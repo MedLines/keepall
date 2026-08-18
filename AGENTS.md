@@ -18,12 +18,13 @@ Local-first personal library. Phase 1 is a complete local product; later phases 
 - `pnpm lint` — lint
 - `pnpm typecheck` — `tsc --noEmit`
 - `pnpm test` — Vitest
-- `pnpm test:e2e` — Playwright
+- `pnpm test:e2e` — production build, then Playwright
 - `pnpm build` — production build
 
 ## Boundaries
 
 - Use pnpm, not npm or yarn.
 - Never commit `.learning/` or `.cursor/plans/`.
-- Do not add Dexie, capture, PWA, sync, or other product features unless the active slice authorizes them.
-- Keep application folders out of the tree until a slice first needs them. `src/app/` is the only product code in Slice 0.
+- Do not add capture, PWA, sync, links, tags, or collections unless the active slice authorizes them.
+- `src/domain` is pure types and rules. `src/persistence` talks to Dexie. UI must not import `dexie`. Domain must not import React or Dexie.
+- Open IndexedDB only in the browser after mount or in event handlers — never at module top level and never during Server Component render.

@@ -20,5 +20,5 @@ Open [http://localhost:3000](http://localhost:3000).
 | `pnpm typecheck` | Type-check |
 | `pnpm test` | Run unit tests |
 | `pnpm test:watch` | Run unit tests in watch mode |
-| `pnpm test:e2e` | Run Playwright end-to-end tests |
+| `pnpm test:e2e` | Production build, then Playwright |
 | `pnpm build` | Create a production build |
