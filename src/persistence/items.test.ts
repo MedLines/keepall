@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { LinkValidationError } from "@/domain/link";
 import { buildNote, NoteValidationError } from "@/domain/note";
 import { deleteKeepallDatabase, getDb } from "./db";
-import { createLink, createNote, listItems, listNotes } from "./items";
+import {
+  createLink,
+  createNote,
+  deleteItem,
+  listItems,
+  listNotes,
+} from "./items";
 
 describe("items persistence", () => {
   beforeEach(async () => {
@@ -42,6 +48,15 @@ describe("items persistence", () => {
     const link = await createLink({ url: "https://example.com" });
 
     expect(await listItems()).toEqual([link, note]);
+  });
+
+  test("deleteItem removes one stored item and leaves the rest", async () => {
+    const keep = await createNote({ content: "keep me" });
+    const drop = await createNote({ content: "drop me" });
+
+    await deleteItem(drop.id);
+
+    expect(await listItems()).toEqual([keep]);
   });
 
   test("createLink does not write javascript URLs", async () => {

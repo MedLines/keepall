@@ -20,6 +20,10 @@ export async function listItems(): Promise<Item[]> {
   return items.reverse();
 }
 
+export async function deleteItem(id: string): Promise<void> {
+  await getDb().items.delete(id);
+}
+
 export async function listNotes(): Promise<NoteItem[]> {
   const notes = await getDb()
     .items.where("type")

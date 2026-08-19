@@ -49,6 +49,31 @@ test("Cancel closes the capture dialog", async ({ page }) => {
   await expect(page.getByRole("dialog")).toBeHidden();
 });
 
+test("deleting a note after confirm survives a reload", async ({ page }) => {
+  await page.goto("/");
+  await page.keyboard.press("Alt+k");
+  await page.getByLabel("Link or note").fill("Remove this note.");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(
+    page.getByLabel("Library").getByText("Remove this note."),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("button", { name: "Confirm delete" }).click();
+
+  await expect(
+    page.getByLabel("Library").getByText("Remove this note."),
+  ).toBeHidden();
+  await expect(page.getByText("No items yet.")).toBeVisible();
+
+  await page.reload();
+
+  await expect(page.getByText("No items yet.")).toBeVisible();
+  await expect(
+    page.getByLabel("Library").getByText("Remove this note."),
+  ).toBeHidden();
+});
+
 test("Ctrl+Enter saves a note from the textarea", async ({ page }) => {
   await page.goto("/");
   await page.keyboard.press("Alt+k");
