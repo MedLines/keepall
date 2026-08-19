@@ -43,6 +43,25 @@ export function buildLink(
   };
 }
 
+export function applyLinkEdit(
+  link: LinkItem,
+  input: { url: string; title?: string },
+  options?: { now?: number },
+): LinkItem {
+  const url = input.url.trim();
+
+  if (!isHttpUrl(url)) {
+    throw new LinkValidationError("Enter an http or https URL");
+  }
+
+  return {
+    ...link,
+    url,
+    title: input.title !== undefined ? input.title.trim() : link.title,
+    updatedAt: options?.now ?? Date.now(),
+  };
+}
+
 export function linkListTitle(link: LinkItem): string {
   if (link.title) {
     return link.title;

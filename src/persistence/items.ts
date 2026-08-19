@@ -1,4 +1,9 @@
-import { buildLink, type CreateLinkInput, type LinkItem } from "@/domain/link";
+import {
+  applyLinkEdit,
+  buildLink,
+  type CreateLinkInput,
+  type LinkItem,
+} from "@/domain/link";
 import {
   applyNoteEdit,
   buildNote,
@@ -40,6 +45,21 @@ export async function updateNote(
   }
 
   const next = applyNoteEdit(existing, input);
+  await getDb().items.put(next);
+  return next;
+}
+
+export async function updateLink(
+  id: string,
+  input: { url: string; title?: string },
+): Promise<LinkItem> {
+  const existing = await getDb().items.get(id);
+
+  if (!existing || existing.type !== "link") {
+    throw new Error("Link not found");
+  }
+
+  const next = applyLinkEdit(existing, input);
   await getDb().items.put(next);
   return next;
 }

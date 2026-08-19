@@ -8,6 +8,7 @@ import {
   deleteItem,
   listItems,
   listNotes,
+  updateLink,
   updateNote,
 } from "./items";
 
@@ -77,6 +78,26 @@ describe("items persistence", () => {
       NoteValidationError,
     );
     expect(await listNotes()).toEqual([created]);
+  });
+
+  test("updateLink changes url and keeps id and createdAt", async () => {
+    const created = await createLink({ url: "https://example.com/old" });
+    const updated = await updateLink(created.id, {
+      url: "https://example.com/new",
+    });
+
+    expect(updated.id).toBe(created.id);
+    expect(updated.createdAt).toBe(created.createdAt);
+    expect(updated.url).toBe("https://example.com/new");
+    expect(await listItems()).toEqual([updated]);
+  });
+
+  test("updateLink does not write javascript URLs", async () => {
+    const created = await createLink({ url: "https://example.com" });
+    await expect(
+      updateLink(created.id, { url: "javascript:alert(1)" }),
+    ).rejects.toBeInstanceOf(LinkValidationError);
+    expect(await listItems()).toEqual([created]);
   });
 
   test("createLink does not write javascript URLs", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildLink, linkListTitle, LinkValidationError } from "./link";
+import { applyLinkEdit, buildLink, linkListTitle, LinkValidationError } from "./link";
 
 describe("buildLink", () => {
   test("creates a link with a trimmed http URL", () => {
@@ -20,6 +20,30 @@ describe("buildLink", () => {
 
   test("rejects javascript URLs", () => {
     expect(() => buildLink({ url: "javascript:alert(1)" })).toThrow(
+      LinkValidationError,
+    );
+  });
+});
+
+describe("applyLinkEdit", () => {
+  test("keeps id and createdAt and updates url", () => {
+    const link = buildLink(
+      { url: "https://example.com/old" },
+      { id: "l1", now: 1000 },
+    );
+
+    expect(
+      applyLinkEdit(link, { url: "  https://example.com/new  " }, { now: 2000 }),
+    ).toEqual({
+      ...link,
+      url: "https://example.com/new",
+      updatedAt: 2000,
+    });
+  });
+
+  test("rejects javascript URLs", () => {
+    const link = buildLink({ url: "https://example.com" }, { id: "l1", now: 1 });
+    expect(() => applyLinkEdit(link, { url: "javascript:alert(1)" })).toThrow(
       LinkValidationError,
     );
   });

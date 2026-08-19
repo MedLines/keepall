@@ -1,22 +1,29 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { buildLink, LinkValidationError } from "@/domain/link";
 import { buildNote, NoteValidationError } from "@/domain/note";
-import { deleteItem, listItems, updateNote } from "@/persistence/items";
+import { deleteItem, listItems, updateLink, updateNote } from "@/persistence/items";
 import { Library } from "./library";
 
 vi.mock("@/persistence/items", () => ({
   listItems: vi.fn(),
   deleteItem: vi.fn(),
   updateNote: vi.fn(),
+  updateLink: vi.fn(),
 }));
 
 const note = buildNote({ content: "A persisted note" }, { id: "n1", now: 1 });
+const link = buildLink(
+  { url: "https://example.com/old" },
+  { id: "l1", now: 1 },
+);
 
 describe("Library", () => {
   beforeEach(() => {
     vi.mocked(listItems).mockReset();
     vi.mocked(deleteItem).mockReset();
     vi.mocked(updateNote).mockReset();
+    vi.mocked(updateLink).mockReset();
   });
 
   test("does not show the empty copy when loading fails", async () => {
@@ -129,6 +136,26 @@ describe("Library", () => {
     expect(await screen.findByText("changed")).toBeInTheDocument();
   });
 
+  test("Ctrl+Enter saves a note edit from the textarea", async () => {
+    const updated = { ...note, content: "from shortcut", updatedAt: 2 };
+    vi.mocked(listItems)
+      .mockResolvedValueOnce([note])
+      .mockResolvedValue([updated]);
+    vi.mocked(updateNote).mockResolvedValue(updated);
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    const field = screen.getByLabelText("Note content");
+    fireEvent.change(field, { target: { value: "from shortcut" } });
+    fireEvent.keyDown(field, { key: "Enter", ctrlKey: true });
+
+    await waitFor(() => {
+      expect(updateNote).toHaveBeenCalledWith("n1", {
+        content: "from shortcut",
+      });
+    });
+  });
+
   test("empty note edit shows a validation alert", async () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     vi.mocked(updateNote).mockRejectedValue(
@@ -146,5 +173,52 @@ describe("Library", () => {
       "Note content is required",
     );
     expect(screen.getByLabelText("Note content")).toBeInTheDocument();
+  });
+
+  test("rejects a javascript URL when saving a link edit", async () => {
+    vi.mocked(listItems).mockResolvedValue([link]);
+    vi.mocked(updateLink).mockRejectedValue(
+      new LinkValidationError("Enter an http or https URL"),
+    );
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("URL"), {
+      target: { value: "javascript:alert(1)" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save link" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Enter an http or https URL",
+    );
+    expect(updateLink).toHaveBeenCalledWith("l1", {
+      url: "javascript:alert(1)",
+      title: "",
+    });
+  });
+
+  test("save link edit persists a new https URL", async () => {
+    const updated = { ...link, url: "https://example.com/new", updatedAt: 2 };
+    vi.mocked(listItems)
+      .mockResolvedValueOnce([link])
+      .mockResolvedValue([updated]);
+    vi.mocked(updateLink).mockResolvedValue(updated);
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("URL"), {
+      target: { value: "https://example.com/new" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save link" }));
+
+    await waitFor(() => {
+      expect(updateLink).toHaveBeenCalledWith("l1", {
+        url: "https://example.com/new",
+        title: "",
+      });
+    });
+    expect(
+      await screen.findByRole("link", { name: "https://example.com/new" }),
+    ).toBeInTheDocument();
   });
 });

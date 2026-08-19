@@ -101,6 +101,33 @@ test("editing a note survives a reload", async ({ page }) => {
   ).toBeHidden();
 });
 
+test("editing a link URL survives a reload", async ({ page }) => {
+  await page.goto("/");
+  await page.keyboard.press("Alt+k");
+  await page.getByLabel("Link or note").fill("https://example.com/old");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(
+    page.getByRole("link", { name: "https://example.com/old" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("URL").fill("https://example.com/new");
+  await page.getByRole("button", { name: "Save link" }).click();
+
+  await expect(
+    page.getByRole("link", { name: "https://example.com/new" }),
+  ).toBeVisible();
+
+  await page.reload();
+
+  await expect(
+    page.getByRole("link", { name: "https://example.com/new" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "https://example.com/old" }),
+  ).toBeHidden();
+});
+
 test("Ctrl+Enter saves a note from the textarea", async ({ page }) => {
   await page.goto("/");
   await page.keyboard.press("Alt+k");
