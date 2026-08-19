@@ -222,3 +222,96 @@ describe("Library", () => {
     ).toBeInTheDocument();
   });
 });
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+describe("Library pending mutations", () => {
+  beforeEach(() => {
+    vi.mocked(listItems).mockReset();
+    vi.mocked(deleteItem).mockReset();
+    vi.mocked(updateNote).mockReset();
+    vi.mocked(updateLink).mockReset();
+  });
+
+  test("does not start a second note save while one is pending", async () => {
+    const hold = deferred<typeof note>();
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(updateNote).mockReturnValue(hold.promise);
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("Note content"), {
+      target: { value: "changed" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Saving…" }));
+
+    expect(updateNote).toHaveBeenCalledTimes(1);
+    hold.resolve({ ...note, content: "changed", updatedAt: 2 });
+  });
+
+  test("keeps the draft and shows an error when a pending save fails", async () => {
+    const hold = deferred<typeof note>();
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(updateNote).mockReturnValue(hold.promise);
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("Note content"), {
+      target: { value: "changed" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+    await screen.findByRole("button", { name: "Saving…" });
+    hold.reject(new Error("idb down"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Couldn't save note.",
+    );
+    expect(screen.getByLabelText("Note content")).toHaveValue("changed");
+    expect(screen.getByRole("button", { name: "Cancel edit" })).toBeEnabled();
+  });
+
+  test("blocks Edit on another item while a save is pending", async () => {
+    const other = buildNote({ content: "other note" }, { id: "n2", now: 2 });
+    const hold = deferred<typeof note>();
+    vi.mocked(listItems).mockResolvedValue([note, other]);
+    vi.mocked(updateNote).mockReturnValue(hold.promise);
+    render(<Library />);
+
+    fireEvent.click((await screen.findAllByRole("button", { name: "Edit" }))[0]!);
+    fireEvent.change(screen.getByLabelText("Note content"), {
+      target: { value: "changed" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+
+    expect(await screen.findByRole("button", { name: "Edit" })).toBeDisabled();
+    hold.resolve({ ...note, content: "changed", updatedAt: 2 });
+  });
+
+  test("cancel cannot run during a pending save", async () => {
+    const hold = deferred<typeof note>();
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(updateNote).mockReturnValue(hold.promise);
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("Note content"), {
+      target: { value: "changed" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+
+    expect(
+      await screen.findByRole("button", { name: "Cancel edit" }),
+    ).toBeDisabled();
+
+    hold.resolve({ ...note, content: "changed", updatedAt: 2 });
+  });
+});

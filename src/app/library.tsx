@@ -1,6 +1,6 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useState } from "react";
 import { itemListTitle, type Item } from "@/domain/item";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
@@ -11,6 +11,11 @@ import {
   updateNote,
 } from "@/persistence/items";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
+
+type PendingMutation =
+  | { op: "save-note"; id: string }
+  | { op: "save-link"; id: string }
+  | { op: "delete"; id: string };
 
 export function Library() {
   const [items, setItems] = useState<Item[]>([]);
@@ -24,8 +29,9 @@ export function Library() {
   const [editDraft, setEditDraft] = useState("");
   const [editTitleDraft, setEditTitleDraft] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
-  const deleteInFlightRef = useRef(false);
-  const editInFlightRef = useRef(false);
+  const [pendingMutation, setPendingMutation] = useState<PendingMutation | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +64,8 @@ export function Library() {
     };
   }, []);
 
+  const mutationBusy = pendingMutation !== null;
+
   function clearEdit() {
     setEditingId(null);
     setEditDraft("");
@@ -71,16 +79,18 @@ export function Library() {
   ) {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
-      save();
+      if (!mutationBusy) {
+        save();
+      }
     }
   }
 
   async function confirmDelete(id: string) {
-    if (deleteInFlightRef.current) {
+    if (pendingMutation) {
       return;
     }
 
-    deleteInFlightRef.current = true;
+    setPendingMutation({ op: "delete", id });
     setDeleteError(null);
 
     try {
@@ -90,16 +100,16 @@ export function Library() {
     } catch {
       setDeleteError("Couldn't delete item.");
     } finally {
-      deleteInFlightRef.current = false;
+      setPendingMutation(null);
     }
   }
 
   async function saveNoteEdit(id: string) {
-    if (editInFlightRef.current) {
+    if (pendingMutation) {
       return;
     }
 
-    editInFlightRef.current = true;
+    setPendingMutation({ op: "save-note", id });
     setEditError(null);
 
     try {
@@ -113,16 +123,16 @@ export function Library() {
         setEditError("Couldn't save note.");
       }
     } finally {
-      editInFlightRef.current = false;
+      setPendingMutation(null);
     }
   }
 
   async function saveLinkEdit(id: string) {
-    if (editInFlightRef.current) {
+    if (pendingMutation) {
       return;
     }
 
-    editInFlightRef.current = true;
+    setPendingMutation({ op: "save-link", id });
     setEditError(null);
 
     try {
@@ -136,7 +146,7 @@ export function Library() {
         setEditError("Couldn't save link.");
       }
     } finally {
-      editInFlightRef.current = false;
+      setPendingMutation(null);
     }
   }
 
@@ -176,9 +186,10 @@ export function Library() {
                       Note content
                     </label>
                     <textarea
-                      className="min-h-24 rounded-md border border-zinc-300 bg-white px-3 py-2"
+                      className="min-h-24 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
                       id={`edit-note-${item.id}`}
                       value={editDraft}
+                      disabled={mutationBusy}
                       onChange={(event) => setEditDraft(event.target.value)}
                       onKeyDown={(event) =>
                         onEditSaveShortcut(event, () =>
@@ -193,15 +204,20 @@ export function Library() {
                     ) : null}
                     <div className="flex flex-wrap gap-3">
                       <button
-                        className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white"
+                        className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
                         type="button"
+                        disabled={mutationBusy}
                         onClick={() => void saveNoteEdit(item.id)}
                       >
-                        Save note
+                        {pendingMutation?.op === "save-note" &&
+                        pendingMutation.id === item.id
+                          ? "Saving…"
+                          : "Save note"}
                       </button>
                       <button
-                        className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium"
+                        className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
                         type="button"
+                        disabled={mutationBusy}
                         onClick={() => clearEdit()}
                       >
                         Cancel edit
@@ -217,9 +233,10 @@ export function Library() {
                       URL
                     </label>
                     <input
-                      className="rounded-md border border-zinc-300 bg-white px-3 py-2"
+                      className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
                       id={`edit-link-url-${item.id}`}
                       value={editDraft}
+                      disabled={mutationBusy}
                       onChange={(event) => setEditDraft(event.target.value)}
                       onKeyDown={(event) =>
                         onEditSaveShortcut(event, () =>
@@ -234,9 +251,10 @@ export function Library() {
                       Title
                     </label>
                     <input
-                      className="rounded-md border border-zinc-300 bg-white px-3 py-2"
+                      className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
                       id={`edit-link-title-${item.id}`}
                       value={editTitleDraft}
+                      disabled={mutationBusy}
                       onChange={(event) => setEditTitleDraft(event.target.value)}
                       onKeyDown={(event) =>
                         onEditSaveShortcut(event, () =>
@@ -251,15 +269,20 @@ export function Library() {
                     ) : null}
                     <div className="flex flex-wrap gap-3">
                       <button
-                        className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white"
+                        className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
                         type="button"
+                        disabled={mutationBusy}
                         onClick={() => void saveLinkEdit(item.id)}
                       >
-                        Save link
+                        {pendingMutation?.op === "save-link" &&
+                        pendingMutation.id === item.id
+                          ? "Saving…"
+                          : "Save link"}
                       </button>
                       <button
-                        className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium"
+                        className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
                         type="button"
+                        disabled={mutationBusy}
                         onClick={() => clearEdit()}
                       >
                         Cancel edit
@@ -288,13 +311,18 @@ export function Library() {
                     <button
                       className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
                       type="button"
+                      disabled={mutationBusy}
                       onClick={() => void confirmDelete(item.id)}
                     >
-                      Confirm delete
+                      {pendingMutation?.op === "delete" &&
+                      pendingMutation.id === item.id
+                        ? "Deleting…"
+                        : "Confirm delete"}
                     </button>
                     <button
-                      className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium"
+                      className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
                       type="button"
+                      disabled={mutationBusy}
                       onClick={() => setPendingDeleteId(null)}
                     >
                       Cancel
@@ -303,8 +331,9 @@ export function Library() {
                 ) : editingId === item.id ? null : (
                   <div className="mt-3 flex flex-wrap gap-3">
                     <button
-                      className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium"
+                      className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
                       type="button"
+                      disabled={mutationBusy}
                       onClick={() => {
                         setPendingDeleteId(null);
                         setDeleteError(null);
@@ -322,8 +351,9 @@ export function Library() {
                       Edit
                     </button>
                     <button
-                      className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium"
+                      className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
                       type="button"
+                      disabled={mutationBusy}
                       onClick={() => {
                         clearEdit();
                         setDeleteError(null);
