@@ -41,6 +41,24 @@ export function buildNote(
   };
 }
 
+export function applyNoteEdit(
+  note: NoteItem,
+  input: { content: string },
+  options?: { now?: number },
+): NoteItem {
+  const content = input.content.trim();
+
+  if (!content) {
+    throw new NoteValidationError("Note content is required");
+  }
+
+  return {
+    ...note,
+    content,
+    updatedAt: options?.now ?? Date.now(),
+  };
+}
+
 export function noteListTitle(note: NoteItem): string {
   return note.title || "Untitled";
 }

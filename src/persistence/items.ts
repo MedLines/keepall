@@ -1,5 +1,10 @@
 import { buildLink, type CreateLinkInput, type LinkItem } from "@/domain/link";
-import { buildNote, type CreateNoteInput, type NoteItem } from "@/domain/note";
+import {
+  applyNoteEdit,
+  buildNote,
+  type CreateNoteInput,
+  type NoteItem,
+} from "@/domain/note";
 import type { Item } from "@/domain/item";
 import { getDb } from "./db";
 
@@ -22,6 +27,21 @@ export async function listItems(): Promise<Item[]> {
 
 export async function deleteItem(id: string): Promise<void> {
   await getDb().items.delete(id);
+}
+
+export async function updateNote(
+  id: string,
+  input: { content: string },
+): Promise<NoteItem> {
+  const existing = await getDb().items.get(id);
+
+  if (!existing || existing.type !== "note") {
+    throw new Error("Note not found");
+  }
+
+  const next = applyNoteEdit(existing, input);
+  await getDb().items.put(next);
+  return next;
 }
 
 export async function listNotes(): Promise<NoteItem[]> {

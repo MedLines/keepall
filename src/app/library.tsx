@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { itemListTitle, type Item } from "@/domain/item";
-import { deleteItem, listItems } from "@/persistence/items";
+import { NoteValidationError } from "@/domain/note";
+import { deleteItem, listItems, updateNote } from "@/persistence/items";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 
 export function Library() {
@@ -13,7 +14,11 @@ export function Library() {
   const [error, setError] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
   const deleteInFlightRef = useRef(false);
+  const editInFlightRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +70,30 @@ export function Library() {
     }
   }
 
+  async function saveNoteEdit(id: string) {
+    if (editInFlightRef.current) {
+      return;
+    }
+
+    editInFlightRef.current = true;
+    setEditError(null);
+
+    try {
+      await updateNote(id, { content: editDraft });
+      setEditingNoteId(null);
+      setEditDraft("");
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch (caught) {
+      if (caught instanceof NoteValidationError) {
+        setEditError(caught.message);
+      } else {
+        setEditError("Couldn't save note.");
+      }
+    } finally {
+      editInFlightRef.current = false;
+    }
+  }
+
   return (
     <section className="mt-8" aria-labelledby="library-heading">
       <h2 className="text-lg font-semibold" id="library-heading">
@@ -92,7 +121,47 @@ export function Library() {
                 key={item.id}
               >
                 <h3 className="font-medium">{itemListTitle(item)}</h3>
-                {item.type === "note" ? (
+                {item.type === "note" && editingNoteId === item.id ? (
+                  <div className="mt-2 flex flex-col gap-2">
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor={`edit-note-${item.id}`}
+                    >
+                      Note content
+                    </label>
+                    <textarea
+                      className="min-h-24 rounded-md border border-zinc-300 bg-white px-3 py-2"
+                      id={`edit-note-${item.id}`}
+                      value={editDraft}
+                      onChange={(event) => setEditDraft(event.target.value)}
+                    />
+                    {editError ? (
+                      <p className="text-sm text-red-700" role="alert">
+                        {editError}
+                      </p>
+                    ) : null}
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white"
+                        type="button"
+                        onClick={() => void saveNoteEdit(item.id)}
+                      >
+                        Save note
+                      </button>
+                      <button
+                        className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium"
+                        type="button"
+                        onClick={() => {
+                          setEditingNoteId(null);
+                          setEditDraft("");
+                          setEditError(null);
+                        }}
+                      >
+                        Cancel edit
+                      </button>
+                    </div>
+                  </div>
+                ) : item.type === "note" ? (
                   <p className="mt-2 whitespace-pre-wrap text-zinc-800">
                     {item.content}
                   </p>
@@ -126,17 +195,37 @@ export function Library() {
                       Cancel
                     </button>
                   </div>
-                ) : (
-                  <button
-                    className="mt-3 rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium"
-                    type="button"
-                    onClick={() => {
-                      setDeleteError(null);
-                      setPendingDeleteId(item.id);
-                    }}
-                  >
-                    Delete
-                  </button>
+                ) : editingNoteId === item.id ? null : (
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    {item.type === "note" ? (
+                      <button
+                        className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium"
+                        type="button"
+                        onClick={() => {
+                          setPendingDeleteId(null);
+                          setDeleteError(null);
+                          setEditError(null);
+                          setEditingNoteId(item.id);
+                          setEditDraft(item.content);
+                        }}
+                      >
+                        Edit
+                      </button>
+                    ) : null}
+                    <button
+                      className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium"
+                      type="button"
+                      onClick={() => {
+                        setEditingNoteId(null);
+                        setEditDraft("");
+                        setEditError(null);
+                        setDeleteError(null);
+                        setPendingDeleteId(item.id);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 )}
               </li>
             ))}

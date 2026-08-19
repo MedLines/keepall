@@ -8,6 +8,7 @@ import {
   deleteItem,
   listItems,
   listNotes,
+  updateNote,
 } from "./items";
 
 describe("items persistence", () => {
@@ -57,6 +58,25 @@ describe("items persistence", () => {
     await deleteItem(drop.id);
 
     expect(await listItems()).toEqual([keep]);
+  });
+
+  test("updateNote changes content and keeps id and createdAt", async () => {
+    const created = await createNote({ content: "old body" });
+    const updated = await updateNote(created.id, { content: "new body" });
+
+    expect(updated.id).toBe(created.id);
+    expect(updated.createdAt).toBe(created.createdAt);
+    expect(updated.content).toBe("new body");
+    expect(updated.updatedAt).toBeGreaterThanOrEqual(created.updatedAt);
+    expect(await listItems()).toEqual([updated]);
+  });
+
+  test("updateNote does not write empty content", async () => {
+    const created = await createNote({ content: "keep" });
+    await expect(updateNote(created.id, { content: "   " })).rejects.toBeInstanceOf(
+      NoteValidationError,
+    );
+    expect(await listNotes()).toEqual([created]);
   });
 
   test("createLink does not write javascript URLs", async () => {

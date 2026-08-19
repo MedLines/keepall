@@ -74,6 +74,33 @@ test("deleting a note after confirm survives a reload", async ({ page }) => {
   ).toBeHidden();
 });
 
+test("editing a note survives a reload", async ({ page }) => {
+  await page.goto("/");
+  await page.keyboard.press("Alt+k");
+  await page.getByLabel("Link or note").fill("Original note body.");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(
+    page.getByLabel("Library").getByText("Original note body."),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("Note content").fill("Edited note body.");
+  await page.getByRole("button", { name: "Save note" }).click();
+
+  await expect(
+    page.getByLabel("Library").getByText("Edited note body."),
+  ).toBeVisible();
+
+  await page.reload();
+
+  await expect(
+    page.getByLabel("Library").getByText("Edited note body."),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Library").getByText("Original note body."),
+  ).toBeHidden();
+});
+
 test("Ctrl+Enter saves a note from the textarea", async ({ page }) => {
   await page.goto("/");
   await page.keyboard.press("Alt+k");

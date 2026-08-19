@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildNote, noteListTitle, NoteValidationError } from "./note";
+import { buildNote, noteListTitle, applyNoteEdit, NoteValidationError } from "./note";
 
 describe("buildNote", () => {
   test("creates a note with trimmed content and an empty title", () => {
@@ -31,6 +31,25 @@ describe("buildNote", () => {
     expect(() => buildNote({ content: "   " })).toThrow(NoteValidationError);
     expect(() => buildNote({ content: "   " })).toThrow(
       "Note content is required",
+    );
+  });
+});
+
+describe("applyNoteEdit", () => {
+  test("keeps id and createdAt and updates content and updatedAt", () => {
+    const note = buildNote({ content: "old" }, { id: "n1", now: 1000 });
+
+    expect(applyNoteEdit(note, { content: "  new body  " }, { now: 2000 })).toEqual({
+      ...note,
+      content: "new body",
+      updatedAt: 2000,
+    });
+  });
+
+  test("rejects empty content", () => {
+    const note = buildNote({ content: "old" }, { id: "n1", now: 1 });
+    expect(() => applyNoteEdit(note, { content: "   " })).toThrow(
+      NoteValidationError,
     );
   });
 });
