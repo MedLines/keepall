@@ -7,5 +7,5 @@ test("renders the Keepall heading", async () => {
   expect(
     screen.getByRole("heading", { level: 1, name: "Keepall" }),
   ).toBeInTheDocument();
-  expect(await screen.findByText("No notes yet.")).toBeInTheDocument();
+  expect(await screen.findByText("No items yet.")).toBeInTheDocument();
 });

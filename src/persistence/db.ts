@@ -1,10 +1,10 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { NoteItem } from "@/domain/note";
+import type { Item } from "@/domain/item";
 
 export const KEEPALL_DB_NAME = "keepall";
 
 export type KeepallDB = Dexie & {
-  items: EntityTable<NoteItem, "id">;
+  items: EntityTable<Item, "id">;
 };
 
 function createKeepallDb(): KeepallDB {

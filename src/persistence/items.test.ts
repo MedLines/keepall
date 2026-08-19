@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, test } from "vitest";
+import { LinkValidationError } from "@/domain/link";
 import { buildNote, NoteValidationError } from "@/domain/note";
 import { deleteKeepallDatabase, getDb } from "./db";
-import { createNote, listNotes } from "./notes";
+import { createLink, createNote, listItems, listNotes } from "./items";
 
-describe("notes persistence", () => {
+describe("items persistence", () => {
   beforeEach(async () => {
     await deleteKeepallDatabase();
   });
@@ -34,5 +35,19 @@ describe("notes persistence", () => {
       NoteValidationError,
     );
     expect(await listNotes()).toEqual([]);
+  });
+
+  test("createLink stores a link that listItems returns with notes", async () => {
+    const note = await createNote({ content: "a note" });
+    const link = await createLink({ url: "https://example.com" });
+
+    expect(await listItems()).toEqual([link, note]);
+  });
+
+  test("createLink does not write javascript URLs", async () => {
+    await expect(
+      createLink({ url: "javascript:alert(1)" }),
+    ).rejects.toBeInstanceOf(LinkValidationError);
+    expect(await listItems()).toEqual([]);
   });
 });

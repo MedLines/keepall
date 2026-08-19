@@ -1,0 +1,30 @@
+import { buildLink, type CreateLinkInput, type LinkItem } from "@/domain/link";
+import { buildNote, type CreateNoteInput, type NoteItem } from "@/domain/note";
+import type { Item } from "@/domain/item";
+import { getDb } from "./db";
+
+export async function createNote(input: CreateNoteInput): Promise<NoteItem> {
+  const note = buildNote(input);
+  await getDb().items.add(note);
+  return note;
+}
+
+export async function createLink(input: CreateLinkInput): Promise<LinkItem> {
+  const link = buildLink(input);
+  await getDb().items.add(link);
+  return link;
+}
+
+export async function listItems(): Promise<Item[]> {
+  const items = await getDb().items.orderBy("createdAt").toArray();
+  return items.reverse();
+}
+
+export async function listNotes(): Promise<NoteItem[]> {
+  const notes = await getDb()
+    .items.where("type")
+    .equals("note")
+    .sortBy("createdAt");
+
+  return notes.reverse() as NoteItem[];
+}

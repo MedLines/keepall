@@ -25,6 +25,6 @@ Local-first personal library. Phase 1 is a complete local product; later phases 
 
 - Use pnpm, not npm or yarn.
 - Never commit `.learning/` or `.cursor/plans/`.
-- Do not add capture, PWA, sync, links, tags, or collections unless the active slice authorizes them.
+- Do not add PWA, sync, tags, or collections unless the active slice authorizes them.
 - `src/domain` is pure types and rules. `src/persistence` talks to Dexie. UI must not import `dexie`. Domain must not import React or Dexie.
 - Open IndexedDB only in the browser after mount or in event handlers — never at module top level and never during Server Component render.
