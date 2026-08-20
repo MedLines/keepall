@@ -14,6 +14,7 @@ describe("buildLink", () => {
       title: "",
       url: "https://example.com/x",
       tagIds: [],
+      collectionIds: [],
       createdAt: 1000,
       updatedAt: 1000,
     });

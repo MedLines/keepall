@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
+import type { Collection } from "@/domain/collection";
 import type { Item } from "@/domain/item";
 import type { Tag } from "@/domain/tag";
 
@@ -7,6 +8,7 @@ export const KEEPALL_DB_NAME = "keepall";
 export type KeepallDB = Dexie & {
   items: EntityTable<Item, "id">;
   tags: EntityTable<Tag, "id">;
+  collections: EntityTable<Collection, "id">;
 };
 
 function createKeepallDb(): KeepallDB {
@@ -19,6 +21,12 @@ function createKeepallDb(): KeepallDB {
   db.version(2).stores({
     items: "id, type, createdAt",
     tags: "id, name",
+  });
+
+  db.version(3).stores({
+    items: "id, type, createdAt",
+    tags: "id, name",
+    collections: "id, name",
   });
 
   return db;

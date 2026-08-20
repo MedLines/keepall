@@ -3,16 +3,18 @@ import { noteListTitle, type NoteItem } from "./note";
 
 export type Item = NoteItem | LinkItem;
 
-export type ItemWithOptionalTagIds = {
+export type ItemWithOptionalOrgIds = {
   tagIds?: string[];
+  collectionIds?: string[];
 };
 
-export function normalizeItemTagIds<T extends ItemWithOptionalTagIds>(
+export function normalizeItem<T extends ItemWithOptionalOrgIds>(
   item: T,
-): T & { tagIds: string[] } {
+): T & { tagIds: string[]; collectionIds: string[] } {
   return {
     ...item,
     tagIds: item.tagIds ?? [],
+    collectionIds: item.collectionIds ?? [],
   };
 }
 
@@ -31,4 +33,17 @@ export function resolveItemTagNames(
   return item.tagIds
     .map((id) => tagsById.get(id)?.name)
     .filter((name): name is string => Boolean(name));
+}
+
+export function resolveItemCollectionNames(
+  item: Item,
+  collectionsById: Map<string, { name: string }>,
+): string[] {
+  return item.collectionIds
+    .map((id) => collectionsById.get(id)?.name)
+    .filter((name): name is string => Boolean(name));
+}
+
+export function itemInCollection(item: Item, collectionId: string): boolean {
+  return item.collectionIds.includes(collectionId);
 }

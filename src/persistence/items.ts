@@ -1,4 +1,4 @@
-import { normalizeItemTagIds, type Item } from "@/domain/item";
+import { normalizeItem, type Item } from "@/domain/item";
 import {
   applyLinkEdit,
   buildLink,
@@ -11,6 +11,7 @@ import {
   type CreateNoteInput,
   type NoteItem,
 } from "@/domain/note";
+import { assignCollectionId } from "@/domain/collection";
 import { assignTagId } from "@/domain/tag";
 import { getDb } from "./db";
 
@@ -28,7 +29,7 @@ export async function createLink(input: CreateLinkInput): Promise<LinkItem> {
 
 export async function listItems(): Promise<Item[]> {
   const items = await getDb().items.orderBy("createdAt").toArray();
-  return items.reverse().map((item) => normalizeItemTagIds(item));
+  return items.reverse().map((item) => normalizeItem(item));
 }
 
 export async function deleteItem(id: string): Promise<void> {
@@ -45,7 +46,7 @@ export async function updateNote(
     throw new Error("Note not found");
   }
 
-  const next = applyNoteEdit(normalizeItemTagIds(existing), input);
+  const next = applyNoteEdit(normalizeItem(existing), input);
   await getDb().items.put(next);
   return next;
 }
@@ -60,7 +61,7 @@ export async function updateLink(
     throw new Error("Link not found");
   }
 
-  const next = applyLinkEdit(normalizeItemTagIds(existing), input);
+  const next = applyLinkEdit(normalizeItem(existing), input);
   await getDb().items.put(next);
   return next;
 }
@@ -81,10 +82,37 @@ export async function assignTagToItem(
     throw new Error("Item not found");
   }
 
-  const current = normalizeItemTagIds(existing);
+  const current = normalizeItem(existing);
   const next = {
     ...current,
     tagIds: assignTagId(current.tagIds, tagId),
+    updatedAt: Date.now(),
+  };
+
+  await getDb().items.put(next);
+  return next;
+}
+
+export async function assignCollectionToItem(
+  itemId: string,
+  collectionId: string,
+): Promise<Item> {
+  const collection = await getDb().collections.get(collectionId);
+
+  if (!collection) {
+    throw new Error("Collection not found");
+  }
+
+  const existing = await getDb().items.get(itemId);
+
+  if (!existing) {
+    throw new Error("Item not found");
+  }
+
+  const current = normalizeItem(existing);
+  const next = {
+    ...current,
+    collectionIds: assignCollectionId(current.collectionIds, collectionId),
     updatedAt: Date.now(),
   };
 
@@ -98,5 +126,5 @@ export async function listNotes(): Promise<NoteItem[]> {
     .equals("note")
     .sortBy("createdAt");
 
-  return notes.reverse().map((note) => normalizeItemTagIds(note as NoteItem));
+  return notes.reverse().map((note) => normalizeItem(note as NoteItem));
 }

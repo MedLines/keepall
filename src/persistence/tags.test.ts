@@ -54,5 +54,6 @@ describe("tags persistence", () => {
     const [item] = await listItems();
 
     expect(item?.tagIds).toEqual([]);
+    expect(item?.collectionIds).toEqual([]);
   });
 });

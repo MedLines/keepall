@@ -7,11 +7,25 @@ import {
   useRef,
   useState,
 } from "react";
-import { resolveItemTagNames, type Item } from "@/domain/item";
+import {
+  CollectionValidationError,
+  type Collection,
+} from "@/domain/collection";
+import {
+  itemInCollection,
+  resolveItemCollectionNames,
+  resolveItemTagNames,
+  type Item,
+} from "@/domain/item";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
 import { TagValidationError, type Tag } from "@/domain/tag";
 import {
+  createCollection,
+  listCollections,
+} from "@/persistence/collections";
+import {
+  assignCollectionToItem,
   assignTagToItem,
   deleteItem,
   listItems,
@@ -27,6 +41,10 @@ type RestoreFocus = { id: string; action: "edit" | "delete" };
 export function Library() {
   const [items, setItems] = useState<Item[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [browseCollectionId, setBrowseCollectionId] = useState<string | null>(
+    null,
+  );
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -39,6 +57,10 @@ export function Library() {
   const [editError, setEditError] = useState<string | null>(null);
   const [tagErrorItemId, setTagErrorItemId] = useState<string | null>(null);
   const [tagError, setTagError] = useState<string | null>(null);
+  const [collectionErrorItemId, setCollectionErrorItemId] = useState<
+    string | null
+  >(null);
+  const [collectionError, setCollectionError] = useState<string | null>(null);
   const [pendingMutation, setPendingMutation] = useState<PendingMutation | null>(
     null,
   );
@@ -58,13 +80,15 @@ export function Library() {
       setError(null);
 
       try {
-        const [nextItems, nextTags] = await Promise.all([
+        const [nextItems, nextTags, nextCollections] = await Promise.all([
           listItems(),
           listTags(),
+          listCollections(),
         ]);
         if (!cancelled) {
           setItems(nextItems);
           setTags(nextTags);
+          setCollections(nextCollections);
           setLoadState("ready");
           setError(null);
         }
@@ -110,6 +134,13 @@ export function Library() {
 
   const mutationBusy = pendingMutation !== null;
   const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
+  const collectionsById = new Map(
+    collections.map((collection) => [collection.id, collection]),
+  );
+  const visibleItems =
+    browseCollectionId === null
+      ? items
+      : items.filter((item) => itemInCollection(item, browseCollectionId));
 
   function clearEdit(options?: { restoreFocus?: boolean }) {
     if (options?.restoreFocus && editingId) {
@@ -232,6 +263,31 @@ export function Library() {
     }
   }
 
+  async function addCollectionToItem(itemId: string, name: string) {
+    if (pendingMutation) {
+      return;
+    }
+
+    setPendingMutation({ op: "assign-collection", id: itemId });
+    setCollectionErrorItemId(null);
+    setCollectionError(null);
+
+    try {
+      const collection = await createCollection({ name });
+      await assignCollectionToItem(itemId, collection.id);
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch (caught) {
+      setCollectionErrorItemId(itemId);
+      if (caught instanceof CollectionValidationError) {
+        setCollectionError(caught.message);
+      } else {
+        setCollectionError("Couldn't add to collection.");
+      }
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
   return (
     <section className="mt-8" aria-labelledby="library-heading">
       <h2
@@ -252,63 +308,116 @@ export function Library() {
         <p className="mt-3 text-sm text-zinc-600">No items yet.</p>
       ) : (
         <>
+          {collections.length > 0 ? (
+            <div
+              className="mt-3 flex flex-wrap gap-2"
+              role="group"
+              aria-label="Browse collections"
+            >
+              <button
+                className={`rounded-md border px-3 py-1 text-sm font-medium ${
+                  browseCollectionId === null
+                    ? "border-zinc-900 bg-zinc-900 text-white"
+                    : "border-zinc-300 bg-white text-zinc-800"
+                }`}
+                type="button"
+                onClick={() => setBrowseCollectionId(null)}
+              >
+                All
+              </button>
+              {collections.map((collection) => (
+                <button
+                  key={collection.id}
+                  className={`rounded-md border px-3 py-1 text-sm font-medium ${
+                    browseCollectionId === collection.id
+                      ? "border-zinc-900 bg-zinc-900 text-white"
+                      : "border-zinc-300 bg-white text-zinc-800"
+                  }`}
+                  type="button"
+                  onClick={() => setBrowseCollectionId(collection.id)}
+                >
+                  {collection.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {deleteError ? (
             <p className="mt-3 text-sm text-red-700" role="alert">
               {deleteError}
             </p>
           ) : null}
-          <ul className="mt-3 flex flex-col gap-4">
-            {items.map((item) => (
-              <LibraryItem
-                key={item.id}
-                item={item}
-                tagNames={resolveItemTagNames(item, tagsById)}
-                tagError={tagErrorItemId === item.id ? tagError : null}
-                editing={editingId === item.id}
-                pendingDelete={pendingDeleteId === item.id}
-                mutationBusy={mutationBusy}
-                pendingMutation={pendingMutation}
-                editDraft={editDraft}
-                editTitleDraft={editTitleDraft}
-                editError={editError}
-                setFirstEditField={(node) => {
-                  firstEditFieldRef.current = node;
-                }}
-                confirmDeleteRef={confirmDeleteRef}
-                onEditDraftChange={setEditDraft}
-                onEditTitleChange={setEditTitleDraft}
-                onEditSaveShortcut={onEditSaveShortcut}
-                onSaveNote={() => void saveNoteEdit(item.id)}
-                onSaveLink={() => void saveLinkEdit(item.id)}
-                onCancelEdit={() => clearEdit({ restoreFocus: true })}
-                onConfirmDelete={() => void confirmDelete(item.id)}
-                onCancelDelete={cancelDelete}
-                onAddTag={(name: string) => void addTagToItem(item.id, name)}
-                onStartEdit={() => {
-                  setPendingDeleteId(null);
-                  setDeleteError(null);
-                  setEditError(null);
-                  setTagError(null);
-                  setTagErrorItemId(null);
-                  setEditingId(item.id);
-                  if (item.type === "note") {
-                    setEditDraft(item.content);
-                    setEditTitleDraft("");
-                  } else {
-                    setEditDraft(item.url);
-                    setEditTitleDraft(item.title);
+          {visibleItems.length === 0 ? (
+            <p className="mt-3 text-sm text-zinc-600">
+              No items in this collection.
+            </p>
+          ) : (
+            <ul className="mt-3 flex flex-col gap-4">
+              {visibleItems.map((item) => (
+                <LibraryItem
+                  key={item.id}
+                  item={item}
+                  tagNames={resolveItemTagNames(item, tagsById)}
+                  tagError={tagErrorItemId === item.id ? tagError : null}
+                  collectionNames={resolveItemCollectionNames(
+                    item,
+                    collectionsById,
+                  )}
+                  collectionError={
+                    collectionErrorItemId === item.id ? collectionError : null
                   }
-                }}
-                onStartDelete={() => {
-                  clearEdit();
-                  setDeleteError(null);
-                  setTagError(null);
-                  setTagErrorItemId(null);
-                  setPendingDeleteId(item.id);
-                }}
-              />
-            ))}
-          </ul>
+                  editing={editingId === item.id}
+                  pendingDelete={pendingDeleteId === item.id}
+                  mutationBusy={mutationBusy}
+                  pendingMutation={pendingMutation}
+                  editDraft={editDraft}
+                  editTitleDraft={editTitleDraft}
+                  editError={editError}
+                  setFirstEditField={(node) => {
+                    firstEditFieldRef.current = node;
+                  }}
+                  confirmDeleteRef={confirmDeleteRef}
+                  onEditDraftChange={setEditDraft}
+                  onEditTitleChange={setEditTitleDraft}
+                  onEditSaveShortcut={onEditSaveShortcut}
+                  onSaveNote={() => void saveNoteEdit(item.id)}
+                  onSaveLink={() => void saveLinkEdit(item.id)}
+                  onCancelEdit={() => clearEdit({ restoreFocus: true })}
+                  onConfirmDelete={() => void confirmDelete(item.id)}
+                  onCancelDelete={cancelDelete}
+                  onAddTag={(name: string) => void addTagToItem(item.id, name)}
+                  onAddCollection={(name: string) =>
+                    void addCollectionToItem(item.id, name)
+                  }
+                  onStartEdit={() => {
+                    setPendingDeleteId(null);
+                    setDeleteError(null);
+                    setEditError(null);
+                    setTagError(null);
+                    setTagErrorItemId(null);
+                    setCollectionError(null);
+                    setCollectionErrorItemId(null);
+                    setEditingId(item.id);
+                    if (item.type === "note") {
+                      setEditDraft(item.content);
+                      setEditTitleDraft("");
+                    } else {
+                      setEditDraft(item.url);
+                      setEditTitleDraft(item.title);
+                    }
+                  }}
+                  onStartDelete={() => {
+                    clearEdit();
+                    setDeleteError(null);
+                    setTagError(null);
+                    setTagErrorItemId(null);
+                    setCollectionError(null);
+                    setCollectionErrorItemId(null);
+                    setPendingDeleteId(item.id);
+                  }}
+                />
+              ))}
+            </ul>
+          )}
         </>
       )}
     </section>

@@ -4,6 +4,7 @@ export type NoteItem = {
   title: string;
   content: string;
   tagIds: string[];
+  collectionIds: string[];
   createdAt: number;
   updatedAt: number;
 };
@@ -38,6 +39,7 @@ export function buildNote(
     title: (input.title ?? "").trim(),
     content,
     tagIds: [],
+    collectionIds: [],
     createdAt: now,
     updatedAt: now,
   };

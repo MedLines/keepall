@@ -14,6 +14,7 @@ describe("buildNote", () => {
       title: "",
       content: "hello world",
       tagIds: [],
+      collectionIds: [],
       createdAt: 1000,
       updatedAt: 1000,
     });
