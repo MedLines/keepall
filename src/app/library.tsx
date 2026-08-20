@@ -19,6 +19,7 @@ import {
 } from "@/domain/item";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
+import { matchesSearchQuery, normalizeSearchQuery } from "@/domain/search";
 import { TagValidationError, type Tag } from "@/domain/tag";
 import {
   createCollection,
@@ -45,6 +46,7 @@ export function Library() {
   const [browseCollectionId, setBrowseCollectionId] = useState<string | null>(
     null,
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -137,11 +139,17 @@ export function Library() {
   const collectionsById = new Map(
     collections.map((collection) => [collection.id, collection]),
   );
-  const visibleItems =
-    browseCollectionId === null
-      ? items
-      : items.filter((item) => itemInCollection(item, browseCollectionId));
+  const visibleItems = items.filter((item) => {
+    if (
+      browseCollectionId !== null &&
+      !itemInCollection(item, browseCollectionId)
+    ) {
+      return false;
+    }
 
+    return matchesSearchQuery(item, searchQuery);
+  });
+  const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
   function clearEdit(options?: { restoreFocus?: boolean }) {
     if (options?.restoreFocus && editingId) {
       restoreFocusRef.current = { id: editingId, action: "edit" };
@@ -308,6 +316,19 @@ export function Library() {
         <p className="mt-3 text-sm text-zinc-600">No items yet.</p>
       ) : (
         <>
+          <div className="mt-3 flex flex-col gap-1">
+            <label className="text-sm font-medium" htmlFor="library-search">
+              Search
+            </label>
+            <input
+              className="rounded-md border border-zinc-300 bg-white px-3 py-2"
+              id="library-search"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search titles, notes, and URLs"
+            />
+          </div>
           {collections.length > 0 ? (
             <div
               className="mt-3 flex flex-wrap gap-2"
@@ -348,7 +369,11 @@ export function Library() {
           ) : null}
           {visibleItems.length === 0 ? (
             <p className="mt-3 text-sm text-zinc-600">
-              No items in this collection.
+              {hasActiveSearch
+                ? "No matching items."
+                : browseCollectionId !== null
+                  ? "No items in this collection."
+                  : "No items yet."}
             </p>
           ) : (
             <ul className="mt-3 flex flex-col gap-4">

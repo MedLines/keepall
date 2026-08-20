@@ -491,3 +491,61 @@ describe("Library collections", () => {
     expect(screen.queryByText("other note")).not.toBeInTheDocument();
   });
 });
+
+describe("Library search", () => {
+  beforeEach(() => {
+    vi.mocked(listItems).mockReset();
+    vi.mocked(deleteItem).mockReset();
+    vi.mocked(updateNote).mockReset();
+    vi.mocked(updateLink).mockReset();
+    vi.mocked(listTags).mockReset();
+    vi.mocked(listTags).mockResolvedValue([]);
+    vi.mocked(createTag).mockReset();
+    vi.mocked(assignTagToItem).mockReset();
+    vi.mocked(listCollections).mockReset();
+    vi.mocked(listCollections).mockResolvedValue([]);
+    vi.mocked(createCollection).mockReset();
+    vi.mocked(assignCollectionToItem).mockReset();
+  });
+
+  test("filters items by title, content, and URL without matching tags", async () => {
+    const designNote = buildNote(
+      { content: "A persisted note about Design" },
+      { id: "n1", now: 1 },
+    );
+    const otherNote = buildNote(
+      { content: "grocery list" },
+      { id: "n2", now: 2 },
+    );
+    const docsLink = buildLink(
+      { title: "API Docs", url: "https://example.com/guide" },
+      { id: "l1", now: 3 },
+    );
+    vi.mocked(listItems).mockResolvedValue([designNote, otherNote, docsLink]);
+    vi.mocked(listTags).mockResolvedValue([
+      { id: "t1", name: "design", createdAt: 1 },
+    ]);
+    render(<Library />);
+
+    await screen.findByText("A persisted note about Design");
+    fireEvent.change(screen.getByLabelText("Search"), {
+      target: { value: "  DESIGN  " },
+    });
+
+    expect(screen.getByText("A persisted note about Design")).toBeInTheDocument();
+    expect(screen.queryByText("grocery list")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Search"), {
+      target: { value: "example.com" },
+    });
+
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "https://example.com/guide",
+    );
+    expect(
+      screen.queryByText("A persisted note about Design"),
+    ).not.toBeInTheDocument();
+  });
+});
