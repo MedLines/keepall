@@ -315,3 +315,43 @@ describe("Library pending mutations", () => {
     hold.resolve({ ...note, content: "changed", updatedAt: 2 });
   });
 });
+describe("Library focus management", () => {
+  beforeEach(() => {
+    vi.mocked(listItems).mockReset();
+    vi.mocked(deleteItem).mockReset();
+    vi.mocked(updateNote).mockReset();
+    vi.mocked(updateLink).mockReset();
+  });
+
+  test("moves focus for edit, cancel, and delete confirmation", async () => {
+    vi.mocked(listItems)
+      .mockResolvedValueOnce([note])
+      .mockResolvedValue([]);
+    vi.mocked(deleteItem).mockResolvedValue(undefined);
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    expect(screen.getByLabelText("Note content")).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
+    expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(
+      screen.getByRole("button", { name: "Confirm delete" }),
+    ).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "Delete" })).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+
+    await waitFor(() => {
+      expect(deleteItem).toHaveBeenCalledWith("n1");
+    });
+    expect(await screen.findByText("No items yet.")).toBeInTheDocument();
+
+    expect(screen.getByRole("heading", { name: "Library" })).toHaveFocus();
+  });
+});

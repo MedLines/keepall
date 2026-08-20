@@ -1,7 +1,13 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useState } from "react";
-import { itemListTitle, type Item } from "@/domain/item";
+import {
+  type KeyboardEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { type Item } from "@/domain/item";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
 import {
@@ -11,11 +17,14 @@ import {
   updateNote,
 } from "@/persistence/items";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
+import { LibraryItem } from "./library-item";
 
 type PendingMutation =
   | { op: "save-note"; id: string }
   | { op: "save-link"; id: string }
   | { op: "delete"; id: string };
+
+type RestoreFocus = { id: string; action: "edit" | "delete" };
 
 export function Library() {
   const [items, setItems] = useState<Item[]>([]);
@@ -32,6 +41,13 @@ export function Library() {
   const [pendingMutation, setPendingMutation] = useState<PendingMutation | null>(
     null,
   );
+
+  const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
+  const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
+    null,
+  );
+  const confirmDeleteRef = useRef<HTMLButtonElement>(null);
+  const restoreFocusRef = useRef<RestoreFocus | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,13 +80,46 @@ export function Library() {
     };
   }, []);
 
+  useLayoutEffect(() => {
+    if (editingId) {
+      firstEditFieldRef.current?.focus();
+      return;
+    }
+
+    if (pendingDeleteId) {
+      confirmDeleteRef.current?.focus();
+      return;
+    }
+
+    const restore = restoreFocusRef.current;
+    if (!restore) {
+      return;
+    }
+
+    const button = document.querySelector<HTMLButtonElement>(
+      `button[data-focus-return="${restore.action}:${restore.id}"]`,
+    );
+    button?.focus();
+    restoreFocusRef.current = null;
+  }, [editingId, pendingDeleteId, items]);
+
   const mutationBusy = pendingMutation !== null;
 
-  function clearEdit() {
+  function clearEdit(options?: { restoreFocus?: boolean }) {
+    if (options?.restoreFocus && editingId) {
+      restoreFocusRef.current = { id: editingId, action: "edit" };
+    }
     setEditingId(null);
     setEditDraft("");
     setEditTitleDraft("");
     setEditError(null);
+  }
+
+  function cancelDelete() {
+    if (pendingDeleteId) {
+      restoreFocusRef.current = { id: pendingDeleteId, action: "delete" };
+    }
+    setPendingDeleteId(null);
   }
 
   function onEditSaveShortcut(
@@ -96,6 +145,8 @@ export function Library() {
     try {
       await deleteItem(id);
       setPendingDeleteId(null);
+      restoreFocusRef.current = null;
+      libraryHeadingRef.current?.focus();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
       setDeleteError("Couldn't delete item.");
@@ -152,7 +203,12 @@ export function Library() {
 
   return (
     <section className="mt-8" aria-labelledby="library-heading">
-      <h2 className="text-lg font-semibold" id="library-heading">
+      <h2
+        className="text-lg font-semibold"
+        id="library-heading"
+        ref={libraryHeadingRef}
+        tabIndex={-1}
+      >
         Library
       </h2>
       {loadState === "loading" ? (
@@ -172,199 +228,47 @@ export function Library() {
           ) : null}
           <ul className="mt-3 flex flex-col gap-4">
             {items.map((item) => (
-              <li
-                className="rounded-md border border-zinc-200 bg-white p-4"
+              <LibraryItem
                 key={item.id}
-              >
-                <h3 className="font-medium">{itemListTitle(item)}</h3>
-                {item.type === "note" && editingId === item.id ? (
-                  <div className="mt-2 flex flex-col gap-2">
-                    <label
-                      className="text-sm font-medium"
-                      htmlFor={`edit-note-${item.id}`}
-                    >
-                      Note content
-                    </label>
-                    <textarea
-                      className="min-h-24 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-                      id={`edit-note-${item.id}`}
-                      value={editDraft}
-                      disabled={mutationBusy}
-                      onChange={(event) => setEditDraft(event.target.value)}
-                      onKeyDown={(event) =>
-                        onEditSaveShortcut(event, () =>
-                          void saveNoteEdit(item.id),
-                        )
-                      }
-                    />
-                    {editError ? (
-                      <p className="text-sm text-red-700" role="alert">
-                        {editError}
-                      </p>
-                    ) : null}
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
-                        type="button"
-                        disabled={mutationBusy}
-                        onClick={() => void saveNoteEdit(item.id)}
-                      >
-                        {pendingMutation?.op === "save-note" &&
-                        pendingMutation.id === item.id
-                          ? "Saving…"
-                          : "Save note"}
-                      </button>
-                      <button
-                        className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-                        type="button"
-                        disabled={mutationBusy}
-                        onClick={() => clearEdit()}
-                      >
-                        Cancel edit
-                      </button>
-                    </div>
-                  </div>
-                ) : item.type === "link" && editingId === item.id ? (
-                  <div className="mt-2 flex flex-col gap-2">
-                    <label
-                      className="text-sm font-medium"
-                      htmlFor={`edit-link-url-${item.id}`}
-                    >
-                      URL
-                    </label>
-                    <input
-                      className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-                      id={`edit-link-url-${item.id}`}
-                      value={editDraft}
-                      disabled={mutationBusy}
-                      onChange={(event) => setEditDraft(event.target.value)}
-                      onKeyDown={(event) =>
-                        onEditSaveShortcut(event, () =>
-                          void saveLinkEdit(item.id),
-                        )
-                      }
-                    />
-                    <label
-                      className="text-sm font-medium"
-                      htmlFor={`edit-link-title-${item.id}`}
-                    >
-                      Title
-                    </label>
-                    <input
-                      className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-                      id={`edit-link-title-${item.id}`}
-                      value={editTitleDraft}
-                      disabled={mutationBusy}
-                      onChange={(event) => setEditTitleDraft(event.target.value)}
-                      onKeyDown={(event) =>
-                        onEditSaveShortcut(event, () =>
-                          void saveLinkEdit(item.id),
-                        )
-                      }
-                    />
-                    {editError ? (
-                      <p className="text-sm text-red-700" role="alert">
-                        {editError}
-                      </p>
-                    ) : null}
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
-                        type="button"
-                        disabled={mutationBusy}
-                        onClick={() => void saveLinkEdit(item.id)}
-                      >
-                        {pendingMutation?.op === "save-link" &&
-                        pendingMutation.id === item.id
-                          ? "Saving…"
-                          : "Save link"}
-                      </button>
-                      <button
-                        className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-                        type="button"
-                        disabled={mutationBusy}
-                        onClick={() => clearEdit()}
-                      >
-                        Cancel edit
-                      </button>
-                    </div>
-                  </div>
-                ) : item.type === "note" ? (
-                  <p className="mt-2 whitespace-pre-wrap text-zinc-800">
-                    {item.content}
-                  </p>
-                ) : (
-                  <p className="mt-2">
-                    <a
-                      className="break-all text-zinc-800 underline"
-                      href={item.url}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      {item.url}
-                    </a>
-                  </p>
-                )}
-                {pendingDeleteId === item.id ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <p className="text-sm text-zinc-700">Delete this item?</p>
-                    <button
-                      className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
-                      type="button"
-                      disabled={mutationBusy}
-                      onClick={() => void confirmDelete(item.id)}
-                    >
-                      {pendingMutation?.op === "delete" &&
-                      pendingMutation.id === item.id
-                        ? "Deleting…"
-                        : "Confirm delete"}
-                    </button>
-                    <button
-                      className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-                      type="button"
-                      disabled={mutationBusy}
-                      onClick={() => setPendingDeleteId(null)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : editingId === item.id ? null : (
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    <button
-                      className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-                      type="button"
-                      disabled={mutationBusy}
-                      onClick={() => {
-                        setPendingDeleteId(null);
-                        setDeleteError(null);
-                        setEditError(null);
-                        setEditingId(item.id);
-                        if (item.type === "note") {
-                          setEditDraft(item.content);
-                          setEditTitleDraft("");
-                        } else {
-                          setEditDraft(item.url);
-                          setEditTitleDraft(item.title);
-                        }
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-                      type="button"
-                      disabled={mutationBusy}
-                      onClick={() => {
-                        clearEdit();
-                        setDeleteError(null);
-                        setPendingDeleteId(item.id);
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </li>
+                item={item}
+                editing={editingId === item.id}
+                pendingDelete={pendingDeleteId === item.id}
+                mutationBusy={mutationBusy}
+                pendingMutation={pendingMutation}
+                editDraft={editDraft}
+                editTitleDraft={editTitleDraft}
+                editError={editError}
+                setFirstEditField={(node) => {
+                  firstEditFieldRef.current = node;
+                }}
+                confirmDeleteRef={confirmDeleteRef}
+                onEditDraftChange={setEditDraft}
+                onEditTitleChange={setEditTitleDraft}
+                onEditSaveShortcut={onEditSaveShortcut}
+                onSaveNote={() => void saveNoteEdit(item.id)}
+                onSaveLink={() => void saveLinkEdit(item.id)}
+                onCancelEdit={() => clearEdit({ restoreFocus: true })}
+                onConfirmDelete={() => void confirmDelete(item.id)}
+                onCancelDelete={cancelDelete}
+                onStartEdit={() => {
+                  setPendingDeleteId(null);
+                  setDeleteError(null);
+                  setEditError(null);
+                  setEditingId(item.id);
+                  if (item.type === "note") {
+                    setEditDraft(item.content);
+                    setEditTitleDraft("");
+                  } else {
+                    setEditDraft(item.url);
+                    setEditTitleDraft(item.title);
+                  }
+                }}
+                onStartDelete={() => {
+                  clearEdit();
+                  setDeleteError(null);
+                  setPendingDeleteId(item.id);
+                }}
+              />
             ))}
           </ul>
         </>
