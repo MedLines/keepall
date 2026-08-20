@@ -5,6 +5,7 @@ export type LinkItem = {
   type: "link";
   title: string;
   url: string;
+  tagIds: string[];
   createdAt: number;
   updatedAt: number;
 };
@@ -38,6 +39,7 @@ export function buildLink(
     type: "link",
     title: (input.title ?? "").trim(),
     url,
+    tagIds: [],
     createdAt: now,
     updatedAt: now,
   };

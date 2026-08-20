@@ -1,17 +1,26 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { Item } from "@/domain/item";
+import type { Tag } from "@/domain/tag";
 
 export const KEEPALL_DB_NAME = "keepall";
 
 export type KeepallDB = Dexie & {
   items: EntityTable<Item, "id">;
+  tags: EntityTable<Tag, "id">;
 };
 
 function createKeepallDb(): KeepallDB {
   const db = new Dexie(KEEPALL_DB_NAME) as KeepallDB;
+
   db.version(1).stores({
     items: "id, type, createdAt",
   });
+
+  db.version(2).stores({
+    items: "id, type, createdAt",
+    tags: "id, name",
+  });
+
   return db;
 }
 

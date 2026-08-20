@@ -2,7 +2,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildLink, LinkValidationError } from "@/domain/link";
 import { buildNote, NoteValidationError } from "@/domain/note";
-import { deleteItem, listItems, updateLink, updateNote } from "@/persistence/items";
+import {
+  assignTagToItem,
+  deleteItem,
+  listItems,
+  updateLink,
+  updateNote,
+} from "@/persistence/items";
+import { createTag, listTags } from "@/persistence/tags";
 import { Library } from "./library";
 
 vi.mock("@/persistence/items", () => ({
@@ -10,6 +17,12 @@ vi.mock("@/persistence/items", () => ({
   deleteItem: vi.fn(),
   updateNote: vi.fn(),
   updateLink: vi.fn(),
+  assignTagToItem: vi.fn(),
+}));
+
+vi.mock("@/persistence/tags", () => ({
+  listTags: vi.fn(),
+  createTag: vi.fn(),
 }));
 
 const note = buildNote({ content: "A persisted note" }, { id: "n1", now: 1 });
@@ -24,6 +37,10 @@ describe("Library", () => {
     vi.mocked(deleteItem).mockReset();
     vi.mocked(updateNote).mockReset();
     vi.mocked(updateLink).mockReset();
+    vi.mocked(listTags).mockReset();
+    vi.mocked(listTags).mockResolvedValue([]);
+    vi.mocked(createTag).mockReset();
+    vi.mocked(assignTagToItem).mockReset();
   });
 
   test("does not show the empty copy when loading fails", async () => {
@@ -239,6 +256,10 @@ describe("Library pending mutations", () => {
     vi.mocked(deleteItem).mockReset();
     vi.mocked(updateNote).mockReset();
     vi.mocked(updateLink).mockReset();
+    vi.mocked(listTags).mockReset();
+    vi.mocked(listTags).mockResolvedValue([]);
+    vi.mocked(createTag).mockReset();
+    vi.mocked(assignTagToItem).mockReset();
   });
 
   test("does not start a second note save while one is pending", async () => {
@@ -321,6 +342,10 @@ describe("Library focus management", () => {
     vi.mocked(deleteItem).mockReset();
     vi.mocked(updateNote).mockReset();
     vi.mocked(updateLink).mockReset();
+    vi.mocked(listTags).mockReset();
+    vi.mocked(listTags).mockResolvedValue([]);
+    vi.mocked(createTag).mockReset();
+    vi.mocked(assignTagToItem).mockReset();
   });
 
   test("moves focus for edit, cancel, and delete confirmation", async () => {
@@ -353,5 +378,43 @@ describe("Library focus management", () => {
     expect(await screen.findByText("No items yet.")).toBeInTheDocument();
 
     expect(screen.getByRole("heading", { name: "Library" })).toHaveFocus();
+  });
+});
+
+describe("Library tags", () => {
+  beforeEach(() => {
+    vi.mocked(listItems).mockReset();
+    vi.mocked(deleteItem).mockReset();
+    vi.mocked(updateNote).mockReset();
+    vi.mocked(updateLink).mockReset();
+    vi.mocked(listTags).mockReset();
+    vi.mocked(listTags).mockResolvedValue([]);
+    vi.mocked(createTag).mockReset();
+    vi.mocked(assignTagToItem).mockReset();
+  });
+
+  test("adds a tag to an item and shows the name after reload", async () => {
+    const tagged = { ...note, tagIds: ["t1"], updatedAt: 2 };
+    const tag = { id: "t1", name: "inspiration", createdAt: 1 };
+    vi.mocked(listItems)
+      .mockResolvedValueOnce([note])
+      .mockResolvedValue([tagged]);
+    vi.mocked(listTags)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([tag]);
+    vi.mocked(createTag).mockResolvedValue(tag);
+    vi.mocked(assignTagToItem).mockResolvedValue(tagged);
+    render(<Library />);
+
+    fireEvent.change(await screen.findByLabelText("Add tag"), {
+      target: { value: "inspiration" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
+
+    await waitFor(() => {
+      expect(createTag).toHaveBeenCalledWith({ name: "inspiration" });
+      expect(assignTagToItem).toHaveBeenCalledWith("n1", "t1");
+    });
+    expect(await screen.findByText("inspiration")).toBeInTheDocument();
   });
 });

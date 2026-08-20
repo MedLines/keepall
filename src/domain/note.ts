@@ -3,6 +3,7 @@ export type NoteItem = {
   type: "note";
   title: string;
   content: string;
+  tagIds: string[];
   createdAt: number;
   updatedAt: number;
 };
@@ -36,6 +37,7 @@ export function buildNote(
     type: "note",
     title: (input.title ?? "").trim(),
     content,
+    tagIds: [],
     createdAt: now,
     updatedAt: now,
   };

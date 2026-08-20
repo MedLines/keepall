@@ -13,6 +13,7 @@ describe("buildLink", () => {
       type: "link",
       title: "",
       url: "https://example.com/x",
+      tagIds: [],
       createdAt: 1000,
       updatedAt: 1000,
     });

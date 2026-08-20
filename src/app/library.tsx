@@ -7,27 +7,26 @@ import {
   useRef,
   useState,
 } from "react";
-import { type Item } from "@/domain/item";
+import { resolveItemTagNames, type Item } from "@/domain/item";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
+import { TagValidationError, type Tag } from "@/domain/tag";
 import {
+  assignTagToItem,
   deleteItem,
   listItems,
   updateLink,
   updateNote,
 } from "@/persistence/items";
+import { createTag, listTags } from "@/persistence/tags";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
-import { LibraryItem } from "./library-item";
-
-type PendingMutation =
-  | { op: "save-note"; id: string }
-  | { op: "save-link"; id: string }
-  | { op: "delete"; id: string };
+import { LibraryItem, type PendingMutation } from "./library-item";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
 
 export function Library() {
   const [items, setItems] = useState<Item[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -38,6 +37,8 @@ export function Library() {
   const [editDraft, setEditDraft] = useState("");
   const [editTitleDraft, setEditTitleDraft] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
+  const [tagErrorItemId, setTagErrorItemId] = useState<string | null>(null);
+  const [tagError, setTagError] = useState<string | null>(null);
   const [pendingMutation, setPendingMutation] = useState<PendingMutation | null>(
     null,
   );
@@ -57,9 +58,13 @@ export function Library() {
       setError(null);
 
       try {
-        const next = await listItems();
+        const [nextItems, nextTags] = await Promise.all([
+          listItems(),
+          listTags(),
+        ]);
         if (!cancelled) {
-          setItems(next);
+          setItems(nextItems);
+          setTags(nextTags);
           setLoadState("ready");
           setError(null);
         }
@@ -104,6 +109,7 @@ export function Library() {
   }, [editingId, pendingDeleteId, items]);
 
   const mutationBusy = pendingMutation !== null;
+  const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
 
   function clearEdit(options?: { restoreFocus?: boolean }) {
     if (options?.restoreFocus && editingId) {
@@ -201,6 +207,31 @@ export function Library() {
     }
   }
 
+  async function addTagToItem(itemId: string, name: string) {
+    if (pendingMutation) {
+      return;
+    }
+
+    setPendingMutation({ op: "assign-tag", id: itemId });
+    setTagErrorItemId(null);
+    setTagError(null);
+
+    try {
+      const tag = await createTag({ name });
+      await assignTagToItem(itemId, tag.id);
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch (caught) {
+      setTagErrorItemId(itemId);
+      if (caught instanceof TagValidationError) {
+        setTagError(caught.message);
+      } else {
+        setTagError("Couldn't add tag.");
+      }
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
   return (
     <section className="mt-8" aria-labelledby="library-heading">
       <h2
@@ -231,6 +262,8 @@ export function Library() {
               <LibraryItem
                 key={item.id}
                 item={item}
+                tagNames={resolveItemTagNames(item, tagsById)}
+                tagError={tagErrorItemId === item.id ? tagError : null}
                 editing={editingId === item.id}
                 pendingDelete={pendingDeleteId === item.id}
                 mutationBusy={mutationBusy}
@@ -250,10 +283,13 @@ export function Library() {
                 onCancelEdit={() => clearEdit({ restoreFocus: true })}
                 onConfirmDelete={() => void confirmDelete(item.id)}
                 onCancelDelete={cancelDelete}
+                onAddTag={(name: string) => void addTagToItem(item.id, name)}
                 onStartEdit={() => {
                   setPendingDeleteId(null);
                   setDeleteError(null);
                   setEditError(null);
+                  setTagError(null);
+                  setTagErrorItemId(null);
                   setEditingId(item.id);
                   if (item.type === "note") {
                     setEditDraft(item.content);
@@ -266,6 +302,8 @@ export function Library() {
                 onStartDelete={() => {
                   clearEdit();
                   setDeleteError(null);
+                  setTagError(null);
+                  setTagErrorItemId(null);
                   setPendingDeleteId(item.id);
                 }}
               />

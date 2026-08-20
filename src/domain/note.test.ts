@@ -13,6 +13,7 @@ describe("buildNote", () => {
       type: "note",
       title: "",
       content: "hello world",
+      tagIds: [],
       createdAt: 1000,
       updatedAt: 1000,
     });
