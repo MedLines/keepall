@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { BackupPanel } from "./backup-panel";
 import { Library } from "./library";
 
 export default function HomePage() {
@@ -13,6 +14,7 @@ export default function HomePage() {
       >
         <Library />
       </Suspense>
+      <BackupPanel />
     </main>
   );
 }
