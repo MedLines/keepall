@@ -12,6 +12,7 @@ import {
 } from "@/persistence/items";
 import { createCollection, listCollections } from "@/persistence/collections";
 import { createTag, listTags } from "@/persistence/tags";
+import { mockNavigation } from "../../vitest.setup";
 import { Library } from "./library";
 
 vi.mock("@/persistence/items", () => ({
@@ -474,10 +475,14 @@ describe("Library collections", () => {
     render(<Library />);
 
     await screen.findByText("A persisted note");
-    fireEvent.change(screen.getAllByLabelText("Add to collection")[0]!, {
+    fireEvent.change(document.getElementById("add-collection-n1")!, {
       target: { value: "Reading" },
     });
-    fireEvent.click(screen.getAllByRole("button", { name: "Add to collection" })[0]!);
+    fireEvent.click(
+      document.querySelector("#add-collection-n1")!
+        .closest("form")!
+        .querySelector('button[type="submit"]')!,
+    );
 
     await waitFor(() => {
       expect(createCollection).toHaveBeenCalledWith({ name: "Reading" });
@@ -547,5 +552,62 @@ describe("Library search", () => {
     expect(
       screen.queryByText("A persisted note about Design"),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("Library view state", () => {
+  beforeEach(() => {
+    vi.mocked(listItems).mockReset();
+    vi.mocked(deleteItem).mockReset();
+    vi.mocked(updateNote).mockReset();
+    vi.mocked(updateLink).mockReset();
+    vi.mocked(listTags).mockReset();
+    vi.mocked(listTags).mockResolvedValue([]);
+    vi.mocked(createTag).mockReset();
+    vi.mocked(assignTagToItem).mockReset();
+    vi.mocked(listCollections).mockReset();
+    vi.mocked(listCollections).mockResolvedValue([]);
+    vi.mocked(createCollection).mockReset();
+    vi.mocked(assignCollectionToItem).mockReset();
+  });
+
+  test("writes search and sort into the URL", async () => {
+    vi.mocked(listItems).mockResolvedValue([note]);
+    render(<Library />);
+
+    await screen.findByText("A persisted note");
+    fireEvent.change(screen.getByLabelText("Search"), {
+      target: { value: "persisted" },
+    });
+
+    expect(mockNavigation.replace).toHaveBeenCalledWith("/?q=persisted", {
+      scroll: false,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Oldest" }));
+
+    expect(mockNavigation.replace).toHaveBeenCalledWith(
+      "/?q=persisted&sort=oldest",
+      { scroll: false },
+    );
+  });
+
+  test("sorts visible items oldest first", async () => {
+    const older = buildNote({ content: "older note" }, { id: "n1", now: 1 });
+    const newer = buildNote({ content: "newer note" }, { id: "n2", now: 2 });
+    vi.mocked(listItems).mockResolvedValue([newer, older]);
+    render(<Library />);
+
+    await screen.findByText("newer note");
+    fireEvent.click(screen.getByRole("button", { name: "Oldest" }));
+
+    const texts = screen
+      .getAllByRole("listitem")
+      .map((item) => item.textContent ?? "");
+    const olderIndex = texts.findIndex((text) => text.includes("older note"));
+    const newerIndex = texts.findIndex((text) => text.includes("newer note"));
+    expect(olderIndex).toBeGreaterThanOrEqual(0);
+    expect(newerIndex).toBeGreaterThanOrEqual(0);
+    expect(olderIndex).toBeLessThan(newerIndex);
   });
 });

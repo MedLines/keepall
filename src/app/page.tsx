@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Library } from "./library";
 
 export default function HomePage() {
@@ -7,7 +8,11 @@ export default function HomePage() {
       <p className="mt-2 text-sm text-zinc-600">
         Press Alt+K or ⌥K to save a link or note.
       </p>
-      <Library />
+      <Suspense
+        fallback={<p className="mt-8 text-sm text-zinc-600">Loading…</p>}
+      >
+        <Library />
+      </Suspense>
     </main>
   );
 }

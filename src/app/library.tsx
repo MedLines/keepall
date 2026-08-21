@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CollectionValidationError,
   type Collection,
@@ -17,6 +18,13 @@ import {
   resolveItemTagNames,
   type Item,
 } from "@/domain/item";
+import {
+  libraryViewHref,
+  mergeLibraryViewState,
+  parseLibraryViewState,
+  sortLibraryItems,
+  type LibraryViewState,
+} from "@/domain/library-view";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
 import { matchesSearchQuery, normalizeSearchQuery } from "@/domain/search";
@@ -40,13 +48,14 @@ import { LibraryItem, type PendingMutation } from "./library-item";
 type RestoreFocus = { id: string; action: "edit" | "delete" };
 
 export function Library() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const view = parseLibraryViewState(searchParams);
+
   const [items, setItems] = useState<Item[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [browseCollectionId, setBrowseCollectionId] = useState<string | null>(
-    null,
-  );
-  const [searchQuery, setSearchQuery] = useState("");
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -139,17 +148,28 @@ export function Library() {
   const collectionsById = new Map(
     collections.map((collection) => [collection.id, collection]),
   );
-  const visibleItems = items.filter((item) => {
-    if (
-      browseCollectionId !== null &&
-      !itemInCollection(item, browseCollectionId)
-    ) {
-      return false;
-    }
+  const browseCollectionId = view.collection;
+  const searchQuery = view.q;
+  const visibleItems = sortLibraryItems(
+    items.filter((item) => {
+      if (
+        browseCollectionId !== null &&
+        !itemInCollection(item, browseCollectionId)
+      ) {
+        return false;
+      }
 
-    return matchesSearchQuery(item, searchQuery);
-  });
+      return matchesSearchQuery(item, searchQuery);
+    }),
+    view.sort,
+  );
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
+
+  function updateView(patch: Partial<LibraryViewState>) {
+    const next = mergeLibraryViewState(view, patch);
+    router.replace(libraryViewHref(pathname, next), { scroll: false });
+  }
+
   function clearEdit(options?: { restoreFocus?: boolean }) {
     if (options?.restoreFocus && editingId) {
       restoreFocusRef.current = { id: editingId, action: "edit" };
@@ -325,9 +345,37 @@ export function Library() {
               id="library-search"
               type="search"
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event) => updateView({ q: event.target.value })}
               placeholder="Search titles, notes, and URLs"
             />
+          </div>
+          <div
+            className="mt-3 flex flex-wrap gap-2"
+            role="group"
+            aria-label="Sort library"
+          >
+            <button
+              className={`rounded-md border px-3 py-1 text-sm font-medium ${
+                view.sort === "newest"
+                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  : "border-zinc-300 bg-white text-zinc-800"
+              }`}
+              type="button"
+              onClick={() => updateView({ sort: "newest" })}
+            >
+              Newest
+            </button>
+            <button
+              className={`rounded-md border px-3 py-1 text-sm font-medium ${
+                view.sort === "oldest"
+                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  : "border-zinc-300 bg-white text-zinc-800"
+              }`}
+              type="button"
+              onClick={() => updateView({ sort: "oldest" })}
+            >
+              Oldest
+            </button>
           </div>
           {collections.length > 0 ? (
             <div
@@ -342,7 +390,7 @@ export function Library() {
                     : "border-zinc-300 bg-white text-zinc-800"
                 }`}
                 type="button"
-                onClick={() => setBrowseCollectionId(null)}
+                onClick={() => updateView({ collection: null })}
               >
                 All
               </button>
@@ -355,7 +403,7 @@ export function Library() {
                       : "border-zinc-300 bg-white text-zinc-800"
                   }`}
                   type="button"
-                  onClick={() => setBrowseCollectionId(collection.id)}
+                  onClick={() => updateView({ collection: collection.id })}
                 >
                   {collection.name}
                 </button>
