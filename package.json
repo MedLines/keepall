@@ -3,19 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --turbopack",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "pnpm build && playwright test"
+    "test:e2e": "pnpm build && playwright test",
+    "test:pwa-update": "playwright test e2e/pwa-update.spec.ts --config playwright.pwa-update.config.ts && pnpm build"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
+    "@serwist/next": "^9.5.12",
     "dexie": "^4.4.5",
     "next": "16.3.1",
     "react": "19.2.8",
@@ -35,6 +37,7 @@
     "eslint-config-next": "16.3.1",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^30.0.1",
+    "serwist": "^9.5.12",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
