@@ -24,6 +24,7 @@ describe("PwaProvider", () => {
   });
 
   beforeEach(() => {
+    vi.resetModules();
     vi.stubEnv("NODE_ENV", "production");
     register.mockClear();
     requestPersistentStorage.mockClear();
@@ -33,6 +34,7 @@ describe("PwaProvider", () => {
       onLine: true,
       serviceWorker: {
         register,
+        getRegistrations: vi.fn().mockResolvedValue([]),
         controller: null,
         addEventListener: vi.fn(),
       },
@@ -132,5 +134,40 @@ describe("PwaProvider", () => {
       expect(register).not.toHaveBeenCalled();
       expect(requestPersistentStorage).not.toHaveBeenCalled();
     });
+  });
+
+  test("unregisters leftover service workers in development", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const unregister = vi.fn().mockResolvedValue(true);
+    const getRegistrations = vi.fn().mockResolvedValue([{ unregister }]);
+    vi.stubGlobal("navigator", {
+      onLine: true,
+      serviceWorker: {
+        register,
+        getRegistrations,
+        controller: null,
+        addEventListener: vi.fn(),
+      },
+    });
+    getClientOriginDeploymentPolicy.mockReturnValue({
+      canonicalOrigin: "https://keepall.app",
+      registerServiceWorker: true,
+      requestPersistentStorage: true,
+      showNonCanonicalWarning: false,
+      showMissingConfigurationWarning: false,
+    });
+
+    const { PwaProvider } = await import("./pwa-provider");
+    render(
+      <PwaProvider>
+        <p>Library</p>
+      </PwaProvider>,
+    );
+
+    await waitFor(() => {
+      expect(getRegistrations).toHaveBeenCalled();
+      expect(unregister).toHaveBeenCalled();
+    });
+    expect(register).not.toHaveBeenCalled();
   });
 });

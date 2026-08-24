@@ -31,11 +31,22 @@ export function PwaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (
-      !policy?.registerServiceWorker ||
-      serwistDisabled ||
-      !("serviceWorker" in navigator)
-    ) {
+    if (!("serviceWorker" in navigator)) {
+      return;
+    }
+
+    // Dev never registers Serwist, but a leftover production SW can serve
+    // stale Turbopack chunks ("module factory is not available").
+    if (serwistDisabled) {
+      void navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          void registration.unregister();
+        }
+      });
+      return;
+    }
+
+    if (!policy?.registerServiceWorker) {
       return;
     }
 
