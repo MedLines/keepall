@@ -1,39 +1,81 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
-import { useOffline } from "next/offline";
+import { useEffect, useState } from "react";
+import { probeNetworkReachable } from "@/pwa/connectivity";
+
+const CONNECTIVITY_POLL_MS = 8_000;
 
 export function OfflineBanner() {
-  const hookOffline = useOffline();
   const [mounted, setMounted] = useState(false);
-  const [connectivityRevision, setConnectivityRevision] = useState(0);
+  const [browserOffline, setBrowserOffline] = useState(false);
+  const [unreachable, setUnreachable] = useState(false);
 
-  useLayoutEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- gate client-only navigator.onLine reads
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only mount + connectivity
     setMounted(true);
 
-    const syncConnectivity = () => {
-      setConnectivityRevision((revision) => revision + 1);
+    let cancelled = false;
+
+    const readBrowserOffline = () => {
+      setBrowserOffline(!navigator.onLine);
     };
 
-    syncConnectivity();
-    window.addEventListener("offline", syncConnectivity);
-    window.addEventListener("online", syncConnectivity);
+    const runProbe = async () => {
+      // Fast path when the browser already admits offline.
+      if (!navigator.onLine) {
+        if (!cancelled) {
+          setUnreachable(true);
+        }
+        return;
+      }
+
+      const reachable = await probeNetworkReachable();
+      if (!cancelled) {
+        setUnreachable(!reachable);
+      }
+    };
+
+    readBrowserOffline();
+    void runProbe();
+
+    const onOffline = () => {
+      readBrowserOffline();
+      setUnreachable(true);
+    };
+    const onOnline = () => {
+      readBrowserOffline();
+      void runProbe();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void runProbe();
+      }
+    };
+
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    const intervalId = window.setInterval(() => {
+      if (!cancelled && document.visibilityState === "visible") {
+        void runProbe();
+      }
+    }, CONNECTIVITY_POLL_MS);
+
     return () => {
-      window.removeEventListener("offline", syncConnectivity);
-      window.removeEventListener("online", syncConnectivity);
+      cancelled = true;
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.clearInterval(intervalId);
     };
   }, []);
-
-  void connectivityRevision;
 
   if (!mounted) {
     return null;
   }
 
-  const isOffline = !navigator.onLine || hookOffline;
-
-  if (!isOffline) {
+  if (!browserOffline && !unreachable) {
     return null;
   }
 

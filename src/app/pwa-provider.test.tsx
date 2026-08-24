@@ -13,8 +13,8 @@ vi.mock("@/pwa/persistent-storage", () => ({
   persistentStorageMessage: (status: string) => status,
 }));
 
-vi.mock("next/offline", () => ({
-  useOffline: () => false,
+vi.mock("@/pwa/connectivity", () => ({
+  probeNetworkReachable: vi.fn().mockResolvedValue(true),
 }));
 
 describe("PwaProvider", () => {

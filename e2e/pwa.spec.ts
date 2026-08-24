@@ -95,11 +95,8 @@ test.describe("PWA / offline shell", () => {
     await context.setOffline(true);
     await page.reload({ waitUntil: "domcontentloaded" });
 
-    // Playwright can keep navigator.onLine true on SW-cached reloads; re-applying
-    // offline fires the browser offline event on the new document.
-    await context.setOffline(false);
-    await context.setOffline(true);
-
+    // Banner must appear from a failed connectivity probe even if navigator.onLine
+    // stays true after a service-worker-cached reload.
     await expect(page.getByTestId("offline-banner")).toBeVisible({
       timeout: 10_000,
     });
