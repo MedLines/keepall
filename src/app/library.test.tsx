@@ -248,8 +248,21 @@ describe("Library", () => {
       });
     });
     expect(
-      await screen.findByRole("link", { name: "https://example.com/new" }),
-    ).toBeInTheDocument();
+      await screen.findByRole("link", { name: "example.com" }),
+    ).toHaveAttribute("href", "https://example.com/new");
+  });
+  test("shows card initial, type chip, and secondary line", async () => {
+    vi.mocked(listItems).mockResolvedValue([note, link]);
+    render(<Library />);
+
+    expect(await screen.findByText("Note")).toBeInTheDocument();
+    expect(screen.getByText("Link")).toBeInTheDocument();
+    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "example.com" })).toHaveAttribute(
+      "href",
+      "https://example.com/old",
+    );
+    expect(screen.getAllByText("example.com").length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -545,7 +558,7 @@ describe("Library search", () => {
       target: { value: "example.com" },
     });
 
-    expect(screen.getByRole("link")).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "API Docs" })).toHaveAttribute(
       "href",
       "https://example.com/guide",
     );

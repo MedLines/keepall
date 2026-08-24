@@ -31,14 +31,14 @@ test("saving a link with Alt+K survives a reload", async ({ page }) => {
     page.getByRole("heading", { name: "example.com" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "https://example.com/path" }),
-  ).toBeVisible();
+    page.getByRole("link", { name: "example.com" }),
+  ).toHaveAttribute("href", "https://example.com/path");
 
   await page.reload();
 
   await expect(
-    page.getByRole("link", { name: "https://example.com/path" }),
-  ).toBeVisible();
+    page.getByRole("link", { name: "example.com" }),
+  ).toHaveAttribute("href", "https://example.com/path");
 });
 
 test("Cancel closes the capture dialog", async ({ page }) => {
@@ -107,25 +107,25 @@ test("editing a link URL survives a reload", async ({ page }) => {
   await page.getByLabel("Link or note").fill("https://example.com/old");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(
-    page.getByRole("link", { name: "https://example.com/old" }),
-  ).toBeVisible();
+    page.getByRole("link", { name: "example.com" }),
+  ).toHaveAttribute("href", "https://example.com/old");
 
   await page.getByRole("button", { name: "Edit" }).click();
   await page.getByLabel("URL").fill("https://example.com/new");
   await page.getByRole("button", { name: "Save link" }).click();
 
   await expect(
-    page.getByRole("link", { name: "https://example.com/new" }),
-  ).toBeVisible();
+    page.getByRole("link", { name: "example.com" }),
+  ).toHaveAttribute("href", "https://example.com/new");
 
   await page.reload();
 
   await expect(
-    page.getByRole("link", { name: "https://example.com/new" }),
-  ).toBeVisible();
+    page.getByRole("link", { name: "example.com" }),
+  ).toHaveAttribute("href", "https://example.com/new");
   await expect(
-    page.getByRole("link", { name: "https://example.com/old" }),
-  ).toBeHidden();
+    page.locator('a[href="https://example.com/old"]'),
+  ).toHaveCount(0);
 });
 
 test("Ctrl+Enter saves a note from the textarea", async ({ page }) => {

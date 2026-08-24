@@ -424,7 +424,7 @@ export function Library() {
                   : "No items yet."}
             </p>
           ) : (
-            <ul className="mt-3 flex flex-col gap-4">
+            <ul className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
               {visibleItems.map((item) => (
                 <LibraryItem
                   key={item.id}

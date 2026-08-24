@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, type KeyboardEvent, type Ref, useState } from "react";
+import { cardInitial, cardSecondaryLine } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
 
 export type PendingMutation =
@@ -95,9 +96,40 @@ export function LibraryItem({
     setCollectionDraft("");
   }
 
+  const title = itemListTitle(item);
+
   return (
-    <li className="rounded-md border border-zinc-200 bg-white p-4">
-      <h3 className="font-medium">{itemListTitle(item)}</h3>
+    <li className="flex flex-col rounded-md border border-zinc-200 bg-white p-4">
+      <div
+        aria-hidden="true"
+        className="mb-3 flex aspect-[16/10] items-center justify-center rounded-md bg-zinc-200 text-4xl font-semibold text-zinc-700"
+      >
+        {cardInitial(item)}
+      </div>
+      <h3 className="font-medium">
+        {item.type === "link" && !editing ? (
+          <a
+            className="break-words text-zinc-900 underline-offset-2 hover:underline"
+            href={item.url}
+            rel="noreferrer"
+            target="_blank"
+          >
+            {title}
+          </a>
+        ) : (
+          title
+        )}
+      </h3>
+      <p className="mt-1">
+        <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
+          {item.type === "link" ? "Link" : "Note"}
+        </span>
+      </p>
+      {!editing ? (
+        <p className="mt-1 line-clamp-2 text-sm text-zinc-600">
+          {cardSecondaryLine(item)}
+        </p>
+      ) : null}
       {item.type === "note" && editing ? (
         <div className="mt-2 flex flex-col gap-2">
           <label
@@ -200,20 +232,7 @@ export function LibraryItem({
             </button>
           </div>
         </div>
-      ) : item.type === "note" ? (
-        <p className="mt-2 whitespace-pre-wrap text-zinc-800">{item.content}</p>
-      ) : (
-        <p className="mt-2">
-          <a
-            className="break-all text-zinc-800 underline"
-            href={item.url}
-            rel="noreferrer"
-            target="_blank"
-          >
-            {item.url}
-          </a>
-        </p>
-      )}
+      ) : null}
       {!editing && !pendingDelete ? (
         <div className="mt-3">
           {tagNames.length > 0 ? (
