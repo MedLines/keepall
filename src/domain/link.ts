@@ -11,6 +11,8 @@ export type LinkItem = {
   previewTitle: string;
   previewDescription: string;
   previewImageUrl: string;
+  /** Local asset id for offline preview bytes; null if none. */
+  previewAssetId: string | null;
   tagIds: string[];
   collectionIds: string[];
   createdAt: number;
@@ -27,6 +29,7 @@ export type LinkPreviewFields = {
   previewTitle: string;
   previewDescription: string;
   previewImageUrl: string;
+  previewAssetId: string | null;
 };
 
 export const EMPTY_LINK_PREVIEW: LinkPreviewFields = {
@@ -34,6 +37,7 @@ export const EMPTY_LINK_PREVIEW: LinkPreviewFields = {
   previewTitle: "",
   previewDescription: "",
   previewImageUrl: "",
+  previewAssetId: null,
 };
 
 export class LinkValidationError extends Error {
@@ -55,6 +59,7 @@ export function coerceLinkPreviewFields(
   raw: Partial<LinkPreviewFields> | null | undefined,
 ): LinkPreviewFields {
   const status = raw?.previewStatus;
+  const assetId = raw?.previewAssetId;
   return {
     previewStatus:
       typeof status === "string" && PREVIEW_STATUSES.has(status)
@@ -65,6 +70,7 @@ export function coerceLinkPreviewFields(
       typeof raw?.previewDescription === "string" ? raw.previewDescription : "",
     previewImageUrl:
       typeof raw?.previewImageUrl === "string" ? raw.previewImageUrl : "",
+    previewAssetId: typeof assetId === "string" && assetId ? assetId : null,
   };
 }
 
@@ -136,6 +142,20 @@ export function applyLinkPreviewResult(
     previewTitle: result.title.trim(),
     previewDescription: result.description.trim(),
     previewImageUrl: result.imageUrl.trim(),
+    // New metadata may point at a different image; clear until bytes are stored.
+    previewAssetId: null,
+    updatedAt: options?.now ?? Date.now(),
+  };
+}
+
+export function applyLinkPreviewAssetId(
+  link: LinkItem,
+  previewAssetId: string | null,
+  options?: { now?: number },
+): LinkItem {
+  return {
+    ...link,
+    previewAssetId,
     updatedAt: options?.now ?? Date.now(),
   };
 }

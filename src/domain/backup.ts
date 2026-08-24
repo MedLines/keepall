@@ -9,6 +9,15 @@ import type { Tag } from "./tag";
 export const KEEPALL_BACKUP_FORMAT = "keepall";
 export const KEEPALL_BACKUP_VERSION = 1;
 
+/** Asset row serialized for JSON backup (bytes as base64). */
+export type BackupAssetRecord = {
+  id: string;
+  mimeType: string;
+  byteLength: number;
+  dataBase64: string;
+  createdAt: number;
+};
+
 export type KeepallBackup = {
   format: typeof KEEPALL_BACKUP_FORMAT;
   version: number;
@@ -16,6 +25,7 @@ export type KeepallBackup = {
   items: Item[];
   tags: Tag[];
   collections: Collection[];
+  assets: BackupAssetRecord[];
 };
 
 export class BackupValidationError extends Error {
@@ -29,6 +39,7 @@ export function buildKeepallBackup(input: {
   items: Item[];
   tags: Tag[];
   collections: Collection[];
+  assets?: BackupAssetRecord[];
   exportedAt?: number;
 }): KeepallBackup {
   return {
@@ -38,6 +49,7 @@ export function buildKeepallBackup(input: {
     items: input.items,
     tags: input.tags,
     collections: input.collections,
+    assets: input.assets ?? [],
   };
 }
 
@@ -77,9 +89,17 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
     throw new BackupValidationError("Backup collections must be an array");
   }
 
+  const rawAssets = candidate.assets;
+  if (rawAssets !== undefined && !Array.isArray(rawAssets)) {
+    throw new BackupValidationError("Backup assets must be an array when present");
+  }
+
   const tags = candidate.tags.map((tag, index) => parseTag(tag, index));
   const collections = candidate.collections.map((collection, index) =>
     parseCollection(collection, index),
+  );
+  const assets = (rawAssets ?? []).map((asset, index) =>
+    parseAsset(asset, index),
   );
   assertUniqueIds(
     tags.map((tag) => tag.id),
@@ -89,11 +109,16 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
     collections.map((collection) => collection.id),
     "collection",
   );
+  assertUniqueIds(
+    assets.map((asset) => asset.id),
+    "asset",
+  );
 
   const tagIds = new Set(tags.map((tag) => tag.id));
   const collectionIds = new Set(collections.map((collection) => collection.id));
+  const assetIds = new Set(assets.map((asset) => asset.id));
   const items = candidate.items.map((item, index) =>
-    parseItem(item, index, tagIds, collectionIds),
+    parseItem(item, index, tagIds, collectionIds, assetIds),
   );
   assertUniqueIds(
     items.map((item) => item.id),
@@ -107,6 +132,7 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
     items,
     tags,
     collections,
+    assets,
   };
 }
 
@@ -214,11 +240,65 @@ function parseStringIdArray(
   });
 }
 
+function parseAsset(raw: unknown, index: number): BackupAssetRecord {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new BackupValidationError(`Asset at index ${index} must be an object`);
+  }
+
+  const asset = raw as Record<string, unknown>;
+
+  if (typeof asset.id !== "string" || !asset.id) {
+    throw new BackupValidationError(
+      `Asset at index ${index} needs a non-empty id`,
+    );
+  }
+
+  if (typeof asset.mimeType !== "string" || !asset.mimeType.trim()) {
+    throw new BackupValidationError(
+      `Asset at index ${index} needs a non-empty mimeType`,
+    );
+  }
+
+  if (
+    typeof asset.byteLength !== "number" ||
+    !Number.isFinite(asset.byteLength) ||
+    asset.byteLength < 0
+  ) {
+    throw new BackupValidationError(
+      `Asset at index ${index} needs a non-negative byteLength`,
+    );
+  }
+
+  if (typeof asset.dataBase64 !== "string" || !asset.dataBase64) {
+    throw new BackupValidationError(
+      `Asset at index ${index} needs dataBase64`,
+    );
+  }
+
+  if (
+    typeof asset.createdAt !== "number" ||
+    !Number.isFinite(asset.createdAt)
+  ) {
+    throw new BackupValidationError(
+      `Asset at index ${index} needs a numeric createdAt`,
+    );
+  }
+
+  return {
+    id: asset.id,
+    mimeType: asset.mimeType.trim(),
+    byteLength: asset.byteLength,
+    dataBase64: asset.dataBase64,
+    createdAt: asset.createdAt,
+  };
+}
+
 function parseItem(
   raw: unknown,
   index: number,
   tagIds: Set<string>,
   collectionIds: Set<string>,
+  assetIds: Set<string>,
 ): Item {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
     throw new BackupValidationError(`Item at index ${index} must be an object`);
@@ -299,12 +379,19 @@ function parseItem(
       );
     }
 
+    const preview = coerceLinkPreviewFields(item as Partial<LinkItem>);
+    const previewAssetId =
+      preview.previewAssetId && assetIds.has(preview.previewAssetId)
+        ? preview.previewAssetId
+        : null;
+
     const link: LinkItem = {
       id: item.id,
       type: "link",
       title: item.title,
       url: item.url,
-      ...coerceLinkPreviewFields(item as Partial<LinkItem>),
+      ...preview,
+      previewAssetId,
       tagIds: itemTagIds,
       collectionIds: itemCollectionIds,
       createdAt: item.createdAt,

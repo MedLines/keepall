@@ -65,6 +65,7 @@ describe("applyLinkEdit", () => {
     expect(next.previewStatus).toBe("idle");
     expect(next.previewTitle).toBe("");
     expect(next.previewImageUrl).toBe("");
+    expect(next.previewAssetId).toBeNull();
   });
 
   test("rejects javascript URLs", () => {
@@ -106,7 +107,10 @@ describe("linkListTitle", () => {
 
 describe("link preview state helpers", () => {
   test("marks pending and applies ready or failed results", () => {
-    const link = buildLink({ url: "https://example.com" }, { id: "l1", now: 1 });
+    const link = {
+      ...buildLink({ url: "https://example.com" }, { id: "l1", now: 1 }),
+      previewAssetId: "asset-old",
+    };
     const pending = markLinkPreviewPending(link, { now: 2 });
     expect(pending.previewStatus).toBe("pending");
 
@@ -123,6 +127,7 @@ describe("link preview state helpers", () => {
     expect(ready.previewStatus).toBe("ready");
     expect(ready.previewTitle).toBe("Hello");
     expect(ready.previewImageUrl).toBe("https://cdn.example.com/i.png");
+    expect(ready.previewAssetId).toBeNull();
 
     const failed = applyLinkPreviewResult(pending, { status: "failed" }, { now: 4 });
     expect(failed.previewStatus).toBe("failed");

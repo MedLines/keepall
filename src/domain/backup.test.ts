@@ -26,6 +26,7 @@ describe("buildKeepallBackup", () => {
       items: [note],
       tags: [],
       collections: [],
+      assets: [],
     });
   });
 });

@@ -1,8 +1,15 @@
 "use client";
 
-import { type FormEvent, type KeyboardEvent, type Ref, useState } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  type Ref,
+  useEffect,
+  useState,
+} from "react";
 import { cardInitial, cardSecondaryLine } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
+import { useAssetObjectUrl } from "./use-asset-object-url";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
@@ -97,15 +104,30 @@ export function LibraryItem({
   }
 
   const title = itemListTitle(item);
-  const showPreviewImage =
+  const previewAssetId = item.type === "link" ? item.previewAssetId : null;
+  const localObjectUrl = useAssetObjectUrl(previewAssetId);
+  const [remoteBroken, setRemoteBroken] = useState(false);
+  const remotePreviewUrl =
+    item.type === "link" ? item.previewImageUrl : "";
+
+  useEffect(() => {
+    setRemoteBroken(false);
+  }, [item.id, remotePreviewUrl]);
+
+  const remoteUrl =
     item.type === "link" &&
     item.previewStatus === "ready" &&
-    Boolean(item.previewImageUrl);
+    remotePreviewUrl &&
+    !remoteBroken
+      ? remotePreviewUrl
+      : null;
+  const imageSrc = localObjectUrl ?? remoteUrl;
+  const showPreviewImage = Boolean(imageSrc);
 
   return (
     <li className="flex flex-col rounded-md border border-zinc-200 bg-white p-4">
       <div className="mb-3 overflow-hidden rounded-md bg-zinc-200">
-        {showPreviewImage ? (
+        {showPreviewImage && item.type === "link" ? (
           <a
             aria-label={title}
             className="block"
@@ -113,11 +135,16 @@ export function LibraryItem({
             rel="noreferrer"
             target="_blank"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- remote OG URLs; no local asset pipeline yet */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- local object URLs + remote OG */}
             <img
               alt=""
               className="aspect-[16/10] w-full object-cover"
-              src={item.previewImageUrl}
+              onError={() => {
+                if (!localObjectUrl) {
+                  setRemoteBroken(true);
+                }
+              }}
+              src={imageSrc!}
             />
           </a>
         ) : (

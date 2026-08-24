@@ -28,6 +28,35 @@ describe("backup persistence", () => {
     expect(backup.items).toEqual([note]);
     expect(backup.tags).toEqual([tag]);
     expect(backup.collections).toEqual([]);
+    expect(backup.assets).toEqual([]);
+  });
+
+  test("export → import round-trips preview assets", async () => {
+    const { createLink, setLinkPreviewAssetId, listItems } = await import(
+      "./items"
+    );
+    const { putAsset, getAsset } = await import("./assets");
+
+    const link = await createLink({ url: "https://example.com" });
+    const asset = await putAsset({
+      mimeType: "image/png",
+      bytes: new Uint8Array([4, 5, 6]),
+    });
+    await setLinkPreviewAssetId(link.id, asset.id);
+
+    const backup = await exportKeepallBackup(77);
+    expect(backup.assets).toHaveLength(1);
+
+    await importKeepallBackupReplace(backup);
+
+    const restored = (await listItems())[0];
+    expect(restored?.type).toBe("link");
+    if (restored?.type !== "link") {
+      throw new Error("expected link");
+    }
+    expect(restored.previewAssetId).toBe(asset.id);
+    const loaded = await getAsset(asset.id);
+    expect(loaded?.byteLength).toBe(3);
   });
 
   test("export → import round-trips items that lack collectionIds in IndexedDB", async () => {
@@ -78,6 +107,7 @@ describe("backup persistence", () => {
       items: [note],
       tags: [tag],
       collections: [],
+      assets: [],
     });
 
     expect(await listItems()).toEqual([note]);

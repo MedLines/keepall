@@ -1,12 +1,47 @@
 import {
   saveLinkPreviewResult,
+  setLinkPreviewAssetId,
   setLinkPreviewPending,
 } from "@/persistence/items";
+import { putAsset } from "@/persistence/assets";
 import { ITEMS_CHANGED_EVENT } from "@/app/items-events";
+
+async function storeLocalPreviewImage(
+  linkId: string,
+  imageUrl: string,
+): Promise<void> {
+  if (!imageUrl.trim()) {
+    return;
+  }
+
+  const response = await fetch("/api/preview-image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: imageUrl }),
+  });
+
+  // Oversize / blocked / upstream failure → keep remote URL only (modest skip).
+  if (!response.ok) {
+    return;
+  }
+
+  const mimeType =
+    response.headers.get("content-type")?.split(";")[0]?.trim() ||
+    "application/octet-stream";
+  const blob = await response.blob();
+  if (blob.size === 0) {
+    return;
+  }
+
+  const asset = await putAsset({ mimeType, bytes: new Uint8Array(await blob.arrayBuffer()) });
+  await setLinkPreviewAssetId(linkId, asset.id);
+  window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+}
 
 /**
  * After a link is saved locally, ask same-origin /api/preview and store the
- * result on the link row. Never throws to the caller — failures mark failed.
+ * result on the link row. When an image URL is present, best-effort fetch
+ * bytes via /api/preview-image into the assets table. Never throws to the caller.
  */
 export async function enrichLinkPreview(linkId: string, url: string): Promise<void> {
   try {
@@ -31,13 +66,21 @@ export async function enrichLinkPreview(linkId: string, url: string): Promise<vo
       imageUrl?: unknown;
     };
 
+    const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl : "";
+
     await saveLinkPreviewResult(linkId, {
       status: "ready",
       title: typeof body.title === "string" ? body.title : "",
       description: typeof body.description === "string" ? body.description : "",
-      imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : "",
+      imageUrl,
     });
     window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+
+    try {
+      await storeLocalPreviewImage(linkId, imageUrl);
+    } catch {
+      // Local bytes are best-effort; remote URL / letter placeholder remain.
+    }
   } catch {
     try {
       await saveLinkPreviewResult(linkId, { status: "failed" });

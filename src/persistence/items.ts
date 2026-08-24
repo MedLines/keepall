@@ -1,6 +1,7 @@
 import { normalizeItem, type Item } from "@/domain/item";
 import {
   applyLinkEdit,
+  applyLinkPreviewAssetId,
   applyLinkPreviewResult,
   buildLink,
   markLinkPreviewPending,
@@ -15,7 +16,16 @@ import {
 } from "@/domain/note";
 import { assignCollectionId } from "@/domain/collection";
 import { assignTagId } from "@/domain/tag";
+import { deleteAsset } from "./assets";
 import { getDb } from "./db";
+
+async function deleteLinkedPreviewAsset(
+  link: LinkItem,
+): Promise<void> {
+  if (link.previewAssetId) {
+    await deleteAsset(link.previewAssetId);
+  }
+}
 
 export async function createNote(input: CreateNoteInput): Promise<NoteItem> {
   const note = buildNote(input);
@@ -35,6 +45,10 @@ export async function listItems(): Promise<Item[]> {
 }
 
 export async function deleteItem(id: string): Promise<void> {
+  const existing = await getDb().items.get(id);
+  if (existing?.type === "link") {
+    await deleteLinkedPreviewAsset(normalizeItem(existing));
+  }
   await getDb().items.delete(id);
 }
 
@@ -63,7 +77,11 @@ export async function updateLink(
     throw new Error("Link not found");
   }
 
-  const next = applyLinkEdit(normalizeItem(existing), input);
+  const current = normalizeItem(existing);
+  const next = applyLinkEdit(current, input);
+  if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
+    await deleteAsset(current.previewAssetId);
+  }
   await getDb().items.put(next);
   return next;
 }
@@ -75,7 +93,12 @@ export async function setLinkPreviewPending(id: string): Promise<LinkItem> {
     throw new Error("Link not found");
   }
 
-  const next = markLinkPreviewPending(normalizeItem(existing));
+  const current = normalizeItem(existing);
+  await deleteLinkedPreviewAsset(current);
+  const next = {
+    ...markLinkPreviewPending(current),
+    previewAssetId: null,
+  };
   await getDb().items.put(next);
   return next;
 }
@@ -92,7 +115,30 @@ export async function saveLinkPreviewResult(
     throw new Error("Link not found");
   }
 
-  const next = applyLinkPreviewResult(normalizeItem(existing), result);
+  const current = normalizeItem(existing);
+  const next = applyLinkPreviewResult(current, result);
+  if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
+    await deleteAsset(current.previewAssetId);
+  }
+  await getDb().items.put(next);
+  return next;
+}
+
+export async function setLinkPreviewAssetId(
+  id: string,
+  previewAssetId: string | null,
+): Promise<LinkItem> {
+  const existing = await getDb().items.get(id);
+
+  if (!existing || existing.type !== "link") {
+    throw new Error("Link not found");
+  }
+
+  const current = normalizeItem(existing);
+  if (current.previewAssetId && current.previewAssetId !== previewAssetId) {
+    await deleteAsset(current.previewAssetId);
+  }
+  const next = applyLinkPreviewAssetId(current, previewAssetId);
   await getDb().items.put(next);
   return next;
 }
