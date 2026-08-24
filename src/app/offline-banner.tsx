@@ -56,10 +56,13 @@ export function OfflineBanner() {
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisibility);
 
+    // Only keep polling while we think the network is up — once unreachable,
+    // re-check less often so a dead probe does not keep the tab busy.
     const intervalId = window.setInterval(() => {
-      if (!cancelled && document.visibilityState === "visible") {
-        void runProbe();
+      if (cancelled || document.visibilityState !== "visible") {
+        return;
       }
+      void runProbe();
     }, CONNECTIVITY_POLL_MS);
 
     return () => {

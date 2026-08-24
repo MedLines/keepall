@@ -7,7 +7,7 @@ export const CONNECTIVITY_PROBE_PATH = "/api/connectivity";
  * Does not trust navigator.onLine — that flag can stay true with no internet.
  */
 export async function probeNetworkReachable(
-  timeoutMs = 4_000,
+  timeoutMs = 2_000,
   fetchImpl: typeof fetch = fetch,
 ): Promise<boolean> {
   const controller = new AbortController();
