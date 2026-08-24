@@ -8,6 +8,8 @@ import {
   deleteItem,
   listItems,
   listNotes,
+  saveLinkPreviewResult,
+  setLinkPreviewPending,
   updateLink,
   updateNote,
 } from "./items";
@@ -105,5 +107,28 @@ describe("items persistence", () => {
       createLink({ url: "javascript:alert(1)" }),
     ).rejects.toBeInstanceOf(LinkValidationError);
     expect(await listItems()).toEqual([]);
+  });
+
+  test("setLinkPreviewPending and saveLinkPreviewResult update the link row", async () => {
+    const created = await createLink({ url: "https://example.com" });
+    const pending = await setLinkPreviewPending(created.id);
+    expect(pending.previewStatus).toBe("pending");
+
+    const ready = await saveLinkPreviewResult(created.id, {
+      status: "ready",
+      title: "Example",
+      description: "Desc",
+      imageUrl: "https://cdn.example.com/i.png",
+    });
+    expect(ready.previewStatus).toBe("ready");
+    expect(ready.previewTitle).toBe("Example");
+    expect(ready.previewImageUrl).toBe("https://cdn.example.com/i.png");
+
+    const listed = await listItems();
+    expect(listed[0]).toMatchObject({
+      id: created.id,
+      previewStatus: "ready",
+      previewTitle: "Example",
+    });
   });
 });

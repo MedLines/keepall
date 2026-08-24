@@ -13,6 +13,7 @@ import {
 import { createCollection, listCollections } from "@/persistence/collections";
 import { createTag, listTags } from "@/persistence/tags";
 import { mockNavigation } from "../../vitest.setup";
+import { enrichLinkPreview } from "./enrich-link-preview";
 import { Library } from "./library";
 
 vi.mock("@/persistence/items", () => ({
@@ -22,6 +23,10 @@ vi.mock("@/persistence/items", () => ({
   updateLink: vi.fn(),
   assignTagToItem: vi.fn(),
   assignCollectionToItem: vi.fn(),
+}));
+
+vi.mock("./enrich-link-preview", () => ({
+  enrichLinkPreview: vi.fn(),
 }));
 
 vi.mock("@/persistence/tags", () => ({
@@ -46,6 +51,7 @@ describe("Library", () => {
     vi.mocked(deleteItem).mockReset();
     vi.mocked(updateNote).mockReset();
     vi.mocked(updateLink).mockReset();
+    vi.mocked(enrichLinkPreview).mockReset();
     vi.mocked(listTags).mockReset();
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
@@ -247,10 +253,36 @@ describe("Library", () => {
         title: "",
       });
     });
+    expect(enrichLinkPreview).toHaveBeenCalledWith(
+      "l1",
+      "https://example.com/new",
+    );
     expect(
       await screen.findByRole("link", { name: "example.com" }),
     ).toHaveAttribute("href", "https://example.com/new");
   });
+
+  test("shows preview image when ready with image URL", async () => {
+    const ready = {
+      ...link,
+      previewStatus: "ready" as const,
+      previewImageUrl: "https://cdn.example.com/og.png",
+      previewTitle: "Example Site",
+    };
+    vi.mocked(listItems).mockResolvedValue([ready]);
+    render(<Library />);
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('img[src="https://cdn.example.com/og.png"]'),
+      ).not.toBeNull();
+    });
+    const links = screen.getAllByRole("link", { name: "Example Site" });
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute("href", "https://example.com/old");
+    expect(links[1]).toHaveAttribute("href", "https://example.com/old");
+  });
+
   test("shows card initial, type chip, and secondary line", async () => {
     vi.mocked(listItems).mockResolvedValue([note, link]);
     render(<Library />);

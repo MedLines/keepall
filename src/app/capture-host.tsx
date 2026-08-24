@@ -10,6 +10,7 @@ import { classifyCapture, resolveCapture } from "@/domain/classify";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
 import { createLink, createNote } from "@/persistence/items";
+import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 
 /** Alt+K (Windows/Linux) and Option+K (macOS). Option is altKey; code stays KeyK even when Option remaps the character. */
@@ -128,11 +129,16 @@ export function CaptureHost() {
 
     try {
       if (resolved.classification.type === "link") {
-        await createLink({ url: resolved.classification.url });
-      } else {
-        await createNote({ content: resolved.classification.content });
+        const link = await createLink({
+          url: resolved.classification.url,
+        });
+        window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+        dispatch({ type: "saved" });
+        void enrichLinkPreview(link.id, link.url);
+        return;
       }
 
+      await createNote({ content: resolved.classification.content });
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
       dispatch({ type: "saved" });
     } catch (caught) {

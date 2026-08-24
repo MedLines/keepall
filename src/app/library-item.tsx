@@ -97,14 +97,37 @@ export function LibraryItem({
   }
 
   const title = itemListTitle(item);
+  const showPreviewImage =
+    item.type === "link" &&
+    item.previewStatus === "ready" &&
+    Boolean(item.previewImageUrl);
 
   return (
     <li className="flex flex-col rounded-md border border-zinc-200 bg-white p-4">
-      <div
-        aria-hidden="true"
-        className="mb-3 flex aspect-[16/10] items-center justify-center rounded-md bg-zinc-200 text-4xl font-semibold text-zinc-700"
-      >
-        {cardInitial(item)}
+      <div className="mb-3 overflow-hidden rounded-md bg-zinc-200">
+        {showPreviewImage ? (
+          <a
+            aria-label={title}
+            className="block"
+            href={item.url}
+            rel="noreferrer"
+            target="_blank"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- remote OG URLs; no local asset pipeline yet */}
+            <img
+              alt=""
+              className="aspect-[16/10] w-full object-cover"
+              src={item.previewImageUrl}
+            />
+          </a>
+        ) : (
+          <div
+            aria-hidden="true"
+            className="flex aspect-[16/10] items-center justify-center text-4xl font-semibold text-zinc-700"
+          >
+            {cardInitial(item)}
+          </div>
+        )}
       </div>
       <h3 className="font-medium">
         {item.type === "link" && !editing ? (

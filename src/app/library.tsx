@@ -43,6 +43,7 @@ import {
 } from "@/persistence/items";
 import { createTag, listTags } from "@/persistence/tags";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
+import { enrichLinkPreview } from "./enrich-link-preview";
 import { LibraryItem, type PendingMutation } from "./library-item";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
@@ -252,9 +253,18 @@ export function Library() {
     setEditError(null);
 
     try {
-      await updateLink(id, { url: editDraft, title: editTitleDraft });
+      const previous = items.find((item) => item.id === id);
+      const previousUrl =
+        previous?.type === "link" ? previous.url : undefined;
+      const updated = await updateLink(id, {
+        url: editDraft,
+        title: editTitleDraft,
+      });
       clearEdit();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      if (previousUrl !== undefined && previousUrl !== updated.url) {
+        void enrichLinkPreview(updated.id, updated.url);
+      }
     } catch (caught) {
       if (caught instanceof LinkValidationError) {
         setEditError(caught.message);

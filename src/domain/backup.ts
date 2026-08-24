@@ -2,6 +2,7 @@ import { isHttpUrl } from "./classify";
 import type { Collection } from "./collection";
 import type { Item } from "./item";
 import type { LinkItem } from "./link";
+import { coerceLinkPreviewFields } from "./link";
 import type { NoteItem } from "./note";
 import type { Tag } from "./tag";
 
@@ -303,6 +304,7 @@ function parseItem(
       type: "link",
       title: item.title,
       url: item.url,
+      ...coerceLinkPreviewFields(item as Partial<LinkItem>),
       tagIds: itemTagIds,
       collectionIds: itemCollectionIds,
       createdAt: item.createdAt,

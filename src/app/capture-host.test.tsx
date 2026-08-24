@@ -1,12 +1,18 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { buildLink } from "@/domain/link";
 import { buildNote } from "@/domain/note";
 import { createLink, createNote } from "@/persistence/items";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
+import { enrichLinkPreview } from "./enrich-link-preview";
 
 vi.mock("@/persistence/items", () => ({
   createNote: vi.fn(),
   createLink: vi.fn(),
+}));
+
+vi.mock("./enrich-link-preview", () => ({
+  enrichLinkPreview: vi.fn(),
 }));
 
 async function openDraft(text: string) {
@@ -42,6 +48,7 @@ describe("CaptureHost", () => {
   beforeEach(() => {
     vi.mocked(createNote).mockReset();
     vi.mocked(createLink).mockReset();
+    vi.mocked(enrichLinkPreview).mockReset();
     Object.assign(navigator, {
       clipboard: {
         readText: vi.fn().mockRejectedValue(new Error("denied")),
@@ -110,5 +117,26 @@ describe("CaptureHost", () => {
     await waitFor(() => {
       expect(createNote).toHaveBeenCalledTimes(1);
     });
+  });
+
+  test("after saving a link, starts preview enrichment", async () => {
+    const link = buildLink(
+      { url: "https://example.com/article" },
+      { id: "l1", now: 1 },
+    );
+    vi.mocked(createLink).mockResolvedValue(link);
+
+    const input = await openDraft("https://example.com/article");
+    fireEvent.submit(input.closest("form")!);
+
+    await waitFor(() => {
+      expect(createLink).toHaveBeenCalledWith({
+        url: "https://example.com/article",
+      });
+    });
+    expect(enrichLinkPreview).toHaveBeenCalledWith(
+      "l1",
+      "https://example.com/article",
+    );
   });
 });

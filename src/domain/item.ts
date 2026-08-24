@@ -1,4 +1,8 @@
-import { linkListTitle, type LinkItem } from "./link";
+import {
+  coerceLinkPreviewFields,
+  linkListTitle,
+  type LinkItem,
+} from "./link";
 import { noteListTitle, type NoteItem } from "./note";
 
 export type Item = NoteItem | LinkItem;
@@ -11,11 +15,23 @@ export type ItemWithOptionalOrgIds = {
 export function normalizeItem<T extends ItemWithOptionalOrgIds>(
   item: T,
 ): T & { tagIds: string[]; collectionIds: string[] } {
-  return {
+  const withOrg = {
     ...item,
     tagIds: item.tagIds ?? [],
     collectionIds: item.collectionIds ?? [],
   };
+
+  if (
+    "type" in withOrg &&
+    (withOrg as { type?: string }).type === "link"
+  ) {
+    return {
+      ...withOrg,
+      ...coerceLinkPreviewFields(withOrg as Partial<LinkItem>),
+    };
+  }
+
+  return withOrg;
 }
 
 export function itemListTitle(item: Item): string {

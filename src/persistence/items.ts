@@ -1,7 +1,9 @@
 import { normalizeItem, type Item } from "@/domain/item";
 import {
   applyLinkEdit,
+  applyLinkPreviewResult,
   buildLink,
+  markLinkPreviewPending,
   type CreateLinkInput,
   type LinkItem,
 } from "@/domain/link";
@@ -62,6 +64,35 @@ export async function updateLink(
   }
 
   const next = applyLinkEdit(normalizeItem(existing), input);
+  await getDb().items.put(next);
+  return next;
+}
+
+export async function setLinkPreviewPending(id: string): Promise<LinkItem> {
+  const existing = await getDb().items.get(id);
+
+  if (!existing || existing.type !== "link") {
+    throw new Error("Link not found");
+  }
+
+  const next = markLinkPreviewPending(normalizeItem(existing));
+  await getDb().items.put(next);
+  return next;
+}
+
+export async function saveLinkPreviewResult(
+  id: string,
+  result:
+    | { status: "ready"; title: string; description: string; imageUrl: string }
+    | { status: "failed" },
+): Promise<LinkItem> {
+  const existing = await getDb().items.get(id);
+
+  if (!existing || existing.type !== "link") {
+    throw new Error("Link not found");
+  }
+
+  const next = applyLinkPreviewResult(normalizeItem(existing), result);
   await getDb().items.put(next);
   return next;
 }
