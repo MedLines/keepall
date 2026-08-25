@@ -16,6 +16,7 @@ describe("parseLibraryViewState", () => {
       collection: null,
       sort: "newest",
       item: null,
+      slide: 0,
     });
 
     expect(
@@ -27,6 +28,19 @@ describe("parseLibraryViewState", () => {
       collection: "c1",
       sort: "oldest",
       item: "n1",
+      slide: 0,
+    });
+
+    expect(
+      parseLibraryViewState(
+        new URLSearchParams("item=i1&slide=2"),
+      ),
+    ).toEqual({
+      q: "",
+      collection: null,
+      sort: "newest",
+      item: "i1",
+      slide: 2,
     });
   });
 
@@ -40,18 +54,30 @@ describe("parseLibraryViewState", () => {
       collection: null,
       sort: "newest",
       item: null,
+      slide: 0,
+    });
+  });
+
+  test("ignores slide when item is missing", () => {
+    expect(parseLibraryViewState(new URLSearchParams("slide=3"))).toEqual({
+      q: "",
+      collection: null,
+      sort: "newest",
+      item: null,
+      slide: 0,
     });
   });
 });
 
 describe("libraryViewStateToSearchParams", () => {
-  test("omits empty q, missing collection/item, and default newest sort", () => {
+  test("omits empty q, missing collection/item, default newest sort, and slide 0", () => {
     expect(
       libraryViewStateToSearchParams({
         q: "  ",
         collection: null,
         sort: "newest",
         item: null,
+        slide: 0,
       }).toString(),
     ).toBe("");
 
@@ -61,8 +87,19 @@ describe("libraryViewStateToSearchParams", () => {
         collection: "c1",
         sort: "oldest",
         item: "n1",
+        slide: 0,
       }).toString(),
     ).toBe("q=design&collection=c1&sort=oldest&item=n1");
+
+    expect(
+      libraryViewStateToSearchParams({
+        q: "",
+        collection: null,
+        sort: "newest",
+        item: "i1",
+        slide: 2,
+      }).toString(),
+    ).toBe("item=i1&slide=2");
   });
 });
 
@@ -74,6 +111,7 @@ describe("libraryViewHref", () => {
         collection: null,
         sort: "newest",
         item: null,
+        slide: 0,
       }),
     ).toBe("/");
     expect(
@@ -82,6 +120,7 @@ describe("libraryViewHref", () => {
         collection: null,
         sort: "newest",
         item: null,
+        slide: 0,
       }),
     ).toBe("/?q=x");
   });

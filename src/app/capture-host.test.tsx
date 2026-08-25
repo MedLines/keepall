@@ -169,4 +169,38 @@ describe("CaptureHost", () => {
       expect(preview).toHaveAttribute("src", expect.stringMatching(/^blob:/));
     });
   });
+
+  test("choose images saves one gallery item with multiple assets", async () => {
+    render(<CaptureHost />);
+    fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
+    await waitFor(() =>
+      expect(screen.getByLabelText("Link or note")).not.toBeDisabled(),
+    );
+
+    const fileInput = screen.getByRole("dialog").querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: {
+        files: [
+          new File([new Uint8Array([1])], "one.png", { type: "image/png" }),
+          new File([new Uint8Array([2, 3])], "two.png", { type: "image/png" }),
+        ],
+      },
+    });
+
+    expect(await screen.findByText("2 images selected")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(createImage).toHaveBeenCalledWith({
+        assets: [
+          { bytes: expect.any(Uint8Array), mimeType: "image/png" },
+          { bytes: expect.any(Uint8Array), mimeType: "image/png" },
+        ],
+        sourceUrl: undefined,
+        caption: undefined,
+      });
+    });
+  });
 });

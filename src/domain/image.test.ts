@@ -4,11 +4,14 @@ import {
   assertLocalImageBytes,
   applyImageEdit,
   buildImage,
+  buildImageFromAssetIds,
+  clampImageSlideIndex,
   coerceImageFields,
   imageCoverAssetId,
   imageListTitle,
   ImageValidationError,
   MAX_LOCAL_IMAGE_BYTES,
+  replaceImageAssetAt,
   textFieldsFromAccompanyingText,
 } from "./image";
 
@@ -81,6 +84,16 @@ describe("imageListTitle", () => {
   });
 });
 
+describe("buildImageFromAssetIds", () => {
+  test("creates one item with ordered assetIds", () => {
+    const image = buildImageFromAssetIds(
+      { assetIds: ["a1", "a2", "a3"] },
+      { id: "i1", now: 1 },
+    );
+    expect(image.assetIds).toEqual(["a1", "a2", "a3"]);
+  });
+});
+
 describe("coerceImageFields", () => {
   test("migrates legacy assetId to a one-item assetIds list", () => {
     expect(coerceImageFields({ assetId: "abc" }).assetIds).toEqual(["abc"]);
@@ -100,6 +113,33 @@ describe("appendImageAsset", () => {
     expect(next.assetIds).toEqual(["a1", "a2"]);
     expect(imageCoverAssetId(next)).toBe("a1");
     expect(next.updatedAt).toBe(2);
+  });
+});
+
+describe("replaceImageAssetAt", () => {
+  test("swaps one slide and keeps order", () => {
+    const image = appendImageAsset(
+      buildImage({ assetId: "a1" }, { id: "i1", now: 1 }),
+      "a2",
+    );
+    const next = replaceImageAssetAt(image, 1, "a3", { now: 3 });
+    expect(next.assetIds).toEqual(["a1", "a3"]);
+    expect(next.updatedAt).toBe(3);
+  });
+
+  test("rejects out-of-range index", () => {
+    const image = buildImage({ assetId: "a1" }, { id: "i1", now: 1 });
+    expect(() => replaceImageAssetAt(image, 1, "a2")).toThrow(
+      ImageValidationError,
+    );
+  });
+});
+
+describe("clampImageSlideIndex", () => {
+  test("clamps to valid range", () => {
+    expect(clampImageSlideIndex(["a", "b", "c"], 99)).toBe(2);
+    expect(clampImageSlideIndex(["a", "b", "c"], -1)).toBe(0);
+    expect(clampImageSlideIndex([], 5)).toBe(0);
   });
 });
 

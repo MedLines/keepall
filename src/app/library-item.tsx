@@ -17,6 +17,8 @@ export type PendingMutation =
   | { op: "save-note"; id: string }
   | { op: "save-link"; id: string }
   | { op: "save-image"; id: string }
+  | { op: "append-image"; id: string }
+  | { op: "replace-image-slide"; id: string }
   | { op: "delete"; id: string }
   | { op: "assign-tag"; id: string }
   | { op: "assign-collection"; id: string };

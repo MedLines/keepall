@@ -10,6 +10,8 @@ type Props = {
   item: Item;
   /** Card thumbs crop; inspect shows the full image. */
   variant?: "card" | "inspect";
+  /** Inspect gallery: show this asset instead of the cover. */
+  assetId?: string | null;
   className?: string;
 };
 
@@ -17,14 +19,17 @@ type Props = {
 export function LibraryItemMedia({
   item,
   variant = "card",
+  assetId,
   className = "",
 }: Props) {
   const assetIdForDisplay =
-    item.type === "link"
-      ? item.previewAssetId
-      : item.type === "image"
-        ? imageCoverAssetId(item)
-        : null;
+    assetId !== undefined
+      ? assetId
+      : item.type === "link"
+        ? item.previewAssetId
+        : item.type === "image"
+          ? imageCoverAssetId(item)
+          : null;
   const localObjectUrl = useAssetObjectUrl(assetIdForDisplay);
   const [remoteBroken, setRemoteBroken] = useState(false);
   const remotePreviewUrl =
@@ -32,7 +37,7 @@ export function LibraryItemMedia({
 
   useEffect(() => {
     setRemoteBroken(false);
-  }, [item.id, remotePreviewUrl]);
+  }, [item.id, remotePreviewUrl, assetIdForDisplay]);
 
   const remoteUrl =
     item.type === "link" &&

@@ -1,8 +1,12 @@
 import { normalizeItem, type Item } from "@/domain/item";
 import {
+  appendImageAsset,
   assertLocalImageBytes,
-  buildImage,
   applyImageEdit,
+  buildImage,
+  buildImageFromAssetIds,
+  ImageValidationError,
+  replaceImageAssetAt,
   type ImageItem,
 } from "@/domain/image";
 import {
@@ -44,16 +48,31 @@ export async function createLink(input: CreateLinkInput): Promise<LinkItem> {
 }
 
 export async function createImage(input: {
-  bytes: Uint8Array;
-  mimeType: string;
+  bytes?: Uint8Array;
+  mimeType?: string;
+  assets?: { bytes: Uint8Array; mimeType: string }[];
   sourceUrl?: string;
   caption?: string;
   title?: string;
 }): Promise<ImageItem> {
-  const mime = assertLocalImageBytes(input.bytes, input.mimeType);
-  const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
-  const image = buildImage({
-    assetId: asset.id,
+  const payloads =
+    input.assets ??
+    (input.bytes && input.mimeType
+      ? [{ bytes: input.bytes, mimeType: input.mimeType }]
+      : []);
+  if (payloads.length === 0) {
+    throw new ImageValidationError("Image asset is required");
+  }
+
+  const assetIds: string[] = [];
+  for (const payload of payloads) {
+    const mime = assertLocalImageBytes(payload.bytes, payload.mimeType);
+    const asset = await putAsset({ mimeType: mime, bytes: payload.bytes });
+    assetIds.push(asset.id);
+  }
+
+  const image = buildImageFromAssetIds({
+    assetIds,
     sourceUrl: input.sourceUrl,
     caption: input.caption,
     title: input.title,
@@ -127,6 +146,51 @@ export async function updateImage(
 
   const next = applyImageEdit(normalizeItem(existing), input);
   await getDb().items.put(next);
+  return next;
+}
+
+export async function appendImageAssetToItem(
+  id: string,
+  input: { bytes: Uint8Array; mimeType: string },
+): Promise<ImageItem> {
+  const existing = await getDb().items.get(id);
+
+  if (!existing || existing.type !== "image") {
+    throw new Error("Image not found");
+  }
+
+  const mime = assertLocalImageBytes(input.bytes, input.mimeType);
+  const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
+  const current = normalizeItem(existing);
+  const next = appendImageAsset(current, asset.id);
+  await getDb().items.put(next);
+  return next;
+}
+
+export async function replaceImageAssetAtIndex(
+  id: string,
+  slideIndex: number,
+  input: { bytes: Uint8Array; mimeType: string },
+): Promise<ImageItem> {
+  const existing = await getDb().items.get(id);
+
+  if (!existing || existing.type !== "image") {
+    throw new Error("Image not found");
+  }
+
+  const current = normalizeItem(existing);
+  const previousAssetId = current.assetIds[slideIndex];
+  if (!previousAssetId) {
+    throw new Error("Image slide not found");
+  }
+
+  const mime = assertLocalImageBytes(input.bytes, input.mimeType);
+  const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
+  const next = replaceImageAssetAt(current, slideIndex, asset.id);
+  await getDb().items.put(next);
+  if (previousAssetId !== asset.id) {
+    await deleteAsset(previousAssetId);
+  }
   return next;
 }
 

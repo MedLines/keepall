@@ -1,12 +1,15 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildLink, LinkValidationError } from "@/domain/link";
+import { buildImage, ImageValidationError } from "@/domain/image";
 import { buildNote, NoteValidationError } from "@/domain/note";
 import {
+  appendImageAssetToItem,
   assignCollectionToItem,
   assignTagToItem,
   deleteItem,
   listItems,
+  replaceImageAssetAtIndex,
   updateLink,
   updateNote,
 } from "@/persistence/items";
@@ -22,6 +25,8 @@ vi.mock("@/persistence/items", () => ({
   updateNote: vi.fn(),
   updateLink: vi.fn(),
   updateImage: vi.fn(),
+  appendImageAssetToItem: vi.fn(),
+  replaceImageAssetAtIndex: vi.fn(),
   assignTagToItem: vi.fn(),
   assignCollectionToItem: vi.fn(),
 }));
@@ -701,5 +706,49 @@ describe("Library inspect", () => {
     expect(
       await screen.findByRole("dialog", { name: "Untitled" }),
     ).toBeInTheDocument();
+  });
+
+  test("image inspect can add a gallery slide and update slide in the URL", async () => {
+    const image = buildImage({ assetId: "a1" }, { id: "i1", now: 1 });
+    const withTwo = { ...image, assetIds: ["a1", "a2"] as string[] };
+    const withThree = { ...image, assetIds: ["a1", "a2", "a3"] as string[] };
+    vi.mocked(listItems).mockResolvedValue([image]);
+    let appendCount = 0;
+    vi.mocked(appendImageAssetToItem).mockImplementation(async () => {
+      appendCount += 1;
+      const next = appendCount >= 2 ? withThree : withTwo;
+      vi.mocked(listItems).mockResolvedValue([next]);
+      return next;
+    });
+
+    render(<Library />);
+    fireEvent.click(await screen.findByRole("button", { name: "Open Image" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Image" });
+    const fileInputs = dialog.querySelectorAll('input[type="file"]');
+
+    fireEvent.change(fileInputs[0]!, {
+      target: {
+        files: [
+          new File([new Uint8Array([1, 2])], "two.png", { type: "image/png" }),
+          new File([new Uint8Array([3, 4])], "three.png", { type: "image/png" }),
+        ],
+      },
+    });
+
+    await waitFor(() => {
+      expect(appendImageAssetToItem).toHaveBeenCalledTimes(2);
+      expect(appendImageAssetToItem).toHaveBeenNthCalledWith(1, "i1", {
+        bytes: expect.any(Uint8Array),
+        mimeType: "image/png",
+      });
+      expect(appendImageAssetToItem).toHaveBeenNthCalledWith(2, "i1", {
+        bytes: expect.any(Uint8Array),
+        mimeType: "image/png",
+      });
+      expect(
+        String(mockNavigation.replace.mock.calls.at(-1)?.[0] ?? ""),
+      ).toContain("slide=2");
+    });
   });
 });

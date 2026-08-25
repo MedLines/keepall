@@ -106,12 +106,69 @@ export function appendImageAsset(
   };
 }
 
+export function replaceImageAssetAt(
+  image: ImageItem,
+  index: number,
+  assetId: string,
+  options?: { now?: number },
+): ImageItem {
+  const id = assetId.trim();
+  if (!id) {
+    throw new ImageValidationError("Image asset is required");
+  }
+  if (index < 0 || index >= image.assetIds.length) {
+    throw new ImageValidationError("Image slide is out of range");
+  }
+  const assetIds = [...image.assetIds];
+  assetIds[index] = id;
+  return {
+    ...image,
+    assetIds,
+    updatedAt: options?.now ?? Date.now(),
+  };
+}
+
+export function clampImageSlideIndex(
+  assetIds: string[],
+  slide: number,
+): number {
+  if (assetIds.length === 0) {
+    return 0;
+  }
+  if (!Number.isFinite(slide) || slide < 0) {
+    return 0;
+  }
+  return Math.min(Math.floor(slide), assetIds.length - 1);
+}
+
 export function buildImage(
   input: CreateImageInput,
   options?: { id?: string; now?: number },
 ): ImageItem {
-  const assetId = input.assetId.trim();
-  if (!assetId) {
+  return buildImageFromAssetIds(
+    {
+      assetIds: [input.assetId],
+      title: input.title,
+      sourceUrl: input.sourceUrl,
+      caption: input.caption,
+    },
+    options,
+  );
+}
+
+export function buildImageFromAssetIds(
+  input: {
+    assetIds: string[];
+    title?: string;
+    sourceUrl?: string;
+    caption?: string;
+  },
+  options?: { id?: string; now?: number },
+): ImageItem {
+  const assetIds = input.assetIds
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (assetIds.length === 0) {
     throw new ImageValidationError("Image asset is required");
   }
 
@@ -126,7 +183,7 @@ export function buildImage(
     id: options?.id ?? crypto.randomUUID(),
     type: "image",
     title: (input.title ?? "").trim(),
-    assetIds: [assetId],
+    assetIds,
     sourceUrl,
     caption: (input.caption ?? "").trim(),
     tagIds: [],

@@ -34,10 +34,12 @@ import {
   listCollections,
 } from "@/persistence/collections";
 import {
+  appendImageAssetToItem,
   assignCollectionToItem,
   assignTagToItem,
   deleteItem,
   listItems,
+  replaceImageAssetAtIndex,
   updateImage,
   updateLink,
   updateNote,
@@ -47,7 +49,7 @@ import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
-import { ImageValidationError } from "@/domain/image";
+import { ImageValidationError, clampImageSlideIndex } from "@/domain/image";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
 
@@ -76,6 +78,7 @@ export function Library() {
     string | null
   >(null);
   const [collectionError, setCollectionError] = useState<string | null>(null);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
   const [pendingMutation, setPendingMutation] = useState<PendingMutation | null>(
     null,
   );
@@ -170,7 +173,8 @@ export function Library() {
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
 
   function updateView(patch: Partial<LibraryViewState>) {
-    const next = mergeLibraryViewState(view, patch);
+    const current = parseLibraryViewState(searchParams);
+    const next = mergeLibraryViewState(current, patch);
     router.replace(libraryViewHref(pathname, next), { scroll: false });
   }
 
@@ -182,11 +186,24 @@ export function Library() {
 
   useEffect(() => {
     if (inspectId !== null && loadState === "ready" && inspectedItem === null) {
-      const next = mergeLibraryViewState(view, { item: null });
-      router.replace(libraryViewHref(pathname, next), { scroll: false });
+      updateView({ item: null, slide: 0 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- clear stale item once after load
   }, [inspectId, inspectedItem, loadState]);
+
+  useEffect(() => {
+    if (loadState !== "ready") {
+      return;
+    }
+    if (!inspectedItem || inspectedItem.type !== "image") {
+      return;
+    }
+    const clamped = clampImageSlideIndex(inspectedItem.assetIds, view.slide);
+    if (clamped !== view.slide) {
+      updateView({ slide: clamped });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- clamp when assets or slide drift
+  }, [inspectedItem, view.slide, loadState]);
 
   function clearEdit(options?: { restoreFocus?: boolean }) {
     if (options?.restoreFocus && editingId) {
@@ -199,13 +216,18 @@ export function Library() {
   }
 
   function closeInspect() {
-    updateView({ item: null });
+    updateView({ item: null, slide: 0 });
     clearEdit();
     setPendingDeleteId(null);
+    setGalleryError(null);
   }
 
   function openInspect(id: string) {
-    updateView({ item: id });
+    updateView({ item: id, slide: 0 });
+  }
+
+  function setInspectSlide(slide: number) {
+    updateView({ slide });
   }
 
   function cancelDelete() {
@@ -240,7 +262,7 @@ export function Library() {
       setPendingDeleteId(null);
       restoreFocusRef.current = null;
       if (view.item === id) {
-        updateView({ item: null });
+        updateView({ item: null, slide: 0 });
       }
       libraryHeadingRef.current?.focus();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
@@ -326,6 +348,65 @@ export function Library() {
         setEditError(caught.message);
       } else {
         setEditError("Couldn't save image.");
+      }
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  async function addImagesToItem(itemId: string, files: File[]) {
+    if (pendingMutation || files.length === 0) {
+      return;
+    }
+
+    setPendingMutation({ op: "append-image", id: itemId });
+    setGalleryError(null);
+
+    try {
+      let updated = null as Awaited<ReturnType<typeof appendImageAssetToItem>> | null;
+      for (const file of files) {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        updated = await appendImageAssetToItem(itemId, {
+          bytes,
+          mimeType: file.type || "application/octet-stream",
+        });
+      }
+      if (updated) {
+        updateView({ item: itemId, slide: updated.assetIds.length - 1 });
+      }
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch (caught) {
+      if (caught instanceof ImageValidationError) {
+        setGalleryError(caught.message);
+      } else {
+        setGalleryError("Couldn't add images.");
+      }
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  async function replaceInspectSlide(itemId: string, file: File) {
+    if (pendingMutation || inspectedItem?.type !== "image") {
+      return;
+    }
+
+    const slideIndex = clampImageSlideIndex(inspectedItem.assetIds, view.slide);
+    setPendingMutation({ op: "replace-image-slide", id: itemId });
+    setGalleryError(null);
+
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      await replaceImageAssetAtIndex(itemId, slideIndex, {
+        bytes,
+        mimeType: file.type || "application/octet-stream",
+      });
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch (caught) {
+      if (caught instanceof ImageValidationError) {
+        setGalleryError(caught.message);
+      } else {
+        setGalleryError("Couldn't replace image.");
       }
     } finally {
       setPendingMutation(null);
@@ -567,6 +648,8 @@ export function Library() {
           )}
           <LibraryInspect
             item={inspectedItem}
+            slide={view.slide}
+            galleryError={galleryError}
             tagNames={
               inspectedItem
                 ? resolveItemTagNames(inspectedItem, tagsById)
@@ -603,6 +686,17 @@ export function Library() {
             }}
             confirmDeleteRef={confirmDeleteRef}
             onClose={closeInspect}
+            onSlideChange={setInspectSlide}
+            onAddImages={(files) => {
+              if (inspectedItem?.type === "image") {
+                void addImagesToItem(inspectedItem.id, files);
+              }
+            }}
+            onReplaceSlide={(file) => {
+              if (inspectedItem?.type === "image") {
+                void replaceInspectSlide(inspectedItem.id, file);
+              }
+            }}
             onEditDraftChange={setEditDraft}
             onEditTitleChange={setEditTitleDraft}
             onEditSaveShortcut={onEditSaveShortcut}

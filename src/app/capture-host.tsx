@@ -34,9 +34,15 @@ type ImageDraft = {
   previewUrl: string;
 };
 
+function revokeImageDraftPreviews(drafts: ImageDraft[]): void {
+  for (const draft of drafts) {
+    URL.revokeObjectURL(draft.previewUrl);
+  }
+}
+
 export function CaptureHost() {
   const [state, dispatch] = useReducer(captureReducer, initialCaptureState);
-  const [imageDraft, setImageDraft] = useState<ImageDraft | null>(null);
+  const [imageDrafts, setImageDrafts] = useState<ImageDraft[]>([]);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,7 +50,7 @@ export function CaptureHost() {
   const isActive = state.status !== "idle";
   const classified = classifyCapture(state.input).type;
   const kind = state.override ?? classified;
-  const savingImage = Boolean(imageDraft);
+  const savingImage = imageDrafts.length > 0;
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -114,7 +120,7 @@ export function CaptureHost() {
     }
 
     const timer = window.setTimeout(() => {
-      clearImageDraft();
+      clearImageDrafts();
       dispatch({ type: "dismiss" });
     }, 800);
 
@@ -123,34 +129,47 @@ export function CaptureHost() {
 
   useEffect(() => {
     return () => {
-      if (imageDraft?.previewUrl) {
-        URL.revokeObjectURL(imageDraft.previewUrl);
-      }
+      revokeImageDraftPreviews(imageDrafts);
     };
-  }, [imageDraft?.previewUrl]);
+  }, [imageDrafts]);
 
-  async function setDraftFromBlob(
-    blob: Blob,
+  function dispatchDraftText(
     accompanyingText: string,
     status: typeof state.status,
   ) {
+    const fields = textFieldsFromAccompanyingText(accompanyingText);
+    const text = fields.sourceUrl || fields.caption || accompanyingText;
+    if (status === "reading") {
+      dispatch({ type: "clipboard", text });
+    } else if (status === "open" || status === "failed") {
+      dispatch({ type: "input", text });
+    }
+  }
+
+  async function setDraftFromFiles(
+    files: File[],
+    accompanyingText: string,
+    status: typeof state.status,
+  ) {
+    if (files.length === 0) {
+      return;
+    }
+
     try {
-      const buffer = new Uint8Array(await blob.arrayBuffer());
-      const mimeType = blob.type || "application/octet-stream";
-      const fields = textFieldsFromAccompanyingText(accompanyingText);
-      const text = fields.sourceUrl || fields.caption || accompanyingText;
-      const previewUrl = URL.createObjectURL(blob);
-      setImageDraft((previous) => {
-        if (previous?.previewUrl) {
-          URL.revokeObjectURL(previous.previewUrl);
-        }
-        return { bytes: buffer, mimeType, previewUrl };
-      });
-      if (status === "reading") {
-        dispatch({ type: "clipboard", text });
-      } else if (status === "open" || status === "failed") {
-        dispatch({ type: "input", text });
+      const drafts: ImageDraft[] = [];
+      for (const file of files) {
+        const buffer = new Uint8Array(await file.arrayBuffer());
+        drafts.push({
+          bytes: buffer,
+          mimeType: file.type || "application/octet-stream",
+          previewUrl: URL.createObjectURL(file),
+        });
       }
+      setImageDrafts((previous) => {
+        revokeImageDraftPreviews(previous);
+        return drafts;
+      });
+      dispatchDraftText(accompanyingText, status);
     } catch {
       if (status === "reading") {
         dispatch({ type: "clipboardUnavailable" });
@@ -158,20 +177,30 @@ export function CaptureHost() {
     }
   }
 
-  function clearImageDraft() {
-    setImageDraft((previous) => {
-      if (previous?.previewUrl) {
-        URL.revokeObjectURL(previous.previewUrl);
-      }
-      return null;
+  async function setDraftFromBlob(
+    blob: Blob,
+    accompanyingText: string,
+    status: typeof state.status,
+  ) {
+    await setDraftFromFiles(
+      [new File([blob], "clipboard-image", { type: blob.type })],
+      accompanyingText,
+      status,
+    );
+  }
+
+  function clearImageDrafts() {
+    setImageDrafts((previous) => {
+      revokeImageDraftPreviews(previous);
+      return [];
     });
   }
 
-  async function onPickFile(file: File | undefined) {
-    if (!file) {
+  async function onPickFiles(files: FileList | File[] | undefined) {
+    if (!files || files.length === 0) {
       return;
     }
-    await setDraftFromBlob(file, state.input, state.status);
+    await setDraftFromFiles(Array.from(files), state.input, state.status);
   }
 
   async function pasteImageFromClipboard() {
@@ -217,7 +246,7 @@ export function CaptureHost() {
       return;
     }
 
-    if (imageDraft) {
+    if (imageDrafts.length > 0) {
       if (captureReducer(state, { type: "save" }).status !== "saving") {
         return;
       }
@@ -226,8 +255,10 @@ export function CaptureHost() {
       try {
         const fields = textFieldsFromAccompanyingText(state.input);
         await createImage({
-          bytes: imageDraft.bytes,
-          mimeType: imageDraft.mimeType,
+          assets: imageDrafts.map((draft) => ({
+            bytes: draft.bytes,
+            mimeType: draft.mimeType,
+          })),
           sourceUrl: fields.sourceUrl || undefined,
           caption: fields.caption || undefined,
         });
@@ -328,7 +359,7 @@ export function CaptureHost() {
           }
           return;
         }
-        clearImageDraft();
+        clearImageDrafts();
         dispatch({ type: "dismiss" });
       }}
     >
@@ -336,14 +367,19 @@ export function CaptureHost() {
         Save to Keepall
       </h2>
       <form className="mt-4 flex flex-col gap-4" onSubmit={onSubmit} onPaste={onPaste}>
-        {imageDraft ? (
+        {imageDrafts.length > 0 ? (
           <div className="overflow-hidden rounded-md border border-zinc-200 bg-zinc-100">
             {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
             <img
               alt=""
               className="max-h-48 w-full object-contain"
-              src={imageDraft.previewUrl}
+              src={imageDrafts[0]!.previewUrl}
             />
+            {imageDrafts.length > 1 ? (
+              <p className="border-t border-zinc-200 px-3 py-2 text-center text-sm text-zinc-600">
+                {imageDrafts.length} images selected
+              </p>
+            ) : null}
           </div>
         ) : null}
         <div className="flex flex-col gap-2">
@@ -375,9 +411,9 @@ export function CaptureHost() {
             accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
             className="sr-only"
             type="file"
+            multiple
             onChange={(event) => {
-              const file = event.target.files?.[0];
-              void onPickFile(file);
+              void onPickFiles(event.target.files ?? undefined);
               event.target.value = "";
             }}
           />
@@ -387,7 +423,7 @@ export function CaptureHost() {
             disabled={state.status === "saving" || state.status === "reading"}
             onClick={() => fileInputRef.current?.click()}
           >
-            Choose image…
+            Choose images…
           </button>
           <button
             className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
@@ -397,14 +433,14 @@ export function CaptureHost() {
           >
             Paste image
           </button>
-          {imageDraft ? (
+          {imageDrafts.length > 0 ? (
             <button
               className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
               type="button"
               disabled={state.status === "saving"}
-              onClick={() => clearImageDraft()}
+              onClick={() => clearImageDrafts()}
             >
-              Remove image
+              Remove images
             </button>
           ) : null}
         </div>
@@ -437,7 +473,11 @@ export function CaptureHost() {
             </button>
           </fieldset>
         ) : (
-          <p className="text-sm text-zinc-600">Saving as image.</p>
+          <p className="text-sm text-zinc-600">
+            {imageDrafts.length > 1
+              ? "Saving as one image item with multiple photos."
+              : "Saving as image."}
+          </p>
         )}
         <p className="text-sm text-zinc-600">Ctrl+Enter or ⌘Enter to save.</p>
         <div className="flex items-center gap-3">
@@ -457,7 +497,7 @@ export function CaptureHost() {
             type="button"
             disabled={shouldBlockDialogDismiss(state.status)}
             onClick={() => {
-              clearImageDraft();
+              clearImageDrafts();
               dispatch({ type: "dismiss" });
             }}
           >

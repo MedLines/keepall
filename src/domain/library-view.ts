@@ -8,6 +8,8 @@ export type LibraryViewState = {
   sort: LibrarySort;
   /** Open library item id for inspect overlay; null when closed. */
   item: string | null;
+  /** Zero-based image gallery index in inspect; omitted from URL when 0. */
+  slide: number;
 };
 
 export const DEFAULT_LIBRARY_SORT: LibrarySort = "newest";
@@ -16,17 +18,30 @@ export function parseLibrarySort(value: string | null): LibrarySort {
   return value === "oldest" ? "oldest" : "newest";
 }
 
+export function parseLibrarySlide(value: string | null): number {
+  if (!value) {
+    return 0;
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
+  return parsed;
+}
+
 export function parseLibraryViewState(
   params: URLSearchParams,
 ): LibraryViewState {
   const collection = params.get("collection")?.trim() || null;
   const item = params.get("item")?.trim() || null;
+  const slide = item ? parseLibrarySlide(params.get("slide")) : 0;
 
   return {
     q: params.get("q") ?? "",
     collection,
     sort: parseLibrarySort(params.get("sort")),
     item,
+    slide,
   };
 }
 
@@ -50,6 +65,9 @@ export function libraryViewStateToSearchParams(
 
   if (state.item) {
     params.set("item", state.item);
+    if (state.slide > 0) {
+      params.set("slide", String(state.slide));
+    }
   }
 
   return params;
@@ -84,6 +102,7 @@ export function mergeLibraryViewState(
       patch.collection !== undefined ? patch.collection : current.collection,
     sort: patch.sort !== undefined ? patch.sort : current.sort,
     item: patch.item !== undefined ? patch.item : current.item,
+    slide: patch.slide !== undefined ? patch.slide : current.slide,
   };
 }
 

@@ -7,6 +7,7 @@ import {
   useReducedMotion,
 } from "motion/react";
 import { cardSecondaryLine } from "@/domain/card-display";
+import { clampImageSlideIndex } from "@/domain/image";
 import { itemListTitle, type Item } from "@/domain/item";
 import { itemMediaLayoutId } from "@/domain/library-view";
 import { LibraryItemMedia } from "./library-item-media";
@@ -20,6 +21,8 @@ import {
 
 type Props = {
   item: Item | null;
+  slide: number;
+  galleryError: string | null;
   tagNames: string[];
   collectionNames: string[];
   tagError: string | null;
@@ -36,6 +39,9 @@ type Props = {
   ) => void;
   confirmDeleteRef: Ref<HTMLButtonElement | null>;
   onClose: () => void;
+  onSlideChange: (slide: number) => void;
+  onAddImages: (files: File[]) => void;
+  onReplaceSlide: (file: File) => void;
   onEditDraftChange: (value: string) => void;
   onEditTitleChange: (value: string) => void;
   onEditSaveShortcut: (
@@ -59,6 +65,8 @@ const BTN =
 
 export function LibraryInspect({
   item,
+  slide,
+  galleryError,
   tagNames,
   collectionNames,
   tagError,
@@ -73,6 +81,9 @@ export function LibraryInspect({
   setFirstEditField,
   confirmDeleteRef,
   onClose,
+  onSlideChange,
+  onAddImages,
+  onReplaceSlide,
   onEditDraftChange,
   onEditTitleChange,
   onEditSaveShortcut,
@@ -90,11 +101,26 @@ export function LibraryInspect({
   const reduceMotion = useReducedMotion();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const addImageInputRef = useRef<HTMLInputElement>(null);
+  const replaceImageInputRef = useRef<HTMLInputElement>(null);
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
 
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const onSlideChangeRef = useRef(onSlideChange);
+  onSlideChangeRef.current = onSlideChange;
+
+  const imageSlide =
+    item?.type === "image"
+      ? clampImageSlideIndex(item.assetIds, slide)
+      : 0;
+  const imageAssetId =
+    item?.type === "image" ? (item.assetIds[imageSlide] ?? null) : null;
+  const imageSlideCount = item?.type === "image" ? item.assetIds.length : 0;
+  const galleryBusy =
+    pendingMutation?.op === "append-image" ||
+    pendingMutation?.op === "replace-image-slide";
 
   useEffect(() => {
     if (!item) {
@@ -102,11 +128,28 @@ export function LibraryInspect({
     }
     const previous = document.activeElement as HTMLElement | null;
     panelRef.current?.focus();
+    const currentItem = item;
 
     function onKeyDown(event: globalThis.KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
         onCloseRef.current();
+        return;
+      }
+      if (
+        currentItem.type === "image" &&
+        imageSlideCount > 1 &&
+        !editing &&
+        !pendingDelete
+      ) {
+        if (event.key === "ArrowLeft" && imageSlide > 0) {
+          event.preventDefault();
+          onSlideChangeRef.current(imageSlide - 1);
+        }
+        if (event.key === "ArrowRight" && imageSlide < imageSlideCount - 1) {
+          event.preventDefault();
+          onSlideChangeRef.current(imageSlide + 1);
+        }
       }
     }
     document.addEventListener("keydown", onKeyDown);
@@ -114,7 +157,7 @@ export function LibraryInspect({
       document.removeEventListener("keydown", onKeyDown);
       previous?.focus?.();
     };
-  }, [item]);
+  }, [item, imageSlide, imageSlideCount, editing, pendingDelete]);
 
   useEffect(() => {
     setTagDraft("");
@@ -189,8 +232,39 @@ export function LibraryInspect({
                 className="overflow-hidden"
                 transition={{ type: "spring", duration: 0.45, bounce: 0 }}
               >
-                <LibraryItemMedia item={item} variant="inspect" />
+                <LibraryItemMedia
+                  item={item}
+                  variant="inspect"
+                  assetId={item.type === "image" ? imageAssetId : undefined}
+                />
               </motion.div>
+              {item.type === "image" && imageSlideCount > 1 ? (
+                <div className="pointer-events-none absolute inset-x-0 bottom-3 flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    className={`${BTN} pointer-events-auto bg-white/95 backdrop-blur-sm`}
+                    disabled={mutationBusy || imageSlide === 0}
+                    aria-label="Previous image"
+                    onClick={() => onSlideChange(imageSlide - 1)}
+                  >
+                    Previous
+                  </button>
+                  <span className="rounded-md bg-zinc-950/70 px-2 py-1 text-xs font-medium text-white">
+                    {imageSlide + 1} / {imageSlideCount}
+                  </span>
+                  <button
+                    type="button"
+                    className={`${BTN} pointer-events-auto bg-white/95 backdrop-blur-sm`}
+                    disabled={
+                      mutationBusy || imageSlide >= imageSlideCount - 1
+                    }
+                    aria-label="Next image"
+                    onClick={() => onSlideChange(imageSlide + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              ) : null}
               <button
                 type="button"
                 className={`${BTN} absolute right-3 top-3 bg-white/95 backdrop-blur-sm`}
@@ -386,6 +460,66 @@ export function LibraryInspect({
                   {collectionError ? (
                     <p className="mt-2 text-sm text-red-700" role="alert">
                       {collectionError}
+                    </p>
+                  ) : null}
+
+                  {item.type === "image" && !editing ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <input
+                        ref={addImageInputRef}
+                        accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
+                        className="sr-only"
+                        type="file"
+                        multiple
+                        onChange={(event) => {
+                          const list = event.target.files;
+                          if (!list || list.length === 0) {
+                            return;
+                          }
+                          onAddImages(Array.from(list));
+                          event.target.value = "";
+                        }}
+                      />
+                      <input
+                        ref={replaceImageInputRef}
+                        accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
+                        className="sr-only"
+                        type="file"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            onReplaceSlide(file);
+                          }
+                          event.target.value = "";
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={BTN}
+                        disabled={mutationBusy}
+                        onClick={() => addImageInputRef.current?.click()}
+                      >
+                        {pendingMutation?.op === "append-image" &&
+                        pendingMutation.id === item.id
+                          ? "Adding…"
+                          : "Add images"}
+                      </button>
+                      <button
+                        type="button"
+                        className={BTN}
+                        disabled={mutationBusy || galleryBusy}
+                        onClick={() => replaceImageInputRef.current?.click()}
+                      >
+                        {pendingMutation?.op === "replace-image-slide" &&
+                        pendingMutation.id === item.id
+                          ? "Replacing…"
+                          : "Replace this image"}
+                      </button>
+                    </div>
+                  ) : null}
+                  {galleryError ? (
+                    <p className="mt-2 text-sm text-red-700" role="alert">
+                      {galleryError}
                     </p>
                   ) : null}
 

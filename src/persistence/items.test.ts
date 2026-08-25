@@ -5,12 +5,14 @@ import { buildNote, NoteValidationError } from "@/domain/note";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { getAsset } from "./assets";
 import {
+  appendImageAssetToItem,
   createImage,
   createLink,
   createNote,
   deleteItem,
   listItems,
   listNotes,
+  replaceImageAssetAtIndex,
   saveLinkPreviewResult,
   setLinkPreviewPending,
   updateImage,
@@ -150,6 +152,22 @@ describe("items persistence", () => {
     expect(await listItems()).toEqual([image]);
   });
 
+  test("createImage stores multiple assets on one item", async () => {
+    const image = await createImage({
+      assets: [
+        { bytes: new Uint8Array([1]), mimeType: "image/png" },
+        { bytes: new Uint8Array([2, 3]), mimeType: "image/jpeg" },
+      ],
+    });
+    expect(image.assetIds).toHaveLength(2);
+    expect(Array.from((await getAsset(image.assetIds[0]!))?.bytes ?? [])).toEqual(
+      [1],
+    );
+    expect(Array.from((await getAsset(image.assetIds[1]!))?.bytes ?? [])).toEqual(
+      [2, 3],
+    );
+  });
+
   test("createImage rejects oversize files", async () => {
     await expect(
       createImage({
@@ -182,5 +200,48 @@ describe("items persistence", () => {
     expect(updated.caption).toBe("new");
     expect(updated.sourceUrl).toBe("https://example.com");
     expect(updated.assetIds).toEqual(image.assetIds);
+  });
+
+  test("appendImageAssetToItem adds a second asset at the end", async () => {
+    const image = await createImage({
+      bytes: new Uint8Array([1]),
+      mimeType: "image/png",
+    });
+    const updated = await appendImageAssetToItem(image.id, {
+      bytes: new Uint8Array([2, 3]),
+      mimeType: "image/jpeg",
+    });
+    expect(updated.assetIds).toHaveLength(2);
+    expect(updated.assetIds[0]).toBe(image.assetIds[0]);
+    expect(await getAsset(updated.assetIds[1]!)).toMatchObject({
+      mimeType: "image/jpeg",
+    });
+  });
+
+  test("replaceImageAssetAtIndex swaps one slide and deletes the old asset", async () => {
+    const image = await createImage({
+      bytes: new Uint8Array([1]),
+      mimeType: "image/png",
+    });
+    await appendImageAssetToItem(image.id, {
+      bytes: new Uint8Array([2]),
+      mimeType: "image/png",
+    });
+    const listed = await listItems();
+    const withTwo = listed[0];
+    if (!withTwo || withTwo.type !== "image") {
+      throw new Error("expected image item");
+    }
+    const oldSecond = withTwo.assetIds[1]!;
+    const updated = await replaceImageAssetAtIndex(withTwo.id, 1, {
+      bytes: new Uint8Array([9]),
+      mimeType: "image/png",
+    });
+    expect(updated.assetIds[0]).toBe(withTwo.assetIds[0]);
+    expect(updated.assetIds[1]).not.toBe(oldSecond);
+    expect(await getAsset(oldSecond)).toBeUndefined();
+    expect(Array.from((await getAsset(updated.assetIds[1]!))?.bytes ?? [])).toEqual(
+      [9],
+    );
   });
 });
