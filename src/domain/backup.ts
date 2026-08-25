@@ -1,6 +1,8 @@
 import { isHttpUrl } from "./classify";
 import type { Collection } from "./collection";
 import type { Item } from "./item";
+import type { ImageItem } from "./image";
+import { coerceImageFields } from "./image";
 import type { LinkItem } from "./link";
 import { coerceLinkPreviewFields } from "./link";
 import type { NoteItem } from "./note";
@@ -398,6 +400,34 @@ function parseItem(
       updatedAt: item.updatedAt,
     };
     return link;
+  }
+
+  if (item.type === "image") {
+    const fields = coerceImageFields(item as Partial<ImageItem>);
+    if (!fields.assetId || !assetIds.has(fields.assetId)) {
+      throw new BackupValidationError(
+        `Image at index ${index} needs a known assetId`,
+      );
+    }
+    if (fields.sourceUrl && !isHttpUrl(fields.sourceUrl)) {
+      throw new BackupValidationError(
+        `Image at index ${index} sourceUrl must be http or https`,
+      );
+    }
+
+    const image: ImageItem = {
+      id: item.id,
+      type: "image",
+      title: item.title,
+      assetId: fields.assetId,
+      sourceUrl: fields.sourceUrl,
+      caption: fields.caption,
+      tagIds: itemTagIds,
+      collectionIds: itemCollectionIds,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    };
+    return image;
   }
 
   throw new BackupValidationError(

@@ -38,6 +38,7 @@ import {
   assignTagToItem,
   deleteItem,
   listItems,
+  updateImage,
   updateLink,
   updateNote,
 } from "@/persistence/items";
@@ -45,6 +46,7 @@ import { createTag, listTags } from "@/persistence/tags";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { LibraryItem, type PendingMutation } from "./library-item";
+import { ImageValidationError } from "@/domain/image";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
 
@@ -276,6 +278,32 @@ export function Library() {
     }
   }
 
+  async function saveImageEdit(id: string) {
+    if (pendingMutation) {
+      return;
+    }
+
+    setPendingMutation({ op: "save-image", id });
+    setEditError(null);
+
+    try {
+      await updateImage(id, {
+        caption: editDraft,
+        sourceUrl: editTitleDraft,
+      });
+      clearEdit();
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch (caught) {
+      if (caught instanceof ImageValidationError) {
+        setEditError(caught.message);
+      } else {
+        setEditError("Couldn't save image.");
+      }
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
   async function addTagToItem(itemId: string, name: string) {
     if (pendingMutation) {
       return;
@@ -464,6 +492,7 @@ export function Library() {
                   onEditSaveShortcut={onEditSaveShortcut}
                   onSaveNote={() => void saveNoteEdit(item.id)}
                   onSaveLink={() => void saveLinkEdit(item.id)}
+                  onSaveImage={() => void saveImageEdit(item.id)}
                   onCancelEdit={() => clearEdit({ restoreFocus: true })}
                   onConfirmDelete={() => void confirmDelete(item.id)}
                   onCancelDelete={cancelDelete}
@@ -483,6 +512,9 @@ export function Library() {
                     if (item.type === "note") {
                       setEditDraft(item.content);
                       setEditTitleDraft("");
+                    } else if (item.type === "image") {
+                      setEditDraft(item.caption);
+                      setEditTitleDraft(item.sourceUrl);
                     } else {
                       setEditDraft(item.url);
                       setEditTitleDraft(item.title);

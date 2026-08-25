@@ -2,13 +2,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildLink } from "@/domain/link";
 import { buildNote } from "@/domain/note";
-import { createLink, createNote } from "@/persistence/items";
+import { createImage, createLink, createNote } from "@/persistence/items";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
 
 vi.mock("@/persistence/items", () => ({
   createNote: vi.fn(),
   createLink: vi.fn(),
+  createImage: vi.fn(),
 }));
 
 vi.mock("./enrich-link-preview", () => ({
@@ -48,6 +49,7 @@ describe("CaptureHost", () => {
   beforeEach(() => {
     vi.mocked(createNote).mockReset();
     vi.mocked(createLink).mockReset();
+    vi.mocked(createImage).mockReset();
     vi.mocked(enrichLinkPreview).mockReset();
     Object.assign(navigator, {
       clipboard: {

@@ -1,17 +1,22 @@
 "use client";
 
-import { type FormEvent, useEffect, useReducer, useRef } from "react";
+import { type FormEvent, useEffect, useReducer, useRef, useState } from "react";
 import {
   captureReducer,
   initialCaptureState,
   shouldBlockDialogDismiss,
 } from "@/domain/capture";
 import { classifyCapture, resolveCapture } from "@/domain/classify";
+import {
+  ImageValidationError,
+  textFieldsFromAccompanyingText,
+} from "@/domain/image";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
-import { createLink, createNote } from "@/persistence/items";
+import { createImage, createLink, createNote } from "@/persistence/items";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
+import { readClipboardImageAndText } from "./read-clipboard-capture";
 
 /** Alt+K (Windows/Linux) and Option+K (macOS). Option is altKey; code stays KeyK even when Option remaps the character. */
 export function isCaptureOpenShortcut(event: KeyboardEvent): boolean {
@@ -23,14 +28,23 @@ export function isCaptureOpenShortcut(event: KeyboardEvent): boolean {
   );
 }
 
+type ImageDraft = {
+  bytes: Uint8Array;
+  mimeType: string;
+  previewUrl: string;
+};
+
 export function CaptureHost() {
   const [state, dispatch] = useReducer(captureReducer, initialCaptureState);
+  const [imageDraft, setImageDraft] = useState<ImageDraft | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const saveInFlightRef = useRef(false);
   const isActive = state.status !== "idle";
   const classified = classifyCapture(state.input).type;
   const kind = state.override ?? classified;
+  const savingImage = Boolean(imageDraft);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -65,19 +79,17 @@ export function CaptureHost() {
     }
 
     let cancelled = false;
-    const clipboard = navigator.clipboard;
 
-    if (!clipboard?.readText) {
-      dispatch({ type: "clipboardUnavailable" });
-      return;
-    }
-
-    clipboard
-      .readText()
-      .then((text) => {
-        if (!cancelled) {
-          dispatch({ type: "clipboard", text });
+    void readClipboardImageAndText()
+      .then(({ image, text }) => {
+        if (cancelled) {
+          return;
         }
+        if (image) {
+          void setDraftFromBlob(image, text, "reading");
+          return;
+        }
+        dispatch({ type: "clipboard", text });
       })
       .catch(() => {
         if (!cancelled) {
@@ -102,14 +114,96 @@ export function CaptureHost() {
     }
 
     const timer = window.setTimeout(() => {
+      clearImageDraft();
       dispatch({ type: "dismiss" });
     }, 800);
 
     return () => window.clearTimeout(timer);
   }, [state.status]);
 
+  useEffect(() => {
+    return () => {
+      if (imageDraft?.previewUrl) {
+        URL.revokeObjectURL(imageDraft.previewUrl);
+      }
+    };
+  }, [imageDraft?.previewUrl]);
+
+  async function setDraftFromBlob(
+    blob: Blob,
+    accompanyingText: string,
+    status: typeof state.status,
+  ) {
+    try {
+      const buffer = new Uint8Array(await blob.arrayBuffer());
+      const mimeType = blob.type || "application/octet-stream";
+      const fields = textFieldsFromAccompanyingText(accompanyingText);
+      const text = fields.sourceUrl || fields.caption || accompanyingText;
+      const previewUrl = URL.createObjectURL(blob);
+      setImageDraft((previous) => {
+        if (previous?.previewUrl) {
+          URL.revokeObjectURL(previous.previewUrl);
+        }
+        return { bytes: buffer, mimeType, previewUrl };
+      });
+      if (status === "reading") {
+        dispatch({ type: "clipboard", text });
+      } else if (status === "open" || status === "failed") {
+        dispatch({ type: "input", text });
+      }
+    } catch {
+      if (status === "reading") {
+        dispatch({ type: "clipboardUnavailable" });
+      }
+    }
+  }
+
+  function clearImageDraft() {
+    setImageDraft((previous) => {
+      if (previous?.previewUrl) {
+        URL.revokeObjectURL(previous.previewUrl);
+      }
+      return null;
+    });
+  }
+
+  async function onPickFile(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+    await setDraftFromBlob(file, state.input, state.status);
+  }
+
   async function persistCapture() {
     if (saveInFlightRef.current) {
+      return;
+    }
+
+    if (imageDraft) {
+      if (captureReducer(state, { type: "save" }).status !== "saving") {
+        return;
+      }
+      saveInFlightRef.current = true;
+      dispatch({ type: "save" });
+      try {
+        const fields = textFieldsFromAccompanyingText(state.input);
+        await createImage({
+          bytes: imageDraft.bytes,
+          mimeType: imageDraft.mimeType,
+          sourceUrl: fields.sourceUrl || undefined,
+          caption: fields.caption || undefined,
+        });
+        window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+        dispatch({ type: "saved" });
+      } catch (caught) {
+        if (caught instanceof ImageValidationError) {
+          dispatch({ type: "failed", message: caught.message });
+        } else {
+          dispatch({ type: "failed", message: "Couldn't save. Try again." });
+        }
+      } finally {
+        saveInFlightRef.current = false;
+      }
       return;
     }
 
@@ -172,16 +266,9 @@ export function CaptureHost() {
         }
       }}
       onClose={() => {
-        // Native dialog dismissal events (e.g. Escape) can close the UI even if the
-        // reducer rejects the "dismiss" event while saving. If that happens, we
-        // immediately re-open to keep reducer state and DOM state consistent.
         if (shouldBlockDialogDismiss(state.status)) {
           const dialog = dialogRef.current;
           if (dialog && !dialog.open) {
-            // Restore the DOM's open state immediately (this is what the unit
-            // tests assert against). In real browsers, `showModal()` should
-            // fully re-open the dialog; in jsdom, toggling `open` is often
-            // enough.
             try {
               dialog.setAttribute("open", "");
             } catch {
@@ -203,6 +290,7 @@ export function CaptureHost() {
           }
           return;
         }
+        clearImageDraft();
         dispatch({ type: "dismiss" });
       }}
     >
@@ -210,9 +298,21 @@ export function CaptureHost() {
         Save to Keepall
       </h2>
       <form className="mt-4 flex flex-col gap-4" onSubmit={onSubmit}>
+        {imageDraft ? (
+          <div className="overflow-hidden rounded-md border border-zinc-200 bg-zinc-100">
+            {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
+            <img
+              alt=""
+              className="max-h-48 w-full object-contain"
+              src={imageDraft.previewUrl}
+            />
+          </div>
+        ) : null}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium" htmlFor="capture-input">
-            Link or note
+            {savingImage
+              ? "Optional source URL or caption"
+              : "Link or note"}
           </label>
           <textarea
             ref={inputRef}
@@ -223,10 +323,7 @@ export function CaptureHost() {
               dispatch({ type: "input", text: event.target.value })
             }
             onKeyDown={(event) => {
-              if (
-                (event.metaKey || event.ctrlKey) &&
-                event.key === "Enter"
-              ) {
+              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
                 event.preventDefault();
                 event.currentTarget.form?.requestSubmit();
               }
@@ -234,33 +331,68 @@ export function CaptureHost() {
             disabled={state.status === "saving" || state.status === "reading"}
           />
         </div>
-        <fieldset className="flex flex-wrap gap-2">
-          <legend className="mb-2 w-full text-sm font-medium">Save as</legend>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInputRef}
+            accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
+            className="sr-only"
+            type="file"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              void onPickFile(file);
+              event.target.value = "";
+            }}
+          />
           <button
-            className={`rounded-md border px-3 py-1 text-sm ${
-              kind === "link"
-                ? "border-zinc-900 bg-zinc-900 text-white"
-                : "border-zinc-300 bg-white"
-            }`}
+            className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
             type="button"
-            aria-pressed={kind === "link"}
-            onClick={() => dispatch({ type: "override", kind: "link" })}
+            disabled={state.status === "saving" || state.status === "reading"}
+            onClick={() => fileInputRef.current?.click()}
           >
-            Link
+            Choose image…
           </button>
-          <button
-            className={`rounded-md border px-3 py-1 text-sm ${
-              kind === "note"
-                ? "border-zinc-900 bg-zinc-900 text-white"
-                : "border-zinc-300 bg-white"
-            }`}
-            type="button"
-            aria-pressed={kind === "note"}
-            onClick={() => dispatch({ type: "override", kind: "note" })}
-          >
-            Note
-          </button>
-        </fieldset>
+          {imageDraft ? (
+            <button
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
+              type="button"
+              disabled={state.status === "saving"}
+              onClick={() => clearImageDraft()}
+            >
+              Remove image
+            </button>
+          ) : null}
+        </div>
+        {!savingImage ? (
+          <fieldset className="flex flex-wrap gap-2">
+            <legend className="mb-2 w-full text-sm font-medium">Save as</legend>
+            <button
+              className={`rounded-md border px-3 py-1 text-sm ${
+                kind === "link"
+                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  : "border-zinc-300 bg-white"
+              }`}
+              type="button"
+              aria-pressed={kind === "link"}
+              onClick={() => dispatch({ type: "override", kind: "link" })}
+            >
+              Link
+            </button>
+            <button
+              className={`rounded-md border px-3 py-1 text-sm ${
+                kind === "note"
+                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  : "border-zinc-300 bg-white"
+              }`}
+              type="button"
+              aria-pressed={kind === "note"}
+              onClick={() => dispatch({ type: "override", kind: "note" })}
+            >
+              Note
+            </button>
+          </fieldset>
+        ) : (
+          <p className="text-sm text-zinc-600">Saving as image.</p>
+        )}
         <p className="text-sm text-zinc-600">Ctrl+Enter or ⌘Enter to save.</p>
         <div className="flex items-center gap-3">
           <button
@@ -278,7 +410,10 @@ export function CaptureHost() {
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-60"
             type="button"
             disabled={shouldBlockDialogDismiss(state.status)}
-            onClick={() => dispatch({ type: "dismiss" })}
+            onClick={() => {
+              clearImageDraft();
+              dispatch({ type: "dismiss" });
+            }}
           >
             Cancel
           </button>

@@ -1,4 +1,5 @@
 import { itemListTitle, type Item } from "./item";
+import type { ImageItem } from "./image";
 import type { LinkItem } from "./link";
 import type { NoteItem } from "./note";
 
@@ -41,11 +42,28 @@ export function noteCardSnippet(
   return `${text.slice(0, maxLength).trimEnd()}…`;
 }
 
-/** Secondary line under the type chip: host for links, snippet for notes. */
+/** Secondary line for image cards: caption, else source host, else empty. */
+export function imageCardSecondary(image: ImageItem): string {
+  if (image.caption) {
+    return image.caption;
+  }
+  if (image.sourceUrl) {
+    try {
+      return new URL(image.sourceUrl).hostname;
+    } catch {
+      return image.sourceUrl;
+    }
+  }
+  return "";
+}
+
+/** Secondary line under the type chip. */
 export function cardSecondaryLine(item: Item): string {
   if (item.type === "note") {
     return noteCardSnippet(item);
   }
-
+  if (item.type === "image") {
+    return imageCardSecondary(item);
+  }
   return linkCardHost(item);
 }

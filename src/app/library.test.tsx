@@ -21,6 +21,7 @@ vi.mock("@/persistence/items", () => ({
   deleteItem: vi.fn(),
   updateNote: vi.fn(),
   updateLink: vi.fn(),
+  updateImage: vi.fn(),
   assignTagToItem: vi.fn(),
   assignCollectionToItem: vi.fn(),
 }));

@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, test } from "vitest";
+import { ImageValidationError } from "@/domain/image";
 import { LinkValidationError } from "@/domain/link";
 import { buildNote, NoteValidationError } from "@/domain/note";
 import { deleteKeepallDatabase, getDb } from "./db";
+import { getAsset } from "./assets";
 import {
+  createImage,
   createLink,
   createNote,
   deleteItem,
@@ -10,6 +13,7 @@ import {
   listNotes,
   saveLinkPreviewResult,
   setLinkPreviewPending,
+  updateImage,
   updateLink,
   updateNote,
 } from "./items";
@@ -130,5 +134,53 @@ describe("items persistence", () => {
       previewStatus: "ready",
       previewTitle: "Example",
     });
+  });
+
+  test("createImage stores bytes and lists the image item", async () => {
+    const bytes = new Uint8Array([1, 2, 3, 4]);
+    const image = await createImage({
+      bytes,
+      mimeType: "image/png",
+      caption: "UI still",
+    });
+    expect(image.type).toBe("image");
+    expect(image.caption).toBe("UI still");
+    const asset = await getAsset(image.assetId);
+    expect(Array.from(asset?.bytes ?? [])).toEqual([1, 2, 3, 4]);
+    expect(await listItems()).toEqual([image]);
+  });
+
+  test("createImage rejects oversize files", async () => {
+    await expect(
+      createImage({
+        bytes: new Uint8Array(3 * 1024 * 1024 + 1),
+        mimeType: "image/png",
+      }),
+    ).rejects.toBeInstanceOf(ImageValidationError);
+  });
+
+  test("deleteItem removes an image asset", async () => {
+    const image = await createImage({
+      bytes: new Uint8Array([9]),
+      mimeType: "image/jpeg",
+    });
+    await deleteItem(image.id);
+    expect(await getAsset(image.assetId)).toBeUndefined();
+    expect(await listItems()).toEqual([]);
+  });
+
+  test("updateImage changes caption and sourceUrl", async () => {
+    const image = await createImage({
+      bytes: new Uint8Array([1]),
+      mimeType: "image/png",
+      caption: "old",
+    });
+    const updated = await updateImage(image.id, {
+      caption: "new",
+      sourceUrl: "https://example.com",
+    });
+    expect(updated.caption).toBe("new");
+    expect(updated.sourceUrl).toBe("https://example.com");
+    expect(updated.assetId).toBe(image.assetId);
   });
 });

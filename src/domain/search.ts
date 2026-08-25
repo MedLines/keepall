@@ -19,6 +19,14 @@ export function matchesSearchQuery(item: Item, query: string): boolean {
     );
   }
 
+  if (item.type === "image") {
+    return (
+      item.title.toLowerCase().includes(needle) ||
+      item.caption.toLowerCase().includes(needle) ||
+      item.sourceUrl.toLowerCase().includes(needle)
+    );
+  }
+
   return (
     item.title.toLowerCase().includes(needle) ||
     item.url.toLowerCase().includes(needle)

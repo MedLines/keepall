@@ -14,6 +14,7 @@ import { useAssetObjectUrl } from "./use-asset-object-url";
 export type PendingMutation =
   | { op: "save-note"; id: string }
   | { op: "save-link"; id: string }
+  | { op: "save-image"; id: string }
   | { op: "delete"; id: string }
   | { op: "assign-tag"; id: string }
   | { op: "assign-collection"; id: string };
@@ -43,6 +44,7 @@ export type LibraryItemProps = {
   ) => void;
   onSaveNote: () => void;
   onSaveLink: () => void;
+  onSaveImage: () => void;
   onCancelEdit: () => void;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
@@ -72,6 +74,7 @@ export function LibraryItem({
   onEditSaveShortcut,
   onSaveNote,
   onSaveLink,
+  onSaveImage,
   onCancelEdit,
   onConfirmDelete,
   onCancelDelete,
@@ -104,8 +107,13 @@ export function LibraryItem({
   }
 
   const title = itemListTitle(item);
-  const previewAssetId = item.type === "link" ? item.previewAssetId : null;
-  const localObjectUrl = useAssetObjectUrl(previewAssetId);
+  const assetIdForDisplay =
+    item.type === "link"
+      ? item.previewAssetId
+      : item.type === "image"
+        ? item.assetId
+        : null;
+  const localObjectUrl = useAssetObjectUrl(assetIdForDisplay);
   const [remoteBroken, setRemoteBroken] = useState(false);
   const remotePreviewUrl =
     item.type === "link" ? item.previewImageUrl : "";
@@ -122,12 +130,15 @@ export function LibraryItem({
       ? remotePreviewUrl
       : null;
   const imageSrc = localObjectUrl ?? remoteUrl;
-  const showPreviewImage = Boolean(imageSrc);
+  const showMedia = Boolean(imageSrc);
+
+  const typeLabel =
+    item.type === "link" ? "Link" : item.type === "image" ? "Image" : "Note";
 
   return (
     <li className="flex flex-col rounded-md border border-zinc-200 bg-white p-4">
       <div className="mb-3 overflow-hidden rounded-md bg-zinc-200">
-        {showPreviewImage && item.type === "link" ? (
+        {showMedia && item.type === "link" ? (
           <a
             aria-label={title}
             className="block"
@@ -147,6 +158,30 @@ export function LibraryItem({
               src={imageSrc!}
             />
           </a>
+        ) : showMedia && item.type === "image" ? (
+          item.sourceUrl ? (
+            <a
+              aria-label={title}
+              className="block"
+              href={item.sourceUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- local asset object URL */}
+              <img
+                alt=""
+                className="aspect-[16/10] w-full object-cover"
+                src={imageSrc!}
+              />
+            </a>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- local asset object URL
+            <img
+              alt=""
+              className="aspect-[16/10] w-full object-cover"
+              src={imageSrc!}
+            />
+          )
         ) : (
           <div
             aria-hidden="true"
@@ -166,13 +201,22 @@ export function LibraryItem({
           >
             {title}
           </a>
+        ) : item.type === "image" && item.sourceUrl && !editing ? (
+          <a
+            className="break-words text-zinc-900 underline-offset-2 hover:underline"
+            href={item.sourceUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            {title}
+          </a>
         ) : (
           title
         )}
       </h3>
       <p className="mt-1">
         <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
-          {item.type === "link" ? "Link" : "Note"}
+          {typeLabel}
         </span>
       </p>
       {!editing ? (
@@ -271,6 +315,64 @@ export function LibraryItem({
               pendingMutation.id === item.id
                 ? "Saving…"
                 : "Save link"}
+            </button>
+            <button
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
+              type="button"
+              disabled={mutationBusy}
+              onClick={onCancelEdit}
+            >
+              Cancel edit
+            </button>
+          </div>
+        </div>
+      ) : item.type === "image" && editing ? (
+        <div className="mt-2 flex flex-col gap-2">
+          <label
+            className="text-sm font-medium"
+            htmlFor={`edit-image-caption-${item.id}`}
+          >
+            Caption
+          </label>
+          <textarea
+            className="min-h-20 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+            id={`edit-image-caption-${item.id}`}
+            ref={setFirstEditField}
+            value={editDraft}
+            disabled={mutationBusy}
+            onChange={(event) => onEditDraftChange(event.target.value)}
+            onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
+          />
+          <label
+            className="text-sm font-medium"
+            htmlFor={`edit-image-source-${item.id}`}
+          >
+            Source URL
+          </label>
+          <input
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+            id={`edit-image-source-${item.id}`}
+            value={editTitleDraft}
+            disabled={mutationBusy}
+            onChange={(event) => onEditTitleChange(event.target.value)}
+            onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
+          />
+          {editError ? (
+            <p className="text-sm text-red-700" role="alert">
+              {editError}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-3">
+            <button
+              className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
+              type="button"
+              disabled={mutationBusy}
+              onClick={onSaveImage}
+            >
+              {pendingMutation?.op === "save-image" &&
+              pendingMutation.id === item.id
+                ? "Saving…"
+                : "Save image"}
             </button>
             <button
               className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"

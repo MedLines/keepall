@@ -1,5 +1,11 @@
 import { normalizeItem, type Item } from "@/domain/item";
 import {
+  assertLocalImageBytes,
+  buildImage,
+  applyImageEdit,
+  type ImageItem,
+} from "@/domain/image";
+import {
   applyLinkEdit,
   applyLinkPreviewAssetId,
   applyLinkPreviewResult,
@@ -16,12 +22,10 @@ import {
 } from "@/domain/note";
 import { assignCollectionId } from "@/domain/collection";
 import { assignTagId } from "@/domain/tag";
-import { deleteAsset } from "./assets";
+import { deleteAsset, putAsset } from "./assets";
 import { getDb } from "./db";
 
-async function deleteLinkedPreviewAsset(
-  link: LinkItem,
-): Promise<void> {
+async function deleteLinkedPreviewAsset(link: LinkItem): Promise<void> {
   if (link.previewAssetId) {
     await deleteAsset(link.previewAssetId);
   }
@@ -39,6 +43,25 @@ export async function createLink(input: CreateLinkInput): Promise<LinkItem> {
   return link;
 }
 
+export async function createImage(input: {
+  bytes: Uint8Array;
+  mimeType: string;
+  sourceUrl?: string;
+  caption?: string;
+  title?: string;
+}): Promise<ImageItem> {
+  const mime = assertLocalImageBytes(input.bytes, input.mimeType);
+  const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
+  const image = buildImage({
+    assetId: asset.id,
+    sourceUrl: input.sourceUrl,
+    caption: input.caption,
+    title: input.title,
+  });
+  await getDb().items.add(image);
+  return image;
+}
+
 export async function listItems(): Promise<Item[]> {
   const items = await getDb().items.orderBy("createdAt").toArray();
   return items.reverse().map((item) => normalizeItem(item));
@@ -48,6 +71,12 @@ export async function deleteItem(id: string): Promise<void> {
   const existing = await getDb().items.get(id);
   if (existing?.type === "link") {
     await deleteLinkedPreviewAsset(normalizeItem(existing));
+  }
+  if (existing?.type === "image") {
+    const image = normalizeItem(existing);
+    if (image.assetId) {
+      await deleteAsset(image.assetId);
+    }
   }
   await getDb().items.delete(id);
 }
@@ -82,6 +111,21 @@ export async function updateLink(
   if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
     await deleteAsset(current.previewAssetId);
   }
+  await getDb().items.put(next);
+  return next;
+}
+
+export async function updateImage(
+  id: string,
+  input: { sourceUrl?: string; caption?: string },
+): Promise<ImageItem> {
+  const existing = await getDb().items.get(id);
+
+  if (!existing || existing.type !== "image") {
+    throw new Error("Image not found");
+  }
+
+  const next = applyImageEdit(normalizeItem(existing), input);
   await getDb().items.put(next);
   return next;
 }

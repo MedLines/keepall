@@ -3,9 +3,10 @@ import {
   linkListTitle,
   type LinkItem,
 } from "./link";
+import { coerceImageFields, imageListTitle, type ImageItem } from "./image";
 import { noteListTitle, type NoteItem } from "./note";
 
-export type Item = NoteItem | LinkItem;
+export type Item = NoteItem | LinkItem | ImageItem;
 
 export type ItemWithOptionalOrgIds = {
   tagIds?: string[];
@@ -21,13 +22,17 @@ export function normalizeItem<T extends ItemWithOptionalOrgIds>(
     collectionIds: item.collectionIds ?? [],
   };
 
-  if (
-    "type" in withOrg &&
-    (withOrg as { type?: string }).type === "link"
-  ) {
+  if ("type" in withOrg && (withOrg as { type?: string }).type === "link") {
     return {
       ...withOrg,
       ...coerceLinkPreviewFields(withOrg as Partial<LinkItem>),
+    };
+  }
+
+  if ("type" in withOrg && (withOrg as { type?: string }).type === "image") {
+    return {
+      ...withOrg,
+      ...coerceImageFields(withOrg as Partial<ImageItem>),
     };
   }
 
@@ -38,7 +43,9 @@ export function itemListTitle(item: Item): string {
   if (item.type === "note") {
     return noteListTitle(item);
   }
-
+  if (item.type === "image") {
+    return imageListTitle(item);
+  }
   return linkListTitle(item);
 }
 
