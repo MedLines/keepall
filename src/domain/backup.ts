@@ -404,9 +404,12 @@ function parseItem(
 
   if (item.type === "image") {
     const fields = coerceImageFields(item as Partial<ImageItem>);
-    if (!fields.assetId || !assetIds.has(fields.assetId)) {
+    if (
+      fields.assetIds.length === 0 ||
+      fields.assetIds.some((id) => !assetIds.has(id))
+    ) {
       throw new BackupValidationError(
-        `Image at index ${index} needs a known assetId`,
+        `Image at index ${index} needs known assetIds`,
       );
     }
     if (fields.sourceUrl && !isHttpUrl(fields.sourceUrl)) {
@@ -419,7 +422,7 @@ function parseItem(
       id: item.id,
       type: "image",
       title: item.title,
-      assetId: fields.assetId,
+      assetIds: fields.assetIds,
       sourceUrl: fields.sourceUrl,
       caption: fields.caption,
       tagIds: itemTagIds,

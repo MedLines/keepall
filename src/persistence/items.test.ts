@@ -145,7 +145,7 @@ describe("items persistence", () => {
     });
     expect(image.type).toBe("image");
     expect(image.caption).toBe("UI still");
-    const asset = await getAsset(image.assetId);
+    const asset = await getAsset(image.assetIds[0]!);
     expect(Array.from(asset?.bytes ?? [])).toEqual([1, 2, 3, 4]);
     expect(await listItems()).toEqual([image]);
   });
@@ -165,7 +165,7 @@ describe("items persistence", () => {
       mimeType: "image/jpeg",
     });
     await deleteItem(image.id);
-    expect(await getAsset(image.assetId)).toBeUndefined();
+    expect(await getAsset(image.assetIds[0]!)).toBeUndefined();
     expect(await listItems()).toEqual([]);
   });
 
@@ -181,6 +181,6 @@ describe("items persistence", () => {
     });
     expect(updated.caption).toBe("new");
     expect(updated.sourceUrl).toBe("https://example.com");
-    expect(updated.assetId).toBe(image.assetId);
+    expect(updated.assetIds).toEqual(image.assetIds);
   });
 });

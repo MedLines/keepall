@@ -5,6 +5,7 @@ import { buildNote } from "@/domain/note";
 import { createImage, createLink, createNote } from "@/persistence/items";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
+import { readClipboardImageAndText } from "./read-clipboard-capture";
 
 vi.mock("@/persistence/items", () => ({
   createNote: vi.fn(),
@@ -14,6 +15,10 @@ vi.mock("@/persistence/items", () => ({
 
 vi.mock("./enrich-link-preview", () => ({
   enrichLinkPreview: vi.fn(),
+}));
+
+vi.mock("./read-clipboard-capture", () => ({
+  readClipboardImageAndText: vi.fn(),
 }));
 
 async function openDraft(text: string) {
@@ -51,10 +56,10 @@ describe("CaptureHost", () => {
     vi.mocked(createLink).mockReset();
     vi.mocked(createImage).mockReset();
     vi.mocked(enrichLinkPreview).mockReset();
-    Object.assign(navigator, {
-      clipboard: {
-        readText: vi.fn().mockRejectedValue(new Error("denied")),
-      },
+    vi.mocked(readClipboardImageAndText).mockReset();
+    vi.mocked(readClipboardImageAndText).mockResolvedValue({
+      image: null,
+      text: "",
     });
   });
 
@@ -140,5 +145,28 @@ describe("CaptureHost", () => {
       "l1",
       "https://example.com/article",
     );
+  });
+
+  test("paste while open picks up an image copied after the dialog opened", async () => {
+    const pngBytes = new Uint8Array([137, 80, 78, 71]);
+    const file = new File([pngBytes], "shot.png", { type: "image/png" });
+
+    render(<CaptureHost />);
+    fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
+    await waitFor(() =>
+      expect(screen.getByLabelText("Link or note")).not.toBeDisabled(),
+    );
+
+    vi.mocked(readClipboardImageAndText).mockResolvedValueOnce({
+      image: file,
+      text: "",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Paste image" }));
+
+    await waitFor(() => {
+      const preview = screen.getByRole("dialog").querySelector("img");
+      expect(preview).not.toBeNull();
+      expect(preview).toHaveAttribute("src", expect.stringMatching(/^blob:/));
+    });
   });
 });

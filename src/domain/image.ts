@@ -14,7 +14,8 @@ export type ImageItem = {
   id: string;
   type: "image";
   title: string;
-  assetId: string;
+  /** Ordered gallery; cover / grid preview is always index 0. */
+  assetIds: string[];
   sourceUrl: string;
   caption: string;
   tagIds: string[];
@@ -24,11 +25,15 @@ export type ImageItem = {
 };
 
 export type CreateImageInput = {
+  /** First (and initially only) asset — becomes `assetIds: [assetId]`. */
   assetId: string;
   title?: string;
   sourceUrl?: string;
   caption?: string;
 };
+
+/** Raw row may still have legacy `assetId` before coerce. */
+export type ImageFieldsRaw = Partial<ImageItem> & { assetId?: string };
 
 export class ImageValidationError extends Error {
   constructor(message: string) {
@@ -80,6 +85,27 @@ export function textFieldsFromAccompanyingText(text: string): {
   return { sourceUrl: "", caption: trimmed };
 }
 
+export function imageCoverAssetId(image: Pick<ImageItem, "assetIds">): string {
+  return image.assetIds[0] ?? "";
+}
+
+/** Append at end — cover (index 0) stays put. */
+export function appendImageAsset(
+  image: ImageItem,
+  assetId: string,
+  options?: { now?: number },
+): ImageItem {
+  const id = assetId.trim();
+  if (!id) {
+    throw new ImageValidationError("Image asset is required");
+  }
+  return {
+    ...image,
+    assetIds: [...image.assetIds, id],
+    updatedAt: options?.now ?? Date.now(),
+  };
+}
+
 export function buildImage(
   input: CreateImageInput,
   options?: { id?: string; now?: number },
@@ -100,7 +126,7 @@ export function buildImage(
     id: options?.id ?? crypto.randomUUID(),
     type: "image",
     title: (input.title ?? "").trim(),
-    assetId,
+    assetIds: [assetId],
     sourceUrl,
     caption: (input.caption ?? "").trim(),
     tagIds: [],
@@ -147,12 +173,26 @@ export function imageListTitle(image: ImageItem): string {
   return "Image";
 }
 
+function coerceAssetIds(raw: ImageFieldsRaw | null | undefined): string[] {
+  if (Array.isArray(raw?.assetIds)) {
+    const fromList = raw.assetIds
+      .filter((id): id is string => typeof id === "string")
+      .map((id) => id.trim())
+      .filter(Boolean);
+    if (fromList.length > 0) {
+      return fromList;
+    }
+  }
+  const legacy = typeof raw?.assetId === "string" ? raw.assetId.trim() : "";
+  return legacy ? [legacy] : [];
+}
+
 export function coerceImageFields(
-  raw: Partial<ImageItem> | null | undefined,
-): Pick<ImageItem, "assetId" | "sourceUrl" | "caption" | "title"> {
+  raw: ImageFieldsRaw | null | undefined,
+): Pick<ImageItem, "assetIds" | "sourceUrl" | "caption" | "title"> {
   return {
     title: typeof raw?.title === "string" ? raw.title : "",
-    assetId: typeof raw?.assetId === "string" ? raw.assetId : "",
+    assetIds: coerceAssetIds(raw),
     sourceUrl: typeof raw?.sourceUrl === "string" ? raw.sourceUrl : "",
     caption: typeof raw?.caption === "string" ? raw.caption : "",
   };

@@ -1,6 +1,7 @@
 "use client";
 
 import { cardInitial } from "@/domain/card-display";
+import { imageCoverAssetId } from "@/domain/image";
 import type { Item } from "@/domain/item";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useEffect, useState } from "react";
@@ -22,7 +23,7 @@ export function LibraryItemMedia({
     item.type === "link"
       ? item.previewAssetId
       : item.type === "image"
-        ? item.assetId
+        ? imageCoverAssetId(item)
         : null;
   const localObjectUrl = useAssetObjectUrl(assetIdForDisplay);
   const [remoteBroken, setRemoteBroken] = useState(false);

@@ -74,8 +74,8 @@ export async function deleteItem(id: string): Promise<void> {
   }
   if (existing?.type === "image") {
     const image = normalizeItem(existing);
-    if (image.assetId) {
-      await deleteAsset(image.assetId);
+    for (const assetId of image.assetIds) {
+      await deleteAsset(assetId);
     }
   }
   await getDb().items.delete(id);

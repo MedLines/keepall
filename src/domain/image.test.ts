@@ -1,8 +1,11 @@
 import { describe, expect, test } from "vitest";
 import {
+  appendImageAsset,
   assertLocalImageBytes,
   applyImageEdit,
   buildImage,
+  coerceImageFields,
+  imageCoverAssetId,
   imageListTitle,
   ImageValidationError,
   MAX_LOCAL_IMAGE_BYTES,
@@ -39,7 +42,7 @@ describe("buildImage", () => {
     expect(image).toMatchObject({
       id: "i1",
       type: "image",
-      assetId: "a1",
+      assetIds: ["a1"],
       sourceUrl: "https://example.com",
       caption: "UI still",
     });
@@ -78,8 +81,30 @@ describe("imageListTitle", () => {
   });
 });
 
+describe("coerceImageFields", () => {
+  test("migrates legacy assetId to a one-item assetIds list", () => {
+    expect(coerceImageFields({ assetId: "abc" }).assetIds).toEqual(["abc"]);
+  });
+
+  test("prefers assetIds when present", () => {
+    expect(
+      coerceImageFields({ assetId: "old", assetIds: ["a1", "a2"] }).assetIds,
+    ).toEqual(["a1", "a2"]);
+  });
+});
+
+describe("appendImageAsset", () => {
+  test("adds at the end and leaves cover at index 0", () => {
+    const image = buildImage({ assetId: "a1" }, { id: "i1", now: 1 });
+    const next = appendImageAsset(image, "a2", { now: 2 });
+    expect(next.assetIds).toEqual(["a1", "a2"]);
+    expect(imageCoverAssetId(next)).toBe("a1");
+    expect(next.updatedAt).toBe(2);
+  });
+});
+
 describe("applyImageEdit", () => {
-  test("updates caption and sourceUrl without changing assetId", () => {
+  test("updates caption and sourceUrl without changing assetIds", () => {
     const image = buildImage(
       { assetId: "a1", caption: "old", sourceUrl: "https://a.com" },
       { id: "i1", now: 1 },
@@ -89,7 +114,7 @@ describe("applyImageEdit", () => {
       { caption: "new", sourceUrl: "https://b.com" },
       { now: 2 },
     );
-    expect(next.assetId).toBe("a1");
+    expect(next.assetIds).toEqual(["a1"]);
     expect(next.caption).toBe("new");
     expect(next.sourceUrl).toBe("https://b.com");
     expect(next.updatedAt).toBe(2);

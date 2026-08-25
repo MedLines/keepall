@@ -81,6 +81,14 @@ if (typeof HTMLDialogElement !== "undefined") {
   }
 }
 
+if (typeof URL.createObjectURL !== "function") {
+  URL.createObjectURL = vi.fn(() => "blob:vitest-mock");
+}
+
+if (typeof URL.revokeObjectURL !== "function") {
+  URL.revokeObjectURL = vi.fn();
+}
+
 beforeEach(async () => {
   navStore.pathname = "/";
   navStore.params = new URLSearchParams();

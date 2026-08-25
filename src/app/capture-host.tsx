@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useReducer, useRef, useState } from "react";
+import { type ClipboardEvent, type FormEvent, useEffect, useReducer, useRef, useState } from "react";
 import {
   captureReducer,
   initialCaptureState,
@@ -174,6 +174,44 @@ export function CaptureHost() {
     await setDraftFromBlob(file, state.input, state.status);
   }
 
+  async function pasteImageFromClipboard() {
+    if (state.status === "saving" || state.status === "reading") {
+      return;
+    }
+    try {
+      const { image, text } = await readClipboardImageAndText();
+      if (image) {
+        await setDraftFromBlob(image, text || state.input, state.status);
+      }
+    } catch {
+      // Clipboard denied or empty — no-op.
+    }
+  }
+
+  async function onPaste(event: ClipboardEvent<HTMLFormElement>) {
+    if (state.status === "saving" || state.status === "reading") {
+      return;
+    }
+
+    const items = event.clipboardData?.items;
+    if (!items) {
+      return;
+    }
+
+    for (const item of items) {
+      if (!item.type.startsWith("image/")) {
+        continue;
+      }
+      const file = item.getAsFile();
+      if (!file) {
+        continue;
+      }
+      event.preventDefault();
+      await setDraftFromBlob(file, state.input, state.status);
+      return;
+    }
+  }
+
   async function persistCapture() {
     if (saveInFlightRef.current) {
       return;
@@ -297,7 +335,7 @@ export function CaptureHost() {
       <h2 className="text-lg font-semibold" id="capture-title">
         Save to Keepall
       </h2>
-      <form className="mt-4 flex flex-col gap-4" onSubmit={onSubmit}>
+      <form className="mt-4 flex flex-col gap-4" onSubmit={onSubmit} onPaste={onPaste}>
         {imageDraft ? (
           <div className="overflow-hidden rounded-md border border-zinc-200 bg-zinc-100">
             {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
@@ -350,6 +388,14 @@ export function CaptureHost() {
             onClick={() => fileInputRef.current?.click()}
           >
             Choose image…
+          </button>
+          <button
+            className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
+            type="button"
+            disabled={state.status === "saving" || state.status === "reading"}
+            onClick={() => void pasteImageFromClipboard()}
+          >
+            Paste image
           </button>
           {imageDraft ? (
             <button
