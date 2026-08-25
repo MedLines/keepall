@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildLink, LinkValidationError } from "@/domain/link";
 import { buildNote, NoteValidationError } from "@/domain/note";
@@ -464,6 +464,20 @@ describe("Library tags", () => {
     vi.mocked(assignCollectionToItem).mockReset();
   });
 
+  test("scan face shows tag chips without empty-state copy", async () => {
+    const tagged = { ...note, tagIds: ["t1"], updatedAt: 2 };
+    const tag = { id: "t1", name: "inspiration", createdAt: 1 };
+    vi.mocked(listItems).mockResolvedValue([tagged]);
+    vi.mocked(listTags).mockResolvedValue([tag]);
+    render(<Library />);
+
+    expect(await screen.findByText("inspiration")).toBeInTheDocument();
+    expect(screen.queryByText("No tags yet.")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add tag" }),
+    ).toBeInTheDocument();
+  });
+
   test("adds a tag to an item and shows the name after reload", async () => {
     const tagged = { ...note, tagIds: ["t1"], updatedAt: 2 };
     const tag = { id: "t1", name: "inspiration", createdAt: 1 };
@@ -477,10 +491,11 @@ describe("Library tags", () => {
     vi.mocked(assignTagToItem).mockResolvedValue(tagged);
     render(<Library />);
 
-    fireEvent.change(await screen.findByLabelText("Add tag"), {
+    fireEvent.click(await screen.findByRole("button", { name: "Add tag" }));
+    fireEvent.change(screen.getByPlaceholderText("Tag name"), {
       target: { value: "inspiration" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await waitFor(() => {
       expect(createTag).toHaveBeenCalledWith({ name: "inspiration" });
@@ -521,14 +536,14 @@ describe("Library collections", () => {
     render(<Library />);
 
     await screen.findByText("A persisted note");
+    const noteCard = screen.getByText("A persisted note").closest("li")!;
+    fireEvent.click(
+      within(noteCard).getByRole("button", { name: "Add to collection" }),
+    );
     fireEvent.change(document.getElementById("add-collection-n1")!, {
       target: { value: "Reading" },
     });
-    fireEvent.click(
-      document.querySelector("#add-collection-n1")!
-        .closest("form")!
-        .querySelector('button[type="submit"]')!,
-    );
+    fireEvent.click(within(noteCard).getByRole("button", { name: "Add" }));
 
     await waitFor(() => {
       expect(createCollection).toHaveBeenCalledWith({ name: "Reading" });

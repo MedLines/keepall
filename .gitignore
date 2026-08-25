@@ -56,3 +56,6 @@ next-env.d.ts
 .cursor/plans/
 .cursor/rules/private-apprenticeship.mdc
 .cursor/rules/code-context-in-teaching.mdc
+
+# Isolated UI prototypes — runnable locally, never ship
+src/app/prototypes/

@@ -54,6 +54,12 @@ export type LibraryItemProps = {
   onStartDelete: () => void;
 };
 
+const ACTION_BTN =
+  "relative flex h-8 min-w-8 items-center justify-center rounded-md bg-white/95 px-2 text-xs font-medium text-zinc-800 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06)] backdrop-blur-sm transition-[transform,box-shadow] duration-150 ease-out after:absolute after:left-1/2 after:top-1/2 after:size-10 after:-translate-x-1/2 after:-translate-y-1/2 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08)] active:scale-[0.96] disabled:opacity-60";
+
+const IMG_CLASS =
+  "aspect-[16/10] w-full object-cover outline outline-1 -outline-offset-1 outline-black/10";
+
 export function LibraryItem({
   item,
   tagNames,
@@ -85,6 +91,7 @@ export function LibraryItem({
 }: LibraryItemProps) {
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
+  const [orgPanel, setOrgPanel] = useState<"tag" | "collection" | null>(null);
 
   function submitTag(event: FormEvent) {
     event.preventDefault();
@@ -94,6 +101,7 @@ export function LibraryItem({
     }
     onAddTag(name);
     setTagDraft("");
+    setOrgPanel(null);
   }
 
   function submitCollection(event: FormEvent) {
@@ -104,7 +112,10 @@ export function LibraryItem({
     }
     onAddCollection(name);
     setCollectionDraft("");
+    setOrgPanel(null);
   }
+
+  const actionChromeVisible = orgPanel !== null;
 
   const title = itemListTitle(item);
   const assetIdForDisplay =
@@ -122,6 +133,12 @@ export function LibraryItem({
     setRemoteBroken(false);
   }, [item.id, remotePreviewUrl]);
 
+  useEffect(() => {
+    if (editing || pendingDelete) {
+      setOrgPanel(null);
+    }
+  }, [editing, pendingDelete]);
+
   const remoteUrl =
     item.type === "link" &&
     item.previewStatus === "ready" &&
@@ -136,8 +153,8 @@ export function LibraryItem({
     item.type === "link" ? "Link" : item.type === "image" ? "Image" : "Note";
 
   return (
-    <li className="flex flex-col rounded-md border border-zinc-200 bg-white p-4">
-      <div className="mb-3 overflow-hidden rounded-md bg-zinc-200">
+    <li className="group relative flex flex-col rounded-2xl bg-white p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06),0_2px_4px_0_rgba(0,0,0,0.04)] transition-[box-shadow] duration-150 ease-out hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08),0_2px_4px_0_rgba(0,0,0,0.06)]">
+      <div className="relative mb-2 overflow-hidden rounded-xl bg-zinc-200">
         {showMedia && item.type === "link" ? (
           <a
             aria-label={title}
@@ -149,7 +166,7 @@ export function LibraryItem({
             {/* eslint-disable-next-line @next/next/no-img-element -- local object URLs + remote OG */}
             <img
               alt=""
-              className="aspect-[16/10] w-full object-cover"
+              className={IMG_CLASS}
               onError={() => {
                 if (!localObjectUrl) {
                   setRemoteBroken(true);
@@ -168,19 +185,11 @@ export function LibraryItem({
               target="_blank"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- local asset object URL */}
-              <img
-                alt=""
-                className="aspect-[16/10] w-full object-cover"
-                src={imageSrc!}
-              />
+              <img alt="" className={IMG_CLASS} src={imageSrc!} />
             </a>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element -- local asset object URL
-            <img
-              alt=""
-              className="aspect-[16/10] w-full object-cover"
-              src={imageSrc!}
-            />
+            <img alt="" className={IMG_CLASS} src={imageSrc!} />
           )
         ) : (
           <div
@@ -190,350 +199,408 @@ export function LibraryItem({
             {cardInitial(item)}
           </div>
         )}
-      </div>
-      <h3 className="font-medium">
-        {item.type === "link" && !editing ? (
-          <a
-            className="break-words text-zinc-900 underline-offset-2 hover:underline"
-            href={item.url}
-            rel="noreferrer"
-            target="_blank"
+        {!editing && !pendingDelete ? (
+          <div
+            className={`absolute inset-x-2 top-2 z-10 flex flex-col items-end gap-1 transition-opacity duration-150 ease-out motion-reduce:transition-none ${
+              actionChromeVisible
+                ? "pointer-events-auto opacity-100"
+                : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+            }`}
           >
-            {title}
-          </a>
-        ) : item.type === "image" && item.sourceUrl && !editing ? (
-          <a
-            className="break-words text-zinc-900 underline-offset-2 hover:underline"
-            href={item.sourceUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            {title}
-          </a>
-        ) : (
-          title
-        )}
-      </h3>
-      <p className="mt-1">
-        <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
-          {typeLabel}
-        </span>
-      </p>
-      {!editing ? (
-        <p className="mt-1 line-clamp-2 text-sm text-zinc-600">
-          {cardSecondaryLine(item)}
-        </p>
-      ) : null}
-      {item.type === "note" && editing ? (
-        <div className="mt-2 flex flex-col gap-2">
-          <label
-            className="text-sm font-medium"
-            htmlFor={`edit-note-${item.id}`}
-          >
-            Note content
-          </label>
-          <textarea
-            className="min-h-24 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-            id={`edit-note-${item.id}`}
-            ref={setFirstEditField}
-            value={editDraft}
-            disabled={mutationBusy}
-            onChange={(event) => onEditDraftChange(event.target.value)}
-            onKeyDown={(event) => onEditSaveShortcut(event, onSaveNote)}
-          />
-          {editError ? (
-            <p className="text-sm text-red-700" role="alert">
-              {editError}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap gap-3">
-            <button
-              className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
-              type="button"
-              disabled={mutationBusy}
-              onClick={onSaveNote}
-            >
-              {pendingMutation?.op === "save-note" &&
-              pendingMutation.id === item.id
-                ? "Saving…"
-                : "Save note"}
-            </button>
-            <button
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-              type="button"
-              disabled={mutationBusy}
-              onClick={onCancelEdit}
-            >
-              Cancel edit
-            </button>
-          </div>
-        </div>
-      ) : item.type === "link" && editing ? (
-        <div className="mt-2 flex flex-col gap-2">
-          <label
-            className="text-sm font-medium"
-            htmlFor={`edit-link-url-${item.id}`}
-          >
-            URL
-          </label>
-          <input
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-            id={`edit-link-url-${item.id}`}
-            ref={setFirstEditField}
-            value={editDraft}
-            disabled={mutationBusy}
-            onChange={(event) => onEditDraftChange(event.target.value)}
-            onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
-          />
-          <label
-            className="text-sm font-medium"
-            htmlFor={`edit-link-title-${item.id}`}
-          >
-            Title
-          </label>
-          <input
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-            id={`edit-link-title-${item.id}`}
-            value={editTitleDraft}
-            disabled={mutationBusy}
-            onChange={(event) => onEditTitleChange(event.target.value)}
-            onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
-          />
-          {editError ? (
-            <p className="text-sm text-red-700" role="alert">
-              {editError}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap gap-3">
-            <button
-              className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
-              type="button"
-              disabled={mutationBusy}
-              onClick={onSaveLink}
-            >
-              {pendingMutation?.op === "save-link" &&
-              pendingMutation.id === item.id
-                ? "Saving…"
-                : "Save link"}
-            </button>
-            <button
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-              type="button"
-              disabled={mutationBusy}
-              onClick={onCancelEdit}
-            >
-              Cancel edit
-            </button>
-          </div>
-        </div>
-      ) : item.type === "image" && editing ? (
-        <div className="mt-2 flex flex-col gap-2">
-          <label
-            className="text-sm font-medium"
-            htmlFor={`edit-image-caption-${item.id}`}
-          >
-            Caption
-          </label>
-          <textarea
-            className="min-h-20 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-            id={`edit-image-caption-${item.id}`}
-            ref={setFirstEditField}
-            value={editDraft}
-            disabled={mutationBusy}
-            onChange={(event) => onEditDraftChange(event.target.value)}
-            onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
-          />
-          <label
-            className="text-sm font-medium"
-            htmlFor={`edit-image-source-${item.id}`}
-          >
-            Source URL
-          </label>
-          <input
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-            id={`edit-image-source-${item.id}`}
-            value={editTitleDraft}
-            disabled={mutationBusy}
-            onChange={(event) => onEditTitleChange(event.target.value)}
-            onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
-          />
-          {editError ? (
-            <p className="text-sm text-red-700" role="alert">
-              {editError}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap gap-3">
-            <button
-              className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
-              type="button"
-              disabled={mutationBusy}
-              onClick={onSaveImage}
-            >
-              {pendingMutation?.op === "save-image" &&
-              pendingMutation.id === item.id
-                ? "Saving…"
-                : "Save image"}
-            </button>
-            <button
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-              type="button"
-              disabled={mutationBusy}
-              onClick={onCancelEdit}
-            >
-              Cancel edit
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {!editing && !pendingDelete ? (
-        <div className="mt-3">
-          {tagNames.length > 0 ? (
-            <ul className="flex flex-wrap gap-2" aria-label="Tags">
-              {tagNames.map((name) => (
-                <li
-                  key={name}
-                  className="rounded-md bg-zinc-100 px-2 py-0.5 text-sm text-zinc-700"
-                >
-                  {name}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-zinc-500">No tags yet.</p>
-          )}
-          <form
-            className="mt-2 flex flex-wrap items-end gap-2"
-            onSubmit={submitTag}
-          >
-            <div className="flex min-w-40 flex-1 flex-col gap-1">
-              <label
-                className="text-sm font-medium"
-                htmlFor={`add-tag-${item.id}`}
-              >
-                Add tag
-              </label>
-              <input
-                className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-                id={`add-tag-${item.id}`}
-                value={tagDraft}
+            <div className="flex justify-end gap-1">
+              <button
+                type="button"
+                className={ACTION_BTN}
+                data-focus-return={`edit:${item.id}`}
                 disabled={mutationBusy}
-                onChange={(event) => setTagDraft(event.target.value)}
-              />
+                onClick={() => {
+                  setOrgPanel(null);
+                  onStartEdit();
+                }}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className={ACTION_BTN}
+                aria-label="Delete"
+                data-focus-return={`delete:${item.id}`}
+                disabled={mutationBusy}
+                onClick={() => {
+                  setOrgPanel(null);
+                  onStartDelete();
+                }}
+              >
+                Del
+              </button>
+              <button
+                type="button"
+                className={ACTION_BTN}
+                aria-expanded={orgPanel === "tag"}
+                aria-label="Add tag"
+                disabled={mutationBusy}
+                onClick={() =>
+                  setOrgPanel((panel) => (panel === "tag" ? null : "tag"))
+                }
+              >
+                Tag
+              </button>
+              <button
+                type="button"
+                className={ACTION_BTN}
+                aria-expanded={orgPanel === "collection"}
+                aria-label="Add to collection"
+                disabled={mutationBusy}
+                onClick={() =>
+                  setOrgPanel((panel) =>
+                    panel === "collection" ? null : "collection",
+                  )
+                }
+              >
+                Col
+              </button>
             </div>
-            <button
-              className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium disabled:opacity-60"
-              type="submit"
-              disabled={mutationBusy}
-            >
-              {pendingMutation?.op === "assign-tag" &&
-              pendingMutation.id === item.id
-                ? "Adding…"
-                : "Add tag"}
-            </button>
-          </form>
-          {tagError ? (
-            <p className="mt-2 text-sm text-red-700" role="alert">
-              {tagError}
-            </p>
-          ) : null}
-          <div className="mt-4">
-            {collectionNames.length > 0 ? (
-              <ul className="flex flex-wrap gap-2" aria-label="Collections">
-                {collectionNames.map((name) => (
-                  <li
-                    key={name}
-                    className="rounded-md bg-zinc-100 px-2 py-0.5 text-sm text-zinc-700"
+            {orgPanel === "tag" ? (
+              <form
+                className="w-56 rounded-lg bg-white/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+                onSubmit={submitTag}
+              >
+                <label className="sr-only" htmlFor={`add-tag-${item.id}`}>
+                  Add tag
+                </label>
+                <div className="flex gap-1">
+                  <input
+                    autoFocus
+                    className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-60"
+                    id={`add-tag-${item.id}`}
+                    placeholder="Tag name"
+                    value={tagDraft}
+                    disabled={mutationBusy}
+                    onChange={(event) => setTagDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") {
+                        event.preventDefault();
+                        setOrgPanel(null);
+                      }
+                    }}
+                  />
+                  <button
+                    className={`${ACTION_BTN} shrink-0`}
+                    type="submit"
+                    disabled={mutationBusy}
                   >
-                    {name}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-zinc-500">No collections yet.</p>
-            )}
-            <form
-              className="mt-2 flex flex-wrap items-end gap-2"
-              onSubmit={submitCollection}
-            >
-              <div className="flex min-w-40 flex-1 flex-col gap-1">
+                    {pendingMutation?.op === "assign-tag" &&
+                    pendingMutation.id === item.id
+                      ? "…"
+                      : "Add"}
+                  </button>
+                </div>
+                {tagError ? (
+                  <p className="mt-1 text-xs text-red-700" role="alert">
+                    {tagError}
+                  </p>
+                ) : null}
+              </form>
+            ) : null}
+            {orgPanel === "collection" ? (
+              <form
+                className="w-56 rounded-lg bg-white/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+                onSubmit={submitCollection}
+              >
                 <label
-                  className="text-sm font-medium"
+                  className="sr-only"
                   htmlFor={`add-collection-${item.id}`}
                 >
                   Add to collection
                 </label>
-                <input
-                  className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-                  id={`add-collection-${item.id}`}
-                  value={collectionDraft}
-                  disabled={mutationBusy}
-                  onChange={(event) => setCollectionDraft(event.target.value)}
-                />
-              </div>
-              <button
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium disabled:opacity-60"
-                type="submit"
-                disabled={mutationBusy}
-              >
-                {pendingMutation?.op === "assign-collection" &&
-                pendingMutation.id === item.id
-                  ? "Adding…"
-                  : "Add to collection"}
-              </button>
-            </form>
-            {collectionError ? (
-              <p className="mt-2 text-sm text-red-700" role="alert">
-                {collectionError}
-              </p>
+                <div className="flex gap-1">
+                  <input
+                    autoFocus
+                    className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-60"
+                    id={`add-collection-${item.id}`}
+                    placeholder="Collection"
+                    value={collectionDraft}
+                    disabled={mutationBusy}
+                    onChange={(event) => setCollectionDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") {
+                        event.preventDefault();
+                        setOrgPanel(null);
+                      }
+                    }}
+                  />
+                  <button
+                    className={`${ACTION_BTN} shrink-0`}
+                    type="submit"
+                    disabled={mutationBusy}
+                  >
+                    {pendingMutation?.op === "assign-collection" &&
+                    pendingMutation.id === item.id
+                      ? "…"
+                      : "Add"}
+                  </button>
+                </div>
+                {collectionError ? (
+                  <p className="mt-1 text-xs text-red-700" role="alert">
+                    {collectionError}
+                  </p>
+                ) : null}
+              </form>
             ) : null}
           </div>
-        </div>
-      ) : null}
-      {pendingDelete ? (
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <p className="text-sm text-zinc-700">Delete this item?</p>
-          <button
-            className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
-            type="button"
-            ref={confirmDeleteRef}
-            disabled={mutationBusy}
-            onClick={onConfirmDelete}
-          >
-            {pendingMutation?.op === "delete" && pendingMutation.id === item.id
-              ? "Deleting…"
-              : "Confirm delete"}
-          </button>
-          <button
-            className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-            type="button"
-            disabled={mutationBusy}
-            onClick={onCancelDelete}
-          >
-            Cancel
-          </button>
-        </div>
-      ) : editing ? null : (
-        <div className="mt-3 flex flex-wrap gap-3">
-          <button
-            className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-            type="button"
-            data-focus-return={`edit:${item.id}`}
-            disabled={mutationBusy}
-            onClick={onStartEdit}
-          >
-            Edit
-          </button>
-          <button
-            className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
-            type="button"
-            data-focus-return={`delete:${item.id}`}
-            disabled={mutationBusy}
-            onClick={onStartDelete}
-          >
-            Delete
-          </button>
-        </div>
-      )}
+        ) : null}
+      </div>
+
+      <div className="px-2 pb-2">
+        <h3 className="text-balance font-medium">
+          {item.type === "link" && !editing ? (
+            <a
+              className="break-words text-zinc-900 underline-offset-2 hover:underline"
+              href={item.url}
+              rel="noreferrer"
+              target="_blank"
+            >
+              {title}
+            </a>
+          ) : item.type === "image" && item.sourceUrl && !editing ? (
+            <a
+              className="break-words text-zinc-900 underline-offset-2 hover:underline"
+              href={item.sourceUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              {title}
+            </a>
+          ) : (
+            title
+          )}
+        </h3>
+        <p className="mt-1">
+          <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
+            {typeLabel}
+          </span>
+        </p>
+        {!editing ? (
+          <p className="mt-1 line-clamp-2 text-pretty text-sm text-zinc-600">
+            {cardSecondaryLine(item)}
+          </p>
+        ) : null}
+        {item.type === "note" && editing ? (
+          <div className="mt-2 flex flex-col gap-2">
+            <label
+              className="text-sm font-medium"
+              htmlFor={`edit-note-${item.id}`}
+            >
+              Note content
+            </label>
+            <textarea
+              className="min-h-24 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+              id={`edit-note-${item.id}`}
+              ref={setFirstEditField}
+              value={editDraft}
+              disabled={mutationBusy}
+              onChange={(event) => onEditDraftChange(event.target.value)}
+              onKeyDown={(event) => onEditSaveShortcut(event, onSaveNote)}
+            />
+            {editError ? (
+              <p className="text-sm text-red-700" role="alert">
+                {editError}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-3">
+              <button
+                className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                type="button"
+                disabled={mutationBusy}
+                onClick={onSaveNote}
+              >
+                {pendingMutation?.op === "save-note" &&
+                pendingMutation.id === item.id
+                  ? "Saving…"
+                  : "Save note"}
+              </button>
+              <button
+                className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                type="button"
+                disabled={mutationBusy}
+                onClick={onCancelEdit}
+              >
+                Cancel edit
+              </button>
+            </div>
+          </div>
+        ) : item.type === "link" && editing ? (
+          <div className="mt-2 flex flex-col gap-2">
+            <label
+              className="text-sm font-medium"
+              htmlFor={`edit-link-url-${item.id}`}
+            >
+              URL
+            </label>
+            <input
+              className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+              id={`edit-link-url-${item.id}`}
+              ref={setFirstEditField}
+              value={editDraft}
+              disabled={mutationBusy}
+              onChange={(event) => onEditDraftChange(event.target.value)}
+              onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
+            />
+            <label
+              className="text-sm font-medium"
+              htmlFor={`edit-link-title-${item.id}`}
+            >
+              Title
+            </label>
+            <input
+              className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+              id={`edit-link-title-${item.id}`}
+              value={editTitleDraft}
+              disabled={mutationBusy}
+              onChange={(event) => onEditTitleChange(event.target.value)}
+              onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
+            />
+            {editError ? (
+              <p className="text-sm text-red-700" role="alert">
+                {editError}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-3">
+              <button
+                className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                type="button"
+                disabled={mutationBusy}
+                onClick={onSaveLink}
+              >
+                {pendingMutation?.op === "save-link" &&
+                pendingMutation.id === item.id
+                  ? "Saving…"
+                  : "Save link"}
+              </button>
+              <button
+                className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                type="button"
+                disabled={mutationBusy}
+                onClick={onCancelEdit}
+              >
+                Cancel edit
+              </button>
+            </div>
+          </div>
+        ) : item.type === "image" && editing ? (
+          <div className="mt-2 flex flex-col gap-2">
+            <label
+              className="text-sm font-medium"
+              htmlFor={`edit-image-caption-${item.id}`}
+            >
+              Caption
+            </label>
+            <textarea
+              className="min-h-20 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+              id={`edit-image-caption-${item.id}`}
+              ref={setFirstEditField}
+              value={editDraft}
+              disabled={mutationBusy}
+              onChange={(event) => onEditDraftChange(event.target.value)}
+              onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
+            />
+            <label
+              className="text-sm font-medium"
+              htmlFor={`edit-image-source-${item.id}`}
+            >
+              Source URL
+            </label>
+            <input
+              className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+              id={`edit-image-source-${item.id}`}
+              value={editTitleDraft}
+              disabled={mutationBusy}
+              onChange={(event) => onEditTitleChange(event.target.value)}
+              onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
+            />
+            {editError ? (
+              <p className="text-sm text-red-700" role="alert">
+                {editError}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-3">
+              <button
+                className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                type="button"
+                disabled={mutationBusy}
+                onClick={onSaveImage}
+              >
+                {pendingMutation?.op === "save-image" &&
+                pendingMutation.id === item.id
+                  ? "Saving…"
+                  : "Save image"}
+              </button>
+              <button
+                className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                type="button"
+                disabled={mutationBusy}
+                onClick={onCancelEdit}
+              >
+                Cancel edit
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {!editing && !pendingDelete ? (
+          tagNames.length > 0 || collectionNames.length > 0 ? (
+            <div className="mt-2 space-y-1.5">
+              {tagNames.length > 0 ? (
+                <ul className="flex flex-wrap gap-1.5" aria-label="Tags">
+                  {tagNames.map((name) => (
+                    <li
+                      key={name}
+                      className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600"
+                    >
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {collectionNames.length > 0 ? (
+                <ul className="flex flex-wrap gap-1.5" aria-label="Collections">
+                  {collectionNames.map((name) => (
+                    <li
+                      key={name}
+                      className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600"
+                    >
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null
+        ) : null}
+        {pendingDelete ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <p className="text-sm text-zinc-700">Delete this item?</p>
+            <button
+              className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+              type="button"
+              ref={confirmDeleteRef}
+              disabled={mutationBusy}
+              onClick={onConfirmDelete}
+            >
+              {pendingMutation?.op === "delete" && pendingMutation.id === item.id
+                ? "Deleting…"
+                : "Confirm delete"}
+            </button>
+            <button
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+              type="button"
+              disabled={mutationBusy}
+              onClick={onCancelDelete}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : null}
+      </div>
     </li>
   );
 }
