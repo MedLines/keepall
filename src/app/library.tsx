@@ -46,6 +46,7 @@ import { createTag, listTags } from "@/persistence/tags";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { LibraryItem, type PendingMutation } from "./library-item";
+import { LibraryInspect } from "./library-inspect";
 import { ImageValidationError } from "@/domain/image";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
@@ -173,6 +174,20 @@ export function Library() {
     router.replace(libraryViewHref(pathname, next), { scroll: false });
   }
 
+  const inspectId = view.item;
+  const inspectedItem =
+    inspectId === null
+      ? null
+      : (items.find((entry) => entry.id === inspectId) ?? null);
+
+  useEffect(() => {
+    if (inspectId !== null && loadState === "ready" && inspectedItem === null) {
+      const next = mergeLibraryViewState(view, { item: null });
+      router.replace(libraryViewHref(pathname, next), { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- clear stale item once after load
+  }, [inspectId, inspectedItem, loadState]);
+
   function clearEdit(options?: { restoreFocus?: boolean }) {
     if (options?.restoreFocus && editingId) {
       restoreFocusRef.current = { id: editingId, action: "edit" };
@@ -181,6 +196,16 @@ export function Library() {
     setEditDraft("");
     setEditTitleDraft("");
     setEditError(null);
+  }
+
+  function closeInspect() {
+    updateView({ item: null });
+    clearEdit();
+    setPendingDeleteId(null);
+  }
+
+  function openInspect(id: string) {
+    updateView({ item: id });
   }
 
   function cancelDelete() {
@@ -214,6 +239,9 @@ export function Library() {
       await deleteItem(id);
       setPendingDeleteId(null);
       restoreFocusRef.current = null;
+      if (view.item === id) {
+        updateView({ item: null });
+      }
       libraryHeadingRef.current?.focus();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
@@ -467,6 +495,8 @@ export function Library() {
                 <LibraryItem
                   key={item.id}
                   item={item}
+                  inspected={inspectId === item.id}
+                  onOpenInspect={() => openInspect(item.id)}
                   tagNames={resolveItemTagNames(item, tagsById)}
                   tagError={tagErrorItemId === item.id ? tagError : null}
                   collectionNames={resolveItemCollectionNames(
@@ -476,8 +506,10 @@ export function Library() {
                   collectionError={
                     collectionErrorItemId === item.id ? collectionError : null
                   }
-                  editing={editingId === item.id}
-                  pendingDelete={pendingDeleteId === item.id}
+                  editing={editingId === item.id && inspectId !== item.id}
+                  pendingDelete={
+                    pendingDeleteId === item.id && inspectId !== item.id
+                  }
                   mutationBusy={mutationBusy}
                   pendingMutation={pendingMutation}
                   editDraft={editDraft}
@@ -533,6 +565,116 @@ export function Library() {
               ))}
             </ul>
           )}
+          <LibraryInspect
+            item={inspectedItem}
+            tagNames={
+              inspectedItem
+                ? resolveItemTagNames(inspectedItem, tagsById)
+                : []
+            }
+            collectionNames={
+              inspectedItem
+                ? resolveItemCollectionNames(inspectedItem, collectionsById)
+                : []
+            }
+            tagError={
+              inspectedItem && tagErrorItemId === inspectedItem.id
+                ? tagError
+                : null
+            }
+            collectionError={
+              inspectedItem && collectionErrorItemId === inspectedItem.id
+                ? collectionError
+                : null
+            }
+            editing={
+              inspectedItem !== null && editingId === inspectedItem.id
+            }
+            pendingDelete={
+              inspectedItem !== null && pendingDeleteId === inspectedItem.id
+            }
+            mutationBusy={mutationBusy}
+            pendingMutation={pendingMutation}
+            editDraft={editDraft}
+            editTitleDraft={editTitleDraft}
+            editError={editError}
+            setFirstEditField={(node) => {
+              firstEditFieldRef.current = node;
+            }}
+            confirmDeleteRef={confirmDeleteRef}
+            onClose={closeInspect}
+            onEditDraftChange={setEditDraft}
+            onEditTitleChange={setEditTitleDraft}
+            onEditSaveShortcut={onEditSaveShortcut}
+            onSaveNote={() => {
+              if (inspectedItem) {
+                void saveNoteEdit(inspectedItem.id);
+              }
+            }}
+            onSaveLink={() => {
+              if (inspectedItem) {
+                void saveLinkEdit(inspectedItem.id);
+              }
+            }}
+            onSaveImage={() => {
+              if (inspectedItem) {
+                void saveImageEdit(inspectedItem.id);
+              }
+            }}
+            onCancelEdit={() => clearEdit()}
+            onConfirmDelete={() => {
+              if (inspectedItem) {
+                void confirmDelete(inspectedItem.id);
+              }
+            }}
+            onCancelDelete={cancelDelete}
+            onAddTag={(name: string) => {
+              if (inspectedItem) {
+                void addTagToItem(inspectedItem.id, name);
+              }
+            }}
+            onAddCollection={(name: string) => {
+              if (inspectedItem) {
+                void addCollectionToItem(inspectedItem.id, name);
+              }
+            }}
+            onStartEdit={() => {
+              if (!inspectedItem) {
+                return;
+              }
+              const target = inspectedItem;
+              setPendingDeleteId(null);
+              setDeleteError(null);
+              setEditError(null);
+              setTagError(null);
+              setTagErrorItemId(null);
+              setCollectionError(null);
+              setCollectionErrorItemId(null);
+              setEditingId(target.id);
+              if (target.type === "note") {
+                setEditDraft(target.content);
+                setEditTitleDraft("");
+              } else if (target.type === "image") {
+                setEditDraft(target.caption);
+                setEditTitleDraft(target.sourceUrl);
+              } else {
+                setEditDraft(target.url);
+                setEditTitleDraft(target.title);
+              }
+            }}
+            onStartDelete={() => {
+              if (!inspectedItem) {
+                return;
+              }
+              clearEdit();
+              setDeleteError(null);
+              setTagError(null);
+              setTagErrorItemId(null);
+              setCollectionError(null);
+              setCollectionErrorItemId(null);
+              setPendingDeleteId(inspectedItem.id);
+            }}
+          />
         </>
       )}
     </section>

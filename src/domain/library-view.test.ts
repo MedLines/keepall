@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { buildLink } from "./link";
 import {
+  itemMediaLayoutId,
   libraryViewHref,
   libraryViewStateToSearchParams,
   parseLibraryViewState,
@@ -9,42 +10,48 @@ import {
 import { buildNote } from "./note";
 
 describe("parseLibraryViewState", () => {
-  test("reads q, collection, and sort with defaults", () => {
+  test("reads q, collection, sort, and item with defaults", () => {
     expect(parseLibraryViewState(new URLSearchParams())).toEqual({
       q: "",
       collection: null,
       sort: "newest",
+      item: null,
     });
 
     expect(
       parseLibraryViewState(
-        new URLSearchParams("q=design&collection=c1&sort=oldest"),
+        new URLSearchParams("q=design&collection=c1&sort=oldest&item=n1"),
       ),
     ).toEqual({
       q: "design",
       collection: "c1",
       sort: "oldest",
+      item: "n1",
     });
   });
 
-  test("treats blank collection as null and unknown sort as newest", () => {
+  test("treats blank collection/item as null and unknown sort as newest", () => {
     expect(
-      parseLibraryViewState(new URLSearchParams("collection=&sort=nope")),
+      parseLibraryViewState(
+        new URLSearchParams("collection=&item=&sort=nope"),
+      ),
     ).toEqual({
       q: "",
       collection: null,
       sort: "newest",
+      item: null,
     });
   });
 });
 
 describe("libraryViewStateToSearchParams", () => {
-  test("omits empty q, missing collection, and default newest sort", () => {
+  test("omits empty q, missing collection/item, and default newest sort", () => {
     expect(
       libraryViewStateToSearchParams({
         q: "  ",
         collection: null,
         sort: "newest",
+        item: null,
       }).toString(),
     ).toBe("");
 
@@ -53,19 +60,36 @@ describe("libraryViewStateToSearchParams", () => {
         q: " design ",
         collection: "c1",
         sort: "oldest",
+        item: "n1",
       }).toString(),
-    ).toBe("q=design&collection=c1&sort=oldest");
+    ).toBe("q=design&collection=c1&sort=oldest&item=n1");
   });
 });
 
 describe("libraryViewHref", () => {
   test("builds pathname with or without query", () => {
     expect(
-      libraryViewHref("/", { q: "", collection: null, sort: "newest" }),
+      libraryViewHref("/", {
+        q: "",
+        collection: null,
+        sort: "newest",
+        item: null,
+      }),
     ).toBe("/");
     expect(
-      libraryViewHref("/", { q: "x", collection: null, sort: "newest" }),
+      libraryViewHref("/", {
+        q: "x",
+        collection: null,
+        sort: "newest",
+        item: null,
+      }),
     ).toBe("/?q=x");
+  });
+});
+
+describe("itemMediaLayoutId", () => {
+  test("stable per item id", () => {
+    expect(itemMediaLayoutId("n1")).toBe("keepall-item-media-n1");
   });
 });
 

@@ -7,9 +7,11 @@ import {
   useEffect,
   useState,
 } from "react";
-import { cardInitial, cardSecondaryLine } from "@/domain/card-display";
+import { motion, useReducedMotion } from "motion/react";
+import { cardSecondaryLine } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
-import { useAssetObjectUrl } from "./use-asset-object-url";
+import { itemMediaLayoutId } from "@/domain/library-view";
+import { LibraryItemMedia } from "./library-item-media";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
@@ -21,6 +23,8 @@ export type PendingMutation =
 
 export type LibraryItemProps = {
   item: Item;
+  inspected: boolean;
+  onOpenInspect: () => void;
   tagNames: string[];
   tagError: string | null;
   collectionNames: string[];
@@ -57,11 +61,10 @@ export type LibraryItemProps = {
 const ACTION_BTN =
   "relative flex h-8 min-w-8 items-center justify-center rounded-md bg-white/95 px-2 text-xs font-medium text-zinc-800 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06)] backdrop-blur-sm transition-[transform,box-shadow] duration-150 ease-out after:absolute after:left-1/2 after:top-1/2 after:size-10 after:-translate-x-1/2 after:-translate-y-1/2 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08)] active:scale-[0.96] disabled:opacity-60";
 
-const IMG_CLASS =
-  "aspect-[16/10] w-full object-cover outline outline-1 -outline-offset-1 outline-black/10";
-
 export function LibraryItem({
   item,
+  inspected,
+  onOpenInspect,
   tagNames,
   tagError,
   collectionNames,
@@ -92,6 +95,7 @@ export function LibraryItem({
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
   const [orgPanel, setOrgPanel] = useState<"tag" | "collection" | null>(null);
+  const reduceMotion = useReducedMotion();
 
   function submitTag(event: FormEvent) {
     event.preventDefault();
@@ -118,20 +122,6 @@ export function LibraryItem({
   const actionChromeVisible = orgPanel !== null;
 
   const title = itemListTitle(item);
-  const assetIdForDisplay =
-    item.type === "link"
-      ? item.previewAssetId
-      : item.type === "image"
-        ? item.assetId
-        : null;
-  const localObjectUrl = useAssetObjectUrl(assetIdForDisplay);
-  const [remoteBroken, setRemoteBroken] = useState(false);
-  const remotePreviewUrl =
-    item.type === "link" ? item.previewImageUrl : "";
-
-  useEffect(() => {
-    setRemoteBroken(false);
-  }, [item.id, remotePreviewUrl]);
 
   useEffect(() => {
     if (editing || pendingDelete) {
@@ -139,67 +129,46 @@ export function LibraryItem({
     }
   }, [editing, pendingDelete]);
 
-  const remoteUrl =
-    item.type === "link" &&
-    item.previewStatus === "ready" &&
-    remotePreviewUrl &&
-    !remoteBroken
-      ? remotePreviewUrl
-      : null;
-  const imageSrc = localObjectUrl ?? remoteUrl;
-  const showMedia = Boolean(imageSrc);
-
   const typeLabel =
     item.type === "link" ? "Link" : item.type === "image" ? "Image" : "Note";
 
   return (
     <li className="group relative flex flex-col rounded-2xl bg-white p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06),0_2px_4px_0_rgba(0,0,0,0.04)] transition-[box-shadow] duration-150 ease-out hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08),0_2px_4px_0_rgba(0,0,0,0.06)]">
       <div className="relative mb-2 overflow-hidden rounded-xl bg-zinc-200">
-        {showMedia && item.type === "link" ? (
+        {inspected ? (
+          <div className="aspect-[16/10] w-full" aria-hidden />
+        ) : item.type === "link" ? (
           <a
             aria-label={title}
-            className="block"
+            className="block overflow-hidden"
             href={item.url}
             rel="noreferrer"
             target="_blank"
+            style={{ borderRadius: 12 }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- local object URLs + remote OG */}
-            <img
-              alt=""
-              className={IMG_CLASS}
-              onError={() => {
-                if (!localObjectUrl) {
-                  setRemoteBroken(true);
-                }
-              }}
-              src={imageSrc!}
-            />
+            <LibraryItemMedia item={item} />
           </a>
-        ) : showMedia && item.type === "image" ? (
-          item.sourceUrl ? (
-            <a
-              aria-label={title}
-              className="block"
-              href={item.sourceUrl}
-              rel="noreferrer"
-              target="_blank"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- local asset object URL */}
-              <img alt="" className={IMG_CLASS} src={imageSrc!} />
-            </a>
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element -- local asset object URL
-            <img alt="" className={IMG_CLASS} src={imageSrc!} />
-          )
         ) : (
-          <div
-            aria-hidden="true"
-            className="flex aspect-[16/10] items-center justify-center text-4xl font-semibold text-zinc-700"
+          <motion.div
+            layoutId={reduceMotion ? undefined : itemMediaLayoutId(item.id)}
+            className="cursor-pointer overflow-hidden"
+            style={{ borderRadius: 12 }}
+            transition={{ type: "spring", duration: 0.45, bounce: 0 }}
+            onClick={onOpenInspect}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpenInspect();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`Open ${title}`}
           >
-            {cardInitial(item)}
-          </div>
+            <LibraryItemMedia item={item} />
+          </motion.div>
         )}
-        {!editing && !pendingDelete ? (
+        {!inspected && !editing && !pendingDelete ? (
           <div
             className={`absolute inset-x-2 top-2 z-10 flex flex-col items-end gap-1 transition-opacity duration-150 ease-out motion-reduce:transition-none ${
               actionChromeVisible
@@ -353,7 +322,7 @@ export function LibraryItem({
 
       <div className="px-2 pb-2">
         <h3 className="text-balance font-medium">
-          {item.type === "link" && !editing ? (
+          {!editing && item.type === "link" ? (
             <a
               className="break-words text-zinc-900 underline-offset-2 hover:underline"
               href={item.url}
@@ -362,15 +331,14 @@ export function LibraryItem({
             >
               {title}
             </a>
-          ) : item.type === "image" && item.sourceUrl && !editing ? (
-            <a
-              className="break-words text-zinc-900 underline-offset-2 hover:underline"
-              href={item.sourceUrl}
-              rel="noreferrer"
-              target="_blank"
+          ) : !editing ? (
+            <button
+              type="button"
+              className="break-words text-left text-zinc-900 underline-offset-2 hover:underline"
+              onClick={onOpenInspect}
             >
               {title}
-            </a>
+            </button>
           ) : (
             title
           )}
@@ -381,9 +349,19 @@ export function LibraryItem({
           </span>
         </p>
         {!editing ? (
-          <p className="mt-1 line-clamp-2 text-pretty text-sm text-zinc-600">
-            {cardSecondaryLine(item)}
-          </p>
+          item.type === "link" ? (
+            <p className="mt-1 line-clamp-2 text-pretty text-sm text-zinc-600">
+              {cardSecondaryLine(item)}
+            </p>
+          ) : (
+            <button
+              type="button"
+              className="mt-1 line-clamp-2 w-full text-left text-pretty text-sm text-zinc-600"
+              onClick={onOpenInspect}
+            >
+              {cardSecondaryLine(item)}
+            </button>
+          )
         ) : null}
         {item.type === "note" && editing ? (
           <div className="mt-2 flex flex-col gap-2">

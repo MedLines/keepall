@@ -6,6 +6,8 @@ export type LibraryViewState = {
   q: string;
   collection: string | null;
   sort: LibrarySort;
+  /** Open library item id for inspect overlay; null when closed. */
+  item: string | null;
 };
 
 export const DEFAULT_LIBRARY_SORT: LibrarySort = "newest";
@@ -18,11 +20,13 @@ export function parseLibraryViewState(
   params: URLSearchParams,
 ): LibraryViewState {
   const collection = params.get("collection")?.trim() || null;
+  const item = params.get("item")?.trim() || null;
 
   return {
     q: params.get("q") ?? "",
     collection,
     sort: parseLibrarySort(params.get("sort")),
+    item,
   };
 }
 
@@ -42,6 +46,10 @@ export function libraryViewStateToSearchParams(
 
   if (state.sort !== DEFAULT_LIBRARY_SORT) {
     params.set("sort", state.sort);
+  }
+
+  if (state.item) {
+    params.set("item", state.item);
   }
 
   return params;
@@ -75,5 +83,11 @@ export function mergeLibraryViewState(
     collection:
       patch.collection !== undefined ? patch.collection : current.collection,
     sort: patch.sort !== undefined ? patch.sort : current.sort,
+    item: patch.item !== undefined ? patch.item : current.item,
   };
+}
+
+/** Shared Motion layoutId for card media ↔ inspect media morph. */
+export function itemMediaLayoutId(itemId: string): string {
+  return `keepall-item-media-${itemId}`;
 }
