@@ -11,6 +11,8 @@ export type LibraryLayout = "grid" | "list";
 export type LibraryViewState = {
   q: string;
   collection: string | null;
+  /** Items with no collection. Ignored when `collection` is set. */
+  unsorted: boolean;
   /** Active tag filter id; null when showing all tags. */
   tag: string | null;
   /** Active type filter; null when All. */
@@ -62,10 +64,14 @@ export function parseLibraryViewState(
   const tag = params.get("tag")?.trim() || null;
   const item = params.get("item")?.trim() || null;
   const slide = item ? parseLibrarySlide(params.get("slide")) : 0;
+  const unsorted = collection
+    ? false
+    : params.get("unsorted") === "1";
 
   return {
     q: params.get("q") ?? "",
     collection,
+    unsorted,
     tag,
     type: parseLibraryType(params.get("type")),
     layout: parseLibraryLayout(params.get("layout")),
@@ -87,6 +93,8 @@ export function libraryViewStateToSearchParams(
 
   if (state.collection) {
     params.set("collection", state.collection);
+  } else if (state.unsorted) {
+    params.set("unsorted", "1");
   }
 
   if (state.tag) {
@@ -163,10 +171,24 @@ export function mergeLibraryViewState(
   current: LibraryViewState,
   patch: Partial<LibraryViewState>,
 ): LibraryViewState {
+  let collection =
+    patch.collection !== undefined ? patch.collection : current.collection;
+  let unsorted =
+    patch.unsorted !== undefined ? patch.unsorted : current.unsorted;
+
+  if (patch.collection) {
+    unsorted = false;
+  } else if (patch.unsorted === true) {
+    collection = null;
+    unsorted = true;
+  } else if (collection) {
+    unsorted = false;
+  }
+
   return {
     q: patch.q !== undefined ? patch.q : current.q,
-    collection:
-      patch.collection !== undefined ? patch.collection : current.collection,
+    collection,
+    unsorted,
     tag: patch.tag !== undefined ? patch.tag : current.tag,
     type: patch.type !== undefined ? patch.type : current.type,
     layout: patch.layout !== undefined ? patch.layout : current.layout,

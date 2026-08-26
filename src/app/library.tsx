@@ -18,6 +18,7 @@ import {
 import {
   itemHasTag,
   itemInCollection,
+  itemIsUnsorted,
   resolveItemCollectionNames,
   resolveItemTagNames,
   resolveItemTags,
@@ -79,11 +80,15 @@ type RestoreFocus = { id: string; action: "edit" | "delete" };
 
 function libraryViewTitle(
   browseCollection: Collection | null,
+  browseUnsorted: boolean,
   browseType: LibraryTypeFilter | null,
   browseTagName: string | null,
 ): string {
   if (browseCollection) {
     return browseCollection.name;
+  }
+  if (browseUnsorted) {
+    return "Unsorted";
   }
   if (browseTagName) {
     return browseTagName;
@@ -269,6 +274,7 @@ export function Library() {
   const browseTagName =
     browseTagId !== null ? (tagsById.get(browseTagId)?.name ?? null) : null;
   const browseType = view.type;
+  const browseUnsorted = view.unsorted;
   const browseLayout = view.layout;
   const searchQuery = view.q;
   const visibleItems = sortLibraryItemsWithCollectionPins(
@@ -281,6 +287,10 @@ export function Library() {
         browseCollectionId !== null &&
         !itemInCollection(item, browseCollectionId)
       ) {
+        return false;
+      }
+
+      if (browseUnsorted && !itemIsUnsorted(item)) {
         return false;
       }
 
@@ -1023,6 +1033,7 @@ export function Library() {
 
   const viewTitle = libraryViewTitle(
     browseCollection,
+    browseUnsorted,
     browseType,
     browseTagName,
   );
@@ -1054,20 +1065,29 @@ export function Library() {
             }
           }}
           browseCollectionId={browseCollectionId}
+          browseUnsorted={browseUnsorted}
           browseType={browseType}
+          browseTagId={browseTagId}
           collections={collections}
+          tags={tags}
+          items={items}
           dropTargetCollectionId={dropTargetCollectionId}
           newCollectionDraft={newCollectionDraft}
           collectionManageError={collectionManageError}
           dragError={dragError}
           mutationBusy={mutationBusy}
           onGoAll={() =>
-            updateView({ collection: null, type: null }, "push")
+            updateView(
+              { collection: null, unsorted: false, type: null },
+              "push",
+            )
+          }
+          onGoUnsorted={() =>
+            updateView({ unsorted: true, collection: null }, "push")
           }
           onGoCollection={(id) => updateView({ collection: id }, "push")}
-          onGoType={(type) =>
-            updateView({ type, collection: null }, "push")
-          }
+          onGoTag={(id) => updateView({ tag: id }, "push")}
+          onGoType={(type) => updateView({ type }, "push")}
           onCollectionDragOver={handleCollectionDragOver}
           onCollectionDragLeave={() => setDropTargetCollectionId(null)}
           onCollectionDrop={handleCollectionDrop}
@@ -1153,9 +1173,11 @@ export function Library() {
                       ? "No items of this type."
                       : browseTagId !== null
                         ? "No items with this tag."
-                        : browseCollectionId !== null
-                          ? "No items in this collection."
-                          : "No items yet."}
+                        : browseUnsorted
+                          ? "No unsorted items."
+                          : browseCollectionId !== null
+                            ? "No items in this collection."
+                            : "No items yet."}
                 </p>
               ) : browseLayout === "list" ? (
                 <ul className="flex flex-col gap-2">

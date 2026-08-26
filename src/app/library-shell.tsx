@@ -11,20 +11,28 @@ import {
   useState,
 } from "react";
 import type { Collection } from "@/domain/collection";
+import type { Item } from "@/domain/item";
 import type { LibraryTypeFilter } from "@/domain/library-view";
+import type { Tag } from "@/domain/tag";
 import { BackupPanel } from "./backup-panel";
 import {
   BackupIcon,
+  ChevronDownIcon,
   CollectionIcon,
+  HashIcon,
   ImageIcon,
+  InboxIcon,
   LibraryIcon,
   LinkIcon,
   MoreIcon,
   NoteIcon,
-  SearchIcon,
   PlusIcon,
+  SearchIcon,
 } from "./shell-icons";
 import {
+  readShellCollectionsOpen,
+  readShellFiltersOpen,
+  readShellTagsOpen,
   SHELL_ASIDE,
   SHELL_BACKDROP,
   SHELL_NAV_GUTTER,
@@ -33,6 +41,9 @@ import {
   SHELL_NAV_ITEM_IDLE,
   SHELL_SIDEBAR_COLLAPSED,
   SHELL_SIDEBAR_EXPANDED,
+  writeShellCollectionsOpen,
+  writeShellFiltersOpen,
+  writeShellTagsOpen,
 } from "./shell-styles";
 import { useShellMobile } from "./use-shell-mobile";
 import { ShellPanelIcon } from "./shell-panel-icon";
@@ -43,15 +54,21 @@ type Props = {
   backupOpen: boolean;
   onBackupOpenChange: (open: boolean) => void;
   browseCollectionId: string | null;
+  browseUnsorted: boolean;
   browseType: LibraryTypeFilter | null;
+  browseTagId: string | null;
   collections: Collection[];
+  tags: Tag[];
+  items: Item[];
   dropTargetCollectionId: string | null;
   newCollectionDraft: string;
   collectionManageError: string | null;
   dragError: string | null;
   mutationBusy: boolean;
   onGoAll: () => void;
+  onGoUnsorted: () => void;
   onGoCollection: (id: string) => void;
+  onGoTag: (id: string) => void;
   onGoType: (type: LibraryTypeFilter) => void;
   onCollectionDragOver: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onCollectionDragLeave: () => void;
@@ -78,15 +95,21 @@ export function LibraryShell({
   backupOpen,
   onBackupOpenChange,
   browseCollectionId,
+  browseUnsorted,
   browseType,
+  browseTagId,
   collections,
+  tags,
+  items,
   dropTargetCollectionId,
   newCollectionDraft,
   collectionManageError,
   dragError,
   mutationBusy,
   onGoAll,
+  onGoUnsorted,
   onGoCollection,
+  onGoTag,
   onGoType,
   onCollectionDragOver,
   onCollectionDragLeave,
@@ -97,17 +120,32 @@ export function LibraryShell({
   onDeleteCollection,
 }: Props) {
   const [collectionFilter, setCollectionFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [collectionsOpen, setCollectionsOpen] = useState(
+    readShellCollectionsOpen,
+  );
+  const [filtersOpen, setFiltersOpen] = useState(readShellFiltersOpen);
+  const [tagsOpen, setTagsOpen] = useState(readShellTagsOpen);
   const isMobile = useShellMobile();
+  const counts = useMemo(() => countSidebarItems(items), [items]);
 
-  const filterQuery = collectionFilter.trim().toLowerCase();
+  const collectionQuery = collectionFilter.trim().toLowerCase();
   const filteredCollections = useMemo(() => {
-    if (!filterQuery) {
+    if (!collectionQuery) {
       return collections;
     }
     return collections.filter((collection) =>
-      collection.name.toLowerCase().includes(filterQuery),
+      collection.name.toLowerCase().includes(collectionQuery),
     );
-  }, [collections, filterQuery]);
+  }, [collections, collectionQuery]);
+
+  const tagQuery = tagFilter.trim().toLowerCase();
+  const filteredTags = useMemo(() => {
+    if (!tagQuery) {
+      return tags;
+    }
+    return tags.filter((tag) => tag.name.toLowerCase().includes(tagQuery));
+  }, [tags, tagQuery]);
 
   const closeOnMobile = useCallback(() => {
     if (isMobile) {
@@ -133,24 +171,30 @@ export function LibraryShell({
   }
 
   const allItemsActive =
-    !backupOpen && browseCollectionId === null && browseType === null;
+    !backupOpen &&
+    browseCollectionId === null &&
+    !browseUnsorted &&
+    browseType === null;
 
-  const collectionBrowseActive = !backupOpen && browseCollectionId !== null;
+  const unsortedActive = !backupOpen && browseUnsorted;
 
   function typeActive(value: LibraryTypeFilter) {
-    return !backupOpen && browseType === value && browseCollectionId === null;
+    return !backupOpen && browseType === value;
   }
 
   const collectionsCollapsedLabel =
     collections.find((collection) => collection.id === browseCollectionId)
       ?.name ?? "Collections";
+  const tagsCollapsedLabel =
+    tags.find((tag) => tag.id === browseTagId)?.name ?? "Tags";
 
-  const libraryNav = (
+  const primaryNav = (
     <>
       <ShellNavItem
         expanded={expanded}
         active={allItemsActive}
         label="All items"
+        count={counts.all}
         icon={<LibraryIcon className="size-4 shrink-0 text-zinc-500" />}
         onClick={() => {
           leaveBackup();
@@ -158,22 +202,36 @@ export function LibraryShell({
           closeOnMobile();
         }}
       />
-      {TYPE_OPTIONS.map(({ value, label, Icon }) => (
-        <ShellNavItem
-          key={value}
-          expanded={expanded}
-          active={typeActive(value)}
-          label={label}
-          icon={<Icon className="size-4 shrink-0 text-zinc-500" />}
-          onClick={() => {
-            leaveBackup();
-            onGoType(value);
-            closeOnMobile();
-          }}
-        />
-      ))}
+      <ShellNavItem
+        expanded={expanded}
+        active={unsortedActive}
+        label="Unsorted"
+        count={counts.unsorted}
+        icon={<InboxIcon className="size-4 shrink-0 text-zinc-500" />}
+        onClick={() => {
+          leaveBackup();
+          onGoUnsorted();
+          closeOnMobile();
+        }}
+      />
     </>
   );
+
+  const typeNav = TYPE_OPTIONS.map(({ value, label, Icon }) => (
+    <ShellNavItem
+      key={value}
+      expanded={expanded}
+      active={typeActive(value)}
+      label={label}
+      count={counts.byType[value]}
+      icon={<Icon className="size-4 shrink-0 text-zinc-500" />}
+      onClick={() => {
+        leaveBackup();
+        onGoType(value);
+        closeOnMobile();
+      }}
+    />
+  ));
 
   return (
     <>
@@ -201,7 +259,7 @@ export function LibraryShell({
             aria-label="Sidebar navigation"
             className={`grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden py-2 ${SHELL_NAV_GUTTER}`}
           >
-            <div className="flex min-h-0 flex-col gap-0.5 overflow-hidden">
+            <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto overscroll-contain">
               <ShellNavItem
                 expanded={expanded}
                 label={expanded ? "Collapse" : "Expand"}
@@ -211,39 +269,102 @@ export function LibraryShell({
                 onClick={() => onPanelOpenChange(!expanded)}
               />
 
-              {expanded ? (
-                <ShellSection title="Library">{libraryNav}</ShellSection>
-              ) : (
-                libraryNav
-              )}
+              {primaryNav}
 
-              <CollectionsSection
-                expanded={expanded}
-                collectionFilter={collectionFilter}
-                onCollectionFilterChange={setCollectionFilter}
-                filteredCollections={filteredCollections}
-                collections={collections}
-                browseCollectionId={browseCollectionId}
-                collectionBrowseActive={collectionBrowseActive}
-                collectionsCollapsedLabel={collectionsCollapsedLabel}
-                dropTargetCollectionId={dropTargetCollectionId}
-                newCollectionDraft={newCollectionDraft}
-                collectionManageError={collectionManageError}
-                dragError={dragError}
-                mutationBusy={mutationBusy}
-                onExpand={() => onPanelOpenChange(true)}
-                onGoCollection={(id) => {
-                  onGoCollection(id);
-                  closeOnMobile();
-                }}
-                onCollectionDragOver={onCollectionDragOver}
-                onCollectionDragLeave={onCollectionDragLeave}
-                onCollectionDrop={onCollectionDrop}
-                onNewCollectionDraftChange={onNewCollectionDraftChange}
-                onCreateCollection={onCreateCollection}
-                onRenameCollection={onRenameCollection}
-                onDeleteCollection={onDeleteCollection}
-              />
+              {expanded ? (
+                <>
+                  <CollectionsSection
+                    collectionsOpen={collectionsOpen}
+                    onCollectionsOpenChange={(open) => {
+                      setCollectionsOpen(open);
+                      writeShellCollectionsOpen(open);
+                    }}
+                    collectionFilter={collectionFilter}
+                    onCollectionFilterChange={setCollectionFilter}
+                    filteredCollections={filteredCollections}
+                    collections={collections}
+                    browseCollectionId={browseCollectionId}
+                    counts={counts.byCollectionId}
+                    dropTargetCollectionId={dropTargetCollectionId}
+                    newCollectionDraft={newCollectionDraft}
+                    collectionManageError={collectionManageError}
+                    dragError={dragError}
+                    mutationBusy={mutationBusy}
+                    onGoCollection={(id) => {
+                      leaveBackup();
+                      onGoCollection(id);
+                      closeOnMobile();
+                    }}
+                    onCollectionDragOver={onCollectionDragOver}
+                    onCollectionDragLeave={onCollectionDragLeave}
+                    onCollectionDrop={onCollectionDrop}
+                    onNewCollectionDraftChange={onNewCollectionDraftChange}
+                    onCreateCollection={onCreateCollection}
+                    onRenameCollection={onRenameCollection}
+                    onDeleteCollection={onDeleteCollection}
+                  />
+
+                  <CollapsibleSection
+                    title="Filters"
+                    open={filtersOpen}
+                    onOpenChange={(open) => {
+                      setFiltersOpen(open);
+                      writeShellFiltersOpen(open);
+                    }}
+                  >
+                    {typeNav}
+                  </CollapsibleSection>
+
+                  <TagsSection
+                    tagsOpen={tagsOpen}
+                    onTagsOpenChange={(open) => {
+                      setTagsOpen(open);
+                      writeShellTagsOpen(open);
+                    }}
+                    tagFilter={tagFilter}
+                    onTagFilterChange={setTagFilter}
+                    filteredTags={filteredTags}
+                    tags={tags}
+                    browseTagId={browseTagId}
+                    counts={counts.byTagId}
+                    onGoTag={(id) => {
+                      leaveBackup();
+                      onGoTag(id);
+                      closeOnMobile();
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <ShellNavItem
+                    expanded={false}
+                    active={browseCollectionId !== null}
+                    label={collectionsCollapsedLabel}
+                    icon={
+                      <CollectionIcon className="size-4 shrink-0 text-zinc-500" />
+                    }
+                    onClick={() => {
+                      onPanelOpenChange(true);
+                      setCollectionsOpen(true);
+                      writeShellCollectionsOpen(true);
+                    }}
+                  />
+                  {typeNav}
+                  <ShellNavItem
+                    expanded={false}
+                    active={browseTagId !== null}
+                    label={tagsCollapsedLabel}
+                    icon={
+                      <HashIcon className="size-4 shrink-0 text-zinc-500" />
+                    }
+                    onClick={() => {
+                      onPanelOpenChange(true);
+                      setTagsOpen(true);
+                      writeShellTagsOpen(true);
+                    }}
+                  />
+                </>
+              )}
             </div>
 
             <ShellNavItem
@@ -269,20 +390,19 @@ export function LibraryShell({
 }
 
 function CollectionsSection({
-  expanded,
+  collectionsOpen,
+  onCollectionsOpenChange,
   collectionFilter,
   onCollectionFilterChange,
   filteredCollections,
   collections,
   browseCollectionId,
-  collectionBrowseActive,
-  collectionsCollapsedLabel,
+  counts,
   dropTargetCollectionId,
   newCollectionDraft,
   collectionManageError,
   dragError,
   mutationBusy,
-  onExpand,
   onGoCollection,
   onCollectionDragOver,
   onCollectionDragLeave,
@@ -292,20 +412,19 @@ function CollectionsSection({
   onRenameCollection,
   onDeleteCollection,
 }: {
-  expanded: boolean;
+  collectionsOpen: boolean;
+  onCollectionsOpenChange: (open: boolean) => void;
   collectionFilter: string;
   onCollectionFilterChange: (value: string) => void;
   filteredCollections: Collection[];
   collections: Collection[];
   browseCollectionId: string | null;
-  collectionBrowseActive: boolean;
-  collectionsCollapsedLabel: string;
+  counts: Record<string, number>;
   dropTargetCollectionId: string | null;
   newCollectionDraft: string;
   collectionManageError: string | null;
   dragError: string | null;
   mutationBusy: boolean;
-  onExpand: () => void;
   onGoCollection: (id: string) => void;
   onCollectionDragOver: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onCollectionDragLeave: () => void;
@@ -321,24 +440,12 @@ function CollectionsSection({
   >(null);
   const [renameDraft, setRenameDraft] = useState("");
 
-  if (!expanded) {
-    return (
-      <ShellNavItem
-        expanded={false}
-        active={collectionBrowseActive}
-        label={collectionsCollapsedLabel}
-        icon={<CollectionIcon className="size-4 shrink-0 text-zinc-500" />}
-        onClick={onExpand}
-      />
-    );
-  }
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-1">
-      <div className="flex shrink-0 items-center justify-between gap-2 pb-1 pl-2 pr-1">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-          Collections
-        </p>
+    <CollapsibleSection
+      title="Collections"
+      open={collectionsOpen}
+      onOpenChange={onCollectionsOpenChange}
+      trailing={
         <button
           type="button"
           className={`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_IDLE} size-7 justify-center px-0 text-zinc-500`}
@@ -347,15 +454,18 @@ function CollectionsSection({
           onClick={() => {
             setCreateOpen((open) => !open);
             onNewCollectionDraftChange("");
+            if (!collectionsOpen) {
+              onCollectionsOpenChange(true);
+            }
           }}
         >
           <PlusIcon />
         </button>
-      </div>
-
+      }
+    >
       {createOpen ? (
         <form
-          className="shrink-0 pb-2 pl-2 pr-1"
+          className="pb-2 pl-2 pr-1"
           onSubmit={(event) => {
             event.preventDefault();
             if (!newCollectionDraft.trim() || mutationBusy) {
@@ -377,87 +487,135 @@ function CollectionsSection({
         </form>
       ) : null}
 
-      <div className="shrink-0 pb-2 pl-2 pr-1">
-        <label className="relative block">
-          <span className="sr-only">Search collections</span>
-          <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400" />
-          <input
-            className="w-full rounded-[8px] border border-zinc-200/80 bg-zinc-50 py-1 pl-7 pr-2 text-xs outline-none transition-[border-color,box-shadow] duration-150 ease-out focus:border-zinc-400 focus:shadow-[0_0_0_2px_rgba(24,24,27,0.08)]"
-            placeholder="Filter…"
-            value={collectionFilter}
-            onChange={(event) => onCollectionFilterChange(event.target.value)}
+      <SidebarSearch
+        label="Search collections"
+        value={collectionFilter}
+        onChange={onCollectionFilterChange}
+      />
+
+      {filteredCollections.length === 0 ? (
+        <p className="px-2 pb-2 text-pretty text-xs text-zinc-500">
+          {collections.length === 0
+            ? "No collections yet."
+            : "No matches."}
+        </p>
+      ) : (
+        filteredCollections.map((collection) => (
+          <CollectionNavRow
+            key={collection.id}
+            collection={collection}
+            count={counts[collection.id] ?? 0}
+            active={browseCollectionId === collection.id}
+            dropHighlight={dropTargetCollectionId === collection.id}
+            renaming={renamingCollectionId === collection.id}
+            renameDraft={renameDraft}
+            mutationBusy={mutationBusy}
+            onNavigate={() => onGoCollection(collection.id)}
+            onDragOver={(event) => onCollectionDragOver(collection.id, event)}
+            onDragLeave={onCollectionDragLeave}
+            onDrop={(event) => onCollectionDrop(collection.id, event)}
+            onStartRename={() => {
+              setRenamingCollectionId(collection.id);
+              setRenameDraft(collection.name);
+            }}
+            onRenameDraftChange={setRenameDraft}
+            onCancelRename={() => {
+              setRenamingCollectionId(null);
+              setRenameDraft("");
+            }}
+            onSubmitRename={() => {
+              const trimmed = renameDraft.trim();
+              if (
+                !trimmed ||
+                trimmed === collection.name.trim() ||
+                mutationBusy
+              ) {
+                setRenamingCollectionId(null);
+                setRenameDraft("");
+                return;
+              }
+              onRenameCollection(collection.id, trimmed);
+              setRenamingCollectionId(null);
+              setRenameDraft("");
+            }}
+            onDelete={() => onDeleteCollection(collection.id)}
           />
-        </label>
-      </div>
+        ))
+      )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        {filteredCollections.length === 0 ? (
-          <p className="px-2 pb-2 text-pretty text-xs text-zinc-500">
-            {collections.length === 0
-              ? "No collections yet."
-              : "No matches."}
-          </p>
-        ) : (
-          filteredCollections.map((collection) => (
-            <CollectionNavRow
-              key={collection.id}
-              collection={collection}
-              active={browseCollectionId === collection.id}
-              dropHighlight={dropTargetCollectionId === collection.id}
-              renaming={renamingCollectionId === collection.id}
-              renameDraft={renameDraft}
-              mutationBusy={mutationBusy}
-              onNavigate={() => onGoCollection(collection.id)}
-              onDragOver={(event) => onCollectionDragOver(collection.id, event)}
-              onDragLeave={onCollectionDragLeave}
-              onDrop={(event) => onCollectionDrop(collection.id, event)}
-              onStartRename={() => {
-                setRenamingCollectionId(collection.id);
-                setRenameDraft(collection.name);
-              }}
-              onRenameDraftChange={setRenameDraft}
-              onCancelRename={() => {
-                setRenamingCollectionId(null);
-                setRenameDraft("");
-              }}
-              onSubmitRename={() => {
-                const trimmed = renameDraft.trim();
-                if (
-                  !trimmed ||
-                  trimmed === collection.name.trim() ||
-                  mutationBusy
-                ) {
-                  setRenamingCollectionId(null);
-                  setRenameDraft("");
-                  return;
-                }
-                onRenameCollection(collection.id, trimmed);
-                setRenamingCollectionId(null);
-                setRenameDraft("");
-              }}
-              onDelete={() => onDeleteCollection(collection.id)}
-            />
-          ))
-        )}
+      {dragError ? (
+        <p className="mt-2 px-2 text-pretty text-xs text-red-700" role="alert">
+          {dragError}
+        </p>
+      ) : null}
 
-        {dragError ? (
-          <p className="mt-2 text-pretty text-xs text-red-700" role="alert">
-            {dragError}
-          </p>
-        ) : null}
+      {collectionManageError ? (
+        <p className="mt-2 px-2 text-pretty text-xs text-red-700" role="alert">
+          {collectionManageError}
+        </p>
+      ) : null}
+    </CollapsibleSection>
+  );
+}
 
-        {collectionManageError ? (
-          <p className="mt-2 px-2 text-pretty text-xs text-red-700" role="alert">
-            {collectionManageError}
-          </p>
-        ) : null}
-      </div>
-    </div>
+function TagsSection({
+  tagsOpen,
+  onTagsOpenChange,
+  tagFilter,
+  onTagFilterChange,
+  filteredTags,
+  tags,
+  browseTagId,
+  counts,
+  onGoTag,
+}: {
+  tagsOpen: boolean;
+  onTagsOpenChange: (open: boolean) => void;
+  tagFilter: string;
+  onTagFilterChange: (value: string) => void;
+  filteredTags: Tag[];
+  tags: Tag[];
+  browseTagId: string | null;
+  counts: Record<string, number>;
+  onGoTag: (id: string) => void;
+}) {
+  return (
+    <CollapsibleSection
+      title={tags.length > 0 ? `Tags (${tags.length})` : "Tags"}
+      open={tagsOpen}
+      onOpenChange={onTagsOpenChange}
+    >
+      <SidebarSearch
+        label="Search tags"
+        value={tagFilter}
+        onChange={onTagFilterChange}
+      />
+
+      {filteredTags.length === 0 ? (
+        <p className="px-2 pb-2 text-pretty text-xs text-zinc-500">
+          {tags.length === 0 ? "No tags yet." : "No matches."}
+        </p>
+      ) : (
+        filteredTags.map((tag) => (
+          <ShellNavItem
+            key={tag.id}
+            expanded
+            active={browseTagId === tag.id}
+            label={tag.name}
+            ariaLabel={`Tag ${tag.name}`}
+            count={counts[tag.id] ?? 0}
+            icon={<HashIcon className="size-4 shrink-0 text-zinc-500" />}
+            onClick={() => onGoTag(tag.id)}
+          />
+        ))
+      )}
+    </CollapsibleSection>
   );
 }
 
 function CollectionNavRow({
   collection,
+  count,
   active,
   dropHighlight,
   renaming,
@@ -474,6 +632,7 @@ function CollectionNavRow({
   onDelete,
 }: {
   collection: Collection;
+  count: number;
   active: boolean;
   dropHighlight: boolean;
   renaming: boolean;
@@ -553,6 +712,7 @@ function CollectionNavRow({
           {icon}
         </span>
         <span className="truncate">{collection.name}</span>
+        <NavCount value={count} />
       </button>
       <CollectionRowMenu
         collectionName={collection.name}
@@ -669,7 +829,9 @@ function ShellNavItem({
   expanded,
   active = false,
   label,
+  ariaLabel,
   icon,
+  count,
   dropHighlight = false,
   onClick,
   onDragOver,
@@ -679,7 +841,9 @@ function ShellNavItem({
   expanded: boolean;
   active?: boolean;
   label: string;
+  ariaLabel?: string;
   icon: ReactNode;
+  count?: number;
   dropHighlight?: boolean;
   onClick: () => void;
   onDragOver?: (event: DragEvent<HTMLButtonElement>) => void;
@@ -696,7 +860,7 @@ function ShellNavItem({
       } ${active ? SHELL_NAV_ITEM_ACTIVE : SHELL_NAV_ITEM_IDLE} ${
         dropHighlight ? "shadow-[0_0_0_2px_rgba(24,24,27,0.9)]" : ""
       }`}
-      aria-label={label}
+      aria-label={ariaLabel ?? label}
       aria-current={active ? "page" : undefined}
       title={!expanded ? label : undefined}
       onClick={onClick}
@@ -705,24 +869,119 @@ function ShellNavItem({
       onDrop={onDrop}
     >
       <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
-      {expanded ? <span className="truncate">{label}</span> : null}
+      {expanded ? (
+        <>
+          <span className="min-w-0 flex-1 truncate">{label}</span>
+          {count !== undefined ? <NavCount value={count} /> : null}
+        </>
+      ) : null}
     </button>
   );
 }
 
-function ShellSection({
+function NavCount({ value }: { value: number }) {
+  return (
+    <span
+      aria-hidden
+      className="ml-auto shrink-0 pl-2 text-[11px] tabular-nums text-zinc-400"
+    >
+      {value}
+    </span>
+  );
+}
+
+function CollapsibleSection({
   title,
+  open,
+  onOpenChange,
+  trailing,
   children,
 }: {
   title: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  trailing?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <div className="mb-1 pt-1">
-      <p className="pb-1 pl-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-        {title}
-      </p>
-      {children}
+    <div className="pt-1">
+      <div className="flex items-center gap-0.5 pb-0.5 pl-1 pr-1">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-1 rounded-[8px] px-1 py-1 text-left transition-[background-color] duration-150 hover:bg-zinc-50"
+          aria-expanded={open}
+          onClick={() => onOpenChange(!open)}
+        >
+          <ChevronDownIcon
+            className={`size-3.5 text-zinc-400 transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
+              open ? "" : "-rotate-90"
+            }`}
+          />
+          <span className="truncate text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            {title}
+          </span>
+        </button>
+        {trailing}
+      </div>
+      {open ? children : null}
     </div>
   );
+}
+
+function SidebarSearch({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="pb-2 pl-2 pr-1">
+      <label className="relative block">
+        <span className="sr-only">{label}</span>
+        <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400" />
+        <input
+          className="w-full rounded-[8px] border border-zinc-200/80 bg-zinc-50 py-1 pl-7 pr-2 text-xs outline-none transition-[border-color,box-shadow] duration-150 ease-out focus:border-zinc-400 focus:shadow-[0_0_0_2px_rgba(24,24,27,0.08)]"
+          placeholder="Search"
+          aria-label={label}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </label>
+    </div>
+  );
+}
+
+function countSidebarItems(items: Item[]) {
+  const byCollectionId: Record<string, number> = {};
+  const byTagId: Record<string, number> = {};
+  const byType: Record<LibraryTypeFilter, number> = {
+    link: 0,
+    note: 0,
+    image: 0,
+  };
+  let unsorted = 0;
+
+  for (const item of items) {
+    byType[item.type] += 1;
+    if (item.collectionIds.length === 0) {
+      unsorted += 1;
+    }
+    for (const id of item.collectionIds) {
+      byCollectionId[id] = (byCollectionId[id] ?? 0) + 1;
+    }
+    for (const id of item.tagIds) {
+      byTagId[id] = (byTagId[id] ?? 0) + 1;
+    }
+  }
+
+  return {
+    all: items.length,
+    unsorted,
+    byType,
+    byCollectionId,
+    byTagId,
+  };
 }

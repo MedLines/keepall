@@ -86,3 +86,8 @@ export function resolveItemCollectionNames(
 export function itemInCollection(item: Item, collectionId: string): boolean {
   return item.collectionIds.includes(collectionId);
 }
+
+/** Captured without a collection — the Unsorted inbox. */
+export function itemIsUnsorted(item: Item): boolean {
+  return item.collectionIds.length === 0;
+}

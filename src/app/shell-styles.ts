@@ -15,6 +15,44 @@ export function writeShellPanelOpen(open: boolean): void {
   window.localStorage.setItem(SHELL_PANEL_KEY, open ? "open" : "closed");
 }
 
+const SHELL_COLLECTIONS_OPEN_KEY = "keepall-shell-collections-open";
+const SHELL_FILTERS_OPEN_KEY = "keepall-shell-filters-open";
+const SHELL_TAGS_OPEN_KEY = "keepall-shell-tags-open";
+
+function readSectionOpen(key: string): boolean {
+  if (typeof window === "undefined") {
+    return true;
+  }
+  return window.localStorage.getItem(key) !== "closed";
+}
+
+export function readShellCollectionsOpen(): boolean {
+  return readSectionOpen(SHELL_COLLECTIONS_OPEN_KEY);
+}
+
+export function writeShellCollectionsOpen(open: boolean): void {
+  window.localStorage.setItem(
+    SHELL_COLLECTIONS_OPEN_KEY,
+    open ? "open" : "closed",
+  );
+}
+
+export function readShellFiltersOpen(): boolean {
+  return readSectionOpen(SHELL_FILTERS_OPEN_KEY);
+}
+
+export function writeShellFiltersOpen(open: boolean): void {
+  window.localStorage.setItem(SHELL_FILTERS_OPEN_KEY, open ? "open" : "closed");
+}
+
+export function readShellTagsOpen(): boolean {
+  return readSectionOpen(SHELL_TAGS_OPEN_KEY);
+}
+
+export function writeShellTagsOpen(open: boolean): void {
+  window.localStorage.setItem(SHELL_TAGS_OPEN_KEY, open ? "open" : "closed");
+}
+
 /** Expanded sidebar width — logo column in top bar matches this. */
 export const SHELL_SIDEBAR_EXPANDED = "w-60";
 

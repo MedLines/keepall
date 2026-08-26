@@ -523,8 +523,9 @@ describe("Library tags", () => {
     vi.mocked(listTags).mockResolvedValue([tag]);
     render(<Library />);
 
-    expect(await screen.findByText("inspiration")).toBeInTheDocument();
-    expect(screen.queryByText("No tags yet.")).not.toBeInTheDocument();
+    const main = await screen.findByRole("main");
+    expect(await within(main).findByText("inspiration")).toBeInTheDocument();
+    expect(within(main).queryByText("No tags yet.")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Add tag" }),
     ).toBeInTheDocument();
@@ -553,7 +554,9 @@ describe("Library tags", () => {
       expect(createTag).toHaveBeenCalledWith({ name: "inspiration" });
       expect(assignTagToItem).toHaveBeenCalledWith("n1", "t1");
     });
-    expect(await screen.findByText("inspiration")).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole("main")).findByText("inspiration"),
+    ).toBeInTheDocument();
   });
 
   test("clicking a tag chip filters the library and writes tag to the URL", async () => {
@@ -565,7 +568,11 @@ describe("Library tags", () => {
     render(<Library />);
 
     await screen.findByText("A persisted note");
-    fireEvent.click(screen.getByRole("button", { name: "inspiration" }));
+    fireEvent.click(
+      within(screen.getByRole("main")).getByRole("button", {
+        name: "inspiration",
+      }),
+    );
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?tag=t1", {
       scroll: false,
@@ -593,7 +600,7 @@ describe("Library tags", () => {
     vi.mocked(unassignTagFromItem).mockResolvedValue(untagged);
     render(<Library />);
 
-    await screen.findByText("inspiration");
+    await within(screen.getByRole("main")).findByText("inspiration");
     fireEvent.click(
       screen.getByRole("button", { name: "Remove tag inspiration" }),
     );
@@ -604,7 +611,10 @@ describe("Library tags", () => {
     await waitFor(() => {
       expect(unassignTagFromItem).toHaveBeenCalledWith("n1", "t1");
     });
-    expect(screen.queryByText("inspiration")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("main")).queryByText("inspiration"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tag inspiration" })).toBeInTheDocument();
     expect(listTags).toHaveBeenCalled();
   });
 });
@@ -807,6 +817,27 @@ describe("Library collections", () => {
     });
     expect(mockNavigation.push).toHaveBeenCalledWith("/", { scroll: false });
     expect(await screen.findByText("A persisted note")).toBeInTheDocument();
+  });
+
+  test("Unsorted shows items that have no collection", async () => {
+    const filed = { ...note, collectionIds: ["c1"] };
+    const inbox = buildNote({ content: "captured fast" }, { id: "n2", now: 2 });
+    vi.mocked(listItems).mockResolvedValue([filed, inbox]);
+    vi.mocked(listCollections).mockResolvedValue([
+      { id: "c1", name: "Reading", createdAt: 1, pinnedItemIds: [] },
+    ]);
+    render(<Library />);
+
+    expect(await screen.findByText("A persisted note")).toBeInTheDocument();
+    expect(screen.getByText("captured fast")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unsorted" }));
+
+    expect(mockNavigation.push).toHaveBeenCalledWith("/?unsorted=1", {
+      scroll: false,
+    });
+    expect(screen.getByText("captured fast")).toBeInTheDocument();
+    expect(screen.queryByText("A persisted note")).not.toBeInTheDocument();
   });
 });
 

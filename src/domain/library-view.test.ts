@@ -9,12 +9,14 @@ import {
   parseLibraryViewState,
   sortLibraryItems,
   sortLibraryItemsWithCollectionPins,
+  mergeLibraryViewState,
 } from "./library-view";
 import { buildNote } from "./note";
 
 const emptyView = {
   q: "",
   collection: null,
+  unsorted: false,
   tag: null,
   type: null,
   layout: "grid" as const,
@@ -55,6 +57,7 @@ describe("parseLibraryViewState", () => {
     ).toEqual({
       q: "design",
       collection: "c1",
+      unsorted: false,
       tag: "t1",
       type: "link",
       layout: "list",
@@ -70,6 +73,18 @@ describe("parseLibraryViewState", () => {
       item: "i1",
       slide: 2,
     });
+  });
+
+  test("reads unsorted=1 and lets collection win when both are present", () => {
+    expect(
+      parseLibraryViewState(new URLSearchParams("unsorted=1")),
+    ).toEqual({ ...emptyView, unsorted: true });
+
+    expect(
+      parseLibraryViewState(
+        new URLSearchParams("collection=c1&unsorted=1"),
+      ),
+    ).toEqual({ ...emptyView, collection: "c1", unsorted: false });
   });
 
   test("treats blank collection/tag/item as null and unknown sort/type as defaults", () => {
@@ -100,6 +115,7 @@ describe("libraryViewStateToSearchParams", () => {
       libraryViewStateToSearchParams({
         q: " design ",
         collection: "c1",
+        unsorted: false,
         tag: "t1",
         type: "note",
         layout: "list",
@@ -118,6 +134,44 @@ describe("libraryViewStateToSearchParams", () => {
         slide: 2,
       }).toString(),
     ).toBe("item=i1&slide=2");
+  });
+
+  test("writes unsorted=1 and omits it when a collection is set", () => {
+    expect(
+      libraryViewStateToSearchParams({
+        ...emptyView,
+        unsorted: true,
+      }).toString(),
+    ).toBe("unsorted=1");
+
+    expect(
+      libraryViewStateToSearchParams({
+        ...emptyView,
+        collection: "c1",
+        unsorted: true,
+      }).toString(),
+    ).toBe("collection=c1");
+  });
+});
+
+describe("mergeLibraryViewState", () => {
+  test("clears unsorted when a collection is set and the reverse", () => {
+    expect(
+      mergeLibraryViewState({ ...emptyView, unsorted: true }, { collection: "c1" }),
+    ).toEqual({ ...emptyView, collection: "c1", unsorted: false });
+
+    expect(
+      mergeLibraryViewState({ ...emptyView, collection: "c1" }, { unsorted: true }),
+    ).toEqual({ ...emptyView, collection: null, unsorted: true });
+  });
+
+  test("lets collection win when a patch sets both", () => {
+    expect(
+      mergeLibraryViewState(emptyView, {
+        collection: "c1",
+        unsorted: true,
+      }),
+    ).toEqual({ ...emptyView, collection: "c1", unsorted: false });
   });
 });
 

@@ -180,6 +180,38 @@ export function PlusIcon({ className }: IconProps) {
   );
 }
 
+export function InboxIcon({ className }: IconProps) {
+  return (
+    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M3.5 11.5 5.2 5.8A1.5 1.5 0 0 1 6.64 4.5h6.72a1.5 1.5 0 0 1 1.44 1.3l1.7 5.7"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.5 11.5h3.2l.8 2h4.8l.8-2h3.2v3A1.5 1.5 0 0 1 15.3 16H4.7A1.5 1.5 0 0 1 3.2 14.5v-3Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function HashIcon({ className }: IconProps) {
+  return (
+    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M7.5 4.5 6 15.5M14 4.5 12.5 15.5M4.5 8h12M3.5 12h12"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function MoreIcon({ className }: IconProps) {
   return (
     <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
