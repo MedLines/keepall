@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { cardInitial, cardSecondaryLine, linkCardHost } from "@/domain/card-display";
+import {
+  cardInitial,
+  cardSecondaryLine,
+  linkCardHost,
+} from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
 import { LibraryItemMedia } from "./library-item-media";
 
@@ -11,7 +15,25 @@ type Props = {
   onOpenInspect: () => void;
 };
 
-/** Compact list row: thumb + title + secondary. Opens inspect. */
+function typeLabel(item: Item): string {
+  if (item.type === "link") {
+    return "Link";
+  }
+  if (item.type === "image") {
+    return "Image";
+  }
+  return "Note";
+}
+
+function formatListDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/** Compact list row: thumb + title + secondary + type/date. Opens inspect. */
 export function LibraryListRow({ item, inspected, onOpenInspect }: Props) {
   const title = itemListTitle(item);
   const secondary = cardSecondaryLine(item);
@@ -23,7 +45,8 @@ export function LibraryListRow({ item, inspected, onOpenInspect }: Props) {
       : null;
 
   const showMediaThumb =
-    (item.type === "link" && Boolean(item.previewAssetId || item.previewImageUrl)) ||
+    (item.type === "link" &&
+      Boolean(item.previewAssetId || item.previewImageUrl)) ||
     item.type === "image";
 
   return (
@@ -65,6 +88,14 @@ export function LibraryListRow({ item, inspected, onOpenInspect }: Props) {
               {secondary}
             </span>
           ) : null}
+        </span>
+        <span className="hidden shrink-0 items-center gap-3 text-xs text-zinc-500 sm:flex">
+          <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-600">
+            {typeLabel(item)}
+          </span>
+          <time dateTime={new Date(item.createdAt).toISOString()}>
+            {formatListDate(item.createdAt)}
+          </time>
         </span>
       </button>
     </li>
