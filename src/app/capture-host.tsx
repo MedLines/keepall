@@ -16,6 +16,7 @@ import { NoteValidationError } from "@/domain/note";
 import { createImage, createLink, createNote } from "@/persistence/items";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
+import { OPEN_CAPTURE_EVENT } from "./capture-events";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
 
 /** Alt+K (Windows/Linux) and Option+K (macOS). Option is altKey; code stays KeyK even when Option remaps the character. */
@@ -60,8 +61,16 @@ export function CaptureHost() {
       }
     }
 
+    function onOpenCapture() {
+      dispatch({ type: "open" });
+    }
+
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
+    };
   }, []);
 
   useEffect(() => {
