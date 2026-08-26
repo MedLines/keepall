@@ -8,7 +8,7 @@ export default function HomePage() {
       <BuildMarker />
       <Suspense
         fallback={
-          <div className="flex h-[100dvh] items-center justify-center bg-zinc-50">
+          <div className="flex h-full items-center justify-center bg-zinc-50">
             <p className="text-sm text-zinc-600">Loading…</p>
           </div>
         }

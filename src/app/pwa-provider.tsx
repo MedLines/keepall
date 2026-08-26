@@ -94,7 +94,7 @@ export function PwaProvider({ children }: { children: ReactNode }) {
   }, [policy]);
 
   return (
-    <>
+    <div className="flex h-[100dvh] flex-col overflow-hidden">
       {policy?.showMissingConfigurationWarning ? (
         <MissingOriginConfigurationWarning />
       ) : null}
@@ -114,7 +114,7 @@ export function PwaProvider({ children }: { children: ReactNode }) {
           }}
         />
       ) : null}
-      {children}
-    </>
+      <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+    </div>
   );
 }
