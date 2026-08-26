@@ -5,6 +5,7 @@ import {
 } from "./link";
 import { coerceImageFields, imageListTitle, type ImageItem } from "./image";
 import { noteListTitle, type NoteItem } from "./note";
+import { coerceExclusiveCollectionIds } from "./collection";
 
 export type Item = NoteItem | LinkItem | ImageItem;
 
@@ -19,7 +20,7 @@ export function normalizeItem<T extends ItemWithOptionalOrgIds>(
   const withOrg = {
     ...item,
     tagIds: item.tagIds ?? [],
-    collectionIds: item.collectionIds ?? [],
+    collectionIds: coerceExclusiveCollectionIds(item.collectionIds ?? []),
   };
 
   if ("type" in withOrg && (withOrg as { type?: string }).type === "link") {

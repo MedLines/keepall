@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import {
   assignCollectionId,
   buildCollection,
+  clearCollectionId,
+  coerceExclusiveCollectionIds,
   CollectionValidationError,
   normalizeCollectionName,
 } from "./collection";
@@ -33,8 +35,23 @@ describe("normalizeCollectionName", () => {
 });
 
 describe("assignCollectionId", () => {
-  test("appends a new id once", () => {
-    expect(assignCollectionId(["a"], "b")).toEqual(["a", "b"]);
+  test("sets exclusive membership to the new id", () => {
+    expect(assignCollectionId(["a"], "b")).toEqual(["b"]);
     expect(assignCollectionId(["a"], "a")).toEqual(["a"]);
+    expect(assignCollectionId([], "c")).toEqual(["c"]);
+  });
+});
+
+describe("coerceExclusiveCollectionIds", () => {
+  test("keeps only the first id", () => {
+    expect(coerceExclusiveCollectionIds(["a", "b", "c"])).toEqual(["a"]);
+    expect(coerceExclusiveCollectionIds([])).toEqual([]);
+  });
+});
+
+describe("clearCollectionId", () => {
+  test("removes the matching id", () => {
+    expect(clearCollectionId(["a"], "a")).toEqual([]);
+    expect(clearCollectionId(["a"], "b")).toEqual(["a"]);
   });
 });

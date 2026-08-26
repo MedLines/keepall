@@ -39,12 +39,23 @@ export function buildCollection(
 }
 
 export function assignCollectionId(
+  _collectionIds: string[],
+  collectionId: string,
+): string[] {
+  return [collectionId];
+}
+
+/** Exclusive membership: keep first id only (migrate legacy multi-id rows). */
+export function coerceExclusiveCollectionIds(
+  collectionIds: string[],
+): string[] {
+  const first = collectionIds[0];
+  return first ? [first] : [];
+}
+
+export function clearCollectionId(
   collectionIds: string[],
   collectionId: string,
 ): string[] {
-  if (collectionIds.includes(collectionId)) {
-    return collectionIds;
-  }
-
-  return [...collectionIds, collectionId];
+  return collectionIds.filter((id) => id !== collectionId);
 }

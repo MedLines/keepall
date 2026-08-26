@@ -32,7 +32,9 @@ import { matchesSearchQuery, normalizeSearchQuery } from "@/domain/search";
 import { TagValidationError, type Tag } from "@/domain/tag";
 import {
   createCollection,
+  deleteCollection,
   listCollections,
+  renameCollection,
 } from "@/persistence/collections";
 import {
   appendImageAssetToItem,
@@ -80,6 +82,11 @@ export function Library() {
     string | null
   >(null);
   const [collectionError, setCollectionError] = useState<string | null>(null);
+  const [collectionManageError, setCollectionManageError] = useState<
+    string | null
+  >(null);
+  const [newCollectionDraft, setNewCollectionDraft] = useState("");
+  const [renameCollectionDraft, setRenameCollectionDraft] = useState("");
   const [galleryError, setGalleryError] = useState<string | null>(null);
   const [pendingMutation, setPendingMutation] = useState<PendingMutation | null>(
     null,
@@ -166,6 +173,10 @@ export function Library() {
     collections.map((collection) => [collection.id, collection]),
   );
   const browseCollectionId = view.collection;
+  const browseCollection =
+    browseCollectionId !== null
+      ? (collectionsById.get(browseCollectionId) ?? null)
+      : null;
   const browseTagId =
     view.tag !== null && tagsById.has(view.tag) ? view.tag : null;
   const browseTagName =
@@ -214,6 +225,25 @@ export function Library() {
     inspectId === null
       ? null
       : (items.find((entry) => entry.id === inspectId) ?? null);
+
+  useEffect(() => {
+    if (browseCollection) {
+      setRenameCollectionDraft(browseCollection.name);
+    } else {
+      setRenameCollectionDraft("");
+    }
+  }, [browseCollection]);
+
+  useEffect(() => {
+    if (
+      browseCollectionId !== null &&
+      loadState === "ready" &&
+      browseCollection === null
+    ) {
+      updateView({ collection: null }, "replace");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- clear stale collection once after load
+  }, [browseCollectionId, browseCollection, loadState]);
 
   useEffect(() => {
     if (inspectId !== null && loadState === "ready" && inspectedItem === null) {
@@ -517,6 +547,89 @@ export function Library() {
     }
   }
 
+  async function createLibraryCollection() {
+    const name = newCollectionDraft.trim();
+    if (!name || pendingMutation) {
+      return;
+    }
+
+    setPendingMutation({ op: "create-collection" });
+    setCollectionManageError(null);
+
+    try {
+      const collection = await createCollection({ name });
+      setNewCollectionDraft("");
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      updateView({ collection: collection.id }, "push");
+    } catch (caught) {
+      if (caught instanceof CollectionValidationError) {
+        setCollectionManageError(caught.message);
+      } else {
+        setCollectionManageError("Couldn't create collection.");
+      }
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  async function renameSelectedCollection() {
+    if (!browseCollection || pendingMutation) {
+      return;
+    }
+    const name = renameCollectionDraft.trim();
+    if (!name) {
+      return;
+    }
+
+    setPendingMutation({
+      op: "rename-collection",
+      id: browseCollection.id,
+    });
+    setCollectionManageError(null);
+
+    try {
+      await renameCollection(browseCollection.id, name);
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch (caught) {
+      if (caught instanceof CollectionValidationError) {
+        setCollectionManageError(caught.message);
+      } else {
+        setCollectionManageError("Couldn't rename collection.");
+      }
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  async function deleteSelectedCollection() {
+    if (!browseCollection || pendingMutation) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete collection “${browseCollection.name}”? Items in it become Unsorted. Items are not deleted.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setPendingMutation({
+      op: "delete-collection",
+      id: browseCollection.id,
+    });
+    setCollectionManageError(null);
+
+    try {
+      await deleteCollection(browseCollection.id);
+      updateView({ collection: null }, "push");
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setCollectionManageError("Couldn't delete collection.");
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
   return (
     <section className="mt-8" aria-labelledby="library-heading">
       <h2
@@ -533,8 +646,6 @@ export function Library() {
         <p className="mt-3 text-sm text-red-700" role="alert">
           {error ?? "Couldn't load items."}
         </p>
-      ) : items.length === 0 ? (
-        <p className="mt-3 text-sm text-zinc-600">No items yet.</p>
       ) : (
         <>
           <div className="mt-3 flex flex-col gap-1">
@@ -605,9 +716,9 @@ export function Library() {
               Oldest
             </button>
           </div>
-          {collections.length > 0 ? (
+          <div className="mt-3 space-y-2">
             <div
-              className="mt-3 flex flex-wrap gap-2"
+              className="flex flex-wrap gap-2"
               role="group"
               aria-label="Browse collections"
             >
@@ -639,7 +750,91 @@ export function Library() {
                 </button>
               ))}
             </div>
-          ) : null}
+            {collections.length === 0 ? (
+              <p className="text-sm text-zinc-600">No collections yet.</p>
+            ) : null}
+            <form
+              className="flex flex-wrap items-end gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void createLibraryCollection();
+              }}
+            >
+              <div className="flex min-w-40 flex-1 flex-col gap-1">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="new-collection-name"
+                >
+                  New collection
+                </label>
+                <input
+                  className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
+                  id="new-collection-name"
+                  value={newCollectionDraft}
+                  disabled={mutationBusy}
+                  onChange={(event) =>
+                    setNewCollectionDraft(event.target.value)
+                  }
+                  placeholder="Name"
+                />
+              </div>
+              <button
+                className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium disabled:opacity-60"
+                type="submit"
+                disabled={mutationBusy || !newCollectionDraft.trim()}
+              >
+                {pendingMutation?.op === "create-collection"
+                  ? "Creating…"
+                  : "Create"}
+              </button>
+            </form>
+            {browseCollection ? (
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="flex min-w-40 flex-1 flex-col gap-1">
+                  <label
+                    className="text-sm font-medium"
+                    htmlFor="rename-collection-name"
+                  >
+                    Rename collection
+                  </label>
+                  <input
+                    className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
+                    id="rename-collection-name"
+                    value={renameCollectionDraft}
+                    disabled={mutationBusy}
+                    onChange={(event) =>
+                      setRenameCollectionDraft(event.target.value)
+                    }
+                  />
+                </div>
+                <button
+                  className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium disabled:opacity-60"
+                  type="button"
+                  disabled={mutationBusy || !renameCollectionDraft.trim()}
+                  onClick={() => void renameSelectedCollection()}
+                >
+                  {pendingMutation?.op === "rename-collection"
+                    ? "Saving…"
+                    : "Save name"}
+                </button>
+                <button
+                  className="rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-800 disabled:opacity-60"
+                  type="button"
+                  disabled={mutationBusy}
+                  onClick={() => void deleteSelectedCollection()}
+                >
+                  {pendingMutation?.op === "delete-collection"
+                    ? "Deleting…"
+                    : "Delete collection"}
+                </button>
+              </div>
+            ) : null}
+            {collectionManageError ? (
+              <p className="text-sm text-red-700" role="alert">
+                {collectionManageError}
+              </p>
+            ) : null}
+          </div>
           {browseTagId !== null && browseTagName !== null ? (
             <div
               className="mt-3 flex flex-wrap items-center gap-2"

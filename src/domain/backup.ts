@@ -1,5 +1,6 @@
 import { isHttpUrl } from "./classify";
 import type { Collection } from "./collection";
+import { coerceExclusiveCollectionIds } from "./collection";
 import type { Item } from "./item";
 import type { ImageItem } from "./image";
 import { coerceImageFields } from "./image";
@@ -332,10 +333,8 @@ function parseItem(
   }
 
   const itemTagIds = parseStringIdArray(item.tagIds, "tagIds", index);
-  const itemCollectionIds = parseStringIdArray(
-    item.collectionIds,
-    "collectionIds",
-    index,
+  const itemCollectionIds = coerceExclusiveCollectionIds(
+    parseStringIdArray(item.collectionIds, "collectionIds", index),
   );
 
   for (const tagId of itemTagIds) {

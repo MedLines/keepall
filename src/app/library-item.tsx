@@ -23,7 +23,10 @@ export type PendingMutation =
   | { op: "delete"; id: string }
   | { op: "assign-tag"; id: string }
   | { op: "unassign-tag"; id: string }
-  | { op: "assign-collection"; id: string };
+  | { op: "assign-collection"; id: string }
+  | { op: "create-collection" }
+  | { op: "rename-collection"; id: string }
+  | { op: "delete-collection"; id: string };
 
 export type LibraryItemProps = {
   item: Item;

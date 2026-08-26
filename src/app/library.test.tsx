@@ -14,7 +14,7 @@ import {
   updateLink,
   updateNote,
 } from "@/persistence/items";
-import { createCollection, listCollections } from "@/persistence/collections";
+import { createCollection, listCollections, renameCollection, deleteCollection } from "@/persistence/collections";
 import { createTag, listTags } from "@/persistence/tags";
 import { mockNavigation } from "../../vitest.setup";
 import { enrichLinkPreview } from "./enrich-link-preview";
@@ -47,6 +47,8 @@ vi.mock("@/persistence/tags", () => ({
 vi.mock("@/persistence/collections", () => ({
   listCollections: vi.fn(),
   createCollection: vi.fn(),
+  renameCollection: vi.fn(),
+  deleteCollection: vi.fn(),
 }));
 
 const note = buildNote({ content: "A persisted note" }, { id: "n1", now: 1 });
@@ -660,7 +662,33 @@ describe("Library collections", () => {
     vi.mocked(listCollections).mockReset();
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
+    vi.mocked(renameCollection).mockReset();
+    vi.mocked(deleteCollection).mockReset();
     vi.mocked(assignCollectionToItem).mockReset();
+  });
+
+  test("creates a collection with no items and browses it", async () => {
+    const collection = { id: "c1", name: "Reading", createdAt: 1 };
+    vi.mocked(listItems).mockResolvedValue([]);
+    vi.mocked(listCollections)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([collection]);
+    vi.mocked(createCollection).mockResolvedValue(collection);
+    render(<Library />);
+
+    expect(await screen.findByText("No collections yet.")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("New collection"), {
+      target: { value: "Reading" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => {
+      expect(createCollection).toHaveBeenCalledWith({ name: "Reading" });
+    });
+    expect(mockNavigation.push).toHaveBeenCalledWith("/?collection=c1", {
+      scroll: false,
+    });
+    expect(await screen.findByRole("button", { name: "Reading" })).toBeInTheDocument();
   });
 
   test("assigns a collection and browses to only that collection", async () => {
@@ -697,6 +725,47 @@ describe("Library collections", () => {
 
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
     expect(screen.queryByText("other note")).not.toBeInTheDocument();
+  });
+
+  test("renames and deletes the selected collection without deleting items", async () => {
+    const collection = { id: "c1", name: "Reading", createdAt: 1 };
+    const renamed = { id: "c1", name: "Later", createdAt: 1 };
+    const tagged = { ...note, collectionIds: ["c1"], updatedAt: 2 };
+    const unsorted = { ...note, collectionIds: [], updatedAt: 3 };
+    vi.mocked(listItems)
+      .mockResolvedValueOnce([tagged])
+      .mockResolvedValueOnce([tagged])
+      .mockResolvedValue([unsorted]);
+    vi.mocked(listCollections)
+      .mockResolvedValueOnce([collection])
+      .mockResolvedValueOnce([renamed])
+      .mockResolvedValue([]);
+    vi.mocked(renameCollection).mockResolvedValue(renamed);
+    vi.mocked(deleteCollection).mockResolvedValue(undefined);
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true),
+    );
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Reading" }));
+    fireEvent.change(screen.getByLabelText("Rename collection"), {
+      target: { value: "Later" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+
+    await waitFor(() => {
+      expect(renameCollection).toHaveBeenCalledWith("c1", "Later");
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Later" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete collection" }));
+
+    await waitFor(() => {
+      expect(deleteCollection).toHaveBeenCalledWith("c1");
+    });
+    expect(mockNavigation.push).toHaveBeenCalledWith("/", { scroll: false });
+    expect(await screen.findByText("A persisted note")).toBeInTheDocument();
   });
 });
 
