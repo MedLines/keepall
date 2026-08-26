@@ -169,7 +169,7 @@ export function LibraryItem({
       onDragEnd={onItemDragEnd}
     >
       <label
-        className={`absolute left-3 top-3 z-20 flex size-8 items-center justify-center rounded-md bg-white/95 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity duration-150 ease-out motion-reduce:transition-none ${
+        className={`absolute left-3 top-3 z-20 flex size-8 items-center justify-center rounded-md bg-white/95 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] ${
           checkboxVisible
             ? "pointer-events-auto opacity-100"
             : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
@@ -198,14 +198,21 @@ export function LibraryItem({
             target="_blank"
             style={{ borderRadius: 12 }}
           >
-            <LibraryItemMedia item={item} />
+            <motion.div
+              layoutId={reduceMotion ? undefined : itemMediaLayoutId(item.id)}
+              className="overflow-hidden"
+              style={{ borderRadius: 12 }}
+              transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+            >
+              <LibraryItemMedia item={item} />
+            </motion.div>
           </a>
         ) : (
           <motion.div
             layoutId={reduceMotion ? undefined : itemMediaLayoutId(item.id)}
             className="cursor-pointer overflow-hidden"
             style={{ borderRadius: 12 }}
-            transition={{ type: "spring", duration: 0.45, bounce: 0 }}
+            transition={{ type: "spring", duration: 0.3, bounce: 0 }}
             onClick={onOpenInspect}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -222,7 +229,7 @@ export function LibraryItem({
         )}
         {!inspected && !editing && !pendingDelete ? (
           <div
-            className={`absolute inset-x-2 top-2 z-10 flex flex-col items-end gap-1 transition-opacity duration-150 ease-out motion-reduce:transition-none ${
+            className={`absolute inset-x-2 top-2 z-10 flex flex-col items-end gap-1 ${
               actionChromeVisible
                 ? "pointer-events-auto opacity-100"
                 : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"

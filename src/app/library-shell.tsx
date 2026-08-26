@@ -246,7 +246,7 @@ export function LibraryShell({
 
       <aside
         aria-label="Sidebar"
-        className={`${SHELL_ASIDE} transition-[width] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
+        className={`${SHELL_ASIDE} ${
           expanded ? SHELL_SIDEBAR_EXPANDED : SHELL_SIDEBAR_COLLAPSED
         }`}
       >

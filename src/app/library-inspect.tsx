@@ -199,7 +199,7 @@ export function LibraryInspect({
     : "";
 
   return (
-    <AnimatePresence>
+    <AnimatePresence initial={false}>
       {open && item ? (
         <motion.div
           key="inspect-root"
@@ -215,7 +215,10 @@ export function LibraryInspect({
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.12 } }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            transition={{
+              duration: 0.2,
+              ease: [0.25, 0.46, 0.45, 0.94],
+            }}
             onClick={onClose}
           />
           <motion.div
@@ -223,9 +226,19 @@ export function LibraryInspect({
             tabIndex={-1}
             className="relative z-10 flex max-h-[min(96vh,64rem)] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.18)] outline-none sm:rounded-2xl"
             style={{ borderRadius: 16 }}
-            initial={reduceMotion ? false : { opacity: 0.96 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.12 } }}
+            initial={
+              reduceMotion ? false : { opacity: 0, scale: 0.95 }
+            }
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{
+              opacity: 0,
+              scale: 0.95,
+              transition: { duration: 0.12 },
+            }}
+            transition={{
+              duration: 0.2,
+              ease: [0.23, 1, 0.32, 1],
+            }}
           >
             <div className="relative shrink-0 bg-zinc-950">
               <motion.div
@@ -234,7 +247,7 @@ export function LibraryInspect({
                 }
                 style={{ borderRadius: 0 }}
                 className="overflow-hidden"
-                transition={{ type: "spring", duration: 0.45, bounce: 0 }}
+                transition={{ type: "spring", duration: 0.3, bounce: 0 }}
               >
                 <LibraryItemMedia
                   item={item}

@@ -86,7 +86,7 @@ export function LibraryListRow({
     >
       <div className="flex items-center gap-2 px-2 py-2">
         <label
-          className={`flex size-8 shrink-0 items-center justify-center transition-opacity duration-150 ease-out motion-reduce:transition-none ${
+          className={`flex size-8 shrink-0 items-center justify-center ${
             checkboxVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           }`}
         >
