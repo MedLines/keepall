@@ -20,6 +20,10 @@ import { mockNavigation } from "../../vitest.setup";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { Library } from "./library";
+import {
+  encodeLibraryDragIds,
+  LIBRARY_ITEM_DRAG_MIME,
+} from "./library-drag";
 import type { Item } from "@/domain/item";
 
 vi.mock("@/persistence/items", () => ({
@@ -940,6 +944,79 @@ describe("Library view state", () => {
     fireEvent.keyDown(window, { key: "Escape" });
 
     expect(screen.queryByText("1 selected")).not.toBeInTheDocument();
+  });
+
+  test("drops an item onto a collection to move it", async () => {
+    const movable = buildNote({ content: "move me" }, { id: "n1", now: 1 });
+    const collection = { id: "c1", name: "Reading", createdAt: 1 };
+    vi.mocked(listItems).mockResolvedValue([movable]);
+    vi.mocked(listCollections).mockResolvedValue([collection]);
+    vi.mocked(assignCollectionToItem).mockResolvedValue({
+      ...movable,
+      collectionIds: ["c1"],
+      updatedAt: 2,
+    });
+
+    render(<Library />);
+    await screen.findByText("move me");
+
+    const dataTransfer = {
+      dropEffect: "none" as const,
+      effectAllowed: "none" as const,
+      types: [] as string[],
+      _store: {} as Record<string, string>,
+      setData(type: string, value: string) {
+        this._store[type] = value;
+        this.types = Object.keys(this._store);
+      },
+      getData(type: string) {
+        return this._store[type] ?? "";
+      },
+    };
+
+    fireEvent.dragStart(screen.getByRole("listitem"), { dataTransfer });
+    const target = screen.getByRole("button", { name: "Reading" });
+    fireEvent.dragOver(target, { dataTransfer });
+    fireEvent.drop(target, { dataTransfer });
+
+    await waitFor(() => {
+      expect(assignCollectionToItem).toHaveBeenCalledWith("n1", "c1");
+    });
+  });
+
+  test("drops a selection onto a collection", async () => {
+    const first = buildNote({ content: "one" }, { id: "n1", now: 1 });
+    const second = buildNote({ content: "two" }, { id: "n2", now: 2 });
+    const collection = { id: "c1", name: "Reading", createdAt: 1 };
+    vi.mocked(listItems).mockResolvedValue([first, second]);
+    vi.mocked(listCollections).mockResolvedValue([collection]);
+    vi.mocked(assignCollectionToItem).mockImplementation(async (id) => {
+      const item = id === "n1" ? first : second;
+      return { ...item, collectionIds: ["c1"], updatedAt: 3 };
+    });
+
+    render(<Library />);
+    await screen.findByText("one");
+
+    const dataTransfer = {
+      dropEffect: "none" as const,
+      effectAllowed: "none" as const,
+      types: [LIBRARY_ITEM_DRAG_MIME],
+      getData(type: string) {
+        if (type === LIBRARY_ITEM_DRAG_MIME) {
+          return encodeLibraryDragIds(["n1", "n2"]);
+        }
+        return "";
+      },
+      setData() {},
+    };
+
+    const target = screen.getByRole("button", { name: "Reading" });
+    fireEvent.drop(target, { dataTransfer });
+
+    await waitFor(() => {
+      expect(assignCollectionToItem).toHaveBeenCalledTimes(2);
+    });
   });
 
   test("sorts visible items oldest first", async () => {

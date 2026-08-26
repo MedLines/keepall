@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type DragEvent,
   type KeyboardEvent,
   useCallback,
   useEffect,
@@ -57,6 +58,12 @@ import { LibraryListRow } from "./library-list-row";
 import { LibraryInspect } from "./library-inspect";
 import { LibraryBulkBar, type BulkPanel } from "./library-bulk-bar";
 import type { OrgNameSuggestion } from "./org-name-suggest";
+import {
+  decodeLibraryDragIds,
+  encodeLibraryDragIds,
+  LIBRARY_ITEM_DRAG_MIME,
+  resolveLibraryDragIds,
+} from "./library-drag";
 import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
@@ -103,6 +110,11 @@ export function Library() {
   const [bulkTagDraft, setBulkTagDraft] = useState("");
   const [bulkRemoveTagDraft, setBulkRemoveTagDraft] = useState("");
   const [bulkCollectionDraft, setBulkCollectionDraft] = useState("");
+  const [draggingIds, setDraggingIds] = useState<Set<string>>(() => new Set());
+  const [dropTargetCollectionId, setDropTargetCollectionId] = useState<
+    string | null
+  >(null);
+  const [dragError, setDragError] = useState<string | null>(null);
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
   const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
@@ -745,6 +757,99 @@ export function Library() {
     }
   }
 
+  async function assignItemsToCollectionIds(
+    itemIds: string[],
+    collectionId: string,
+    options?: { clearSelection?: boolean },
+  ) {
+    if (pendingMutation) {
+      return;
+    }
+
+    const toAssign = [...new Set(itemIds)].filter((id) => {
+      const item = itemsById.get(id);
+      return item && !item.collectionIds.includes(collectionId);
+    });
+    if (toAssign.length === 0) {
+      setDraggingIds(new Set());
+      setDropTargetCollectionId(null);
+      return;
+    }
+
+    setPendingMutation({ op: "bulk-assign-collection" });
+    setDragError(null);
+
+    try {
+      for (const itemId of toAssign) {
+        await assignCollectionToItem(itemId, collectionId);
+      }
+      if (options?.clearSelection) {
+        clearSelection();
+      }
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setDragError("Couldn't move items to collection.");
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } finally {
+      setPendingMutation(null);
+      setDraggingIds(new Set());
+      setDropTargetCollectionId(null);
+    }
+  }
+
+  function handleItemDragStart(itemId: string, event: DragEvent<HTMLElement>) {
+    if (mutationBusy) {
+      event.preventDefault();
+      return;
+    }
+
+    const ids = resolveLibraryDragIds(itemId, selectedIds);
+    event.dataTransfer.setData(
+      LIBRARY_ITEM_DRAG_MIME,
+      encodeLibraryDragIds(ids),
+    );
+    event.dataTransfer.effectAllowed = "move";
+    setDraggingIds(new Set(ids));
+    setDragError(null);
+  }
+
+  function handleItemDragEnd() {
+    setDraggingIds(new Set());
+    setDropTargetCollectionId(null);
+  }
+
+  function handleCollectionDragOver(
+    collectionId: string,
+    event: DragEvent<HTMLButtonElement>,
+  ) {
+    if (mutationBusy) {
+      return;
+    }
+    if (!event.dataTransfer.types.includes(LIBRARY_ITEM_DRAG_MIME)) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDropTargetCollectionId(collectionId);
+  }
+
+  function handleCollectionDrop(
+    collectionId: string,
+    event: DragEvent<HTMLButtonElement>,
+  ) {
+    event.preventDefault();
+    setDropTargetCollectionId(null);
+    const ids = decodeLibraryDragIds(
+      event.dataTransfer.getData(LIBRARY_ITEM_DRAG_MIME),
+    );
+    if (!ids) {
+      return;
+    }
+    void assignItemsToCollectionIds(ids, collectionId, {
+      clearSelection: true,
+    });
+  }
+
   async function createLibraryCollection() {
     const name = newCollectionDraft.trim();
     if (!name || pendingMutation) {
@@ -966,16 +1071,30 @@ export function Library() {
                     browseCollectionId === collection.id
                       ? "border-zinc-900 bg-zinc-900 text-white"
                       : "border-zinc-300 bg-white text-zinc-800"
+                  } ${
+                    dropTargetCollectionId === collection.id
+                      ? "ring-2 ring-zinc-900 ring-offset-1"
+                      : ""
                   }`}
                   type="button"
                   onClick={() =>
                     updateView({ collection: collection.id }, "push")
                   }
+                  onDragOver={(event) =>
+                    handleCollectionDragOver(collection.id, event)
+                  }
+                  onDragLeave={() => setDropTargetCollectionId(null)}
+                  onDrop={(event) => handleCollectionDrop(collection.id, event)}
                 >
                   {collection.name}
                 </button>
               ))}
             </div>
+            {dragError ? (
+              <p className="text-sm text-red-700" role="alert">
+                {dragError}
+              </p>
+            ) : null}
             {collections.length === 0 ? (
               <p className="text-sm text-zinc-600">No collections yet.</p>
             ) : null}
@@ -1136,8 +1255,12 @@ export function Library() {
                   inspected={inspectId === item.id}
                   selected={selectedIds.has(item.id)}
                   selectionActive={selectionActive}
+                  dragEnabled={!mutationBusy && inspectId !== item.id}
+                  isDragging={draggingIds.has(item.id)}
                   onOpenInspect={() => openInspect(item.id)}
                   onToggleSelect={() => toggleItemSelected(item.id)}
+                  onItemDragStart={(event) => handleItemDragStart(item.id, event)}
+                  onItemDragEnd={handleItemDragEnd}
                 />
               ))}
             </ul>
@@ -1222,6 +1345,17 @@ export function Library() {
                   onToggleSelect={() => toggleItemSelected(item.id)}
                   tagSuggestions={tagSuggestions}
                   collectionSuggestions={collectionSuggestions}
+                  dragEnabled={
+                    !mutationBusy &&
+                    editingId !== item.id &&
+                    pendingDeleteId !== item.id &&
+                    inspectId !== item.id
+                  }
+                  isDragging={draggingIds.has(item.id)}
+                  onItemDragStart={(event) =>
+                    handleItemDragStart(item.id, event)
+                  }
+                  onItemDragEnd={handleItemDragEnd}
                 />
               ))}
             </ul>

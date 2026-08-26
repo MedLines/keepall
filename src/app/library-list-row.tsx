@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type DragEvent, useState } from "react";
 import {
   cardInitial,
   cardSecondaryLine,
@@ -16,6 +16,10 @@ type Props = {
   selectionActive: boolean;
   onOpenInspect: () => void;
   onToggleSelect: () => void;
+  dragEnabled: boolean;
+  isDragging: boolean;
+  onItemDragStart: (event: DragEvent<HTMLElement>) => void;
+  onItemDragEnd: () => void;
 };
 
 function typeLabel(item: Item): string {
@@ -44,6 +48,10 @@ export function LibraryListRow({
   selectionActive,
   onOpenInspect,
   onToggleSelect,
+  dragEnabled,
+  isDragging,
+  onItemDragStart,
+  onItemDragEnd,
 }: Props) {
   const title = itemListTitle(item);
   const secondary = cardSecondaryLine(item);
@@ -63,9 +71,12 @@ export function LibraryListRow({
 
   return (
     <li
-      className={`group rounded-lg border border-zinc-200 bg-white ${
+      draggable={dragEnabled}
+      className={`group rounded-lg border border-zinc-200 bg-white transition-opacity duration-150 ease-out ${
         inspected || selected ? "ring-2 ring-zinc-900" : ""
-      }`}
+      } ${isDragging ? "opacity-50" : ""}`}
+      onDragStart={onItemDragStart}
+      onDragEnd={onItemDragEnd}
     >
       <div className="flex items-center gap-2 px-2 py-2">
         <label

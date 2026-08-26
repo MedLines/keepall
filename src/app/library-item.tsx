@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type DragEvent,
   type KeyboardEvent,
   type Ref,
   useEffect,
@@ -74,6 +75,10 @@ export type LibraryItemProps = {
   onToggleSelect: () => void;
   tagSuggestions: OrgNameSuggestion[];
   collectionSuggestions: OrgNameSuggestion[];
+  dragEnabled: boolean;
+  isDragging: boolean;
+  onItemDragStart: (event: DragEvent<HTMLElement>) => void;
+  onItemDragEnd: () => void;
 };
 
 const ACTION_BTN =
@@ -116,6 +121,10 @@ export function LibraryItem({
   onToggleSelect,
   tagSuggestions,
   collectionSuggestions,
+  dragEnabled,
+  isDragging,
+  onItemDragStart,
+  onItemDragEnd,
 }: LibraryItemProps) {
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
@@ -144,9 +153,12 @@ export function LibraryItem({
 
   return (
     <li
-      className={`group relative flex flex-col rounded-2xl bg-white p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06),0_2px_4px_0_rgba(0,0,0,0.04)] transition-[box-shadow] duration-150 ease-out hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08),0_2px_4px_0_rgba(0,0,0,0.06)] ${
+      draggable={dragEnabled}
+      className={`group relative flex flex-col rounded-2xl bg-white p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06),0_2px_4px_0_rgba(0,0,0,0.04)] transition-[box-shadow,opacity] duration-150 ease-out hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08),0_2px_4px_0_rgba(0,0,0,0.06)] ${
         selected ? "ring-2 ring-zinc-900" : ""
-      }`}
+      } ${isDragging ? "opacity-50" : ""}`}
+      onDragStart={onItemDragStart}
+      onDragEnd={onItemDragEnd}
     >
       <label
         className={`absolute left-3 top-3 z-20 flex size-8 items-center justify-center rounded-md bg-white/95 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity duration-150 ease-out motion-reduce:transition-none ${
@@ -172,6 +184,7 @@ export function LibraryItem({
           <a
             aria-label={title}
             className="block overflow-hidden"
+            draggable={false}
             href={item.url}
             rel="noreferrer"
             target="_blank"
