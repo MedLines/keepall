@@ -827,11 +827,14 @@ describe("Library search", () => {
     vi.mocked(assignCollectionToItem).mockReset();
   });
 
-  test("filters items by title, content, and URL without matching tags", async () => {
-    const designNote = buildNote(
-      { content: "A persisted note about Design" },
-      { id: "n1", now: 1 },
-    );
+  test("filters items by title, content, URL, and tag names", async () => {
+    const designNote = {
+      ...buildNote(
+        { content: "A persisted note about Design" },
+        { id: "n1", now: 1 },
+      ),
+      tagIds: ["t1"],
+    };
     const otherNote = buildNote(
       { content: "grocery list" },
       { id: "n2", now: 2 },
@@ -842,7 +845,7 @@ describe("Library search", () => {
     );
     vi.mocked(listItems).mockResolvedValue([designNote, otherNote, docsLink]);
     vi.mocked(listTags).mockResolvedValue([
-      { id: "t1", name: "design", createdAt: 1 },
+      { id: "t1", name: "inspiration", createdAt: 1 },
     ]);
     render(<Library />);
 
@@ -856,6 +859,13 @@ describe("Library search", () => {
     expect(
       within(screen.getByRole("main")).queryByRole("link"),
     ).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Search"), {
+      target: { value: "inspiration" },
+    });
+
+    expect(screen.getByText("A persisted note about Design")).toBeInTheDocument();
+    expect(screen.queryByText("grocery list")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Search"), {
       target: { value: "example.com" },

@@ -4,11 +4,19 @@ export function normalizeSearchQuery(query: string): string {
   return query.trim().toLowerCase();
 }
 
-/** Case-insensitive substring match on item-owned text fields only. */
-export function matchesSearchQuery(item: Item, query: string): boolean {
+/** Case-insensitive substring match on item text fields and resolved tag names. */
+export function matchesSearchQuery(
+  item: Item,
+  query: string,
+  tagNames: readonly string[] = [],
+): boolean {
   const needle = normalizeSearchQuery(query);
 
   if (!needle) {
+    return true;
+  }
+
+  if (tagNames.some((name) => name.toLowerCase().includes(needle))) {
     return true;
   }
 

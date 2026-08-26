@@ -19,6 +19,7 @@ import {
   itemHasTag,
   itemInCollection,
   resolveItemCollectionNames,
+  resolveItemTagNames,
   resolveItemTags,
   type Item,
 } from "@/domain/item";
@@ -287,7 +288,11 @@ export function Library() {
         return false;
       }
 
-      return matchesSearchQuery(item, searchQuery);
+      return matchesSearchQuery(
+        item,
+        searchQuery,
+        resolveItemTagNames(item, tagsById),
+      );
     }),
     view.sort,
     browseCollectionId !== null

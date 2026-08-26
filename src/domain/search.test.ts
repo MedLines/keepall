@@ -43,4 +43,10 @@ describe("matchesSearchQuery", () => {
   test("does not match unrelated note content against a link", () => {
     expect(matchesSearchQuery(link, "persisted")).toBe(false);
   });
+
+  test("matches resolved tag names case-insensitively", () => {
+    expect(matchesSearchQuery(note, "design", ["Inspiration"])).toBe(true);
+    expect(matchesSearchQuery(note, "WORK", ["work", "reading"])).toBe(true);
+    expect(matchesSearchQuery(note, "missing", ["Design"])).toBe(false);
+  });
 });

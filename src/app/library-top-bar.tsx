@@ -81,7 +81,7 @@ export function LibraryTopBar({
                 className="w-full rounded-[10px] border border-zinc-200/80 bg-zinc-50 py-1.5 pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-150 ease-out focus:border-zinc-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)]"
                 id="library-search"
                 type="search"
-                placeholder="Search titles, notes, and URLs"
+                placeholder="Search titles, notes, URLs, and tags"
                 value={searchQuery}
                 onChange={(event) => onSearchChange(event.target.value)}
               />
