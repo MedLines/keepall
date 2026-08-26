@@ -19,6 +19,10 @@ type Props = {
   onSubmit: (name: string) => void;
   onCancel?: () => void;
   compact?: boolean;
+  /** Use inside another form so Enter adds a name instead of submitting the parent. */
+  embedded?: boolean;
+  /** When false, the list appears only after the user types. Default true. */
+  suggestWhenEmpty?: boolean;
 };
 
 /** Typeahead for tag or collection names — pick existing or submit a new name. */
@@ -37,6 +41,8 @@ export function OrgNameSuggest({
   onSubmit,
   onCancel,
   compact = false,
+  embedded = false,
+  suggestWhenEmpty = true,
 }: Props) {
   const filtered = useMemo(() => {
     const query = value.trim().toLowerCase();
@@ -44,9 +50,11 @@ export function OrgNameSuggest({
       ? suggestions.filter((entry) =>
           entry.name.toLowerCase().includes(query),
         )
-      : suggestions;
+      : suggestWhenEmpty
+        ? suggestions
+        : [];
     return matches.slice(0, 8);
-  }, [value, suggestions]);
+  }, [value, suggestions, suggestWhenEmpty]);
 
   function submitName(name: string) {
     const trimmed = name.trim();
@@ -65,6 +73,17 @@ export function OrgNameSuggest({
     if (event.key === "Escape") {
       event.preventDefault();
       onCancel?.();
+      return;
+    }
+
+    if (
+      embedded &&
+      event.key === "Enter" &&
+      !event.metaKey &&
+      !event.ctrlKey
+    ) {
+      event.preventDefault();
+      submitName(value);
     }
   }
 
@@ -76,8 +95,8 @@ export function OrgNameSuggest({
     ? "relative flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md bg-white/95 px-2 text-xs font-medium text-zinc-800 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06)] backdrop-blur-sm disabled:opacity-60"
     : "rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-800 disabled:opacity-60";
 
-  return (
-    <form className={compact ? "w-full" : undefined} onSubmit={handleSubmit}>
+  const fields = (
+    <>
       <label className={hideLabel ? "sr-only" : "text-sm font-medium"} htmlFor={inputId}>
         {label}
       </label>
@@ -127,7 +146,18 @@ export function OrgNameSuggest({
             </ul>
           ) : null}
         </div>
-        <button className={buttonClass} disabled={disabled} type="submit">
+        <button
+          className={buttonClass}
+          disabled={disabled}
+          type={embedded ? "button" : "submit"}
+          onClick={
+            embedded
+              ? () => {
+                  submitName(value);
+                }
+              : undefined
+          }
+        >
           {pending ? "…" : submitLabel}
         </button>
       </div>
@@ -139,6 +169,16 @@ export function OrgNameSuggest({
           {error}
         </p>
       ) : null}
+    </>
+  );
+
+  if (embedded) {
+    return <div className={compact ? "w-full" : undefined}>{fields}</div>;
+  }
+
+  return (
+    <form className={compact ? "w-full" : undefined} onSubmit={handleSubmit}>
+      {fields}
     </form>
   );
 }

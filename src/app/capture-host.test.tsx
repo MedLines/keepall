@@ -1,8 +1,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { buildImageFromAssetIds } from "@/domain/image";
 import { buildLink } from "@/domain/link";
 import { buildNote } from "@/domain/note";
+import { applyItemOrg } from "@/persistence/apply-item-org";
+import { listCollections } from "@/persistence/collections";
 import { createImage, createLink, createNote } from "@/persistence/items";
+import { listTags } from "@/persistence/tags";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
@@ -11,6 +15,20 @@ vi.mock("@/persistence/items", () => ({
   createNote: vi.fn(),
   createLink: vi.fn(),
   createImage: vi.fn(),
+}));
+
+vi.mock("@/persistence/apply-item-org", () => ({
+  applyItemOrg: vi.fn(),
+}));
+
+vi.mock("@/persistence/tags", () => ({
+  listTags: vi.fn(),
+  createTag: vi.fn(),
+}));
+
+vi.mock("@/persistence/collections", () => ({
+  listCollections: vi.fn(),
+  createCollection: vi.fn(),
 }));
 
 vi.mock("./enrich-link-preview", () => ({
@@ -55,6 +73,12 @@ describe("CaptureHost", () => {
     vi.mocked(createNote).mockReset();
     vi.mocked(createLink).mockReset();
     vi.mocked(createImage).mockReset();
+    vi.mocked(applyItemOrg).mockReset();
+    vi.mocked(applyItemOrg).mockResolvedValue(undefined);
+    vi.mocked(listTags).mockReset();
+    vi.mocked(listTags).mockResolvedValue([]);
+    vi.mocked(listCollections).mockReset();
+    vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(enrichLinkPreview).mockReset();
     vi.mocked(readClipboardImageAndText).mockReset();
     vi.mocked(readClipboardImageAndText).mockResolvedValue({
@@ -177,6 +201,13 @@ describe("CaptureHost", () => {
       expect(screen.getByLabelText("Link, note, or image")).not.toBeDisabled(),
     );
 
+    vi.mocked(createImage).mockResolvedValue(
+      buildImageFromAssetIds(
+        { assetIds: ["a1", "a2"] },
+        { id: "img1", now: 1 },
+      ),
+    );
+
     const fileInput = screen.getByRole("dialog").querySelector(
       'input[type="file"]',
     ) as HTMLInputElement;
@@ -201,6 +232,70 @@ describe("CaptureHost", () => {
         sourceUrl: undefined,
         caption: undefined,
       });
+    });
+    expect(applyItemOrg).not.toHaveBeenCalled();
+  });
+
+  test("save applies draft tags and collection after the item exists", async () => {
+    const link = buildLink(
+      { url: "https://example.com/article" },
+      { id: "l1", now: 1 },
+    );
+    vi.mocked(createLink).mockResolvedValue(link);
+
+    const input = await openDraft("https://example.com/article");
+    fireEvent.change(screen.getByPlaceholderText("Tag name"), {
+      target: { value: "work" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
+    fireEvent.change(screen.getByPlaceholderText("Collection"), {
+      target: { value: "Reading" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add collection" }));
+    fireEvent.submit(input.closest("form")!);
+
+    await waitFor(() => {
+      expect(createLink).toHaveBeenCalledTimes(1);
+      expect(applyItemOrg).toHaveBeenCalledWith("l1", {
+        tagNames: ["work"],
+        collectionName: "Reading",
+      });
+    });
+  });
+
+  test("if filing fails, retry does not create a second item", async () => {
+    const link = buildLink(
+      { url: "https://example.com/article" },
+      { id: "l1", now: 1 },
+    );
+    vi.mocked(createLink).mockResolvedValue(link);
+    vi.mocked(applyItemOrg)
+      .mockRejectedValueOnce(new Error("quota"))
+      .mockResolvedValueOnce(undefined);
+
+    const input = await openDraft("https://example.com/article");
+    fireEvent.change(screen.getByPlaceholderText("Tag name"), {
+      target: { value: "work" },
+    });
+    fireEvent.submit(input.closest("form")!);
+
+    expect(
+      await screen.findByText(
+        "Saved, but couldn't add tags or collection. Try again.",
+      ),
+    ).toBeInTheDocument();
+    expect(createLink).toHaveBeenCalledTimes(1);
+    expect(applyItemOrg).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(applyItemOrg).toHaveBeenCalledTimes(2);
+    });
+    expect(createLink).toHaveBeenCalledTimes(1);
+    expect(applyItemOrg).toHaveBeenNthCalledWith(2, "l1", {
+      tagNames: ["work"],
+      collectionName: null,
     });
   });
 });

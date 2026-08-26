@@ -6,6 +6,7 @@ import {
   initialCaptureState,
   shouldBlockDialogDismiss,
 } from "@/domain/capture";
+import { captureOrgDrafts } from "@/domain/capture-org";
 import { classifyCapture, resolveCapture } from "@/domain/classify";
 import {
   ImageValidationError,
@@ -13,11 +14,17 @@ import {
 } from "@/domain/image";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
+import { applyItemOrg } from "@/persistence/apply-item-org";
+import { listCollections } from "@/persistence/collections";
 import { createImage, createLink, createNote } from "@/persistence/items";
+import { listTags } from "@/persistence/tags";
+import { CaptureOrgPanel } from "./capture-org-panel";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { OPEN_CAPTURE_EVENT } from "./capture-events";
+import type { OrgNameSuggestion } from "./org-name-suggest";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
+import { SHELL_TOP_BTN, SHELL_TOP_BTN_ACTIVE, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 
 /** Alt+K (Windows/Linux) and Option+K (macOS). Option is altKey; code stays KeyK even when Option remaps the character. */
 export function isCaptureOpenShortcut(event: KeyboardEvent): boolean {
@@ -41,17 +48,37 @@ function revokeImageDraftPreviews(drafts: ImageDraft[]): void {
   }
 }
 
+const GHOST_BTN =
+  "text-sm text-zinc-600 transition-colors duration-150 hover:text-zinc-900 disabled:opacity-60";
+
 export function CaptureHost() {
   const [state, dispatch] = useReducer(captureReducer, initialCaptureState);
   const [imageDrafts, setImageDrafts] = useState<ImageDraft[]>([]);
+  const [draftTagNames, setDraftTagNames] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [draftCollectionName, setDraftCollectionName] = useState<string | null>(
+    null,
+  );
+  const [collectionInput, setCollectionInput] = useState("");
+  const [tagSuggestions, setTagSuggestions] = useState<OrgNameSuggestion[]>([]);
+  const [collectionSuggestions, setCollectionSuggestions] = useState<
+    OrgNameSuggestion[]
+  >([]);
+  const [savedItemId, setSavedItemId] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveInFlightRef = useRef(false);
+  const savedItemIdRef = useRef<string | null>(null);
   const isActive = state.status !== "idle";
   const classified = classifyCapture(state.input).type;
   const kind = state.override ?? classified;
   const savingImage = imageDrafts.length > 0;
+  const composeLocked =
+    state.status === "saving" ||
+    state.status === "reading" ||
+    savedItemId !== null;
+  const orgLocked = state.status === "saving" || state.status === "reading";
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -93,6 +120,13 @@ export function CaptureHost() {
       return;
     }
 
+    savedItemIdRef.current = null;
+    setSavedItemId(null);
+    setDraftTagNames([]);
+    setTagInput("");
+    setDraftCollectionName(null);
+    setCollectionInput("");
+
     let cancelled = false;
 
     void readClipboardImageAndText()
@@ -129,7 +163,7 @@ export function CaptureHost() {
     }
 
     const timer = window.setTimeout(() => {
-      clearImageDrafts();
+      resetSession();
       dispatch({ type: "dismiss" });
     }, 800);
 
@@ -141,6 +175,50 @@ export function CaptureHost() {
       revokeImageDraftPreviews(imageDrafts);
     };
   }, [imageDrafts]);
+
+  useEffect(() => {
+    if (!isActive) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void Promise.all([listTags(), listCollections()])
+      .then(([tags, collections]) => {
+        if (cancelled) {
+          return;
+        }
+        setTagSuggestions(tags.map((tag) => ({ id: tag.id, name: tag.name })));
+        setCollectionSuggestions(
+          collections.map((collection) => ({
+            id: collection.id,
+            name: collection.name,
+          })),
+        );
+      })
+      .catch(() => {
+        /* typeahead stays empty; save still works */
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isActive]);
+
+  function rememberSavedItem(itemId: string) {
+    savedItemIdRef.current = itemId;
+    setSavedItemId(itemId);
+  }
+
+  function resetSession() {
+    savedItemIdRef.current = null;
+    setSavedItemId(null);
+    setDraftTagNames([]);
+    setTagInput("");
+    setDraftCollectionName(null);
+    setCollectionInput("");
+    clearImageDrafts();
+  }
 
   function dispatchDraftText(
     accompanyingText: string,
@@ -213,7 +291,7 @@ export function CaptureHost() {
   }
 
   async function pasteImageFromClipboard() {
-    if (state.status === "saving" || state.status === "reading") {
+    if (composeLocked) {
       return;
     }
     const { image, text } = await readClipboardImageAndText();
@@ -223,7 +301,7 @@ export function CaptureHost() {
   }
 
   async function onPaste(event: ClipboardEvent<HTMLFormElement>) {
-    if (state.status === "saving" || state.status === "reading") {
+    if (composeLocked) {
       return;
     }
 
@@ -251,41 +329,17 @@ export function CaptureHost() {
       return;
     }
 
-    if (imageDrafts.length > 0) {
-      if (captureReducer(state, { type: "save" }).status !== "saving") {
+    const org = captureOrgDrafts(
+      [...draftTagNames, tagInput],
+      draftCollectionName ?? collectionInput,
+    );
+
+    if (!savedItemIdRef.current && imageDrafts.length === 0) {
+      const resolved = resolveCapture(state.input, state.override);
+      if (!resolved.ok) {
+        dispatch({ type: "failed", message: resolved.error });
         return;
       }
-      saveInFlightRef.current = true;
-      dispatch({ type: "save" });
-      try {
-        const fields = textFieldsFromAccompanyingText(state.input);
-        await createImage({
-          assets: imageDrafts.map((draft) => ({
-            bytes: draft.bytes,
-            mimeType: draft.mimeType,
-          })),
-          sourceUrl: fields.sourceUrl || undefined,
-          caption: fields.caption || undefined,
-        });
-        window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-        dispatch({ type: "saved" });
-      } catch (caught) {
-        if (caught instanceof ImageValidationError) {
-          dispatch({ type: "failed", message: caught.message });
-        } else {
-          dispatch({ type: "failed", message: "Couldn't save. Try again." });
-        }
-      } finally {
-        saveInFlightRef.current = false;
-      }
-      return;
-    }
-
-    const resolved = resolveCapture(state.input, state.override);
-
-    if (!resolved.ok) {
-      dispatch({ type: "failed", message: resolved.error });
-      return;
     }
 
     if (captureReducer(state, { type: "save" }).status !== "saving") {
@@ -296,21 +350,63 @@ export function CaptureHost() {
     dispatch({ type: "save" });
 
     try {
-      if (resolved.classification.type === "link") {
-        const link = await createLink({
-          url: resolved.classification.url,
-        });
+      let itemId = savedItemIdRef.current;
+
+      if (!itemId) {
+        if (imageDrafts.length > 0) {
+          const fields = textFieldsFromAccompanyingText(state.input);
+          const image = await createImage({
+            assets: imageDrafts.map((draft) => ({
+              bytes: draft.bytes,
+              mimeType: draft.mimeType,
+            })),
+            sourceUrl: fields.sourceUrl || undefined,
+            caption: fields.caption || undefined,
+          });
+          itemId = image.id;
+        } else {
+          const resolved = resolveCapture(state.input, state.override);
+          if (!resolved.ok) {
+            dispatch({ type: "failed", message: resolved.error });
+            return;
+          }
+
+          if (resolved.classification.type === "link") {
+            const link = await createLink({
+              url: resolved.classification.url,
+            });
+            itemId = link.id;
+            void enrichLinkPreview(link.id, link.url);
+          } else {
+            const note = await createNote({
+              content: resolved.classification.content,
+            });
+            itemId = note.id;
+          }
+        }
+
+        rememberSavedItem(itemId);
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-        dispatch({ type: "saved" });
-        void enrichLinkPreview(link.id, link.url);
+      }
+
+      if (org.tagNames.length > 0 || org.collectionName) {
+        await applyItemOrg(itemId, org);
+        window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      }
+
+      dispatch({ type: "saved" });
+    } catch (caught) {
+      if (savedItemIdRef.current) {
+        dispatch({
+          type: "failed",
+          message: "Saved, but couldn't add tags or collection. Try again.",
+        });
         return;
       }
 
-      await createNote({ content: resolved.classification.content });
-      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-      dispatch({ type: "saved" });
-    } catch (caught) {
-      if (
+      if (caught instanceof ImageValidationError) {
+        dispatch({ type: "failed", message: caught.message });
+      } else if (
         caught instanceof NoteValidationError ||
         caught instanceof LinkValidationError
       ) {
@@ -328,10 +424,15 @@ export function CaptureHost() {
     await persistCapture();
   }
 
+  function addDraftTag(name: string) {
+    const next = captureOrgDrafts([...draftTagNames, name], null);
+    setDraftTagNames(next.tagNames);
+  }
+
   return (
     <dialog
       ref={dialogRef}
-      className="w-full max-w-lg rounded-lg border border-zinc-200 bg-white p-6 shadow-lg"
+      className="fixed inset-0 m-auto h-fit max-h-[min(90dvh,40rem)] w-[min(100%-2rem,32rem)] overflow-y-auto rounded-[12px] bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-zinc-900/20 [&::backdrop]:backdrop-blur-[1px]"
       aria-labelledby="capture-title"
       onCancel={(event) => {
         if (shouldBlockDialogDismiss(state.status)) {
@@ -364,16 +465,26 @@ export function CaptureHost() {
           }
           return;
         }
-        clearImageDrafts();
+        resetSession();
         dispatch({ type: "dismiss" });
       }}
     >
-      <h2 className="text-lg font-semibold" id="capture-title">
+      <h2 className="text-lg font-semibold tracking-tight" id="capture-title">
         Save to Keepall
       </h2>
-      <form className="mt-4 flex flex-col gap-4" onSubmit={onSubmit} onPaste={onPaste}>
+      <form
+        className="mt-4 flex flex-col gap-5"
+        onSubmit={onSubmit}
+        onPaste={onPaste}
+        onKeyDown={(event) => {
+          if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+            event.preventDefault();
+            event.currentTarget.requestSubmit();
+          }
+        }}
+      >
         {imageDrafts.length > 0 ? (
-          <div className="overflow-hidden rounded-md border border-zinc-200 bg-zinc-100">
+          <div className="overflow-hidden rounded-[10px] bg-zinc-100 shadow-[0_0_0_1px_rgba(0,0,0,0.05)]">
             {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
             <img
               alt=""
@@ -381,36 +492,35 @@ export function CaptureHost() {
               src={imageDrafts[0]!.previewUrl}
             />
             {imageDrafts.length > 1 ? (
-              <p className="border-t border-zinc-200 px-3 py-2 text-center text-sm text-zinc-600">
+              <p className="border-t border-zinc-200/80 px-3 py-2 text-center text-xs text-zinc-500">
                 {imageDrafts.length} images selected
               </p>
             ) : null}
           </div>
         ) : null}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium" htmlFor="capture-input">
+          <label className="sr-only" htmlFor="capture-input">
             {savingImage
               ? "Optional source URL or caption"
               : "Link, note, or image"}
           </label>
           <textarea
             ref={inputRef}
-            className="min-h-28 rounded-md border border-zinc-300 bg-white px-3 py-2"
+            className="min-h-24 w-full rounded-[10px] border border-zinc-200/80 bg-zinc-50 px-3 py-2 text-sm outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out focus:border-zinc-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)] disabled:opacity-60"
             id="capture-input"
+            placeholder={
+              savingImage
+                ? "Optional source URL or caption"
+                : "Paste a link, note, or image"
+            }
             value={state.input}
             onChange={(event) =>
               dispatch({ type: "input", text: event.target.value })
             }
-            onKeyDown={(event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-            disabled={state.status === "saving" || state.status === "reading"}
+            disabled={composeLocked}
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <input
             ref={fileInputRef}
             accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
@@ -423,71 +533,94 @@ export function CaptureHost() {
             }}
           />
           <button
-            className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
+            className={GHOST_BTN}
             type="button"
-            disabled={state.status === "saving" || state.status === "reading"}
+            disabled={composeLocked}
             onClick={() => fileInputRef.current?.click()}
           >
-            Choose images…
+            Add image
           </button>
           <button
-            className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
+            className={GHOST_BTN}
             type="button"
-            disabled={state.status === "saving" || state.status === "reading"}
+            disabled={composeLocked}
             onClick={() => void pasteImageFromClipboard()}
           >
             Paste image
           </button>
           {imageDrafts.length > 0 ? (
             <button
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium disabled:opacity-60"
+              className={GHOST_BTN}
               type="button"
-              disabled={state.status === "saving"}
+              disabled={composeLocked}
               onClick={() => clearImageDrafts()}
             >
               Remove images
             </button>
           ) : null}
+          {!savingImage ? (
+            <div className="ml-auto flex gap-1">
+              <button
+                className={`${SHELL_TOP_BTN} h-7 px-2.5 text-xs ${
+                  kind === "link" ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE
+                }`}
+                type="button"
+                aria-pressed={kind === "link"}
+                disabled={composeLocked}
+                onClick={() => dispatch({ type: "override", kind: "link" })}
+              >
+                Link
+              </button>
+              <button
+                className={`${SHELL_TOP_BTN} h-7 px-2.5 text-xs ${
+                  kind === "note" ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE
+                }`}
+                type="button"
+                aria-pressed={kind === "note"}
+                disabled={composeLocked}
+                onClick={() => dispatch({ type: "override", kind: "note" })}
+              >
+                Note
+              </button>
+            </div>
+          ) : (
+            <p className="ml-auto text-xs text-zinc-500">
+              {imageDrafts.length > 1
+                ? "One item, several photos"
+                : "Saving as image"}
+            </p>
+          )}
         </div>
-        {!savingImage ? (
-          <fieldset className="flex flex-wrap gap-2">
-            <legend className="mb-2 w-full text-sm font-medium">Save as</legend>
-            <button
-              className={`rounded-md border px-3 py-1 text-sm ${
-                kind === "link"
-                  ? "border-zinc-900 bg-zinc-900 text-white"
-                  : "border-zinc-300 bg-white"
-              }`}
-              type="button"
-              aria-pressed={kind === "link"}
-              onClick={() => dispatch({ type: "override", kind: "link" })}
-            >
-              Link
-            </button>
-            <button
-              className={`rounded-md border px-3 py-1 text-sm ${
-                kind === "note"
-                  ? "border-zinc-900 bg-zinc-900 text-white"
-                  : "border-zinc-300 bg-white"
-              }`}
-              type="button"
-              aria-pressed={kind === "note"}
-              onClick={() => dispatch({ type: "override", kind: "note" })}
-            >
-              Note
-            </button>
-          </fieldset>
-        ) : (
-          <p className="text-sm text-zinc-600">
-            {imageDrafts.length > 1
-              ? "Saving as one image item with multiple photos."
-              : "Saving as image."}
+        <CaptureOrgPanel
+          tagNames={draftTagNames}
+          tagInput={tagInput}
+          collectionName={draftCollectionName}
+          collectionInput={collectionInput}
+          tagSuggestions={tagSuggestions}
+          collectionSuggestions={collectionSuggestions}
+          disabled={orgLocked}
+          onTagInputChange={setTagInput}
+          onAddTag={addDraftTag}
+          onRemoveTag={(name) =>
+            setDraftTagNames((current) =>
+              current.filter((entry) => entry !== name),
+            )
+          }
+          onCollectionInputChange={setCollectionInput}
+          onSetCollection={(name) => {
+            const next = captureOrgDrafts([], name);
+            setDraftCollectionName(next.collectionName);
+          }}
+          onClearCollection={() => setDraftCollectionName(null)}
+        />
+        {state.error ? (
+          <p className="text-sm text-red-700" role="alert">
+            {state.error}
           </p>
-        )}
-        <p className="text-sm text-zinc-600">Ctrl+Enter or ⌘Enter to save.</p>
+        ) : null}
         <div className="flex items-center gap-3">
           <button
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} px-4 disabled:opacity-60`}
             type="submit"
             disabled={
               state.status === "saving" ||
@@ -498,24 +631,21 @@ export function CaptureHost() {
             {state.status === "saving" ? "Saving…" : "Save"}
           </button>
           <button
-            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-60"
+            className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-4 disabled:opacity-60`}
             type="button"
             disabled={shouldBlockDialogDismiss(state.status)}
             onClick={() => {
-              clearImageDrafts();
+              resetSession();
               dispatch({ type: "dismiss" });
             }}
           >
             Cancel
           </button>
           {state.status === "saved" ? (
-            <p className="text-sm text-zinc-700">Saved.</p>
-          ) : null}
-          {state.error ? (
-            <p className="text-sm text-red-700" role="alert">
-              {state.error}
-            </p>
-          ) : null}
+            <p className="text-xs text-zinc-500">Saved.</p>
+          ) : (
+            <p className="ml-auto text-xs text-zinc-500">⌘Enter to save</p>
+          )}
         </div>
       </form>
     </dialog>
