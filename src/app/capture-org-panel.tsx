@@ -1,7 +1,8 @@
 "use client";
 
-import { SHELL_FORM_SURFACE } from "./shell-styles";
-import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
+import { type KeyboardEvent, useMemo } from "react";
+import { SHELL_MANAGE_SURFACE } from "./shell-styles";
+import type { OrgNameSuggestion } from "./org-name-suggest";
 
 type Props = {
   tagNames: string[];
@@ -19,6 +20,28 @@ type Props = {
   onClearCollection: () => void;
 };
 
+const PICK_CHIP =
+  "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs transition-[background-color,border-color,color] duration-150 ease-out disabled:opacity-60";
+
+const PICK_CHIP_OUTLINE =
+  "border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 hover:bg-zinc-50";
+
+const PICK_CHIP_SELECTED =
+  "border-zinc-900 bg-zinc-900 text-white";
+
+const FIELD_INPUT =
+  "w-full rounded-[8px] border border-zinc-200/80 bg-white px-2.5 py-1.5 text-sm outline-none transition-[border-color,box-shadow] duration-150 ease-out placeholder:text-zinc-400 focus:border-zinc-400 focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)] disabled:opacity-60";
+
+function filterByQuery(entries: OrgNameSuggestion[], query: string) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) {
+    return entries;
+  }
+  return entries.filter((entry) =>
+    entry.name.toLowerCase().includes(normalized),
+  );
+}
+
 export function CaptureOrgPanel({
   tagNames,
   tagInput,
@@ -34,27 +57,74 @@ export function CaptureOrgPanel({
   onSetCollection,
   onClearCollection,
 }: Props) {
-  const unusedTags = tagSuggestions.filter(
-    (entry) => !tagNames.includes(entry.name),
+  const unusedTags = useMemo(
+    () =>
+      tagSuggestions.filter((entry) => !tagNames.includes(entry.name)),
+    [tagNames, tagSuggestions],
   );
-  const unusedCollections = collectionSuggestions.filter(
-    (entry) => entry.name !== collectionName,
+  const visibleTagPicks = filterByQuery(unusedTags, tagInput);
+  const visibleCollections = filterByQuery(collectionSuggestions, collectionInput);
+
+  const tagQuery = tagInput.trim();
+  const collectionQuery = collectionInput.trim();
+  const tagQueryMatchesExisting = tagSuggestions.some(
+    (entry) => entry.name.toLowerCase() === tagQuery.toLowerCase(),
+  );
+  const collectionQueryMatchesExisting = collectionSuggestions.some(
+    (entry) => entry.name.toLowerCase() === collectionQuery.toLowerCase(),
   );
 
+  function submitTagDraft() {
+    const trimmed = tagQuery;
+    if (!trimmed || disabled) {
+      return;
+    }
+    if (tagNames.includes(trimmed)) {
+      onTagInputChange("");
+      return;
+    }
+    onAddTag(trimmed);
+    onTagInputChange("");
+  }
+
+  function submitCollectionDraft() {
+    const trimmed = collectionQuery;
+    if (!trimmed || disabled) {
+      return;
+    }
+    onSetCollection(trimmed);
+    onCollectionInputChange("");
+  }
+
+  function onTagFieldKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter" || event.metaKey || event.ctrlKey) {
+      return;
+    }
+    event.preventDefault();
+    submitTagDraft();
+  }
+
+  function onCollectionFieldKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter" || event.metaKey || event.ctrlKey) {
+      return;
+    }
+    event.preventDefault();
+    submitCollectionDraft();
+  }
+
   return (
-    <div className={`${SHELL_FORM_SURFACE} flex flex-col gap-3`}>
+    <div className={`${SHELL_MANAGE_SURFACE} flex flex-col gap-3`}>
       <p className="text-xs font-medium text-zinc-500">Optional</p>
-      <div>
+
+      <div className="flex flex-col gap-1.5">
+        <p className="text-xs font-medium text-zinc-700">Tags</p>
         {tagNames.length > 0 ? (
-          <ul className="mb-2 flex flex-wrap gap-1.5" aria-label="Tags">
+          <ul className="flex flex-wrap gap-1" aria-label="Selected tags">
             {tagNames.map((name) => (
-              <li
-                key={name}
-                className="flex items-center gap-1 rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600"
-              >
+              <li key={name} className={`${PICK_CHIP} ${PICK_CHIP_SELECTED} pr-0.5`}>
                 {name}
                 <button
-                  className="text-zinc-400 hover:text-zinc-700 disabled:opacity-60"
+                  className="flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] leading-none text-zinc-400 transition-[background-color,color] duration-150 ease-out hover:bg-white/15 hover:text-white disabled:opacity-60"
                   type="button"
                   disabled={disabled}
                   aria-label={`Remove tag ${name}`}
@@ -66,62 +136,111 @@ export function CaptureOrgPanel({
             ))}
           </ul>
         ) : null}
-        <OrgNameSuggest
-          embedded
-          compact
-          hideLabel
-          inputId="capture-add-tag"
-          label="Tags"
-          placeholder="Tag name"
-          submitLabel="Add tag"
-          value={tagInput}
-          suggestions={unusedTags}
+        {visibleTagPicks.length > 0 ? (
+          <ul
+            className="flex flex-wrap gap-1"
+            aria-label="Existing tags"
+          >
+            {visibleTagPicks.map((entry) => (
+              <li key={entry.id}>
+                <button
+                  className={`${PICK_CHIP} ${PICK_CHIP_OUTLINE}`}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onAddTag(entry.name)}
+                >
+                  {entry.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : tagSuggestions.length > 0 && tagQuery ? (
+          <p className="text-xs text-zinc-500">No matching tags — Enter creates one.</p>
+        ) : null}
+        <input
+          autoComplete="off"
+          className={FIELD_INPUT}
           disabled={disabled}
-          suggestWhenEmpty={false}
-          onChange={onTagInputChange}
-          onSubmit={(name) => {
-            onAddTag(name);
-            onTagInputChange("");
-          }}
+          id="capture-add-tag"
+          placeholder={
+            tagSuggestions.length > 0
+              ? "Filter or create tag…"
+              : "Tag name"
+          }
+          value={tagInput}
+          onChange={(event) => onTagInputChange(event.target.value)}
+          onKeyDown={onTagFieldKeyDown}
         />
+        {tagQuery && !tagQueryMatchesExisting ? (
+          <p className="text-xs text-zinc-500">
+            Enter to create “{tagQuery}”
+          </p>
+        ) : null}
       </div>
-      <div>
-        {collectionName ? (
-          <ul className="mb-2 flex flex-wrap gap-1.5" aria-label="Collection">
-            <li className="flex items-center gap-1 rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600">
-              {collectionName}
+
+      <div className="flex flex-col gap-1.5">
+        <p className="text-xs font-medium text-zinc-700">Collection</p>
+        <ul
+          className="flex flex-wrap gap-1"
+          aria-label="Collections"
+        >
+          <li>
+            <button
+              className={`${PICK_CHIP} ${
+                collectionName === null ? PICK_CHIP_SELECTED : PICK_CHIP_OUTLINE
+              }`}
+              type="button"
+              disabled={disabled}
+              aria-pressed={collectionName === null}
+              onClick={() => onClearCollection()}
+            >
+              Unsorted
+            </button>
+          </li>
+          {visibleCollections.map((entry) => (
+            <li key={entry.id}>
               <button
-                className="text-zinc-400 hover:text-zinc-700 disabled:opacity-60"
+                className={`${PICK_CHIP} ${
+                  collectionName === entry.name
+                    ? PICK_CHIP_SELECTED
+                    : PICK_CHIP_OUTLINE
+                }`}
                 type="button"
                 disabled={disabled}
-                aria-label={`Remove collection ${collectionName}`}
-                onClick={onClearCollection}
+                aria-pressed={collectionName === entry.name}
+                onClick={() => onSetCollection(entry.name)}
               >
-                ×
+                {entry.name}
               </button>
             </li>
-          </ul>
-        ) : (
-          <p className="mb-2 text-xs text-zinc-500">Unsorted until you pick a collection</p>
-        )}
-        <OrgNameSuggest
-          embedded
-          compact
-          hideLabel
-          inputId="capture-add-collection"
-          label="Collection"
-          placeholder="Collection"
-          submitLabel="Add collection"
-          value={collectionInput}
-          suggestions={unusedCollections}
+          ))}
+        </ul>
+        {collectionSuggestions.length > 0 && collectionQuery ? (
+          visibleCollections.length === 0 ? (
+            <p className="text-xs text-zinc-500">
+              No matching collections — Enter creates one.
+            </p>
+          ) : null
+        ) : null}
+        <input
+          autoComplete="off"
+          className={FIELD_INPUT}
           disabled={disabled}
-          suggestWhenEmpty={false}
-          onChange={onCollectionInputChange}
-          onSubmit={(name) => {
-            onSetCollection(name);
-            onCollectionInputChange("");
-          }}
+          id="capture-add-collection"
+          placeholder={
+            collectionSuggestions.length > 0
+              ? "Filter or new collection…"
+              : "Collection name"
+          }
+          value={collectionInput}
+          onChange={(event) => onCollectionInputChange(event.target.value)}
+          onKeyDown={onCollectionFieldKeyDown}
         />
+        {collectionQuery && !collectionQueryMatchesExisting ? (
+          <p className="text-xs text-zinc-500">
+            Enter to create “{collectionQuery}”
+          </p>
+        ) : null}
       </div>
     </div>
   );

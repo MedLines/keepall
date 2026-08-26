@@ -194,6 +194,56 @@ describe("CaptureHost", () => {
     });
   });
 
+  test("second paste adds another image instead of replacing the first", async () => {
+    const first = new File([new Uint8Array([1])], "one.png", {
+      type: "image/png",
+    });
+    const second = new File([new Uint8Array([2])], "two.png", {
+      type: "image/png",
+    });
+
+    render(<CaptureHost />);
+    fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
+    await waitFor(() =>
+      expect(screen.getByLabelText("Link, note, or image")).not.toBeDisabled(),
+    );
+
+    vi.mocked(readClipboardImageAndText).mockResolvedValueOnce({
+      image: first,
+      text: "",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Paste image" }));
+    expect(await screen.findByLabelText("1 image attached")).toBeInTheDocument();
+
+    vi.mocked(readClipboardImageAndText).mockResolvedValueOnce({
+      image: second,
+      text: "",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Paste image" }));
+
+    expect(await screen.findByLabelText("2 images attached")).toBeInTheDocument();
+    expect(screen.getByRole("dialog").querySelectorAll("img")).toHaveLength(2);
+
+    vi.mocked(createImage).mockResolvedValue(
+      buildImageFromAssetIds(
+        { assetIds: ["a1", "a2"] },
+        { id: "img1", now: 1 },
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(createImage).toHaveBeenCalledWith({
+        assets: [
+          { bytes: expect.any(Uint8Array), mimeType: "image/png" },
+          { bytes: expect.any(Uint8Array), mimeType: "image/png" },
+        ],
+        sourceUrl: undefined,
+        caption: undefined,
+      });
+    });
+  });
+
   test("choose images saves one gallery item with multiple assets", async () => {
     render(<CaptureHost />);
     fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
@@ -220,7 +270,8 @@ describe("CaptureHost", () => {
       },
     });
 
-    expect(await screen.findByText("2 images selected")).toBeInTheDocument();
+    expect(await screen.findByLabelText("2 images attached")).toBeInTheDocument();
+    expect(screen.getByRole("dialog").querySelectorAll("img")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -247,17 +298,56 @@ describe("CaptureHost", () => {
     fireEvent.change(screen.getByPlaceholderText("Tag name"), {
       target: { value: "work" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
-    fireEvent.change(screen.getByPlaceholderText("Collection"), {
+    fireEvent.keyDown(screen.getByPlaceholderText("Tag name"), {
+      key: "Enter",
+      code: "Enter",
+    });
+    fireEvent.change(screen.getByPlaceholderText("Collection name"), {
       target: { value: "Reading" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Add collection" }));
+    fireEvent.keyDown(screen.getByPlaceholderText("Collection name"), {
+      key: "Enter",
+      code: "Enter",
+    });
     fireEvent.submit(input.closest("form")!);
 
     await waitFor(() => {
       expect(createLink).toHaveBeenCalledTimes(1);
       expect(applyItemOrg).toHaveBeenCalledWith("l1", {
         tagNames: ["work"],
+        collectionName: "Reading",
+      });
+    });
+  });
+
+  test("chip picks assign existing tag and collection without typing", async () => {
+    vi.mocked(listTags).mockResolvedValue([
+      { id: "t1", name: "work", createdAt: 1 },
+      { id: "t2", name: "colors", createdAt: 1 },
+    ]);
+    vi.mocked(listCollections).mockResolvedValue([
+      {
+        id: "c1",
+        name: "Reading",
+        createdAt: 1,
+        pinnedItemIds: [],
+      },
+    ]);
+
+    const link = buildLink(
+      { url: "https://example.com/article" },
+      { id: "l1", now: 1 },
+    );
+    vi.mocked(createLink).mockResolvedValue(link);
+
+    const input = await openDraft("https://example.com/article");
+    fireEvent.click(await screen.findByRole("button", { name: "colors" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reading" }));
+    fireEvent.submit(input.closest("form")!);
+
+    await waitFor(() => {
+      expect(applyItemOrg).toHaveBeenCalledWith("l1", {
+        tagNames: ["colors"],
         collectionName: "Reading",
       });
     });

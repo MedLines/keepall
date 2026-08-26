@@ -26,6 +26,21 @@ import type { OrgNameSuggestion } from "./org-name-suggest";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_ACTIVE, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 
+const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-8 px-3 text-xs disabled:opacity-60`;
+
+function imageDraftPreviewMaxHeightClass(count: number): string {
+  if (count <= 2) {
+    return "max-h-16";
+  }
+  if (count <= 4) {
+    return "max-h-14";
+  }
+  if (count <= 6) {
+    return "max-h-12";
+  }
+  return "max-h-10";
+}
+
 /** Alt+K (Windows/Linux) and Option+K (macOS). Option is altKey; code stays KeyK even when Option remaps the character. */
 export function isCaptureOpenShortcut(event: KeyboardEvent): boolean {
   return (
@@ -47,9 +62,6 @@ function revokeImageDraftPreviews(drafts: ImageDraft[]): void {
     URL.revokeObjectURL(draft.previewUrl);
   }
 }
-
-const GHOST_BTN =
-  "text-sm text-zinc-600 transition-colors duration-150 hover:text-zinc-900 disabled:opacity-60";
 
 export function CaptureHost() {
   const [state, dispatch] = useReducer(captureReducer, initialCaptureState);
@@ -252,10 +264,7 @@ export function CaptureHost() {
           previewUrl: URL.createObjectURL(file),
         });
       }
-      setImageDrafts((previous) => {
-        revokeImageDraftPreviews(previous);
-        return drafts;
-      });
+      setImageDrafts((previous) => [...previous, ...drafts]);
       dispatchDraftText(accompanyingText, status);
     } catch {
       if (status === "reading") {
@@ -473,7 +482,7 @@ export function CaptureHost() {
         Save to Keepall
       </h2>
       <form
-        className="mt-4 flex flex-col gap-5"
+        className="mt-3 flex flex-col gap-4"
         onSubmit={onSubmit}
         onPaste={onPaste}
         onKeyDown={(event) => {
@@ -484,19 +493,32 @@ export function CaptureHost() {
         }}
       >
         {imageDrafts.length > 0 ? (
-          <div className="overflow-hidden rounded-[10px] bg-zinc-100 shadow-[0_0_0_1px_rgba(0,0,0,0.05)]">
-            {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
-            <img
-              alt=""
-              className="max-h-48 w-full object-contain"
-              src={imageDrafts[0]!.previewUrl}
-            />
-            {imageDrafts.length > 1 ? (
-              <p className="border-t border-zinc-200/80 px-3 py-2 text-center text-xs text-zinc-500">
-                {imageDrafts.length} images selected
-              </p>
-            ) : null}
-          </div>
+          <ul
+            className={`flex gap-1.5 ${imageDrafts.length === 1 ? "" : "w-full"}`}
+            aria-label={`${imageDrafts.length} image${imageDrafts.length === 1 ? "" : "s"} attached`}
+          >
+            {imageDrafts.map((draft) => (
+              <li
+                key={draft.previewUrl}
+                className={imageDrafts.length === 1 ? "shrink-0" : "min-w-0 flex-1"}
+              >
+                <div
+                  className={`overflow-hidden rounded-lg bg-zinc-100 shadow-[0_0_0_1px_rgba(0,0,0,0.05)] ${
+                    imageDrafts.length === 1
+                      ? "size-16"
+                      : `aspect-square w-full ${imageDraftPreviewMaxHeightClass(imageDrafts.length)}`
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
+                  <img
+                    alt=""
+                    className="size-full object-cover"
+                    src={draft.previewUrl}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
         ) : null}
         <div className="flex flex-col gap-2">
           <label className="sr-only" htmlFor="capture-input">
@@ -506,7 +528,9 @@ export function CaptureHost() {
           </label>
           <textarea
             ref={inputRef}
-            className="min-h-24 w-full rounded-[10px] border border-zinc-200/80 bg-zinc-50 px-3 py-2 text-sm outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out focus:border-zinc-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)] disabled:opacity-60"
+            className={`w-full rounded-[10px] border border-zinc-200/80 bg-zinc-50 px-3 py-2 text-sm outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out focus:border-zinc-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)] disabled:opacity-60 ${
+              savingImage ? "min-h-16" : "min-h-24"
+            }`}
             id="capture-input"
             placeholder={
               savingImage
@@ -533,7 +557,7 @@ export function CaptureHost() {
             }}
           />
           <button
-            className={GHOST_BTN}
+            className={IMAGE_ACTION_BTN}
             type="button"
             disabled={composeLocked}
             onClick={() => fileInputRef.current?.click()}
@@ -541,7 +565,7 @@ export function CaptureHost() {
             Add image
           </button>
           <button
-            className={GHOST_BTN}
+            className={IMAGE_ACTION_BTN}
             type="button"
             disabled={composeLocked}
             onClick={() => void pasteImageFromClipboard()}
@@ -550,7 +574,7 @@ export function CaptureHost() {
           </button>
           {imageDrafts.length > 0 ? (
             <button
-              className={GHOST_BTN}
+              className={IMAGE_ACTION_BTN}
               type="button"
               disabled={composeLocked}
               onClick={() => clearImageDrafts()}
