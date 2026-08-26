@@ -2,12 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
 import HomePage from "./page";
 
-test("renders the Keepall heading as a home link", async () => {
+test("renders the Keepall home link and library shell", async () => {
   render(<HomePage />);
-  expect(
-    screen.getByRole("heading", { level: 1, name: "Keepall" }),
-  ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Keepall" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Keepall home" })).toHaveAttribute(
     "href",
     "/",
   );

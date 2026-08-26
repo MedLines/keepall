@@ -27,6 +27,7 @@ import {
   mergeLibraryViewState,
   parseLibraryViewState,
   sortLibraryItemsWithCollectionPins,
+  type LibraryTypeFilter,
   type LibraryViewState,
 } from "@/domain/library-view";
 import { LinkValidationError } from "@/domain/link";
@@ -60,6 +61,9 @@ import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryListRow } from "./library-list-row";
 import { LibraryInspect } from "./library-inspect";
 import { LibraryBulkBar, type BulkPanel } from "./library-bulk-bar";
+import { LibraryShell } from "./library-shell";
+import { LibraryTopBar } from "./library-top-bar";
+import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import {
   decodeLibraryDragIds,
@@ -70,6 +74,29 @@ import {
 import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
+
+function libraryViewTitle(
+  browseCollection: Collection | null,
+  browseType: LibraryTypeFilter | null,
+  browseTagName: string | null,
+): string {
+  if (browseCollection) {
+    return browseCollection.name;
+  }
+  if (browseTagName) {
+    return browseTagName;
+  }
+  if (browseType === "link") {
+    return "Links";
+  }
+  if (browseType === "note") {
+    return "Notes";
+  }
+  if (browseType === "image") {
+    return "Images";
+  }
+  return "All items";
+}
 
 export function Library() {
   const router = useRouter();
@@ -119,6 +146,8 @@ export function Library() {
   >(null);
   const [dragError, setDragError] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [backupOpen, setBackupOpen] = useState(false);
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
   const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
@@ -126,6 +155,14 @@ export function Library() {
   );
   const confirmDeleteRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef<RestoreFocus | null>(null);
+
+  useEffect(() => {
+    setPanelOpen(readShellPanelOpen());
+  }, []);
+
+  useEffect(() => {
+    writeShellPanelOpen(panelOpen);
+  }, [panelOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -980,584 +1017,417 @@ export function Library() {
     }
   }
 
+  const viewTitle = libraryViewTitle(
+    browseCollection,
+    browseType,
+    browseTagName,
+  );
+
   return (
-    <section className="mt-8" aria-labelledby="library-heading">
-      <h2
-        className="text-lg font-semibold"
-        id="library-heading"
-        ref={libraryHeadingRef}
-        tabIndex={-1}
-      >
-        Library
-      </h2>
-      {loadState === "loading" ? (
-        <p className="mt-3 text-sm text-zinc-600">Loading…</p>
-      ) : loadState === "error" ? (
-        <p className="mt-3 text-sm text-red-700" role="alert">
-          {error ?? "Couldn't load items."}
-        </p>
-      ) : (
-        <>
-          <div className="mt-3 flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="library-search">
-              Search
-            </label>
-            <input
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2"
-              id="library-search"
-              type="search"
-              value={searchQuery}
-              onChange={(event) => updateView({ q: event.target.value })}
-              placeholder="Search titles, notes, and URLs"
-            />
-          </div>
-          <div
-            className="mt-3 flex flex-wrap gap-2"
-            role="group"
-            aria-label="Filter by type"
-          >
-            {(
-              [
-                { value: null, label: "All" },
-                { value: "link" as const, label: "Links" },
-                { value: "note" as const, label: "Notes" },
-                { value: "image" as const, label: "Images" },
-              ] as const
-            ).map((option) => (
-              <button
-                key={option.label}
-                className={`rounded-md border px-3 py-1 text-sm font-medium ${
-                  browseType === option.value
-                    ? "border-zinc-900 bg-zinc-900 text-white"
-                    : "border-zinc-300 bg-white text-zinc-800"
-                }`}
-                type="button"
-                onClick={() => updateView({ type: option.value }, "push")}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <div
-            className="mt-3 flex flex-wrap gap-2"
-            role="group"
-            aria-label="Sort library"
-          >
-            <button
-              className={`rounded-md border px-3 py-1 text-sm font-medium ${
-                view.sort === "newest"
-                  ? "border-zinc-900 bg-zinc-900 text-white"
-                  : "border-zinc-300 bg-white text-zinc-800"
-              }`}
-              type="button"
-              onClick={() => updateView({ sort: "newest" }, "push")}
-            >
-              Newest
-            </button>
-            <button
-              className={`rounded-md border px-3 py-1 text-sm font-medium ${
-                view.sort === "oldest"
-                  ? "border-zinc-900 bg-zinc-900 text-white"
-                  : "border-zinc-300 bg-white text-zinc-800"
-              }`}
-              type="button"
-              onClick={() => updateView({ sort: "oldest" }, "push")}
-            >
-              Oldest
-            </button>
-          </div>
-          <div
-            className="mt-3 flex flex-wrap gap-2"
-            role="group"
-            aria-label="Library layout"
-          >
-            <button
-              className={`rounded-md border px-3 py-1 text-sm font-medium ${
-                browseLayout === "grid"
-                  ? "border-zinc-900 bg-zinc-900 text-white"
-                  : "border-zinc-300 bg-white text-zinc-800"
-              }`}
-              type="button"
-              onClick={() => updateView({ layout: "grid" }, "replace")}
-            >
-              Grid
-            </button>
-            <button
-              className={`rounded-md border px-3 py-1 text-sm font-medium ${
-                browseLayout === "list"
-                  ? "border-zinc-900 bg-zinc-900 text-white"
-                  : "border-zinc-300 bg-white text-zinc-800"
-              }`}
-              type="button"
-              onClick={() => updateView({ layout: "list" }, "replace")}
-            >
-              List
-            </button>
-          </div>
-          <div className="mt-3 space-y-2">
-            <div
-              className="flex flex-wrap gap-2"
-              role="group"
-              aria-label="Browse collections"
-            >
-              <button
-                className={`rounded-md border px-3 py-1 text-sm font-medium ${
-                  browseCollectionId === null
-                    ? "border-zinc-900 bg-zinc-900 text-white"
-                    : "border-zinc-300 bg-white text-zinc-800"
-                }`}
-                type="button"
-                onClick={() => updateView({ collection: null }, "push")}
-              >
-                All
-              </button>
-              {collections.map((collection) => (
-                <button
-                  key={collection.id}
-                  className={`rounded-md border px-3 py-1 text-sm font-medium ${
-                    browseCollectionId === collection.id
-                      ? "border-zinc-900 bg-zinc-900 text-white"
-                      : "border-zinc-300 bg-white text-zinc-800"
-                  } ${
-                    dropTargetCollectionId === collection.id
-                      ? "ring-2 ring-zinc-900 ring-offset-1"
-                      : ""
-                  }`}
-                  type="button"
-                  onClick={() =>
-                    updateView({ collection: collection.id }, "push")
-                  }
-                  onDragOver={(event) =>
-                    handleCollectionDragOver(collection.id, event)
-                  }
-                  onDragLeave={() => setDropTargetCollectionId(null)}
-                  onDrop={(event) => handleCollectionDrop(collection.id, event)}
-                >
-                  {collection.name}
-                </button>
-              ))}
-            </div>
-            {dragError ? (
-              <p className="text-sm text-red-700" role="alert">
-                {dragError}
-              </p>
-            ) : null}
-            {collections.length === 0 ? (
-              <p className="text-sm text-zinc-600">No collections yet.</p>
-            ) : null}
-            <form
-              className="flex flex-wrap items-end gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void createLibraryCollection();
-              }}
-            >
-              <div className="flex min-w-40 flex-1 flex-col gap-1">
-                <label
-                  className="text-sm font-medium"
-                  htmlFor="new-collection-name"
-                >
-                  New collection
-                </label>
-                <input
-                  className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
-                  id="new-collection-name"
-                  value={newCollectionDraft}
-                  disabled={mutationBusy}
-                  onChange={(event) =>
-                    setNewCollectionDraft(event.target.value)
-                  }
-                  placeholder="Name"
-                />
-              </div>
-              <button
-                className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium disabled:opacity-60"
-                type="submit"
-                disabled={mutationBusy || !newCollectionDraft.trim()}
-              >
-                {pendingMutation?.op === "create-collection"
-                  ? "Creating…"
-                  : "Create"}
-              </button>
-            </form>
-            {browseCollection ? (
-              <div className="flex flex-wrap items-end gap-2">
-                <div className="flex min-w-40 flex-1 flex-col gap-1">
-                  <label
-                    className="text-sm font-medium"
-                    htmlFor="rename-collection-name"
-                  >
-                    Rename collection
-                  </label>
-                  <input
-                    className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
-                    id="rename-collection-name"
-                    value={renameCollectionDraft}
-                    disabled={mutationBusy}
-                    onChange={(event) =>
-                      setRenameCollectionDraft(event.target.value)
-                    }
-                  />
-                </div>
-                <button
-                  className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium disabled:opacity-60"
-                  type="button"
-                  disabled={mutationBusy || !renameCollectionDraft.trim()}
-                  onClick={() => void renameSelectedCollection()}
-                >
-                  {pendingMutation?.op === "rename-collection"
-                    ? "Saving…"
-                    : "Save name"}
-                </button>
-                <button
-                  className="rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-800 disabled:opacity-60"
-                  type="button"
-                  disabled={mutationBusy}
-                  onClick={() => void deleteSelectedCollection()}
-                >
-                  {pendingMutation?.op === "delete-collection"
-                    ? "Deleting…"
-                    : "Delete collection"}
-                </button>
-              </div>
-            ) : null}
-            {collectionManageError ? (
-              <p className="text-sm text-red-700" role="alert">
-                {collectionManageError}
-              </p>
-            ) : null}
-          </div>
-          {browseTagId !== null && browseTagName !== null ? (
-            <div
-              className="mt-3 flex flex-wrap items-center gap-2"
-              role="status"
-            >
-              <p className="text-sm text-zinc-700">
-                Tag: <span className="font-medium">{browseTagName}</span>
-              </p>
-              <button
-                className="rounded-md border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-800"
-                type="button"
-                onClick={() => updateView({ tag: null }, "push")}
-              >
-                Clear tag
-              </button>
-            </div>
-          ) : null}
-          {deleteError ? (
-            <p className="mt-3 text-sm text-red-700" role="alert">
-              {deleteError}
+    <div className="flex h-[100dvh] overflow-hidden bg-zinc-50">
+      <LibraryShell
+        panelOpen={panelOpen}
+        onPanelOpenChange={setPanelOpen}
+        backupOpen={backupOpen}
+        onBackupOpenChange={(open) => {
+          setBackupOpen(open);
+          if (open) {
+            setPanelOpen(true);
+          }
+        }}
+        browseCollectionId={browseCollectionId}
+        browseType={browseType}
+        collections={collections}
+        dropTargetCollectionId={dropTargetCollectionId}
+        newCollectionDraft={newCollectionDraft}
+        renameCollectionDraft={renameCollectionDraft}
+        browseCollection={browseCollection}
+        collectionManageError={collectionManageError}
+        dragError={dragError}
+        mutationBusy={mutationBusy}
+        pendingMutation={pendingMutation}
+        libraryActive={!backupOpen}
+        onGoAll={() =>
+          updateView({ collection: null, type: null }, "push")
+        }
+        onGoCollection={(id) => updateView({ collection: id }, "push")}
+        onGoType={(type) =>
+          updateView({ type, collection: null }, "push")
+        }
+        onCollectionDragOver={handleCollectionDragOver}
+        onCollectionDragLeave={() => setDropTargetCollectionId(null)}
+        onCollectionDrop={handleCollectionDrop}
+        onNewCollectionDraftChange={setNewCollectionDraft}
+        onCreateCollection={() => void createLibraryCollection()}
+        onRenameDraftChange={setRenameCollectionDraft}
+        onRenameCollection={() => void renameSelectedCollection()}
+        onDeleteCollection={() => void deleteSelectedCollection()}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <LibraryTopBar
+          headingRef={libraryHeadingRef}
+          title={viewTitle}
+          itemCount={visibleItems.length}
+          searchQuery={searchQuery}
+          onSearchChange={(value) => updateView({ q: value })}
+          sort={view.sort}
+          onSortChange={(sort) => updateView({ sort }, "push")}
+          layout={browseLayout}
+          onLayoutChange={(layout) => updateView({ layout }, "replace")}
+        />
+
+        <main
+          className="flex-1 overflow-auto px-4 py-4 sm:px-5"
+          aria-labelledby="library-heading"
+        >
+          {loadState === "loading" ? (
+            <p className="text-sm text-zinc-600">Loading…</p>
+          ) : loadState === "error" ? (
+            <p className="text-sm text-red-700" role="alert">
+              {error ?? "Couldn't load items."}
             </p>
-          ) : null}
-          <LibraryBulkBar
-            busy={mutationBusy}
-            collectionDraft={bulkCollectionDraft}
-            collectionSuggestions={collectionSuggestions}
-            count={selectedIds.size}
-            error={bulkError}
-            panel={bulkPanel}
-            pendingAddCollection={pendingMutation?.op === "bulk-assign-collection"}
-            pendingAddTag={pendingMutation?.op === "bulk-assign-tag"}
-            pendingDelete={pendingMutation?.op === "bulk-delete"}
-            pendingRemoveTag={pendingMutation?.op === "bulk-unassign-tag"}
-            removeTagDraft={bulkRemoveTagDraft}
-            removeTagSuggestions={bulkRemoveTagSuggestions}
-            tagDraft={bulkTagDraft}
-            tagSuggestions={tagSuggestions}
-            onBulkAddCollection={(name) => void bulkAddCollection(name)}
-            onBulkAddTag={(name) => void bulkAddTag(name)}
-            onBulkRemoveTag={(name) => void bulkRemoveTag(name)}
-            onClearSelection={clearSelection}
-            onClosePanel={() => {
-              setBulkPanel(null);
-              setBulkError(null);
-            }}
-            onCollectionDraftChange={setBulkCollectionDraft}
-            onConfirmDelete={() => void bulkDeleteSelected()}
-            onOpenPanel={(panel) => {
-              setBulkError(null);
-              setBulkPanel(panel);
-            }}
-            onRemoveTagDraftChange={setBulkRemoveTagDraft}
-            onTagDraftChange={setBulkTagDraft}
-          />
-          {visibleItems.length === 0 ? (
-            <p className="mt-3 text-sm text-zinc-600">
-              {hasActiveSearch
-                ? "No matching items."
-                : browseType !== null
-                  ? "No items of this type."
-                  : browseTagId !== null
-                    ? "No items with this tag."
-                    : browseCollectionId !== null
-                      ? "No items in this collection."
-                      : "No items yet."}
-            </p>
-          ) : browseLayout === "list" ? (
-            <ul className="mt-3 flex flex-col gap-2">
-              {visibleItems.map((item) => (
-                <LibraryListRow
-                  key={item.id}
-                  item={item}
-                  inspected={inspectId === item.id}
-                  selected={selectedIds.has(item.id)}
-                  selectionActive={selectionActive}
-                  dragEnabled={!mutationBusy && inspectId !== item.id}
-                  isDragging={draggingIds.has(item.id)}
-                  onOpenInspect={() => openInspect(item.id)}
-                  onToggleSelect={() => toggleItemSelected(item.id)}
-                  onItemDragStart={(event) => handleItemDragStart(item.id, event)}
-                  onItemDragEnd={handleItemDragEnd}
-                  pinVisible={itemPinVisible(item)}
-                  pinned={itemIsPinned(item)}
-                  onTogglePin={() => void togglePinItem(item.id)}
-                />
-              ))}
-            </ul>
           ) : (
-            <ul className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
-              {visibleItems.map((item) => (
-                <LibraryItem
-                  key={item.id}
-                  item={item}
-                  inspected={inspectId === item.id}
-                  onOpenInspect={() => openInspect(item.id)}
-                  tagNames={resolveItemTags(item, tagsById)}
-                  tagError={tagErrorItemId === item.id ? tagError : null}
-                  collectionNames={resolveItemCollectionNames(
-                    item,
-                    collectionsById,
-                  )}
-                  collectionError={
-                    collectionErrorItemId === item.id ? collectionError : null
+            <>
+              {browseTagId !== null && browseTagName !== null ? (
+                <div
+                  className="mb-3 flex flex-wrap items-center gap-2"
+                  role="status"
+                >
+                  <p className="text-sm text-zinc-700">
+                    Tag: <span className="font-medium">{browseTagName}</span>
+                  </p>
+                  <button
+                    className="rounded-md border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-800"
+                    type="button"
+                    onClick={() => updateView({ tag: null }, "push")}
+                  >
+                    Clear tag
+                  </button>
+                </div>
+              ) : null}
+              {deleteError ? (
+                <p className="mb-3 text-sm text-red-700" role="alert">
+                  {deleteError}
+                </p>
+              ) : null}
+              <LibraryBulkBar
+                busy={mutationBusy}
+                collectionDraft={bulkCollectionDraft}
+                collectionSuggestions={collectionSuggestions}
+                count={selectedIds.size}
+                error={bulkError}
+                panel={bulkPanel}
+                pendingAddCollection={
+                  pendingMutation?.op === "bulk-assign-collection"
+                }
+                pendingAddTag={pendingMutation?.op === "bulk-assign-tag"}
+                pendingDelete={pendingMutation?.op === "bulk-delete"}
+                pendingRemoveTag={pendingMutation?.op === "bulk-unassign-tag"}
+                removeTagDraft={bulkRemoveTagDraft}
+                removeTagSuggestions={bulkRemoveTagSuggestions}
+                tagDraft={bulkTagDraft}
+                tagSuggestions={tagSuggestions}
+                onBulkAddCollection={(name) => void bulkAddCollection(name)}
+                onBulkAddTag={(name) => void bulkAddTag(name)}
+                onBulkRemoveTag={(name) => void bulkRemoveTag(name)}
+                onClearSelection={clearSelection}
+                onClosePanel={() => {
+                  setBulkPanel(null);
+                  setBulkError(null);
+                }}
+                onCollectionDraftChange={setBulkCollectionDraft}
+                onConfirmDelete={() => void bulkDeleteSelected()}
+                onOpenPanel={(panel) => {
+                  setBulkError(null);
+                  setBulkPanel(panel);
+                }}
+                onRemoveTagDraftChange={setBulkRemoveTagDraft}
+                onTagDraftChange={setBulkTagDraft}
+              />
+              {visibleItems.length === 0 ? (
+                <p className="text-sm text-zinc-600">
+                  {hasActiveSearch
+                    ? "No matching items."
+                    : browseType !== null
+                      ? "No items of this type."
+                      : browseTagId !== null
+                        ? "No items with this tag."
+                        : browseCollectionId !== null
+                          ? "No items in this collection."
+                          : "No items yet."}
+                </p>
+              ) : browseLayout === "list" ? (
+                <ul className="flex flex-col gap-2">
+                  {visibleItems.map((item) => (
+                    <LibraryListRow
+                      key={item.id}
+                      item={item}
+                      inspected={inspectId === item.id}
+                      selected={selectedIds.has(item.id)}
+                      selectionActive={selectionActive}
+                      dragEnabled={!mutationBusy && inspectId !== item.id}
+                      isDragging={draggingIds.has(item.id)}
+                      onOpenInspect={() => openInspect(item.id)}
+                      onToggleSelect={() => toggleItemSelected(item.id)}
+                      onItemDragStart={(event) =>
+                        handleItemDragStart(item.id, event)
+                      }
+                      onItemDragEnd={handleItemDragEnd}
+                      pinVisible={itemPinVisible(item)}
+                      pinned={itemIsPinned(item)}
+                      onTogglePin={() => void togglePinItem(item.id)}
+                    />
+                  ))}
+                </ul>
+              ) : (
+                <ul className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
+                  {visibleItems.map((item) => (
+                    <LibraryItem
+                      key={item.id}
+                      item={item}
+                      inspected={inspectId === item.id}
+                      onOpenInspect={() => openInspect(item.id)}
+                      tagNames={resolveItemTags(item, tagsById)}
+                      tagError={tagErrorItemId === item.id ? tagError : null}
+                      collectionNames={resolveItemCollectionNames(
+                        item,
+                        collectionsById,
+                      )}
+                      collectionError={
+                        collectionErrorItemId === item.id
+                          ? collectionError
+                          : null
+                      }
+                      onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
+                      editing={editingId === item.id && inspectId !== item.id}
+                      pendingDelete={
+                        pendingDeleteId === item.id && inspectId !== item.id
+                      }
+                      mutationBusy={mutationBusy}
+                      pendingMutation={pendingMutation}
+                      editDraft={editDraft}
+                      editTitleDraft={editTitleDraft}
+                      editError={editError}
+                      setFirstEditField={(node) => {
+                        firstEditFieldRef.current = node;
+                      }}
+                      confirmDeleteRef={confirmDeleteRef}
+                      onEditDraftChange={setEditDraft}
+                      onEditTitleChange={setEditTitleDraft}
+                      onEditSaveShortcut={onEditSaveShortcut}
+                      onSaveNote={() => void saveNoteEdit(item.id)}
+                      onSaveLink={() => void saveLinkEdit(item.id)}
+                      onSaveImage={() => void saveImageEdit(item.id)}
+                      onCancelEdit={() => clearEdit({ restoreFocus: true })}
+                      onConfirmDelete={() => void confirmDelete(item.id)}
+                      onCancelDelete={cancelDelete}
+                      onAddTag={(name: string) => void addTagToItem(item.id, name)}
+                      onRemoveTag={(tagId: string) =>
+                        void removeTagFromItem(item.id, tagId)
+                      }
+                      onAddCollection={(name: string) =>
+                        void addCollectionToItem(item.id, name)
+                      }
+                      onStartEdit={() => {
+                        setPendingDeleteId(null);
+                        setDeleteError(null);
+                        setEditError(null);
+                        setTagError(null);
+                        setTagErrorItemId(null);
+                        setCollectionError(null);
+                        setCollectionErrorItemId(null);
+                        setEditingId(item.id);
+                        if (item.type === "note") {
+                          setEditDraft(item.content);
+                          setEditTitleDraft("");
+                        } else if (item.type === "image") {
+                          setEditDraft(item.caption);
+                          setEditTitleDraft(item.sourceUrl);
+                        } else {
+                          setEditDraft(item.url);
+                          setEditTitleDraft(item.title);
+                        }
+                      }}
+                      onStartDelete={() => {
+                        clearEdit();
+                        setDeleteError(null);
+                        setTagError(null);
+                        setTagErrorItemId(null);
+                        setCollectionError(null);
+                        setCollectionErrorItemId(null);
+                        setPendingDeleteId(item.id);
+                      }}
+                      selected={selectedIds.has(item.id)}
+                      selectionActive={selectionActive}
+                      onToggleSelect={() => toggleItemSelected(item.id)}
+                      tagSuggestions={tagSuggestions}
+                      collectionSuggestions={collectionSuggestions}
+                      dragEnabled={
+                        !mutationBusy &&
+                        editingId !== item.id &&
+                        pendingDeleteId !== item.id &&
+                        inspectId !== item.id
+                      }
+                      isDragging={draggingIds.has(item.id)}
+                      onItemDragStart={(event) =>
+                        handleItemDragStart(item.id, event)
+                      }
+                      onItemDragEnd={handleItemDragEnd}
+                      pinVisible={itemPinVisible(item)}
+                      pinned={itemIsPinned(item)}
+                      onTogglePin={() => void togglePinItem(item.id)}
+                    />
+                  ))}
+                </ul>
+              )}
+              <LibraryInspect
+                item={inspectedItem}
+                slide={view.slide}
+                galleryError={galleryError}
+                tagNames={
+                  inspectedItem
+                    ? resolveItemTags(inspectedItem, tagsById)
+                    : []
+                }
+                collectionNames={
+                  inspectedItem
+                    ? resolveItemCollectionNames(inspectedItem, collectionsById)
+                    : []
+                }
+                tagError={
+                  inspectedItem && tagErrorItemId === inspectedItem.id
+                    ? tagError
+                    : null
+                }
+                collectionError={
+                  inspectedItem && collectionErrorItemId === inspectedItem.id
+                    ? collectionError
+                    : null
+                }
+                onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
+                editing={
+                  inspectedItem !== null && editingId === inspectedItem.id
+                }
+                pendingDelete={
+                  inspectedItem !== null && pendingDeleteId === inspectedItem.id
+                }
+                mutationBusy={mutationBusy}
+                pendingMutation={pendingMutation}
+                editDraft={editDraft}
+                editTitleDraft={editTitleDraft}
+                editError={editError}
+                setFirstEditField={(node) => {
+                  firstEditFieldRef.current = node;
+                }}
+                confirmDeleteRef={confirmDeleteRef}
+                onClose={closeInspect}
+                onSlideChange={setInspectSlide}
+                onAddImages={(files) => {
+                  if (inspectedItem?.type === "image") {
+                    void addImagesToItem(inspectedItem.id, files);
                   }
-                  onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
-                  editing={editingId === item.id && inspectId !== item.id}
-                  pendingDelete={
-                    pendingDeleteId === item.id && inspectId !== item.id
+                }}
+                onReplaceSlide={(file) => {
+                  if (inspectedItem?.type === "image") {
+                    void replaceInspectSlide(inspectedItem.id, file);
                   }
-                  mutationBusy={mutationBusy}
-                  pendingMutation={pendingMutation}
-                  editDraft={editDraft}
-                  editTitleDraft={editTitleDraft}
-                  editError={editError}
-                  setFirstEditField={(node) => {
-                    firstEditFieldRef.current = node;
-                  }}
-                  confirmDeleteRef={confirmDeleteRef}
-                  onEditDraftChange={setEditDraft}
-                  onEditTitleChange={setEditTitleDraft}
-                  onEditSaveShortcut={onEditSaveShortcut}
-                  onSaveNote={() => void saveNoteEdit(item.id)}
-                  onSaveLink={() => void saveLinkEdit(item.id)}
-                  onSaveImage={() => void saveImageEdit(item.id)}
-                  onCancelEdit={() => clearEdit({ restoreFocus: true })}
-                  onConfirmDelete={() => void confirmDelete(item.id)}
-                  onCancelDelete={cancelDelete}
-                  onAddTag={(name: string) => void addTagToItem(item.id, name)}
-                  onRemoveTag={(tagId: string) =>
-                    void removeTagFromItem(item.id, tagId)
+                }}
+                onEditDraftChange={setEditDraft}
+                onEditTitleChange={setEditTitleDraft}
+                onEditSaveShortcut={onEditSaveShortcut}
+                onSaveNote={() => {
+                  if (inspectedItem) {
+                    void saveNoteEdit(inspectedItem.id);
                   }
-                  onAddCollection={(name: string) =>
-                    void addCollectionToItem(item.id, name)
+                }}
+                onSaveLink={() => {
+                  if (inspectedItem) {
+                    void saveLinkEdit(inspectedItem.id);
                   }
-                  onStartEdit={() => {
-                    setPendingDeleteId(null);
-                    setDeleteError(null);
-                    setEditError(null);
-                    setTagError(null);
-                    setTagErrorItemId(null);
-                    setCollectionError(null);
-                    setCollectionErrorItemId(null);
-                    setEditingId(item.id);
-                    if (item.type === "note") {
-                      setEditDraft(item.content);
-                      setEditTitleDraft("");
-                    } else if (item.type === "image") {
-                      setEditDraft(item.caption);
-                      setEditTitleDraft(item.sourceUrl);
-                    } else {
-                      setEditDraft(item.url);
-                      setEditTitleDraft(item.title);
-                    }
-                  }}
-                  onStartDelete={() => {
-                    clearEdit();
-                    setDeleteError(null);
-                    setTagError(null);
-                    setTagErrorItemId(null);
-                    setCollectionError(null);
-                    setCollectionErrorItemId(null);
-                    setPendingDeleteId(item.id);
-                  }}
-                  selected={selectedIds.has(item.id)}
-                  selectionActive={selectionActive}
-                  onToggleSelect={() => toggleItemSelected(item.id)}
-                  tagSuggestions={tagSuggestions}
-                  collectionSuggestions={collectionSuggestions}
-                  dragEnabled={
-                    !mutationBusy &&
-                    editingId !== item.id &&
-                    pendingDeleteId !== item.id &&
-                    inspectId !== item.id
+                }}
+                onSaveImage={() => {
+                  if (inspectedItem) {
+                    void saveImageEdit(inspectedItem.id);
                   }
-                  isDragging={draggingIds.has(item.id)}
-                  onItemDragStart={(event) =>
-                    handleItemDragStart(item.id, event)
+                }}
+                onCancelEdit={() => clearEdit()}
+                onConfirmDelete={() => {
+                  if (inspectedItem) {
+                    void confirmDelete(inspectedItem.id);
                   }
-                  onItemDragEnd={handleItemDragEnd}
-                  pinVisible={itemPinVisible(item)}
-                  pinned={itemIsPinned(item)}
-                  onTogglePin={() => void togglePinItem(item.id)}
-                />
-              ))}
-            </ul>
+                }}
+                onCancelDelete={cancelDelete}
+                onAddTag={(name: string) => {
+                  if (inspectedItem) {
+                    void addTagToItem(inspectedItem.id, name);
+                  }
+                }}
+                onRemoveTag={(tagId: string) => {
+                  if (inspectedItem) {
+                    void removeTagFromItem(inspectedItem.id, tagId);
+                  }
+                }}
+                onAddCollection={(name: string) => {
+                  if (inspectedItem) {
+                    void addCollectionToItem(inspectedItem.id, name);
+                  }
+                }}
+                onStartEdit={() => {
+                  if (!inspectedItem) {
+                    return;
+                  }
+                  const target = inspectedItem;
+                  setPendingDeleteId(null);
+                  setDeleteError(null);
+                  setEditError(null);
+                  setTagError(null);
+                  setTagErrorItemId(null);
+                  setCollectionError(null);
+                  setCollectionErrorItemId(null);
+                  setEditingId(target.id);
+                  if (target.type === "note") {
+                    setEditDraft(target.content);
+                    setEditTitleDraft("");
+                  } else if (target.type === "image") {
+                    setEditDraft(target.caption);
+                    setEditTitleDraft(target.sourceUrl);
+                  } else {
+                    setEditDraft(target.url);
+                    setEditTitleDraft(target.title);
+                  }
+                }}
+                onStartDelete={() => {
+                  if (!inspectedItem) {
+                    return;
+                  }
+                  clearEdit();
+                  setDeleteError(null);
+                  setTagError(null);
+                  setTagErrorItemId(null);
+                  setCollectionError(null);
+                  setCollectionErrorItemId(null);
+                  setPendingDeleteId(inspectedItem.id);
+                }}
+                tagSuggestions={tagSuggestions}
+                collectionSuggestions={collectionSuggestions}
+                pinVisible={
+                  inspectedItem !== null && itemPinVisible(inspectedItem)
+                }
+                pinned={
+                  inspectedItem !== null ? itemIsPinned(inspectedItem) : false
+                }
+                pinError={pinError}
+                onTogglePin={() => {
+                  if (inspectedItem) {
+                    void togglePinItem(inspectedItem.id);
+                  }
+                }}
+              />
+            </>
           )}
-          <LibraryInspect
-            item={inspectedItem}
-            slide={view.slide}
-            galleryError={galleryError}
-            tagNames={
-              inspectedItem
-                ? resolveItemTags(inspectedItem, tagsById)
-                : []
-            }
-            collectionNames={
-              inspectedItem
-                ? resolveItemCollectionNames(inspectedItem, collectionsById)
-                : []
-            }
-            tagError={
-              inspectedItem && tagErrorItemId === inspectedItem.id
-                ? tagError
-                : null
-            }
-            collectionError={
-              inspectedItem && collectionErrorItemId === inspectedItem.id
-                ? collectionError
-                : null
-            }
-            onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
-            editing={
-              inspectedItem !== null && editingId === inspectedItem.id
-            }
-            pendingDelete={
-              inspectedItem !== null && pendingDeleteId === inspectedItem.id
-            }
-            mutationBusy={mutationBusy}
-            pendingMutation={pendingMutation}
-            editDraft={editDraft}
-            editTitleDraft={editTitleDraft}
-            editError={editError}
-            setFirstEditField={(node) => {
-              firstEditFieldRef.current = node;
-            }}
-            confirmDeleteRef={confirmDeleteRef}
-            onClose={closeInspect}
-            onSlideChange={setInspectSlide}
-            onAddImages={(files) => {
-              if (inspectedItem?.type === "image") {
-                void addImagesToItem(inspectedItem.id, files);
-              }
-            }}
-            onReplaceSlide={(file) => {
-              if (inspectedItem?.type === "image") {
-                void replaceInspectSlide(inspectedItem.id, file);
-              }
-            }}
-            onEditDraftChange={setEditDraft}
-            onEditTitleChange={setEditTitleDraft}
-            onEditSaveShortcut={onEditSaveShortcut}
-            onSaveNote={() => {
-              if (inspectedItem) {
-                void saveNoteEdit(inspectedItem.id);
-              }
-            }}
-            onSaveLink={() => {
-              if (inspectedItem) {
-                void saveLinkEdit(inspectedItem.id);
-              }
-            }}
-            onSaveImage={() => {
-              if (inspectedItem) {
-                void saveImageEdit(inspectedItem.id);
-              }
-            }}
-            onCancelEdit={() => clearEdit()}
-            onConfirmDelete={() => {
-              if (inspectedItem) {
-                void confirmDelete(inspectedItem.id);
-              }
-            }}
-            onCancelDelete={cancelDelete}
-            onAddTag={(name: string) => {
-              if (inspectedItem) {
-                void addTagToItem(inspectedItem.id, name);
-              }
-            }}
-            onRemoveTag={(tagId: string) => {
-              if (inspectedItem) {
-                void removeTagFromItem(inspectedItem.id, tagId);
-              }
-            }}
-            onAddCollection={(name: string) => {
-              if (inspectedItem) {
-                void addCollectionToItem(inspectedItem.id, name);
-              }
-            }}
-            onStartEdit={() => {
-              if (!inspectedItem) {
-                return;
-              }
-              const target = inspectedItem;
-              setPendingDeleteId(null);
-              setDeleteError(null);
-              setEditError(null);
-              setTagError(null);
-              setTagErrorItemId(null);
-              setCollectionError(null);
-              setCollectionErrorItemId(null);
-              setEditingId(target.id);
-              if (target.type === "note") {
-                setEditDraft(target.content);
-                setEditTitleDraft("");
-              } else if (target.type === "image") {
-                setEditDraft(target.caption);
-                setEditTitleDraft(target.sourceUrl);
-              } else {
-                setEditDraft(target.url);
-                setEditTitleDraft(target.title);
-              }
-            }}
-            onStartDelete={() => {
-              if (!inspectedItem) {
-                return;
-              }
-              clearEdit();
-              setDeleteError(null);
-              setTagError(null);
-              setTagErrorItemId(null);
-              setCollectionError(null);
-              setCollectionErrorItemId(null);
-              setPendingDeleteId(inspectedItem.id);
-            }}
-            tagSuggestions={tagSuggestions}
-            collectionSuggestions={collectionSuggestions}
-            pinVisible={
-              inspectedItem !== null && itemPinVisible(inspectedItem)
-            }
-            pinned={
-              inspectedItem !== null ? itemIsPinned(inspectedItem) : false
-            }
-            pinError={pinError}
-            onTogglePin={() => {
-              if (inspectedItem) {
-                void togglePinItem(inspectedItem.id);
-              }
-            }}
-          />
-        </>
-      )}
-    </section>
+        </main>
+      </div>
+    </div>
   );
 }

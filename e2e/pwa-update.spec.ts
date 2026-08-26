@@ -82,7 +82,7 @@ test("shows update banner after a second deploy and reload applies it", async ({
   page,
 }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Keepall" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Keepall home" })).toBeVisible();
   await expect(page.getByTestId("build-marker")).toHaveText("build-a");
 
   await expect

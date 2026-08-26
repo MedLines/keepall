@@ -21,7 +21,7 @@ test.describe("PWA / offline shell", () => {
 
   test("saved item survives offline reload", async ({ page, context }) => {
     await page.goto("/");
-    await page.getByRole("heading", { name: "Keepall" }).click();
+    await page.getByRole("link", { name: "Keepall home" }).click();
     await page.keyboard.press("Alt+k");
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.getByLabel("Link, note, or image").fill("Offline survival note.");
@@ -67,7 +67,7 @@ test.describe("PWA / offline shell", () => {
 
   test("shows offline banner after offline reload", async ({ page, context }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Keepall" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Keepall home" })).toBeVisible();
 
     await expect
       .poll(

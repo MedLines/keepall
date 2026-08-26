@@ -840,7 +840,9 @@ describe("Library search", () => {
 
     expect(screen.getByText("A persisted note about Design")).toBeInTheDocument();
     expect(screen.queryByText("grocery list")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("main")).queryByRole("link"),
+    ).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Search"), {
       target: { value: "example.com" },

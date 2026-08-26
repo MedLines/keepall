@@ -9,7 +9,7 @@ import {
 } from "@/persistence/backup";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 
-export function BackupPanel() {
+export function BackupPanel({ variant = "page" }: { variant?: "page" | "sidebar" }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +87,51 @@ export function BackupPanel() {
         fileInputRef.current.value = "";
       }
     }
+  }
+
+  if (variant === "sidebar") {
+    return (
+      <section aria-labelledby="backup-heading">
+        <h2 className="text-sm font-semibold text-zinc-900" id="backup-heading">
+          Backup
+        </h2>
+        <p className="mt-2 text-xs leading-relaxed text-zinc-600">
+          Export a versioned <code className="text-[11px]">.keepall</code> file, or
+          replace this browser&apos;s library from one.
+        </p>
+        <div className="mt-3 flex flex-col gap-2">
+          <button
+            className="rounded-[10px] border border-zinc-200/80 bg-white px-3 py-2 text-sm font-medium shadow-[0_0_0_1px_rgba(0,0,0,0.04)] transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+            type="button"
+            disabled={busy}
+            onClick={() => void onExport()}
+          >
+            Export backup
+          </button>
+          <button
+            className="rounded-[10px] border border-zinc-200/80 bg-white px-3 py-2 text-sm font-medium shadow-[0_0_0_1px_rgba(0,0,0,0.04)] transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+            type="button"
+            disabled={busy}
+            onClick={() => void onPickFile()}
+          >
+            Import backup
+          </button>
+          <input
+            ref={fileInputRef}
+            className="sr-only"
+            type="file"
+            accept="application/json,.json,.keepall"
+            onChange={(event) => void onFileChange(event.target.files)}
+          />
+        </div>
+        {status ? <p className="mt-2 text-xs text-zinc-700">{status}</p> : null}
+        {error ? (
+          <p className="mt-2 text-xs text-red-700" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </section>
+    );
   }
 
   return (
