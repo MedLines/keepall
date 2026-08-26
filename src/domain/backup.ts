@@ -214,6 +214,11 @@ function parseCollection(raw: unknown, index: number): Collection {
     id: collection.id,
     name: collection.name.trim().replace(/\s+/g, " "),
     createdAt: collection.createdAt,
+    pinnedItemIds: parseStringIdArray(
+      collection.pinnedItemIds,
+      "pinnedItemIds",
+      index,
+    ),
   };
 }
 

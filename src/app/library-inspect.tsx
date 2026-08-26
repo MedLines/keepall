@@ -63,6 +63,10 @@ type Props = {
   onStartDelete: () => void;
   tagSuggestions: OrgNameSuggestion[];
   collectionSuggestions: OrgNameSuggestion[];
+  pinVisible: boolean;
+  pinned: boolean;
+  pinError: string | null;
+  onTogglePin: () => void;
 };
 
 const BTN =
@@ -106,6 +110,10 @@ export function LibraryInspect({
   onStartDelete,
   tagSuggestions,
   collectionSuggestions,
+  pinVisible,
+  pinned,
+  pinError,
+  onTogglePin,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const titleId = useId();
@@ -377,6 +385,32 @@ export function LibraryInspect({
                         </li>
                       ))}
                     </ul>
+                  ) : null}
+
+                  {pinVisible ? (
+                    <div className="mt-3">
+                      <button
+                        className={BTN}
+                        type="button"
+                        disabled={mutationBusy}
+                        onClick={onTogglePin}
+                      >
+                        {pendingMutation?.op === "pin-item" &&
+                        pendingMutation.itemId === item.id
+                          ? "Pinning…"
+                          : pendingMutation?.op === "unpin-item" &&
+                              pendingMutation.itemId === item.id
+                            ? "Unpinning…"
+                            : pinned
+                              ? "Unpin from collection"
+                              : "Pin to top of collection"}
+                      </button>
+                      {pinError ? (
+                        <p className="mt-2 text-sm text-red-700" role="alert">
+                          {pinError}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
 
                   <div className="mt-4 max-w-md">

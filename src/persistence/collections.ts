@@ -1,7 +1,10 @@
 import {
   buildCollection,
   clearCollectionId,
+  normalizeCollection,
   normalizeCollectionName,
+  pinItemId,
+  unpinItemId,
   type Collection,
   type CreateCollectionInput,
   CollectionValidationError,
@@ -19,7 +22,7 @@ export async function createCollection(
     .first();
 
   if (existing) {
-    return existing;
+    return normalizeCollection(existing);
   }
 
   await getDb().collections.add(collection);
@@ -27,7 +30,8 @@ export async function createCollection(
 }
 
 export async function listCollections(): Promise<Collection[]> {
-  return getDb().collections.orderBy("name").toArray();
+  const rows = await getDb().collections.orderBy("name").toArray();
+  return rows.map((row) => normalizeCollection(row));
 }
 
 export async function renameCollection(
@@ -52,10 +56,10 @@ export async function renameCollection(
     throw new CollectionValidationError("Collection name already exists");
   }
 
-  const next: Collection = {
+  const next: Collection = normalizeCollection({
     ...existing,
     name: normalized,
-  };
+  });
   await getDb().collections.put(next);
   return next;
 }
@@ -85,4 +89,50 @@ export async function deleteCollection(collectionId: string): Promise<void> {
     }
     await db.collections.delete(collectionId);
   });
+}
+
+export async function pinItemInCollection(
+  collectionId: string,
+  itemId: string,
+): Promise<Collection> {
+  const existing = await getDb().collections.get(collectionId);
+  if (!existing) {
+    throw new Error("Collection not found");
+  }
+
+  const item = await getDb().items.get(itemId);
+  if (!item) {
+    throw new Error("Item not found");
+  }
+
+  const normalizedItem = normalizeItem(item);
+  if (!normalizedItem.collectionIds.includes(collectionId)) {
+    throw new Error("Item is not in this collection");
+  }
+
+  const collection = normalizeCollection(existing);
+  const next = normalizeCollection({
+    ...collection,
+    pinnedItemIds: pinItemId(collection.pinnedItemIds, itemId),
+  });
+  await getDb().collections.put(next);
+  return next;
+}
+
+export async function unpinItemInCollection(
+  collectionId: string,
+  itemId: string,
+): Promise<Collection> {
+  const existing = await getDb().collections.get(collectionId);
+  if (!existing) {
+    throw new Error("Collection not found");
+  }
+
+  const collection = normalizeCollection(existing);
+  const next = normalizeCollection({
+    ...collection,
+    pinnedItemIds: unpinItemId(collection.pinnedItemIds, itemId),
+  });
+  await getDb().collections.put(next);
+  return next;
 }

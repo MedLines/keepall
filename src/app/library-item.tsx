@@ -31,7 +31,9 @@ export type PendingMutation =
   | { op: "bulk-delete" }
   | { op: "bulk-assign-tag" }
   | { op: "bulk-unassign-tag" }
-  | { op: "bulk-assign-collection" };
+  | { op: "bulk-assign-collection" }
+  | { op: "pin-item"; collectionId: string; itemId: string }
+  | { op: "unpin-item"; collectionId: string; itemId: string };
 
 export type LibraryItemProps = {
   item: Item;
@@ -79,6 +81,9 @@ export type LibraryItemProps = {
   isDragging: boolean;
   onItemDragStart: (event: DragEvent<HTMLElement>) => void;
   onItemDragEnd: () => void;
+  pinVisible: boolean;
+  pinned: boolean;
+  onTogglePin: () => void;
 };
 
 const ACTION_BTN =
@@ -125,6 +130,9 @@ export function LibraryItem({
   isDragging,
   onItemDragStart,
   onItemDragEnd,
+  pinVisible,
+  pinned,
+  onTogglePin,
 }: LibraryItemProps) {
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
@@ -221,6 +229,28 @@ export function LibraryItem({
             }`}
           >
             <div className="flex justify-end gap-1">
+              {pinVisible ? (
+                <button
+                  type="button"
+                  className={ACTION_BTN}
+                  aria-label={pinned ? "Unpin" : "Pin"}
+                  disabled={mutationBusy}
+                  onClick={() => {
+                    setOrgPanel(null);
+                    onTogglePin();
+                  }}
+                >
+                  {pendingMutation?.op === "pin-item" &&
+                  pendingMutation.itemId === item.id
+                    ? "…"
+                    : pendingMutation?.op === "unpin-item" &&
+                        pendingMutation.itemId === item.id
+                      ? "…"
+                      : pinned
+                        ? "Unpin"
+                        : "Pin"}
+                </button>
+              ) : null}
               <button
                 type="button"
                 className={ACTION_BTN}

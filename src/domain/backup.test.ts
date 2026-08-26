@@ -114,4 +114,43 @@ describe("parseKeepallBackup", () => {
     expect(parsed.items[0]?.tagIds).toEqual([]);
     expect(parsed.items[0]?.collectionIds).toEqual([]);
   });
+
+  test("treats missing pinnedItemIds as empty on collections", () => {
+    const parsed = parseKeepallBackup({
+      format: "keepall",
+      version: 1,
+      exportedAt: 1,
+      items: [],
+      tags: [],
+      collections: [
+        {
+          id: "c1",
+          name: "Reading",
+          createdAt: 1,
+        },
+      ],
+    });
+    expect(parsed.collections[0]?.pinnedItemIds).toEqual([]);
+  });
+
+  test("round-trips pinnedItemIds on collections", () => {
+    const collection = {
+      ...buildCollection({ name: "Reading" }, { id: "c1", now: 1 }),
+      pinnedItemIds: ["n1", "n2"],
+    };
+    const note = {
+      ...buildNote({ content: "hello" }, { id: "n1", now: 1 }),
+      tagIds: [],
+      collectionIds: ["c1"],
+    };
+    const parsed = parseKeepallBackup(
+      buildKeepallBackup({
+        items: [note],
+        tags: [],
+        collections: [collection],
+        exportedAt: 1,
+      }),
+    );
+    expect(parsed.collections[0]?.pinnedItemIds).toEqual(["n1", "n2"]);
+  });
 });

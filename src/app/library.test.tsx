@@ -14,7 +14,7 @@ import {
   updateLink,
   updateNote,
 } from "@/persistence/items";
-import { createCollection, listCollections, renameCollection, deleteCollection } from "@/persistence/collections";
+import { createCollection, listCollections, renameCollection, deleteCollection, pinItemInCollection, unpinItemInCollection } from "@/persistence/collections";
 import { createTag, listTags } from "@/persistence/tags";
 import { mockNavigation } from "../../vitest.setup";
 import { enrichLinkPreview } from "./enrich-link-preview";
@@ -53,6 +53,8 @@ vi.mock("@/persistence/collections", () => ({
   createCollection: vi.fn(),
   renameCollection: vi.fn(),
   deleteCollection: vi.fn(),
+  pinItemInCollection: vi.fn(),
+  unpinItemInCollection: vi.fn(),
 }));
 
 const note = buildNote({ content: "A persisted note" }, { id: "n1", now: 1 });
@@ -77,6 +79,8 @@ describe("Library", () => {
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
     vi.mocked(assignCollectionToItem).mockReset();
+    vi.mocked(pinItemInCollection).mockReset();
+    vi.mocked(unpinItemInCollection).mockReset();
   });
 
   test("does not show the empty copy when loading fails", async () => {
@@ -672,7 +676,12 @@ describe("Library collections", () => {
   });
 
   test("creates a collection with no items and browses it", async () => {
-    const collection = { id: "c1", name: "Reading", createdAt: 1 };
+    const collection = {
+      id: "c1",
+      name: "Reading",
+      createdAt: 1,
+      pinnedItemIds: [],
+    };
     vi.mocked(listItems).mockResolvedValue([]);
     vi.mocked(listCollections)
       .mockResolvedValueOnce([])
@@ -697,7 +706,12 @@ describe("Library collections", () => {
 
   test("assigns a collection and browses to only that collection", async () => {
     const other = buildNote({ content: "other note" }, { id: "n2", now: 2 });
-    const collection = { id: "c1", name: "Reading", createdAt: 1 };
+    const collection = {
+      id: "c1",
+      name: "Reading",
+      createdAt: 1,
+      pinnedItemIds: [],
+    };
     const tagged = { ...note, collectionIds: ["c1"], updatedAt: 3 };
     vi.mocked(listItems)
       .mockResolvedValueOnce([note, other])
@@ -732,8 +746,18 @@ describe("Library collections", () => {
   });
 
   test("renames and deletes the selected collection without deleting items", async () => {
-    const collection = { id: "c1", name: "Reading", createdAt: 1 };
-    const renamed = { id: "c1", name: "Later", createdAt: 1 };
+    const collection = {
+      id: "c1",
+      name: "Reading",
+      createdAt: 1,
+      pinnedItemIds: [],
+    };
+    const renamed = {
+      id: "c1",
+      name: "Later",
+      createdAt: 1,
+      pinnedItemIds: [],
+    };
     const tagged = { ...note, collectionIds: ["c1"], updatedAt: 2 };
     const unsorted = { ...note, collectionIds: [], updatedAt: 3 };
     vi.mocked(listItems)
@@ -948,7 +972,12 @@ describe("Library view state", () => {
 
   test("drops an item onto a collection to move it", async () => {
     const movable = buildNote({ content: "move me" }, { id: "n1", now: 1 });
-    const collection = { id: "c1", name: "Reading", createdAt: 1 };
+    const collection = {
+      id: "c1",
+      name: "Reading",
+      createdAt: 1,
+      pinnedItemIds: [],
+    };
     vi.mocked(listItems).mockResolvedValue([movable]);
     vi.mocked(listCollections).mockResolvedValue([collection]);
     vi.mocked(assignCollectionToItem).mockResolvedValue({
@@ -987,7 +1016,12 @@ describe("Library view state", () => {
   test("drops a selection onto a collection", async () => {
     const first = buildNote({ content: "one" }, { id: "n1", now: 1 });
     const second = buildNote({ content: "two" }, { id: "n2", now: 2 });
-    const collection = { id: "c1", name: "Reading", createdAt: 1 };
+    const collection = {
+      id: "c1",
+      name: "Reading",
+      createdAt: 1,
+      pinnedItemIds: [],
+    };
     vi.mocked(listItems).mockResolvedValue([first, second]);
     vi.mocked(listCollections).mockResolvedValue([collection]);
     vi.mocked(assignCollectionToItem).mockImplementation(async (id) => {
@@ -1016,6 +1050,34 @@ describe("Library view state", () => {
 
     await waitFor(() => {
       expect(assignCollectionToItem).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test("pins an item when browsing a collection", async () => {
+    const pinnedNote = buildNote({ content: "pin me" }, { id: "n1", now: 1 });
+    const collection = {
+      id: "c1",
+      name: "Reading",
+      createdAt: 1,
+      pinnedItemIds: [],
+    };
+    vi.mocked(listItems).mockResolvedValue([
+      { ...pinnedNote, collectionIds: ["c1"] },
+    ]);
+    vi.mocked(listCollections).mockResolvedValue([collection]);
+    vi.mocked(pinItemInCollection).mockResolvedValue({
+      ...collection,
+      pinnedItemIds: ["n1"],
+    });
+
+    mockNavigation.replace("/?collection=c1");
+    render(<Library />);
+
+    await screen.findByText("pin me");
+    fireEvent.click(screen.getByRole("button", { name: "Pin" }));
+
+    await waitFor(() => {
+      expect(pinItemInCollection).toHaveBeenCalledWith("c1", "n1");
     });
   });
 

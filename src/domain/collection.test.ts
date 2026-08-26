@@ -4,8 +4,11 @@ import {
   buildCollection,
   clearCollectionId,
   coerceExclusiveCollectionIds,
+  coercePinnedItemIds,
   CollectionValidationError,
   normalizeCollectionName,
+  pinItemId,
+  unpinItemId,
 } from "./collection";
 
 describe("buildCollection", () => {
@@ -16,6 +19,7 @@ describe("buildCollection", () => {
       id: "c1",
       name: "Reading",
       createdAt: 10,
+      pinnedItemIds: [],
     });
   });
 
@@ -53,5 +57,26 @@ describe("clearCollectionId", () => {
   test("removes the matching id", () => {
     expect(clearCollectionId(["a"], "a")).toEqual([]);
     expect(clearCollectionId(["a"], "b")).toEqual(["a"]);
+  });
+});
+
+describe("pinItemId", () => {
+  test("appends once and keeps order", () => {
+    expect(pinItemId([], "n1")).toEqual(["n1"]);
+    expect(pinItemId(["n1"], "n2")).toEqual(["n1", "n2"]);
+    expect(pinItemId(["n1"], "n1")).toEqual(["n1"]);
+  });
+});
+
+describe("unpinItemId", () => {
+  test("removes one id", () => {
+    expect(unpinItemId(["n1", "n2"], "n1")).toEqual(["n2"]);
+  });
+});
+
+describe("coercePinnedItemIds", () => {
+  test("dedupes and drops empty strings", () => {
+    expect(coercePinnedItemIds(["a", "a", "", "b"])).toEqual(["a", "b"]);
+    expect(coercePinnedItemIds(undefined)).toEqual([]);
   });
 });

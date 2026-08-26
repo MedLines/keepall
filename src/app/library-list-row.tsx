@@ -20,6 +20,9 @@ type Props = {
   isDragging: boolean;
   onItemDragStart: (event: DragEvent<HTMLElement>) => void;
   onItemDragEnd: () => void;
+  pinVisible: boolean;
+  pinned: boolean;
+  onTogglePin: () => void;
 };
 
 function typeLabel(item: Item): string {
@@ -52,6 +55,9 @@ export function LibraryListRow({
   isDragging,
   onItemDragStart,
   onItemDragEnd,
+  pinVisible,
+  pinned,
+  onTogglePin,
 }: Props) {
   const title = itemListTitle(item);
   const secondary = cardSecondaryLine(item);
@@ -93,6 +99,19 @@ export function LibraryListRow({
             onClick={(event) => event.stopPropagation()}
           />
         </label>
+        {pinVisible ? (
+          <button
+            type="button"
+            className="shrink-0 rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-800"
+            aria-label={pinned ? "Unpin" : "Pin"}
+            onClick={(event) => {
+              event.stopPropagation();
+              onTogglePin();
+            }}
+          >
+            {pinned ? "Unpin" : "Pin"}
+          </button>
+        ) : null}
         <button
           type="button"
           className="group flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:bg-zinc-50"

@@ -8,6 +8,7 @@ import {
   parseLibraryType,
   parseLibraryViewState,
   sortLibraryItems,
+  sortLibraryItemsWithCollectionPins,
 } from "./library-view";
 import { buildNote } from "./note";
 
@@ -147,5 +148,38 @@ describe("sortLibraryItems", () => {
     expect(sortLibraryItems([older, newer], "oldest").map((i) => i.id)).toEqual(
       ["a", "b"],
     );
+  });
+});
+
+describe("sortLibraryItemsWithCollectionPins", () => {
+  test("puts pinned ids first then applies sort", () => {
+    const a = buildNote({ content: "a" }, { id: "a", now: 1 });
+    const b = buildNote({ content: "b" }, { id: "b", now: 2 });
+    const c = buildNote({ content: "c" }, { id: "c", now: 3 });
+
+    expect(
+      sortLibraryItemsWithCollectionPins([a, b, c], "newest", ["a", "c"]).map(
+        (item) => item.id,
+      ),
+    ).toEqual(["a", "c", "b"]);
+  });
+
+  test("skips unknown pin ids", () => {
+    const a = buildNote({ content: "a" }, { id: "a", now: 1 });
+    expect(
+      sortLibraryItemsWithCollectionPins([a], "newest", ["missing", "a"]).map(
+        (item) => item.id,
+      ),
+    ).toEqual(["a"]);
+  });
+
+  test("falls back to sort when pins is null", () => {
+    const older = buildNote({ content: "older" }, { id: "a", now: 1 });
+    const newer = buildNote({ content: "newer" }, { id: "b", now: 2 });
+    expect(
+      sortLibraryItemsWithCollectionPins([older, newer], "newest", null).map(
+        (item) => item.id,
+      ),
+    ).toEqual(["b", "a"]);
   });
 });

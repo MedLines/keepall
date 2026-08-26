@@ -12,6 +12,7 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CollectionValidationError,
+  isItemPinnedInCollection,
   type Collection,
 } from "@/domain/collection";
 import {
@@ -25,7 +26,7 @@ import {
   libraryViewHref,
   mergeLibraryViewState,
   parseLibraryViewState,
-  sortLibraryItems,
+  sortLibraryItemsWithCollectionPins,
   type LibraryViewState,
 } from "@/domain/library-view";
 import { LinkValidationError } from "@/domain/link";
@@ -36,7 +37,9 @@ import {
   createCollection,
   deleteCollection,
   listCollections,
+  pinItemInCollection,
   renameCollection,
+  unpinItemInCollection,
 } from "@/persistence/collections";
 import {
   appendImageAssetToItem,
@@ -115,6 +118,7 @@ export function Library() {
     string | null
   >(null);
   const [dragError, setDragError] = useState<string | null>(null);
+  const [pinError, setPinError] = useState<string | null>(null);
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
   const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
@@ -229,7 +233,7 @@ export function Library() {
   const browseType = view.type;
   const browseLayout = view.layout;
   const searchQuery = view.q;
-  const visibleItems = sortLibraryItems(
+  const visibleItems = sortLibraryItemsWithCollectionPins(
     items.filter((item) => {
       if (browseType !== null && item.type !== browseType) {
         return false;
@@ -249,6 +253,9 @@ export function Library() {
       return matchesSearchQuery(item, searchQuery);
     }),
     view.sort,
+    browseCollectionId !== null
+      ? (browseCollection?.pinnedItemIds ?? null)
+      : null,
   );
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
   const selectionActive = selectedIds.size > 0;
@@ -850,6 +857,46 @@ export function Library() {
     });
   }
 
+  async function togglePinItem(itemId: string) {
+    if (!browseCollection || pendingMutation) {
+      return;
+    }
+
+    const pinned = isItemPinnedInCollection(browseCollection, itemId);
+    setPendingMutation({
+      op: pinned ? "unpin-item" : "pin-item",
+      collectionId: browseCollection.id,
+      itemId,
+    });
+    setPinError(null);
+
+    try {
+      if (pinned) {
+        await unpinItemInCollection(browseCollection.id, itemId);
+      } else {
+        await pinItemInCollection(browseCollection.id, itemId);
+      }
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setPinError("Couldn't update pin.");
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  function itemPinVisible(item: Item): boolean {
+    return (
+      browseCollectionId !== null &&
+      itemInCollection(item, browseCollectionId)
+    );
+  }
+
+  function itemIsPinned(item: Item): boolean {
+    return browseCollection
+      ? isItemPinnedInCollection(browseCollection, item.id)
+      : false;
+  }
+
   async function createLibraryCollection() {
     const name = newCollectionDraft.trim();
     if (!name || pendingMutation) {
@@ -1261,6 +1308,9 @@ export function Library() {
                   onToggleSelect={() => toggleItemSelected(item.id)}
                   onItemDragStart={(event) => handleItemDragStart(item.id, event)}
                   onItemDragEnd={handleItemDragEnd}
+                  pinVisible={itemPinVisible(item)}
+                  pinned={itemIsPinned(item)}
+                  onTogglePin={() => void togglePinItem(item.id)}
                 />
               ))}
             </ul>
@@ -1356,6 +1406,9 @@ export function Library() {
                     handleItemDragStart(item.id, event)
                   }
                   onItemDragEnd={handleItemDragEnd}
+                  pinVisible={itemPinVisible(item)}
+                  pinned={itemIsPinned(item)}
+                  onTogglePin={() => void togglePinItem(item.id)}
                 />
               ))}
             </ul>
@@ -1490,6 +1543,18 @@ export function Library() {
             }}
             tagSuggestions={tagSuggestions}
             collectionSuggestions={collectionSuggestions}
+            pinVisible={
+              inspectedItem !== null && itemPinVisible(inspectedItem)
+            }
+            pinned={
+              inspectedItem !== null ? itemIsPinned(inspectedItem) : false
+            }
+            pinError={pinError}
+            onTogglePin={() => {
+              if (inspectedItem) {
+                void togglePinItem(inspectedItem.id);
+              }
+            }}
           />
         </>
       )}

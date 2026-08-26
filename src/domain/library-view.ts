@@ -134,6 +134,31 @@ export function sortLibraryItems<T extends Pick<Item, "createdAt">>(
   return copy;
 }
 
+/** Pinned ids first (stable array order), then remaining items by sort. Ignored when pins is null. */
+export function sortLibraryItemsWithCollectionPins<
+  T extends Pick<Item, "id" | "createdAt">,
+>(items: T[], sort: LibrarySort, pinnedItemIds: string[] | null): T[] {
+  if (!pinnedItemIds || pinnedItemIds.length === 0) {
+    return sortLibraryItems(items, sort);
+  }
+
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const pinned: T[] = [];
+  for (const id of pinnedItemIds) {
+    const item = byId.get(id);
+    if (item) {
+      pinned.push(item);
+    }
+  }
+
+  const pinnedSet = new Set(pinned.map((item) => item.id));
+  const rest = sortLibraryItems(
+    items.filter((item) => !pinnedSet.has(item.id)),
+    sort,
+  );
+  return [...pinned, ...rest];
+}
+
 export function mergeLibraryViewState(
   current: LibraryViewState,
   patch: Partial<LibraryViewState>,

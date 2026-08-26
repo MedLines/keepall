@@ -6,7 +6,9 @@ import {
   createCollection,
   deleteCollection,
   listCollections,
+  pinItemInCollection,
   renameCollection,
+  unpinItemInCollection,
 } from "./collections";
 
 describe("collections persistence", () => {
@@ -81,6 +83,35 @@ describe("collections persistence", () => {
     const [item] = await listItems();
 
     expect(item?.collectionIds).toEqual([]);
+  });
+
+  test("listCollections coerces missing pinnedItemIds", async () => {
+    await getDb().collections.add({
+      id: "c1",
+      name: "Reading",
+      createdAt: 1,
+    } as never);
+
+    expect(await listCollections()).toEqual([
+      {
+        id: "c1",
+        name: "Reading",
+        createdAt: 1,
+        pinnedItemIds: [],
+      },
+    ]);
+  });
+
+  test("pin and unpin item ids on a collection", async () => {
+    const note = await createNote({ content: "pinned note" });
+    const collection = await createCollection({ name: "Reading" });
+    await assignCollectionToItem(note.id, collection.id);
+
+    const pinned = await pinItemInCollection(collection.id, note.id);
+    expect(pinned.pinnedItemIds).toEqual([note.id]);
+
+    const unpinned = await unpinItemInCollection(collection.id, note.id);
+    expect(unpinned.pinnedItemIds).toEqual([]);
   });
 
   test("renameCollection updates the name", async () => {
