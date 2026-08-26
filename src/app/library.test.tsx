@@ -893,6 +893,55 @@ describe("Library view state", () => {
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
   });
 
+  test("bulk add tag applies to selected items", async () => {
+    const tagged = buildNote({ content: "one" }, { id: "n1", now: 1 });
+    const other = buildNote({ content: "two" }, { id: "n2", now: 2 });
+    vi.mocked(listItems).mockResolvedValue([tagged, other]);
+    vi.mocked(listTags).mockResolvedValue([
+      { id: "t1", name: "work", createdAt: 1 },
+    ]);
+    vi.mocked(createTag).mockResolvedValue({
+      id: "t1",
+      name: "work",
+      createdAt: 1,
+    });
+    vi.mocked(assignTagToItem).mockResolvedValue(tagged);
+
+    render(<Library />);
+
+    await screen.findByText("one");
+    const [first, second] = screen.getAllByRole("checkbox");
+    fireEvent.click(first);
+    fireEvent.click(second);
+    const bulk = screen.getByRole("region", { name: "Bulk actions" });
+    fireEvent.click(within(bulk).getByRole("button", { name: "Add tag" }));
+    fireEvent.change(screen.getByLabelText("Add tag to selection"), {
+      target: { value: "work" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => {
+      expect(createTag).toHaveBeenCalledWith({ name: "work" });
+    });
+    expect(assignTagToItem).toHaveBeenCalledTimes(2);
+    expect(assignTagToItem).toHaveBeenCalledWith("n1", "t1");
+    expect(assignTagToItem).toHaveBeenCalledWith("n2", "t1");
+  });
+
+  test("clear selection with Escape when inspect is closed", async () => {
+    vi.mocked(listItems).mockResolvedValue([note]);
+    render(<Library />);
+
+    await screen.findByText("A persisted note");
+    const [checkbox] = screen.getAllByRole("checkbox");
+    fireEvent.click(checkbox);
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    expect(screen.queryByText("1 selected")).not.toBeInTheDocument();
+  });
+
   test("sorts visible items oldest first", async () => {
     const older = buildNote({ content: "older note" }, { id: "n1", now: 1 });
     const newer = buildNote({ content: "newer note" }, { id: "n2", now: 2 });

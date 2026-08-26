@@ -2,6 +2,7 @@
 
 import {
   type KeyboardEvent,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -29,7 +30,7 @@ import {
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
 import { matchesSearchQuery, normalizeSearchQuery } from "@/domain/search";
-import { TagValidationError, type Tag } from "@/domain/tag";
+import { TagValidationError, normalizeTagName, type Tag } from "@/domain/tag";
 import {
   createCollection,
   deleteCollection,
@@ -54,6 +55,8 @@ import { enrichLinkPreview } from "./enrich-link-preview";
 import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryListRow } from "./library-list-row";
 import { LibraryInspect } from "./library-inspect";
+import { LibraryBulkBar, type BulkPanel } from "./library-bulk-bar";
+import type { OrgNameSuggestion } from "./org-name-suggest";
 import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
@@ -92,6 +95,14 @@ export function Library() {
   const [pendingMutation, setPendingMutation] = useState<PendingMutation | null>(
     null,
   );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [bulkPanel, setBulkPanel] = useState<BulkPanel>(null);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkTagDraft, setBulkTagDraft] = useState("");
+  const [bulkRemoveTagDraft, setBulkRemoveTagDraft] = useState("");
+  const [bulkCollectionDraft, setBulkCollectionDraft] = useState("");
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
   const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
@@ -168,6 +179,27 @@ export function Library() {
     restoreFocusRef.current = null;
   }, [editingId, pendingDeleteId, items]);
 
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setBulkPanel(null);
+    setBulkError(null);
+    setBulkTagDraft("");
+    setBulkRemoveTagDraft("");
+    setBulkCollectionDraft("");
+  }, []);
+
+  function toggleItemSelected(id: string) {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
   const mutationBusy = pendingMutation !== null;
   const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
   const collectionsById = new Map(
@@ -207,6 +239,33 @@ export function Library() {
     view.sort,
   );
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
+  const selectionActive = selectedIds.size > 0;
+  const itemsById = new Map(items.map((item) => [item.id, item]));
+  const tagSuggestions: OrgNameSuggestion[] = tags.map((tag) => ({
+    id: tag.id,
+    name: tag.name,
+  }));
+  const collectionSuggestions: OrgNameSuggestion[] = collections.map(
+    (collection) => ({
+      id: collection.id,
+      name: collection.name,
+    }),
+  );
+  const bulkRemoveTagSuggestions: OrgNameSuggestion[] = (() => {
+    const tagIdSet = new Set<string>();
+    for (const id of selectedIds) {
+      const item = itemsById.get(id);
+      if (item) {
+        for (const tagId of item.tagIds) {
+          tagIdSet.add(tagId);
+        }
+      }
+    }
+    return tags
+      .filter((tag) => tagIdSet.has(tag.id))
+      .map((tag) => ({ id: tag.id, name: tag.name }));
+  })();
+  const inspectId = view.item;
 
   function updateView(
     patch: Partial<LibraryViewState>,
@@ -222,7 +281,6 @@ export function Library() {
     }
   }
 
-  const inspectId = view.item;
   const inspectedItem =
     inspectId === null
       ? null
@@ -267,6 +325,26 @@ export function Library() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- clamp when assets or slide drift
   }, [inspectedItem, view.slide, loadState]);
+
+  useEffect(() => {
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key !== "Escape") {
+        return;
+      }
+      if (inspectId !== null) {
+        return;
+      }
+      if (bulkPanel) {
+        setBulkPanel(null);
+        return;
+      }
+      if (selectedIds.size > 0) {
+        clearSelection();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [bulkPanel, clearSelection, inspectId, selectedIds.size]);
 
   function clearEdit(options?: { restoreFocus?: boolean }) {
     if (options?.restoreFocus && editingId) {
@@ -544,6 +622,124 @@ export function Library() {
       } else {
         setCollectionError("Couldn't add to collection.");
       }
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  async function bulkDeleteSelected() {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || pendingMutation) {
+      return;
+    }
+
+    setPendingMutation({ op: "bulk-delete" });
+    setBulkError(null);
+
+    try {
+      for (const id of ids) {
+        await deleteItem(id);
+      }
+      if (ids.some((id) => view.item === id)) {
+        updateView({ item: null, slide: 0 });
+      }
+      clearSelection();
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setBulkError("Couldn't delete all items.");
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  async function bulkAddTag(name: string) {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || pendingMutation) {
+      return;
+    }
+
+    setPendingMutation({ op: "bulk-assign-tag" });
+    setBulkError(null);
+
+    try {
+      const tag = await createTag({ name });
+      for (const itemId of ids) {
+        await assignTagToItem(itemId, tag.id);
+      }
+      setBulkTagDraft("");
+      setBulkPanel(null);
+      clearSelection();
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch (caught) {
+      if (caught instanceof TagValidationError) {
+        setBulkError(caught.message);
+      } else {
+        setBulkError("Couldn't add tag to all items.");
+      }
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  async function bulkRemoveTag(name: string) {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || pendingMutation) {
+      return;
+    }
+
+    const normalized = normalizeTagName(name);
+    const tag = tags.find((entry) => entry.name === normalized);
+    if (!tag) {
+      setBulkError("Tag not found on selection.");
+      return;
+    }
+
+    setPendingMutation({ op: "bulk-unassign-tag" });
+    setBulkError(null);
+
+    try {
+      for (const itemId of ids) {
+        await unassignTagFromItem(itemId, tag.id);
+      }
+      setBulkRemoveTagDraft("");
+      setBulkPanel(null);
+      clearSelection();
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setBulkError("Couldn't remove tag from all items.");
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  async function bulkAddCollection(name: string) {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || pendingMutation) {
+      return;
+    }
+
+    setPendingMutation({ op: "bulk-assign-collection" });
+    setBulkError(null);
+
+    try {
+      const collection = await createCollection({ name });
+      for (const itemId of ids) {
+        await assignCollectionToItem(itemId, collection.id);
+      }
+      setBulkCollectionDraft("");
+      setBulkPanel(null);
+      clearSelection();
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch (caught) {
+      if (caught instanceof CollectionValidationError) {
+        setBulkError(caught.message);
+      } else {
+        setBulkError("Couldn't move all items to collection.");
+      }
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } finally {
       setPendingMutation(null);
     }
@@ -887,6 +1083,38 @@ export function Library() {
               {deleteError}
             </p>
           ) : null}
+          <LibraryBulkBar
+            busy={mutationBusy}
+            collectionDraft={bulkCollectionDraft}
+            collectionSuggestions={collectionSuggestions}
+            count={selectedIds.size}
+            error={bulkError}
+            panel={bulkPanel}
+            pendingAddCollection={pendingMutation?.op === "bulk-assign-collection"}
+            pendingAddTag={pendingMutation?.op === "bulk-assign-tag"}
+            pendingDelete={pendingMutation?.op === "bulk-delete"}
+            pendingRemoveTag={pendingMutation?.op === "bulk-unassign-tag"}
+            removeTagDraft={bulkRemoveTagDraft}
+            removeTagSuggestions={bulkRemoveTagSuggestions}
+            tagDraft={bulkTagDraft}
+            tagSuggestions={tagSuggestions}
+            onBulkAddCollection={(name) => void bulkAddCollection(name)}
+            onBulkAddTag={(name) => void bulkAddTag(name)}
+            onBulkRemoveTag={(name) => void bulkRemoveTag(name)}
+            onClearSelection={clearSelection}
+            onClosePanel={() => {
+              setBulkPanel(null);
+              setBulkError(null);
+            }}
+            onCollectionDraftChange={setBulkCollectionDraft}
+            onConfirmDelete={() => void bulkDeleteSelected()}
+            onOpenPanel={(panel) => {
+              setBulkError(null);
+              setBulkPanel(panel);
+            }}
+            onRemoveTagDraftChange={setBulkRemoveTagDraft}
+            onTagDraftChange={setBulkTagDraft}
+          />
           {visibleItems.length === 0 ? (
             <p className="mt-3 text-sm text-zinc-600">
               {hasActiveSearch
@@ -906,7 +1134,10 @@ export function Library() {
                   key={item.id}
                   item={item}
                   inspected={inspectId === item.id}
+                  selected={selectedIds.has(item.id)}
+                  selectionActive={selectionActive}
                   onOpenInspect={() => openInspect(item.id)}
+                  onToggleSelect={() => toggleItemSelected(item.id)}
                 />
               ))}
             </ul>
@@ -986,6 +1217,11 @@ export function Library() {
                     setCollectionErrorItemId(null);
                     setPendingDeleteId(item.id);
                   }}
+                  selected={selectedIds.has(item.id)}
+                  selectionActive={selectionActive}
+                  onToggleSelect={() => toggleItemSelected(item.id)}
+                  tagSuggestions={tagSuggestions}
+                  collectionSuggestions={collectionSuggestions}
                 />
               ))}
             </ul>
@@ -1118,6 +1354,8 @@ export function Library() {
               setCollectionErrorItemId(null);
               setPendingDeleteId(inspectedItem.id);
             }}
+            tagSuggestions={tagSuggestions}
+            collectionSuggestions={collectionSuggestions}
           />
         </>
       )}

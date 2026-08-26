@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  type FormEvent,
   type KeyboardEvent,
   type Ref,
   useEffect,
@@ -13,6 +12,7 @@ import { itemListTitle, type Item } from "@/domain/item";
 import { itemMediaLayoutId } from "@/domain/library-view";
 import { LibraryItemMedia } from "./library-item-media";
 import { ItemTagChips } from "./item-tag-chips";
+import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
@@ -26,7 +26,11 @@ export type PendingMutation =
   | { op: "assign-collection"; id: string }
   | { op: "create-collection" }
   | { op: "rename-collection"; id: string }
-  | { op: "delete-collection"; id: string };
+  | { op: "delete-collection"; id: string }
+  | { op: "bulk-delete" }
+  | { op: "bulk-assign-tag" }
+  | { op: "bulk-unassign-tag" }
+  | { op: "bulk-assign-collection" };
 
 export type LibraryItemProps = {
   item: Item;
@@ -65,6 +69,11 @@ export type LibraryItemProps = {
   onBrowseTag: (tagId: string) => void;
   onStartEdit: () => void;
   onStartDelete: () => void;
+  selected: boolean;
+  selectionActive: boolean;
+  onToggleSelect: () => void;
+  tagSuggestions: OrgNameSuggestion[];
+  collectionSuggestions: OrgNameSuggestion[];
 };
 
 const ACTION_BTN =
@@ -102,34 +111,25 @@ export function LibraryItem({
   onBrowseTag,
   onStartEdit,
   onStartDelete,
+  selected,
+  selectionActive,
+  onToggleSelect,
+  tagSuggestions,
+  collectionSuggestions,
 }: LibraryItemProps) {
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
   const [orgPanel, setOrgPanel] = useState<"tag" | "collection" | null>(null);
   const reduceMotion = useReducedMotion();
 
-  function submitTag(event: FormEvent) {
-    event.preventDefault();
-    const name = tagDraft.trim();
-    if (!name || mutationBusy) {
-      return;
-    }
-    onAddTag(name);
-    setTagDraft("");
-  }
-
-  function submitCollection(event: FormEvent) {
-    event.preventDefault();
-    const name = collectionDraft.trim();
-    if (!name || mutationBusy) {
-      return;
-    }
-    onAddCollection(name);
-    setCollectionDraft("");
-    setOrgPanel(null);
-  }
-
   const actionChromeVisible = orgPanel !== null;
+  const checkboxVisible = selected || selectionActive;
+  const availableTagSuggestions = tagSuggestions.filter(
+    (entry) => !item.tagIds.includes(entry.id),
+  );
+  const availableCollectionSuggestions = collectionSuggestions.filter(
+    (entry) => !item.collectionIds.includes(entry.id),
+  );
 
   const title = itemListTitle(item);
 
@@ -143,7 +143,28 @@ export function LibraryItem({
     item.type === "link" ? "Link" : item.type === "image" ? "Image" : "Note";
 
   return (
-    <li className="group relative flex flex-col rounded-2xl bg-white p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06),0_2px_4px_0_rgba(0,0,0,0.04)] transition-[box-shadow] duration-150 ease-out hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08),0_2px_4px_0_rgba(0,0,0,0.06)]">
+    <li
+      className={`group relative flex flex-col rounded-2xl bg-white p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06),0_2px_4px_0_rgba(0,0,0,0.04)] transition-[box-shadow] duration-150 ease-out hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08),0_2px_4px_0_rgba(0,0,0,0.06)] ${
+        selected ? "ring-2 ring-zinc-900" : ""
+      }`}
+    >
+      <label
+        className={`absolute left-3 top-3 z-20 flex size-8 items-center justify-center rounded-md bg-white/95 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity duration-150 ease-out motion-reduce:transition-none ${
+          checkboxVisible
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+        }`}
+      >
+        <span className="sr-only">Select {title}</span>
+        <input
+          checked={selected}
+          className="size-4 rounded border-zinc-300"
+          disabled={mutationBusy}
+          type="checkbox"
+          onChange={onToggleSelect}
+          onClick={(event) => event.stopPropagation()}
+        />
+      </label>
       <div className="relative mb-2 overflow-hidden rounded-xl bg-zinc-200">
         {inspected ? (
           <div className="aspect-[16/10] w-full" aria-hidden />
@@ -240,91 +261,55 @@ export function LibraryItem({
               </button>
             </div>
             {orgPanel === "tag" ? (
-              <form
-                className="w-56 rounded-lg bg-white/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm"
-                onSubmit={submitTag}
-              >
-                <label className="sr-only" htmlFor={`add-tag-${item.id}`}>
-                  Add tag
-                </label>
-                <div className="flex gap-1">
-                  <input
-                    autoFocus
-                    className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-60"
-                    id={`add-tag-${item.id}`}
-                    placeholder="Tag name"
-                    value={tagDraft}
-                    disabled={mutationBusy}
-                    onChange={(event) => setTagDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Escape") {
-                        event.preventDefault();
-                        setOrgPanel(null);
-                      }
-                    }}
-                  />
-                  <button
-                    className={`${ACTION_BTN} shrink-0`}
-                    type="submit"
-                    disabled={mutationBusy}
-                  >
-                    {pendingMutation?.op === "assign-tag" &&
+              <div className="w-56 rounded-lg bg-white/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+                <OrgNameSuggest
+                  compact
+                  hideLabel
+                  inputId={`add-tag-${item.id}`}
+                  label="Add tag"
+                  placeholder="Tag name"
+                  value={tagDraft}
+                  suggestions={availableTagSuggestions}
+                  disabled={mutationBusy}
+                  pending={
+                    pendingMutation?.op === "assign-tag" &&
                     pendingMutation.id === item.id
-                      ? "…"
-                      : "Add"}
-                  </button>
-                </div>
-                {tagError ? (
-                  <p className="mt-1 text-xs text-red-700" role="alert">
-                    {tagError}
-                  </p>
-                ) : null}
-              </form>
+                  }
+                  error={tagError}
+                  onChange={setTagDraft}
+                  onCancel={() => setOrgPanel(null)}
+                  onSubmit={(name) => {
+                    onAddTag(name);
+                    setTagDraft("");
+                  }}
+                />
+              </div>
             ) : null}
             {orgPanel === "collection" ? (
-              <form
-                className="w-56 rounded-lg bg-white/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm"
-                onSubmit={submitCollection}
-              >
-                <label
-                  className="sr-only"
-                  htmlFor={`add-collection-${item.id}`}
-                >
-                  Add to collection
-                </label>
-                <div className="flex gap-1">
-                  <input
-                    autoFocus
-                    className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-60"
-                    id={`add-collection-${item.id}`}
-                    placeholder="Collection"
-                    value={collectionDraft}
-                    disabled={mutationBusy}
-                    onChange={(event) => setCollectionDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Escape") {
-                        event.preventDefault();
-                        setOrgPanel(null);
-                      }
-                    }}
-                  />
-                  <button
-                    className={`${ACTION_BTN} shrink-0`}
-                    type="submit"
-                    disabled={mutationBusy}
-                  >
-                    {pendingMutation?.op === "assign-collection" &&
+              <div className="w-56 rounded-lg bg-white/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+                <OrgNameSuggest
+                  compact
+                  hideLabel
+                  inputId={`add-collection-${item.id}`}
+                  label="Add to collection"
+                  placeholder="Collection"
+                  value={collectionDraft}
+                  suggestions={availableCollectionSuggestions}
+                  disabled={mutationBusy}
+                  pending={
+                    pendingMutation?.op === "assign-collection" &&
                     pendingMutation.id === item.id
-                      ? "…"
-                      : "Add"}
-                  </button>
-                </div>
-                {collectionError ? (
-                  <p className="mt-1 text-xs text-red-700" role="alert">
-                    {collectionError}
-                  </p>
-                ) : null}
-              </form>
+                  }
+                  error={collectionError}
+                  onChange={setCollectionDraft}
+                  onCancel={() => setOrgPanel(null)}
+                  onSubmit={(name) => {
+                    onAddCollection(name);
+                    setCollectionDraft("");
+                    setOrgPanel(null);
+                  }}
+                />
+              </div>
             ) : null}
           </div>
         ) : null}

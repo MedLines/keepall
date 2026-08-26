@@ -12,7 +12,10 @@ import { LibraryItemMedia } from "./library-item-media";
 type Props = {
   item: Item;
   inspected: boolean;
+  selected: boolean;
+  selectionActive: boolean;
   onOpenInspect: () => void;
+  onToggleSelect: () => void;
 };
 
 function typeLabel(item: Item): string {
@@ -34,7 +37,14 @@ function formatListDate(timestamp: number): string {
 }
 
 /** Compact list row: thumb + title + secondary + type/date. Opens inspect. */
-export function LibraryListRow({ item, inspected, onOpenInspect }: Props) {
+export function LibraryListRow({
+  item,
+  inspected,
+  selected,
+  selectionActive,
+  onOpenInspect,
+  onToggleSelect,
+}: Props) {
   const title = itemListTitle(item);
   const secondary = cardSecondaryLine(item);
   const [faviconBroken, setFaviconBroken] = useState(false);
@@ -49,18 +59,35 @@ export function LibraryListRow({ item, inspected, onOpenInspect }: Props) {
       Boolean(item.previewAssetId || item.previewImageUrl)) ||
     item.type === "image";
 
+  const checkboxVisible = selected || selectionActive;
+
   return (
     <li
-      className={`rounded-lg border border-zinc-200 bg-white ${
-        inspected ? "ring-2 ring-zinc-900" : ""
+      className={`group rounded-lg border border-zinc-200 bg-white ${
+        inspected || selected ? "ring-2 ring-zinc-900" : ""
       }`}
     >
-      <button
-        type="button"
-        className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-zinc-50"
-        onClick={onOpenInspect}
-        aria-label={`Open ${title}`}
-      >
+      <div className="flex items-center gap-2 px-2 py-2">
+        <label
+          className={`flex size-8 shrink-0 items-center justify-center transition-opacity duration-150 ease-out motion-reduce:transition-none ${
+            checkboxVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          <span className="sr-only">Select {title}</span>
+          <input
+            checked={selected}
+            className="size-4 rounded border-zinc-300"
+            type="checkbox"
+            onChange={onToggleSelect}
+            onClick={(event) => event.stopPropagation()}
+          />
+        </label>
+        <button
+          type="button"
+          className="group flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:bg-zinc-50"
+          onClick={onOpenInspect}
+          aria-label={`Open ${title}`}
+        >
         <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-zinc-200 text-sm font-semibold text-zinc-700">
           {showMediaThumb ? (
             <LibraryItemMedia
@@ -97,7 +124,8 @@ export function LibraryListRow({ item, inspected, onOpenInspect }: Props) {
             {formatListDate(item.createdAt)}
           </time>
         </span>
-      </button>
+        </button>
+      </div>
     </li>
   );
 }

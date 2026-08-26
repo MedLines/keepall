@@ -13,8 +13,8 @@ import { itemMediaLayoutId } from "@/domain/library-view";
 import { LibraryItemMedia } from "./library-item-media";
 import { ItemTagChips } from "./item-tag-chips";
 import type { PendingMutation } from "./library-item";
+import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 import {
-  type FormEvent,
   type KeyboardEvent,
   type Ref,
   useState,
@@ -61,6 +61,8 @@ type Props = {
   onBrowseTag: (tagId: string) => void;
   onStartEdit: () => void;
   onStartDelete: () => void;
+  tagSuggestions: OrgNameSuggestion[];
+  collectionSuggestions: OrgNameSuggestion[];
 };
 
 const BTN =
@@ -102,6 +104,8 @@ export function LibraryInspect({
   onBrowseTag,
   onStartEdit,
   onStartDelete,
+  tagSuggestions,
+  collectionSuggestions,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const titleId = useId();
@@ -166,27 +170,17 @@ export function LibraryInspect({
     setCollectionDraft("");
   }, [item?.id]);
 
-  function submitTag(event: FormEvent) {
-    event.preventDefault();
-    const name = tagDraft.trim();
-    if (!name || mutationBusy) {
-      return;
-    }
-    onAddTag(name);
-    setTagDraft("");
-  }
-
-  function submitCollection(event: FormEvent) {
-    event.preventDefault();
-    const name = collectionDraft.trim();
-    if (!name || mutationBusy) {
-      return;
-    }
-    onAddCollection(name);
-    setCollectionDraft("");
-  }
-
   const open = item !== null;
+  const availableTagSuggestions =
+    item === null
+      ? []
+      : tagSuggestions.filter((entry) => !item.tagIds.includes(entry.id));
+  const availableCollectionSuggestions =
+    item === null
+      ? []
+      : collectionSuggestions.filter(
+          (entry) => !item.collectionIds.includes(entry.id),
+        );
   const title = item ? itemListTitle(item) : "";
   const typeLabel = item
     ? item.type === "link"
@@ -385,79 +379,57 @@ export function LibraryInspect({
                     </ul>
                   ) : null}
 
-                  <form
-                    className="mt-4 flex flex-wrap items-end gap-2"
-                    onSubmit={submitTag}
-                  >
-                    <div className="flex min-w-40 flex-1 flex-col gap-1">
-                      <label
-                        className="text-sm font-medium"
-                        htmlFor={`inspect-add-tag-${item.id}`}
-                      >
-                        Add tag
-                      </label>
-                      <input
-                        className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-                        id={`inspect-add-tag-${item.id}`}
-                        value={tagDraft}
-                        disabled={mutationBusy}
-                        onChange={(event) => setTagDraft(event.target.value)}
-                      />
-                    </div>
-                    <button
-                      className={BTN}
-                      type="submit"
+                  <div className="mt-4 max-w-md">
+                    <OrgNameSuggest
+                      inputId={`inspect-add-tag-${item.id}`}
+                      label="Add tag"
+                      value={tagDraft}
+                      suggestions={availableTagSuggestions}
                       disabled={mutationBusy}
-                    >
-                      {pendingMutation?.op === "assign-tag" &&
-                      pendingMutation.id === item.id
-                        ? "Adding…"
-                        : "Add tag"}
-                    </button>
-                  </form>
-                  {tagError ? (
-                    <p className="mt-2 text-sm text-red-700" role="alert">
-                      {tagError}
-                    </p>
-                  ) : null}
+                      pending={
+                        pendingMutation?.op === "assign-tag" &&
+                        pendingMutation.id === item.id
+                      }
+                      submitLabel={
+                        pendingMutation?.op === "assign-tag" &&
+                        pendingMutation.id === item.id
+                          ? "Adding…"
+                          : "Add tag"
+                      }
+                      error={tagError}
+                      onChange={setTagDraft}
+                      onSubmit={(name) => {
+                        onAddTag(name);
+                        setTagDraft("");
+                      }}
+                    />
+                  </div>
 
-                  <form
-                    className="mt-3 flex flex-wrap items-end gap-2"
-                    onSubmit={submitCollection}
-                  >
-                    <div className="flex min-w-40 flex-1 flex-col gap-1">
-                      <label
-                        className="text-sm font-medium"
-                        htmlFor={`inspect-add-collection-${item.id}`}
-                      >
-                        Add to collection
-                      </label>
-                      <input
-                        className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
-                        id={`inspect-add-collection-${item.id}`}
-                        value={collectionDraft}
-                        disabled={mutationBusy}
-                        onChange={(event) =>
-                          setCollectionDraft(event.target.value)
-                        }
-                      />
-                    </div>
-                    <button
-                      className={BTN}
-                      type="submit"
+                  <div className="mt-3 max-w-md">
+                    <OrgNameSuggest
+                      inputId={`inspect-add-collection-${item.id}`}
+                      label="Add to collection"
+                      value={collectionDraft}
+                      suggestions={availableCollectionSuggestions}
                       disabled={mutationBusy}
-                    >
-                      {pendingMutation?.op === "assign-collection" &&
-                      pendingMutation.id === item.id
-                        ? "Adding…"
-                        : "Add to collection"}
-                    </button>
-                  </form>
-                  {collectionError ? (
-                    <p className="mt-2 text-sm text-red-700" role="alert">
-                      {collectionError}
-                    </p>
-                  ) : null}
+                      pending={
+                        pendingMutation?.op === "assign-collection" &&
+                        pendingMutation.id === item.id
+                      }
+                      submitLabel={
+                        pendingMutation?.op === "assign-collection" &&
+                        pendingMutation.id === item.id
+                          ? "Adding…"
+                          : "Add to collection"
+                      }
+                      error={collectionError}
+                      onChange={setCollectionDraft}
+                      onSubmit={(name) => {
+                        onAddCollection(name);
+                        setCollectionDraft("");
+                      }}
+                    />
+                  </div>
 
                   {item.type === "image" && !editing ? (
                     <div className="mt-4 flex flex-wrap gap-2">
