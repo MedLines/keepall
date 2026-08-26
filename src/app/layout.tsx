@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { CaptureHost } from "./capture-host";
 import { PwaProvider } from "./pwa-provider";
 import "./globals.css";
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
           <CaptureHost />
         </PwaProvider>
+        <Analytics />
       </body>
     </html>
   );
