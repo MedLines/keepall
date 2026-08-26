@@ -207,13 +207,9 @@ export function CaptureHost() {
     if (state.status === "saving" || state.status === "reading") {
       return;
     }
-    try {
-      const { image, text } = await readClipboardImageAndText();
-      if (image) {
-        await setDraftFromBlob(image, text || state.input, state.status);
-      }
-    } catch {
-      // Clipboard denied or empty. No-op.
+    const { image, text } = await readClipboardImageAndText();
+    if (image) {
+      await setDraftFromBlob(image, text || state.input, state.status);
     }
   }
 

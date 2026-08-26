@@ -141,8 +141,7 @@ describe("items persistence", () => {
   test("createImage stores bytes and lists the image item", async () => {
     const bytes = new Uint8Array([1, 2, 3, 4]);
     const image = await createImage({
-      bytes,
-      mimeType: "image/png",
+      assets: [{ bytes, mimeType: "image/png" }],
       caption: "UI still",
     });
     expect(image.type).toBe("image");
@@ -171,16 +170,19 @@ describe("items persistence", () => {
   test("createImage rejects oversize files", async () => {
     await expect(
       createImage({
-        bytes: new Uint8Array(3 * 1024 * 1024 + 1),
-        mimeType: "image/png",
+        assets: [
+          {
+            bytes: new Uint8Array(3 * 1024 * 1024 + 1),
+            mimeType: "image/png",
+          },
+        ],
       }),
     ).rejects.toBeInstanceOf(ImageValidationError);
   });
 
   test("deleteItem removes an image asset", async () => {
     const image = await createImage({
-      bytes: new Uint8Array([9]),
-      mimeType: "image/jpeg",
+      assets: [{ bytes: new Uint8Array([9]), mimeType: "image/jpeg" }],
     });
     await deleteItem(image.id);
     expect(await getAsset(image.assetIds[0]!)).toBeUndefined();
@@ -189,8 +191,7 @@ describe("items persistence", () => {
 
   test("updateImage changes caption and sourceUrl", async () => {
     const image = await createImage({
-      bytes: new Uint8Array([1]),
-      mimeType: "image/png",
+      assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }],
       caption: "old",
     });
     const updated = await updateImage(image.id, {
@@ -204,8 +205,7 @@ describe("items persistence", () => {
 
   test("appendImageAssetToItem adds a second asset at the end", async () => {
     const image = await createImage({
-      bytes: new Uint8Array([1]),
-      mimeType: "image/png",
+      assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }],
     });
     const updated = await appendImageAssetToItem(image.id, {
       bytes: new Uint8Array([2, 3]),
@@ -220,8 +220,7 @@ describe("items persistence", () => {
 
   test("replaceImageAssetAtIndex swaps one slide and deletes the old asset", async () => {
     const image = await createImage({
-      bytes: new Uint8Array([1]),
-      mimeType: "image/png",
+      assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }],
     });
     await appendImageAssetToItem(image.id, {
       bytes: new Uint8Array([2]),

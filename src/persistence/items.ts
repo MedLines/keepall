@@ -3,7 +3,6 @@ import {
   appendImageAsset,
   assertLocalImageBytes,
   applyImageEdit,
-  buildImage,
   buildImageFromAssetIds,
   ImageValidationError,
   replaceImageAssetAt,
@@ -48,24 +47,17 @@ export async function createLink(input: CreateLinkInput): Promise<LinkItem> {
 }
 
 export async function createImage(input: {
-  bytes?: Uint8Array;
-  mimeType?: string;
-  assets?: { bytes: Uint8Array; mimeType: string }[];
+  assets: { bytes: Uint8Array; mimeType: string }[];
   sourceUrl?: string;
   caption?: string;
   title?: string;
 }): Promise<ImageItem> {
-  const payloads =
-    input.assets ??
-    (input.bytes && input.mimeType
-      ? [{ bytes: input.bytes, mimeType: input.mimeType }]
-      : []);
-  if (payloads.length === 0) {
+  if (input.assets.length === 0) {
     throw new ImageValidationError("Image asset is required");
   }
 
   const assetIds: string[] = [];
-  for (const payload of payloads) {
+  for (const payload of input.assets) {
     const mime = assertLocalImageBytes(payload.bytes, payload.mimeType);
     const asset = await putAsset({ mimeType: mime, bytes: payload.bytes });
     assetIds.push(asset.id);
@@ -188,9 +180,7 @@ export async function replaceImageAssetAtIndex(
   const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
   const next = replaceImageAssetAt(current, slideIndex, asset.id);
   await getDb().items.put(next);
-  if (previousAssetId !== asset.id) {
-    await deleteAsset(previousAssetId);
-  }
+  await deleteAsset(previousAssetId);
   return next;
 }
 

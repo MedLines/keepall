@@ -49,7 +49,7 @@ import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
-import { ImageValidationError, clampImageSlideIndex } from "@/domain/image";
+import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
 
@@ -363,7 +363,7 @@ export function Library() {
     setGalleryError(null);
 
     try {
-      let updated = null as Awaited<ReturnType<typeof appendImageAssetToItem>> | null;
+      let updated: ImageItem | null = null;
       for (const file of files) {
         const bytes = new Uint8Array(await file.arrayBuffer());
         updated = await appendImageAssetToItem(itemId, {

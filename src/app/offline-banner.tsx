@@ -56,8 +56,6 @@ export function OfflineBanner() {
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisibility);
 
-    // Poll while online. When unreachable, still poll on the same interval so
-    // recovery is detected without busy-looping the probe.
     const intervalId = window.setInterval(() => {
       if (cancelled || document.visibilityState !== "visible") {
         return;

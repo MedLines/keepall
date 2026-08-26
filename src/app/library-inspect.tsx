@@ -118,9 +118,6 @@ export function LibraryInspect({
   const imageAssetId =
     item?.type === "image" ? (item.assetIds[imageSlide] ?? null) : null;
   const imageSlideCount = item?.type === "image" ? item.assetIds.length : 0;
-  const galleryBusy =
-    pendingMutation?.op === "append-image" ||
-    pendingMutation?.op === "replace-image-slide";
 
   useEffect(() => {
     if (!item) {
@@ -507,7 +504,7 @@ export function LibraryInspect({
                       <button
                         type="button"
                         className={BTN}
-                        disabled={mutationBusy || galleryBusy}
+                        disabled={mutationBusy}
                         onClick={() => replaceImageInputRef.current?.click()}
                       >
                         {pendingMutation?.op === "replace-image-slide" &&
