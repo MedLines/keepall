@@ -36,3 +36,19 @@ export const SHELL_TOP_BTN_ACTIVE =
 
 export const SHELL_TOP_BTN_IDLE =
   "border-zinc-200/80 bg-white text-zinc-700 shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.03)] hover:bg-zinc-50";
+
+/** Shell chrome: shadow edge instead of a hard border. */
+export const SHELL_ASIDE =
+  "relative z-30 flex h-full shrink-0 bg-white shadow-[1px_0_0_rgba(0,0,0,0.05),4px_0_24px_rgba(0,0,0,0.03)]";
+
+export const SHELL_PANEL_SURFACE =
+  "flex h-full w-60 shrink-0 flex-col bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_8px_24px_rgba(0,0,0,0.06)]";
+
+export const SHELL_BACKDROP =
+  "fixed inset-y-0 right-0 left-14 z-40 bg-zinc-900/20 backdrop-blur-[1px] transition-[opacity] duration-200 ease-out motion-reduce:transition-none md:hidden";
+
+export const SHELL_FORM_SURFACE =
+  "rounded-[12px] bg-zinc-50 p-3 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.04)]";
+
+export const SHELL_MANAGE_SURFACE =
+  "rounded-[12px] bg-white p-3 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.04)]";

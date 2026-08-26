@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { CaptureHost } from "./capture-host";
+import { DevToolsEntry } from "./dev-tools-entry";
 import { PwaProvider } from "./pwa-provider";
 import "./globals.css";
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
           <CaptureHost />
         </PwaProvider>
+        {process.env.NODE_ENV === "development" ? <DevToolsEntry /> : null}
         <Analytics />
       </body>
     </html>

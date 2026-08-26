@@ -118,7 +118,7 @@ export function LibraryListRow({
           onClick={onOpenInspect}
           aria-label={`Open ${title}`}
         >
-        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-zinc-200 text-sm font-semibold text-zinc-700">
+        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-zinc-200 text-sm font-semibold text-zinc-700 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
           {showMediaThumb ? (
             <LibraryItemMedia
               item={item}

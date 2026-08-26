@@ -98,6 +98,19 @@ if (typeof URL.revokeObjectURL !== "function") {
   URL.revokeObjectURL = vi.fn();
 }
 
+if (typeof window.matchMedia !== "function") {
+  window.matchMedia = (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  });
+}
+
 beforeEach(async () => {
   navStore.pathname = "/";
   navStore.params = new URLSearchParams();

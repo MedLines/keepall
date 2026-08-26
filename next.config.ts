@@ -18,6 +18,18 @@ const nextConfig: NextConfig = {
   experimental: {
     useOffline: true,
   },
+  webpack: (config, { dev }) => {
+    if (!dev) {
+      config.resolve ??= {};
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        agentation: false,
+        "interface-kit/react": false,
+        "interface-kit": false,
+      };
+    }
+    return config;
+  },
   async headers() {
     return [
       {

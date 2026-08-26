@@ -64,6 +64,7 @@ import { LibraryBulkBar, type BulkPanel } from "./library-bulk-bar";
 import { LibraryShell } from "./library-shell";
 import { LibraryTopBar } from "./library-top-bar";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
+import { isShellMobileViewport } from "./use-shell-mobile";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import {
   decodeLibraryDragIds,
@@ -396,11 +397,15 @@ export function Library() {
       }
       if (selectedIds.size > 0) {
         clearSelection();
+        return;
+      }
+      if (panelOpen && isShellMobileViewport()) {
+        setPanelOpen(false);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [bulkPanel, clearSelection, inspectId, selectedIds.size]);
+  }, [bulkPanel, clearSelection, inspectId, panelOpen, selectedIds.size]);
 
   function clearEdit(options?: { restoreFocus?: boolean }) {
     if (options?.restoreFocus && editingId) {
@@ -1075,6 +1080,8 @@ export function Library() {
           onSortChange={(sort) => updateView({ sort }, "push")}
           layout={browseLayout}
           onLayoutChange={(layout) => updateView({ layout }, "replace")}
+          showBrowseOpen={!panelOpen}
+          onBrowseOpen={() => setPanelOpen(true)}
         />
 
         <main

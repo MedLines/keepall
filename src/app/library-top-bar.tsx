@@ -2,7 +2,7 @@
 
 import { type Ref } from "react";
 import type { LibraryLayout, LibrarySort } from "@/domain/library-view";
-import { GridIcon, ListIcon, SearchIcon } from "./shell-icons";
+import { GridIcon, ListIcon, PanelIcon, SearchIcon } from "./shell-icons";
 import {
   SHELL_TOP_BTN,
   SHELL_TOP_BTN_ACTIVE,
@@ -19,6 +19,8 @@ type Props = {
   onSortChange: (sort: LibrarySort) => void;
   layout: LibraryLayout;
   onLayoutChange: (layout: LibraryLayout) => void;
+  onBrowseOpen?: () => void;
+  showBrowseOpen?: boolean;
 };
 
 export function LibraryTopBar({
@@ -31,10 +33,24 @@ export function LibraryTopBar({
   onSortChange,
   layout,
   onLayoutChange,
+  onBrowseOpen,
+  showBrowseOpen = false,
 }: Props) {
   return (
-    <header className="shrink-0 border-b border-zinc-200/80 bg-white px-4 py-3 sm:px-5">
+    <header className="shrink-0 bg-white px-4 py-3 shadow-[0_1px_0_rgba(0,0,0,0.06)] sm:px-5">
       <div className="flex flex-wrap items-center gap-3 gap-y-2">
+        {showBrowseOpen && onBrowseOpen ? (
+          <button
+            type="button"
+            className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} md:hidden`}
+            aria-label="Open browse panel"
+            onClick={onBrowseOpen}
+          >
+            <PanelIcon />
+            Browse
+          </button>
+        ) : null}
+
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
             Library
