@@ -52,6 +52,7 @@ import { createTag, listTags } from "@/persistence/tags";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { LibraryItem, type PendingMutation } from "./library-item";
+import { LibraryListRow } from "./library-list-row";
 import { LibraryInspect } from "./library-inspect";
 import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
 
@@ -182,6 +183,7 @@ export function Library() {
   const browseTagName =
     browseTagId !== null ? (tagsById.get(browseTagId)?.name ?? null) : null;
   const browseType = view.type;
+  const browseLayout = view.layout;
   const searchQuery = view.q;
   const visibleItems = sortLibraryItems(
     items.filter((item) => {
@@ -716,6 +718,34 @@ export function Library() {
               Oldest
             </button>
           </div>
+          <div
+            className="mt-3 flex flex-wrap gap-2"
+            role="group"
+            aria-label="Library layout"
+          >
+            <button
+              className={`rounded-md border px-3 py-1 text-sm font-medium ${
+                browseLayout === "grid"
+                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  : "border-zinc-300 bg-white text-zinc-800"
+              }`}
+              type="button"
+              onClick={() => updateView({ layout: "grid" }, "replace")}
+            >
+              Grid
+            </button>
+            <button
+              className={`rounded-md border px-3 py-1 text-sm font-medium ${
+                browseLayout === "list"
+                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  : "border-zinc-300 bg-white text-zinc-800"
+              }`}
+              type="button"
+              onClick={() => updateView({ layout: "list" }, "replace")}
+            >
+              List
+            </button>
+          </div>
           <div className="mt-3 space-y-2">
             <div
               className="flex flex-wrap gap-2"
@@ -869,6 +899,17 @@ export function Library() {
                       ? "No items in this collection."
                       : "No items yet."}
             </p>
+          ) : browseLayout === "list" ? (
+            <ul className="mt-3 flex flex-col gap-2">
+              {visibleItems.map((item) => (
+                <LibraryListRow
+                  key={item.id}
+                  item={item}
+                  inspected={inspectId === item.id}
+                  onOpenInspect={() => openInspect(item.id)}
+                />
+              ))}
+            </ul>
           ) : (
             <ul className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
               {visibleItems.map((item) => (

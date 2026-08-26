@@ -866,6 +866,33 @@ describe("Library view state", () => {
     );
   });
 
+  test("toggles list layout with replace and keeps filters", async () => {
+    vi.mocked(listItems).mockResolvedValue([note, link]);
+    render(<Library />);
+
+    await screen.findByText("A persisted note");
+    fireEvent.click(screen.getByRole("button", { name: "List" }));
+
+    expect(mockNavigation.replace).toHaveBeenCalledWith("/?layout=list", {
+      scroll: false,
+    });
+    expect(
+      screen.getByRole("button", { name: "Open Untitled" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Notes" }));
+
+    expect(mockNavigation.push).toHaveBeenCalledWith(
+      "/?type=note&layout=list",
+      { scroll: false },
+    );
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Open example.com" })).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+  });
+
   test("sorts visible items oldest first", async () => {
     const older = buildNote({ content: "older note" }, { id: "n1", now: 1 });
     const newer = buildNote({ content: "newer note" }, { id: "n2", now: 2 });

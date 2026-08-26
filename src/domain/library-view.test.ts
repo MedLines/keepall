@@ -4,6 +4,7 @@ import {
   itemMediaLayoutId,
   libraryViewHref,
   libraryViewStateToSearchParams,
+  parseLibraryLayout,
   parseLibraryType,
   parseLibraryViewState,
   sortLibraryItems,
@@ -15,6 +16,7 @@ const emptyView = {
   collection: null,
   tag: null,
   type: null,
+  layout: "grid" as const,
   sort: "newest" as const,
   item: null,
   slide: 0,
@@ -30,14 +32,23 @@ describe("parseLibraryType", () => {
   });
 });
 
+describe("parseLibraryLayout", () => {
+  test("accepts list and defaults to grid", () => {
+    expect(parseLibraryLayout("list")).toBe("list");
+    expect(parseLibraryLayout("grid")).toBe("grid");
+    expect(parseLibraryLayout("masonry")).toBe("grid");
+    expect(parseLibraryLayout(null)).toBe("grid");
+  });
+});
+
 describe("parseLibraryViewState", () => {
-  test("reads q, collection, tag, type, sort, and item with defaults", () => {
+  test("reads q, collection, tag, type, layout, sort, and item with defaults", () => {
     expect(parseLibraryViewState(new URLSearchParams())).toEqual(emptyView);
 
     expect(
       parseLibraryViewState(
         new URLSearchParams(
-          "q=design&collection=c1&tag=t1&type=link&sort=oldest&item=n1",
+          "q=design&collection=c1&tag=t1&type=link&layout=list&sort=oldest&item=n1",
         ),
       ),
     ).toEqual({
@@ -45,6 +56,7 @@ describe("parseLibraryViewState", () => {
       collection: "c1",
       tag: "t1",
       type: "link",
+      layout: "list",
       sort: "oldest",
       item: "n1",
       slide: 0,
@@ -75,7 +87,7 @@ describe("parseLibraryViewState", () => {
 });
 
 describe("libraryViewStateToSearchParams", () => {
-  test("omits empty q, missing filters, default newest sort, and slide 0", () => {
+  test("omits empty q, missing filters, default grid/newest, and slide 0", () => {
     expect(
       libraryViewStateToSearchParams({
         ...emptyView,
@@ -89,11 +101,14 @@ describe("libraryViewStateToSearchParams", () => {
         collection: "c1",
         tag: "t1",
         type: "note",
+        layout: "list",
         sort: "oldest",
         item: "n1",
         slide: 0,
       }).toString(),
-    ).toBe("q=design&collection=c1&tag=t1&type=note&sort=oldest&item=n1");
+    ).toBe(
+      "q=design&collection=c1&tag=t1&type=note&layout=list&sort=oldest&item=n1",
+    );
 
     expect(
       libraryViewStateToSearchParams({

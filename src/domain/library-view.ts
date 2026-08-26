@@ -5,6 +5,9 @@ export type LibrarySort = "newest" | "oldest";
 /** Item kind filter; null means All types. */
 export type LibraryTypeFilter = "link" | "note" | "image";
 
+/** How the library paints items; null/grid is default. */
+export type LibraryLayout = "grid" | "list";
+
 export type LibraryViewState = {
   q: string;
   collection: string | null;
@@ -12,6 +15,8 @@ export type LibraryViewState = {
   tag: string | null;
   /** Active type filter; null when All. */
   type: LibraryTypeFilter | null;
+  /** grid (default) or list; omitted from URL when grid. */
+  layout: LibraryLayout;
   sort: LibrarySort;
   /** Open library item id for inspect overlay; null when closed. */
   item: string | null;
@@ -20,6 +25,7 @@ export type LibraryViewState = {
 };
 
 export const DEFAULT_LIBRARY_SORT: LibrarySort = "newest";
+export const DEFAULT_LIBRARY_LAYOUT: LibraryLayout = "grid";
 
 export function parseLibrarySort(value: string | null): LibrarySort {
   return value === "oldest" ? "oldest" : "newest";
@@ -32,6 +38,10 @@ export function parseLibraryType(
     return value;
   }
   return null;
+}
+
+export function parseLibraryLayout(value: string | null): LibraryLayout {
+  return value === "list" ? "list" : "grid";
 }
 
 export function parseLibrarySlide(value: string | null): number {
@@ -58,6 +68,7 @@ export function parseLibraryViewState(
     collection,
     tag,
     type: parseLibraryType(params.get("type")),
+    layout: parseLibraryLayout(params.get("layout")),
     sort: parseLibrarySort(params.get("sort")),
     item,
     slide,
@@ -84,6 +95,10 @@ export function libraryViewStateToSearchParams(
 
   if (state.type) {
     params.set("type", state.type);
+  }
+
+  if (state.layout !== DEFAULT_LIBRARY_LAYOUT) {
+    params.set("layout", state.layout);
   }
 
   if (state.sort !== DEFAULT_LIBRARY_SORT) {
@@ -129,6 +144,7 @@ export function mergeLibraryViewState(
       patch.collection !== undefined ? patch.collection : current.collection,
     tag: patch.tag !== undefined ? patch.tag : current.tag,
     type: patch.type !== undefined ? patch.type : current.type,
+    layout: patch.layout !== undefined ? patch.layout : current.layout,
     sort: patch.sort !== undefined ? patch.sort : current.sort,
     item: patch.item !== undefined ? patch.item : current.item,
     slide: patch.slide !== undefined ? patch.slide : current.slide,
