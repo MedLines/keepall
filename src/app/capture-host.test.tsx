@@ -24,7 +24,7 @@ vi.mock("./read-clipboard-capture", () => ({
 async function openDraft(text: string) {
   render(<CaptureHost />);
   fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
-  const input = await screen.findByLabelText("Link or note");
+  const input = await screen.findByLabelText("Link, note, or image");
   await waitFor(() => expect(input).not.toBeDisabled());
   fireEvent.change(input, { target: { value: text } });
   return input;
@@ -154,7 +154,7 @@ describe("CaptureHost", () => {
     render(<CaptureHost />);
     fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
     await waitFor(() =>
-      expect(screen.getByLabelText("Link or note")).not.toBeDisabled(),
+      expect(screen.getByLabelText("Link, note, or image")).not.toBeDisabled(),
     );
 
     vi.mocked(readClipboardImageAndText).mockResolvedValueOnce({
@@ -174,7 +174,7 @@ describe("CaptureHost", () => {
     render(<CaptureHost />);
     fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
     await waitFor(() =>
-      expect(screen.getByLabelText("Link or note")).not.toBeDisabled(),
+      expect(screen.getByLabelText("Link, note, or image")).not.toBeDisabled(),
     );
 
     const fileInput = screen.getByRole("dialog").querySelector(

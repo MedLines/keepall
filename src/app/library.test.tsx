@@ -17,7 +17,9 @@ import { createCollection, listCollections } from "@/persistence/collections";
 import { createTag, listTags } from "@/persistence/tags";
 import { mockNavigation } from "../../vitest.setup";
 import { enrichLinkPreview } from "./enrich-link-preview";
+import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { Library } from "./library";
+import type { Item } from "@/domain/item";
 
 vi.mock("@/persistence/items", () => ({
   listItems: vi.fn(),
@@ -77,6 +79,32 @@ describe("Library", () => {
     );
     expect(screen.queryByText("No items yet.")).not.toBeInTheDocument();
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+  });
+
+  test("ITEMS_CHANGED refresh keeps the grid without Loading", async () => {
+    vi.mocked(listItems).mockResolvedValue([note]);
+    render(<Library />);
+    expect(await screen.findByText("A persisted note")).toBeInTheDocument();
+
+    let resolveNext!: (value: Item[]) => void;
+    vi.mocked(listItems).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveNext = resolve;
+        }),
+    );
+
+    window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+
+    resolveNext([note]);
+    await waitFor(() => {
+      expect(listItems).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+    expect(screen.getByText("A persisted note")).toBeInTheDocument();
   });
 
   test("does not delete until confirm", async () => {

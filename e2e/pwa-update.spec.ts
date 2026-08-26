@@ -101,7 +101,7 @@ test("shows update banner after a second deploy and reload applies it", async ({
 
   await page.keyboard.press("Alt+k");
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByLabel("Link or note").fill("Update flow note.");
+  await page.getByLabel("Link, note, or image").fill("Update flow note.");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(

@@ -93,8 +93,11 @@ export function Library() {
   useEffect(() => {
     let cancelled = false;
 
-    async function reload() {
-      setLoadState("loading");
+    async function reload(options?: { soft?: boolean }) {
+      const soft = options?.soft === true;
+      if (!soft) {
+        setLoadState("loading");
+      }
       setError(null);
 
       try {
@@ -113,17 +116,22 @@ export function Library() {
       } catch {
         if (!cancelled) {
           setError("Couldn't load items.");
-          setLoadState("error");
+          if (!soft) {
+            setLoadState("error");
+          }
         }
       }
     }
 
     void reload();
-    window.addEventListener(ITEMS_CHANGED_EVENT, reload);
+    function onItemsChanged() {
+      void reload({ soft: true });
+    }
+    window.addEventListener(ITEMS_CHANGED_EVENT, onItemsChanged);
 
     return () => {
       cancelled = true;
-      window.removeEventListener(ITEMS_CHANGED_EVENT, reload);
+      window.removeEventListener(ITEMS_CHANGED_EVENT, onItemsChanged);
     };
   }, []);
 
@@ -372,6 +380,9 @@ export function Library() {
         });
       }
       if (updated) {
+        setItems((previous) =>
+          previous.map((entry) => (entry.id === itemId ? updated! : entry)),
+        );
         updateView({ item: itemId, slide: updated.assetIds.length - 1 });
       }
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));

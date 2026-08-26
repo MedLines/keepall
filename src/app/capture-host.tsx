@@ -382,7 +382,7 @@ export function CaptureHost() {
           <label className="text-sm font-medium" htmlFor="capture-input">
             {savingImage
               ? "Optional source URL or caption"
-              : "Link or note"}
+              : "Link, note, or image"}
           </label>
           <textarea
             ref={inputRef}

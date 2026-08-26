@@ -24,7 +24,7 @@ test.describe("PWA / offline shell", () => {
     await page.getByRole("heading", { name: "Keepall" }).click();
     await page.keyboard.press("Alt+k");
     await expect(page.getByRole("dialog")).toBeVisible();
-    await page.getByLabel("Link or note").fill("Offline survival note.");
+    await page.getByLabel("Link, note, or image").fill("Offline survival note.");
     await page.getByRole("button", { name: "Save" }).click();
     await expect(
       page.getByLabel("Library").getByText("Offline survival note."),

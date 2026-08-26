@@ -9,7 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Press Alt+K or ⌥K to save a link or note.
+Open [http://localhost:3000](http://localhost:3000). Press Alt+K or ⌥K to save a link, note, or image.
 
 ## Commands
 
