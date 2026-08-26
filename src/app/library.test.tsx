@@ -26,6 +26,11 @@ import {
 } from "./library-drag";
 import type { Item } from "@/domain/item";
 
+function pickTopMenu(menuLabel: string, optionLabel: string) {
+  fireEvent.click(screen.getByRole("button", { name: menuLabel }));
+  fireEvent.click(screen.getByRole("option", { name: optionLabel }));
+}
+
 vi.mock("@/persistence/items", () => ({
   listItems: vi.fn(),
   deleteItem: vi.fn(),
@@ -542,7 +547,7 @@ describe("Library tags", () => {
     fireEvent.change(screen.getByPlaceholderText("Tag name"), {
       target: { value: "inspiration" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.submit(screen.getByPlaceholderText("Tag name").closest("form")!);
 
     await waitFor(() => {
       expect(createTag).toHaveBeenCalledWith({ name: "inspiration" });
@@ -636,7 +641,8 @@ describe("Library type filter", () => {
     render(<Library />);
 
     await screen.findByText("design note");
-    fireEvent.click(screen.getByRole("button", { name: "Links" }));
+    const sidebarNav = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    fireEvent.click(within(sidebarNav).getByRole("button", { name: "Links" }));
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?type=link", {
       scroll: false,
@@ -690,10 +696,12 @@ describe("Library collections", () => {
     render(<Library />);
 
     expect(await screen.findByText("No collections yet.")).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("New collection"), {
+    fireEvent.click(screen.getByRole("button", { name: "New collection" }));
+    const nameInput = screen.getByLabelText("New collection name");
+    fireEvent.change(nameInput, {
       target: { value: "Reading" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    fireEvent.submit(nameInput.closest("form")!);
 
     await waitFor(() => {
       expect(createCollection).toHaveBeenCalledWith({ name: "Reading" });
@@ -777,17 +785,22 @@ describe("Library collections", () => {
     render(<Library />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Reading" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reading actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
     fireEvent.change(screen.getByLabelText("Rename collection"), {
       target: { value: "Later" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+    fireEvent.submit(
+      screen.getByLabelText("Rename collection").closest("form")!,
+    );
 
     await waitFor(() => {
       expect(renameCollection).toHaveBeenCalledWith("c1", "Later");
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Later" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete collection" }));
+    fireEvent.click(screen.getByRole("button", { name: "Later actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
 
     await waitFor(() => {
       expect(deleteCollection).toHaveBeenCalledWith("c1");
@@ -888,7 +901,7 @@ describe("Library view state", () => {
       scroll: false,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Oldest" }));
+    pickTopMenu("Sort library", "Oldest");
 
     expect(mockNavigation.push).toHaveBeenCalledWith(
       "/?q=persisted&sort=oldest",
@@ -901,7 +914,7 @@ describe("Library view state", () => {
     render(<Library />);
 
     await screen.findByText("A persisted note");
-    fireEvent.click(screen.getByRole("button", { name: "List" }));
+    pickTopMenu("Library layout", "List");
 
     expect(mockNavigation.replace).toHaveBeenCalledWith("/?layout=list", {
       scroll: false,
@@ -911,7 +924,8 @@ describe("Library view state", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Notes" }));
+    const sidebarNav = screen.getByRole("navigation", { name: "Sidebar navigation" });
+    fireEvent.click(within(sidebarNav).getByRole("button", { name: "Notes" }));
 
     expect(mockNavigation.push).toHaveBeenCalledWith(
       "/?type=note&layout=list",
@@ -948,7 +962,7 @@ describe("Library view state", () => {
     fireEvent.change(screen.getByLabelText("Add tag to selection"), {
       target: { value: "work" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(within(bulk).getByRole("button", { name: "Add" }));
 
     await waitFor(() => {
       expect(createTag).toHaveBeenCalledWith({ name: "work" });
@@ -1090,7 +1104,7 @@ describe("Library view state", () => {
     render(<Library />);
 
     await screen.findByText("newer note");
-    fireEvent.click(screen.getByRole("button", { name: "Oldest" }));
+    pickTopMenu("Sort library", "Oldest");
 
     const texts = screen
       .getAllByRole("listitem")

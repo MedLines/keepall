@@ -128,7 +128,6 @@ export function Library() {
     string | null
   >(null);
   const [newCollectionDraft, setNewCollectionDraft] = useState("");
-  const [renameCollectionDraft, setRenameCollectionDraft] = useState("");
   const [galleryError, setGalleryError] = useState<string | null>(null);
   const [pendingMutation, setPendingMutation] = useState<PendingMutation | null>(
     null,
@@ -342,14 +341,6 @@ export function Library() {
     inspectId === null
       ? null
       : (items.find((entry) => entry.id === inspectId) ?? null);
-
-  useEffect(() => {
-    if (browseCollection) {
-      setRenameCollectionDraft(browseCollection.name);
-    } else {
-      setRenameCollectionDraft("");
-    }
-  }, [browseCollection]);
 
   useEffect(() => {
     if (
@@ -869,7 +860,7 @@ export function Library() {
 
   function handleCollectionDragOver(
     collectionId: string,
-    event: DragEvent<HTMLButtonElement>,
+    event: DragEvent<HTMLElement>,
   ) {
     if (mutationBusy) {
       return;
@@ -884,7 +875,7 @@ export function Library() {
 
   function handleCollectionDrop(
     collectionId: string,
-    event: DragEvent<HTMLButtonElement>,
+    event: DragEvent<HTMLElement>,
   ) {
     event.preventDefault();
     setDropTargetCollectionId(null);
@@ -964,23 +955,23 @@ export function Library() {
     }
   }
 
-  async function renameSelectedCollection() {
-    if (!browseCollection || pendingMutation) {
+  async function renameCollectionById(id: string, name: string) {
+    if (pendingMutation) {
       return;
     }
-    const name = renameCollectionDraft.trim();
-    if (!name) {
+    const trimmed = name.trim();
+    if (!trimmed) {
       return;
     }
 
     setPendingMutation({
       op: "rename-collection",
-      id: browseCollection.id,
+      id,
     });
     setCollectionManageError(null);
 
     try {
-      await renameCollection(browseCollection.id, name);
+      await renameCollection(id, trimmed);
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch (caught) {
       if (caught instanceof CollectionValidationError) {
@@ -993,13 +984,14 @@ export function Library() {
     }
   }
 
-  async function deleteSelectedCollection() {
-    if (!browseCollection || pendingMutation) {
+  async function deleteCollectionById(id: string) {
+    const collection = collections.find((entry) => entry.id === id);
+    if (!collection || pendingMutation) {
       return;
     }
 
     const confirmed = window.confirm(
-      `Delete collection “${browseCollection.name}”? Items in it become Unsorted. Items are not deleted.`,
+      `Delete collection “${collection.name}”? Items in it become Unsorted. Items are not deleted.`,
     );
     if (!confirmed) {
       return;
@@ -1007,13 +999,15 @@ export function Library() {
 
     setPendingMutation({
       op: "delete-collection",
-      id: browseCollection.id,
+      id,
     });
     setCollectionManageError(null);
 
     try {
-      await deleteCollection(browseCollection.id);
-      updateView({ collection: null }, "push");
+      await deleteCollection(id);
+      if (browseCollectionId === id) {
+        updateView({ collection: null }, "push");
+      }
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
       setCollectionManageError("Couldn't delete collection.");
@@ -1029,63 +1023,57 @@ export function Library() {
   );
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-zinc-50">
-      <LibraryShell
-        panelOpen={panelOpen}
-        onPanelOpenChange={setPanelOpen}
-        backupOpen={backupOpen}
-        onBackupOpenChange={(open) => {
-          setBackupOpen(open);
-          if (open) {
-            setPanelOpen(true);
-          }
-        }}
-        browseCollectionId={browseCollectionId}
-        browseType={browseType}
-        collections={collections}
-        dropTargetCollectionId={dropTargetCollectionId}
-        newCollectionDraft={newCollectionDraft}
-        renameCollectionDraft={renameCollectionDraft}
-        browseCollection={browseCollection}
-        collectionManageError={collectionManageError}
-        dragError={dragError}
-        mutationBusy={mutationBusy}
-        pendingMutation={pendingMutation}
-        libraryActive={!backupOpen}
-        onGoAll={() =>
-          updateView({ collection: null, type: null }, "push")
-        }
-        onGoCollection={(id) => updateView({ collection: id }, "push")}
-        onGoType={(type) =>
-          updateView({ type, collection: null }, "push")
-        }
-        onCollectionDragOver={handleCollectionDragOver}
-        onCollectionDragLeave={() => setDropTargetCollectionId(null)}
-        onCollectionDrop={handleCollectionDrop}
-        onNewCollectionDraftChange={setNewCollectionDraft}
-        onCreateCollection={() => void createLibraryCollection()}
-        onRenameDraftChange={setRenameCollectionDraft}
-        onRenameCollection={() => void renameSelectedCollection()}
-        onDeleteCollection={() => void deleteSelectedCollection()}
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-zinc-50">
+      <LibraryTopBar
+        headingRef={libraryHeadingRef}
+        title={viewTitle}
+        itemCount={visibleItems.length}
+        searchQuery={searchQuery}
+        onSearchChange={(value) => updateView({ q: value })}
+        sort={view.sort}
+        onSortChange={(sort) => updateView({ sort }, "push")}
+        layout={browseLayout}
+        onLayoutChange={(layout) => updateView({ layout }, "replace")}
+        onHomeClick={() => setBackupOpen(false)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <LibraryTopBar
-          headingRef={libraryHeadingRef}
-          title={viewTitle}
-          itemCount={visibleItems.length}
-          searchQuery={searchQuery}
-          onSearchChange={(value) => updateView({ q: value })}
-          sort={view.sort}
-          onSortChange={(sort) => updateView({ sort }, "push")}
-          layout={browseLayout}
-          onLayoutChange={(layout) => updateView({ layout }, "replace")}
-          showBrowseOpen={!panelOpen}
-          onBrowseOpen={() => setPanelOpen(true)}
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        <LibraryShell
+          panelOpen={panelOpen}
+          onPanelOpenChange={setPanelOpen}
+          backupOpen={backupOpen}
+          onBackupOpenChange={(open) => {
+            setBackupOpen(open);
+            if (open) {
+              setPanelOpen(true);
+            }
+          }}
+          browseCollectionId={browseCollectionId}
+          browseType={browseType}
+          collections={collections}
+          dropTargetCollectionId={dropTargetCollectionId}
+          newCollectionDraft={newCollectionDraft}
+          collectionManageError={collectionManageError}
+          dragError={dragError}
+          mutationBusy={mutationBusy}
+          onGoAll={() =>
+            updateView({ collection: null, type: null }, "push")
+          }
+          onGoCollection={(id) => updateView({ collection: id }, "push")}
+          onGoType={(type) =>
+            updateView({ type, collection: null }, "push")
+          }
+          onCollectionDragOver={handleCollectionDragOver}
+          onCollectionDragLeave={() => setDropTargetCollectionId(null)}
+          onCollectionDrop={handleCollectionDrop}
+          onNewCollectionDraftChange={setNewCollectionDraft}
+          onCreateCollection={() => void createLibraryCollection()}
+          onRenameCollection={(id, name) => void renameCollectionById(id, name)}
+          onDeleteCollection={(id) => void deleteCollectionById(id)}
         />
 
         <main
-          className="flex-1 overflow-auto px-4 py-4 sm:px-5"
+          className="min-w-0 flex-1 overflow-auto px-4 py-4 sm:px-5"
           aria-labelledby="library-heading"
         >
           {loadState === "loading" ? (

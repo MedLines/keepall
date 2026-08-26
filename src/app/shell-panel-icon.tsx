@@ -5,17 +5,18 @@ import { PanelIcon } from "./shell-icons";
 
 type Props = {
   open: boolean;
+  className?: string;
 };
 
-export function ShellPanelIcon({ open }: Props) {
+export function ShellPanelIcon({ open, className }: Props) {
   const reduceMotion = useReducedMotion();
 
   if (reduceMotion) {
-    return <PanelIcon />;
+    return <PanelIcon className={className} />;
   }
 
   return (
-    <span className="relative block size-5">
+    <span className={`relative block size-5 shrink-0 ${className ?? ""}`}>
       <motion.span
         initial={false}
         animate={{

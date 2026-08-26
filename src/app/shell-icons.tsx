@@ -95,6 +95,41 @@ export function SearchIcon({ className }: IconProps) {
   );
 }
 
+export function SidebarChevronIcon({
+  className,
+  expanded,
+}: IconProps & { expanded: boolean }) {
+  return (
+    <svg
+      className={iconClass("size-5", className)}
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden
+    >
+      {expanded ? (
+        <>
+          <path
+            d="M8 5v10M5.5 7.5 8 5l2.5 2.5M5.5 12.5 8 15l2.5-2.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path d="M12 5v10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </>
+      ) : (
+        <path
+          d="M7 5v10M9.5 7.5 7 5 4.5 7.5M9.5 12.5 7 15l2.5-2.5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+    </svg>
+  );
+}
+
 export function PanelIcon({ className }: IconProps) {
   return (
     <svg className={iconClass("size-5", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -119,6 +154,38 @@ export function ListIcon({ className }: IconProps) {
   return (
     <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
       <path d="M5 6h10M5 10h10M5 14h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ChevronDownIcon({ className }: IconProps) {
+  return (
+    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M6 8.5 10 12.5 14 8.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function PlusIcon({ className }: IconProps) {
+  return (
+    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path d="M10 6v8M6 10h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function MoreIcon({ className }: IconProps) {
+  return (
+    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
+      <circle cx="10" cy="5" r="1.25" fill="currentColor" />
+      <circle cx="10" cy="10" r="1.25" fill="currentColor" />
+      <circle cx="10" cy="15" r="1.25" fill="currentColor" />
     </svg>
   );
 }
