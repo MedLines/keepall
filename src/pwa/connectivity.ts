@@ -4,7 +4,7 @@ export const CONNECTIVITY_PROBE_PATH = "/api/connectivity";
 /**
  * Returns true when a network response arrives (any status).
  * Returns false when the request fails (offline, DNS, abort, etc.).
- * Does not trust navigator.onLine — that flag can stay true with no internet.
+ * Does not trust navigator.onLine. That flag can stay true with no internet.
  */
 export async function probeNetworkReachable(
   timeoutMs = 2_000,

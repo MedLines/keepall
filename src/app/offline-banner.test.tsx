@@ -34,7 +34,7 @@ describe("OfflineBanner", () => {
     const { OfflineBanner } = await import("./offline-banner");
     render(<OfflineBanner />);
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent(/You’re offline/i);
+      expect(screen.getByRole("status")).toHaveTextContent(/You are offline/i);
     });
   });
 
@@ -43,7 +43,7 @@ describe("OfflineBanner", () => {
     const { OfflineBanner } = await import("./offline-banner");
     render(<OfflineBanner />);
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent(/You’re offline/i);
+      expect(screen.getByRole("status")).toHaveTextContent(/You are offline/i);
     });
   });
 });

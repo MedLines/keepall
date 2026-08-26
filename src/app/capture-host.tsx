@@ -213,7 +213,7 @@ export function CaptureHost() {
         await setDraftFromBlob(image, text || state.input, state.status);
       }
     } catch {
-      // Clipboard denied or empty — no-op.
+      // Clipboard denied or empty. No-op.
     }
   }
 

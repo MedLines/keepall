@@ -5,7 +5,7 @@ import {
 import { PreviewFetchError } from "./preview-fetch";
 
 const MAX_REDIRECTS = 5;
-/** Modest local preview cap — oversize is skipped, not stored. */
+/** Modest local preview cap. Oversize is skipped, not stored. */
 export const MAX_PREVIEW_IMAGE_BYTES = 512_000;
 const FETCH_TIMEOUT_MS = 8_000;
 

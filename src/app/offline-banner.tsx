@@ -56,8 +56,8 @@ export function OfflineBanner() {
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisibility);
 
-    // Only keep polling while we think the network is up — once unreachable,
-    // re-check less often so a dead probe does not keep the tab busy.
+    // Poll while online. When unreachable, still poll on the same interval so
+    // recovery is detected without busy-looping the probe.
     const intervalId = window.setInterval(() => {
       if (cancelled || document.visibilityState !== "visible") {
         return;
@@ -88,7 +88,7 @@ export function OfflineBanner() {
       className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950"
       role="status"
     >
-      You’re offline. Your library on this device still works.
+      You are offline. Your library on this device still works.
     </div>
   );
 }

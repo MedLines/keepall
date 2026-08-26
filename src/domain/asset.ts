@@ -31,7 +31,7 @@ export function buildAsset(
 }
 
 export function assetToBlob(asset: Asset): Blob {
-  // Copy into a plain ArrayBuffer — some IndexedDB drivers return shared views.
+  // Copy into a plain ArrayBuffer. Some IndexedDB drivers return shared views.
   const copy = new Uint8Array(asset.bytes);
   return new Blob([copy], { type: asset.mimeType });
 }

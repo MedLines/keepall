@@ -12,7 +12,7 @@ export function PwaUpdateBanner({ onReload }: PwaUpdateBannerProps) {
       data-testid="pwa-update-banner"
     >
       <p className="inline">
-        Update available. Reload when you’re ready — your library data stays on
+        Update available. Reload when you are ready. Your library data stays on
         this device.{" "}
       </p>
       <button

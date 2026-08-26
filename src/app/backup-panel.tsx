@@ -95,7 +95,7 @@ export function BackupPanel() {
         Backup
       </h2>
       <p className="mt-2 text-sm text-zinc-600">
-        Export a versioned <code>.keepall</code> file, or replace this browser’s
+        Export a versioned <code>.keepall</code> file, or replace this browser's
         library from one. Import replaces everything after validation.
       </p>
       <div className="mt-3 flex flex-wrap gap-3">

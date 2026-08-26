@@ -32,7 +32,7 @@ const serwist = new Serwist({
         networkTimeoutSeconds: NAVIGATION_NETWORK_TIMEOUT_SECONDS,
       }),
     },
-    // Prefer a short network attempt, then Cache Storage — avoids ~10s tab spinners
+    // Prefer a short network attempt, then Cache Storage. Avoids ~10s tab spinners
     // when airplane mode leaves the browser thinking it is still online.
     {
       matcher: ({ request, sameOrigin, url: { pathname } }) =>

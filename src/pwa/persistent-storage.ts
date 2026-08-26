@@ -1,7 +1,7 @@
 export type PersistentStorageStatus = "granted" | "denied" | "unavailable";
 
 /**
- * Ask the browser to keep this origin’s storage (including IndexedDB)
+ * Ask the browser to keep this origin's storage (including IndexedDB)
  * when under pressure. Never throws.
  */
 export async function requestPersistentStorage(): Promise<PersistentStorageStatus> {

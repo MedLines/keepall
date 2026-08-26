@@ -69,7 +69,7 @@ export function isBlockedIpAddress(ip: string): boolean {
 
 /**
  * Parse and reject unsafe URL shapes before any network I/O.
- * Does not resolve DNS — call assertPreviewUrlAllowed for that.
+ * Does not resolve DNS. Call assertPreviewUrlAllowed for that.
  */
 export function parsePreviewCandidateUrl(raw: string): URL {
   let parsed: URL;

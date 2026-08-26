@@ -20,7 +20,7 @@ export function cardInitial(item: Item): string {
   return letter.toLocaleUpperCase();
 }
 
-/** Hostname for a link card’s secondary line. Falls back to the raw URL. */
+/** Hostname for a link card's secondary line. Falls back to the raw URL. */
 export function linkCardHost(link: LinkItem): string {
   try {
     return new URL(link.url).hostname;

@@ -14,7 +14,7 @@ const serwistDisabled = process.env.NODE_ENV !== "production";
 
 /**
  * Registers the Serwist-built classic `/sw.js` after mount.
- * Avoids SerwistProvider’s useState initializer (null on SSR, never retries)
+ * Avoids SerwistProvider's useState initializer (null on SSR, never retries)
  * and its default `type: "module"` registration.
  */
 export function PwaProvider({ children }: { children: ReactNode }) {

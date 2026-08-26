@@ -25,7 +25,7 @@ export type ImageItem = {
 };
 
 export type CreateImageInput = {
-  /** First (and initially only) asset — becomes `assetIds: [assetId]`. */
+  /** First (and initially only) asset. Becomes `assetIds: [assetId]`. */
   assetId: string;
   title?: string;
   sourceUrl?: string;
@@ -89,7 +89,7 @@ export function imageCoverAssetId(image: Pick<ImageItem, "assetIds">): string {
   return image.assetIds[0] ?? "";
 }
 
-/** Append at end — cover (index 0) stays put. */
+/** Append at end. Cover (index 0) stays put. */
 export function appendImageAsset(
   image: ImageItem,
   assetId: string,

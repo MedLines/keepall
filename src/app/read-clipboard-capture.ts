@@ -30,7 +30,7 @@ export async function readClipboardImageAndText(): Promise<{
         }
       }
     } catch {
-      // Permissions or unsupported — try text-only below.
+      // Permissions or unsupported. Try text-only below.
     }
   }
 

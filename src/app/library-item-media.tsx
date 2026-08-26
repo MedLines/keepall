@@ -15,7 +15,7 @@ type Props = {
   className?: string;
 };
 
-/** Renders link/image preview or note letter — no links (inspect owns outbound). */
+/** Renders link/image preview or note letter. No links; inspect owns outbound. */
 export function LibraryItemMedia({
   item,
   variant = "card",
