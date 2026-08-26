@@ -3,6 +3,7 @@ import {
   assignTagId,
   buildTag,
   normalizeTagName,
+  removeTagId,
   TagValidationError,
 } from "./tag";
 
@@ -30,5 +31,12 @@ describe("assignTagId", () => {
   test("appends a new id once", () => {
     expect(assignTagId(["a"], "b")).toEqual(["a", "b"]);
     expect(assignTagId(["a"], "a")).toEqual(["a"]);
+  });
+});
+
+describe("removeTagId", () => {
+  test("removes one id and leaves others", () => {
+    expect(removeTagId(["a", "b", "c"], "b")).toEqual(["a", "c"]);
+    expect(removeTagId(["a"], "missing")).toEqual(["a"]);
   });
 });

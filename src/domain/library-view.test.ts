@@ -10,10 +10,11 @@ import {
 import { buildNote } from "./note";
 
 describe("parseLibraryViewState", () => {
-  test("reads q, collection, sort, and item with defaults", () => {
+  test("reads q, collection, tag, sort, and item with defaults", () => {
     expect(parseLibraryViewState(new URLSearchParams())).toEqual({
       q: "",
       collection: null,
+      tag: null,
       sort: "newest",
       item: null,
       slide: 0,
@@ -21,37 +22,40 @@ describe("parseLibraryViewState", () => {
 
     expect(
       parseLibraryViewState(
-        new URLSearchParams("q=design&collection=c1&sort=oldest&item=n1"),
+        new URLSearchParams(
+          "q=design&collection=c1&tag=t1&sort=oldest&item=n1",
+        ),
       ),
     ).toEqual({
       q: "design",
       collection: "c1",
+      tag: "t1",
       sort: "oldest",
       item: "n1",
       slide: 0,
     });
 
     expect(
-      parseLibraryViewState(
-        new URLSearchParams("item=i1&slide=2"),
-      ),
+      parseLibraryViewState(new URLSearchParams("item=i1&slide=2")),
     ).toEqual({
       q: "",
       collection: null,
+      tag: null,
       sort: "newest",
       item: "i1",
       slide: 2,
     });
   });
 
-  test("treats blank collection/item as null and unknown sort as newest", () => {
+  test("treats blank collection/tag/item as null and unknown sort as newest", () => {
     expect(
       parseLibraryViewState(
-        new URLSearchParams("collection=&item=&sort=nope"),
+        new URLSearchParams("collection=&tag=&item=&sort=nope"),
       ),
     ).toEqual({
       q: "",
       collection: null,
+      tag: null,
       sort: "newest",
       item: null,
       slide: 0,
@@ -62,6 +66,7 @@ describe("parseLibraryViewState", () => {
     expect(parseLibraryViewState(new URLSearchParams("slide=3"))).toEqual({
       q: "",
       collection: null,
+      tag: null,
       sort: "newest",
       item: null,
       slide: 0,
@@ -70,11 +75,12 @@ describe("parseLibraryViewState", () => {
 });
 
 describe("libraryViewStateToSearchParams", () => {
-  test("omits empty q, missing collection/item, default newest sort, and slide 0", () => {
+  test("omits empty q, missing collection/tag/item, default newest sort, and slide 0", () => {
     expect(
       libraryViewStateToSearchParams({
         q: "  ",
         collection: null,
+        tag: null,
         sort: "newest",
         item: null,
         slide: 0,
@@ -85,16 +91,18 @@ describe("libraryViewStateToSearchParams", () => {
       libraryViewStateToSearchParams({
         q: " design ",
         collection: "c1",
+        tag: "t1",
         sort: "oldest",
         item: "n1",
         slide: 0,
       }).toString(),
-    ).toBe("q=design&collection=c1&sort=oldest&item=n1");
+    ).toBe("q=design&collection=c1&tag=t1&sort=oldest&item=n1");
 
     expect(
       libraryViewStateToSearchParams({
         q: "",
         collection: null,
+        tag: null,
         sort: "newest",
         item: "i1",
         slide: 2,
@@ -109,6 +117,7 @@ describe("libraryViewHref", () => {
       libraryViewHref("/", {
         q: "",
         collection: null,
+        tag: null,
         sort: "newest",
         item: null,
         slide: 0,
@@ -118,6 +127,7 @@ describe("libraryViewHref", () => {
       libraryViewHref("/", {
         q: "x",
         collection: null,
+        tag: null,
         sort: "newest",
         item: null,
         slide: 0,

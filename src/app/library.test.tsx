@@ -10,6 +10,7 @@ import {
   deleteItem,
   listItems,
   replaceImageAssetAtIndex,
+  unassignTagFromItem,
   updateLink,
   updateNote,
 } from "@/persistence/items";
@@ -30,6 +31,7 @@ vi.mock("@/persistence/items", () => ({
   appendImageAssetToItem: vi.fn(),
   replaceImageAssetAtIndex: vi.fn(),
   assignTagToItem: vi.fn(),
+  unassignTagFromItem: vi.fn(),
   assignCollectionToItem: vi.fn(),
 }));
 
@@ -64,6 +66,7 @@ describe("Library", () => {
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
     vi.mocked(assignTagToItem).mockReset();
+    vi.mocked(unassignTagFromItem).mockReset();
     vi.mocked(listCollections).mockReset();
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
@@ -350,6 +353,7 @@ describe("Library pending mutations", () => {
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
     vi.mocked(assignTagToItem).mockReset();
+    vi.mocked(unassignTagFromItem).mockReset();
     vi.mocked(listCollections).mockReset();
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
@@ -440,6 +444,7 @@ describe("Library focus management", () => {
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
     vi.mocked(assignTagToItem).mockReset();
+    vi.mocked(unassignTagFromItem).mockReset();
     vi.mocked(listCollections).mockReset();
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
@@ -489,6 +494,7 @@ describe("Library tags", () => {
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
     vi.mocked(assignTagToItem).mockReset();
+    vi.mocked(unassignTagFromItem).mockReset();
     vi.mocked(listCollections).mockReset();
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
@@ -534,6 +540,58 @@ describe("Library tags", () => {
     });
     expect(await screen.findByText("inspiration")).toBeInTheDocument();
   });
+
+  test("clicking a tag chip filters the library and writes tag to the URL", async () => {
+    const other = buildNote({ content: "other note" }, { id: "n2", now: 2 });
+    const tagged = { ...note, tagIds: ["t1"], updatedAt: 2 };
+    const tag = { id: "t1", name: "inspiration", createdAt: 1 };
+    vi.mocked(listItems).mockResolvedValue([tagged, other]);
+    vi.mocked(listTags).mockResolvedValue([tag]);
+    render(<Library />);
+
+    await screen.findByText("A persisted note");
+    fireEvent.click(screen.getByRole("button", { name: "inspiration" }));
+
+    expect(mockNavigation.push).toHaveBeenCalledWith("/?tag=t1", {
+      scroll: false,
+    });
+    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+    expect(screen.queryByText("other note")).not.toBeInTheDocument();
+    expect(screen.getByText(/Tag:/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear tag" }));
+
+    expect(mockNavigation.push).toHaveBeenCalledWith("/", {
+      scroll: false,
+    });
+    expect(screen.getByText("other note")).toBeInTheDocument();
+  });
+
+  test("removes a tag from an item without deleting the tag library row", async () => {
+    const tagged = { ...note, tagIds: ["t1"], updatedAt: 2 };
+    const untagged = { ...note, tagIds: [], updatedAt: 3 };
+    const tag = { id: "t1", name: "inspiration", createdAt: 1 };
+    vi.mocked(listItems)
+      .mockResolvedValueOnce([tagged])
+      .mockResolvedValue([untagged]);
+    vi.mocked(listTags).mockResolvedValue([tag]);
+    vi.mocked(unassignTagFromItem).mockResolvedValue(untagged);
+    render(<Library />);
+
+    await screen.findByText("inspiration");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove tag inspiration" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirm remove tag inspiration" }),
+    );
+
+    await waitFor(() => {
+      expect(unassignTagFromItem).toHaveBeenCalledWith("n1", "t1");
+    });
+    expect(screen.queryByText("inspiration")).not.toBeInTheDocument();
+    expect(listTags).toHaveBeenCalled();
+  });
 });
 
 describe("Library collections", () => {
@@ -546,6 +604,7 @@ describe("Library collections", () => {
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
     vi.mocked(assignTagToItem).mockReset();
+    vi.mocked(unassignTagFromItem).mockReset();
     vi.mocked(listCollections).mockReset();
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
@@ -599,6 +658,7 @@ describe("Library search", () => {
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
     vi.mocked(assignTagToItem).mockReset();
+    vi.mocked(unassignTagFromItem).mockReset();
     vi.mocked(listCollections).mockReset();
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
@@ -657,6 +717,7 @@ describe("Library view state", () => {
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
     vi.mocked(assignTagToItem).mockReset();
+    vi.mocked(unassignTagFromItem).mockReset();
     vi.mocked(listCollections).mockReset();
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
@@ -678,7 +739,7 @@ describe("Library view state", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Oldest" }));
 
-    expect(mockNavigation.replace).toHaveBeenCalledWith(
+    expect(mockNavigation.push).toHaveBeenCalledWith(
       "/?q=persisted&sort=oldest",
       { scroll: false },
     );
@@ -714,6 +775,7 @@ describe("Library inspect", () => {
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
     vi.mocked(assignTagToItem).mockReset();
+    vi.mocked(unassignTagFromItem).mockReset();
     vi.mocked(listCollections).mockReset();
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
@@ -728,8 +790,8 @@ describe("Library inspect", () => {
       await screen.findByRole("button", { name: "Open Untitled" }),
     );
 
-    expect(mockNavigation.replace).toHaveBeenCalled();
-    const href = String(mockNavigation.replace.mock.calls.at(-1)?.[0] ?? "");
+    expect(mockNavigation.push).toHaveBeenCalled();
+    const href = String(mockNavigation.push.mock.calls.at(-1)?.[0] ?? "");
     expect(href).toContain("item=n1");
     expect(
       await screen.findByRole("dialog", { name: "Untitled" }),

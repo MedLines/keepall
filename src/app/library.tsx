@@ -13,9 +13,10 @@ import {
   type Collection,
 } from "@/domain/collection";
 import {
+  itemHasTag,
   itemInCollection,
   resolveItemCollectionNames,
-  resolveItemTagNames,
+  resolveItemTags,
   type Item,
 } from "@/domain/item";
 import {
@@ -40,6 +41,7 @@ import {
   deleteItem,
   listItems,
   replaceImageAssetAtIndex,
+  unassignTagFromItem,
   updateImage,
   updateLink,
   updateNote,
@@ -164,6 +166,10 @@ export function Library() {
     collections.map((collection) => [collection.id, collection]),
   );
   const browseCollectionId = view.collection;
+  const browseTagId =
+    view.tag !== null && tagsById.has(view.tag) ? view.tag : null;
+  const browseTagName =
+    browseTagId !== null ? (tagsById.get(browseTagId)?.name ?? null) : null;
   const searchQuery = view.q;
   const visibleItems = sortLibraryItems(
     items.filter((item) => {
@@ -174,16 +180,28 @@ export function Library() {
         return false;
       }
 
+      if (browseTagId !== null && !itemHasTag(item, browseTagId)) {
+        return false;
+      }
+
       return matchesSearchQuery(item, searchQuery);
     }),
     view.sort,
   );
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
 
-  function updateView(patch: Partial<LibraryViewState>) {
+  function updateView(
+    patch: Partial<LibraryViewState>,
+    history: "replace" | "push" = "replace",
+  ) {
     const current = parseLibraryViewState(searchParams);
     const next = mergeLibraryViewState(current, patch);
-    router.replace(libraryViewHref(pathname, next), { scroll: false });
+    const href = libraryViewHref(pathname, next);
+    if (history === "push") {
+      router.push(href, { scroll: false });
+    } else {
+      router.replace(href, { scroll: false });
+    }
   }
 
   const inspectId = view.item;
@@ -224,14 +242,14 @@ export function Library() {
   }
 
   function closeInspect() {
-    updateView({ item: null, slide: 0 });
+    updateView({ item: null, slide: 0 }, "push");
     clearEdit();
     setPendingDeleteId(null);
     setGalleryError(null);
   }
 
   function openInspect(id: string) {
-    updateView({ item: id, slide: 0 });
+    updateView({ item: id, slide: 0 }, "push");
   }
 
   function setInspectSlide(slide: number) {
@@ -449,6 +467,26 @@ export function Library() {
     }
   }
 
+  async function removeTagFromItem(itemId: string, tagId: string) {
+    if (pendingMutation) {
+      return;
+    }
+
+    setPendingMutation({ op: "unassign-tag", id: itemId });
+    setTagErrorItemId(null);
+    setTagError(null);
+
+    try {
+      await unassignTagFromItem(itemId, tagId);
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setTagErrorItemId(itemId);
+      setTagError("Couldn't remove tag.");
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
   async function addCollectionToItem(itemId: string, name: string) {
     if (pendingMutation) {
       return;
@@ -519,7 +557,7 @@ export function Library() {
                   : "border-zinc-300 bg-white text-zinc-800"
               }`}
               type="button"
-              onClick={() => updateView({ sort: "newest" })}
+              onClick={() => updateView({ sort: "newest" }, "push")}
             >
               Newest
             </button>
@@ -530,7 +568,7 @@ export function Library() {
                   : "border-zinc-300 bg-white text-zinc-800"
               }`}
               type="button"
-              onClick={() => updateView({ sort: "oldest" })}
+              onClick={() => updateView({ sort: "oldest" }, "push")}
             >
               Oldest
             </button>
@@ -548,7 +586,7 @@ export function Library() {
                     : "border-zinc-300 bg-white text-zinc-800"
                 }`}
                 type="button"
-                onClick={() => updateView({ collection: null })}
+                onClick={() => updateView({ collection: null }, "push")}
               >
                 All
               </button>
@@ -561,11 +599,30 @@ export function Library() {
                       : "border-zinc-300 bg-white text-zinc-800"
                   }`}
                   type="button"
-                  onClick={() => updateView({ collection: collection.id })}
+                  onClick={() =>
+                    updateView({ collection: collection.id }, "push")
+                  }
                 >
                   {collection.name}
                 </button>
               ))}
+            </div>
+          ) : null}
+          {browseTagId !== null && browseTagName !== null ? (
+            <div
+              className="mt-3 flex flex-wrap items-center gap-2"
+              role="status"
+            >
+              <p className="text-sm text-zinc-700">
+                Tag: <span className="font-medium">{browseTagName}</span>
+              </p>
+              <button
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-800"
+                type="button"
+                onClick={() => updateView({ tag: null }, "push")}
+              >
+                Clear tag
+              </button>
             </div>
           ) : null}
           {deleteError ? (
@@ -577,9 +634,11 @@ export function Library() {
             <p className="mt-3 text-sm text-zinc-600">
               {hasActiveSearch
                 ? "No matching items."
-                : browseCollectionId !== null
-                  ? "No items in this collection."
-                  : "No items yet."}
+                : browseTagId !== null
+                  ? "No items with this tag."
+                  : browseCollectionId !== null
+                    ? "No items in this collection."
+                    : "No items yet."}
             </p>
           ) : (
             <ul className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
@@ -589,7 +648,7 @@ export function Library() {
                   item={item}
                   inspected={inspectId === item.id}
                   onOpenInspect={() => openInspect(item.id)}
-                  tagNames={resolveItemTagNames(item, tagsById)}
+                  tagNames={resolveItemTags(item, tagsById)}
                   tagError={tagErrorItemId === item.id ? tagError : null}
                   collectionNames={resolveItemCollectionNames(
                     item,
@@ -598,6 +657,7 @@ export function Library() {
                   collectionError={
                     collectionErrorItemId === item.id ? collectionError : null
                   }
+                  onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
                   editing={editingId === item.id && inspectId !== item.id}
                   pendingDelete={
                     pendingDeleteId === item.id && inspectId !== item.id
@@ -621,6 +681,9 @@ export function Library() {
                   onConfirmDelete={() => void confirmDelete(item.id)}
                   onCancelDelete={cancelDelete}
                   onAddTag={(name: string) => void addTagToItem(item.id, name)}
+                  onRemoveTag={(tagId: string) =>
+                    void removeTagFromItem(item.id, tagId)
+                  }
                   onAddCollection={(name: string) =>
                     void addCollectionToItem(item.id, name)
                   }
@@ -663,7 +726,7 @@ export function Library() {
             galleryError={galleryError}
             tagNames={
               inspectedItem
-                ? resolveItemTagNames(inspectedItem, tagsById)
+                ? resolveItemTags(inspectedItem, tagsById)
                 : []
             }
             collectionNames={
@@ -681,6 +744,7 @@ export function Library() {
                 ? collectionError
                 : null
             }
+            onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
             editing={
               inspectedItem !== null && editingId === inspectedItem.id
             }
@@ -736,6 +800,11 @@ export function Library() {
             onAddTag={(name: string) => {
               if (inspectedItem) {
                 void addTagToItem(inspectedItem.id, name);
+              }
+            }}
+            onRemoveTag={(tagId: string) => {
+              if (inspectedItem) {
+                void removeTagFromItem(inspectedItem.id, tagId);
               }
             }}
             onAddCollection={(name: string) => {

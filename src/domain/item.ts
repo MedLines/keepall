@@ -53,9 +53,24 @@ export function resolveItemTagNames(
   item: Item,
   tagsById: Map<string, { name: string }>,
 ): string[] {
+  return resolveItemTags(item, tagsById).map((tag) => tag.name);
+}
+
+/** Tags on an item that still exist in the library (id + display name). */
+export function resolveItemTags(
+  item: Item,
+  tagsById: Map<string, { name: string }>,
+): { id: string; name: string }[] {
   return item.tagIds
-    .map((id) => tagsById.get(id)?.name)
-    .filter((name): name is string => Boolean(name));
+    .map((id) => {
+      const name = tagsById.get(id)?.name;
+      return name ? { id, name } : null;
+    })
+    .filter((tag): tag is { id: string; name: string } => tag !== null);
+}
+
+export function itemHasTag(item: Item, tagId: string): boolean {
+  return item.tagIds.includes(tagId);
 }
 
 export function resolveItemCollectionNames(

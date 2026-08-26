@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { TagValidationError } from "@/domain/tag";
 import { deleteKeepallDatabase, getDb } from "./db";
-import { assignTagToItem, createNote, listItems } from "./items";
+import { assignTagToItem, createNote, listItems, unassignTagFromItem } from "./items";
 import { createTag, listTags } from "./tags";
 
 describe("tags persistence", () => {
@@ -39,6 +39,17 @@ describe("tags persistence", () => {
 
     expect(updated.tagIds).toEqual([tag.id]);
     expect(await listItems()).toEqual([updated]);
+  });
+
+  test("unassignTagFromItem drops the id but leaves the tag in the library", async () => {
+    const note = await createNote({ content: "tagged note" });
+    const tag = await createTag({ name: "inspiration" });
+    await assignTagToItem(note.id, tag.id);
+
+    const updated = await unassignTagFromItem(note.id, tag.id);
+
+    expect(updated.tagIds).toEqual([]);
+    expect(await listTags()).toEqual([tag]);
   });
 
   test("listItems treats missing tagIds as an empty array", async () => {

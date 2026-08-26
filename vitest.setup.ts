@@ -45,6 +45,14 @@ export const mockNavigation = {
         : new URLSearchParams();
     emit();
   }),
+  push: vi.fn((href: string) => {
+    const queryIndex = href.indexOf("?");
+    navStore.params =
+      queryIndex >= 0
+        ? new URLSearchParams(href.slice(queryIndex + 1))
+        : new URLSearchParams();
+    emit();
+  }),
 };
 
 vi.mock("next/navigation", () => ({
@@ -62,6 +70,7 @@ vi.mock("next/navigation", () => ({
     ),
   useRouter: () => ({
     replace: mockNavigation.replace,
+    push: mockNavigation.push,
   }),
 }));
 
@@ -95,6 +104,15 @@ beforeEach(async () => {
   navStore.listeners.clear();
   mockNavigation.replace.mockReset();
   mockNavigation.replace.mockImplementation((href: string) => {
+    const queryIndex = href.indexOf("?");
+    navStore.params =
+      queryIndex >= 0
+        ? new URLSearchParams(href.slice(queryIndex + 1))
+        : new URLSearchParams();
+    emit();
+  });
+  mockNavigation.push.mockReset();
+  mockNavigation.push.mockImplementation((href: string) => {
     const queryIndex = href.indexOf("?");
     navStore.params =
       queryIndex >= 0

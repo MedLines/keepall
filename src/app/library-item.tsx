@@ -12,6 +12,7 @@ import { cardSecondaryLine } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
 import { itemMediaLayoutId } from "@/domain/library-view";
 import { LibraryItemMedia } from "./library-item-media";
+import { ItemTagChips } from "./item-tag-chips";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
@@ -21,13 +22,14 @@ export type PendingMutation =
   | { op: "replace-image-slide"; id: string }
   | { op: "delete"; id: string }
   | { op: "assign-tag"; id: string }
+  | { op: "unassign-tag"; id: string }
   | { op: "assign-collection"; id: string };
 
 export type LibraryItemProps = {
   item: Item;
   inspected: boolean;
   onOpenInspect: () => void;
-  tagNames: string[];
+  tagNames: { id: string; name: string }[];
   tagError: string | null;
   collectionNames: string[];
   collectionError: string | null;
@@ -55,7 +57,9 @@ export type LibraryItemProps = {
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
   onAddTag: (name: string) => void;
+  onRemoveTag: (tagId: string) => void;
   onAddCollection: (name: string) => void;
+  onBrowseTag: (tagId: string) => void;
   onStartEdit: () => void;
   onStartDelete: () => void;
 };
@@ -90,7 +94,9 @@ export function LibraryItem({
   onConfirmDelete,
   onCancelDelete,
   onAddTag,
+  onRemoveTag,
   onAddCollection,
+  onBrowseTag,
   onStartEdit,
   onStartDelete,
 }: LibraryItemProps) {
@@ -107,7 +113,6 @@ export function LibraryItem({
     }
     onAddTag(name);
     setTagDraft("");
-    setOrgPanel(null);
   }
 
   function submitCollection(event: FormEvent) {
@@ -530,16 +535,12 @@ export function LibraryItem({
           tagNames.length > 0 || collectionNames.length > 0 ? (
             <div className="mt-2 space-y-1.5">
               {tagNames.length > 0 ? (
-                <ul className="flex flex-wrap gap-1.5" aria-label="Tags">
-                  {tagNames.map((name) => (
-                    <li
-                      key={name}
-                      className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600"
-                    >
-                      {name}
-                    </li>
-                  ))}
-                </ul>
+                <ItemTagChips
+                  tags={tagNames}
+                  mutationBusy={mutationBusy}
+                  onBrowseTag={onBrowseTag}
+                  onRemoveTag={onRemoveTag}
+                />
               ) : null}
               {collectionNames.length > 0 ? (
                 <ul className="flex flex-wrap gap-1.5" aria-label="Collections">

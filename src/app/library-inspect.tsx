@@ -11,6 +11,7 @@ import { clampImageSlideIndex } from "@/domain/image";
 import { itemListTitle, type Item } from "@/domain/item";
 import { itemMediaLayoutId } from "@/domain/library-view";
 import { LibraryItemMedia } from "./library-item-media";
+import { ItemTagChips } from "./item-tag-chips";
 import type { PendingMutation } from "./library-item";
 import {
   type FormEvent,
@@ -23,7 +24,7 @@ type Props = {
   item: Item | null;
   slide: number;
   galleryError: string | null;
-  tagNames: string[];
+  tagNames: { id: string; name: string }[];
   collectionNames: string[];
   tagError: string | null;
   collectionError: string | null;
@@ -55,7 +56,9 @@ type Props = {
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
   onAddTag: (name: string) => void;
+  onRemoveTag: (tagId: string) => void;
   onAddCollection: (name: string) => void;
+  onBrowseTag: (tagId: string) => void;
   onStartEdit: () => void;
   onStartDelete: () => void;
 };
@@ -94,7 +97,9 @@ export function LibraryInspect({
   onConfirmDelete,
   onCancelDelete,
   onAddTag,
+  onRemoveTag,
   onAddCollection,
+  onBrowseTag,
   onStartEdit,
   onStartDelete,
 }: Props) {
@@ -356,19 +361,13 @@ export function LibraryInspect({
               {!editing && !pendingDelete ? (
                 <>
                   {tagNames.length > 0 ? (
-                    <ul
+                    <ItemTagChips
                       className="mt-3 flex flex-wrap gap-1.5"
-                      aria-label="Tags"
-                    >
-                      {tagNames.map((name) => (
-                        <li
-                          key={name}
-                          className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600"
-                        >
-                          {name}
-                        </li>
-                      ))}
-                    </ul>
+                      tags={tagNames}
+                      mutationBusy={mutationBusy}
+                      onBrowseTag={onBrowseTag}
+                      onRemoveTag={onRemoveTag}
+                    />
                   ) : null}
                   {collectionNames.length > 0 ? (
                     <ul

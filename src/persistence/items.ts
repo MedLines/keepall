@@ -24,7 +24,7 @@ import {
   type NoteItem,
 } from "@/domain/note";
 import { assignCollectionId } from "@/domain/collection";
-import { assignTagId } from "@/domain/tag";
+import { assignTagId, removeTagId } from "@/domain/tag";
 import { deleteAsset, putAsset } from "./assets";
 import { getDb } from "./db";
 
@@ -261,6 +261,27 @@ export async function assignTagToItem(
   const next = {
     ...current,
     tagIds: assignTagId(current.tagIds, tagId),
+    updatedAt: Date.now(),
+  };
+
+  await getDb().items.put(next);
+  return next;
+}
+
+export async function unassignTagFromItem(
+  itemId: string,
+  tagId: string,
+): Promise<Item> {
+  const existing = await getDb().items.get(itemId);
+
+  if (!existing) {
+    throw new Error("Item not found");
+  }
+
+  const current = normalizeItem(existing);
+  const next = {
+    ...current,
+    tagIds: removeTagId(current.tagIds, tagId),
     updatedAt: Date.now(),
   };
 

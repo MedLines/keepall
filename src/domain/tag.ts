@@ -45,3 +45,8 @@ export function assignTagId(tagIds: string[], tagId: string): string[] {
 
   return [...tagIds, tagId];
 }
+
+/** Drop one tag id from an item; the tag row in the library is unchanged. */
+export function removeTagId(tagIds: string[], tagId: string): string[] {
+  return tagIds.filter((id) => id !== tagId);
+}
