@@ -4,32 +4,47 @@ import {
   itemMediaLayoutId,
   libraryViewHref,
   libraryViewStateToSearchParams,
+  parseLibraryType,
   parseLibraryViewState,
   sortLibraryItems,
 } from "./library-view";
 import { buildNote } from "./note";
 
+const emptyView = {
+  q: "",
+  collection: null,
+  tag: null,
+  type: null,
+  sort: "newest" as const,
+  item: null,
+  slide: 0,
+};
+
+describe("parseLibraryType", () => {
+  test("accepts link note image and rejects unknown", () => {
+    expect(parseLibraryType("link")).toBe("link");
+    expect(parseLibraryType("note")).toBe("note");
+    expect(parseLibraryType("image")).toBe("image");
+    expect(parseLibraryType("other")).toBeNull();
+    expect(parseLibraryType(null)).toBeNull();
+  });
+});
+
 describe("parseLibraryViewState", () => {
-  test("reads q, collection, tag, sort, and item with defaults", () => {
-    expect(parseLibraryViewState(new URLSearchParams())).toEqual({
-      q: "",
-      collection: null,
-      tag: null,
-      sort: "newest",
-      item: null,
-      slide: 0,
-    });
+  test("reads q, collection, tag, type, sort, and item with defaults", () => {
+    expect(parseLibraryViewState(new URLSearchParams())).toEqual(emptyView);
 
     expect(
       parseLibraryViewState(
         new URLSearchParams(
-          "q=design&collection=c1&tag=t1&sort=oldest&item=n1",
+          "q=design&collection=c1&tag=t1&type=link&sort=oldest&item=n1",
         ),
       ),
     ).toEqual({
       q: "design",
       collection: "c1",
       tag: "t1",
+      type: "link",
       sort: "oldest",
       item: "n1",
       slide: 0,
@@ -38,52 +53,33 @@ describe("parseLibraryViewState", () => {
     expect(
       parseLibraryViewState(new URLSearchParams("item=i1&slide=2")),
     ).toEqual({
-      q: "",
-      collection: null,
-      tag: null,
-      sort: "newest",
+      ...emptyView,
       item: "i1",
       slide: 2,
     });
   });
 
-  test("treats blank collection/tag/item as null and unknown sort as newest", () => {
+  test("treats blank collection/tag/item as null and unknown sort/type as defaults", () => {
     expect(
       parseLibraryViewState(
-        new URLSearchParams("collection=&tag=&item=&sort=nope"),
+        new URLSearchParams("collection=&tag=&item=&sort=nope&type=video"),
       ),
-    ).toEqual({
-      q: "",
-      collection: null,
-      tag: null,
-      sort: "newest",
-      item: null,
-      slide: 0,
-    });
+    ).toEqual(emptyView);
   });
 
   test("ignores slide when item is missing", () => {
-    expect(parseLibraryViewState(new URLSearchParams("slide=3"))).toEqual({
-      q: "",
-      collection: null,
-      tag: null,
-      sort: "newest",
-      item: null,
-      slide: 0,
-    });
+    expect(parseLibraryViewState(new URLSearchParams("slide=3"))).toEqual(
+      emptyView,
+    );
   });
 });
 
 describe("libraryViewStateToSearchParams", () => {
-  test("omits empty q, missing collection/tag/item, default newest sort, and slide 0", () => {
+  test("omits empty q, missing filters, default newest sort, and slide 0", () => {
     expect(
       libraryViewStateToSearchParams({
+        ...emptyView,
         q: "  ",
-        collection: null,
-        tag: null,
-        sort: "newest",
-        item: null,
-        slide: 0,
       }).toString(),
     ).toBe("");
 
@@ -92,18 +88,16 @@ describe("libraryViewStateToSearchParams", () => {
         q: " design ",
         collection: "c1",
         tag: "t1",
+        type: "note",
         sort: "oldest",
         item: "n1",
         slide: 0,
       }).toString(),
-    ).toBe("q=design&collection=c1&tag=t1&sort=oldest&item=n1");
+    ).toBe("q=design&collection=c1&tag=t1&type=note&sort=oldest&item=n1");
 
     expect(
       libraryViewStateToSearchParams({
-        q: "",
-        collection: null,
-        tag: null,
-        sort: "newest",
+        ...emptyView,
         item: "i1",
         slide: 2,
       }).toString(),
@@ -113,26 +107,8 @@ describe("libraryViewStateToSearchParams", () => {
 
 describe("libraryViewHref", () => {
   test("builds pathname with or without query", () => {
-    expect(
-      libraryViewHref("/", {
-        q: "",
-        collection: null,
-        tag: null,
-        sort: "newest",
-        item: null,
-        slide: 0,
-      }),
-    ).toBe("/");
-    expect(
-      libraryViewHref("/", {
-        q: "x",
-        collection: null,
-        tag: null,
-        sort: "newest",
-        item: null,
-        slide: 0,
-      }),
-    ).toBe("/?q=x");
+    expect(libraryViewHref("/", emptyView)).toBe("/");
+    expect(libraryViewHref("/", { ...emptyView, q: "x" })).toBe("/?q=x");
   });
 });
 

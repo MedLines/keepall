@@ -170,9 +170,14 @@ export function Library() {
     view.tag !== null && tagsById.has(view.tag) ? view.tag : null;
   const browseTagName =
     browseTagId !== null ? (tagsById.get(browseTagId)?.name ?? null) : null;
+  const browseType = view.type;
   const searchQuery = view.q;
   const visibleItems = sortLibraryItems(
     items.filter((item) => {
+      if (browseType !== null && item.type !== browseType) {
+        return false;
+      }
+
       if (
         browseCollectionId !== null &&
         !itemInCollection(item, browseCollectionId)
@@ -548,6 +553,33 @@ export function Library() {
           <div
             className="mt-3 flex flex-wrap gap-2"
             role="group"
+            aria-label="Filter by type"
+          >
+            {(
+              [
+                { value: null, label: "All" },
+                { value: "link" as const, label: "Links" },
+                { value: "note" as const, label: "Notes" },
+                { value: "image" as const, label: "Images" },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.label}
+                className={`rounded-md border px-3 py-1 text-sm font-medium ${
+                  browseType === option.value
+                    ? "border-zinc-900 bg-zinc-900 text-white"
+                    : "border-zinc-300 bg-white text-zinc-800"
+                }`}
+                type="button"
+                onClick={() => updateView({ type: option.value }, "push")}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div
+            className="mt-3 flex flex-wrap gap-2"
+            role="group"
             aria-label="Sort library"
           >
             <button
@@ -634,11 +666,13 @@ export function Library() {
             <p className="mt-3 text-sm text-zinc-600">
               {hasActiveSearch
                 ? "No matching items."
-                : browseTagId !== null
-                  ? "No items with this tag."
-                  : browseCollectionId !== null
-                    ? "No items in this collection."
-                    : "No items yet."}
+                : browseType !== null
+                  ? "No items of this type."
+                  : browseTagId !== null
+                    ? "No items with this tag."
+                    : browseCollectionId !== null
+                      ? "No items in this collection."
+                      : "No items yet."}
             </p>
           ) : (
             <ul className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">

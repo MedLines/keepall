@@ -594,6 +594,58 @@ describe("Library tags", () => {
   });
 });
 
+describe("Library type filter", () => {
+  beforeEach(() => {
+    vi.mocked(listItems).mockReset();
+    vi.mocked(listTags).mockReset();
+    vi.mocked(listTags).mockResolvedValue([]);
+    vi.mocked(listCollections).mockReset();
+    vi.mocked(listCollections).mockResolvedValue([]);
+  });
+
+  test("filters by type and keeps tag AND semantics", async () => {
+    const designNote = {
+      ...buildNote({ content: "design note" }, { id: "n1", now: 1 }),
+      tagIds: ["t1"],
+    };
+    const designLink = {
+      ...buildLink(
+        { title: "Design link", url: "https://example.com/design" },
+        { id: "l1", now: 2 },
+      ),
+      tagIds: ["t1"],
+    };
+    const plainLink = buildLink(
+      { title: "Other link", url: "https://example.com/other" },
+      { id: "l2", now: 3 },
+    );
+    vi.mocked(listItems).mockResolvedValue([designNote, designLink, plainLink]);
+    vi.mocked(listTags).mockResolvedValue([
+      { id: "t1", name: "design", createdAt: 1 },
+    ]);
+    render(<Library />);
+
+    await screen.findByText("design note");
+    fireEvent.click(screen.getByRole("button", { name: "Links" }));
+
+    expect(mockNavigation.push).toHaveBeenCalledWith("/?type=link", {
+      scroll: false,
+    });
+    expect(screen.queryByText("design note")).not.toBeInTheDocument();
+    expect(screen.getByText("Design link")).toBeInTheDocument();
+    expect(screen.getByText("Other link")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "design" }));
+
+    expect(mockNavigation.push).toHaveBeenCalledWith("/?tag=t1&type=link", {
+      scroll: false,
+    });
+    expect(screen.getByText("Design link")).toBeInTheDocument();
+    expect(screen.queryByText("Other link")).not.toBeInTheDocument();
+    expect(screen.queryByText("design note")).not.toBeInTheDocument();
+  });
+});
+
 describe("Library collections", () => {
   beforeEach(() => {
     vi.mocked(listItems).mockReset();

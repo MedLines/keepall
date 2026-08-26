@@ -2,11 +2,16 @@ import type { Item } from "./item";
 
 export type LibrarySort = "newest" | "oldest";
 
+/** Item kind filter; null means All types. */
+export type LibraryTypeFilter = "link" | "note" | "image";
+
 export type LibraryViewState = {
   q: string;
   collection: string | null;
   /** Active tag filter id; null when showing all tags. */
   tag: string | null;
+  /** Active type filter; null when All. */
+  type: LibraryTypeFilter | null;
   sort: LibrarySort;
   /** Open library item id for inspect overlay; null when closed. */
   item: string | null;
@@ -18,6 +23,15 @@ export const DEFAULT_LIBRARY_SORT: LibrarySort = "newest";
 
 export function parseLibrarySort(value: string | null): LibrarySort {
   return value === "oldest" ? "oldest" : "newest";
+}
+
+export function parseLibraryType(
+  value: string | null,
+): LibraryTypeFilter | null {
+  if (value === "link" || value === "note" || value === "image") {
+    return value;
+  }
+  return null;
 }
 
 export function parseLibrarySlide(value: string | null): number {
@@ -43,6 +57,7 @@ export function parseLibraryViewState(
     q: params.get("q") ?? "",
     collection,
     tag,
+    type: parseLibraryType(params.get("type")),
     sort: parseLibrarySort(params.get("sort")),
     item,
     slide,
@@ -65,6 +80,10 @@ export function libraryViewStateToSearchParams(
 
   if (state.tag) {
     params.set("tag", state.tag);
+  }
+
+  if (state.type) {
+    params.set("type", state.type);
   }
 
   if (state.sort !== DEFAULT_LIBRARY_SORT) {
@@ -109,6 +128,7 @@ export function mergeLibraryViewState(
     collection:
       patch.collection !== undefined ? patch.collection : current.collection,
     tag: patch.tag !== undefined ? patch.tag : current.tag,
+    type: patch.type !== undefined ? patch.type : current.type,
     sort: patch.sort !== undefined ? patch.sort : current.sort,
     item: patch.item !== undefined ? patch.item : current.item,
     slide: patch.slide !== undefined ? patch.slide : current.slide,
