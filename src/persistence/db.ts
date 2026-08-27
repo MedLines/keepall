@@ -38,6 +38,13 @@ function createKeepallDb(): KeepallDB {
     assets: "id",
   });
 
+  db.version(5).stores({
+    items: "id, type, createdAt",
+    tags: "id, name",
+    collections: "id, name",
+    assets: "id, contentHash",
+  });
+
   return db;
 }
 

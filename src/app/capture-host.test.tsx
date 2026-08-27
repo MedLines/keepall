@@ -5,7 +5,7 @@ import { buildLink } from "@/domain/link";
 import { buildNote } from "@/domain/note";
 import { applyItemOrg } from "@/persistence/apply-item-org";
 import { listCollections } from "@/persistence/collections";
-import { createImage, createOrReuseLink, createNote, findLinkByNormalizedUrl, clearCollectionOnItem, replaceItemTagsByNames } from "@/persistence/items";
+import { createOrReuseImage, createOrReuseLink, createNote, findImageByAssetPayloads, findLinkByNormalizedUrl, clearCollectionOnItem, replaceItemTagsByNames } from "@/persistence/items";
 import { listTags } from "@/persistence/tags";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
@@ -16,7 +16,9 @@ vi.mock("@/persistence/items", () => ({
   createLink: vi.fn(),
   createImage: vi.fn(),
   createOrReuseLink: vi.fn(),
+  createOrReuseImage: vi.fn(),
   findLinkByNormalizedUrl: vi.fn(),
+  findImageByAssetPayloads: vi.fn(),
   clearCollectionOnItem: vi.fn(),
   replaceItemTagsByNames: vi.fn(),
 }));
@@ -76,9 +78,11 @@ describe("CaptureHost", () => {
   beforeEach(() => {
     vi.mocked(createNote).mockReset();
     vi.mocked(createOrReuseLink).mockReset();
-    vi.mocked(createImage).mockReset();
+    vi.mocked(createOrReuseImage).mockReset();
     vi.mocked(findLinkByNormalizedUrl).mockReset();
     vi.mocked(findLinkByNormalizedUrl).mockResolvedValue(null);
+    vi.mocked(findImageByAssetPayloads).mockReset();
+    vi.mocked(findImageByAssetPayloads).mockResolvedValue(null);
     vi.mocked(clearCollectionOnItem).mockReset();
     vi.mocked(replaceItemTagsByNames).mockReset();
     vi.mocked(applyItemOrg).mockReset();
@@ -200,6 +204,68 @@ describe("CaptureHost", () => {
     expect(await screen.findByText("Saved.")).toBeInTheDocument();
   });
 
+  test("reuses an existing image and asks when collection differs", async () => {
+    const existing = {
+      ...buildImageFromAssetIds(
+        { assetIds: ["a1"] },
+        { id: "img1", now: 1 },
+      ),
+      collectionIds: ["c-reading"],
+    };
+    vi.mocked(findImageByAssetPayloads).mockResolvedValue(existing);
+    vi.mocked(listCollections).mockResolvedValue([
+      {
+        id: "c-reading",
+        name: "Reading",
+        createdAt: 1,
+        pinnedItemIds: [],
+      },
+    ]);
+    vi.mocked(createOrReuseImage).mockResolvedValue({
+      image: existing,
+      created: false,
+    });
+
+    render(<CaptureHost />);
+    fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
+    await waitFor(() =>
+      expect(screen.getByLabelText("Link, note, or image")).not.toBeDisabled(),
+    );
+
+    const file = new File([new Uint8Array([1, 2, 3])], "shot.png", {
+      type: "image/png",
+    });
+    const fileInput = screen.getByRole("dialog").querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    expect(await screen.findByLabelText("1 image attached")).toBeInTheDocument();
+
+    fireEvent.change(
+      await screen.findByPlaceholderText("Filter or new collection…"),
+      { target: { value: "Work" } },
+    );
+    fireEvent.keyDown(screen.getByPlaceholderText("Filter or new collection…"), {
+      key: "Enter",
+      code: "Enter",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Already saved" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: /Move to “Work”/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => {
+      expect(createOrReuseImage).toHaveBeenCalledTimes(1);
+      expect(applyItemOrg).toHaveBeenCalledWith("img1", {
+        tagNames: [],
+        collectionName: "Work",
+      });
+    });
+  });
+
   test("asks keep or move in a separate modal when the collection differs", async () => {
     const existing = {
       ...buildLink(
@@ -234,7 +300,7 @@ describe("CaptureHost", () => {
     fireEvent.submit(input.closest("form")!);
 
     expect(
-      await screen.findByRole("heading", { name: "Link already saved" }),
+      await screen.findByRole("heading", { name: "Already saved" }),
     ).toBeInTheDocument();
     expect(createOrReuseLink).not.toHaveBeenCalled();
 
@@ -280,7 +346,7 @@ describe("CaptureHost", () => {
     fireEvent.submit(input.closest("form")!);
 
     expect(
-      await screen.findByRole("heading", { name: "Link already saved" }),
+      await screen.findByRole("heading", { name: "Already saved" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Keep existing/ })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Use new only/ })).toBeInTheDocument();
@@ -347,16 +413,17 @@ describe("CaptureHost", () => {
     expect(await screen.findByLabelText("2 images attached")).toBeInTheDocument();
     expect(screen.getByRole("dialog").querySelectorAll("img")).toHaveLength(2);
 
-    vi.mocked(createImage).mockResolvedValue(
-      buildImageFromAssetIds(
+    vi.mocked(createOrReuseImage).mockResolvedValue({
+      image: buildImageFromAssetIds(
         { assetIds: ["a1", "a2"] },
         { id: "img1", now: 1 },
       ),
-    );
+      created: true,
+    });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      expect(createImage).toHaveBeenCalledWith({
+      expect(createOrReuseImage).toHaveBeenCalledWith({
         assets: [
           { bytes: expect.any(Uint8Array), mimeType: "image/png" },
           { bytes: expect.any(Uint8Array), mimeType: "image/png" },
@@ -374,12 +441,13 @@ describe("CaptureHost", () => {
       expect(screen.getByLabelText("Link, note, or image")).not.toBeDisabled(),
     );
 
-    vi.mocked(createImage).mockResolvedValue(
-      buildImageFromAssetIds(
+    vi.mocked(createOrReuseImage).mockResolvedValue({
+      image: buildImageFromAssetIds(
         { assetIds: ["a1", "a2"] },
         { id: "img1", now: 1 },
       ),
-    );
+      created: true,
+    });
 
     const fileInput = screen.getByRole("dialog").querySelector(
       'input[type="file"]',
@@ -398,7 +466,7 @@ describe("CaptureHost", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      expect(createImage).toHaveBeenCalledWith({
+      expect(createOrReuseImage).toHaveBeenCalledWith({
         assets: [
           { bytes: expect.any(Uint8Array), mimeType: "image/png" },
           { bytes: expect.any(Uint8Array), mimeType: "image/png" },

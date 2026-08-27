@@ -16,6 +16,17 @@ describe("assets persistence", () => {
     expect(loaded?.mimeType).toBe("image/png");
     expect(loaded?.byteLength).toBe(3);
     expect(Array.from(loaded?.bytes ?? [])).toEqual([9, 8, 7]);
+    expect(loaded?.contentHash).toHaveLength(64);
+  });
+
+  test("putAsset reuses a row with the same content hash", async () => {
+    const bytes = new Uint8Array([1, 2, 3]);
+    const first = await putAsset({ mimeType: "image/png", bytes });
+    const second = await putAsset({
+      mimeType: "image/png",
+      bytes: new Uint8Array([1, 2, 3]),
+    });
+    expect(second.id).toBe(first.id);
   });
 
   test("deleteItem removes a linked preview asset", async () => {

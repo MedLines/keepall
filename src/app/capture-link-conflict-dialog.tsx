@@ -78,11 +78,11 @@ export function CaptureLinkConflictDialog({
         <div className="flex flex-col gap-4">
           <div>
             <h2 className="text-lg font-semibold tracking-tight" id={titleId}>
-              Link already saved
+              Already saved
             </h2>
             <p className="mt-1 text-sm text-zinc-600">
-              Choose how to update the existing item. Tags and collection are
-              separate.
+              This item is already in your library. Choose how to update tags
+              and collection.
             </p>
           </div>
 

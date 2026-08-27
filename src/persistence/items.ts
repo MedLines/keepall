@@ -28,7 +28,8 @@ import {
 } from "@/domain/note";
 import { assignCollectionId } from "@/domain/collection";
 import { assignTagId, removeTagId } from "@/domain/tag";
-import { deleteAsset, putAsset } from "./assets";
+import { hashAssetBytes, sameContentHashMultiset } from "@/domain/asset";
+import { deleteAsset, ensureContentHash, getAsset, putAsset } from "./assets";
 import { getDb } from "./db";
 import { createTag } from "./tags";
 
@@ -168,6 +169,85 @@ export async function createImage(input: {
   });
   await getDb().items.add(image);
   return image;
+}
+
+/**
+ * Find an image item that is the same capture:
+ * - one file → a single-asset image with the same bytes
+ * - several files → an image whose assets are the same set of bytes
+ */
+export async function findImageByAssetPayloads(
+  payloads: { bytes: Uint8Array; mimeType: string }[],
+): Promise<ImageItem | null> {
+  if (payloads.length === 0) {
+    return null;
+  }
+
+  const hashes: string[] = [];
+  for (const payload of payloads) {
+    assertLocalImageBytes(payload.bytes, payload.mimeType);
+    hashes.push(await hashAssetBytes(payload.bytes));
+  }
+
+  const rows = await getDb().items.where("type").equals("image").toArray();
+  for (const raw of rows) {
+    const image = normalizeItem(raw);
+    if (image.type !== "image") {
+      continue;
+    }
+
+    if (hashes.length === 1) {
+      if (image.assetIds.length !== 1) {
+        continue;
+      }
+      const asset = await getAsset(image.assetIds[0]!);
+      if (!asset) {
+        continue;
+      }
+      const hashed = await ensureContentHash(asset);
+      if (hashed.contentHash === hashes[0]) {
+        return image;
+      }
+      continue;
+    }
+
+    if (image.assetIds.length !== hashes.length) {
+      continue;
+    }
+    const imageHashes: string[] = [];
+    let missing = false;
+    for (const assetId of image.assetIds) {
+      const asset = await getAsset(assetId);
+      if (!asset) {
+        missing = true;
+        break;
+      }
+      const hashed = await ensureContentHash(asset);
+      imageHashes.push(hashed.contentHash);
+    }
+    if (missing) {
+      continue;
+    }
+    if (sameContentHashMultiset(hashes, imageHashes)) {
+      return image;
+    }
+  }
+
+  return null;
+}
+
+export async function createOrReuseImage(input: {
+  assets: { bytes: Uint8Array; mimeType: string }[];
+  sourceUrl?: string;
+  caption?: string;
+  title?: string;
+}): Promise<{ image: ImageItem; created: boolean }> {
+  const existing = await findImageByAssetPayloads(input.assets);
+  if (existing) {
+    return { image: existing, created: false };
+  }
+  const image = await createImage(input);
+  return { image, created: true };
 }
 
 export async function listItems(): Promise<Item[]> {

@@ -8,6 +8,7 @@ import {
   appendImageAssetToItem,
   createImage,
   createLink,
+  createOrReuseImage,
   createOrReuseLink,
   createNote,
   deleteItem,
@@ -70,6 +71,22 @@ describe("items persistence", () => {
     expect(second.created).toBe(false);
     expect(second.link.id).toBe(first.id);
     expect((await listItems()).filter((item) => item.type === "link")).toHaveLength(
+      1,
+    );
+  });
+
+  test("createOrReuseImage returns the existing single-asset image for the same bytes", async () => {
+    const bytes = new Uint8Array([10, 20, 30]);
+    const first = await createImage({
+      assets: [{ bytes, mimeType: "image/png" }],
+    });
+    const second = await createOrReuseImage({
+      assets: [{ bytes: new Uint8Array([10, 20, 30]), mimeType: "image/png" }],
+    });
+
+    expect(second.created).toBe(false);
+    expect(second.image.id).toBe(first.id);
+    expect((await listItems()).filter((item) => item.type === "image")).toHaveLength(
       1,
     );
   });

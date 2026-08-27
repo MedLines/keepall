@@ -36,6 +36,7 @@ describe("enrichLinkPreview", () => {
       mimeType: "image/png",
       byteLength: 3,
       bytes: new Uint8Array([1, 2, 3]),
+      contentHash: "abc",
       createdAt: 1,
     });
     vi.stubGlobal(

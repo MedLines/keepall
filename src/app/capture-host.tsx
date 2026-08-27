@@ -17,9 +17,10 @@ import { NoteValidationError } from "@/domain/note";
 import { applyItemOrg } from "@/persistence/apply-item-org";
 import {
   clearCollectionOnItem,
-  createImage,
   createNote,
+  createOrReuseImage,
   createOrReuseLink,
+  findImageByAssetPayloads,
   findLinkByNormalizedUrl,
   replaceItemTagsByNames,
 } from "@/persistence/items";
@@ -408,7 +409,66 @@ export function CaptureHost() {
     let collectionChoice: "keep" | "move" | null = null;
     let tagChoice: "keep" | "replace" | "merge" = "merge";
 
-    if (!savedItemIdRef.current && imageDrafts.length === 0) {
+    async function resolveExistingOrgConflict(existing: {
+      id: string;
+      tagIds: string[];
+      collectionIds: string[];
+    }): Promise<boolean> {
+      const [collections, tags] = await Promise.all([
+        listCollections(),
+        listTags(),
+      ]);
+      const existingCollectionId = existing.collectionIds[0] ?? null;
+      const existingCollectionName = existingCollectionId
+        ? (collections.find((entry) => entry.id === existingCollectionId)
+            ?.name ?? null)
+        : null;
+      const existingTagNames = existing.tagIds
+        .map((id) => tags.find((tag) => tag.id === id)?.name)
+        .filter((name): name is string => Boolean(name));
+
+      const askCollection = captureCollectionConflict(
+        existingCollectionName,
+        org.collectionName,
+      );
+      const askTags = captureTagConflict(existingTagNames, org.tagNames);
+
+      if ((askCollection || askTags) && !conflictChoice) {
+        setLinkConflict({
+          itemId: existing.id,
+          existingCollectionName,
+          nextCollectionName: org.collectionName,
+          existingTagNames,
+          nextTagNames: org.tagNames,
+          askCollection,
+          askTags,
+        });
+        return false;
+      }
+
+      if (conflictChoice) {
+        collectionChoice = askCollection
+          ? conflictChoice.collectionChoice
+          : null;
+        tagChoice = askTags ? conflictChoice.tagChoice : "merge";
+      }
+      return true;
+    }
+
+    if (!savedItemIdRef.current && imageDrafts.length > 0) {
+      const existing = await findImageByAssetPayloads(
+        imageDrafts.map((draft) => ({
+          bytes: draft.bytes,
+          mimeType: draft.mimeType,
+        })),
+      );
+      if (existing) {
+        const ok = await resolveExistingOrgConflict(existing);
+        if (!ok) {
+          return;
+        }
+      }
+    } else if (!savedItemIdRef.current && imageDrafts.length === 0) {
       const resolved = resolveCapture(state.input, state.override);
       if (!resolved.ok) {
         dispatch({ type: "failed", message: resolved.error });
@@ -420,43 +480,9 @@ export function CaptureHost() {
           resolved.classification.url,
         );
         if (existing) {
-          const [collections, tags] = await Promise.all([
-            listCollections(),
-            listTags(),
-          ]);
-          const existingCollectionId = existing.collectionIds[0] ?? null;
-          const existingCollectionName = existingCollectionId
-            ? (collections.find((entry) => entry.id === existingCollectionId)
-                ?.name ?? null)
-            : null;
-          const existingTagNames = existing.tagIds
-            .map((id) => tags.find((tag) => tag.id === id)?.name)
-            .filter((name): name is string => Boolean(name));
-
-          const askCollection = captureCollectionConflict(
-            existingCollectionName,
-            org.collectionName,
-          );
-          const askTags = captureTagConflict(existingTagNames, org.tagNames);
-
-          if ((askCollection || askTags) && !conflictChoice) {
-            setLinkConflict({
-              itemId: existing.id,
-              existingCollectionName,
-              nextCollectionName: org.collectionName,
-              existingTagNames,
-              nextTagNames: org.tagNames,
-              askCollection,
-              askTags,
-            });
+          const ok = await resolveExistingOrgConflict(existing);
+          if (!ok) {
             return;
-          }
-
-          if (conflictChoice) {
-            collectionChoice = askCollection
-              ? conflictChoice.collectionChoice
-              : null;
-            tagChoice = askTags ? conflictChoice.tagChoice : "merge";
           }
         }
       }
@@ -476,7 +502,7 @@ export function CaptureHost() {
       if (!itemId) {
         if (imageDrafts.length > 0) {
           const fields = textFieldsFromAccompanyingText(state.input);
-          const image = await createImage({
+          const { image } = await createOrReuseImage({
             assets: imageDrafts.map((draft) => ({
               bytes: draft.bytes,
               mimeType: draft.mimeType,

@@ -18,6 +18,7 @@ export type BackupAssetRecord = {
   mimeType: string;
   byteLength: number;
   dataBase64: string;
+  contentHash?: string;
   createdAt: number;
 };
 
@@ -297,6 +298,8 @@ function parseAsset(raw: unknown, index: number): BackupAssetRecord {
     mimeType: asset.mimeType.trim(),
     byteLength: asset.byteLength,
     dataBase64: asset.dataBase64,
+    contentHash:
+      typeof asset.contentHash === "string" ? asset.contentHash : undefined,
     createdAt: asset.createdAt,
   };
 }

@@ -25,6 +25,7 @@ export async function exportKeepallBackup(
     mimeType: asset.mimeType,
     byteLength: asset.byteLength,
     dataBase64: bytesToBase64(asset.bytes),
+    contentHash: asset.contentHash || undefined,
     createdAt: asset.createdAt,
   }));
 
@@ -48,6 +49,7 @@ export async function importKeepallBackupReplace(
       {
         mimeType: record.mimeType,
         bytes: base64ToBytes(record.dataBase64),
+        contentHash: record.contentHash,
       },
       { id: record.id, now: record.createdAt },
     ),
