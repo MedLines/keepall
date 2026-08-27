@@ -8,6 +8,7 @@ import {
   appendImageAssetToItem,
   createImage,
   createLink,
+  createOrReuseLink,
   createNote,
   deleteItem,
   listItems,
@@ -58,6 +59,19 @@ describe("items persistence", () => {
     const link = await createLink({ url: "https://example.com" });
 
     expect(await listItems()).toEqual([link, note]);
+  });
+
+  test("createOrReuseLink returns the existing row for the same normalized URL", async () => {
+    const first = await createLink({ url: "https://www.example.com/path/" });
+    const second = await createOrReuseLink({
+      url: "https://example.com/path",
+    });
+
+    expect(second.created).toBe(false);
+    expect(second.link.id).toBe(first.id);
+    expect((await listItems()).filter((item) => item.type === "link")).toHaveLength(
+      1,
+    );
   });
 
   test("deleteItem removes one stored item and leaves the rest", async () => {

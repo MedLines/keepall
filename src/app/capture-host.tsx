@@ -15,16 +15,34 @@ import {
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
 import { applyItemOrg } from "@/persistence/apply-item-org";
+import {
+  clearCollectionOnItem,
+  createImage,
+  createNote,
+  createOrReuseLink,
+  findLinkByNormalizedUrl,
+  replaceItemTagsByNames,
+} from "@/persistence/items";
 import { listCollections } from "@/persistence/collections";
-import { createImage, createLink, createNote } from "@/persistence/items";
 import { listTags } from "@/persistence/tags";
 import { CaptureOrgPanel } from "./capture-org-panel";
+import {
+  CaptureLinkConflictDialog,
+  type CaptureLinkConflict,
+  type CaptureLinkConflictChoice,
+} from "./capture-link-conflict-dialog";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { OPEN_CAPTURE_EVENT } from "./capture-events";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_ACTIVE, SHELL_TOP_BTN_IDLE } from "./shell-styles";
+import {
+  captureCollectionConflict,
+  captureTagConflict,
+} from "@/domain/link";
+import type { CaptureOrgDrafts } from "@/domain/capture-org";
+
 
 const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-8 px-3 text-xs disabled:opacity-60`;
 
@@ -63,6 +81,42 @@ function revokeImageDraftPreviews(drafts: ImageDraft[]): void {
   }
 }
 
+async function applyCaptureOrg(
+  itemId: string,
+  org: CaptureOrgDrafts,
+  choices: {
+    collectionChoice: "keep" | "move" | null;
+    tagChoice: "keep" | "replace" | "merge";
+  },
+): Promise<void> {
+  const { collectionChoice, tagChoice } = choices;
+
+  if (tagChoice === "replace") {
+    await replaceItemTagsByNames(itemId, org.tagNames);
+  } else if (tagChoice === "merge" && org.tagNames.length > 0) {
+    await applyItemOrg(itemId, {
+      tagNames: org.tagNames,
+      collectionName: null,
+    });
+  }
+
+  if (collectionChoice === "keep") {
+    return;
+  }
+
+  if (collectionChoice === "move" && !org.collectionName) {
+    await clearCollectionOnItem(itemId);
+    return;
+  }
+
+  if (org.collectionName) {
+    await applyItemOrg(itemId, {
+      tagNames: [],
+      collectionName: org.collectionName,
+    });
+  }
+}
+
 export function CaptureHost() {
   const [state, dispatch] = useReducer(captureReducer, initialCaptureState);
   const [imageDrafts, setImageDrafts] = useState<ImageDraft[]>([]);
@@ -77,6 +131,9 @@ export function CaptureHost() {
     OrgNameSuggestion[]
   >([]);
   const [savedItemId, setSavedItemId] = useState<string | null>(null);
+  const [linkConflict, setLinkConflict] = useState<CaptureLinkConflict | null>(
+    null,
+  );
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -134,6 +191,7 @@ export function CaptureHost() {
 
     savedItemIdRef.current = null;
     setSavedItemId(null);
+    setLinkConflict(null);
     setDraftTagNames([]);
     setTagInput("");
     setDraftCollectionName(null);
@@ -225,6 +283,7 @@ export function CaptureHost() {
   function resetSession() {
     savedItemIdRef.current = null;
     setSavedItemId(null);
+    setLinkConflict(null);
     setDraftTagNames([]);
     setTagInput("");
     setDraftCollectionName(null);
@@ -333,7 +392,9 @@ export function CaptureHost() {
     }
   }
 
-  async function persistCapture() {
+  async function persistCapture(options?: {
+    conflictChoice?: CaptureLinkConflictChoice;
+  }) {
     if (saveInFlightRef.current) {
       return;
     }
@@ -342,12 +403,62 @@ export function CaptureHost() {
       [...draftTagNames, tagInput],
       draftCollectionName ?? collectionInput,
     );
+    const conflictChoice = options?.conflictChoice ?? null;
+
+    let collectionChoice: "keep" | "move" | null = null;
+    let tagChoice: "keep" | "replace" | "merge" = "merge";
 
     if (!savedItemIdRef.current && imageDrafts.length === 0) {
       const resolved = resolveCapture(state.input, state.override);
       if (!resolved.ok) {
         dispatch({ type: "failed", message: resolved.error });
         return;
+      }
+
+      if (resolved.classification.type === "link") {
+        const existing = await findLinkByNormalizedUrl(
+          resolved.classification.url,
+        );
+        if (existing) {
+          const [collections, tags] = await Promise.all([
+            listCollections(),
+            listTags(),
+          ]);
+          const existingCollectionId = existing.collectionIds[0] ?? null;
+          const existingCollectionName = existingCollectionId
+            ? (collections.find((entry) => entry.id === existingCollectionId)
+                ?.name ?? null)
+            : null;
+          const existingTagNames = existing.tagIds
+            .map((id) => tags.find((tag) => tag.id === id)?.name)
+            .filter((name): name is string => Boolean(name));
+
+          const askCollection = captureCollectionConflict(
+            existingCollectionName,
+            org.collectionName,
+          );
+          const askTags = captureTagConflict(existingTagNames, org.tagNames);
+
+          if ((askCollection || askTags) && !conflictChoice) {
+            setLinkConflict({
+              itemId: existing.id,
+              existingCollectionName,
+              nextCollectionName: org.collectionName,
+              existingTagNames,
+              nextTagNames: org.tagNames,
+              askCollection,
+              askTags,
+            });
+            return;
+          }
+
+          if (conflictChoice) {
+            collectionChoice = askCollection
+              ? conflictChoice.collectionChoice
+              : null;
+            tagChoice = askTags ? conflictChoice.tagChoice : "merge";
+          }
+        }
       }
     }
 
@@ -357,6 +468,7 @@ export function CaptureHost() {
 
     saveInFlightRef.current = true;
     dispatch({ type: "save" });
+    setLinkConflict(null);
 
     try {
       let itemId = savedItemIdRef.current;
@@ -381,11 +493,13 @@ export function CaptureHost() {
           }
 
           if (resolved.classification.type === "link") {
-            const link = await createLink({
+            const { link, created } = await createOrReuseLink({
               url: resolved.classification.url,
             });
             itemId = link.id;
-            void enrichLinkPreview(link.id, link.url);
+            if (created) {
+              void enrichLinkPreview(link.id, link.url);
+            }
           } else {
             const note = await createNote({
               content: resolved.classification.content,
@@ -398,10 +512,8 @@ export function CaptureHost() {
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
       }
 
-      if (org.tagNames.length > 0 || org.collectionName) {
-        await applyItemOrg(itemId, org);
-        window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-      }
+      await applyCaptureOrg(itemId, org, { collectionChoice, tagChoice });
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
 
       dispatch({ type: "saved" });
     } catch (caught) {
@@ -433,12 +545,21 @@ export function CaptureHost() {
     await persistCapture();
   }
 
+  async function confirmLinkConflict(choice: CaptureLinkConflictChoice) {
+    await persistCapture({ conflictChoice: choice });
+  }
+
+  function cancelLinkConflict() {
+    setLinkConflict(null);
+  }
+
   function addDraftTag(name: string) {
     const next = captureOrgDrafts([...draftTagNames, name], null);
     setDraftTagNames(next.tagNames);
   }
 
   return (
+    <>
     <dialog
       ref={dialogRef}
       className="fixed inset-0 m-auto h-fit max-h-[min(90dvh,40rem)] w-[min(100%-2rem,32rem)] overflow-y-auto rounded-[12px] bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-zinc-900/20 [&::backdrop]:backdrop-blur-[1px]"
@@ -622,7 +743,7 @@ export function CaptureHost() {
           collectionInput={collectionInput}
           tagSuggestions={tagSuggestions}
           collectionSuggestions={collectionSuggestions}
-          disabled={orgLocked}
+          disabled={orgLocked || linkConflict !== null}
           onTagInputChange={setTagInput}
           onAddTag={addDraftTag}
           onRemoveTag={(name) =>
@@ -673,5 +794,12 @@ export function CaptureHost() {
         </div>
       </form>
     </dialog>
+    <CaptureLinkConflictDialog
+      conflict={linkConflict}
+      busy={state.status === "saving"}
+      onConfirm={(choice) => void confirmLinkConflict(choice)}
+      onCancel={cancelLinkConflict}
+    />
+    </>
   );
 }

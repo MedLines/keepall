@@ -121,6 +121,80 @@ export function linkNeedsPreviewRetry(
   return false;
 }
 
+/**
+ * Compare key for “same page?”. Not what we store on first save.
+ * Lowercases host, strips www., trailing slash, and hash; defaults https.
+ */
+export function normalizeLinkUrl(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  let candidate = trimmed;
+  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(candidate)) {
+    candidate = `https://${candidate}`;
+  }
+
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return null;
+    }
+
+    let host = url.hostname.toLowerCase();
+    if (host.startsWith("www.")) {
+      host = host.slice(4);
+    }
+
+    let path = url.pathname;
+    if (path.length > 1 && path.endsWith("/")) {
+      path = path.slice(0, -1);
+    }
+
+    const protocol = url.protocol === "http:" ? "http:" : "https:";
+    return `${protocol}//${host}${path}${url.search}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Ask before changing collection when the existing link is already filed. */
+export function captureCollectionConflict(
+  existingCollectionName: string | null,
+  nextCollectionName: string | null,
+): boolean {
+  if (!existingCollectionName) {
+    return false;
+  }
+  return existingCollectionName !== nextCollectionName;
+}
+
+/** Ask before changing tags when both existing and capture have tags. */
+export function captureTagConflict(
+  existingTagNames: string[],
+  nextTagNames: string[],
+): boolean {
+  if (existingTagNames.length === 0 || nextTagNames.length === 0) {
+    return false;
+  }
+  const existing = new Set(
+    existingTagNames.map((name) => name.trim().toLowerCase()).filter(Boolean),
+  );
+  const next = new Set(
+    nextTagNames.map((name) => name.trim().toLowerCase()).filter(Boolean),
+  );
+  if (existing.size !== next.size) {
+    return true;
+  }
+  for (const name of existing) {
+    if (!next.has(name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function buildLink(
   input: CreateLinkInput,
   options?: { id?: string; now?: number },

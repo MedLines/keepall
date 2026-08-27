@@ -15,6 +15,7 @@ import {
   applyLinkPreviewRetry,
   buildLink,
   markLinkPreviewPending,
+  normalizeLinkUrl,
   type CreateLinkInput,
   type LinkItem,
   type LinkPreviewRetry,
@@ -29,6 +30,7 @@ import { assignCollectionId } from "@/domain/collection";
 import { assignTagId, removeTagId } from "@/domain/tag";
 import { deleteAsset, putAsset } from "./assets";
 import { getDb } from "./db";
+import { createTag } from "./tags";
 
 async function deleteLinkedPreviewAsset(link: LinkItem): Promise<void> {
   if (link.previewAssetId) {
@@ -46,6 +48,99 @@ export async function createLink(input: CreateLinkInput): Promise<LinkItem> {
   const link = buildLink(input);
   await getDb().items.add(link);
   return link;
+}
+
+export async function findLinkByNormalizedUrl(
+  url: string,
+): Promise<LinkItem | null> {
+  const normalized = normalizeLinkUrl(url);
+  if (!normalized) {
+    return null;
+  }
+
+  const items = await getDb().items.where("type").equals("link").toArray();
+  for (const raw of items) {
+    const link = normalizeItem(raw);
+    if (link.type !== "link") {
+      continue;
+    }
+    if (normalizeLinkUrl(link.url) === normalized) {
+      return link;
+    }
+  }
+  return null;
+}
+
+/** Create a link, or return the existing row with the same normalized URL. */
+export async function createOrReuseLink(
+  input: CreateLinkInput,
+): Promise<{ link: LinkItem; created: boolean }> {
+  const existing = await findLinkByNormalizedUrl(input.url);
+  if (existing) {
+    return { link: existing, created: false };
+  }
+  const link = await createLink(input);
+  return { link, created: true };
+}
+
+export async function clearCollectionOnItem(itemId: string): Promise<Item> {
+  const existing = await getDb().items.get(itemId);
+
+  if (!existing) {
+    throw new Error("Item not found");
+  }
+
+  const current = normalizeItem(existing);
+  const next = {
+    ...current,
+    collectionIds: [] as string[],
+    updatedAt: Date.now(),
+  };
+  await getDb().items.put(next);
+  return next;
+}
+
+export async function setItemTagIds(
+  itemId: string,
+  tagIds: string[],
+): Promise<Item> {
+  const existing = await getDb().items.get(itemId);
+
+  if (!existing) {
+    throw new Error("Item not found");
+  }
+
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const id of tagIds) {
+    if (!id || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    unique.push(id);
+  }
+
+  const current = normalizeItem(existing);
+  const next = {
+    ...current,
+    tagIds: unique,
+    updatedAt: Date.now(),
+  };
+  await getDb().items.put(next);
+  return next;
+}
+
+/** Replace all tags on an item with the given names (create/reuse tag rows). */
+export async function replaceItemTagsByNames(
+  itemId: string,
+  tagNames: string[],
+): Promise<Item> {
+  const ids: string[] = [];
+  for (const name of tagNames) {
+    const tag = await createTag({ name });
+    ids.push(tag.id);
+  }
+  return setItemTagIds(itemId, ids);
 }
 
 export async function createImage(input: {

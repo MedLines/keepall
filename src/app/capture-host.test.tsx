@@ -5,7 +5,7 @@ import { buildLink } from "@/domain/link";
 import { buildNote } from "@/domain/note";
 import { applyItemOrg } from "@/persistence/apply-item-org";
 import { listCollections } from "@/persistence/collections";
-import { createImage, createLink, createNote } from "@/persistence/items";
+import { createImage, createOrReuseLink, createNote, findLinkByNormalizedUrl, clearCollectionOnItem, replaceItemTagsByNames } from "@/persistence/items";
 import { listTags } from "@/persistence/tags";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
@@ -15,6 +15,10 @@ vi.mock("@/persistence/items", () => ({
   createNote: vi.fn(),
   createLink: vi.fn(),
   createImage: vi.fn(),
+  createOrReuseLink: vi.fn(),
+  findLinkByNormalizedUrl: vi.fn(),
+  clearCollectionOnItem: vi.fn(),
+  replaceItemTagsByNames: vi.fn(),
 }));
 
 vi.mock("@/persistence/apply-item-org", () => ({
@@ -71,8 +75,12 @@ describe("isCaptureOpenShortcut", () => {
 describe("CaptureHost", () => {
   beforeEach(() => {
     vi.mocked(createNote).mockReset();
-    vi.mocked(createLink).mockReset();
+    vi.mocked(createOrReuseLink).mockReset();
     vi.mocked(createImage).mockReset();
+    vi.mocked(findLinkByNormalizedUrl).mockReset();
+    vi.mocked(findLinkByNormalizedUrl).mockResolvedValue(null);
+    vi.mocked(clearCollectionOnItem).mockReset();
+    vi.mocked(replaceItemTagsByNames).mockReset();
     vi.mocked(applyItemOrg).mockReset();
     vi.mocked(applyItemOrg).mockResolvedValue(undefined);
     vi.mocked(listTags).mockReset();
@@ -155,13 +163,13 @@ describe("CaptureHost", () => {
       { url: "https://example.com/article" },
       { id: "l1", now: 1 },
     );
-    vi.mocked(createLink).mockResolvedValue(link);
+    vi.mocked(createOrReuseLink).mockResolvedValue({ link, created: true });
 
     const input = await openDraft("https://example.com/article");
     fireEvent.submit(input.closest("form")!);
 
     await waitFor(() => {
-      expect(createLink).toHaveBeenCalledWith({
+      expect(createOrReuseLink).toHaveBeenCalledWith({
         url: "https://example.com/article",
       });
     });
@@ -169,6 +177,121 @@ describe("CaptureHost", () => {
       "l1",
       "https://example.com/article",
     );
+  });
+
+  test("reuses an existing link instead of creating a second card", async () => {
+    const existing = buildLink(
+      { url: "https://example.com/article" },
+      { id: "l1", now: 1 },
+    );
+    vi.mocked(findLinkByNormalizedUrl).mockResolvedValue(existing);
+    vi.mocked(createOrReuseLink).mockResolvedValue({
+      link: existing,
+      created: false,
+    });
+
+    const input = await openDraft("https://www.example.com/article/");
+    fireEvent.submit(input.closest("form")!);
+
+    await waitFor(() => {
+      expect(createOrReuseLink).toHaveBeenCalledTimes(1);
+    });
+    expect(enrichLinkPreview).not.toHaveBeenCalled();
+    expect(await screen.findByText("Saved.")).toBeInTheDocument();
+  });
+
+  test("asks keep or move in a separate modal when the collection differs", async () => {
+    const existing = {
+      ...buildLink(
+        { url: "https://example.com/article" },
+        { id: "l1", now: 1 },
+      ),
+      collectionIds: ["c-reading"],
+    };
+    vi.mocked(findLinkByNormalizedUrl).mockResolvedValue(existing);
+    vi.mocked(listCollections).mockResolvedValue([
+      {
+        id: "c-reading",
+        name: "Reading",
+        createdAt: 1,
+        pinnedItemIds: [],
+      },
+    ]);
+    vi.mocked(createOrReuseLink).mockResolvedValue({
+      link: existing,
+      created: false,
+    });
+
+    const input = await openDraft("https://example.com/article");
+    fireEvent.change(
+      await screen.findByPlaceholderText("Filter or new collection…"),
+      { target: { value: "Work" } },
+    );
+    fireEvent.keyDown(screen.getByPlaceholderText("Filter or new collection…"), {
+      key: "Enter",
+      code: "Enter",
+    });
+    fireEvent.submit(input.closest("form")!);
+
+    expect(
+      await screen.findByRole("heading", { name: "Link already saved" }),
+    ).toBeInTheDocument();
+    expect(createOrReuseLink).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("radio", { name: /Move to “Work”/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => {
+      expect(createOrReuseLink).toHaveBeenCalledTimes(1);
+      expect(applyItemOrg).toHaveBeenCalledWith("l1", {
+        tagNames: [],
+        collectionName: "Work",
+      });
+    });
+  });
+
+  test("tag conflict offers keep, replace, and merge in the conflict modal", async () => {
+    const existing = {
+      ...buildLink(
+        { url: "https://example.com/article" },
+        { id: "l1", now: 1 },
+      ),
+      tagIds: ["t-old"],
+    };
+    vi.mocked(findLinkByNormalizedUrl).mockResolvedValue(existing);
+    vi.mocked(listTags).mockResolvedValue([
+      { id: "t-old", name: "old", createdAt: 1 },
+    ]);
+    vi.mocked(createOrReuseLink).mockResolvedValue({
+      link: existing,
+      created: false,
+    });
+    vi.mocked(replaceItemTagsByNames).mockResolvedValue(existing);
+
+    const input = await openDraft("https://example.com/article");
+    fireEvent.change(
+      await screen.findByPlaceholderText("Filter or create tag…"),
+      { target: { value: "new" } },
+    );
+    fireEvent.keyDown(screen.getByPlaceholderText("Filter or create tag…"), {
+      key: "Enter",
+      code: "Enter",
+    });
+    fireEvent.submit(input.closest("form")!);
+
+    expect(
+      await screen.findByRole("heading", { name: "Link already saved" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Keep existing/ })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Use new only/ })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Merge both/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: /Use new only/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => {
+      expect(replaceItemTagsByNames).toHaveBeenCalledWith("l1", ["new"]);
+    });
   });
 
   test("paste while open picks up an image copied after the dialog opened", async () => {
@@ -292,7 +415,7 @@ describe("CaptureHost", () => {
       { url: "https://example.com/article" },
       { id: "l1", now: 1 },
     );
-    vi.mocked(createLink).mockResolvedValue(link);
+    vi.mocked(createOrReuseLink).mockResolvedValue({ link, created: true });
 
     const input = await openDraft("https://example.com/article");
     fireEvent.change(screen.getByPlaceholderText("Tag name"), {
@@ -312,9 +435,13 @@ describe("CaptureHost", () => {
     fireEvent.submit(input.closest("form")!);
 
     await waitFor(() => {
-      expect(createLink).toHaveBeenCalledTimes(1);
+      expect(createOrReuseLink).toHaveBeenCalledTimes(1);
       expect(applyItemOrg).toHaveBeenCalledWith("l1", {
         tagNames: ["work"],
+        collectionName: null,
+      });
+      expect(applyItemOrg).toHaveBeenCalledWith("l1", {
+        tagNames: [],
         collectionName: "Reading",
       });
     });
@@ -338,7 +465,7 @@ describe("CaptureHost", () => {
       { url: "https://example.com/article" },
       { id: "l1", now: 1 },
     );
-    vi.mocked(createLink).mockResolvedValue(link);
+    vi.mocked(createOrReuseLink).mockResolvedValue({ link, created: true });
 
     const input = await openDraft("https://example.com/article");
     fireEvent.click(await screen.findByRole("button", { name: "colors" }));
@@ -348,6 +475,10 @@ describe("CaptureHost", () => {
     await waitFor(() => {
       expect(applyItemOrg).toHaveBeenCalledWith("l1", {
         tagNames: ["colors"],
+        collectionName: null,
+      });
+      expect(applyItemOrg).toHaveBeenCalledWith("l1", {
+        tagNames: [],
         collectionName: "Reading",
       });
     });
@@ -358,7 +489,7 @@ describe("CaptureHost", () => {
       { url: "https://example.com/article" },
       { id: "l1", now: 1 },
     );
-    vi.mocked(createLink).mockResolvedValue(link);
+    vi.mocked(createOrReuseLink).mockResolvedValue({ link, created: true });
     vi.mocked(applyItemOrg)
       .mockRejectedValueOnce(new Error("quota"))
       .mockResolvedValueOnce(undefined);
@@ -374,7 +505,7 @@ describe("CaptureHost", () => {
         "Saved, but couldn't add tags or collection. Try again.",
       ),
     ).toBeInTheDocument();
-    expect(createLink).toHaveBeenCalledTimes(1);
+    expect(createOrReuseLink).toHaveBeenCalledTimes(1);
     expect(applyItemOrg).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -382,7 +513,7 @@ describe("CaptureHost", () => {
     await waitFor(() => {
       expect(applyItemOrg).toHaveBeenCalledTimes(2);
     });
-    expect(createLink).toHaveBeenCalledTimes(1);
+    expect(createOrReuseLink).toHaveBeenCalledTimes(1);
     expect(applyItemOrg).toHaveBeenNthCalledWith(2, "l1", {
       tagNames: ["work"],
       collectionName: null,

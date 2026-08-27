@@ -4,6 +4,8 @@ import {
   applyLinkPreviewResult,
   applyLinkPreviewRetry,
   buildLink,
+  captureCollectionConflict,
+  captureTagConflict,
   coerceLinkPreviewFields,
   EMPTY_LINK_PREVIEW,
   LINK_PREVIEW_PENDING_LEASE_MS,
@@ -11,6 +13,7 @@ import {
   linkNeedsPreviewRetry,
   LinkValidationError,
   markLinkPreviewPending,
+  normalizeLinkUrl,
 } from "./link";
 
 describe("buildLink", () => {
@@ -192,5 +195,37 @@ describe("link preview state helpers", () => {
         9999,
       ),
     ).toBe(false);
+  });
+});
+
+describe("normalizeLinkUrl", () => {
+  test("strips www, trailing slash, and hash; lowercases host", () => {
+    expect(normalizeLinkUrl("HTTPS://WWW.Example.com/Path/?q=1#frag")).toBe(
+      "https://example.com/Path?q=1",
+    );
+    expect(normalizeLinkUrl("example.com/a/")).toBe("https://example.com/a");
+  });
+
+  test("rejects non-http schemes", () => {
+    expect(normalizeLinkUrl("javascript:alert(1)")).toBeNull();
+  });
+});
+
+describe("captureCollectionConflict", () => {
+  test("asks only when the existing link is already filed elsewhere", () => {
+    expect(captureCollectionConflict(null, "Work")).toBe(false);
+    expect(captureCollectionConflict("Reading", "Reading")).toBe(false);
+    expect(captureCollectionConflict("Reading", "Work")).toBe(true);
+    expect(captureCollectionConflict("Reading", null)).toBe(true);
+  });
+});
+
+describe("captureTagConflict", () => {
+  test("asks only when both sides have tags and they differ", () => {
+    expect(captureTagConflict([], ["work"])).toBe(false);
+    expect(captureTagConflict(["work"], [])).toBe(false);
+    expect(captureTagConflict(["work"], ["work"])).toBe(false);
+    expect(captureTagConflict(["work"], ["later"])).toBe(true);
+    expect(captureTagConflict(["work"], ["work", "later"])).toBe(true);
   });
 });
