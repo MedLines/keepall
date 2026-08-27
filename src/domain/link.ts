@@ -2,6 +2,12 @@ import { isHttpUrl } from "./classify";
 
 export type LinkPreviewStatus = "idle" | "pending" | "ready" | "failed";
 
+/** Why preview stopped: try again later vs never. null = no outstanding retry. */
+export type LinkPreviewRetry = "network" | "none";
+
+/** Pending enrich older than this is treated as dead (crash / sleep). */
+export const LINK_PREVIEW_PENDING_LEASE_MS = 2 * 60 * 1000;
+
 export type LinkItem = {
   id: string;
   type: "link";
@@ -13,6 +19,9 @@ export type LinkItem = {
   previewImageUrl: string;
   /** Local asset id for offline preview bytes; null if none. */
   previewAssetId: string | null;
+  previewRetry: LinkPreviewRetry | null;
+  /** When pending/last attempt started; used for the dead-lease check. */
+  previewAttemptedAt: number | null;
   tagIds: string[];
   collectionIds: string[];
   createdAt: number;
@@ -30,6 +39,8 @@ export type LinkPreviewFields = {
   previewDescription: string;
   previewImageUrl: string;
   previewAssetId: string | null;
+  previewRetry: LinkPreviewRetry | null;
+  previewAttemptedAt: number | null;
 };
 
 export const EMPTY_LINK_PREVIEW: LinkPreviewFields = {
@@ -38,6 +49,8 @@ export const EMPTY_LINK_PREVIEW: LinkPreviewFields = {
   previewDescription: "",
   previewImageUrl: "",
   previewAssetId: null,
+  previewRetry: null,
+  previewAttemptedAt: null,
 };
 
 export class LinkValidationError extends Error {
@@ -54,12 +67,16 @@ const PREVIEW_STATUSES = new Set<string>([
   "failed",
 ]);
 
+const PREVIEW_RETRIES = new Set<string>(["network", "none"]);
+
 /** Fill missing preview fields on older IndexedDB / backup link rows. */
 export function coerceLinkPreviewFields(
   raw: Partial<LinkPreviewFields> | null | undefined,
 ): LinkPreviewFields {
   const status = raw?.previewStatus;
   const assetId = raw?.previewAssetId;
+  const retry = raw?.previewRetry;
+  const attemptedAt = raw?.previewAttemptedAt;
   return {
     previewStatus:
       typeof status === "string" && PREVIEW_STATUSES.has(status)
@@ -71,7 +88,37 @@ export function coerceLinkPreviewFields(
     previewImageUrl:
       typeof raw?.previewImageUrl === "string" ? raw.previewImageUrl : "",
     previewAssetId: typeof assetId === "string" && assetId ? assetId : null,
+    previewRetry:
+      typeof retry === "string" && PREVIEW_RETRIES.has(retry)
+        ? (retry as LinkPreviewRetry)
+        : null,
+    previewAttemptedAt:
+      typeof attemptedAt === "number" && Number.isFinite(attemptedAt)
+        ? attemptedAt
+        : null,
   };
+}
+
+/** True when a wake should call enrich again for this link. */
+export function linkNeedsPreviewRetry(
+  link: LinkItem,
+  now = Date.now(),
+): boolean {
+  if (link.previewRetry === "none") {
+    return false;
+  }
+  if (link.previewRetry === "network") {
+    return true;
+  }
+  if (link.previewStatus === "failed") {
+    // Older rows before Slice 27 had no reason; treat as retryable.
+    return true;
+  }
+  if (link.previewStatus === "pending") {
+    const started = link.previewAttemptedAt ?? link.updatedAt;
+    return now - started >= LINK_PREVIEW_PENDING_LEASE_MS;
+  }
+  return false;
 }
 
 export function buildLink(
@@ -125,14 +172,17 @@ export function applyLinkPreviewResult(
   link: LinkItem,
   result:
     | { status: "ready"; title: string; description: string; imageUrl: string }
-    | { status: "failed" },
+    | { status: "failed"; retry?: LinkPreviewRetry },
   options?: { now?: number },
 ): LinkItem {
+  const now = options?.now ?? Date.now();
   if (result.status === "failed") {
     return {
       ...link,
       previewStatus: "failed",
-      updatedAt: options?.now ?? Date.now(),
+      previewRetry: result.retry ?? "network",
+      previewAttemptedAt: now,
+      updatedAt: now,
     };
   }
 
@@ -144,7 +194,10 @@ export function applyLinkPreviewResult(
     previewImageUrl: result.imageUrl.trim(),
     // New metadata may point at a different image; clear until bytes are stored.
     previewAssetId: null,
-    updatedAt: options?.now ?? Date.now(),
+    // Bytes still needed → network until store succeeds or marks none.
+    previewRetry: result.imageUrl.trim() ? "network" : null,
+    previewAttemptedAt: now,
+    updatedAt: now,
   };
 }
 
@@ -156,7 +209,22 @@ export function applyLinkPreviewAssetId(
   return {
     ...link,
     previewAssetId,
+    previewRetry: previewAssetId ? null : link.previewRetry,
     updatedAt: options?.now ?? Date.now(),
+  };
+}
+
+export function applyLinkPreviewRetry(
+  link: LinkItem,
+  previewRetry: LinkPreviewRetry | null,
+  options?: { now?: number },
+): LinkItem {
+  const now = options?.now ?? Date.now();
+  return {
+    ...link,
+    previewRetry,
+    previewAttemptedAt: now,
+    updatedAt: now,
   };
 }
 
@@ -164,10 +232,13 @@ export function markLinkPreviewPending(
   link: LinkItem,
   options?: { now?: number },
 ): LinkItem {
+  const now = options?.now ?? Date.now();
   return {
     ...link,
     previewStatus: "pending",
-    updatedAt: options?.now ?? Date.now(),
+    previewRetry: null,
+    previewAttemptedAt: now,
+    updatedAt: now,
   };
 }
 

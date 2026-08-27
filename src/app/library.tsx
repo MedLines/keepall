@@ -59,6 +59,7 @@ import {
 import { createTag, listTags } from "@/persistence/tags";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
+import { wakeLinkPreviewRetries } from "./wake-link-preview-retries";
 import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
 import { LibraryBulkBar, type BulkPanel } from "./library-bulk-bar";
@@ -211,6 +212,17 @@ export function Library() {
     return () => {
       cancelled = true;
       window.removeEventListener(ITEMS_CHANGED_EVENT, onItemsChanged);
+    };
+  }, []);
+
+  useEffect(() => {
+    void wakeLinkPreviewRetries();
+    function onOnline() {
+      void wakeLinkPreviewRetries();
+    }
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.removeEventListener("online", onOnline);
     };
   }, []);
 

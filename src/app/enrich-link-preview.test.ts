@@ -4,6 +4,7 @@ import {
   saveLinkPreviewResult,
   setLinkPreviewAssetId,
   setLinkPreviewPending,
+  setLinkPreviewRetry,
 } from "@/persistence/items";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
@@ -12,6 +13,7 @@ vi.mock("@/persistence/items", () => ({
   setLinkPreviewPending: vi.fn(),
   saveLinkPreviewResult: vi.fn(),
   setLinkPreviewAssetId: vi.fn(),
+  setLinkPreviewRetry: vi.fn(),
 }));
 
 vi.mock("@/persistence/assets", () => ({
@@ -23,10 +25,12 @@ describe("enrichLinkPreview", () => {
     vi.mocked(setLinkPreviewPending).mockReset();
     vi.mocked(saveLinkPreviewResult).mockReset();
     vi.mocked(setLinkPreviewAssetId).mockReset();
+    vi.mocked(setLinkPreviewRetry).mockReset();
     vi.mocked(putAsset).mockReset();
     vi.mocked(setLinkPreviewPending).mockResolvedValue({} as never);
     vi.mocked(saveLinkPreviewResult).mockResolvedValue({} as never);
     vi.mocked(setLinkPreviewAssetId).mockResolvedValue({} as never);
+    vi.mocked(setLinkPreviewRetry).mockResolvedValue({} as never);
     vi.mocked(putAsset).mockResolvedValue({
       id: "a1",
       mimeType: "image/png",
@@ -93,9 +97,10 @@ describe("enrichLinkPreview", () => {
     ).toBe(true);
   });
 
-  test("marks failed when the preview API responds non-OK", async () => {
+  test("marks failed with network retry when the preview API responds non-OK", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
+      status: 502,
       json: async () => ({ error: "nope" }),
     } as Response);
 
@@ -103,11 +108,27 @@ describe("enrichLinkPreview", () => {
 
     expect(saveLinkPreviewResult).toHaveBeenCalledWith("l1", {
       status: "failed",
+      retry: "network",
     });
     expect(putAsset).not.toHaveBeenCalled();
   });
 
-  test("skips local bytes when the image API rejects oversize", async () => {
+  test("marks failed with none when the preview URL is blocked", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: "blocked" }),
+    } as Response);
+
+    await enrichLinkPreview("l1", "https://example.com");
+
+    expect(saveLinkPreviewResult).toHaveBeenCalledWith("l1", {
+      status: "failed",
+      retry: "none",
+    });
+  });
+
+  test("marks none when the image API rejects oversize", async () => {
     vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/preview") {
@@ -131,6 +152,18 @@ describe("enrichLinkPreview", () => {
       description: "World",
       imageUrl: "https://cdn.example.com/x.png",
     });
+    expect(setLinkPreviewRetry).toHaveBeenCalledWith("l1", "none");
     expect(putAsset).not.toHaveBeenCalled();
+  });
+
+  test("marks network when preview fetch throws offline", async () => {
+    vi.mocked(fetch).mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await enrichLinkPreview("l1", "https://example.com");
+
+    expect(saveLinkPreviewResult).toHaveBeenCalledWith("l1", {
+      status: "failed",
+      retry: "network",
+    });
   });
 });

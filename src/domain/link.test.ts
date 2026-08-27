@@ -2,9 +2,13 @@ import { describe, expect, test } from "vitest";
 import {
   applyLinkEdit,
   applyLinkPreviewResult,
+  applyLinkPreviewRetry,
   buildLink,
+  coerceLinkPreviewFields,
   EMPTY_LINK_PREVIEW,
+  LINK_PREVIEW_PENDING_LEASE_MS,
   linkListTitle,
+  linkNeedsPreviewRetry,
   LinkValidationError,
   markLinkPreviewPending,
 } from "./link";
@@ -59,6 +63,7 @@ describe("applyLinkEdit", () => {
       previewStatus: "ready" as const,
       previewTitle: "Old",
       previewImageUrl: "https://cdn.example.com/a.png",
+      previewRetry: "none" as const,
     };
 
     const next = applyLinkEdit(link, { url: "https://example.com/new" });
@@ -66,6 +71,7 @@ describe("applyLinkEdit", () => {
     expect(next.previewTitle).toBe("");
     expect(next.previewImageUrl).toBe("");
     expect(next.previewAssetId).toBeNull();
+    expect(next.previewRetry).toBeNull();
   });
 
   test("rejects javascript URLs", () => {
@@ -113,6 +119,8 @@ describe("link preview state helpers", () => {
     };
     const pending = markLinkPreviewPending(link, { now: 2 });
     expect(pending.previewStatus).toBe("pending");
+    expect(pending.previewAttemptedAt).toBe(2);
+    expect(pending.previewRetry).toBeNull();
 
     const ready = applyLinkPreviewResult(
       pending,
@@ -128,8 +136,61 @@ describe("link preview state helpers", () => {
     expect(ready.previewTitle).toBe("Hello");
     expect(ready.previewImageUrl).toBe("https://cdn.example.com/i.png");
     expect(ready.previewAssetId).toBeNull();
+    expect(ready.previewRetry).toBe("network");
 
-    const failed = applyLinkPreviewResult(pending, { status: "failed" }, { now: 4 });
+    const failed = applyLinkPreviewResult(
+      pending,
+      { status: "failed" },
+      { now: 4 },
+    );
     expect(failed.previewStatus).toBe("failed");
+    expect(failed.previewRetry).toBe("network");
+  });
+
+  test("coerce fills missing retry fields on older rows", () => {
+    expect(
+      coerceLinkPreviewFields({
+        previewStatus: "failed",
+        previewTitle: "t",
+      }),
+    ).toEqual({
+      previewStatus: "failed",
+      previewTitle: "t",
+      previewDescription: "",
+      previewImageUrl: "",
+      previewAssetId: null,
+      previewRetry: null,
+      previewAttemptedAt: null,
+    });
+  });
+
+  test("linkNeedsPreviewRetry honors network, none, failed, and dead pending", () => {
+    const base = buildLink({ url: "https://example.com" }, { id: "l1", now: 1 });
+
+    expect(
+      linkNeedsPreviewRetry({ ...base, previewRetry: "network" }, 100),
+    ).toBe(true);
+    expect(linkNeedsPreviewRetry({ ...base, previewRetry: "none" }, 100)).toBe(
+      false,
+    );
+    expect(
+      linkNeedsPreviewRetry({ ...base, previewStatus: "failed" }, 100),
+    ).toBe(true);
+
+    const freshPending = markLinkPreviewPending(base, { now: 1000 });
+    expect(linkNeedsPreviewRetry(freshPending, 1000 + 1_000)).toBe(false);
+    expect(
+      linkNeedsPreviewRetry(
+        freshPending,
+        1000 + LINK_PREVIEW_PENDING_LEASE_MS,
+      ),
+    ).toBe(true);
+
+    expect(
+      linkNeedsPreviewRetry(
+        applyLinkPreviewRetry(base, "none", { now: 5 }),
+        9999,
+      ),
+    ).toBe(false);
   });
 });

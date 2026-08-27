@@ -12,10 +12,12 @@ import {
   applyLinkEdit,
   applyLinkPreviewAssetId,
   applyLinkPreviewResult,
+  applyLinkPreviewRetry,
   buildLink,
   markLinkPreviewPending,
   type CreateLinkInput,
   type LinkItem,
+  type LinkPreviewRetry,
 } from "@/domain/link";
 import {
   applyNoteEdit,
@@ -205,7 +207,7 @@ export async function saveLinkPreviewResult(
   id: string,
   result:
     | { status: "ready"; title: string; description: string; imageUrl: string }
-    | { status: "failed" },
+    | { status: "failed"; retry?: LinkPreviewRetry },
 ): Promise<LinkItem> {
   const existing = await getDb().items.get(id);
 
@@ -218,6 +220,22 @@ export async function saveLinkPreviewResult(
   if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
     await deleteAsset(current.previewAssetId);
   }
+  await getDb().items.put(next);
+  return next;
+}
+
+export async function setLinkPreviewRetry(
+  id: string,
+  previewRetry: LinkPreviewRetry | null,
+): Promise<LinkItem> {
+  const existing = await getDb().items.get(id);
+
+  if (!existing || existing.type !== "link") {
+    throw new Error("Link not found");
+  }
+
+  const current = normalizeItem(existing);
+  const next = applyLinkPreviewRetry(current, previewRetry);
   await getDb().items.put(next);
   return next;
 }

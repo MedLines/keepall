@@ -48,6 +48,10 @@ vi.mock("./enrich-link-preview", () => ({
   enrichLinkPreview: vi.fn(),
 }));
 
+vi.mock("./wake-link-preview-retries", () => ({
+  wakeLinkPreviewRetries: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/persistence/tags", () => ({
   listTags: vi.fn(),
   createTag: vi.fn(),
