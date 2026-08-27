@@ -199,7 +199,7 @@ export function LibraryInspect({
     : "";
 
   return (
-    <AnimatePresence initial={false}>
+    <AnimatePresence initial={false} mode="wait">
       {open && item ? (
         <motion.div
           key="inspect-root"

@@ -60,7 +60,6 @@ import { createTag, listTags } from "@/persistence/tags";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { LibraryItem, type PendingMutation } from "./library-item";
-import { LibraryListRow } from "./library-list-row";
 import { LibraryInspect } from "./library-inspect";
 import { LibraryBulkBar, type BulkPanel } from "./library-bulk-bar";
 import { LibraryShell } from "./library-shell";
@@ -1179,127 +1178,122 @@ export function Library() {
                             ? "No items in this collection."
                             : "No items yet."}
                 </p>
-              ) : browseLayout === "list" ? (
-                <ul className="flex flex-col gap-2">
-                  {visibleItems.map((item) => (
-                    <LibraryListRow
-                      key={item.id}
-                      item={item}
-                      inspected={inspectId === item.id}
-                      selected={selectedIds.has(item.id)}
-                      selectionActive={selectionActive}
-                      dragEnabled={!mutationBusy && inspectId !== item.id}
-                      isDragging={draggingIds.has(item.id)}
-                      onOpenInspect={() => openInspect(item.id)}
-                      onToggleSelect={() => toggleItemSelected(item.id)}
-                      onItemDragStart={(event) =>
-                        handleItemDragStart(item.id, event)
-                      }
-                      onItemDragEnd={handleItemDragEnd}
-                      pinVisible={itemPinVisible(item)}
-                      pinned={itemIsPinned(item)}
-                      onTogglePin={() => void togglePinItem(item.id)}
-                    />
-                  ))}
-                </ul>
               ) : (
-                <ul className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
+                <ul
+                  className={
+                    browseLayout === "list"
+                      ? "flex flex-col gap-2"
+                      : "grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4"
+                  }
+                >
                   {visibleItems.map((item) => (
-                    <LibraryItem
-                      key={item.id}
-                      item={item}
-                      inspected={inspectId === item.id}
-                      onOpenInspect={() => openInspect(item.id)}
-                      tagNames={resolveItemTags(item, tagsById)}
-                      tagError={tagErrorItemId === item.id ? tagError : null}
-                      collectionNames={resolveItemCollectionNames(
-                        item,
-                        collectionsById,
-                      )}
-                      collectionError={
-                        collectionErrorItemId === item.id
-                          ? collectionError
-                          : null
-                      }
-                      onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
-                      editing={editingId === item.id && inspectId !== item.id}
-                      pendingDelete={
-                        pendingDeleteId === item.id && inspectId !== item.id
-                      }
-                      mutationBusy={mutationBusy}
-                      pendingMutation={pendingMutation}
-                      editDraft={editDraft}
-                      editTitleDraft={editTitleDraft}
-                      editError={editError}
-                      setFirstEditField={(node) => {
-                        firstEditFieldRef.current = node;
-                      }}
-                      confirmDeleteRef={confirmDeleteRef}
-                      onEditDraftChange={setEditDraft}
-                      onEditTitleChange={setEditTitleDraft}
-                      onEditSaveShortcut={onEditSaveShortcut}
-                      onSaveNote={() => void saveNoteEdit(item.id)}
-                      onSaveLink={() => void saveLinkEdit(item.id)}
-                      onSaveImage={() => void saveImageEdit(item.id)}
-                      onCancelEdit={() => clearEdit({ restoreFocus: true })}
-                      onConfirmDelete={() => void confirmDelete(item.id)}
-                      onCancelDelete={cancelDelete}
-                      onAddTag={(name: string) => void addTagToItem(item.id, name)}
-                      onRemoveTag={(tagId: string) =>
-                        void removeTagFromItem(item.id, tagId)
-                      }
-                      onAddCollection={(name: string) =>
-                        void addCollectionToItem(item.id, name)
-                      }
-                      onStartEdit={() => {
-                        setPendingDeleteId(null);
-                        setDeleteError(null);
-                        setEditError(null);
-                        setTagError(null);
-                        setTagErrorItemId(null);
-                        setCollectionError(null);
-                        setCollectionErrorItemId(null);
-                        setEditingId(item.id);
-                        if (item.type === "note") {
-                          setEditDraft(item.content);
-                          setEditTitleDraft("");
-                        } else if (item.type === "image") {
-                          setEditDraft(item.caption);
-                          setEditTitleDraft(item.sourceUrl);
-                        } else {
-                          setEditDraft(item.url);
-                          setEditTitleDraft(item.title);
+                      <LibraryItem
+                        key={item.id}
+                        item={item}
+                        inspected={inspectId === item.id}
+                        layoutMode={browseLayout}
+                        onOpenInspect={() => openInspect(item.id)}
+                        tagNames={resolveItemTags(item, tagsById)}
+                        tagError={
+                          tagErrorItemId === item.id ? tagError : null
                         }
-                      }}
-                      onStartDelete={() => {
-                        clearEdit();
-                        setDeleteError(null);
-                        setTagError(null);
-                        setTagErrorItemId(null);
-                        setCollectionError(null);
-                        setCollectionErrorItemId(null);
-                        setPendingDeleteId(item.id);
-                      }}
-                      selected={selectedIds.has(item.id)}
-                      selectionActive={selectionActive}
-                      onToggleSelect={() => toggleItemSelected(item.id)}
-                      tagSuggestions={tagSuggestions}
-                      collectionSuggestions={collectionSuggestions}
-                      dragEnabled={
-                        !mutationBusy &&
-                        editingId !== item.id &&
-                        pendingDeleteId !== item.id &&
-                        inspectId !== item.id
-                      }
-                      isDragging={draggingIds.has(item.id)}
-                      onItemDragStart={(event) =>
-                        handleItemDragStart(item.id, event)
-                      }
-                      onItemDragEnd={handleItemDragEnd}
-                      pinVisible={itemPinVisible(item)}
-                      pinned={itemIsPinned(item)}
-                      onTogglePin={() => void togglePinItem(item.id)}
-                    />
+                        collectionNames={resolveItemCollectionNames(
+                          item,
+                          collectionsById,
+                        )}
+                        collectionError={
+                          collectionErrorItemId === item.id
+                            ? collectionError
+                            : null
+                        }
+                        onBrowseTag={(tagId) =>
+                          updateView({ tag: tagId }, "push")
+                        }
+                        editing={
+                          editingId === item.id && inspectId !== item.id
+                        }
+                        pendingDelete={
+                          pendingDeleteId === item.id &&
+                          inspectId !== item.id
+                        }
+                        mutationBusy={mutationBusy}
+                        pendingMutation={pendingMutation}
+                        editDraft={editDraft}
+                        editTitleDraft={editTitleDraft}
+                        editError={editError}
+                        setFirstEditField={(node) => {
+                          firstEditFieldRef.current = node;
+                        }}
+                        confirmDeleteRef={confirmDeleteRef}
+                        onEditDraftChange={setEditDraft}
+                        onEditTitleChange={setEditTitleDraft}
+                        onEditSaveShortcut={onEditSaveShortcut}
+                        onSaveNote={() => void saveNoteEdit(item.id)}
+                        onSaveLink={() => void saveLinkEdit(item.id)}
+                        onSaveImage={() => void saveImageEdit(item.id)}
+                        onCancelEdit={() =>
+                          clearEdit({ restoreFocus: true })
+                        }
+                        onConfirmDelete={() => void confirmDelete(item.id)}
+                        onCancelDelete={cancelDelete}
+                        onAddTag={(name: string) =>
+                          void addTagToItem(item.id, name)
+                        }
+                        onRemoveTag={(tagId: string) =>
+                          void removeTagFromItem(item.id, tagId)
+                        }
+                        onAddCollection={(name: string) =>
+                          void addCollectionToItem(item.id, name)
+                        }
+                        onStartEdit={() => {
+                          setPendingDeleteId(null);
+                          setDeleteError(null);
+                          setEditError(null);
+                          setTagError(null);
+                          setTagErrorItemId(null);
+                          setCollectionError(null);
+                          setCollectionErrorItemId(null);
+                          setEditingId(item.id);
+                          if (item.type === "note") {
+                            setEditDraft(item.content);
+                            setEditTitleDraft("");
+                          } else if (item.type === "image") {
+                            setEditDraft(item.caption);
+                            setEditTitleDraft(item.sourceUrl);
+                          } else {
+                            setEditDraft(item.url);
+                            setEditTitleDraft(item.title);
+                          }
+                        }}
+                        onStartDelete={() => {
+                          clearEdit();
+                          setDeleteError(null);
+                          setTagError(null);
+                          setTagErrorItemId(null);
+                          setCollectionError(null);
+                          setCollectionErrorItemId(null);
+                          setPendingDeleteId(item.id);
+                        }}
+                        selected={selectedIds.has(item.id)}
+                        selectionActive={selectionActive}
+                        onToggleSelect={() => toggleItemSelected(item.id)}
+                        tagSuggestions={tagSuggestions}
+                        collectionSuggestions={collectionSuggestions}
+                        dragEnabled={
+                          !mutationBusy &&
+                          editingId !== item.id &&
+                          pendingDeleteId !== item.id &&
+                          inspectId !== item.id
+                        }
+                        isDragging={draggingIds.has(item.id)}
+                        onItemDragStart={(event) =>
+                          handleItemDragStart(item.id, event)
+                        }
+                        onItemDragEnd={handleItemDragEnd}
+                        pinVisible={itemPinVisible(item)}
+                        pinned={itemIsPinned(item)}
+                        onTogglePin={() => void togglePinItem(item.id)}
+                      />
                   ))}
                 </ul>
               )}

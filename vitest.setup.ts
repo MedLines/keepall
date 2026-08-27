@@ -100,7 +100,7 @@ if (typeof URL.revokeObjectURL !== "function") {
 
 if (typeof window.matchMedia !== "function") {
   window.matchMedia = (query: string) => ({
-    matches: false,
+    matches: query.includes("prefers-reduced-motion"),
     media: query,
     onchange: null,
     addEventListener: () => {},

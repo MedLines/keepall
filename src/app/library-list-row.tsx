@@ -1,12 +1,15 @@
 "use client";
 
 import { type DragEvent, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import {
   cardInitial,
   cardSecondaryLine,
   linkCardHost,
 } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
+import type { LibraryLayout } from "@/domain/library-view";
+import { itemMediaLayoutProps } from "./item-media-layout";
 import { LibraryItemMedia } from "./library-item-media";
 
 type Props = {
@@ -23,6 +26,7 @@ type Props = {
   pinVisible: boolean;
   pinned: boolean;
   onTogglePin: () => void;
+  layoutMode: LibraryLayout;
 };
 
 function typeLabel(item: Item): string {
@@ -58,10 +62,12 @@ export function LibraryListRow({
   pinVisible,
   pinned,
   onTogglePin,
+  layoutMode,
 }: Props) {
   const title = itemListTitle(item);
   const secondary = cardSecondaryLine(item);
   const [faviconBroken, setFaviconBroken] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const faviconUrl =
     item.type === "link" && !faviconBroken
@@ -118,24 +124,32 @@ export function LibraryListRow({
           onClick={onOpenInspect}
           aria-label={`Open ${title}`}
         >
-        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-zinc-200 text-sm font-semibold text-zinc-700 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
-          {showMediaThumb ? (
-            <LibraryItemMedia
-              item={item}
-              className="!aspect-auto size-10 object-cover"
-            />
-          ) : faviconUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- best-effort external favicon
-            <img
-              alt=""
-              className="size-5"
-              src={faviconUrl}
-              onError={() => setFaviconBroken(true)}
-            />
+          {inspected ? (
+            <span className="size-10 shrink-0" aria-hidden />
           ) : (
-            cardInitial(item)
+            <motion.span
+              className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-zinc-200 text-sm font-semibold text-zinc-700 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
+              style={{ borderRadius: 8 }}
+              {...itemMediaLayoutProps(item.id, layoutMode, reduceMotion)}
+            >
+              {showMediaThumb ? (
+                <LibraryItemMedia
+                  item={item}
+                  className="!aspect-auto size-10 object-cover"
+                />
+              ) : faviconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- best-effort external favicon
+                <img
+                  alt=""
+                  className="size-5"
+                  src={faviconUrl}
+                  onError={() => setFaviconBroken(true)}
+                />
+              ) : (
+                cardInitial(item)
+              )}
+            </motion.span>
           )}
-        </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium text-zinc-900">
             {title}
