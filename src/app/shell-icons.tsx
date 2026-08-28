@@ -171,6 +171,34 @@ export function ListIcon({ className }: IconProps) {
   );
 }
 
+/** Stacked layers — “all types” / multi-category filter (not sort lines). */
+export function LayersIcon({ className }: IconProps) {
+  return (
+    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M10 3.5 16.5 7 10 10.5 3.5 7 10 3.5Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.5 10.5 10 14 16.5 10.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.5 13.5 10 16.5 16.5 13.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function ChevronDownIcon({ className }: IconProps) {
   return (
     <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>

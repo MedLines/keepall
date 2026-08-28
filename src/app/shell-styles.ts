@@ -16,7 +16,6 @@ export function writeShellPanelOpen(open: boolean): void {
 }
 
 const SHELL_COLLECTIONS_OPEN_KEY = "keepall-shell-collections-open";
-const SHELL_FILTERS_OPEN_KEY = "keepall-shell-filters-open";
 const SHELL_TAGS_OPEN_KEY = "keepall-shell-tags-open";
 
 function readSectionOpen(key: string): boolean {
@@ -35,14 +34,6 @@ export function writeShellCollectionsOpen(open: boolean): void {
     SHELL_COLLECTIONS_OPEN_KEY,
     open ? "open" : "closed",
   );
-}
-
-export function readShellFiltersOpen(): boolean {
-  return readSectionOpen(SHELL_FILTERS_OPEN_KEY);
-}
-
-export function writeShellFiltersOpen(open: boolean): void {
-  window.localStorage.setItem(SHELL_FILTERS_OPEN_KEY, open ? "open" : "closed");
 }
 
 export function readShellTagsOpen(): boolean {

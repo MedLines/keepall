@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { type Ref } from "react";
-import type { LibraryLayout, LibrarySort } from "@/domain/library-view";
+import type {
+  LibraryLayout,
+  LibrarySort,
+  LibraryTypeFilter,
+} from "@/domain/library-view";
+import { LibraryTypeFilterMenu } from "./library-type-filter-menu";
 import { openCaptureDialog } from "./capture-events";
 import {
   LibraryBulkPanels,
@@ -36,8 +41,11 @@ type Props = {
   onSortChange: (sort: LibrarySort) => void;
   layout: LibraryLayout;
   onLayoutChange: (layout: LibraryLayout) => void;
+  typeFilter: LibraryTypeFilter | null;
+  onTypeFilterChange: (type: LibraryTypeFilter | null) => void;
   onHomeClick?: () => void;
   bulk?: LibraryBulkBarProps;
+  libraryLoading?: boolean;
 };
 
 export function LibraryTopBar({
@@ -50,8 +58,11 @@ export function LibraryTopBar({
   onSortChange,
   layout,
   onLayoutChange,
+  typeFilter,
+  onTypeFilterChange,
   onHomeClick,
   bulk,
+  libraryLoading = false,
 }: Props) {
   const showBulkSlot = bulk !== undefined && bulk.visibleCount > 0;
   const bulkPanelOpen = bulk?.panel !== null && bulk?.panel !== undefined;
@@ -86,7 +97,9 @@ export function LibraryTopBar({
               </h2>
               <p className="truncate text-sm font-semibold text-zinc-900">{title}</p>
               <p className="text-[11px] tabular-nums text-zinc-500">
-                {itemCount} item{itemCount === 1 ? "" : "s"}
+                {libraryLoading
+                  ? "Loading…"
+                  : `${itemCount} item${itemCount === 1 ? "" : "s"}`}
               </p>
             </div>
 
@@ -120,6 +133,11 @@ export function LibraryTopBar({
                 />
               </label>
             </div>
+
+            <LibraryTypeFilterMenu
+              value={typeFilter}
+              onChange={onTypeFilterChange}
+            />
 
             <ShellTopMenu
               ariaLabel="Sort library"
@@ -161,7 +179,9 @@ export function LibraryTopBar({
       <div className="border-t border-zinc-100 px-3 py-1.5 sm:hidden">
         <p className="truncate text-sm font-semibold text-zinc-900">{title}</p>
         <p className="text-[11px] tabular-nums text-zinc-500">
-          {itemCount} item{itemCount === 1 ? "" : "s"}
+          {libraryLoading
+            ? "Loading…"
+            : `${itemCount} item${itemCount === 1 ? "" : "s"}`}
         </p>
       </div>
     </header>

@@ -32,7 +32,6 @@ import {
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
 import { matchesSearchQuery, normalizeSearchQuery } from "@/domain/search";
-import { PREVIEW_DAILY_VIEWPORT_CAP } from "@/domain/preview-enrich";
 import { TagValidationError, normalizeTagName, type Tag } from "@/domain/tag";
 import {
   createCollection,
@@ -79,7 +78,6 @@ import {
   setViewportPreviewEnrichEnabled,
   startPreviewWelcomeBatch,
   subscribePreviewEnrichProgress,
-  subscribePreviewViewportBudgetCapped,
   type PreviewEnrichProgress,
 } from "./preview-enrich-coordinator";
 import { wakeLinkPreviewRetries } from "./wake-link-preview-retries";
@@ -244,7 +242,6 @@ export function Library() {
   const [backupOpen, setBackupOpen] = useState(false);
   const [previewEnrichProgress, setPreviewEnrichProgress] =
     useState<PreviewEnrichProgress>(null);
-  const [previewBudgetCapped, setPreviewBudgetCapped] = useState(false);
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
   const mainScrollRef = useRef<HTMLElement>(null);
@@ -411,14 +408,7 @@ export function Library() {
 
   useEffect(() => {
     void resumePreviewWelcomeBatch();
-    const unsubProgress = subscribePreviewEnrichProgress(setPreviewEnrichProgress);
-    const unsubBudget = subscribePreviewViewportBudgetCapped(
-      setPreviewBudgetCapped,
-    );
-    return () => {
-      unsubProgress();
-      unsubBudget();
-    };
+    return subscribePreviewEnrichProgress(setPreviewEnrichProgress);
   }, []);
 
   useEffect(() => {
@@ -1421,6 +1411,9 @@ export function Library() {
         onSortChange={(sort) => updateView({ sort }, "push")}
         layout={browseLayout}
         onLayoutChange={(layout) => updateView({ layout }, "replace")}
+        typeFilter={browseType}
+        onTypeFilterChange={(type) => updateView({ type }, "push")}
+        libraryLoading={loadState === "loading"}
         onHomeClick={() => setBackupOpen(false)}
         bulk={{
           allVisibleSelected,
@@ -1483,6 +1476,7 @@ export function Library() {
           collectionManageError={collectionManageError}
           dragError={dragError}
           mutationBusy={mutationBusy}
+          libraryLoading={loadState === "loading"}
           onGoAll={() =>
             updateView(
               { collection: null, unsorted: false, type: null },
@@ -1494,7 +1488,6 @@ export function Library() {
           }
           onGoCollection={(id) => updateView({ collection: id }, "push")}
           onGoTag={(id) => updateView({ tag: id }, "push")}
-          onGoType={(type) => updateView({ type }, "push")}
           onCollectionDragOver={handleCollectionDragOver}
           onCollectionDragLeave={() => setDropTargetCollectionId(null)}
           onCollectionDrop={handleCollectionDrop}
@@ -1548,13 +1541,6 @@ export function Library() {
                 >
                   Fetching link previews… {previewEnrichProgress.done} /{" "}
                   {previewEnrichProgress.total}
-                </p>
-              ) : null}
-              {previewBudgetCapped ? (
-                <p className="mb-3 text-sm text-zinc-600" role="status">
-                  Automatic preview fetching paused for today (
-                  {PREVIEW_DAILY_VIEWPORT_CAP}/day). Open a link and choose
-                  Fetch preview.
                 </p>
               ) : null}
               {visibleItems.length === 0 ? (

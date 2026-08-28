@@ -20,18 +20,14 @@ import {
   ChevronDownIcon,
   CollectionIcon,
   HashIcon,
-  ImageIcon,
   InboxIcon,
   LibraryIcon,
-  LinkIcon,
   MoreIcon,
-  NoteIcon,
   PlusIcon,
   SearchIcon,
 } from "./shell-icons";
 import {
   readShellCollectionsOpen,
-  readShellFiltersOpen,
   readShellTagsOpen,
   SHELL_ASIDE,
   SHELL_BACKDROP,
@@ -42,7 +38,6 @@ import {
   SHELL_SIDEBAR_COLLAPSED,
   SHELL_SIDEBAR_EXPANDED,
   writeShellCollectionsOpen,
-  writeShellFiltersOpen,
   writeShellTagsOpen,
 } from "./shell-styles";
 import { useShellMobile } from "./use-shell-mobile";
@@ -65,11 +60,11 @@ type Props = {
   collectionManageError: string | null;
   dragError: string | null;
   mutationBusy: boolean;
+  libraryLoading?: boolean;
   onGoAll: () => void;
   onGoUnsorted: () => void;
   onGoCollection: (id: string) => void;
   onGoTag: (id: string) => void;
-  onGoType: (type: LibraryTypeFilter) => void;
   onCollectionDragOver: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onCollectionDragLeave: () => void;
   onCollectionDrop: (id: string, event: DragEvent<HTMLDivElement>) => void;
@@ -78,16 +73,6 @@ type Props = {
   onRenameCollection: (id: string, name: string) => void;
   onDeleteCollection: (id: string) => void;
 };
-
-const TYPE_OPTIONS: {
-  value: LibraryTypeFilter;
-  label: string;
-  Icon: typeof LinkIcon;
-}[] = [
-  { value: "link", label: "Links", Icon: LinkIcon },
-  { value: "note", label: "Notes", Icon: NoteIcon },
-  { value: "image", label: "Images", Icon: ImageIcon },
-];
 
 export function LibraryShell({
   panelOpen: expanded,
@@ -106,11 +91,11 @@ export function LibraryShell({
   collectionManageError,
   dragError,
   mutationBusy,
+  libraryLoading = false,
   onGoAll,
   onGoUnsorted,
   onGoCollection,
   onGoTag,
-  onGoType,
   onCollectionDragOver,
   onCollectionDragLeave,
   onCollectionDrop,
@@ -124,7 +109,6 @@ export function LibraryShell({
   const [collectionsOpen, setCollectionsOpen] = useState(
     readShellCollectionsOpen,
   );
-  const [filtersOpen, setFiltersOpen] = useState(readShellFiltersOpen);
   const [tagsOpen, setTagsOpen] = useState(readShellTagsOpen);
   const isMobile = useShellMobile();
 
@@ -177,10 +161,6 @@ export function LibraryShell({
 
   const unsortedActive = !backupOpen && browseUnsorted;
 
-  function typeActive(value: LibraryTypeFilter) {
-    return !backupOpen && browseType === value;
-  }
-
   const collectionsCollapsedLabel =
     collections.find((collection) => collection.id === browseCollectionId)
       ?.name ?? "Collections";
@@ -193,7 +173,7 @@ export function LibraryShell({
         expanded={expanded}
         active={allItemsActive}
         label="All items"
-        count={counts.all}
+        count={libraryLoading ? undefined : counts.all}
         icon={<LibraryIcon className="size-4 shrink-0 text-zinc-500" />}
         onClick={() => {
           leaveBackup();
@@ -205,7 +185,7 @@ export function LibraryShell({
         expanded={expanded}
         active={unsortedActive}
         label="Unsorted"
-        count={counts.unsorted}
+        count={libraryLoading ? undefined : counts.unsorted}
         icon={<InboxIcon className="size-4 shrink-0 text-zinc-500" />}
         onClick={() => {
           leaveBackup();
@@ -215,22 +195,6 @@ export function LibraryShell({
       />
     </>
   );
-
-  const typeNav = TYPE_OPTIONS.map(({ value, label, Icon }) => (
-    <ShellNavItem
-      key={value}
-      expanded={expanded}
-      active={typeActive(value)}
-      label={label}
-      count={counts.byType[value]}
-      icon={<Icon className="size-4 shrink-0 text-zinc-500" />}
-      onClick={() => {
-        leaveBackup();
-        onGoType(value);
-        closeOnMobile();
-      }}
-    />
-  ));
 
   return (
     <>
@@ -289,6 +253,7 @@ export function LibraryShell({
                     collectionManageError={collectionManageError}
                     dragError={dragError}
                     mutationBusy={mutationBusy}
+                    libraryLoading={libraryLoading}
                     onGoCollection={(id) => {
                       leaveBackup();
                       onGoCollection(id);
@@ -303,17 +268,6 @@ export function LibraryShell({
                     onDeleteCollection={onDeleteCollection}
                   />
 
-                  <CollapsibleSection
-                    title="Filters"
-                    open={filtersOpen}
-                    onOpenChange={(open) => {
-                      setFiltersOpen(open);
-                      writeShellFiltersOpen(open);
-                    }}
-                  >
-                    {typeNav}
-                  </CollapsibleSection>
-
                   <TagsSection
                     tagsOpen={tagsOpen}
                     onTagsOpenChange={(open) => {
@@ -326,6 +280,7 @@ export function LibraryShell({
                     tags={tags}
                     browseTagId={browseTagId}
                     counts={counts.byTagId}
+                    libraryLoading={libraryLoading}
                     onGoTag={(id) => {
                       leaveBackup();
                       onGoTag(id);
@@ -348,7 +303,6 @@ export function LibraryShell({
                       writeShellCollectionsOpen(true);
                     }}
                   />
-                  {typeNav}
                   <ShellNavItem
                     expanded={false}
                     active={browseTagId !== null}
@@ -402,6 +356,7 @@ function CollectionsSection({
   collectionManageError,
   dragError,
   mutationBusy,
+  libraryLoading = false,
   onGoCollection,
   onCollectionDragOver,
   onCollectionDragLeave,
@@ -424,6 +379,7 @@ function CollectionsSection({
   collectionManageError: string | null;
   dragError: string | null;
   mutationBusy: boolean;
+  libraryLoading?: boolean;
   onGoCollection: (id: string) => void;
   onCollectionDragOver: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onCollectionDragLeave: () => void;
@@ -494,16 +450,18 @@ function CollectionsSection({
 
       {filteredCollections.length === 0 ? (
         <p className="px-2 pb-2 text-pretty text-xs text-zinc-500">
-          {collections.length === 0
-            ? "No collections yet."
-            : "No matches."}
+          {libraryLoading
+            ? "Loading…"
+            : collections.length === 0
+              ? "No collections yet."
+              : "No matches."}
         </p>
       ) : (
         filteredCollections.map((collection) => (
           <CollectionNavRow
             key={collection.id}
             collection={collection}
-            count={counts[collection.id] ?? 0}
+            count={libraryLoading ? undefined : (counts[collection.id] ?? 0)}
             active={browseCollectionId === collection.id}
             dropHighlight={dropTargetCollectionId === collection.id}
             renaming={renamingCollectionId === collection.id}
@@ -566,6 +524,7 @@ function TagsSection({
   tags,
   browseTagId,
   counts,
+  libraryLoading = false,
   onGoTag,
 }: {
   tagsOpen: boolean;
@@ -576,11 +535,18 @@ function TagsSection({
   tags: Tag[];
   browseTagId: string | null;
   counts: Record<string, number>;
+  libraryLoading?: boolean;
   onGoTag: (id: string) => void;
 }) {
   return (
     <CollapsibleSection
-      title={tags.length > 0 ? `Tags (${tags.length})` : "Tags"}
+      title={
+        libraryLoading
+          ? "Tags"
+          : tags.length > 0
+            ? `Tags (${tags.length})`
+            : "Tags"
+      }
       open={tagsOpen}
       onOpenChange={onTagsOpenChange}
     >
@@ -592,7 +558,11 @@ function TagsSection({
 
       {filteredTags.length === 0 ? (
         <p className="px-2 pb-2 text-pretty text-xs text-zinc-500">
-          {tags.length === 0 ? "No tags yet." : "No matches."}
+          {libraryLoading
+            ? "Loading…"
+            : tags.length === 0
+              ? "No tags yet."
+              : "No matches."}
         </p>
       ) : (
         filteredTags.map((tag) => (
@@ -602,7 +572,7 @@ function TagsSection({
             active={browseTagId === tag.id}
             label={tag.name}
             ariaLabel={`Tag ${tag.name}`}
-            count={counts[tag.id] ?? 0}
+            count={libraryLoading ? undefined : (counts[tag.id] ?? 0)}
             icon={<HashIcon className="size-4 shrink-0 text-zinc-500" />}
             onClick={() => onGoTag(tag.id)}
           />

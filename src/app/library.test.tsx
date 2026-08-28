@@ -676,8 +676,7 @@ describe("Library type filter", () => {
     render(<Library />);
 
     await screen.findByText("design note");
-    const sidebarNav = screen.getByRole("navigation", { name: "Sidebar navigation" });
-    fireEvent.click(within(sidebarNav).getByRole("button", { name: "Links" }));
+    pickTopMenu("Filter by type", "Links");
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?type=link", {
       scroll: false,
@@ -694,6 +693,13 @@ describe("Library type filter", () => {
     expect(screen.getByText("Design link")).toBeInTheDocument();
     expect(screen.queryByText("Other link")).not.toBeInTheDocument();
     expect(screen.queryByText("design note")).not.toBeInTheDocument();
+
+    pickTopMenu("Filter by type", "All types");
+
+    expect(mockNavigation.push).toHaveBeenCalledWith("/?tag=t1", {
+      scroll: false,
+    });
+    expect(screen.getByText("Design link")).toBeInTheDocument();
   });
 });
 
@@ -990,8 +996,7 @@ describe("Library view state", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
 
-    const sidebarNav = screen.getByRole("navigation", { name: "Sidebar navigation" });
-    fireEvent.click(within(sidebarNav).getByRole("button", { name: "Notes" }));
+    pickTopMenu("Filter by type", "Notes");
 
     expect(mockNavigation.push).toHaveBeenCalledWith(
       "/?type=note&layout=list",

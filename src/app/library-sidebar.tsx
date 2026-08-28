@@ -27,5 +27,6 @@ export const LibrarySidebar = memo(
     prev.newCollectionDraft === next.newCollectionDraft &&
     prev.collectionManageError === next.collectionManageError &&
     prev.dragError === next.dragError &&
-    prev.mutationBusy === next.mutationBusy,
+    prev.mutationBusy === next.mutationBusy &&
+    prev.libraryLoading === next.libraryLoading,
 );

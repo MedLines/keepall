@@ -2,7 +2,11 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ChevronDownIcon } from "./shell-icons";
-import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
+import {
+  SHELL_TOP_BTN,
+  SHELL_TOP_BTN_ACTIVE,
+  SHELL_TOP_BTN_IDLE,
+} from "./shell-styles";
 
 type Option<T extends string> = {
   value: T;
@@ -17,6 +21,8 @@ type Props<T extends string> = {
   onChange: (value: T) => void;
   /** Trigger shows icon (+ chevron) only; dropdown options keep labels. */
   iconOnly?: boolean;
+  /** Emphasize trigger when a non-default value is active (e.g. type filter). */
+  emphasized?: boolean;
 };
 
 export function ShellTopMenu<T extends string>({
@@ -25,11 +31,13 @@ export function ShellTopMenu<T extends string>({
   options,
   onChange,
   iconOnly = false,
+  emphasized = false,
 }: Props<T>) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
-  const active = options.find((option) => option.value === value) ?? options[0];
+  const activeOption =
+    options.find((option) => option.value === value) ?? options[0];
 
   useEffect(() => {
     if (!open) {
@@ -57,18 +65,18 @@ export function ShellTopMenu<T extends string>({
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} ${iconOnly ? "px-2" : ""}`}
+        className={`${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE} ${iconOnly ? "px-2" : ""}`}
         aria-label={ariaLabel}
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-controls={listId}
         onClick={() => setOpen((current) => !current)}
       >
-        {active?.icon}
+        {activeOption?.icon}
         {iconOnly ? (
-          <span className="sr-only">{active?.label}</span>
+          <span className="sr-only">{activeOption?.label}</span>
         ) : (
-          <span>{active?.label}</span>
+          <span>{activeOption?.label}</span>
         )}
         <ChevronDownIcon className="text-zinc-400" />
       </button>
