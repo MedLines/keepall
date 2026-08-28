@@ -19,6 +19,14 @@ export type ImageFolderImportEntry = {
 
 export type ImageFolderImportOptions = {
   collectionName?: string;
+  onProgress?: (progress: {
+    done: number;
+    total: number;
+    currentName: string;
+  }) => void;
+  /** Call every N successfully processed files so the library can refresh. */
+  onBatch?: () => void;
+  batchEvery?: number;
 };
 
 function emptySummary(): ImageFolderImportSummary {
@@ -32,6 +40,54 @@ function emptySummary(): ImageFolderImportSummary {
   };
 }
 
+function yieldToUi(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+async function importOneEntry(
+  entry: ImageFolderImportEntry,
+  summary: ImageFolderImportSummary,
+  collectionId: string | null,
+): Promise<void> {
+  const gate = classifyImageFolderFile(
+    entry.name,
+    entry.bytes.byteLength,
+    entry.mimeType,
+  );
+  if (gate.kind === "skip") {
+    if (gate.reason === "oversize") {
+      summary.skippedOversize += 1;
+    } else if (gate.reason === "empty") {
+      summary.skippedEmpty += 1;
+    } else {
+      summary.skippedInvalid += 1;
+    }
+    return;
+  }
+
+  try {
+    const mime = assertLocalImageBytes(entry.bytes, gate.mimeType);
+    const { image, created } = await createOrReuseImage({
+      assets: [{ bytes: entry.bytes, mimeType: mime }],
+      title: imageTitleFromFileName(entry.name),
+    });
+    if (created) {
+      summary.added += 1;
+    } else {
+      summary.reused += 1;
+    }
+    if (collectionId) {
+      await assignCollectionToItem(image.id, collectionId);
+    }
+  } catch (caught) {
+    if (caught instanceof ImageValidationError) {
+      summary.skippedInvalid += 1;
+      return;
+    }
+    summary.skippedRead += 1;
+  }
+}
+
 export async function importImageFolderEntries(
   entries: ImageFolderImportEntry[],
   options?: ImageFolderImportOptions,
@@ -39,51 +95,33 @@ export async function importImageFolderEntries(
   const summary = emptySummary();
   const collectionName = options?.collectionName?.trim();
   let collectionId: string | null = null;
+  const total = entries.length;
+  const batchEvery = options?.batchEvery ?? 10;
 
   if (collectionName) {
     const collection = await createCollection({ name: collectionName });
     collectionId = collection.id;
   }
 
-  for (const entry of entries) {
-    const gate = classifyImageFolderFile(
-      entry.name,
-      entry.bytes.byteLength,
-      entry.mimeType,
-    );
-    if (gate.kind === "skip") {
-      if (gate.reason === "oversize") {
-        summary.skippedOversize += 1;
-      } else if (gate.reason === "empty") {
-        summary.skippedEmpty += 1;
-      } else {
-        summary.skippedInvalid += 1;
-      }
-      continue;
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index]!;
+    options?.onProgress?.({
+      done: index,
+      total,
+      currentName: imageTitleFromFileName(entry.name),
+    });
+    await importOneEntry(entry, summary, collectionId);
+    if (options?.onBatch && batchEvery > 0 && (index + 1) % batchEvery === 0) {
+      options.onBatch();
     }
-
-    try {
-      const mime = assertLocalImageBytes(entry.bytes, gate.mimeType);
-      const { image, created } = await createOrReuseImage({
-        assets: [{ bytes: entry.bytes, mimeType: mime }],
-        title: imageTitleFromFileName(entry.name),
-      });
-      if (created) {
-        summary.added += 1;
-      } else {
-        summary.reused += 1;
-      }
-      if (collectionId) {
-        await assignCollectionToItem(image.id, collectionId);
-      }
-    } catch (caught) {
-      if (caught instanceof ImageValidationError) {
-        summary.skippedInvalid += 1;
-        continue;
-      }
-      summary.skippedRead += 1;
-    }
+    await yieldToUi();
   }
+
+  options?.onProgress?.({
+    done: total,
+    total,
+    currentName: "",
+  });
 
   return summary;
 }
@@ -92,10 +130,22 @@ export async function importImageFolder(
   files: File[],
   options?: ImageFolderImportOptions,
 ): Promise<ImageFolderImportSummary> {
-  const entries: ImageFolderImportEntry[] = [];
   const summary = emptySummary();
+  const collectionName = options?.collectionName?.trim();
+  let collectionId: string | null = null;
+  const total = files.length;
+  const batchEvery = options?.batchEvery ?? 10;
 
-  for (const file of files) {
+  if (collectionName) {
+    const collection = await createCollection({ name: collectionName });
+    collectionId = collection.id;
+  }
+
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index]!;
+    const displayName = imageTitleFromFileName(file.name);
+    options?.onProgress?.({ done: index, total, currentName: displayName });
+
     const gate = classifyImageFolderFile(file.name, file.size, file.type);
     if (gate.kind === "skip") {
       if (gate.reason === "oversize") {
@@ -105,30 +155,30 @@ export async function importImageFolder(
       } else {
         summary.skippedInvalid += 1;
       }
+      await yieldToUi();
       continue;
     }
 
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
-      entries.push({
-        name: file.name,
-        bytes,
-        mimeType: file.type,
-      });
+      await importOneEntry(
+        { name: file.name, bytes, mimeType: file.type },
+        summary,
+        collectionId,
+      );
     } catch {
       summary.skippedRead += 1;
     }
+
+    if (options?.onBatch && batchEvery > 0 && (index + 1) % batchEvery === 0) {
+      options.onBatch();
+    }
+    await yieldToUi();
   }
 
-  const imported = await importImageFolderEntries(entries, options);
-  return {
-    added: imported.added,
-    reused: imported.reused,
-    skippedOversize: summary.skippedOversize + imported.skippedOversize,
-    skippedInvalid: summary.skippedInvalid + imported.skippedInvalid,
-    skippedEmpty: summary.skippedEmpty + imported.skippedEmpty,
-    skippedRead: summary.skippedRead + imported.skippedRead,
-  };
+  options?.onProgress?.({ done: total, total, currentName: "" });
+
+  return summary;
 }
 
 /** Sum of stored asset bytes — for quota warnings before a large import. */

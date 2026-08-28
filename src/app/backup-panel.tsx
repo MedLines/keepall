@@ -5,6 +5,7 @@ import type { BookmarksHtmlCollectionPolicy } from "@/domain/bookmarks-html";
 import {
   formatImageFolderImportStatus,
   imageFolderImportSkippedDetail,
+  suggestImageFolderCollectionName,
 } from "@/domain/image-folder-import";
 import { BackupValidationError } from "@/domain/backup";
 import { normalizeItem } from "@/domain/item";
@@ -65,6 +66,11 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const [imageQuotaWarning, setImageQuotaWarning] = useState<string | null>(
     null,
   );
+  const [imageImportProgress, setImageImportProgress] = useState<{
+    done: number;
+    total: number;
+    currentName: string;
+  } | null>(null);
   const [collectionPolicy, setCollectionPolicy] =
     useState<BookmarksHtmlCollectionPolicy>("unsorted-only");
   const [lastBookmarksSummary, setLastBookmarksSummary] =
@@ -311,7 +317,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     try {
       const files = Array.from(fileList);
       setPendingImageFiles(files);
-      setImageCollectionDraft("");
+      setImageCollectionDraft(suggestImageFolderCollectionName(files));
       const importableBytes = sumImportableFolderBytes(files);
       setImageQuotaWarning(
         await storageQuotaWarningForImport(importableBytes),
@@ -342,13 +348,25 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     }
 
     const files = pendingImageFiles;
+    const collectionName = imageCollectionDraft.trim() || undefined;
+    const total = files.length;
+
+    setPendingImageFiles(null);
+    setImageQuotaWarning(null);
+    setImageImportProgress({ done: 0, total, currentName: "" });
     setBusy(true);
     setError(null);
-    setStatus(null);
+    setStatus(`Importing images… 0 / ${total}`);
 
     try {
       const summary = await importImageFolder(files, {
-        collectionName: imageCollectionDraft.trim() || undefined,
+        collectionName,
+        batchEvery: 8,
+        onBatch: () => window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT)),
+        onProgress: ({ done, total: progressTotal, currentName }) => {
+          setImageImportProgress({ done, total: progressTotal, currentName });
+          setStatus(`Importing images… ${done} / ${progressTotal}`);
+        },
       });
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
       let message = formatImageFolderImportStatus(summary);
@@ -357,13 +375,11 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         message = `${message} (${skippedDetail})`;
       }
       setStatus(message);
-      setPendingImageFiles(null);
       setImageCollectionDraft("");
-      setImageQuotaWarning(null);
     } catch {
       setError("Couldn't import images.");
-      setPendingImageFiles(null);
     } finally {
+      setImageImportProgress(null);
       setBusy(false);
     }
   }
@@ -435,18 +451,28 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               under 3MB becomes its own library item. Larger or unsupported
               files are skipped.
             </p>
+            <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+              Subfolders are not turned into collections — only one optional
+              collection for the whole import (prefilled from the folder name).
+              Nested collections are not supported.
+            </p>
           </div>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-zinc-900">
-              Collection (optional)
+              Collection for all imports (optional)
             </span>
             <input
-              className="rounded-[10px] border border-zinc-200 px-3 py-2"
+              className="rounded-[10px] border border-zinc-200 px-3 py-2 disabled:opacity-60"
               type="text"
               value={imageCollectionDraft}
               placeholder="e.g. Vacation 2024"
+              disabled={busy}
               onChange={(event) => setImageCollectionDraft(event.target.value)}
             />
+            <span className="text-xs text-zinc-500">
+              Leave blank to keep images unsorted. Clear the field to skip a
+              collection.
+            </span>
           </label>
           {imageQuotaWarning ? (
             <p className="text-sm text-amber-800" role="status">
@@ -460,7 +486,9 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               disabled={busy}
               onClick={() => void runImageFolderImport()}
             >
-              Import images
+              {busy && imageImportProgress
+                ? `Importing… ${imageImportProgress.done} / ${imageImportProgress.total}`
+                : "Import images"}
             </button>
             <button
               className="rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-600 transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
@@ -710,6 +738,39 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   const feedback = (
     <>
+      {imageImportProgress ? (
+        <div
+          className={
+            variant === "sidebar" ? "mt-2 space-y-1" : "mt-3 space-y-2"
+          }
+          role="status"
+          aria-live="polite"
+        >
+          <p
+            className={
+              variant === "sidebar" ? "text-xs text-zinc-700" : "text-sm text-zinc-700"
+            }
+          >
+            Importing images… {imageImportProgress.done} /{" "}
+            {imageImportProgress.total}
+            {imageImportProgress.currentName
+              ? ` — ${imageImportProgress.currentName}`
+              : ""}
+          </p>
+          <progress
+            className="h-2 w-full overflow-hidden rounded-full accent-zinc-900"
+            max={imageImportProgress.total}
+            value={imageImportProgress.done}
+          />
+          <p
+            className={
+              variant === "sidebar" ? "text-[11px] text-zinc-500" : "text-xs text-zinc-500"
+            }
+          >
+            You can keep browsing — new images appear as they import.
+          </p>
+        </div>
+      ) : null}
       {status ? (
         <p
           className={

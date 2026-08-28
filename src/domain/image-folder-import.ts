@@ -42,6 +42,32 @@ export function imageTitleFromFileName(fileName: string): string {
   return withoutExt || base || "Image";
 }
 
+/** Top-level folder name from a browser relative path (`Album/shot.jpg` → `Album`). */
+export function imageFolderRootName(relativePath: string): string | null {
+  const normalized = relativePath.replace(/\\/g, "/").trim();
+  if (!normalized.includes("/")) {
+    return null;
+  }
+  const root = normalized.split("/")[0]?.trim();
+  return root || null;
+}
+
+/** Suggest a default collection from the picked folder’s root segment. */
+export function suggestImageFolderCollectionName(
+  files: { webkitRelativePath?: string; name: string }[],
+): string {
+  for (const file of files) {
+    const path = file.webkitRelativePath?.trim();
+    if (path) {
+      const root = imageFolderRootName(path);
+      if (root) {
+        return root;
+      }
+    }
+  }
+  return "";
+}
+
 export function inferImageFolderMimeType(
   fileName: string,
   reportedMime: string,

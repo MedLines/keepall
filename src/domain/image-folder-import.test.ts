@@ -4,6 +4,7 @@ import {
   classifyImageFolderFile,
   imageTitleFromFileName,
   inferImageFolderMimeType,
+  suggestImageFolderCollectionName,
 } from "./image-folder-import";
 
 describe("classifyImageFolderFile", () => {
@@ -37,5 +38,15 @@ describe("classifyImageFolderFile", () => {
 describe("imageTitleFromFileName", () => {
   test("strips folders and extensions", () => {
     expect(imageTitleFromFileName("vacation/img-001.JPG")).toBe("img-001");
+  });
+});
+
+describe("suggestImageFolderCollectionName", () => {
+  test("uses the top-level folder segment", () => {
+    expect(
+      suggestImageFolderCollectionName([
+        { webkitRelativePath: "Vacation 2024/IMG_001.jpg", name: "IMG_001.jpg" },
+      ]),
+    ).toBe("Vacation 2024");
   });
 });
