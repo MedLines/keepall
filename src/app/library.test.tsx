@@ -52,6 +52,13 @@ vi.mock("./wake-link-preview-retries", () => ({
   wakeLinkPreviewRetries: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("./preview-enrich-coordinator", () => ({
+  startPreviewWelcomeBatch: vi.fn().mockResolvedValue(undefined),
+  resumePreviewWelcomeBatch: vi.fn().mockResolvedValue(undefined),
+  subscribePreviewEnrichProgress: vi.fn(() => () => {}),
+  requestPreviewEnrichViewport: vi.fn(),
+}));
+
 vi.mock("@/persistence/tags", () => ({
   listTags: vi.fn(),
   createTag: vi.fn(),

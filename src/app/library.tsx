@@ -57,8 +57,14 @@ import {
   updateNote,
 } from "@/persistence/items";
 import { createTag, listTags } from "@/persistence/tags";
-import { ITEMS_CHANGED_EVENT } from "./items-events";
+import { ITEMS_CHANGED_EVENT, PREVIEW_WELCOME_EVENT, type PreviewWelcomeDetail } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
+import {
+  resumePreviewWelcomeBatch,
+  startPreviewWelcomeBatch,
+  subscribePreviewEnrichProgress,
+  type PreviewEnrichProgress,
+} from "./preview-enrich-coordinator";
 import { wakeLinkPreviewRetries } from "./wake-link-preview-retries";
 import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
@@ -154,6 +160,8 @@ export function Library() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
   const [backupOpen, setBackupOpen] = useState(false);
+  const [previewEnrichProgress, setPreviewEnrichProgress] =
+    useState<PreviewEnrichProgress>(null);
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
   const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
@@ -223,6 +231,22 @@ export function Library() {
     window.addEventListener("online", onOnline);
     return () => {
       window.removeEventListener("online", onOnline);
+    };
+  }, []);
+
+  useEffect(() => {
+    void resumePreviewWelcomeBatch();
+    return subscribePreviewEnrichProgress(setPreviewEnrichProgress);
+  }, []);
+
+  useEffect(() => {
+    function onPreviewWelcome(event: Event) {
+      const detail = (event as CustomEvent<PreviewWelcomeDetail>).detail;
+      void startPreviewWelcomeBatch(detail.linkIds);
+    }
+    window.addEventListener(PREVIEW_WELCOME_EVENT, onPreviewWelcome);
+    return () => {
+      window.removeEventListener(PREVIEW_WELCOME_EVENT, onPreviewWelcome);
     };
   }, []);
 
@@ -1140,6 +1164,17 @@ export function Library() {
               {deleteError ? (
                 <p className="mb-3 text-sm text-red-700" role="alert">
                   {deleteError}
+                </p>
+              ) : null}
+              {previewEnrichProgress?.kind === "welcome" &&
+              previewEnrichProgress.done < previewEnrichProgress.total ? (
+                <p
+                  className="mb-3 text-sm text-zinc-600"
+                  role="status"
+                  aria-live="polite"
+                >
+                  Fetching link previews… {previewEnrichProgress.done} /{" "}
+                  {previewEnrichProgress.total}
                 </p>
               ) : null}
               <LibraryBulkBar

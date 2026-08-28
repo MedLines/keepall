@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { BookmarksHtmlCollectionPolicy } from "@/domain/bookmarks-html";
 import { BackupValidationError } from "@/domain/backup";
+import { normalizeItem } from "@/domain/item";
 import {
   exportKeepallBackup,
   importKeepallBackupMerge,
@@ -14,7 +15,7 @@ import {
   importBookmarksHtmlMerge,
   type BookmarksHtmlImportSummary,
 } from "@/persistence/bookmarks-html-import";
-import { ITEMS_CHANGED_EVENT } from "./items-events";
+import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
 import { BackupIcon, CloseIcon } from "./shell-icons";
 
 type ImportMode = "merge" | "replace";
@@ -200,12 +201,19 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       if (mode === "merge") {
         const { summary } = await importKeepallBackupMerge(raw);
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+        dispatchPreviewWelcome(summary.addedLinkIds);
         setStatus(
           `Merged: ${summary.added} added, ${summary.updated} updated, ${summary.unchanged} unchanged.`,
         );
       } else {
-        await importKeepallBackupReplace(raw);
+        const backup = await importKeepallBackupReplace(raw);
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+        dispatchPreviewWelcome(
+          backup.items
+            .map((item) => normalizeItem(item))
+            .filter((item) => item.type === "link")
+            .map((item) => item.id),
+        );
         setStatus("Library replaced from backup.");
       }
       setPendingRaw(null);
@@ -236,6 +244,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     try {
       const summary = await importBookmarksHtmlMerge(html, { collectionPolicy });
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      dispatchPreviewWelcome(summary.addedLinkIds);
       setLastBookmarksSummary(summary);
       setStatus(
         `Bookmarks: ${summary.added} added, ${summary.merged} merged, ${summary.skipped} skipped.`,

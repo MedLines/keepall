@@ -102,6 +102,7 @@ export type KeepallMergeSummary = {
   added: number;
   updated: number;
   unchanged: number;
+  addedLinkIds: string[];
 };
 
 /**
@@ -159,6 +160,7 @@ export async function importKeepallBackupMerge(
     added: 0,
     updated: 0,
     unchanged: 0,
+    addedLinkIds: [],
   };
 
   const localItems = (await db.items.toArray()).map((row) => normalizeItem(row));
@@ -311,6 +313,7 @@ export async function importKeepallBackupMerge(
         }
         itemIdMap.set(incoming.id, next.id);
         summary.added += 1;
+        summary.addedLinkIds.push(next.id);
         continue;
       }
 

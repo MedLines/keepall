@@ -21,6 +21,7 @@ export type BookmarksHtmlImportSummary = {
   merged: number;
   skipped: number;
   skippedRows: SkippedBookmarkRow[];
+  addedLinkIds: string[];
 };
 
 export { BookmarksHtmlParseError, formatSkippedBookmarksLog };
@@ -35,6 +36,7 @@ export async function importBookmarksHtmlMerge(
     merged: 0,
     skipped: 0,
     skippedRows: [],
+    addedLinkIds: [],
   };
 
   for (const row of rows) {
@@ -68,6 +70,7 @@ export async function importBookmarksHtmlMerge(
     const { link, created } = linkResult;
     if (created) {
       summary.added += 1;
+      summary.addedLinkIds.push(link.id);
     } else {
       summary.merged += 1;
     }

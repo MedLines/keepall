@@ -5,6 +5,7 @@ import {
   type KeyboardEvent,
   type Ref,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { motion, useReducedMotion } from "motion/react";
@@ -17,6 +18,7 @@ import {
   useBrowseChromeVisible,
 } from "./item-media-layout";
 import { LibraryItemMedia } from "./library-item-media";
+import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { ItemTagChips } from "./item-tag-chips";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 
@@ -166,6 +168,11 @@ export function LibraryItem({
   const title = itemListTitle(item);
   const secondary = cardSecondaryLine(item);
   const isList = layoutMode === "list";
+  const rowRef = useRef<HTMLLIElement>(null);
+  usePreviewEnrichViewport(
+    rowRef,
+    item.type === "link" ? item : null,
+  );
 
   useEffect(() => {
     if (editing || pendingDelete) {
@@ -391,6 +398,7 @@ export function LibraryItem({
 
   return (
     <li
+      ref={rowRef}
       draggable={dragEnabled}
       className={isDragging ? "opacity-50" : undefined}
       onDragStart={onItemDragStart}
