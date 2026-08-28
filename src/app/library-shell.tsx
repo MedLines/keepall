@@ -601,7 +601,7 @@ function CollectionNavRow({
   onDelete,
 }: {
   collection: Collection;
-  count: number;
+  count?: number;
   active: boolean;
   dropHighlight: boolean;
   renaming: boolean;
@@ -681,7 +681,7 @@ function CollectionNavRow({
           {icon}
         </span>
         <span className="truncate">{collection.name}</span>
-        <NavCount value={count} />
+        {count !== undefined ? <NavCount value={count} /> : null}
       </button>
       <CollectionRowMenu
         collectionName={collection.name}
