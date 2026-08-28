@@ -10,6 +10,11 @@ import {
   subscribePreviewEnrichProgress,
 } from "./preview-enrich-coordinator";
 import { writeStoredWelcomeBatch } from "./preview-welcome-storage";
+import {
+  clearPreviewBudgetForTests,
+  trySpendViewportAutoBudget,
+} from "./preview-budget-storage";
+import { PREVIEW_DAILY_VIEWPORT_CAP } from "@/domain/preview-enrich";
 
 vi.mock("./enrich-link-preview", () => ({
   enrichLinkPreview: vi.fn(),
@@ -22,6 +27,7 @@ vi.mock("@/persistence/items", () => ({
 describe("preview-enrich-coordinator", () => {
   beforeEach(() => {
     resetPreviewEnrichCoordinatorForTests();
+    clearPreviewBudgetForTests();
     vi.mocked(enrichLinkPreview).mockReset();
     vi.mocked(listItems).mockReset();
     vi.mocked(enrichLinkPreview).mockImplementation(
@@ -91,5 +97,15 @@ describe("preview-enrich-coordinator", () => {
     expect(enrichLinkPreview).toHaveBeenCalledTimes(2);
     expect(enrichLinkPreview).toHaveBeenCalledWith("b", "https://b.example");
     expect(enrichLinkPreview).toHaveBeenCalledWith("c", "https://c.example");
+  });
+
+  test("blocks viewport enrich when the daily cap is spent", () => {
+    for (let index = 0; index < PREVIEW_DAILY_VIEWPORT_CAP; index += 1) {
+      trySpendViewportAutoBudget();
+    }
+
+    requestPreviewEnrichViewport("x", "https://x.example");
+
+    expect(enrichLinkPreview).not.toHaveBeenCalled();
   });
 });

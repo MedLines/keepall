@@ -56,7 +56,9 @@ vi.mock("./preview-enrich-coordinator", () => ({
   startPreviewWelcomeBatch: vi.fn().mockResolvedValue(undefined),
   resumePreviewWelcomeBatch: vi.fn().mockResolvedValue(undefined),
   subscribePreviewEnrichProgress: vi.fn(() => () => {}),
+  subscribePreviewViewportBudgetCapped: vi.fn(() => () => {}),
   requestPreviewEnrichViewport: vi.fn(),
+  requestManualPreviewEnrich: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/persistence/tags", () => ({

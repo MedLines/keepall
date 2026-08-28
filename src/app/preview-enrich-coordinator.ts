@@ -7,6 +7,10 @@ import type { LinkItem } from "@/domain/link";
 import { listItems } from "@/persistence/items";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import {
+  isViewportAutoBudgetCapped,
+  trySpendViewportAutoBudget,
+} from "./preview-budget-storage";
+import {
   clearStoredWelcomeBatch,
   readStoredWelcomeBatch,
   writeStoredWelcomeBatch,
@@ -34,6 +38,19 @@ let welcomeIds = new Set<string>();
 let welcomeTotal = 0;
 let welcomeDone = 0;
 const progressListeners = new Set<ProgressListener>();
+const budgetCappedListeners = new Set<(capped: boolean) => void>();
+let viewportBudgetCapped = false;
+
+function notifyBudgetCapped(capped: boolean) {
+  viewportBudgetCapped = capped;
+  for (const listener of budgetCappedListeners) {
+    listener(capped);
+  }
+}
+
+function refreshBudgetCappedState() {
+  notifyBudgetCapped(isViewportAutoBudgetCapped());
+}
 
 function notifyProgress() {
   const progress: PreviewEnrichProgress =
@@ -91,6 +108,7 @@ export function resetPreviewEnrichCoordinatorForTests(): void {
   welcomeIds = new Set();
   welcomeTotal = 0;
   welcomeDone = 0;
+  viewportBudgetCapped = false;
   clearStoredWelcomeBatch();
 }
 
@@ -117,6 +135,10 @@ function pumpQueue() {
     if (inFlightIds.has(next.linkId)) {
       continue;
     }
+    if (next.priority === 1 && !trySpendViewportAutoBudget()) {
+      notifyBudgetCapped(true);
+      continue;
+    }
     inFlightIds.add(next.linkId);
     persistWelcomeBatch();
     void enrichLinkPreview(next.linkId, next.url).finally(() => {
@@ -138,6 +160,20 @@ export function subscribePreviewEnrichProgress(
   );
   return () => {
     progressListeners.delete(listener);
+  };
+}
+
+export function isPreviewViewportBudgetCapped(): boolean {
+  return viewportBudgetCapped || isViewportAutoBudgetCapped();
+}
+
+export function subscribePreviewViewportBudgetCapped(
+  listener: (capped: boolean) => void,
+): () => void {
+  budgetCappedListeners.add(listener);
+  listener(isPreviewViewportBudgetCapped());
+  return () => {
+    budgetCappedListeners.delete(listener);
   };
 }
 
@@ -212,6 +248,7 @@ export async function startPreviewWelcomeBatch(
 
 /** Continue a stored welcome batch after reload or tab reopen. */
 export async function resumePreviewWelcomeBatch(): Promise<void> {
+  refreshBudgetCappedState();
   const stored = readStoredWelcomeBatch();
   if (!stored) {
     return;
@@ -240,5 +277,17 @@ export async function resumePreviewWelcomeBatch(): Promise<void> {
 
 /** Viewport / scroll: queue one idle link for enrich when it enters view. */
 export function requestPreviewEnrichViewport(linkId: string, url: string): void {
+  if (isPreviewViewportBudgetCapped()) {
+    notifyBudgetCapped(true);
+    return;
+  }
   enqueue({ linkId, url, priority: 1 });
+}
+
+/** User-initiated fetch — bypasses the daily viewport cap. */
+export function requestManualPreviewEnrich(
+  linkId: string,
+  url: string,
+): Promise<void> {
+  return enrichLinkPreview(linkId, url);
 }

@@ -35,6 +35,7 @@ import {
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
 import { matchesSearchQuery, normalizeSearchQuery } from "@/domain/search";
+import { PREVIEW_DAILY_VIEWPORT_CAP } from "@/domain/preview-enrich";
 import { TagValidationError, normalizeTagName, type Tag } from "@/domain/tag";
 import {
   createCollection,
@@ -63,6 +64,7 @@ import {
   resumePreviewWelcomeBatch,
   startPreviewWelcomeBatch,
   subscribePreviewEnrichProgress,
+  subscribePreviewViewportBudgetCapped,
   type PreviewEnrichProgress,
 } from "./preview-enrich-coordinator";
 import { wakeLinkPreviewRetries } from "./wake-link-preview-retries";
@@ -162,6 +164,7 @@ export function Library() {
   const [backupOpen, setBackupOpen] = useState(false);
   const [previewEnrichProgress, setPreviewEnrichProgress] =
     useState<PreviewEnrichProgress>(null);
+  const [previewBudgetCapped, setPreviewBudgetCapped] = useState(false);
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
   const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
@@ -236,7 +239,14 @@ export function Library() {
 
   useEffect(() => {
     void resumePreviewWelcomeBatch();
-    return subscribePreviewEnrichProgress(setPreviewEnrichProgress);
+    const unsubProgress = subscribePreviewEnrichProgress(setPreviewEnrichProgress);
+    const unsubBudget = subscribePreviewViewportBudgetCapped(
+      setPreviewBudgetCapped,
+    );
+    return () => {
+      unsubProgress();
+      unsubBudget();
+    };
   }, []);
 
   useEffect(() => {
@@ -1175,6 +1185,13 @@ export function Library() {
                 >
                   Fetching link previews… {previewEnrichProgress.done} /{" "}
                   {previewEnrichProgress.total}
+                </p>
+              ) : null}
+              {previewBudgetCapped ? (
+                <p className="mb-3 text-sm text-zinc-600" role="status">
+                  Automatic preview fetching paused for today (
+                  {PREVIEW_DAILY_VIEWPORT_CAP}/day). Open a link and choose
+                  Fetch preview.
                 </p>
               ) : null}
               <LibraryBulkBar

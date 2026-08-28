@@ -9,11 +9,13 @@ import {
 import { cardSecondaryLine } from "@/domain/card-display";
 import { clampImageSlideIndex } from "@/domain/image";
 import { itemListTitle, type Item } from "@/domain/item";
+import { linkCanManualPreviewFetch } from "@/domain/preview-enrich";
 import { itemMediaLayoutId } from "@/domain/library-view";
 import { LibraryItemMedia } from "./library-item-media";
 import { ItemTagChips } from "./item-tag-chips";
 import type { PendingMutation } from "./library-item";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
+import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
 import {
   type KeyboardEvent,
   type Ref,
@@ -118,6 +120,7 @@ export function LibraryInspect({
   const reduceMotion = useReducedMotion();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const [fetchingPreview, setFetchingPreview] = useState(false);
   const addImageInputRef = useRef<HTMLInputElement>(null);
   const replaceImageInputRef = useRef<HTMLInputElement>(null);
   const [tagDraft, setTagDraft] = useState("");
@@ -398,6 +401,24 @@ export function LibraryInspect({
                         </li>
                       ))}
                     </ul>
+                  ) : null}
+
+                  {item.type === "link" && linkCanManualPreviewFetch(item) ? (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        className={BTN}
+                        disabled={mutationBusy || fetchingPreview}
+                        onClick={() => {
+                          setFetchingPreview(true);
+                          void requestManualPreviewEnrich(item.id, item.url).finally(
+                            () => setFetchingPreview(false),
+                          );
+                        }}
+                      >
+                        {fetchingPreview ? "Fetching…" : "Fetch preview"}
+                      </button>
+                    </div>
                   ) : null}
 
                   {pinVisible ? (

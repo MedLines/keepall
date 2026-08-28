@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { buildLink } from "./link";
-import { linkNeedsPreviewEnrich } from "./preview-enrich";
+import {
+  linkCanManualPreviewFetch,
+  linkNeedsPreviewEnrich,
+} from "./preview-enrich";
 
 describe("linkNeedsPreviewEnrich", () => {
   test("is true for idle links", () => {
@@ -19,5 +22,26 @@ describe("linkNeedsPreviewEnrich", () => {
     expect(linkNeedsPreviewEnrich({ ...link, previewStatus: "failed" })).toBe(
       false,
     );
+  });
+});
+
+describe("linkCanManualPreviewFetch", () => {
+  test("is true for idle and retryable failed links", () => {
+    const link = buildLink({ url: "https://example.com" }, { id: "l1", now: 1 });
+    expect(linkCanManualPreviewFetch(link)).toBe(true);
+    expect(
+      linkCanManualPreviewFetch({
+        ...link,
+        previewStatus: "failed",
+        previewRetry: "network",
+      }),
+    ).toBe(true);
+    expect(
+      linkCanManualPreviewFetch({
+        ...link,
+        previewStatus: "failed",
+        previewRetry: "none",
+      }),
+    ).toBe(false);
   });
 });
