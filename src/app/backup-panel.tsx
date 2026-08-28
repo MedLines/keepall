@@ -2,6 +2,10 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { BookmarksHtmlCollectionPolicy } from "@/domain/bookmarks-html";
+import {
+  formatImageFolderImportStatus,
+  imageFolderImportSkippedDetail,
+} from "@/domain/image-folder-import";
 import { BackupValidationError } from "@/domain/backup";
 import { normalizeItem } from "@/domain/item";
 import {
@@ -15,7 +19,12 @@ import {
   importBookmarksHtmlMerge,
   type BookmarksHtmlImportSummary,
 } from "@/persistence/bookmarks-html-import";
+import { importImageFolder } from "@/persistence/image-folder-import";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
+import {
+  storageQuotaWarningForImport,
+  sumImportableFolderBytes,
+} from "./storage-quota-warning";
 import { BackupIcon, CloseIcon } from "./shell-icons";
 
 type ImportMode = "merge" | "replace";
@@ -38,12 +47,22 @@ function downloadTextFile(filename: string, text: string) {
 export function BackupPanel({ variant = "page", onClose }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bookmarksFileInputRef = useRef<HTMLInputElement>(null);
+  const imageFolderInputRef = useRef<HTMLInputElement>(null);
   const choiceDialogRef = useRef<HTMLDialogElement>(null);
   const bookmarksDialogRef = useRef<HTMLDialogElement>(null);
+  const imageFolderDialogRef = useRef<HTMLDialogElement>(null);
   const choiceTitleId = useId();
   const bookmarksTitleId = useId();
+  const imageFolderTitleId = useId();
   const [pendingRaw, setPendingRaw] = useState<unknown | null>(null);
   const [pendingBookmarksHtml, setPendingBookmarksHtml] = useState<string | null>(
+    null,
+  );
+  const [pendingImageFiles, setPendingImageFiles] = useState<File[] | null>(
+    null,
+  );
+  const [imageCollectionDraft, setImageCollectionDraft] = useState("");
+  const [imageQuotaWarning, setImageQuotaWarning] = useState<string | null>(
     null,
   );
   const [collectionPolicy, setCollectionPolicy] =
@@ -80,6 +99,19 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     }
   }, [pendingBookmarksHtml]);
 
+  useEffect(() => {
+    const dialog = imageFolderDialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (pendingImageFiles !== null && !dialog.open) {
+      dialog.showModal();
+    }
+    if (pendingImageFiles === null && dialog.open) {
+      dialog.close();
+    }
+  }, [pendingImageFiles]);
+
   async function onExport() {
     setBusy(true);
     setError(null);
@@ -111,6 +143,10 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   function onPickBookmarksImport() {
     bookmarksFileInputRef.current?.click();
+  }
+
+  function onPickImageFolder() {
+    imageFolderInputRef.current?.click();
   }
 
   async function onFileChange(fileList: FileList | null) {
@@ -262,6 +298,76 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     }
   }
 
+  async function onImageFolderChange(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setStatus(null);
+    setLastBookmarksSummary(null);
+
+    try {
+      const files = Array.from(fileList);
+      setPendingImageFiles(files);
+      setImageCollectionDraft("");
+      const importableBytes = sumImportableFolderBytes(files);
+      setImageQuotaWarning(
+        await storageQuotaWarningForImport(importableBytes),
+      );
+    } catch {
+      setError("Couldn't read folder.");
+    } finally {
+      setBusy(false);
+      if (imageFolderInputRef.current) {
+        imageFolderInputRef.current.value = "";
+      }
+    }
+  }
+
+  function cancelImageFolderImport() {
+    if (busy) {
+      return;
+    }
+    setPendingImageFiles(null);
+    setImageCollectionDraft("");
+    setImageQuotaWarning(null);
+    setStatus("Image import canceled.");
+  }
+
+  async function runImageFolderImport() {
+    if (pendingImageFiles === null) {
+      return;
+    }
+
+    const files = pendingImageFiles;
+    setBusy(true);
+    setError(null);
+    setStatus(null);
+
+    try {
+      const summary = await importImageFolder(files, {
+        collectionName: imageCollectionDraft.trim() || undefined,
+      });
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      let message = formatImageFolderImportStatus(summary);
+      const skippedDetail = imageFolderImportSkippedDetail(summary);
+      if (skippedDetail) {
+        message = `${message} (${skippedDetail})`;
+      }
+      setStatus(message);
+      setPendingImageFiles(null);
+      setImageCollectionDraft("");
+      setImageQuotaWarning(null);
+    } catch {
+      setError("Couldn't import images.");
+      setPendingImageFiles(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function onDownloadSkippedLog() {
     if (!lastBookmarksSummary || lastBookmarksSummary.skippedRows.length === 0) {
       return;
@@ -290,6 +396,84 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       accept=".html,text/html,.htm"
       onChange={(event) => void onBookmarksFileChange(event.target.files)}
     />
+  );
+
+  const imageFolderInput = (
+    <input
+      ref={imageFolderInputRef}
+      className="sr-only"
+      type="file"
+      accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
+      multiple
+      onChange={(event) => void onImageFolderChange(event.target.files)}
+      {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+    />
+  );
+
+  const imageFolderDialog = (
+    <dialog
+      ref={imageFolderDialogRef}
+      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,28rem)] w-[min(100%-2rem,28rem)] overflow-y-auto rounded-[12px] bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-zinc-900/35 [&::backdrop]:backdrop-blur-[1px]"
+      aria-labelledby={imageFolderTitleId}
+      onCancel={(event) => {
+        event.preventDefault();
+        cancelImageFolderImport();
+      }}
+    >
+      {pendingImageFiles !== null ? (
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2
+              className="text-lg font-semibold tracking-tight"
+              id={imageFolderTitleId}
+            >
+              Import image folder
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+              {pendingImageFiles.length} file
+              {pendingImageFiles.length === 1 ? "" : "s"} selected. Each image
+              under 3MB becomes its own library item. Larger or unsupported
+              files are skipped.
+            </p>
+          </div>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-zinc-900">
+              Collection (optional)
+            </span>
+            <input
+              className="rounded-[10px] border border-zinc-200 px-3 py-2"
+              type="text"
+              value={imageCollectionDraft}
+              placeholder="e.g. Vacation 2024"
+              onChange={(event) => setImageCollectionDraft(event.target.value)}
+            />
+          </label>
+          {imageQuotaWarning ? (
+            <p className="text-sm text-amber-800" role="status">
+              {imageQuotaWarning}
+            </p>
+          ) : null}
+          <div className="flex flex-col gap-2">
+            <button
+              className="rounded-[10px] bg-zinc-900 px-3 py-2.5 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              type="button"
+              disabled={busy}
+              onClick={() => void runImageFolderImport()}
+            >
+              Import images
+            </button>
+            <button
+              className="rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-600 transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              type="button"
+              disabled={busy}
+              onClick={cancelImageFolderImport}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </dialog>
   );
 
   const choiceDialog = (
@@ -510,8 +694,17 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       >
         Import bookmarks
       </button>
+      <button
+        className={buttonClass}
+        type="button"
+        disabled={busy}
+        onClick={onPickImageFolder}
+      >
+        Import images
+      </button>
       {fileInput}
       {bookmarksFileInput}
+      {imageFolderInput}
     </div>
   );
 
@@ -561,14 +754,16 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       <p className="mt-2 text-xs leading-relaxed text-zinc-600">
         <strong className="font-medium">Keepall</strong> backup: export or import
         a <code className="text-[11px]">.keepall</code> file.{" "}
-        <strong className="font-medium">Browser</strong>: import an HTML export
-        into Keepall (merge only — never wipes).
+        <strong className="font-medium">Browser</strong>: HTML bookmarks.{" "}
+        <strong className="font-medium">Images</strong>: a folder of files (3MB
+        each max).
       </p>
     ) : (
       <p className="mt-2 text-sm text-zinc-600">
         <strong className="font-medium">Keepall</strong> backup: export or import
         a <code>.keepall</code> file. <strong className="font-medium">Browser</strong>
-        : import an HTML export into Keepall (merge only — never wipes).
+        : HTML bookmarks. <strong className="font-medium">Images</strong>: pick a
+        folder (3MB per file max).
       </p>
     );
 
@@ -581,6 +776,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         {feedback}
         {choiceDialog}
         {bookmarksDialog}
+        {imageFolderDialog}
       </section>
     );
   }
@@ -593,6 +789,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       {feedback}
       {choiceDialog}
       {bookmarksDialog}
+      {imageFolderDialog}
     </section>
   );
 }
