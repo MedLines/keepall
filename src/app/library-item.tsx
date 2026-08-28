@@ -205,9 +205,9 @@ export function LibraryItem({
           {...itemMediaLayoutProps(item.id, layoutMode, reduceMotion)}
           className={
             isList
-              ? "size-10 overflow-hidden bg-zinc-200"
+              ? `size-10 overflow-hidden ${item.type === "link" ? "bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)]" : "bg-zinc-200"}`
               : item.type === "link"
-                ? "aspect-[16/10] w-full overflow-hidden bg-zinc-200"
+                ? "aspect-[16/10] w-full overflow-hidden bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
                 : "aspect-[16/10] w-full cursor-pointer overflow-hidden bg-zinc-200"
           }
           style={{ borderRadius: isList ? 8 : 12 }}

@@ -1,11 +1,9 @@
 "use client";
 
-import { type DragEvent, useState } from "react";
+import { type DragEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
-  cardInitial,
   cardSecondaryLine,
-  linkCardHost,
 } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
 import type { LibraryLayout } from "@/domain/library-view";
@@ -66,18 +64,7 @@ export function LibraryListRow({
 }: Props) {
   const title = itemListTitle(item);
   const secondary = cardSecondaryLine(item);
-  const [faviconBroken, setFaviconBroken] = useState(false);
   const reduceMotion = useReducedMotion();
-
-  const faviconUrl =
-    item.type === "link" && !faviconBroken
-      ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(linkCardHost(item))}&sz=32`
-      : null;
-
-  const showMediaThumb =
-    (item.type === "link" &&
-      Boolean(item.previewAssetId || item.previewImageUrl)) ||
-    item.type === "image";
 
   const checkboxVisible = selected || selectionActive;
 
@@ -128,26 +115,19 @@ export function LibraryListRow({
             <span className="size-10 shrink-0" aria-hidden />
           ) : (
             <motion.span
-              className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-zinc-200 text-sm font-semibold text-zinc-700 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
+              className={`flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] shadow-[0_0_0_1px_rgba(0,0,0,0.06)] ${
+                item.type === "link"
+                  ? "bg-white"
+                  : "bg-zinc-200 text-sm font-semibold text-zinc-700"
+              }`}
               style={{ borderRadius: 8 }}
               {...itemMediaLayoutProps(item.id, layoutMode, reduceMotion)}
             >
-              {showMediaThumb ? (
-                <LibraryItemMedia
-                  item={item}
-                  className="!aspect-auto size-10 object-cover"
-                />
-              ) : faviconUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- best-effort external favicon
-                <img
-                  alt=""
-                  className="size-5"
-                  src={faviconUrl}
-                  onError={() => setFaviconBroken(true)}
-                />
-              ) : (
-                cardInitial(item)
-              )}
+              <LibraryItemMedia
+                item={item}
+                compact
+                className="!aspect-auto size-10"
+              />
             </motion.span>
           )}
         <span className="min-w-0 flex-1">

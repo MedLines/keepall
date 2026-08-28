@@ -3,6 +3,7 @@ import {
   cardInitial,
   cardSecondaryLine,
   linkCardHost,
+  linkFaviconUrl,
   noteCardSnippet,
   NOTE_SNIPPET_MAX_LENGTH,
 } from "./card-display";
@@ -39,6 +40,18 @@ describe("linkCardHost", () => {
       { id: "l1", now: 1 },
     );
     expect(linkCardHost(link)).toBe("docs.example.com");
+  });
+});
+
+describe("linkFaviconUrl", () => {
+  test("builds a Google favicon URL from the link hostname", () => {
+    expect(linkFaviconUrl("https://docs.example.com/path")).toBe(
+      "https://www.google.com/s2/favicons?domain=docs.example.com&sz=128",
+    );
+  });
+
+  test("returns null for invalid URLs", () => {
+    expect(linkFaviconUrl("not-a-url")).toBeNull();
   });
 });
 

@@ -29,6 +29,26 @@ export function linkCardHost(link: LinkItem): string {
   }
 }
 
+/**
+ * Favicon image URL from the link hostname — loaded by the browser, not Keepall
+ * server. Used when no local/OG preview exists yet (e.g. after import).
+ */
+export function linkFaviconUrl(
+  linkUrl: string,
+  options?: { size?: number },
+): string | null {
+  try {
+    const hostname = new URL(linkUrl.trim()).hostname;
+    if (!hostname) {
+      return null;
+    }
+    const size = options?.size ?? 128;
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=${size}`;
+  } catch {
+    return null;
+  }
+}
+
 /** Short plain-text preview of note content for the secondary line. */
 export function noteCardSnippet(
   note: NoteItem,
