@@ -59,6 +59,9 @@ vi.mock("./preview-enrich-coordinator", () => ({
   subscribePreviewViewportBudgetCapped: vi.fn(() => () => {}),
   requestPreviewEnrichViewport: vi.fn(),
   requestManualPreviewEnrich: vi.fn().mockResolvedValue(undefined),
+  clearPendingViewportPreviewEnrich: vi.fn(),
+  pausePreviewEnrichForNavigation: vi.fn(),
+  setViewportPreviewEnrichEnabled: vi.fn(),
 }));
 
 vi.mock("@/persistence/tags", () => ({
@@ -130,6 +133,9 @@ describe("Library", () => {
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
 
+    await waitFor(() => {
+      expect(typeof resolveNext).toBe("function");
+    });
     resolveNext([note]);
     await waitFor(() => {
       expect(listItems).toHaveBeenCalledTimes(2);
@@ -322,9 +328,11 @@ describe("Library", () => {
       "l1",
       "https://example.com/new",
     );
-    expect(
-      (await screen.findAllByRole("link", { name: "example.com" }))[0],
-    ).toHaveAttribute("href", "https://example.com/new");
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("link", { name: "example.com" })[0],
+      ).toHaveAttribute("href", "https://example.com/new");
+    });
   });
 
   test("shows preview image when ready with image URL", async () => {
@@ -567,9 +575,11 @@ describe("Library tags", () => {
       expect(createTag).toHaveBeenCalledWith({ name: "inspiration" });
       expect(assignTagToItem).toHaveBeenCalledWith("n1", "t1");
     });
-    expect(
-      await within(screen.getByRole("main")).findByText("inspiration"),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("main")).getByText("inspiration"),
+      ).toBeInTheDocument();
+    });
   });
 
   test("clicking a tag chip filters the library and writes tag to the URL", async () => {
@@ -624,9 +634,11 @@ describe("Library tags", () => {
     await waitFor(() => {
       expect(unassignTagFromItem).toHaveBeenCalledWith("n1", "t1");
     });
-    expect(
-      within(screen.getByRole("main")).queryByText("inspiration"),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("main")).queryByText("inspiration"),
+      ).not.toBeInTheDocument();
+    });
     expect(screen.getByRole("button", { name: "Tag inspiration" })).toBeInTheDocument();
     expect(listTags).toHaveBeenCalled();
   });

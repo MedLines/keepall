@@ -289,6 +289,11 @@ export async function listItems(): Promise<Item[]> {
   return items.reverse().map((item) => normalizeItem(item));
 }
 
+export async function getItem(id: string): Promise<Item | null> {
+  const row = await getDb().items.get(id);
+  return row ? normalizeItem(row) : null;
+}
+
 export async function deleteItem(id: string): Promise<void> {
   const existing = await getDb().items.get(id);
   if (existing?.type === "link") {

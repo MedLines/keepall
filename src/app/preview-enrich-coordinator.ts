@@ -7,6 +7,10 @@ import type { LinkItem } from "@/domain/link";
 import { listItems } from "@/persistence/items";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import {
+  isPreviewEnrichPaused,
+  setPreviewEnrichPaused,
+} from "./preview-enrich-pause";
+import {
   isViewportAutoBudgetCapped,
   trySpendViewportAutoBudget,
 } from "./preview-budget-storage";
@@ -34,9 +38,13 @@ type ProgressListener = (progress: PreviewEnrichProgress) => void;
 const queue: QueueEntry[] = [];
 const queuedIds = new Set<string>();
 const inFlightIds = new Set<string>();
+const inFlightAbort = new Map<string, AbortController>();
 let welcomeIds = new Set<string>();
+const welcomeUrls = new Map<string, string>();
 let welcomeTotal = 0;
 let welcomeDone = 0;
+/** When false, viewport (priority 1) enqueue is ignored — folder switches pause it. */
+let viewportEnqueueEnabled = true;
 const progressListeners = new Set<ProgressListener>();
 const budgetCappedListeners = new Set<(capped: boolean) => void>();
 let viewportBudgetCapped = false;
@@ -80,6 +88,7 @@ function persistWelcomeBatch() {
 
 function clearWelcomeProgress() {
   welcomeIds = new Set();
+  welcomeUrls.clear();
   welcomeTotal = 0;
   welcomeDone = 0;
   clearStoredWelcomeBatch();
@@ -102,14 +111,85 @@ function markWelcomeLinkDone(linkId: string) {
 
 /** Test-only reset — module singleton state must not leak between Vitest cases. */
 export function resetPreviewEnrichCoordinatorForTests(): void {
+  for (const controller of inFlightAbort.values()) {
+    controller.abort();
+  }
+  inFlightAbort.clear();
   queue.length = 0;
   queuedIds.clear();
   inFlightIds.clear();
   welcomeIds = new Set();
+  welcomeUrls.clear();
   welcomeTotal = 0;
   welcomeDone = 0;
+  viewportEnqueueEnabled = true;
+  setPreviewEnrichPaused(false);
   viewportBudgetCapped = false;
   clearStoredWelcomeBatch();
+}
+
+function abortAllInFlightPreviewEnrich(): void {
+  for (const controller of inFlightAbort.values()) {
+    controller.abort();
+  }
+  inFlightAbort.clear();
+  inFlightIds.clear();
+}
+
+/**
+ * Drop queued viewport enrich jobs (priority 1). Welcome stays queued.
+ * Call when the user changes collection/filter so browsing wins over preview spam.
+ */
+export function clearPendingViewportPreviewEnrich(): void {
+  for (let index = queue.length - 1; index >= 0; index -= 1) {
+    const entry = queue[index];
+    if (entry?.priority !== 1) {
+      continue;
+    }
+    queuedIds.delete(entry.linkId);
+    queue.splice(index, 1);
+  }
+}
+
+export { isPreviewEnrichPaused } from "./preview-enrich-pause";
+
+/**
+ * Folder/filter navigation wins over viewport enrich. Abort in-flight fetches
+ * (including welcome). Persist remaining welcome ids; resume re-queues them
+ * from remembered URLs (no extra listItems on the click/resume path).
+ */
+export function pausePreviewEnrichForNavigation(): void {
+  setPreviewEnrichPaused(true);
+  viewportEnqueueEnabled = false;
+  clearPendingViewportPreviewEnrich();
+  abortAllInFlightPreviewEnrich();
+  persistWelcomeBatch();
+}
+
+/** Pause or resume viewport enqueue. Resume continues remaining welcome ids. */
+export function setViewportPreviewEnrichEnabled(enabled: boolean): void {
+  viewportEnqueueEnabled = enabled;
+  if (!enabled) {
+    setPreviewEnrichPaused(true);
+    clearPendingViewportPreviewEnrich();
+    return;
+  }
+  setPreviewEnrichPaused(false);
+  requeueWelcomeFromMemory();
+  pumpQueue();
+}
+
+function requeueWelcomeFromMemory(): void {
+  if (welcomeIds.size === 0) {
+    return;
+  }
+  for (const id of welcomeIds) {
+    const url = welcomeUrls.get(id);
+    if (!url) {
+      continue;
+    }
+    enqueue({ linkId: id, url, priority: 0 });
+  }
 }
 
 function enqueue(entry: QueueEntry) {
@@ -123,6 +203,9 @@ function enqueue(entry: QueueEntry) {
 }
 
 function pumpQueue() {
+  if (isPreviewEnrichPaused()) {
+    return;
+  }
   while (
     inFlightIds.size < PREVIEW_ENRICH_CONCURRENCY &&
     queue.length > 0
@@ -141,9 +224,16 @@ function pumpQueue() {
     }
     inFlightIds.add(next.linkId);
     persistWelcomeBatch();
-    void enrichLinkPreview(next.linkId, next.url).finally(() => {
+    const controller = new AbortController();
+    inFlightAbort.set(next.linkId, controller);
+    void enrichLinkPreview(next.linkId, next.url, {
+      signal: controller.signal,
+    }).finally(() => {
+      inFlightAbort.delete(next.linkId);
       inFlightIds.delete(next.linkId);
-      markWelcomeLinkDone(next.linkId);
+      if (!controller.signal.aborted) {
+        markWelcomeLinkDone(next.linkId);
+      }
       pumpQueue();
     });
   }
@@ -209,12 +299,14 @@ async function linksForWelcomeIds(linkIds: string[]): Promise<{
 
 function beginWelcomeBatch(links: LinkItem[], progress: StoredWelcomeBatch) {
   welcomeIds = new Set(links.map((link) => link.id));
+  welcomeUrls.clear();
   welcomeTotal = progress.total;
   welcomeDone = progress.done;
   notifyProgress();
   persistWelcomeBatch();
 
   for (const link of links) {
+    welcomeUrls.set(link.id, link.url);
     enqueue({ linkId: link.id, url: link.url, priority: 0 });
   }
 }
@@ -277,6 +369,9 @@ export async function resumePreviewWelcomeBatch(): Promise<void> {
 
 /** Viewport / scroll: queue one idle link for enrich when it enters view. */
 export function requestPreviewEnrichViewport(linkId: string, url: string): void {
+  if (!viewportEnqueueEnabled) {
+    return;
+  }
   if (isPreviewViewportBudgetCapped()) {
     notifyBudgetCapped(true);
     return;

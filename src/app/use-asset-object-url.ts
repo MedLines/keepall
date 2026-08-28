@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { getAsset, assetToBlob } from "@/persistence/assets";
+import {
+  isLibraryNavigationStale,
+  useLibraryNavigationGenerationRef,
+} from "./library-navigation";
 
 /**
  * Load a local asset Blob and expose a short-lived object URL for <img src>.
@@ -12,6 +16,7 @@ export function useAssetObjectUrl(
   options?: { enabled?: boolean },
 ): string | null {
   const enabled = options?.enabled !== false;
+  const navigationGenerationRef = useLibraryNavigationGenerationRef();
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,9 +27,15 @@ export function useAssetObjectUrl(
 
     let cancelled = false;
     let createdUrl: string | null = null;
+    const capturedGeneration = navigationGenerationRef?.current ?? 0;
 
     void getAsset(assetId).then((asset) => {
-      if (cancelled || !asset) {
+      if (
+        cancelled ||
+        !asset ||
+        (navigationGenerationRef !== null &&
+          isLibraryNavigationStale(navigationGenerationRef, capturedGeneration))
+      ) {
         return;
       }
       createdUrl = URL.createObjectURL(assetToBlob(asset));
@@ -37,7 +48,7 @@ export function useAssetObjectUrl(
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [assetId, enabled]);
+  }, [assetId, enabled, navigationGenerationRef]);
 
   return objectUrl;
 }

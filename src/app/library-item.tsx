@@ -100,8 +100,6 @@ export type LibraryItemProps = {
   pinned: boolean;
   onTogglePin: () => void;
   layoutMode: LibraryLayout;
-  /** Skip layout morph animations on large libraries. */
-  simplifiedMotion?: boolean;
 };
 
 const ACTION_BTN =
@@ -152,12 +150,11 @@ export function LibraryItem({
   pinned,
   onTogglePin,
   layoutMode,
-  simplifiedMotion = false,
 }: LibraryItemProps) {
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
   const [orgPanel, setOrgPanel] = useState<"tag" | "collection" | null>(null);
-  const reduceMotion = useReducedMotion() || simplifiedMotion;
+  const reduceMotion = useReducedMotion();
 
   const actionChromeVisible = orgPanel !== null;
   const checkboxVisible = selected || selectionActive;

@@ -8,6 +8,7 @@ import {
 } from "@/persistence/items";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
+import { setPreviewEnrichPaused } from "./preview-enrich-pause";
 
 vi.mock("@/persistence/items", () => ({
   setLinkPreviewPending: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock("@/persistence/assets", () => ({
 
 describe("enrichLinkPreview", () => {
   beforeEach(() => {
+    setPreviewEnrichPaused(false);
     vi.mocked(setLinkPreviewPending).mockReset();
     vi.mocked(saveLinkPreviewResult).mockReset();
     vi.mocked(setLinkPreviewAssetId).mockReset();
@@ -72,28 +74,36 @@ describe("enrichLinkPreview", () => {
     await enrichLinkPreview("l1", "https://example.com");
 
     expect(setLinkPreviewPending).toHaveBeenCalledWith("l1");
-    expect(fetch).toHaveBeenCalledWith("/api/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: "https://example.com" }),
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/preview",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: "https://example.com" }),
+      }),
+    );
     expect(saveLinkPreviewResult).toHaveBeenCalledWith("l1", {
       status: "ready",
       title: "Hello",
       description: "World",
       imageUrl: "https://cdn.example.com/x.png",
     });
-    expect(fetch).toHaveBeenCalledWith("/api/preview-image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: "https://cdn.example.com/x.png" }),
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/preview-image",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: "https://cdn.example.com/x.png" }),
+      }),
+    );
     expect(putAsset).toHaveBeenCalled();
     expect(setLinkPreviewAssetId).toHaveBeenCalledWith("l1", "a1");
     expect(
       dispatchSpy.mock.calls.some(
         ([event]) =>
-          event instanceof Event && event.type === ITEMS_CHANGED_EVENT,
+          event instanceof CustomEvent &&
+          event.type === ITEMS_CHANGED_EVENT &&
+          event.detail?.source === "enrich",
       ),
     ).toBe(true);
   });
@@ -104,6 +114,7 @@ describe("enrichLinkPreview", () => {
       status: 502,
       json: async () => ({ error: "nope" }),
     } as Response);
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
 
     await enrichLinkPreview("l1", "https://example.com");
 
@@ -112,6 +123,40 @@ describe("enrichLinkPreview", () => {
       retry: "network",
     });
     expect(putAsset).not.toHaveBeenCalled();
+    expect(
+      dispatchSpy.mock.calls.some(
+        ([event]) =>
+          event instanceof CustomEvent &&
+          event.type === ITEMS_CHANGED_EVENT &&
+          event.detail?.source === "enrich",
+      ),
+    ).toBe(true);
+  });
+
+  test("skips ITEMS_CHANGED while folder navigation has paused enrich", async () => {
+    setPreviewEnrichPaused(true);
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => ({ error: "nope" }),
+    } as Response);
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+    dispatchSpy.mockClear();
+
+    await enrichLinkPreview("l1", "https://example.com");
+
+    expect(saveLinkPreviewResult).toHaveBeenCalledWith("l1", {
+      status: "failed",
+      retry: "network",
+    });
+    expect(
+      dispatchSpy.mock.calls.some(
+        ([event]) =>
+          event instanceof CustomEvent &&
+          event.type === ITEMS_CHANGED_EVENT &&
+          event.detail?.source === "enrich",
+      ),
+    ).toBe(false);
   });
 
   test("marks failed with none when the preview URL is blocked", async () => {

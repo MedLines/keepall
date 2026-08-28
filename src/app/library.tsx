@@ -9,7 +9,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useTransition,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -18,11 +17,8 @@ import {
   type Collection,
 } from "@/domain/collection";
 import {
-  itemHasTag,
   itemInCollection,
-  itemIsUnsorted,
   resolveItemCollectionNames,
-  resolveItemTagNames,
   resolveItemTags,
   type Item,
 } from "@/domain/item";
@@ -30,7 +26,6 @@ import {
   libraryViewHref,
   mergeLibraryViewState,
   parseLibraryViewState,
-  sortLibraryItemsWithCollectionPins,
   type LibraryTypeFilter,
   type LibraryViewState,
 } from "@/domain/library-view";
@@ -52,6 +47,7 @@ import {
   assignCollectionToItem,
   assignTagToItem,
   deleteItem,
+  getItem,
   listItems,
   replaceImageAssetAtIndex,
   unassignTagFromItem,
@@ -60,10 +56,27 @@ import {
   updateNote,
 } from "@/persistence/items";
 import { createTag, listTags } from "@/persistence/tags";
-import { ITEMS_CHANGED_EVENT, PREVIEW_WELCOME_EVENT, type PreviewWelcomeDetail } from "./items-events";
+import { ITEMS_CHANGED_EVENT, enrichChangedItemId, isEnrichItemsChanged, PREVIEW_WELCOME_EVENT, type PreviewWelcomeDetail } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import {
+  buildLibraryBrowseIndexes,
+  filterAndSortLibraryItems,
+  replaceItemInBrowseIndexes,
+} from "./library-browse-index";
+import {
+  markLibraryNavScopeChange,
+  measureLibraryNavScopeCommit,
+} from "./library-nav-profile";
+import {
+  LibraryNavigationProvider,
+} from "./library-navigation";
+import { LibrarySidebar } from "./library-sidebar";
+import { countSidebarItems } from "./library-sidebar-counts";
+import { LibraryMainGrid } from "./library-main-grid";
+import {
+  pausePreviewEnrichForNavigation,
   resumePreviewWelcomeBatch,
+  setViewportPreviewEnrichEnabled,
   startPreviewWelcomeBatch,
   subscribePreviewEnrichProgress,
   subscribePreviewViewportBudgetCapped,
@@ -73,7 +86,6 @@ import { wakeLinkPreviewRetries } from "./wake-link-preview-retries";
 import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
 import { type BulkPanel } from "./library-bulk-bar";
-import { LibraryShell } from "./library-shell";
 import { LibraryTopBar } from "./library-top-bar";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
 import { isShellMobileViewport } from "./use-shell-mobile";
@@ -85,13 +97,12 @@ import {
   resolveLibraryDragIds,
 } from "./library-drag";
 import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
-import {
-  LIBRARY_SIMPLIFIED_MOTION_MIN,
-  LIBRARY_VIRTUALIZE_MIN,
-} from "./library-scale";
-import { LibraryVirtualItems } from "./library-virtual-items";
+import { isPreviewEnrichPaused } from "./preview-enrich-pause";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
+
+/** Resume enrich + flush deferred enrich reloads after folder clicks stop. */
+const BROWSE_IDLE_MS = 2500;
 
 function libraryViewTitle(
   browseCollection: Collection | null,
@@ -124,7 +135,69 @@ export function Library() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const view = parseLibraryViewState(searchParams);
+  const urlSearchKey = searchParams.toString();
+  /** Local view is the source of truth so folder clicks update the sidebar immediately. */
+  const [view, setView] = useState(() => parseLibraryViewState(searchParams));
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  /** Ignore stale Next.js URL updates from older router.push while clicking fast. */
+  const ignoreUrlSyncRef = useRef(false);
+  const lastWrittenSearchRef = useRef(urlSearchKey);
+  const urlWriteTimerRef = useRef<number | null>(null);
+  const browseIdleTimerRef = useRef<number | null>(null);
+  const pendingEnrichPatchIdsRef = useRef<Set<string>>(new Set());
+  const flushEnrichPatchesRef = useRef<((ids: string[]) => void) | null>(null);
+  const flushSoftReloadRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (urlSearchKey === lastWrittenSearchRef.current) {
+      ignoreUrlSyncRef.current = false;
+      return;
+    }
+    if (ignoreUrlSyncRef.current) {
+      // Older navigation finished after a newer click — do not stomp local view.
+      return;
+    }
+    setView(parseLibraryViewState(searchParams));
+  }, [urlSearchKey, searchParams]);
+
+  useEffect(() => {
+    function onPopState() {
+      ignoreUrlSyncRef.current = false;
+      const params = new URLSearchParams(window.location.search);
+      lastWrittenSearchRef.current = params.toString();
+      setView(parseLibraryViewState(params));
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (urlWriteTimerRef.current !== null) {
+        window.clearTimeout(urlWriteTimerRef.current);
+      }
+      if (browseIdleTimerRef.current !== null) {
+        window.clearTimeout(browseIdleTimerRef.current);
+      }
+    };
+  }, []);
+
+  const scheduleBrowseIdle = useCallback(() => {
+    pausePreviewEnrichForNavigation();
+    if (browseIdleTimerRef.current !== null) {
+      window.clearTimeout(browseIdleTimerRef.current);
+    }
+    browseIdleTimerRef.current = window.setTimeout(() => {
+      browseIdleTimerRef.current = null;
+      setViewportPreviewEnrichEnabled(true);
+      if (pendingEnrichPatchIdsRef.current.size > 0) {
+        const ids = [...pendingEnrichPatchIdsRef.current];
+        pendingEnrichPatchIdsRef.current.clear();
+        flushEnrichPatchesRef.current?.(ids);
+      }
+    }, BROWSE_IDLE_MS);
+  }, []);
 
   const [items, setItems] = useState<Item[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -176,7 +249,11 @@ export function Library() {
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
   const mainScrollRef = useRef<HTMLElement>(null);
   const prevBrowseScopeRef = useRef<string | null>(null);
-  const [isViewPending, startTransition] = useTransition();
+  const pendingNavScopeLabelRef = useRef<string | null>(null);
+  const browseIndexesRef = useRef(buildLibraryBrowseIndexes([]));
+  const [browseIndexEpoch, setBrowseIndexEpoch] = useState(0);
+  const navigationGenerationRef = useRef(0);
+  const [navigationGeneration, setNavigationGeneration] = useState(0);
   const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
     null,
   );
@@ -193,6 +270,7 @@ export function Library() {
 
   useEffect(() => {
     let cancelled = false;
+    let softReloadTimer: number | null = null;
 
     async function reload(options?: { soft?: boolean }) {
       const soft = options?.soft === true;
@@ -208,6 +286,8 @@ export function Library() {
           listCollections(),
         ]);
         if (!cancelled) {
+          browseIndexesRef.current = buildLibraryBrowseIndexes(nextItems);
+          setBrowseIndexEpoch((epoch) => epoch + 1);
           setItems(nextItems);
           setTags(nextTags);
           setCollections(nextCollections);
@@ -225,13 +305,95 @@ export function Library() {
     }
 
     void reload();
-    function onItemsChanged() {
-      void reload({ soft: true });
+    function scheduleSoftReload() {
+      if (softReloadTimer !== null) {
+        window.clearTimeout(softReloadTimer);
+      }
+      softReloadTimer = window.setTimeout(() => {
+        softReloadTimer = null;
+        void reload({ soft: true });
+      }, 150);
+    }
+    flushSoftReloadRef.current = scheduleSoftReload;
+
+    async function patchEnrichItems(ids: string[]) {
+      if (ids.length === 0) {
+        return;
+      }
+      try {
+        const rows = await Promise.all(ids.map((id) => getItem(id)));
+        if (cancelled) {
+          return;
+        }
+        const patches = rows.filter((item): item is Item => item !== null);
+        if (patches.length === 0) {
+          return;
+        }
+        setItems((prev) => {
+            let next: Item[] | null = null;
+            let indexChanged = false;
+            for (const item of patches) {
+              const index = prev.findIndex((row) => row.id === item.id);
+              if (index === -1) {
+                continue;
+              }
+              if (prev[index] === item) {
+                continue;
+              }
+              if (
+                replaceItemInBrowseIndexes(
+                  browseIndexesRef.current,
+                  item.id,
+                  item,
+                )
+              ) {
+                indexChanged = true;
+              }
+              if (!next) {
+                next = prev.slice();
+              }
+              next[index] = item;
+            }
+            if (indexChanged) {
+              setBrowseIndexEpoch((epoch) => epoch + 1);
+            }
+            return next ?? prev;
+          });
+      } catch {
+        // ignore — user actions still trigger a full reload
+      }
+    }
+    flushEnrichPatchesRef.current = (ids) => {
+      void patchEnrichItems(ids);
+    };
+
+    function scheduleEnrichItemPatch(itemId: string) {
+      if (isPreviewEnrichPaused() || browseIdleTimerRef.current !== null) {
+        pendingEnrichPatchIdsRef.current.add(itemId);
+        return;
+      }
+      void patchEnrichItems([itemId]);
+    }
+
+    function onItemsChanged(event: Event) {
+      if (isEnrichItemsChanged(event)) {
+        const itemId = enrichChangedItemId(event);
+        if (itemId) {
+          scheduleEnrichItemPatch(itemId);
+          return;
+        }
+      }
+      scheduleSoftReload();
     }
     window.addEventListener(ITEMS_CHANGED_EVENT, onItemsChanged);
 
     return () => {
       cancelled = true;
+      flushSoftReloadRef.current = null;
+      flushEnrichPatchesRef.current = null;
+      if (softReloadTimer !== null) {
+        window.clearTimeout(softReloadTimer);
+      }
       window.removeEventListener(ITEMS_CHANGED_EVENT, onItemsChanged);
     };
   }, []);
@@ -316,8 +478,9 @@ export function Library() {
 
   const mutationBusy = pendingMutation !== null;
   const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
-  const collectionsById = new Map(
-    collections.map((collection) => [collection.id, collection]),
+  const collectionsById = useMemo(
+    () => new Map(collections.map((collection) => [collection.id, collection])),
+    [collections],
   );
   const browseCollectionId = view.collection;
   const browseCollection =
@@ -332,54 +495,30 @@ export function Library() {
   const browseUnsorted = view.unsorted;
   const browseLayout = view.layout;
   const searchQuery = view.q;
-  const visibleItems = useMemo(() => {
-    const tagMap = new Map(tags.map((tag) => [tag.id, tag]));
-    return sortLibraryItemsWithCollectionPins(
-      items.filter((item) => {
-        if (browseType !== null && item.type !== browseType) {
-          return false;
-        }
-
-        if (
-          browseCollectionId !== null &&
-          !itemInCollection(item, browseCollectionId)
-        ) {
-          return false;
-        }
-
-        if (browseUnsorted && !itemIsUnsorted(item)) {
-          return false;
-        }
-
-        if (browseTagId !== null && !itemHasTag(item, browseTagId)) {
-          return false;
-        }
-
-        return matchesSearchQuery(
-          item,
-          searchQuery,
-          resolveItemTagNames(item, tagMap),
-        );
-      }),
-      view.sort,
-      browseCollectionId !== null
-        ? (browseCollection?.pinnedItemIds ?? null)
-        : null,
-    );
-  }, [
-    items,
-    tags,
-    browseType,
-    browseCollectionId,
-    browseUnsorted,
-    browseTagId,
-    searchQuery,
-    view.sort,
-    browseCollection?.pinnedItemIds,
-  ]);
-  const simplifiedMotion =
-    visibleItems.length >= LIBRARY_SIMPLIFIED_MOTION_MIN;
-  const useVirtualList = visibleItems.length >= LIBRARY_VIRTUALIZE_MIN;
+  const browseIndexes = browseIndexesRef.current;
+  const sidebarCounts = useMemo(() => countSidebarItems(items), [items]);
+  const headerItemCount = useMemo(
+    () =>
+      filterAndSortLibraryItems(
+        items,
+        tags,
+        view,
+        collectionsById,
+        browseIndexes,
+      ).length,
+    [items, tags, view, collectionsById, browseIndexEpoch],
+  );
+  const visibleItems = useMemo(
+    () =>
+      filterAndSortLibraryItems(
+        items,
+        tags,
+        view,
+        collectionsById,
+        browseIndexes,
+      ),
+    [items, tags, view, collectionsById, browseIndexEpoch],
+  );
   const browseScopeKey = `${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
   const allVisibleSelected =
@@ -423,26 +562,67 @@ export function Library() {
       patch: Partial<LibraryViewState>,
       history: "replace" | "push" = "replace",
     ) => {
-      startTransition(() => {
-        const current = parseLibraryViewState(searchParams);
-        const next = mergeLibraryViewState(current, patch);
-        const href = libraryViewHref(pathname, next);
+      const current = viewRef.current;
+      const next = mergeLibraryViewState(current, patch);
+      const scopeChanged =
+        next.collection !== current.collection ||
+        next.unsorted !== current.unsorted ||
+        next.type !== current.type ||
+        next.tag !== current.tag;
+      if (scopeChanged) {
+        scheduleBrowseIdle();
+        navigationGenerationRef.current += 1;
+        setNavigationGeneration(navigationGenerationRef.current);
+        const scopeLabel = `${next.collection ?? "all"}|${next.unsorted}|${next.type ?? ""}|${next.tag ?? ""}`;
+        pendingNavScopeLabelRef.current = scopeLabel;
+        markLibraryNavScopeChange(scopeLabel);
+      }
+      setView(next);
+      viewRef.current = next;
+
+      const href = libraryViewHref(pathname, next);
+      const search = href.includes("?") ? href.slice(href.indexOf("?") + 1) : "";
+      lastWrittenSearchRef.current = search;
+      ignoreUrlSyncRef.current = true;
+
+      if (process.env.NODE_ENV === "test") {
         if (history === "push") {
           router.push(href, { scroll: false });
         } else {
           router.replace(href, { scroll: false });
         }
-      });
+        return;
+      }
+
+      if (urlWriteTimerRef.current !== null) {
+        window.clearTimeout(urlWriteTimerRef.current);
+      }
+      urlWriteTimerRef.current = window.setTimeout(() => {
+        urlWriteTimerRef.current = null;
+        if (history === "push") {
+          window.history.pushState(window.history.state, "", href);
+        } else {
+          window.history.replaceState(window.history.state, "", href);
+        }
+      }, 100);
     },
-    [pathname, router, searchParams],
+    [pathname, router, scheduleBrowseIdle],
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (pendingNavScopeLabelRef.current !== null) {
+      measureLibraryNavScopeCommit(pendingNavScopeLabelRef.current);
+      pendingNavScopeLabelRef.current = null;
+    }
     if (prevBrowseScopeRef.current === browseScopeKey) {
       return;
     }
     if (prevBrowseScopeRef.current !== null) {
       clearSelection();
+      const main = mainScrollRef.current;
+      if (main) {
+        main.scrollTop = 0;
+      }
     }
     prevBrowseScopeRef.current = browseScopeKey;
   }, [browseScopeKey, clearSelection]);
@@ -1140,7 +1320,6 @@ export function Library() {
         item={item}
         inspected={inspectId === item.id}
         layoutMode={browseLayout}
-        simplifiedMotion={simplifiedMotion}
         onOpenInspect={() => openInspect(item.id)}
         tagNames={resolveItemTags(item, tagsById)}
         tagError={tagErrorItemId === item.id ? tagError : null}
@@ -1227,11 +1406,15 @@ export function Library() {
   }
 
   return (
+    <LibraryNavigationProvider
+      generation={navigationGeneration}
+      generationRef={navigationGenerationRef}
+    >
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-zinc-50">
       <LibraryTopBar
         headingRef={libraryHeadingRef}
         title={viewTitle}
-        itemCount={visibleItems.length}
+        itemCount={headerItemCount}
         searchQuery={searchQuery}
         onSearchChange={(value) => updateView({ q: value })}
         sort={view.sort}
@@ -1256,7 +1439,7 @@ export function Library() {
           removeTagSuggestions: bulkRemoveTagSuggestions,
           tagDraft: bulkTagDraft,
           tagSuggestions,
-          visibleCount: visibleItems.length,
+          visibleCount: headerItemCount,
           onBulkAddCollection: (name) => void bulkAddCollection(name),
           onBulkAddTag: (name) => void bulkAddTag(name),
           onBulkRemoveTag: (name) => void bulkRemoveTag(name),
@@ -1278,7 +1461,7 @@ export function Library() {
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <LibraryShell
+        <LibrarySidebar
           panelOpen={panelOpen}
           onPanelOpenChange={setPanelOpen}
           backupOpen={backupOpen}
@@ -1294,7 +1477,7 @@ export function Library() {
           browseTagId={browseTagId}
           collections={collections}
           tags={tags}
-          items={items}
+          sidebarCounts={sidebarCounts}
           dropTargetCollectionId={dropTargetCollectionId}
           newCollectionDraft={newCollectionDraft}
           collectionManageError={collectionManageError}
@@ -1374,46 +1557,43 @@ export function Library() {
                   Fetch preview.
                 </p>
               ) : null}
-              {isViewPending ? (
-                <p
-                  className="mb-3 text-sm text-zinc-600"
-                  role="status"
-                  aria-live="polite"
-                >
-                  Updating library…
-                </p>
-              ) : null}
               {visibleItems.length === 0 ? (
                 <p className="text-sm text-zinc-600">
-                  {hasActiveSearch
+                  {normalizeSearchQuery(view.q).length > 0
                     ? "No matching items."
-                    : browseType !== null
+                    : view.type !== null
                       ? "No items of this type."
-                      : browseTagId !== null
+                      : view.tag !== null
                         ? "No items with this tag."
-                        : browseUnsorted
+                        : view.unsorted
                           ? "No unsorted items."
                           : browseCollectionId !== null
                             ? "No items in this collection."
                             : "No items yet."}
                 </p>
-              ) : useVirtualList ? (
-                <LibraryVirtualItems
-                  items={visibleItems}
+              ) : (
+                <LibraryMainGrid
+                  visibleItems={visibleItems}
+                  scopeKey={browseScopeKey}
                   layout={browseLayout}
                   scrollRef={mainScrollRef}
                   renderItem={renderLibraryItem}
-                />
-              ) : (
-                <ul
-                  className={
-                    browseLayout === "list"
-                      ? "flex flex-col gap-2"
-                      : "grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4"
+                  empty={
+                    <p className="text-sm text-zinc-600">
+                      {normalizeSearchQuery(view.q).length > 0
+                        ? "No matching items."
+                        : view.type !== null
+                          ? "No items of this type."
+                          : view.tag !== null
+                            ? "No items with this tag."
+                            : view.unsorted
+                              ? "No unsorted items."
+                              : browseCollectionId !== null
+                                ? "No items in this collection."
+                                : "No items yet."}
+                    </p>
                   }
-                >
-                  {visibleItems.map((item) => renderLibraryItem(item))}
-                </ul>
+                />
               )}
               <LibraryInspect
                 item={inspectedItem}
@@ -1563,5 +1743,6 @@ export function Library() {
         </main>
       </div>
     </div>
+    </LibraryNavigationProvider>
   );
 }

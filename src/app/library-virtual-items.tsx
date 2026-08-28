@@ -21,6 +21,8 @@ type Props = {
   items: Item[];
   layout: LibraryLayout;
   scrollRef: RefObject<HTMLElement | null>;
+  /** Scroll to top when the filtered set changes — virtualizer instance is reused. */
+  scopeKey: string;
   renderItem: (item: Item) => ReactNode;
 };
 
@@ -39,6 +41,7 @@ export function LibraryVirtualItems({
   items,
   layout,
   scrollRef,
+  scopeKey,
   renderItem,
 }: Props) {
   const [containerWidth, setContainerWidth] = useState(0);
@@ -78,8 +81,12 @@ export function LibraryVirtualItems({
   });
 
   useEffect(() => {
+    rowVirtualizer.scrollToOffset(0);
+  }, [scopeKey, rowVirtualizer]);
+
+  useEffect(() => {
     rowVirtualizer.measure();
-  }, [columnCount, isList, rowVirtualizer]);
+  }, [scopeKey, columnCount, isList, items.length, rowVirtualizer]);
 
   return (
     <div
@@ -100,7 +107,7 @@ export function LibraryVirtualItems({
             key={virtualRow.key}
             ref={rowVirtualizer.measureElement}
             data-index={virtualRow.index}
-            className="absolute left-0 top-0 w-full"
+            className={`absolute left-0 top-0 w-full ${isList ? "" : "pb-4"}`}
             style={{ transform: `translateY(${virtualRow.start}px)` }}
           >
             <ul

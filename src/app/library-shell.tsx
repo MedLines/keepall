@@ -11,9 +11,9 @@ import {
   useState,
 } from "react";
 import type { Collection } from "@/domain/collection";
-import type { Item } from "@/domain/item";
 import type { LibraryTypeFilter } from "@/domain/library-view";
 import type { Tag } from "@/domain/tag";
+import type { LibrarySidebarCounts } from "./library-sidebar-counts";
 import { BackupPanel } from "./backup-panel";
 import {
   BackupIcon,
@@ -59,7 +59,7 @@ type Props = {
   browseTagId: string | null;
   collections: Collection[];
   tags: Tag[];
-  items: Item[];
+  sidebarCounts: LibrarySidebarCounts;
   dropTargetCollectionId: string | null;
   newCollectionDraft: string;
   collectionManageError: string | null;
@@ -100,7 +100,7 @@ export function LibraryShell({
   browseTagId,
   collections,
   tags,
-  items,
+  sidebarCounts: counts,
   dropTargetCollectionId,
   newCollectionDraft,
   collectionManageError,
@@ -127,7 +127,6 @@ export function LibraryShell({
   const [filtersOpen, setFiltersOpen] = useState(readShellFiltersOpen);
   const [tagsOpen, setTagsOpen] = useState(readShellTagsOpen);
   const isMobile = useShellMobile();
-  const counts = useMemo(() => countSidebarItems(items), [items]);
 
   const collectionQuery = collectionFilter.trim().toLowerCase();
   const filteredCollections = useMemo(() => {
@@ -952,36 +951,4 @@ function SidebarSearch({
       </label>
     </div>
   );
-}
-
-function countSidebarItems(items: Item[]) {
-  const byCollectionId: Record<string, number> = {};
-  const byTagId: Record<string, number> = {};
-  const byType: Record<LibraryTypeFilter, number> = {
-    link: 0,
-    note: 0,
-    image: 0,
-  };
-  let unsorted = 0;
-
-  for (const item of items) {
-    byType[item.type] += 1;
-    if (item.collectionIds.length === 0) {
-      unsorted += 1;
-    }
-    for (const id of item.collectionIds) {
-      byCollectionId[id] = (byCollectionId[id] ?? 0) + 1;
-    }
-    for (const id of item.tagIds) {
-      byTagId[id] = (byTagId[id] ?? 0) + 1;
-    }
-  }
-
-  return {
-    all: items.length,
-    unsorted,
-    byType,
-    byCollectionId,
-    byTagId,
-  };
 }

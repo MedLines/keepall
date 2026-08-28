@@ -4,7 +4,6 @@ import { cardInitial, linkFaviconUrl } from "@/domain/card-display";
 import { imageCoverAssetId } from "@/domain/image";
 import type { Item } from "@/domain/item";
 import { useAssetObjectUrl } from "./use-asset-object-url";
-import { useNearViewport } from "./use-near-viewport";
 import { useEffect, useState } from "react";
 
 type Props = {
@@ -15,8 +14,6 @@ type Props = {
   assetId?: string | null;
   /** Smaller favicon for list-row thumbs. */
   compact?: boolean;
-  /** Card thumbs: defer IndexedDB read until near viewport. Inspect always loads. */
-  lazyLoad?: boolean;
   className?: string;
 };
 
@@ -27,10 +24,7 @@ export function LibraryItemMedia({
   assetId,
   compact = false,
   className = "",
-  lazyLoad = true,
 }: Props) {
-  const shouldLazyLoad = lazyLoad && variant === "card";
-  const { ref: viewportRef, near: nearViewport } = useNearViewport();
   const assetIdForDisplay =
     assetId !== undefined
       ? assetId
@@ -39,9 +33,7 @@ export function LibraryItemMedia({
         : item.type === "image"
           ? imageCoverAssetId(item)
           : null;
-  const localObjectUrl = useAssetObjectUrl(assetIdForDisplay, {
-    enabled: !shouldLazyLoad || nearViewport,
-  });
+  const localObjectUrl = useAssetObjectUrl(assetIdForDisplay);
   const [remoteBroken, setRemoteBroken] = useState(false);
   const [faviconBroken, setFaviconBroken] = useState(false);
   const remotePreviewUrl =
@@ -68,77 +60,65 @@ export function LibraryItemMedia({
   const isFaviconOnly = Boolean(faviconSrc && imageSrc === faviconSrc);
   const isInspect = variant === "inspect";
 
-  const mediaBody = (() => {
-    if (isFaviconOnly && faviconSrc) {
-      return (
-        <div
-          aria-hidden="true"
-          className={
-            compact
-              ? `flex size-full items-center justify-center bg-white ${className}`
-              : `flex aspect-[16/10] h-full w-full items-center justify-center bg-white ${className}`
-          }
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- remote favicon at native size */}
-          <img
-            alt=""
-            className={compact ? "size-5 object-contain" : "size-12 object-contain"}
-            src={faviconSrc}
-            onError={() => setFaviconBroken(true)}
-          />
-        </div>
-      );
-    }
-
-    if (imageSrc && (item.type === "link" || item.type === "image")) {
-      return (
-        // eslint-disable-next-line @next/next/no-img-element -- local object URLs + remote OG
-        <img
-          alt=""
-          className={
-            isInspect
-              ? `mx-auto max-h-[min(78vh,56rem)] w-full object-contain outline outline-1 -outline-offset-1 outline-white/10 ${className}`
-              : compact
-                ? `size-full object-cover outline outline-1 -outline-offset-1 outline-black/10 ${className}`
-                : `aspect-[16/10] h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/10 ${className}`
-          }
-          src={imageSrc}
-          onError={() => {
-            if (previewSrc) {
-              if (!localObjectUrl) {
-                setRemoteBroken(true);
-              }
-              return;
-            }
-            setFaviconBroken(true);
-          }}
-        />
-      );
-    }
-
+  if (isFaviconOnly && faviconSrc) {
     return (
       <div
         aria-hidden="true"
         className={
-          isInspect
-            ? `flex min-h-48 items-center justify-center bg-zinc-900 text-5xl font-semibold text-zinc-400 ${className}`
-            : compact
-              ? `flex size-full items-center justify-center bg-zinc-200 text-sm font-semibold text-zinc-700 ${className}`
-              : `flex aspect-[16/10] items-center justify-center bg-zinc-200 text-4xl font-semibold text-zinc-700 ${className}`
+          compact
+            ? `flex size-full items-center justify-center bg-white ${className}`
+            : `flex aspect-[16/10] h-full w-full items-center justify-center bg-white ${className}`
         }
       >
-        {cardInitial(item)}
-      </div>
-    );
-  })();
-
-  if (shouldLazyLoad) {
-    return (
-      <div ref={viewportRef} className="size-full min-h-0">
-        {mediaBody}
+        {/* eslint-disable-next-line @next/next/no-img-element -- remote favicon at native size */}
+        <img
+          alt=""
+          className={compact ? "size-5 object-contain" : "size-12 object-contain"}
+          src={faviconSrc}
+          onError={() => setFaviconBroken(true)}
+        />
       </div>
     );
   }
 
-  return mediaBody;
+  if (imageSrc && (item.type === "link" || item.type === "image")) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- local object URLs + remote OG
+      <img
+        alt=""
+        className={
+          isInspect
+            ? `mx-auto max-h-[min(78vh,56rem)] w-full object-contain outline outline-1 -outline-offset-1 outline-white/10 ${className}`
+            : compact
+              ? `size-full object-cover outline outline-1 -outline-offset-1 outline-black/10 ${className}`
+              : `aspect-[16/10] h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/10 ${className}`
+        }
+        src={imageSrc}
+        onError={() => {
+          if (previewSrc) {
+            if (!localObjectUrl) {
+              setRemoteBroken(true);
+            }
+            return;
+          }
+          setFaviconBroken(true);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      aria-hidden="true"
+      className={
+        isInspect
+          ? `flex min-h-48 items-center justify-center bg-zinc-900 text-5xl font-semibold text-zinc-400 ${className}`
+          : compact
+            ? `flex size-full items-center justify-center bg-zinc-200 text-sm font-semibold text-zinc-700 ${className}`
+            : `flex aspect-[16/10] items-center justify-center bg-zinc-200 text-4xl font-semibold text-zinc-700 ${className}`
+      }
+    >
+      {cardInitial(item)}
+    </div>
+  );
 }
