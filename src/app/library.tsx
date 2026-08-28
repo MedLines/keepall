@@ -6,8 +6,10 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
+  useTransition,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -83,6 +85,11 @@ import {
   resolveLibraryDragIds,
 } from "./library-drag";
 import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
+import {
+  LIBRARY_SIMPLIFIED_MOTION_MIN,
+  LIBRARY_VIRTUALIZE_MIN,
+} from "./library-scale";
+import { LibraryVirtualItems } from "./library-virtual-items";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
 
@@ -167,6 +174,9 @@ export function Library() {
   const [previewBudgetCapped, setPreviewBudgetCapped] = useState(false);
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
+  const mainScrollRef = useRef<HTMLElement>(null);
+  const prevBrowseScopeRef = useRef<string | null>(null);
+  const [isViewPending, startTransition] = useTransition();
   const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
     null,
   );
@@ -322,38 +332,55 @@ export function Library() {
   const browseUnsorted = view.unsorted;
   const browseLayout = view.layout;
   const searchQuery = view.q;
-  const visibleItems = sortLibraryItemsWithCollectionPins(
-    items.filter((item) => {
-      if (browseType !== null && item.type !== browseType) {
-        return false;
-      }
+  const visibleItems = useMemo(() => {
+    const tagMap = new Map(tags.map((tag) => [tag.id, tag]));
+    return sortLibraryItemsWithCollectionPins(
+      items.filter((item) => {
+        if (browseType !== null && item.type !== browseType) {
+          return false;
+        }
 
-      if (
-        browseCollectionId !== null &&
-        !itemInCollection(item, browseCollectionId)
-      ) {
-        return false;
-      }
+        if (
+          browseCollectionId !== null &&
+          !itemInCollection(item, browseCollectionId)
+        ) {
+          return false;
+        }
 
-      if (browseUnsorted && !itemIsUnsorted(item)) {
-        return false;
-      }
+        if (browseUnsorted && !itemIsUnsorted(item)) {
+          return false;
+        }
 
-      if (browseTagId !== null && !itemHasTag(item, browseTagId)) {
-        return false;
-      }
+        if (browseTagId !== null && !itemHasTag(item, browseTagId)) {
+          return false;
+        }
 
-      return matchesSearchQuery(
-        item,
-        searchQuery,
-        resolveItemTagNames(item, tagsById),
-      );
-    }),
+        return matchesSearchQuery(
+          item,
+          searchQuery,
+          resolveItemTagNames(item, tagMap),
+        );
+      }),
+      view.sort,
+      browseCollectionId !== null
+        ? (browseCollection?.pinnedItemIds ?? null)
+        : null,
+    );
+  }, [
+    items,
+    tags,
+    browseType,
+    browseCollectionId,
+    browseUnsorted,
+    browseTagId,
+    searchQuery,
     view.sort,
-    browseCollectionId !== null
-      ? (browseCollection?.pinnedItemIds ?? null)
-      : null,
-  );
+    browseCollection?.pinnedItemIds,
+  ]);
+  const simplifiedMotion =
+    visibleItems.length >= LIBRARY_SIMPLIFIED_MOTION_MIN;
+  const useVirtualList = visibleItems.length >= LIBRARY_VIRTUALIZE_MIN;
+  const browseScopeKey = `${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
   const allVisibleSelected =
     visibleItems.length > 0 &&
@@ -391,19 +418,34 @@ export function Library() {
   })();
   const inspectId = view.item;
 
-  function updateView(
-    patch: Partial<LibraryViewState>,
-    history: "replace" | "push" = "replace",
-  ) {
-    const current = parseLibraryViewState(searchParams);
-    const next = mergeLibraryViewState(current, patch);
-    const href = libraryViewHref(pathname, next);
-    if (history === "push") {
-      router.push(href, { scroll: false });
-    } else {
-      router.replace(href, { scroll: false });
+  const updateView = useCallback(
+    (
+      patch: Partial<LibraryViewState>,
+      history: "replace" | "push" = "replace",
+    ) => {
+      startTransition(() => {
+        const current = parseLibraryViewState(searchParams);
+        const next = mergeLibraryViewState(current, patch);
+        const href = libraryViewHref(pathname, next);
+        if (history === "push") {
+          router.push(href, { scroll: false });
+        } else {
+          router.replace(href, { scroll: false });
+        }
+      });
+    },
+    [pathname, router, searchParams],
+  );
+
+  useEffect(() => {
+    if (prevBrowseScopeRef.current === browseScopeKey) {
+      return;
     }
-  }
+    if (prevBrowseScopeRef.current !== null) {
+      clearSelection();
+    }
+    prevBrowseScopeRef.current = browseScopeKey;
+  }, [browseScopeKey, clearSelection]);
 
   const inspectedItem =
     inspectId === null
@@ -1091,6 +1133,99 @@ export function Library() {
     browseTagName,
   );
 
+  function renderLibraryItem(item: Item) {
+    return (
+      <LibraryItem
+        key={item.id}
+        item={item}
+        inspected={inspectId === item.id}
+        layoutMode={browseLayout}
+        simplifiedMotion={simplifiedMotion}
+        onOpenInspect={() => openInspect(item.id)}
+        tagNames={resolveItemTags(item, tagsById)}
+        tagError={tagErrorItemId === item.id ? tagError : null}
+        collectionNames={resolveItemCollectionNames(item, collectionsById)}
+        collectionError={
+          collectionErrorItemId === item.id ? collectionError : null
+        }
+        onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
+        editing={editingId === item.id && inspectId !== item.id}
+        pendingDelete={
+          pendingDeleteId === item.id && inspectId !== item.id
+        }
+        mutationBusy={mutationBusy}
+        pendingMutation={pendingMutation}
+        editDraft={editDraft}
+        editTitleDraft={editTitleDraft}
+        editError={editError}
+        setFirstEditField={(node) => {
+          firstEditFieldRef.current = node;
+        }}
+        confirmDeleteRef={confirmDeleteRef}
+        onEditDraftChange={setEditDraft}
+        onEditTitleChange={setEditTitleDraft}
+        onEditSaveShortcut={onEditSaveShortcut}
+        onSaveNote={() => void saveNoteEdit(item.id)}
+        onSaveLink={() => void saveLinkEdit(item.id)}
+        onSaveImage={() => void saveImageEdit(item.id)}
+        onCancelEdit={() => clearEdit({ restoreFocus: true })}
+        onConfirmDelete={() => void confirmDelete(item.id)}
+        onCancelDelete={cancelDelete}
+        onAddTag={(name: string) => void addTagToItem(item.id, name)}
+        onRemoveTag={(tagId: string) => void removeTagFromItem(item.id, tagId)}
+        onAddCollection={(name: string) =>
+          void addCollectionToItem(item.id, name)
+        }
+        onStartEdit={() => {
+          setPendingDeleteId(null);
+          setDeleteError(null);
+          setEditError(null);
+          setTagError(null);
+          setTagErrorItemId(null);
+          setCollectionError(null);
+          setCollectionErrorItemId(null);
+          setEditingId(item.id);
+          if (item.type === "note") {
+            setEditDraft(item.content);
+            setEditTitleDraft("");
+          } else if (item.type === "image") {
+            setEditDraft(item.caption);
+            setEditTitleDraft(item.sourceUrl);
+          } else {
+            setEditDraft(item.url);
+            setEditTitleDraft(item.title);
+          }
+        }}
+        onStartDelete={() => {
+          clearEdit();
+          setDeleteError(null);
+          setTagError(null);
+          setTagErrorItemId(null);
+          setCollectionError(null);
+          setCollectionErrorItemId(null);
+          setPendingDeleteId(item.id);
+        }}
+        selected={selectedIds.has(item.id)}
+        selectionActive={selectionActive}
+        onToggleSelect={() => toggleItemSelected(item.id)}
+        tagSuggestions={tagSuggestions}
+        collectionSuggestions={collectionSuggestions}
+        dragEnabled={
+          !mutationBusy &&
+          editingId !== item.id &&
+          pendingDeleteId !== item.id &&
+          inspectId !== item.id
+        }
+        isDragging={draggingIds.has(item.id)}
+        onItemDragStart={(event) => handleItemDragStart(item.id, event)}
+        onItemDragEnd={handleItemDragEnd}
+        pinVisible={itemPinVisible(item)}
+        pinned={itemIsPinned(item)}
+        onTogglePin={() => void togglePinItem(item.id)}
+      />
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-zinc-50">
       <LibraryTopBar
@@ -1187,6 +1322,7 @@ export function Library() {
         />
 
         <main
+          ref={mainScrollRef}
           className="min-w-0 flex-1 overflow-auto px-4 py-4 sm:px-5"
           aria-labelledby="library-heading"
         >
@@ -1238,6 +1374,15 @@ export function Library() {
                   Fetch preview.
                 </p>
               ) : null}
+              {isViewPending ? (
+                <p
+                  className="mb-3 text-sm text-zinc-600"
+                  role="status"
+                  aria-live="polite"
+                >
+                  Updating library…
+                </p>
+              ) : null}
               {visibleItems.length === 0 ? (
                 <p className="text-sm text-zinc-600">
                   {hasActiveSearch
@@ -1252,6 +1397,13 @@ export function Library() {
                             ? "No items in this collection."
                             : "No items yet."}
                 </p>
+              ) : useVirtualList ? (
+                <LibraryVirtualItems
+                  items={visibleItems}
+                  layout={browseLayout}
+                  scrollRef={mainScrollRef}
+                  renderItem={renderLibraryItem}
+                />
               ) : (
                 <ul
                   className={
@@ -1260,115 +1412,7 @@ export function Library() {
                       : "grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4"
                   }
                 >
-                  {visibleItems.map((item) => (
-                      <LibraryItem
-                        key={item.id}
-                        item={item}
-                        inspected={inspectId === item.id}
-                        layoutMode={browseLayout}
-                        onOpenInspect={() => openInspect(item.id)}
-                        tagNames={resolveItemTags(item, tagsById)}
-                        tagError={
-                          tagErrorItemId === item.id ? tagError : null
-                        }
-                        collectionNames={resolveItemCollectionNames(
-                          item,
-                          collectionsById,
-                        )}
-                        collectionError={
-                          collectionErrorItemId === item.id
-                            ? collectionError
-                            : null
-                        }
-                        onBrowseTag={(tagId) =>
-                          updateView({ tag: tagId }, "push")
-                        }
-                        editing={
-                          editingId === item.id && inspectId !== item.id
-                        }
-                        pendingDelete={
-                          pendingDeleteId === item.id &&
-                          inspectId !== item.id
-                        }
-                        mutationBusy={mutationBusy}
-                        pendingMutation={pendingMutation}
-                        editDraft={editDraft}
-                        editTitleDraft={editTitleDraft}
-                        editError={editError}
-                        setFirstEditField={(node) => {
-                          firstEditFieldRef.current = node;
-                        }}
-                        confirmDeleteRef={confirmDeleteRef}
-                        onEditDraftChange={setEditDraft}
-                        onEditTitleChange={setEditTitleDraft}
-                        onEditSaveShortcut={onEditSaveShortcut}
-                        onSaveNote={() => void saveNoteEdit(item.id)}
-                        onSaveLink={() => void saveLinkEdit(item.id)}
-                        onSaveImage={() => void saveImageEdit(item.id)}
-                        onCancelEdit={() =>
-                          clearEdit({ restoreFocus: true })
-                        }
-                        onConfirmDelete={() => void confirmDelete(item.id)}
-                        onCancelDelete={cancelDelete}
-                        onAddTag={(name: string) =>
-                          void addTagToItem(item.id, name)
-                        }
-                        onRemoveTag={(tagId: string) =>
-                          void removeTagFromItem(item.id, tagId)
-                        }
-                        onAddCollection={(name: string) =>
-                          void addCollectionToItem(item.id, name)
-                        }
-                        onStartEdit={() => {
-                          setPendingDeleteId(null);
-                          setDeleteError(null);
-                          setEditError(null);
-                          setTagError(null);
-                          setTagErrorItemId(null);
-                          setCollectionError(null);
-                          setCollectionErrorItemId(null);
-                          setEditingId(item.id);
-                          if (item.type === "note") {
-                            setEditDraft(item.content);
-                            setEditTitleDraft("");
-                          } else if (item.type === "image") {
-                            setEditDraft(item.caption);
-                            setEditTitleDraft(item.sourceUrl);
-                          } else {
-                            setEditDraft(item.url);
-                            setEditTitleDraft(item.title);
-                          }
-                        }}
-                        onStartDelete={() => {
-                          clearEdit();
-                          setDeleteError(null);
-                          setTagError(null);
-                          setTagErrorItemId(null);
-                          setCollectionError(null);
-                          setCollectionErrorItemId(null);
-                          setPendingDeleteId(item.id);
-                        }}
-                        selected={selectedIds.has(item.id)}
-                        selectionActive={selectionActive}
-                        onToggleSelect={() => toggleItemSelected(item.id)}
-                        tagSuggestions={tagSuggestions}
-                        collectionSuggestions={collectionSuggestions}
-                        dragEnabled={
-                          !mutationBusy &&
-                          editingId !== item.id &&
-                          pendingDeleteId !== item.id &&
-                          inspectId !== item.id
-                        }
-                        isDragging={draggingIds.has(item.id)}
-                        onItemDragStart={(event) =>
-                          handleItemDragStart(item.id, event)
-                        }
-                        onItemDragEnd={handleItemDragEnd}
-                        pinVisible={itemPinVisible(item)}
-                        pinned={itemIsPinned(item)}
-                        onTogglePin={() => void togglePinItem(item.id)}
-                      />
-                  ))}
+                  {visibleItems.map((item) => renderLibraryItem(item))}
                 </ul>
               )}
               <LibraryInspect

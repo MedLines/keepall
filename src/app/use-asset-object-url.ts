@@ -7,11 +7,15 @@ import { getAsset, assetToBlob } from "@/persistence/assets";
  * Load a local asset Blob and expose a short-lived object URL for <img src>.
  * Revokes the URL on change/unmount so memory does not leak.
  */
-export function useAssetObjectUrl(assetId: string | null): string | null {
+export function useAssetObjectUrl(
+  assetId: string | null,
+  options?: { enabled?: boolean },
+): string | null {
+  const enabled = options?.enabled !== false;
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!assetId) {
+    if (!assetId || !enabled) {
       setObjectUrl(null);
       return;
     }
@@ -33,7 +37,7 @@ export function useAssetObjectUrl(assetId: string | null): string | null {
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [assetId]);
+  }, [assetId, enabled]);
 
   return objectUrl;
 }
