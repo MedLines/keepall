@@ -252,7 +252,7 @@ export function LibraryShell({
       >
         {backupOpen && expanded ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4">
-            <BackupPanel variant="sidebar" />
+            <BackupPanel variant="sidebar" onClose={leaveBackup} />
           </div>
         ) : (
           <nav

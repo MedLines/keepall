@@ -4,12 +4,16 @@ import { buildNote } from "@/domain/note";
 import { buildTag } from "@/domain/tag";
 import {
   exportKeepallBackup,
+  importKeepallBackupMerge,
   importKeepallBackupReplace,
   libraryHasLocalData,
 } from "./backup";
 import { deleteKeepallDatabase, getDb } from "./db";
-import { createNote, listItems } from "./items";
+import { createLink, createNote, listItems } from "./items";
 import { createTag, listTags } from "./tags";
+import { createCollection, listCollections } from "./collections";
+import { buildLink } from "@/domain/link";
+import { buildCollection } from "@/domain/collection";
 
 describe("backup persistence", () => {
   beforeEach(async () => {
@@ -160,6 +164,143 @@ describe("backup persistence", () => {
     } finally {
       db.items.bulkAdd = originalBulkAdd;
     }
+
+    expect(await listItems()).toEqual([existing]);
+  });
+
+  test("importKeepallBackupMerge adds missing notes and keeps local on second merge", async () => {
+    const local = await createNote({ content: "already here" });
+    const incoming = buildNote({ content: "from laptop" }, { id: "n-laptop", now: 5 });
+
+    const { summary } = await importKeepallBackupMerge({
+      format: "keepall",
+      version: 1,
+      exportedAt: 1,
+      items: [incoming],
+      tags: [],
+      collections: [],
+      assets: [],
+    });
+
+    expect(summary.added).toBe(1);
+    const items = await listItems();
+    expect(items).toHaveLength(2);
+    expect(items.map((item) => item.id).sort()).toEqual(
+      [local.id, "n-laptop"].sort(),
+    );
+
+    const second = await importKeepallBackupMerge({
+      format: "keepall",
+      version: 1,
+      exportedAt: 2,
+      items: [incoming],
+      tags: [],
+      collections: [],
+      assets: [],
+    });
+    expect(second.summary.added).toBe(0);
+    expect(second.summary.unchanged).toBe(1);
+    expect(await listItems()).toHaveLength(2);
+  });
+
+  test("importKeepallBackupMerge matches links by URL and applies newer title", async () => {
+    const local = await createLink({
+      url: "https://example.com",
+      title: "Old",
+    });
+    await getDb().items.put({ ...local, updatedAt: 10 });
+
+    const incoming = {
+      ...buildLink(
+        { url: "https://example.com/", title: "New" },
+        { id: "other-device", now: 20 },
+      ),
+      updatedAt: 20,
+    };
+
+    const { summary } = await importKeepallBackupMerge({
+      format: "keepall",
+      version: 1,
+      exportedAt: 3,
+      items: [incoming],
+      tags: [],
+      collections: [],
+      assets: [],
+    });
+
+    expect(summary.updated).toBe(1);
+    const items = await listItems();
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      id: local.id,
+      type: "link",
+      title: "New",
+      updatedAt: 20,
+    });
+  });
+
+  test("importKeepallBackupMerge unions tags and lets newer collection win", async () => {
+    const work = await createTag({ name: "work" });
+    const reading = await createCollection({ name: "Reading" });
+    const local = await createLink({ url: "https://tagged.example" });
+    await getDb().items.put({
+      ...local,
+      tagIds: [work.id],
+      collectionIds: [reading.id],
+      updatedAt: 10,
+    });
+
+    const design = buildTag({ name: "design" }, { id: "t-design", now: 1 });
+    const later = buildCollection({ name: "Later" }, { id: "c-later", now: 1 });
+    const incoming = {
+      ...buildLink({ url: "https://tagged.example" }, { id: "l2", now: 20 }),
+      tagIds: ["t-design"],
+      collectionIds: ["c-later"],
+      updatedAt: 20,
+    };
+
+    await importKeepallBackupMerge({
+      format: "keepall",
+      version: 1,
+      exportedAt: 4,
+      items: [incoming],
+      tags: [design],
+      collections: [later],
+      assets: [],
+    });
+
+    const tags = await listTags();
+    expect(tags.map((tag) => tag.name).sort()).toEqual(["design", "work"]);
+    const collections = await listCollections();
+    expect(collections.map((c) => c.name).sort()).toEqual(["Later", "Reading"]);
+
+    const [item] = await listItems();
+    expect(item?.type).toBe("link");
+    if (item?.type !== "link") {
+      throw new Error("expected link");
+    }
+    const tagNames = tags
+      .filter((tag) => item.tagIds.includes(tag.id))
+      .map((tag) => tag.name)
+      .sort();
+    expect(tagNames).toEqual(["design", "work"]);
+    const collection = collections.find((c) => c.id === item.collectionIds[0]);
+    expect(collection?.name).toBe("Later");
+  });
+
+  test("failed merge validation leaves the existing library untouched", async () => {
+    const existing = await createNote({ content: "keep me" });
+
+    await expect(
+      importKeepallBackupMerge({
+        format: "keepall",
+        version: 1,
+        exportedAt: 1,
+        items: [{ ...existing, tagIds: ["missing"], collectionIds: [] }],
+        tags: [],
+        collections: [],
+      }),
+    ).rejects.toBeInstanceOf(BackupValidationError);
 
     expect(await listItems()).toEqual([existing]);
   });

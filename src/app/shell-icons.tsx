@@ -86,6 +86,19 @@ export function BackupIcon({ className }: IconProps) {
   );
 }
 
+export function CloseIcon({ className }: IconProps) {
+  return (
+    <svg className={iconClass("size-5", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M6 6l8 8M14 6l-8 8"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function SearchIcon({ className }: IconProps) {
   return (
     <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
