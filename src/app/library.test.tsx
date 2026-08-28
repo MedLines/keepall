@@ -1038,6 +1038,9 @@ describe("Library view state", () => {
     const [first] = screen.getAllByRole("checkbox");
     fireEvent.click(first);
     const bulk = screen.getByRole("region", { name: "Bulk actions" });
+    expect(within(bulk).getByRole("button", { name: "Deselect all" })).toBeInTheDocument();
+    expect(within(bulk).getByRole("button", { name: "Select all" })).toBeInTheDocument();
+
     fireEvent.click(within(bulk).getByRole("button", { name: "Select all" }));
     expect(screen.getByText("2 selected")).toBeInTheDocument();
 

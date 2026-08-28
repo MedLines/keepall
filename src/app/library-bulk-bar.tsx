@@ -69,13 +69,23 @@ export function LibraryBulkToolbar({
       <span className="shrink-0 pr-1 text-xs font-medium tabular-nums text-zinc-800">
         {count} selected
       </span>
+      {!allVisibleSelected ? (
+        <button
+          className={BULK_BTN}
+          disabled={busy}
+          type="button"
+          onClick={onSelectAllVisible}
+        >
+          Select all
+        </button>
+      ) : null}
       <button
         className={BULK_BTN}
         disabled={busy}
         type="button"
-        onClick={allVisibleSelected ? onClearSelection : onSelectAllVisible}
+        onClick={onClearSelection}
       >
-        {allVisibleSelected ? "Deselect all" : "Select all"}
+        Deselect all
       </button>
       <button
         className={BULK_BTN}
