@@ -29,7 +29,13 @@ import {
 import { assignCollectionId } from "@/domain/collection";
 import { assignTagId, removeTagId } from "@/domain/tag";
 import { hashAssetBytes, sameContentHashMultiset } from "@/domain/asset";
-import { deleteAsset, ensureContentHash, getAsset, putAsset } from "./assets";
+import {
+  deleteAsset,
+  ensureContentHash,
+  findAssetByContentHash,
+  getAsset,
+  putAsset,
+} from "./assets";
 import { getDb } from "./db";
 import { createTag } from "./tags";
 
@@ -189,25 +195,28 @@ export async function findImageByAssetPayloads(
     hashes.push(await hashAssetBytes(payload.bytes));
   }
 
+  if (hashes.length === 1) {
+    const asset = await findAssetByContentHash(hashes[0]!);
+    if (asset) {
+      const rows = await getDb().items.where("type").equals("image").toArray();
+      for (const raw of rows) {
+        const image = normalizeItem(raw);
+        if (
+          image.type === "image" &&
+          image.assetIds.length === 1 &&
+          image.assetIds[0] === asset.id
+        ) {
+          return image;
+        }
+      }
+    }
+    return null;
+  }
+
   const rows = await getDb().items.where("type").equals("image").toArray();
   for (const raw of rows) {
     const image = normalizeItem(raw);
     if (image.type !== "image") {
-      continue;
-    }
-
-    if (hashes.length === 1) {
-      if (image.assetIds.length !== 1) {
-        continue;
-      }
-      const asset = await getAsset(image.assetIds[0]!);
-      if (!asset) {
-        continue;
-      }
-      const hashed = await ensureContentHash(asset);
-      if (hashed.contentHash === hashes[0]) {
-        return image;
-      }
       continue;
     }
 
@@ -248,6 +257,31 @@ export async function createOrReuseImage(input: {
   }
   const image = await createImage(input);
   return { image, created: true };
+}
+
+/** One-pass map: content hash → image item id (single-asset images only). */
+export async function buildSingleAssetImageHashIndex(): Promise<Map<string, string>> {
+  const assetIdToImageId = new Map<string, string>();
+  const rows = await getDb().items.where("type").equals("image").toArray();
+  for (const raw of rows) {
+    const image = normalizeItem(raw);
+    if (image.type === "image" && image.assetIds.length === 1) {
+      assetIdToImageId.set(image.assetIds[0]!, image.id);
+    }
+  }
+
+  const index = new Map<string, string>();
+  for (const [assetId, imageId] of assetIdToImageId) {
+    const asset = await getAsset(assetId);
+    if (!asset) {
+      continue;
+    }
+    const hashed = await ensureContentHash(asset);
+    if (hashed.contentHash) {
+      index.set(hashed.contentHash, imageId);
+    }
+  }
+  return index;
 }
 
 export async function listItems(): Promise<Item[]> {

@@ -42,6 +42,23 @@ describe("importImageFolderEntries", () => {
     expect(collections.map((c) => c.name)).toEqual(["Scans"]);
   });
 
+  test("re-importing a full batch reuses every item", async () => {
+    const entries = Array.from({ length: 50 }, (_, index) => ({
+      name: `shot-${index}.png`,
+      bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, index & 0xff]),
+      mimeType: "image/png",
+    }));
+
+    const first = await importImageFolderEntries(entries);
+    expect(first).toMatchObject({ added: 50, reused: 0 });
+
+    const second = await importImageFolderEntries(entries);
+    expect(second).toMatchObject({ added: 0, reused: 50 });
+    expect((await listItems()).filter((item) => item.type === "image")).toHaveLength(
+      50,
+    );
+  });
+
   test("skips oversize and invalid files", async () => {
     const summary = await importImageFolderEntries([
       {

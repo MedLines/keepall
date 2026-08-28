@@ -70,6 +70,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     done: number;
     total: number;
     currentName: string;
+    added: number;
+    reused: number;
   } | null>(null);
   const [collectionPolicy, setCollectionPolicy] =
     useState<BookmarksHtmlCollectionPolicy>("unsorted-only");
@@ -353,19 +355,24 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
     setPendingImageFiles(null);
     setImageQuotaWarning(null);
-    setImageImportProgress({ done: 0, total, currentName: "" });
+    setImageImportProgress({ done: 0, total, currentName: "", added: 0, reused: 0 });
     setBusy(true);
     setError(null);
-    setStatus(`Importing images… 0 / ${total}`);
+    setStatus(null);
 
     try {
       const summary = await importImageFolder(files, {
         collectionName,
         batchEvery: 8,
         onBatch: () => window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT)),
-        onProgress: ({ done, total: progressTotal, currentName }) => {
-          setImageImportProgress({ done, total: progressTotal, currentName });
-          setStatus(`Importing images… ${done} / ${progressTotal}`);
+        onProgress: ({ done, total: progressTotal, currentName, added, reused }) => {
+          setImageImportProgress({
+            done,
+            total: progressTotal,
+            currentName,
+            added,
+            reused,
+          });
         },
       });
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
@@ -753,6 +760,9 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
           >
             Importing images… {imageImportProgress.done} /{" "}
             {imageImportProgress.total}
+            {imageImportProgress.reused > 0
+              ? ` · ${imageImportProgress.reused} already in library`
+              : ""}
             {imageImportProgress.currentName
               ? ` — ${imageImportProgress.currentName}`
               : ""}
@@ -767,11 +777,14 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               variant === "sidebar" ? "text-[11px] text-zinc-500" : "text-xs text-zinc-500"
             }
           >
-            You can keep browsing — new images appear as they import.
+            {imageImportProgress.added > 0
+              ? "New images appear as they import. "
+              : ""}
+            Same file bytes are reused — the library count should not double.
           </p>
         </div>
       ) : null}
-      {status ? (
+      {status && !imageImportProgress ? (
         <p
           className={
             variant === "sidebar"
