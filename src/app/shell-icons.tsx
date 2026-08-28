@@ -185,6 +185,32 @@ export function ChevronDownIcon({ className }: IconProps) {
   );
 }
 
+export function SortDescIcon({ className }: IconProps) {
+  return (
+    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M5 6h10M7 10h6M9.5 14h1"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function SortAscIcon({ className }: IconProps) {
+  return (
+    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M9.5 6h1M7 10h6M5 14h10"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function PlusIcon({ className }: IconProps) {
   return (
     <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>

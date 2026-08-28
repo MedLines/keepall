@@ -70,7 +70,7 @@ import {
 import { wakeLinkPreviewRetries } from "./wake-link-preview-retries";
 import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
-import { LibraryBulkBar, type BulkPanel } from "./library-bulk-bar";
+import { type BulkPanel } from "./library-bulk-bar";
 import { LibraryShell } from "./library-shell";
 import { LibraryTopBar } from "./library-top-bar";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
@@ -355,6 +355,14 @@ export function Library() {
       : null,
   );
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
+  const allVisibleSelected =
+    visibleItems.length > 0 &&
+    visibleItems.every((item) => selectedIds.has(item.id));
+
+  function selectAllVisible() {
+    setSelectedIds(new Set(visibleItems.map((item) => item.id)));
+  }
+
   const selectionActive = selectedIds.size > 0;
   const itemsById = new Map(items.map((item) => [item.id, item]));
   const tagSuggestions: OrgNameSuggestion[] = tags.map((tag) => ({
@@ -1096,6 +1104,42 @@ export function Library() {
         layout={browseLayout}
         onLayoutChange={(layout) => updateView({ layout }, "replace")}
         onHomeClick={() => setBackupOpen(false)}
+        bulk={{
+          allVisibleSelected,
+          busy: mutationBusy,
+          collectionDraft: bulkCollectionDraft,
+          collectionSuggestions,
+          count: selectedIds.size,
+          error: bulkError,
+          panel: bulkPanel,
+          pendingAddCollection:
+            pendingMutation?.op === "bulk-assign-collection",
+          pendingAddTag: pendingMutation?.op === "bulk-assign-tag",
+          pendingDelete: pendingMutation?.op === "bulk-delete",
+          pendingRemoveTag: pendingMutation?.op === "bulk-unassign-tag",
+          removeTagDraft: bulkRemoveTagDraft,
+          removeTagSuggestions: bulkRemoveTagSuggestions,
+          tagDraft: bulkTagDraft,
+          tagSuggestions,
+          visibleCount: visibleItems.length,
+          onBulkAddCollection: (name) => void bulkAddCollection(name),
+          onBulkAddTag: (name) => void bulkAddTag(name),
+          onBulkRemoveTag: (name) => void bulkRemoveTag(name),
+          onClearSelection: clearSelection,
+          onSelectAllVisible: selectAllVisible,
+          onClosePanel: () => {
+            setBulkPanel(null);
+            setBulkError(null);
+          },
+          onCollectionDraftChange: setBulkCollectionDraft,
+          onConfirmDelete: () => void bulkDeleteSelected(),
+          onOpenPanel: (panel) => {
+            setBulkError(null);
+            setBulkPanel(panel);
+          },
+          onRemoveTagDraftChange: setBulkRemoveTagDraft,
+          onTagDraftChange: setBulkTagDraft,
+        }}
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -1194,40 +1238,6 @@ export function Library() {
                   Fetch preview.
                 </p>
               ) : null}
-              <LibraryBulkBar
-                busy={mutationBusy}
-                collectionDraft={bulkCollectionDraft}
-                collectionSuggestions={collectionSuggestions}
-                count={selectedIds.size}
-                error={bulkError}
-                panel={bulkPanel}
-                pendingAddCollection={
-                  pendingMutation?.op === "bulk-assign-collection"
-                }
-                pendingAddTag={pendingMutation?.op === "bulk-assign-tag"}
-                pendingDelete={pendingMutation?.op === "bulk-delete"}
-                pendingRemoveTag={pendingMutation?.op === "bulk-unassign-tag"}
-                removeTagDraft={bulkRemoveTagDraft}
-                removeTagSuggestions={bulkRemoveTagSuggestions}
-                tagDraft={bulkTagDraft}
-                tagSuggestions={tagSuggestions}
-                onBulkAddCollection={(name) => void bulkAddCollection(name)}
-                onBulkAddTag={(name) => void bulkAddTag(name)}
-                onBulkRemoveTag={(name) => void bulkRemoveTag(name)}
-                onClearSelection={clearSelection}
-                onClosePanel={() => {
-                  setBulkPanel(null);
-                  setBulkError(null);
-                }}
-                onCollectionDraftChange={setBulkCollectionDraft}
-                onConfirmDelete={() => void bulkDeleteSelected()}
-                onOpenPanel={(panel) => {
-                  setBulkError(null);
-                  setBulkPanel(panel);
-                }}
-                onRemoveTagDraftChange={setBulkRemoveTagDraft}
-                onTagDraftChange={setBulkTagDraft}
-              />
               {visibleItems.length === 0 ? (
                 <p className="text-sm text-zinc-600">
                   {hasActiveSearch

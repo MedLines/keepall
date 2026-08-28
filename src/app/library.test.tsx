@@ -1016,7 +1016,8 @@ describe("Library view state", () => {
     fireEvent.change(screen.getByLabelText("Add tag to selection"), {
       target: { value: "work" },
     });
-    fireEvent.click(within(bulk).getByRole("button", { name: "Add" }));
+    const tagForm = screen.getByLabelText("Add tag to selection").closest("form");
+    fireEvent.click(within(tagForm!).getByRole("button", { name: "Add" }));
 
     await waitFor(() => {
       expect(createTag).toHaveBeenCalledWith({ name: "work" });
@@ -1024,6 +1025,24 @@ describe("Library view state", () => {
     expect(assignTagToItem).toHaveBeenCalledTimes(2);
     expect(assignTagToItem).toHaveBeenCalledWith("n1", "t1");
     expect(assignTagToItem).toHaveBeenCalledWith("n2", "t1");
+  });
+
+  test("select all and deselect all visible items", async () => {
+    const one = buildNote({ content: "one" }, { id: "n1", now: 1 });
+    const two = buildNote({ content: "two" }, { id: "n2", now: 2 });
+    vi.mocked(listItems).mockResolvedValue([one, two]);
+
+    render(<Library />);
+
+    await screen.findByText("one");
+    const [first] = screen.getAllByRole("checkbox");
+    fireEvent.click(first);
+    const bulk = screen.getByRole("region", { name: "Bulk actions" });
+    fireEvent.click(within(bulk).getByRole("button", { name: "Select all" }));
+    expect(screen.getByText("2 selected")).toBeInTheDocument();
+
+    fireEvent.click(within(bulk).getByRole("button", { name: "Deselect all" }));
+    expect(screen.queryByText("2 selected")).not.toBeInTheDocument();
   });
 
   test("clear selection with Escape when inspect is closed", async () => {

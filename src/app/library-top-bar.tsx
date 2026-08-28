@@ -4,7 +4,19 @@ import Link from "next/link";
 import { type Ref } from "react";
 import type { LibraryLayout, LibrarySort } from "@/domain/library-view";
 import { openCaptureDialog } from "./capture-events";
-import { GridIcon, ListIcon, LogoIcon, SearchIcon } from "./shell-icons";
+import {
+  LibraryBulkPanels,
+  LibraryBulkToolbar,
+  type LibraryBulkBarProps,
+} from "./library-bulk-bar";
+import {
+  GridIcon,
+  ListIcon,
+  LogoIcon,
+  SearchIcon,
+  SortAscIcon,
+  SortDescIcon,
+} from "./shell-icons";
 import { ShellTopMenu } from "./shell-top-menu";
 import {
   SHELL_NAV_ITEM,
@@ -12,7 +24,6 @@ import {
   SHELL_SIDEBAR_EXPANDED,
   SHELL_TOP_BTN,
   SHELL_TOP_BTN_ACTIVE,
-  SHELL_TOP_BTN_IDLE,
 } from "./shell-styles";
 
 type Props = {
@@ -26,6 +37,7 @@ type Props = {
   layout: LibraryLayout;
   onLayoutChange: (layout: LibraryLayout) => void;
   onHomeClick?: () => void;
+  bulk?: LibraryBulkBarProps;
 };
 
 export function LibraryTopBar({
@@ -39,10 +51,14 @@ export function LibraryTopBar({
   layout,
   onLayoutChange,
   onHomeClick,
+  bulk,
 }: Props) {
+  const showBulkSlot = bulk !== undefined && bulk.visibleCount > 0;
+  const bulkPanelOpen = bulk?.panel !== null && bulk?.panel !== undefined;
+
   return (
     <header className="shrink-0 border-b border-zinc-200/80 bg-white">
-      <div className="flex min-h-12">
+      <div className="flex min-h-11 items-stretch">
         <div
           className={`${SHELL_SIDEBAR_EXPANDED} flex shrink-0 items-center border-r border-zinc-200/80 px-3`}
         >
@@ -57,64 +73,88 @@ export function LibraryTopBar({
           </Link>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
-          <div className="hidden min-w-0 shrink-0 sm:block">
-            <h2
-              ref={headingRef}
-              className="sr-only"
-              id="library-heading"
-              tabIndex={-1}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-h-11 min-w-0 items-center gap-2 px-3 py-1 sm:gap-2 sm:px-4">
+            <div className="hidden min-w-0 shrink-0 sm:block sm:w-28 lg:w-32">
+              <h2
+                ref={headingRef}
+                className="sr-only"
+                id="library-heading"
+                tabIndex={-1}
+              >
+                Library
+              </h2>
+              <p className="truncate text-sm font-semibold text-zinc-900">{title}</p>
+              <p className="text-[11px] tabular-nums text-zinc-500">
+                {itemCount} item{itemCount === 1 ? "" : "s"}
+              </p>
+            </div>
+
+            {showBulkSlot ? (
+              <div
+                className="flex min-h-8 min-w-[12rem] flex-1 items-center overflow-hidden"
+                aria-hidden={bulk!.count === 0}
+              >
+                <LibraryBulkToolbar
+                  allVisibleSelected={bulk!.allVisibleSelected}
+                  busy={bulk!.busy}
+                  count={bulk!.count}
+                  onClearSelection={bulk!.onClearSelection}
+                  onOpenPanel={bulk!.onOpenPanel}
+                  onSelectAllVisible={bulk!.onSelectAllVisible}
+                />
+              </div>
+            ) : null}
+
+            <div className="min-w-0 shrink-0 sm:w-44 lg:w-52">
+              <label className="relative block" htmlFor="library-search">
+                <span className="sr-only">Search</span>
+                <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+                <input
+                  className="h-8 w-full rounded-[10px] border border-zinc-200/80 bg-zinc-50 pl-8 pr-2.5 text-sm outline-none transition-[border-color,box-shadow] duration-150 ease-out focus:border-zinc-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)]"
+                  id="library-search"
+                  type="search"
+                  placeholder="Search…"
+                  value={searchQuery}
+                  onChange={(event) => onSearchChange(event.target.value)}
+                />
+              </label>
+            </div>
+
+            <ShellTopMenu
+              ariaLabel="Sort library"
+              iconOnly
+              value={sort}
+              options={[
+                { value: "newest", label: "Newest", icon: <SortDescIcon /> },
+                { value: "oldest", label: "Oldest", icon: <SortAscIcon /> },
+              ]}
+              onChange={onSortChange}
+            />
+
+            <ShellTopMenu
+              ariaLabel="Library layout"
+              iconOnly
+              value={layout}
+              options={[
+                { value: "grid", label: "Grid", icon: <GridIcon /> },
+                { value: "list", label: "List", icon: <ListIcon /> },
+              ]}
+              onChange={onLayoutChange}
+            />
+
+            <button
+              type="button"
+              className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} shrink-0`}
+              onClick={() => openCaptureDialog()}
             >
-              Library
-            </h2>
-            <p className="truncate text-sm font-semibold text-zinc-900">{title}</p>
-            <p className="text-[11px] tabular-nums text-zinc-500">
-              {itemCount} item{itemCount === 1 ? "" : "s"}
-            </p>
+              Add
+            </button>
           </div>
 
-          <div className="min-w-0 flex-1">
-            <label className="relative block" htmlFor="library-search">
-              <span className="sr-only">Search</span>
-              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-              <input
-                className="w-full rounded-[10px] border border-zinc-200/80 bg-zinc-50 py-1.5 pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-150 ease-out focus:border-zinc-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)]"
-                id="library-search"
-                type="search"
-                placeholder="Search titles, notes, URLs, and tags"
-                value={searchQuery}
-                onChange={(event) => onSearchChange(event.target.value)}
-              />
-            </label>
-          </div>
-
-          <ShellTopMenu
-            ariaLabel="Sort library"
-            value={sort}
-            options={[
-              { value: "newest", label: "Newest" },
-              { value: "oldest", label: "Oldest" },
-            ]}
-            onChange={onSortChange}
-          />
-
-          <ShellTopMenu
-            ariaLabel="Library layout"
-            value={layout}
-            options={[
-              { value: "grid", label: "Grid", icon: <GridIcon /> },
-              { value: "list", label: "List", icon: <ListIcon /> },
-            ]}
-            onChange={onLayoutChange}
-          />
-
-          <button
-            type="button"
-            className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE}`}
-            onClick={() => openCaptureDialog()}
-          >
-            Add
-          </button>
+          {bulk && (bulkPanelOpen || bulk.error) ? (
+            <LibraryBulkPanels {...bulk} />
+          ) : null}
         </div>
       </div>
 

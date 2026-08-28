@@ -1,11 +1,14 @@
 "use client";
 
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
+import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 
 export type BulkPanel = null | "delete" | "add-tag" | "remove-tag" | "add-collection";
 
-type Props = {
+export type LibraryBulkBarProps = {
   count: number;
+  visibleCount: number;
+  allVisibleSelected: boolean;
   panel: BulkPanel;
   busy: boolean;
   error: string | null;
@@ -21,6 +24,7 @@ type Props = {
   pendingDelete: boolean;
   onOpenPanel: (panel: Exclude<BulkPanel, null>) => void;
   onClosePanel: () => void;
+  onSelectAllVisible: () => void;
   onClearSelection: () => void;
   onConfirmDelete: () => void;
   onTagDraftChange: (value: string) => void;
@@ -31,7 +35,112 @@ type Props = {
   onBulkAddCollection: (name: string) => void;
 };
 
-export function LibraryBulkBar({
+const BULK_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-8 shrink-0 px-2 text-xs`;
+
+type ToolbarProps = Pick<
+  LibraryBulkBarProps,
+  | "count"
+  | "allVisibleSelected"
+  | "busy"
+  | "onOpenPanel"
+  | "onSelectAllVisible"
+  | "onClearSelection"
+>;
+
+/** Compact bulk buttons for the top bar (selection must be active). */
+export function LibraryBulkToolbar({
+  count,
+  allVisibleSelected,
+  busy,
+  onOpenPanel,
+  onSelectAllVisible,
+  onClearSelection,
+}: ToolbarProps) {
+  if (count === 0) {
+    return null;
+  }
+
+  return (
+    <div
+      className="flex min-w-0 items-center gap-1 overflow-x-auto"
+      role="region"
+      aria-label="Bulk actions"
+    >
+      <span className="shrink-0 pr-1 text-xs font-medium tabular-nums text-zinc-800">
+        {count} selected
+      </span>
+      <button
+        className={BULK_BTN}
+        disabled={busy}
+        type="button"
+        onClick={allVisibleSelected ? onClearSelection : onSelectAllVisible}
+      >
+        {allVisibleSelected ? "Deselect all" : "Select all"}
+      </button>
+      <button
+        className={BULK_BTN}
+        disabled={busy}
+        type="button"
+        onClick={() => onOpenPanel("delete")}
+      >
+        Delete
+      </button>
+      <button
+        className={BULK_BTN}
+        disabled={busy}
+        type="button"
+        onClick={() => onOpenPanel("add-tag")}
+      >
+        Add tag
+      </button>
+      <button
+        className={BULK_BTN}
+        disabled={busy}
+        type="button"
+        onClick={() => onOpenPanel("remove-tag")}
+      >
+        Remove tag
+      </button>
+      <button
+        className={BULK_BTN}
+        disabled={busy}
+        type="button"
+        onClick={() => onOpenPanel("add-collection")}
+      >
+        Add to collection
+      </button>
+    </div>
+  );
+}
+
+type PanelsProps = Pick<
+  LibraryBulkBarProps,
+  | "count"
+  | "panel"
+  | "busy"
+  | "error"
+  | "tagDraft"
+  | "removeTagDraft"
+  | "collectionDraft"
+  | "tagSuggestions"
+  | "removeTagSuggestions"
+  | "collectionSuggestions"
+  | "pendingAddTag"
+  | "pendingRemoveTag"
+  | "pendingAddCollection"
+  | "pendingDelete"
+  | "onClosePanel"
+  | "onConfirmDelete"
+  | "onTagDraftChange"
+  | "onRemoveTagDraftChange"
+  | "onCollectionDraftChange"
+  | "onBulkAddTag"
+  | "onBulkRemoveTag"
+  | "onBulkAddCollection"
+>;
+
+/** Confirm / form row under the top bar when a bulk panel is open. */
+export function LibraryBulkPanels({
   count,
   panel,
   busy,
@@ -46,9 +155,7 @@ export function LibraryBulkBar({
   pendingRemoveTag,
   pendingAddCollection,
   pendingDelete,
-  onOpenPanel,
   onClosePanel,
-  onClearSelection,
   onConfirmDelete,
   onTagDraftChange,
   onRemoveTagDraftChange,
@@ -56,65 +163,15 @@ export function LibraryBulkBar({
   onBulkAddTag,
   onBulkRemoveTag,
   onBulkAddCollection,
-}: Props) {
-  if (count === 0) {
+}: PanelsProps) {
+  if (panel === null && !error) {
     return null;
   }
 
   return (
-    <div
-      className="mt-3 rounded-lg border border-zinc-300 bg-zinc-50 p-3"
-      role="region"
-      aria-label="Bulk actions"
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm font-medium text-zinc-800">
-          {count} selected
-        </p>
-        <button
-          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 disabled:opacity-60"
-          disabled={busy}
-          type="button"
-          onClick={() => onOpenPanel("delete")}
-        >
-          Delete
-        </button>
-        <button
-          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 disabled:opacity-60"
-          disabled={busy}
-          type="button"
-          onClick={() => onOpenPanel("add-tag")}
-        >
-          Add tag
-        </button>
-        <button
-          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 disabled:opacity-60"
-          disabled={busy}
-          type="button"
-          onClick={() => onOpenPanel("remove-tag")}
-        >
-          Remove tag
-        </button>
-        <button
-          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 disabled:opacity-60"
-          disabled={busy}
-          type="button"
-          onClick={() => onOpenPanel("add-collection")}
-        >
-          Add to collection
-        </button>
-        <button
-          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 disabled:opacity-60"
-          disabled={busy}
-          type="button"
-          onClick={onClearSelection}
-        >
-          Clear selection
-        </button>
-      </div>
-
+    <div className="border-t border-zinc-100 bg-zinc-50/80 px-3 py-2 sm:px-4">
       {panel === "delete" ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm text-zinc-700">
             Delete {count} item{count === 1 ? "" : "s"}? This cannot be undone.
           </p>
@@ -138,7 +195,7 @@ export function LibraryBulkBar({
       ) : null}
 
       {panel === "add-tag" ? (
-        <div className="mt-3 max-w-md">
+        <div className="max-w-md">
           <OrgNameSuggest
             compact
             inputId="bulk-add-tag"
@@ -158,7 +215,7 @@ export function LibraryBulkBar({
       ) : null}
 
       {panel === "remove-tag" ? (
-        <div className="mt-3 max-w-md">
+        <div className="max-w-md">
           <OrgNameSuggest
             compact
             inputId="bulk-remove-tag"
@@ -178,7 +235,7 @@ export function LibraryBulkBar({
       ) : null}
 
       {panel === "add-collection" ? (
-        <div className="mt-3 max-w-md">
+        <div className="max-w-md">
           <OrgNameSuggest
             compact
             inputId="bulk-add-collection"
@@ -198,10 +255,26 @@ export function LibraryBulkBar({
       ) : null}
 
       {panel === null && error ? (
-        <p className="mt-2 text-sm text-red-700" role="alert">
+        <p className="text-sm text-red-700" role="alert">
           {error}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+/** @deprecated Use LibraryBulkToolbar + LibraryBulkPanels in the top bar. */
+export function LibraryBulkBar(props: LibraryBulkBarProps) {
+  if (props.visibleCount === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-zinc-300 bg-zinc-50 p-3">
+      <LibraryBulkToolbar {...props} />
+      <div className="mt-2">
+        <LibraryBulkPanels {...props} />
+      </div>
     </div>
   );
 }

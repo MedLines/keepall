@@ -15,6 +15,8 @@ type Props<T extends string> = {
   value: T;
   options: Option<T>[];
   onChange: (value: T) => void;
+  /** Trigger shows icon (+ chevron) only; dropdown options keep labels. */
+  iconOnly?: boolean;
 };
 
 export function ShellTopMenu<T extends string>({
@@ -22,6 +24,7 @@ export function ShellTopMenu<T extends string>({
   value,
   options,
   onChange,
+  iconOnly = false,
 }: Props<T>) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -54,7 +57,7 @@ export function ShellTopMenu<T extends string>({
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE}`}
+        className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} ${iconOnly ? "px-2" : ""}`}
         aria-label={ariaLabel}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -62,7 +65,11 @@ export function ShellTopMenu<T extends string>({
         onClick={() => setOpen((current) => !current)}
       >
         {active?.icon}
-        <span>{active?.label}</span>
+        {iconOnly ? (
+          <span className="sr-only">{active?.label}</span>
+        ) : (
+          <span>{active?.label}</span>
+        )}
         <ChevronDownIcon className="text-zinc-400" />
       </button>
       {open ? (
