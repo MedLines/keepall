@@ -69,7 +69,7 @@ import {
 import {
   LibraryNavigationProvider,
 } from "./library-navigation";
-import { LibrarySidebar } from "./library-sidebar";
+import { LibraryShell } from "./library-shell";
 import { countSidebarItems } from "./library-sidebar-counts";
 import { LibraryMainGrid } from "./library-main-grid";
 import {
@@ -1454,7 +1454,7 @@ export function Library() {
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <LibrarySidebar
+        <LibraryShell
           panelOpen={panelOpen}
           onPanelOpenChange={setPanelOpen}
           backupOpen={backupOpen}

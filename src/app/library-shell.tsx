@@ -35,6 +35,7 @@ import {
   SHELL_NAV_ITEM,
   SHELL_NAV_ITEM_ACTIVE,
   SHELL_NAV_ITEM_IDLE,
+  SHELL_NAV_SURFACE,
   SHELL_SIDEBAR_COLLAPSED,
   SHELL_SIDEBAR_EXPANDED,
   writeShellCollectionsOpen,
@@ -624,7 +625,7 @@ function CollectionNavRow({
   if (renaming) {
     return (
       <form
-        className={`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_ACTIVE} w-full gap-2 px-2 py-1.5`}
+        className={`${SHELL_NAV_SURFACE} ${SHELL_NAV_ITEM_ACTIVE} w-full gap-2 px-2 py-1.5`}
         onSubmit={(event) => {
           event.preventDefault();
           onSubmitRename();
@@ -661,10 +662,10 @@ function CollectionNavRow({
 
   return (
     <div
-      className={`group ${SHELL_NAV_ITEM} flex min-w-0 w-full items-center py-1.5 pl-2 pr-1 text-sm ${
+      className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-1 text-sm ${
         active
           ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-zinc-900`
-          : `text-zinc-600 ${SHELL_NAV_ITEM_IDLE}`
+          : "text-zinc-600"
       } ${dropHighlight ? "shadow-[0_0_0_2px_rgba(24,24,27,0.9)]" : ""}`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -672,7 +673,9 @@ function CollectionNavRow({
     >
       <button
         type="button"
-        className="flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
+        className={`flex min-w-0 flex-1 self-stretch items-center gap-2 rounded-[10px] py-2.5 pl-2 text-left outline-none transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500 ${
+          active ? "" : SHELL_NAV_ITEM_IDLE
+        }`}
         aria-label={collection.name}
         aria-current={active ? "page" : undefined}
         onClick={onNavigate}

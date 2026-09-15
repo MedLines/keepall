@@ -53,9 +53,13 @@ export const SHELL_SIDEBAR_COLLAPSED = "w-14";
 /** Horizontal padding shared by all sidebar nav rows. */
 export const SHELL_NAV_GUTTER = "px-2";
 
-/** Sidebar nav row — icon always; label when expanded. */
+/** Visual surface shared by composite nav rows and interactive nav items. */
+export const SHELL_NAV_SURFACE =
+  "relative flex items-center rounded-[10px] text-zinc-600 transition-[background-color,box-shadow,color] duration-150 ease-out";
+
+/** Interactive sidebar nav item — icon always; label when expanded. */
 export const SHELL_NAV_ITEM =
-  "relative flex items-center rounded-[10px] text-zinc-600 transition-[transform,background-color,box-shadow,color] duration-150 ease-out active:scale-[0.98] motion-reduce:transition-[background-color,box-shadow,color] motion-reduce:active:scale-100";
+  `${SHELL_NAV_SURFACE} transition-transform active:scale-[0.98] motion-reduce:transition-[background-color,box-shadow,color] motion-reduce:active:scale-100`;
 
 export const SHELL_NAV_ITEM_ACTIVE =
   "bg-zinc-100 font-medium text-zinc-900 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]";

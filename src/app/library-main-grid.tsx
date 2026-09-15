@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type ReactNode, type RefObject } from "react";
+import { type ReactNode, type RefObject } from "react";
 import type { Item } from "@/domain/item";
 import type { LibraryLayout } from "@/domain/library-view";
 import { LibraryVirtualItems } from "./library-virtual-items";
@@ -16,7 +16,7 @@ type Props = {
 };
 
 /** Grid/list body — virtualizes at 60+ visible so leaving a big folder unmounts ~30 cards, not 396. */
-export const LibraryMainGrid = memo(function LibraryMainGrid({
+export function LibraryMainGrid({
   visibleItems,
   scopeKey,
   layout,
@@ -53,4 +53,4 @@ export const LibraryMainGrid = memo(function LibraryMainGrid({
       {visibleItems.map((item) => renderItem(item))}
     </ul>
   );
-});
+}
