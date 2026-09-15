@@ -60,3 +60,4 @@ plans/
 
 # Isolated UI prototypes — runnable locally, never ship
 src/app/prototypes/
+.codex
