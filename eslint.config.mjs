@@ -1,10 +1,21 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import sonarjs from "eslint-plugin-sonarjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    files: ["src/**/*.{js,jsx,ts,tsx}"],
+    ignores: ["**/*.test.*", "**/*.spec.*"],
+    plugins: { sonarjs },
+    // Advisory limits for application code; test setup keeps its existing rules.
+    rules: {
+      complexity: ["warn", { max: 20, variant: "classic" }],
+      "sonarjs/cognitive-complexity": ["warn", 15],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
