@@ -160,21 +160,35 @@ export async function createImage(input: {
     throw new ImageValidationError("Image asset is required");
   }
 
-  const assetIds: string[] = [];
+  // Finish hashing before the transaction so async crypto cannot auto-commit it.
+  const preparedAssets: {
+    mimeType: string;
+    bytes: Uint8Array;
+    contentHash: string;
+  }[] = [];
   for (const payload of input.assets) {
     const mime = assertLocalImageBytes(payload.bytes, payload.mimeType);
-    const asset = await putAsset({ mimeType: mime, bytes: payload.bytes });
-    assetIds.push(asset.id);
+    const contentHash = await hashAssetBytes(payload.bytes);
+    preparedAssets.push({ mimeType: mime, bytes: payload.bytes, contentHash });
   }
 
-  const image = buildImageFromAssetIds({
-    assetIds,
-    sourceUrl: input.sourceUrl,
-    caption: input.caption,
-    title: input.title,
+  const db = getDb();
+  return db.transaction("rw", db.assets, db.items, async () => {
+    const assetIds: string[] = [];
+    for (const payload of preparedAssets) {
+      const asset = await putAsset(payload);
+      assetIds.push(asset.id);
+    }
+
+    const image = buildImageFromAssetIds({
+      assetIds,
+      sourceUrl: input.sourceUrl,
+      caption: input.caption,
+      title: input.title,
+    });
+    await db.items.add(image);
+    return image;
   });
-  await getDb().items.add(image);
-  return image;
 }
 
 /**
