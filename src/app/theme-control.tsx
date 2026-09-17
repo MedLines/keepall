@@ -13,7 +13,7 @@ export function ThemeControl({ compact = false }: { compact?: boolean }) {
   const theme = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
 
   return (
-    <label className={`theme-control relative flex h-10 items-center gap-2 rounded-control text-text-secondary hover:bg-bg-raised ${compact ? "mx-auto w-10 justify-center" : "px-2"}`}>
+    <label className={`theme-control relative flex h-11 items-center gap-2 rounded-xl text-text-secondary hover:bg-bg-raised ${compact ? "w-11 justify-center border border-border-edge" : "px-2"}`}>
       <ThemeIcon />
       <span className={compact ? "sr-only" : "text-sm"}>Theme</span>
       <select

@@ -44,14 +44,14 @@ export function writeShellTagsOpen(open: boolean): void {
   window.localStorage.setItem(SHELL_TAGS_OPEN_KEY, open ? "open" : "closed");
 }
 
-/** Expanded sidebar width — logo column in top bar matches this. */
-export const SHELL_SIDEBAR_EXPANDED = "w-60";
+/** Expanded navigation width; the content panel begins at this edge. */
+export const SHELL_SIDEBAR_EXPANDED = "w-56";
 
 /** Collapsed sidebar width (icon rail). */
 export const SHELL_SIDEBAR_COLLAPSED = "w-14";
 
 /** Horizontal padding shared by all sidebar nav rows. */
-export const SHELL_NAV_GUTTER = "px-2";
+export const SHELL_NAV_GUTTER = "px-4";
 
 /** Visual surface shared by composite nav rows and interactive nav items. */
 export const SHELL_NAV_SURFACE =
@@ -62,7 +62,7 @@ export const SHELL_NAV_ITEM =
   `${SHELL_NAV_SURFACE} transition-transform active:scale-[0.98] motion-reduce:transition-[background-color,box-shadow,color] motion-reduce:active:scale-100`;
 
 export const SHELL_NAV_ITEM_ACTIVE =
-  "bg-bg-surface font-medium text-text-primary shadow-edge";
+  "bg-bg-raised font-medium text-text-primary";
 
 export const SHELL_NAV_ITEM_IDLE =
   "hover:bg-bg-raised";

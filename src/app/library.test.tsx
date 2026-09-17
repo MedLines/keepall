@@ -516,7 +516,7 @@ describe("Library focus management", () => {
     });
     expect(await screen.findByText("No items yet.")).toBeInTheDocument();
 
-    expect(screen.getByRole("heading", { name: "Library" })).toHaveFocus();
+    expect(screen.getByRole("heading", { name: "All items" })).toHaveFocus();
   });
 });
 
@@ -676,7 +676,7 @@ describe("Library type filter", () => {
     render(<Library />);
 
     await screen.findByText("design note");
-    pickTopMenu("Filter by type", "Links");
+    fireEvent.click(screen.getByRole("button", { name: "Links" }));
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?type=link", {
       scroll: false,
@@ -694,7 +694,7 @@ describe("Library type filter", () => {
     expect(screen.queryByText("Other link")).not.toBeInTheDocument();
     expect(screen.queryByText("design note")).not.toBeInTheDocument();
 
-    pickTopMenu("Filter by type", "All types");
+    fireEvent.click(screen.getByRole("button", { name: "All items" }));
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?tag=t1", {
       scroll: false,
@@ -986,7 +986,9 @@ describe("Library view state", () => {
     render(<Library />);
 
     await screen.findByText("A persisted note");
-    pickTopMenu("Library layout", "List");
+    fireEvent.click(screen.getByRole("button", { name: "List view" }));
+    expect(screen.getByRole("button", { name: "List view" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "false");
 
     expect(mockNavigation.replace).toHaveBeenCalledWith("/?layout=list", {
       scroll: false,
@@ -996,7 +998,7 @@ describe("Library view state", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
 
-    pickTopMenu("Filter by type", "Notes");
+    fireEvent.click(screen.getByRole("button", { name: "Notes" }));
 
     expect(mockNavigation.push).toHaveBeenCalledWith(
       "/?type=note&layout=list",

@@ -1395,12 +1395,7 @@ export function Library() {
     );
   }
 
-  return (
-    <LibraryNavigationProvider
-      generation={navigationGeneration}
-      generationRef={navigationGenerationRef}
-    >
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-shell">
+  const topBar = (
       <LibraryTopBar
         headingRef={libraryHeadingRef}
         title={viewTitle}
@@ -1411,10 +1406,9 @@ export function Library() {
         onSortChange={(sort) => updateView({ sort }, "push")}
         layout={browseLayout}
         onLayoutChange={(layout) => updateView({ layout }, "replace")}
-        typeFilter={browseType}
-        onTypeFilterChange={(type) => updateView({ type }, "push")}
+        panelOpen={panelOpen}
+        onPanelOpenChange={setPanelOpen}
         libraryLoading={loadState === "loading"}
-        onHomeClick={() => setBackupOpen(false)}
         bulk={{
           allVisibleSelected,
           busy: mutationBusy,
@@ -1452,8 +1446,14 @@ export function Library() {
           onTagDraftChange: setBulkTagDraft,
         }}
       />
+  );
 
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+  return (
+    <LibraryNavigationProvider
+      generation={navigationGeneration}
+      generationRef={navigationGenerationRef}
+    >
+      <div className="relative flex h-full min-h-0 overflow-hidden bg-bg-shell py-2.5 pr-2.5">
         <LibraryShell
           panelOpen={panelOpen}
           onPanelOpenChange={setPanelOpen}
@@ -1488,6 +1488,7 @@ export function Library() {
           }
           onGoCollection={(id) => updateView({ collection: id }, "push")}
           onGoTag={(id) => updateView({ tag: id }, "push")}
+          onGoType={(type) => updateView({ type }, "push")}
           onCollectionDragOver={handleCollectionDragOver}
           onCollectionDragLeave={() => setDropTargetCollectionId(null)}
           onCollectionDrop={handleCollectionDrop}
@@ -1497,9 +1498,11 @@ export function Library() {
           onDeleteCollection={(id) => void deleteCollectionById(id)}
         />
 
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel ring-1 ring-inset ring-border-subtle">
+        {topBar}
         <main
           ref={mainScrollRef}
-          className="mb-2 mr-2 min-w-0 flex-1 overflow-auto rounded-panel border border-border-edge bg-bg-canvas px-4 py-4 sm:mb-3 sm:mr-3 sm:px-6 sm:py-6"
+          className="min-h-0 min-w-0 flex-1 overflow-auto px-3 pb-6 sm:px-6"
           aria-labelledby="library-heading"
         >
           {loadState === "loading" ? (
@@ -1727,8 +1730,8 @@ export function Library() {
             </>
           )}
         </main>
+        </div>
       </div>
-    </div>
     </LibraryNavigationProvider>
   );
 }

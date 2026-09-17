@@ -19,7 +19,7 @@ type Props<T extends string> = {
   value: T;
   options: Option<T>[];
   onChange: (value: T) => void;
-  /** Trigger shows icon (+ chevron) only; dropdown options keep labels. */
+  /** Trigger shows only the icon; dropdown options keep labels. */
   iconOnly?: boolean;
   /** Emphasize trigger when a non-default value is active (e.g. type filter). */
   emphasized?: boolean;
@@ -65,8 +65,9 @@ export function ShellTopMenu<T extends string>({
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className={`${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE} ${iconOnly ? "px-2" : ""}`}
+        className={iconOnly ? `flex size-11 items-center justify-center rounded-xl border border-border-edge ${emphasized ? "bg-action-primary text-text-on-action" : "text-text-secondary hover:bg-bg-raised hover:text-text-primary"}` : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`}
         aria-label={ariaLabel}
+        title={`${ariaLabel}: ${activeOption?.label}`}
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-controls={listId}
@@ -78,14 +79,14 @@ export function ShellTopMenu<T extends string>({
         ) : (
           <span>{activeOption?.label}</span>
         )}
-        <ChevronDownIcon className="text-text-secondary" />
+        {!iconOnly ? <ChevronDownIcon className="text-text-secondary" /> : null}
       </button>
       {open ? (
         <ul
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute left-0 top-[calc(100%+4px)] z-50 min-w-[9rem] overflow-hidden rounded-control border border-border-edge bg-bg-surface py-1 shadow-menu sm:left-auto sm:right-0"
+          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[9rem] overflow-hidden rounded-control border border-border-edge bg-bg-surface py-1 shadow-menu"
         >
           {options.map((option) => (
             <li key={option.value} role="presentation">

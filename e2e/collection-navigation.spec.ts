@@ -35,8 +35,8 @@ test.beforeEach(async ({ page }) => {
 
 async function expectCollection(page: Page, name: string, other: string) {
   await expect(page.getByRole("button", { name, exact: true })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByLabel("Library").getByText(`${name} test content`, { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Library").getByText(`${other} test content`, { exact: true })).toBeHidden();
+  await expect(page.getByRole("main").getByText(`${name} test content`, { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByText(`${other} test content`, { exact: true })).toBeHidden();
 }
 
 for (const edge of ["top", "centre", "bottom", "left"] as const) {

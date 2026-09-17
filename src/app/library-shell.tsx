@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   type DragEvent,
   type ReactNode,
@@ -21,8 +22,12 @@ import {
   CollectionIcon,
   HashIcon,
   InboxIcon,
+  ImageIcon,
   LibraryIcon,
+  LinkIcon,
+  LogoIcon,
   MoreIcon,
+  NoteIcon,
   PlusIcon,
   SearchIcon,
 } from "./shell-icons";
@@ -43,7 +48,6 @@ import {
 } from "./shell-styles";
 import { useShellMobile } from "./use-shell-mobile";
 import { ShellPanelIcon } from "./shell-panel-icon";
-import { ThemeControl } from "./theme-control";
 
 type Props = {
   panelOpen: boolean;
@@ -67,6 +71,7 @@ type Props = {
   onGoUnsorted: () => void;
   onGoCollection: (id: string) => void;
   onGoTag: (id: string) => void;
+  onGoType: (type: LibraryTypeFilter | null) => void;
   onCollectionDragOver: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onCollectionDragLeave: () => void;
   onCollectionDrop: (id: string, event: DragEvent<HTMLDivElement>) => void;
@@ -98,6 +103,7 @@ export function LibraryShell({
   onGoUnsorted,
   onGoCollection,
   onGoTag,
+  onGoType,
   onCollectionDragOver,
   onCollectionDragLeave,
   onCollectionDrop,
@@ -177,7 +183,7 @@ export function LibraryShell({
         active={allItemsActive}
         label="All items"
         count={libraryLoading ? undefined : counts.all}
-        icon={<LibraryIcon className="size-4 shrink-0 text-text-secondary" />}
+        icon={<LibraryIcon className="size-[18px] shrink-0 text-text-secondary" />}
         onClick={() => {
           leaveBackup();
           onGoAll();
@@ -189,13 +195,32 @@ export function LibraryShell({
         active={unsortedActive}
         label="Unsorted"
         count={libraryLoading ? undefined : counts.unsorted}
-        icon={<InboxIcon className="size-4 shrink-0 text-text-secondary" />}
+        icon={<InboxIcon className="size-[18px] shrink-0 text-text-secondary" />}
         onClick={() => {
           leaveBackup();
           onGoUnsorted();
           closeOnMobile();
         }}
       />
+      {([
+        { type: "image", label: "Images", icon: <ImageIcon /> },
+        { type: "link", label: "Links", icon: <LinkIcon /> },
+        { type: "note", label: "Notes", icon: <NoteIcon /> },
+      ] as const).map((item) => (
+        <ShellNavItem
+          key={item.type}
+          expanded={expanded}
+          active={!backupOpen && browseType === item.type}
+          label={item.label}
+          count={libraryLoading ? undefined : counts.byType[item.type]}
+          icon={item.icon}
+          onClick={() => {
+            leaveBackup();
+            onGoType(browseType === item.type ? null : item.type);
+            closeOnMobile();
+          }}
+        />
+      ))}
     </>
   );
 
@@ -214,11 +239,13 @@ export function LibraryShell({
       ) : null}
 
       <aside
+        id="library-sidebar"
         aria-label="Sidebar"
         className={`${SHELL_ASIDE} transition-[width] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
           expanded ? SHELL_SIDEBAR_EXPANDED : SHELL_SIDEBAR_COLLAPSED
         } ${mobileSidebarOpen ? "absolute inset-y-0 left-0 z-50 shadow-menu" : "relative z-30"}`}
       >
+        <SidebarBrand expanded={expanded} mobileSidebarOpen={mobileSidebarOpen} onHome={leaveBackup} onClose={() => onPanelOpenChange(false)} />
         {backupOpen && expanded ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4">
             <BackupPanel variant="sidebar" onClose={leaveBackup} />
@@ -226,18 +253,9 @@ export function LibraryShell({
         ) : (
           <nav
             aria-label="Sidebar navigation"
-            className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden py-2 ${SHELL_NAV_GUTTER}`}
+            className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-[18px] ${expanded ? SHELL_NAV_GUTTER : "px-2"}`}
           >
-            <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto overscroll-contain">
-              <ShellNavItem
-                expanded={expanded}
-                label={expanded ? "Collapse" : "Expand"}
-                icon={
-                  <ShellPanelIcon open={expanded} className="size-4" />
-                }
-                onClick={() => onPanelOpenChange(!expanded)}
-              />
-
+            <div className="flex min-h-0 flex-col gap-1 overflow-y-auto overscroll-contain">
               {primaryNav}
 
               {expanded ? (
@@ -329,9 +347,9 @@ export function LibraryShell({
             <ShellNavItem
               expanded={expanded}
               active={backupOpen}
-              label="Backup"
+              label="Backup & restore"
               icon={
-                <BackupIcon className="size-4 shrink-0 text-text-secondary" />
+                <BackupIcon className="size-[18px] shrink-0 text-text-secondary" />
               }
               onClick={() => {
                 const next = !backupOpen;
@@ -343,11 +361,34 @@ export function LibraryShell({
             />
           </nav>
         )}
-        <div className="shrink-0 px-2 pb-3">
-          <ThemeControl compact={!expanded} />
-        </div>
       </aside>
     </>
+  );
+}
+
+function SidebarBrand({ expanded, mobileSidebarOpen, onHome, onClose }: {
+  expanded: boolean;
+  mobileSidebarOpen: boolean;
+  onHome: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className={`mb-5 mt-[18px] flex h-10 shrink-0 items-center ${expanded ? "mx-4" : "mx-2"}`}>
+      <Link
+        href="/"
+        aria-label="Keepall home"
+        className={`flex h-10 min-w-0 items-center gap-2.5 rounded-control text-text-primary hover:bg-bg-raised ${expanded ? "flex-1 px-3" : "w-10 justify-center"}`}
+        onClick={onHome}
+      >
+        <LogoIcon className="size-[22px]" />
+        {expanded ? <span className="text-[23px] font-semibold leading-7">keepall</span> : null}
+      </Link>
+      {mobileSidebarOpen ? (
+        <button type="button" aria-label="Close navigation" title="Close sidebar" className="flex size-8 shrink-0 items-center justify-center rounded-control hover:bg-bg-raised" onClick={onClose}>
+          <ShellPanelIcon open />
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -675,7 +716,7 @@ function CollectionNavRow({
     >
       <button
         type="button"
-        className={`flex min-w-0 flex-1 self-stretch items-center gap-2 rounded-[10px] py-2.5 pl-2 text-left outline-none transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus ${
+        className={`flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-[10px] py-2 pl-3 text-left outline-none transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus ${
           active ? "" : SHELL_NAV_ITEM_IDLE
         }`}
         aria-label={collection.name}
@@ -826,7 +867,7 @@ function ShellNavItem({
       type="button"
       className={`${SHELL_NAV_ITEM} ${
         expanded
-          ? "w-full gap-2 px-2 py-1.5 text-left text-sm"
+          ? "min-h-10 w-full gap-2.5 px-3 py-2 text-left text-sm"
           : "mx-auto size-10 justify-center px-0"
       } ${active ? SHELL_NAV_ITEM_ACTIVE : SHELL_NAV_ITEM_IDLE} ${
         dropHighlight ? "ring-2 ring-border-focus" : ""
@@ -839,7 +880,7 @@ function ShellNavItem({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {icon ? <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span> : null}
+      {icon ? <span className="flex size-[18px] shrink-0 items-center justify-center">{icon}</span> : null}
       {expanded ? (
         <>
           <span className="min-w-0 flex-1 truncate">{label}</span>
@@ -877,16 +918,16 @@ function CollapsibleSection({
   children: ReactNode;
 }) {
   return (
-    <div className="pt-5">
-      <div className="flex items-center gap-0.5 pb-0.5 pl-1 pr-1">
+    <div className="shrink-0 pt-4">
+      <div className="mb-1 flex h-10 items-center gap-0.5">
         <button
           type="button"
-          className="flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-control px-1 py-1 text-left text-text-primary transition-[background-color] duration-150 hover:bg-bg-raised"
+          className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-control px-2 text-left text-text-primary transition-[background-color] duration-150 hover:bg-bg-raised"
           aria-expanded={open}
           onClick={() => onOpenChange(!open)}
         >
           {icon}
-          <span className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</span>
+          <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{title}</span>
           <ChevronDownIcon
             className={`size-3.5 text-text-secondary transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
               open ? "" : "-rotate-90"
@@ -895,7 +936,7 @@ function CollapsibleSection({
         </button>
         {trailing}
       </div>
-      {open ? children : null}
+      {open ? <div className="flex flex-col gap-1">{children}</div> : null}
     </div>
   );
 }
@@ -910,12 +951,12 @@ function SidebarSearch({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="pb-2 pl-2 pr-1">
+    <div>
       <label className="relative block">
         <span className="sr-only">{label}</span>
         <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
         <input
-          className="h-8 w-full rounded-control border border-border-edge bg-bg-canvas pl-7 pr-2 text-xs outline-none focus:border-border-focus"
+          className="h-9 w-full rounded-control border border-border-edge bg-bg-canvas pl-7 pr-2 text-xs outline-none focus:border-border-focus"
           placeholder="Search"
           aria-label={label}
           value={value}
