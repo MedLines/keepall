@@ -26,6 +26,28 @@ describe("grid card content", () => {
     expect(container.querySelector("svg")).toBeTruthy();
   });
 
+  it("places pinned status beside the card title", () => {
+    render(
+      <LibraryCardContent
+        item={{
+          ...base,
+          type: "image",
+          title: "Pinned reference",
+          assetIds: ["asset"],
+          sourceUrl: "",
+          caption: "",
+        }}
+        onOpen={vi.fn()}
+        pinned
+      />,
+    );
+
+    const title = screen.getByRole("button", { name: "Pinned reference" });
+    const status = screen.getByTitle("Pinned in this collection");
+
+    expect(status.parentElement).toContainElement(title);
+  });
+
   it("uses a compact tag count before disclosing browse and removal actions", () => {
     const browse = vi.fn();
     const remove = vi.fn();

@@ -458,12 +458,6 @@ export function LibraryItem({
         }
       >
       {cardActions}
-      {!isList && pinVisible && pinned ? (
-        <span title="Pinned in this collection" className="absolute end-14 top-3 z-20 flex size-8 items-center justify-center rounded-control bg-bg-surface/95 text-text-primary">
-          <PinIcon />
-          <span className="sr-only">Pinned in this collection</span>
-        </span>
-      ) : null}
       <label
         data-visible={checkboxVisible}
         className={
@@ -499,7 +493,11 @@ export function LibraryItem({
         style={{ pointerEvents: chromeVisible ? "auto" : "none" }}
       >
         {!isList && !editing ? (
-          <LibraryCardContent item={item} onOpen={onOpenInspect} />
+          <LibraryCardContent
+            item={item}
+            onOpen={onOpenInspect}
+            pinned={pinVisible && pinned}
+          />
         ) : (
           <div className={isList ? "min-w-0 flex-1 text-left" : undefined}>
             {isList && !editing && !pendingDelete ? (

@@ -337,11 +337,14 @@ test("card actions, tag disclosure, selection and collection context work", asyn
   await note.getByRole("checkbox").check();
   await expect(note.getByRole("checkbox")).toBeChecked();
   await note.getByRole("checkbox").uncheck();
-  await page.getByRole("button", { name: "UI inspiration", exact: true }).click();
+  await page.getByLabel("UI inspiration", { exact: true }).click();
   await expect(note.getByRole("list", { name: "Collections" })).toHaveCount(0);
   await note.hover();
   await note.locator("summary").click();
   await note.getByRole("button", { name: "Pin", exact: true }).click();
+  const pinnedStatus = note.getByTitle("Pinned in this collection");
+  await expect(pinnedStatus).toBeVisible();
+  await expect(pinnedStatus.locator("xpath=..")).toContainText("Design notes");
   await expect(note.getByRole("button", { name: "Unpin", exact: true })).toBeVisible();
 });
 

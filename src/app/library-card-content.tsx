@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { itemListTitle, type Item } from "@/domain/item";
 import { imageCardSecondary, linkCardHost, linkFaviconUrl } from "@/domain/card-display";
-import { CloseIcon, CollectionIcon, LinkIcon, NoteIcon } from "./shell-icons";
+import { CloseIcon, CollectionIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
 
 function LinkSource({ url, host }: { url: string; host: string }) {
   const [broken, setBroken] = useState(false);
@@ -19,7 +19,11 @@ function LinkSource({ url, host }: { url: string; host: string }) {
   );
 }
 
-export function LibraryCardContent({ item, onOpen }: { item: Item; onOpen: () => void }) {
+export function LibraryCardContent({ item, onOpen, pinned = false }: {
+  item: Item;
+  onOpen: () => void;
+  pinned?: boolean;
+}) {
   const title = item.type === "link" && !item.title.trim() && !item.previewTitle.trim()
     ? item.url.replace(/^https?:\/\//, "")
     : itemListTitle(item);
@@ -28,11 +32,20 @@ export function LibraryCardContent({ item, onOpen }: { item: Item; onOpen: () =>
     <div className="min-w-0">
       {item.type === "note" ? <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary"><NoteIcon className="size-4" />Note</div> : null}
       {item.type === "link" ? <LinkSource key={item.url} url={item.url} host={linkCardHost(item)} /> : null}
-      <h2 className={item.type === "note" ? "text-[17px] font-medium leading-snug" : "text-sm font-medium leading-snug"}>
+      <h2 className={`flex min-w-0 items-start gap-1.5 ${item.type === "note" ? "text-[17px] font-medium leading-snug" : "text-sm font-medium leading-snug"}`}>
+        {pinned ? (
+          <span
+            title="Pinned in this collection"
+            className="mt-0.5 flex size-4 shrink-0 items-center justify-center text-text-secondary"
+          >
+            <PinIcon className="size-4" />
+            <span className="sr-only">Pinned in this collection</span>
+          </span>
+        ) : null}
         {item.type === "link" ? (
-          <a href={item.url} target="_blank" rel="noreferrer" title={title} className="line-clamp-2 break-words underline-offset-2 hover:underline">{title}</a>
+          <a href={item.url} target="_blank" rel="noreferrer" title={title} className="min-w-0 flex-1 line-clamp-2 break-words underline-offset-2 hover:underline">{title}</a>
         ) : (
-          <button type="button" onClick={onOpen} title={title} className={`${item.type === "image" ? "truncate" : "line-clamp-2 break-words"} w-full text-left underline-offset-2 hover:underline`}>{title}</button>
+          <button type="button" onClick={onOpen} title={title} className={`${item.type === "image" ? "truncate" : "line-clamp-2 break-words"} min-w-0 flex-1 text-left underline-offset-2 hover:underline`}>{title}</button>
         )}
       </h2>
       {item.type === "note" ? (
