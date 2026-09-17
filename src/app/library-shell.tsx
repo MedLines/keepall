@@ -255,11 +255,11 @@ export function LibraryShell({
             aria-label="Sidebar navigation"
             className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-[18px] ${expanded ? SHELL_NAV_GUTTER : "px-2"}`}
           >
-            <div className="flex min-h-0 flex-col gap-1 overflow-y-auto overscroll-contain">
-              {primaryNav}
+            <div className={`flex min-h-0 flex-col gap-1 ${expanded ? "overflow-hidden" : "overflow-y-auto overscroll-contain"}`}>
+              <div className="flex shrink-0 flex-col gap-1">{primaryNav}</div>
 
               {expanded ? (
-                <>
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                   <CollectionsSection
                     collectionsOpen={collectionsOpen}
                     onCollectionsOpenChange={(open) => {
@@ -311,9 +311,9 @@ export function LibraryShell({
                       closeOnMobile();
                     }}
                   />
-                </>
+                </div>
               ) : (
-                <>
+                <div className="flex shrink-0 flex-col gap-1">
                   <ShellNavItem
                     expanded={false}
                     active={browseCollectionId !== null}
@@ -340,7 +340,7 @@ export function LibraryShell({
                       writeShellTagsOpen(true);
                     }}
                   />
-                </>
+                </div>
               )}
             </div>
 
@@ -499,69 +499,73 @@ function CollectionsSection({
         onChange={onCollectionFilterChange}
       />
 
-      {filteredCollections.length === 0 ? (
-        <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
-          {libraryLoading
-            ? "Loading…"
-            : collections.length === 0
-              ? "No collections yet."
-              : "No matches."}
-        </p>
-      ) : (
-        filteredCollections.map((collection) => (
-          <CollectionNavRow
-            key={collection.id}
-            collection={collection}
-            count={libraryLoading ? undefined : (counts[collection.id] ?? 0)}
-            active={browseCollectionId === collection.id}
-            dropHighlight={dropTargetCollectionId === collection.id}
-            renaming={renamingCollectionId === collection.id}
-            renameDraft={renameDraft}
-            mutationBusy={mutationBusy}
-            onNavigate={() => onGoCollection(collection.id)}
-            onDragOver={(event) => onCollectionDragOver(collection.id, event)}
-            onDragLeave={onCollectionDragLeave}
-            onDrop={(event) => onCollectionDrop(collection.id, event)}
-            onStartRename={() => {
-              setRenamingCollectionId(collection.id);
-              setRenameDraft(collection.name);
-            }}
-            onRenameDraftChange={setRenameDraft}
-            onCancelRename={() => {
-              setRenamingCollectionId(null);
-              setRenameDraft("");
-            }}
-            onSubmitRename={() => {
-              const trimmed = renameDraft.trim();
-              if (
-                !trimmed ||
-                trimmed === collection.name.trim() ||
-                mutationBusy
-              ) {
-                setRenamingCollectionId(null);
-                setRenameDraft("");
-                return;
-              }
-              onRenameCollection(collection.id, trimmed);
-              setRenamingCollectionId(null);
-              setRenameDraft("");
-            }}
-            onDelete={() => onDeleteCollection(collection.id)}
-          />
-        ))
-      )}
+      <div className="library-sidebar-section-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+        <div className="flex flex-col gap-1">
+          {filteredCollections.length === 0 ? (
+            <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
+              {libraryLoading
+                ? "Loading…"
+                : collections.length === 0
+                  ? "No collections yet."
+                  : "No matches."}
+            </p>
+          ) : (
+            filteredCollections.map((collection) => (
+              <CollectionNavRow
+                key={collection.id}
+                collection={collection}
+                count={libraryLoading ? undefined : (counts[collection.id] ?? 0)}
+                active={browseCollectionId === collection.id}
+                dropHighlight={dropTargetCollectionId === collection.id}
+                renaming={renamingCollectionId === collection.id}
+                renameDraft={renameDraft}
+                mutationBusy={mutationBusy}
+                onNavigate={() => onGoCollection(collection.id)}
+                onDragOver={(event) => onCollectionDragOver(collection.id, event)}
+                onDragLeave={onCollectionDragLeave}
+                onDrop={(event) => onCollectionDrop(collection.id, event)}
+                onStartRename={() => {
+                  setRenamingCollectionId(collection.id);
+                  setRenameDraft(collection.name);
+                }}
+                onRenameDraftChange={setRenameDraft}
+                onCancelRename={() => {
+                  setRenamingCollectionId(null);
+                  setRenameDraft("");
+                }}
+                onSubmitRename={() => {
+                  const trimmed = renameDraft.trim();
+                  if (
+                    !trimmed ||
+                    trimmed === collection.name.trim() ||
+                    mutationBusy
+                  ) {
+                    setRenamingCollectionId(null);
+                    setRenameDraft("");
+                    return;
+                  }
+                  onRenameCollection(collection.id, trimmed);
+                  setRenamingCollectionId(null);
+                  setRenameDraft("");
+                }}
+                onDelete={() => onDeleteCollection(collection.id)}
+              />
+            ))
+          )}
 
-      {dragError ? (
-        <p className="mt-2 px-2 text-pretty text-xs text-text-danger" role="alert">
-          {dragError}
-        </p>
-      ) : null}
+          {dragError ? (
+            <p className="mt-2 px-2 text-pretty text-xs text-text-danger" role="alert">
+              {dragError}
+            </p>
+          ) : null}
 
-      {collectionManageError ? (
-        <p className="mt-2 px-2 text-pretty text-xs text-text-danger" role="alert">
-          {collectionManageError}
-        </p>
-      ) : null}
+          {collectionManageError ? (
+            <p className="mt-2 px-2 text-pretty text-xs text-text-danger" role="alert">
+              {collectionManageError}
+            </p>
+          ) : null}
+        </div>
+      </div>
     </CollapsibleSection>
   );
 }
@@ -608,27 +612,31 @@ function TagsSection({
         onChange={onTagFilterChange}
       />
 
-      {filteredTags.length === 0 ? (
-        <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
-          {libraryLoading
-            ? "Loading…"
-            : tags.length === 0
-              ? "No tags yet."
-              : "No matches."}
-        </p>
-      ) : (
-        filteredTags.map((tag) => (
-          <ShellNavItem
-            key={tag.id}
-            expanded
-            active={browseTagId === tag.id}
-            label={tag.name}
-            ariaLabel={`Tag ${tag.name}`}
-            count={libraryLoading ? undefined : (counts[tag.id] ?? 0)}
-            onClick={() => onGoTag(tag.id)}
-          />
-        ))
-      )}
+      <div className="library-sidebar-section-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+        <div className="flex flex-col gap-1">
+          {filteredTags.length === 0 ? (
+            <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
+              {libraryLoading
+                ? "Loading…"
+                : tags.length === 0
+                  ? "No tags yet."
+                  : "No matches."}
+            </p>
+          ) : (
+            filteredTags.map((tag) => (
+              <ShellNavItem
+                key={tag.id}
+                expanded
+                active={browseTagId === tag.id}
+                label={tag.name}
+                ariaLabel={`Tag ${tag.name}`}
+                count={libraryLoading ? undefined : (counts[tag.id] ?? 0)}
+                onClick={() => onGoTag(tag.id)}
+              />
+            ))
+          )}
+        </div>
+      </div>
     </CollapsibleSection>
   );
 }
@@ -918,8 +926,8 @@ function CollapsibleSection({
   children: ReactNode;
 }) {
   return (
-    <div className="shrink-0 pt-4">
-      <div className="mb-1 flex h-10 items-center gap-0.5">
+    <div className={`${open ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} pt-4`}>
+      <div className="mb-1 flex h-10 shrink-0 items-center gap-0.5">
         <button
           type="button"
           className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-control px-2 text-left text-text-primary transition-[background-color] duration-150 hover:bg-bg-raised"
@@ -936,7 +944,7 @@ function CollapsibleSection({
         </button>
         {trailing}
       </div>
-      {open ? <div className="flex flex-col gap-1">{children}</div> : null}
+      {open ? <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">{children}</div> : null}
     </div>
   );
 }
