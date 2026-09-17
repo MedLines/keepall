@@ -22,7 +22,7 @@ describe("library-scale", () => {
 
   test("grid column count grows with container width", () => {
     expect(gridColumnCount(320)).toBe(1);
-    expect(gridColumnCount(800)).toBe(3);
-    expect(gridColumnCount(1200)).toBe(4);
+    expect(gridColumnCount(800)).toBe(2);
+    expect(gridColumnCount(1200)).toBe(3);
   });
 });

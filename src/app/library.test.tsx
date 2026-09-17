@@ -330,7 +330,7 @@ describe("Library", () => {
     );
     await waitFor(() => {
       expect(
-        screen.getAllByRole("link", { name: "example.com" })[0],
+        screen.getAllByRole("link", { name: "example.com/new" })[0],
       ).toHaveAttribute("href", "https://example.com/new");
     });
   });
@@ -355,15 +355,15 @@ describe("Library", () => {
     expect(links[0]).toHaveAttribute("href", "https://example.com/old");
   });
 
-  test("shows card initial, type chip, and secondary line", async () => {
+  test("shows note content and compact link metadata without a letter thumbnail", async () => {
     vi.mocked(listItems).mockResolvedValue([note, link]);
     render(<Library />);
 
     expect(await screen.findByText("Note")).toBeInTheDocument();
-    expect(screen.getByText("Link")).toBeInTheDocument();
+    expect(screen.queryByText("Link")).not.toBeInTheDocument();
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
     expect(
-      screen.getAllByRole("link", { name: "example.com" })[0],
+      screen.getAllByRole("link", { name: "example.com/old" })[0],
     ).toHaveAttribute("href", "https://example.com/old");
     expect(screen.getAllByText("example.com").length).toBeGreaterThanOrEqual(1);
   });
@@ -591,6 +591,7 @@ describe("Library tags", () => {
     render(<Library />);
 
     await screen.findByText("A persisted note");
+    fireEvent.click(screen.getByRole("button", { name: "1 tag" }));
     fireEvent.click(
       within(screen.getByRole("main")).getByRole("button", {
         name: "inspiration",
@@ -623,7 +624,7 @@ describe("Library tags", () => {
     vi.mocked(unassignTagFromItem).mockResolvedValue(untagged);
     render(<Library />);
 
-    await within(screen.getByRole("main")).findByText("inspiration");
+    fireEvent.click(await screen.findByRole("button", { name: "1 tag" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Remove tag inspiration" }),
     );
@@ -685,6 +686,7 @@ describe("Library type filter", () => {
     expect(screen.getByText("Design link")).toBeInTheDocument();
     expect(screen.getByText("Other link")).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: "1 tag" }));
     fireEvent.click(screen.getByRole("button", { name: "design" }));
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?tag=t1&type=link", {
@@ -1234,7 +1236,7 @@ describe("Library inspect", () => {
     render(<Library />);
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Open Untitled" }),
+      await screen.findByRole("button", { name: "Read Untitled" }),
     );
 
     expect(mockNavigation.push).toHaveBeenCalled();

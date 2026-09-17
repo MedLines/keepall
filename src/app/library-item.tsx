@@ -19,7 +19,8 @@ import {
 } from "./item-media-layout";
 import { LibraryItemMedia } from "./library-item-media";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
-import { ItemTagChips } from "./item-tag-chips";
+import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
+import { CollectionIcon, DeleteIcon, EditIcon, HashIcon, MoreIcon, PinIcon } from "./shell-icons";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 
 function formatListDate(timestamp: number): string {
@@ -103,7 +104,7 @@ export type LibraryItemProps = {
 };
 
 const ACTION_BTN =
-  "relative flex h-8 min-w-8 items-center justify-center rounded-md bg-bg-surface/95 px-2 text-xs font-medium text-text-primary shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06)] backdrop-blur-sm transition-[transform,box-shadow] duration-150 ease-out after:absolute after:left-1/2 after:top-1/2 after:size-10 after:-translate-x-1/2 after:-translate-y-1/2 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08)] active:scale-[0.96] disabled:opacity-60";
+  "flex min-h-10 w-full items-center gap-2 rounded-control px-2 text-left text-sm text-text-primary hover:bg-bg-raised disabled:opacity-60";
 
 export function LibraryItem({
   item,
@@ -154,9 +155,11 @@ export function LibraryItem({
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
   const [orgPanel, setOrgPanel] = useState<"tag" | "collection" | null>(null);
+  const [imageRatio, setImageRatio] = useState(1.6);
+  const [failedPreview, setFailedPreview] = useState<string | null>(null);
+  const actionsRef = useRef<HTMLDetailsElement>(null);
   const reduceMotion = useReducedMotion();
 
-  const actionChromeVisible = orgPanel !== null;
   const checkboxVisible = selected || selectionActive;
   const availableTagSuggestions = tagSuggestions.filter(
     (entry) => !item.tagIds.includes(entry.id),
@@ -168,6 +171,14 @@ export function LibraryItem({
   const title = itemListTitle(item);
   const secondary = cardSecondaryLine(item);
   const isList = layoutMode === "list";
+  const previewKey = item.type === "link"
+    ? `${item.previewAssetId}:${item.previewImageUrl}`
+    : "";
+  const hasMedia = item.type === "image" || (
+    item.type === "link" &&
+    failedPreview !== previewKey &&
+    Boolean(item.previewAssetId || (item.previewStatus === "ready" && item.previewImageUrl))
+  );
   const rowRef = useRef<HTMLLIElement>(null);
   usePreviewEnrichViewport(
     rowRef,
@@ -199,12 +210,13 @@ export function LibraryItem({
       className={
         isList
           ? "relative size-10 shrink-0"
-          : "relative mb-2 w-full"
+          : "relative mb-3 w-full"
       }
     >
       {inspected ? (
         <div
-          className={isList ? "size-10" : "aspect-[16/10] w-full"}
+          className={isList ? "size-10" : "w-full"}
+          style={isList ? undefined : { aspectRatio: imageRatio }}
           aria-hidden
         />
       ) : (
@@ -214,8 +226,8 @@ export function LibraryItem({
             isList
               ? `size-10 overflow-hidden ${item.type === "link" ? "bg-bg-surface shadow-[0_0_0_1px_rgba(0,0,0,0.06)]" : "bg-bg-raised"}`
               : item.type === "link"
-                ? "aspect-[16/10] w-full overflow-hidden bg-bg-surface shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
-                : "aspect-[16/10] w-full cursor-pointer overflow-hidden bg-bg-raised"
+                ? "w-full overflow-hidden bg-bg-surface"
+                : "w-full cursor-pointer overflow-hidden bg-bg-raised"
           }
           style={{ borderRadius: isList ? 8 : 12 }}
           onClick={
@@ -241,7 +253,11 @@ export function LibraryItem({
         >
           <LibraryItemMedia
             item={item}
-            className="!aspect-auto h-full w-full object-cover"
+            variant={isList ? "card" : "grid"}
+            compact={isList}
+            onImageLoad={setImageRatio}
+            onPreviewUnavailable={() => setFailedPreview(previewKey)}
+            className={isList ? "!aspect-auto h-full w-full object-cover" : ""}
           />
         </motion.div>
       )}
@@ -255,17 +271,31 @@ export function LibraryItem({
           target="_blank"
         />
       ) : null}
-      {!isList && !inspected && !editing && !pendingDelete ? (
+    </div>
+  );
+
+  const cardActions = !isList && !inspected && !editing && !pendingDelete ? (
+    <details
+      ref={actionsRef}
+      className="library-card-actions absolute end-3 top-3 z-30"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && actionsRef.current) {
+          event.preventDefault();
+          actionsRef.current.open = false;
+          actionsRef.current.querySelector("summary")?.focus();
+        }
+      }}
+    >
+      <summary
+        aria-label={`Actions for ${title}`}
+        className="relative flex size-8 cursor-pointer list-none items-center justify-center rounded-control bg-bg-surface/95 text-text-secondary shadow-edge after:absolute after:-inset-1 hover:text-text-primary [&::-webkit-details-marker]:hidden"
+      >
+        <MoreIcon />
+      </summary>
           <div
-            className={`absolute inset-x-2 top-2 z-10 flex flex-col items-end gap-1 transition-opacity duration-100 ${
-              !chromeVisible
-                ? "pointer-events-none opacity-0"
-                : actionChromeVisible
-                  ? "pointer-events-auto opacity-100"
-                  : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
-            }`}
+            className="absolute end-0 mt-2 flex w-56 max-w-[calc(100vw-5rem)] flex-col gap-2 rounded-control bg-bg-surface p-2 shadow-menu ring-1 ring-border-edge"
           >
-            <div className="flex justify-end gap-1">
+            <div className="flex flex-col">
               {pinVisible ? (
                 <button
                   type="button"
@@ -277,6 +307,7 @@ export function LibraryItem({
                     onTogglePin();
                   }}
                 >
+                  <PinIcon />
                   {pendingMutation?.op === "pin-item" &&
                   pendingMutation.itemId === item.id
                     ? "…"
@@ -298,7 +329,7 @@ export function LibraryItem({
                   onStartEdit();
                 }}
               >
-                Edit
+                <EditIcon /> Edit
               </button>
               <button
                 type="button"
@@ -311,7 +342,7 @@ export function LibraryItem({
                   onStartDelete();
                 }}
               >
-                Del
+                <DeleteIcon /> Delete
               </button>
               <button
                 type="button"
@@ -323,7 +354,7 @@ export function LibraryItem({
                   setOrgPanel((panel) => (panel === "tag" ? null : "tag"))
                 }
               >
-                Tag
+                <HashIcon /> Add tag
               </button>
               <button
                 type="button"
@@ -337,11 +368,11 @@ export function LibraryItem({
                   )
                 }
               >
-                Col
+                <CollectionIcon /> Move to collection
               </button>
             </div>
             {orgPanel === "tag" ? (
-              <div className="w-56 rounded-lg bg-bg-surface/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+              <div className="min-w-0 p-1">
                 <OrgNameSuggest
                   compact
                   hideLabel
@@ -366,7 +397,7 @@ export function LibraryItem({
               </div>
             ) : null}
             {orgPanel === "collection" ? (
-              <div className="w-56 rounded-lg bg-bg-surface/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+              <div className="min-w-0 p-1">
                 <OrgNameSuggest
                   compact
                   hideLabel
@@ -392,15 +423,14 @@ export function LibraryItem({
               </div>
             ) : null}
           </div>
-        ) : null}
-    </div>
-  );
+    </details>
+  ) : null;
 
   return (
     <li
       ref={rowRef}
       draggable={dragEnabled}
-      className={isDragging ? "opacity-50" : undefined}
+      className={`min-w-0 ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
     >
@@ -410,11 +440,18 @@ export function LibraryItem({
             ? `group flex items-center gap-2 rounded-lg border border-border-edge bg-bg-surface px-2 py-2 ${
                 inspected || selected ? "ring-2 ring-border-focus" : ""
               }`
-            : `group relative flex flex-col rounded-2xl bg-bg-surface p-2 shadow-edge ${
-                selected ? "ring-2 ring-border-focus" : ""
+            : `library-card group relative flex flex-col rounded-panel p-2 ${
+                selected ? "outline-2 outline-border-focus" : ""
               }`
         }
       >
+      {cardActions}
+      {!isList && pinVisible && pinned ? (
+        <span title="Pinned in this collection" className="absolute end-14 top-3 z-20 flex size-8 items-center justify-center rounded-control bg-bg-surface/95 text-text-primary">
+          <PinIcon />
+          <span className="sr-only">Pinned in this collection</span>
+        </span>
+      ) : null}
       <label
         className={
           isList
@@ -425,7 +462,7 @@ export function LibraryItem({
                     ? "opacity-100"
                     : "opacity-0 group-hover:opacity-100"
               }`
-            : `absolute left-3 top-3 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity duration-100 ${
+            : `absolute start-3 top-3 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity duration-100 ${
                 !chromeVisible
                   ? "pointer-events-none opacity-0"
                   : checkboxVisible
@@ -467,99 +504,28 @@ export function LibraryItem({
           </button>
         ) : null}
       </div>
-      {mediaSlot}
+      {isList || hasMedia ? mediaSlot : null}
       <motion.div
         {...chromeMotion}
         className={
           isList
             ? "flex min-w-0 flex-1 items-center gap-3"
-            : "px-2 pb-2"
+            : hasMedia ? "px-2 pb-1" : "px-2 pb-1 pt-3"
         }
         style={{ pointerEvents: chromeVisible ? "auto" : "none" }}
       >
-        <div
-          className={
-            isList ? "min-w-0 flex-1 cursor-pointer text-left" : undefined
-          }
-          onClick={isList ? onOpenInspect : undefined}
-          onKeyDown={
-            isList
-              ? (event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onOpenInspect();
-                  }
-                }
-              : undefined
-          }
-          role={isList ? "button" : undefined}
-          tabIndex={isList ? 0 : undefined}
-          aria-label={isList ? `Open ${title}` : undefined}
-        >
-          <div
-            className={
-              isList
-                ? "truncate text-sm font-medium text-text-primary"
-                : "text-balance font-medium"
-            }
-          >
-            {!isList && !editing && item.type === "link" ? (
-              <a
-                className="break-words text-text-primary underline-offset-2 hover:underline"
-                href={item.url}
-                rel="noreferrer"
-                target="_blank"
-              >
-                {title}
-              </a>
-            ) : !isList && !editing ? (
-              <button
-                type="button"
-                className="break-words text-left text-text-primary underline-offset-2 hover:underline"
-                onClick={onOpenInspect}
-              >
-                {title}
+        {!isList && !editing ? (
+          <LibraryCardContent item={item} onOpen={onOpenInspect} />
+        ) : (
+          <div className={isList ? "min-w-0 flex-1 text-left" : undefined}>
+            {isList ? (
+              <button type="button" onClick={onOpenInspect} aria-label={`Open ${title}`} className="block w-full text-left">
+                <span className="block truncate text-sm font-medium">{title}</span>
+                {secondary ? <span className="block truncate text-xs text-text-secondary">{secondary}</span> : null}
               </button>
-            ) : (
-              title
-            )}
+            ) : <p className="text-sm font-medium">{title}</p>}
           </div>
-          {!isList ? (
-            <p className="mt-1">
-              <span className="inline-block rounded-full bg-bg-raised px-2 py-0.5 text-xs font-medium text-text-primary">
-                {typeLabel}
-              </span>
-            </p>
-          ) : null}
-          {secondary && !editing ? (
-            <div
-              className={
-                isList
-                  ? "truncate text-xs text-text-secondary"
-                  : item.type === "link"
-                    ? "mt-1 line-clamp-2 text-pretty text-sm text-text-secondary"
-                    : "mt-1 line-clamp-2 w-full cursor-pointer text-left text-pretty text-sm text-text-secondary"
-              }
-              onClick={
-                !isList && item.type !== "link" ? onOpenInspect : undefined
-              }
-              onKeyDown={
-                !isList && item.type !== "link"
-                  ? (event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onOpenInspect();
-                      }
-                    }
-                  : undefined
-              }
-              role={!isList && item.type !== "link" ? "button" : undefined}
-              tabIndex={!isList && item.type !== "link" ? 0 : undefined}
-            >
-              {secondary}
-            </div>
-          ) : null}
-        </div>
+        )}
         {isList ? (
           <span className="hidden shrink-0 items-center gap-3 text-xs text-text-secondary sm:flex">
             <span className="rounded bg-bg-raised px-1.5 py-0.5 font-medium text-text-secondary">
@@ -735,30 +701,13 @@ export function LibraryItem({
           </div>
         ) : null}
         {!editing && !pendingDelete ? (
-          tagNames.length > 0 || collectionNames.length > 0 ? (
-            <div className="mt-2 space-y-1.5">
-              {tagNames.length > 0 ? (
-                <ItemTagChips
-                  tags={tagNames}
-                  mutationBusy={mutationBusy}
-                  onBrowseTag={onBrowseTag}
-                  onRemoveTag={onRemoveTag}
-                />
-              ) : null}
-              {collectionNames.length > 0 ? (
-                <ul className="flex flex-wrap gap-1.5" aria-label="Collections">
-                  {collectionNames.map((name) => (
-                    <li
-                      key={name}
-                      className="rounded bg-bg-raised px-1.5 py-0.5 text-xs text-text-secondary"
-                    >
-                      {name}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          ) : null
+          <LibraryCardMetadata
+            collections={collectionNames}
+            tags={tagNames}
+            mutationBusy={mutationBusy}
+            onBrowseTag={onBrowseTag}
+            onRemoveTag={onRemoveTag}
+          />
         ) : null}
         {pendingDelete ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">

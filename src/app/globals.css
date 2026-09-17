@@ -28,6 +28,7 @@
   --color-bg-shell: light-dark(var(--neutral-150), var(--neutral-950));
   --color-bg-canvas: light-dark(var(--neutral-50), var(--neutral-975));
   --color-bg-surface: light-dark(var(--white), var(--neutral-800));
+  --color-bg-card-end: light-dark(var(--white), var(--neutral-950));
   --color-bg-raised: light-dark(var(--neutral-100), var(--neutral-750));
   --color-bg-overlay: #09090b;
   --color-bg-media: #18181a;
@@ -36,6 +37,7 @@
   --color-text-on-media: #f2f2f0;
   --color-border-subtle: light-dark(var(--neutral-200), var(--neutral-700));
   --color-border-edge: light-dark(#00000024, #ffffff24);
+  --color-border-media: light-dark(rgb(0 0 0 / 10%), rgb(255 255 255 / 10%));
   --color-border-control: light-dark(#7d8085, #767b83);
   --color-border-focus: light-dark(var(--neutral-900), var(--white));
   --color-action-primary: light-dark(var(--neutral-900), var(--white));
@@ -56,12 +58,40 @@
 @layer base {
   body { font-family: var(--font-sans); }
   button:not(:disabled), select { cursor: pointer; }
-  :where(button, a, input, textarea, select):focus-visible {
+  :where(button, a, input, textarea, select, summary):focus-visible {
     outline: 2px solid var(--color-border-focus);
     outline-offset: 2px;
   }
   input::placeholder, textarea::placeholder { color: var(--color-text-secondary); }
   select option { background: var(--color-bg-surface); color: var(--color-text-primary); }
+}
+
+.library-card {
+  background: linear-gradient(to bottom, var(--color-bg-surface) 42%, var(--color-bg-card-end));
+  box-shadow: inset 0 0 0 1px var(--color-border-edge), 0 2px 4px #0000000a;
+}
+
+.library-card-actions {
+  transition: opacity 100ms ease-out;
+}
+
+/* Touch devices keep a discoverable action trigger without requiring hover. */
+@media (hover: hover) and (pointer: fine) {
+  .library-card-actions {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .library-card:hover .library-card-actions,
+  .library-card:focus-within .library-card-actions,
+  .library-card-actions[open] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-card-actions { transition: none; }
 }
 
 /* The invisible native select keeps a visible focus target in the icon rail. */

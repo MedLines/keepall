@@ -441,6 +441,8 @@ export function Library() {
     const button = document.querySelector<HTMLButtonElement>(
       `button[data-focus-return="${restore.action}:${restore.id}"]`,
     );
+    const actions = button?.closest("details");
+    if (actions) actions.open = true;
     button?.focus();
     restoreFocusRef.current = null;
   }, [editingId, pendingDeleteId, items]);
@@ -1313,7 +1315,7 @@ export function Library() {
         onOpenInspect={() => openInspect(item.id)}
         tagNames={resolveItemTags(item, tagsById)}
         tagError={tagErrorItemId === item.id ? tagError : null}
-        collectionNames={resolveItemCollectionNames(item, collectionsById)}
+        collectionNames={browseCollectionId ? [] : resolveItemCollectionNames(item, collectionsById)}
         collectionError={
           collectionErrorItemId === item.id ? collectionError : null
         }

@@ -8,6 +8,7 @@ import {
   Note01Icon as Note01, Search01Icon as Search01, SidebarLeft01Icon as SidebarLeft01,
   Sorting05Icon as Sorting05, Sorting02Icon as Sorting02,
   Sun03Icon as Sun03, Tag01Icon as Tag01,
+  Edit02Icon as Edit02, Delete02Icon as Delete02, PinIcon as Pin,
 } from "@hugeicons/core-free-icons";
 
 type IconProps = { className?: string };
@@ -39,6 +40,9 @@ export function PlusIcon(props: IconProps) { return <ShellIcon icon={Add01} {...
 export function InboxIcon(props: IconProps) { return <ShellIcon icon={Inbox} {...props} />; }
 export function HashIcon(props: IconProps) { return <ShellIcon icon={Tag01} {...props} />; }
 export function MoreIcon(props: IconProps) { return <ShellIcon icon={MoreVertical} {...props} />; }
+export function EditIcon(props: IconProps) { return <ShellIcon icon={Edit02} {...props} />; }
+export function DeleteIcon(props: IconProps) { return <ShellIcon icon={Delete02} {...props} />; }
+export function PinIcon(props: IconProps) { return <ShellIcon icon={Pin} {...props} />; }
 export function ThemeIcon(props: IconProps) { return <ShellIcon icon={Sun03} {...props} />; }
 
 export function SidebarChevronIcon({ expanded, className = "" }: IconProps & { expanded: boolean }) {

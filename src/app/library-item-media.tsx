@@ -8,8 +8,10 @@ import { useEffect, useState } from "react";
 
 type Props = {
   item: Item;
-  /** Card thumbs crop; inspect shows the full image. */
-  variant?: "card" | "inspect";
+  /** Grid preserves image proportions; compact rows crop; inspect contains. */
+  variant?: "card" | "grid" | "inspect";
+  onImageLoad?: (ratio: number) => void;
+  onPreviewUnavailable?: () => void;
   /** Inspect gallery: show this asset instead of the cover. */
   assetId?: string | null;
   /** Smaller favicon for list-row thumbs. */
@@ -23,6 +25,8 @@ export function LibraryItemMedia({
   variant = "card",
   assetId,
   compact = false,
+  onImageLoad,
+  onPreviewUnavailable,
   className = "",
 }: Props) {
   const assetIdForDisplay =
@@ -60,6 +64,8 @@ export function LibraryItemMedia({
   const isFaviconOnly = Boolean(faviconSrc && imageSrc === faviconSrc);
   const isInspect = variant === "inspect";
 
+  if (variant === "grid" && item.type === "link" && !previewSrc) return null;
+
   if (isFaviconOnly && faviconSrc) {
     return (
       <div
@@ -87,14 +93,18 @@ export function LibraryItemMedia({
       <img
         alt=""
         className={
-          isInspect
+          variant === "grid"
+            ? `block h-auto w-full rounded-[inherit] outline outline-1 -outline-offset-1 outline-border-media ${className}`
+            : isInspect
             ? `mx-auto max-h-[min(78vh,56rem)] w-full object-contain outline outline-1 -outline-offset-1 outline-white/10 ${className}`
             : compact
               ? `size-full object-cover outline outline-1 -outline-offset-1 outline-black/10 ${className}`
               : `aspect-[16/10] h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/10 ${className}`
         }
         src={imageSrc}
+        onLoad={(event) => onImageLoad?.(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)}
         onError={() => {
+          if (variant === "grid" && item.type === "link") onPreviewUnavailable?.();
           if (previewSrc) {
             if (!localObjectUrl) {
               setRemoteBroken(true);

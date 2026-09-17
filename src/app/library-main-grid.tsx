@@ -47,7 +47,7 @@ export function LibraryMainGrid({
       className={
         layout === "list"
           ? "flex flex-col gap-2"
-          : "grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-4"
+          : "grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] items-start gap-5"
       }
     >
       {visibleItems.map((item) => renderItem(item))}

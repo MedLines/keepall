@@ -54,7 +54,8 @@ export function LibraryVirtualItems({
     }
 
     const updateWidth = () => {
-      setContainerWidth(element.clientWidth);
+      const style = getComputedStyle(element);
+      setContainerWidth(element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight));
     };
 
     updateWidth();
@@ -107,11 +108,11 @@ export function LibraryVirtualItems({
             key={virtualRow.key}
             ref={rowVirtualizer.measureElement}
             data-index={virtualRow.index}
-            className={`absolute left-0 top-0 w-full ${isList ? "" : "pb-4"}`}
+            className={`absolute left-0 top-0 w-full ${isList ? "" : "pb-5"}`}
             style={{ transform: `translateY(${virtualRow.start}px)` }}
           >
             <ul
-              className={isList ? "flex flex-col gap-2" : "grid gap-4"}
+              className={isList ? "flex flex-col gap-2" : "grid items-start gap-5"}
               style={
                 isList
                   ? undefined
