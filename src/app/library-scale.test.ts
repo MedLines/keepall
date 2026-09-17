@@ -1,19 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
-  LIBRARY_GRID_GAP_PX,
-  LIBRARY_GRID_MIN_COL_PX,
+  gridColumnCount,
   LIBRARY_VIRTUALIZE_MIN,
 } from "./library-scale";
-
-function gridColumnCount(containerWidth: number): number {
-  return Math.max(
-    1,
-    Math.floor(
-      (containerWidth + LIBRARY_GRID_GAP_PX) /
-        (LIBRARY_GRID_MIN_COL_PX + LIBRARY_GRID_GAP_PX),
-    ),
-  );
-}
 
 describe("library-scale", () => {
   test("virtualize threshold is above typical small libraries", () => {

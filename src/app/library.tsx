@@ -72,6 +72,7 @@ import {
 import { LibraryShell } from "./library-shell";
 import { countSidebarItems } from "./library-sidebar-counts";
 import { LibraryMainGrid } from "./library-main-grid";
+import type { MasonryPlacement } from "./library-masonry";
 import {
   pausePreviewEnrichForNavigation,
   resumePreviewWelcomeBatch,
@@ -1305,10 +1306,11 @@ export function Library() {
     browseTagName,
   );
 
-  function renderLibraryItem(item: Item) {
+  function renderLibraryItem(item: Item, placement?: MasonryPlacement) {
     return (
       <LibraryItem
         key={item.id}
+        placement={placement}
         item={item}
         inspected={inspectId === item.id}
         layoutMode={browseLayout}

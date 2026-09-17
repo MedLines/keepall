@@ -5,6 +5,7 @@ import type { Item } from "@/domain/item";
 import type { LibraryLayout } from "@/domain/library-view";
 import { LibraryVirtualItems } from "./library-virtual-items";
 import { LIBRARY_VIRTUALIZE_MIN } from "./library-scale";
+import { LibraryMasonry, type MasonryPlacement } from "./library-masonry";
 
 type Props = {
   visibleItems: Item[];
@@ -12,10 +13,10 @@ type Props = {
   layout: LibraryLayout;
   scrollRef: RefObject<HTMLElement | null>;
   empty: ReactNode;
-  renderItem: (item: Item) => ReactNode;
+  renderItem: (item: Item, placement?: MasonryPlacement) => ReactNode;
 };
 
-/** Grid/list body — virtualizes at 60+ visible so leaving a big folder unmounts ~30 cards, not 396. */
+/** Both views window large libraries; grid cards keep their natural heights. */
 export function LibraryMainGrid({
   visibleItems,
   scopeKey,
@@ -28,6 +29,10 @@ export function LibraryMainGrid({
     return empty;
   }
 
+  if (layout === "grid") {
+    return <LibraryMasonry items={visibleItems} scopeKey={scopeKey} scrollRef={scrollRef} renderItem={renderItem} />;
+  }
+
   const useVirtualList = visibleItems.length >= LIBRARY_VIRTUALIZE_MIN;
 
   if (useVirtualList) {
@@ -35,7 +40,6 @@ export function LibraryMainGrid({
       <LibraryVirtualItems
         scopeKey={scopeKey}
         items={visibleItems}
-        layout={layout}
         scrollRef={scrollRef}
         renderItem={renderItem}
       />
@@ -43,13 +47,7 @@ export function LibraryMainGrid({
   }
 
   return (
-    <ul
-      className={
-        layout === "list"
-          ? "flex flex-col gap-2"
-          : "grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] items-start gap-5"
-      }
-    >
+    <ul className="flex flex-col gap-2">
       {visibleItems.map((item) => renderItem(item))}
     </ul>
   );

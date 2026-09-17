@@ -4,6 +4,7 @@ import {
   type DragEvent,
   type KeyboardEvent,
   type Ref,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -22,6 +23,7 @@ import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
 import { CollectionIcon, DeleteIcon, EditIcon, HashIcon, MoreIcon, PinIcon } from "./shell-icons";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
+import type { MasonryPlacement } from "./library-masonry";
 
 function formatListDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString(undefined, {
@@ -52,6 +54,7 @@ export type PendingMutation =
   | { op: "unpin-item"; collectionId: string; itemId: string };
 
 export type LibraryItemProps = {
+  placement?: MasonryPlacement;
   item: Item;
   inspected: boolean;
   onOpenInspect: () => void;
@@ -107,6 +110,7 @@ const ACTION_BTN =
   "flex min-h-10 w-full items-center gap-2 rounded-control px-2 text-left text-sm text-text-primary hover:bg-bg-raised disabled:opacity-60";
 
 export function LibraryItem({
+  placement,
   item,
   inspected,
   onOpenInspect,
@@ -180,6 +184,11 @@ export function LibraryItem({
     Boolean(item.previewAssetId || (item.previewStatus === "ready" && item.previewImageUrl))
   );
   const rowRef = useRef<HTMLLIElement>(null);
+  const measureElement = placement?.measureElement;
+  const setRowRef = useCallback((node: HTMLLIElement | null) => {
+    rowRef.current = node;
+    measureElement?.(node);
+  }, [measureElement]);
   usePreviewEnrichViewport(
     rowRef,
     item.type === "link" ? item : null,
@@ -428,9 +437,11 @@ export function LibraryItem({
 
   return (
     <li
-      ref={rowRef}
+      ref={setRowRef}
+      style={placement?.style}
+      data-index={placement?.index}
       draggable={dragEnabled}
-      className={`min-w-0 ${isDragging ? "opacity-50" : ""}`}
+      className={`min-w-0 focus-within:z-10 has-[details[open]]:z-10 ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
     >

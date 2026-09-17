@@ -1,4 +1,26 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function expectCardsNotToOverlap(page: Page) {
+  await expect(async () => {
+    const boxes = await page.locator(".library-card").evaluateAll(nodes => nodes.map(node => {
+      const { x, y, width, height } = node.getBoundingClientRect();
+      return { x, y, width, height };
+    }));
+    for (let i = 0; i < boxes.length; i++) {
+      for (const other of boxes.slice(i + 1)) {
+        const box = boxes[i];
+        const overlap = box.x < other.x + other.width - 1 && other.x < box.x + box.width - 1
+          && box.y < other.y + other.height - 1 && other.y < box.y + box.height - 1;
+        expect(overlap).toBe(false);
+      }
+    }
+    for (const box of boxes) {
+      const next = boxes.filter(other => Math.abs(other.x - box.x) < 1 && other.y > box.y)
+        .sort((a, b) => a.y - b.y)[0];
+      if (next) expect(Math.abs(next.y - box.y - box.height - 20)).toBeLessThanOrEqual(1);
+    }
+  }).toPass({ timeout: 5000 });
+}
 
 test.use({ serviceWorkers: "block" });
 
@@ -131,7 +153,93 @@ test("card actions, tag disclosure, selection and collection context work", asyn
   await expect(note.getByRole("button", { name: "Unpin", exact: true })).toBeVisible();
 });
 
-test("a large library keeps measured row virtualization and reaches the last card", async ({ page }) => {
+test("masonry places the next card below a shorter card, not a full row", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>(resolve => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("items", "readwrite");
+      for (let i = 0; i < 2; i++) tx.objectStore("items").put({ id: `packing-${i}`, type: "note", title: `Packing note ${i}`, content: "A short observation.", createdAt: -i, updatedAt: 1, collectionIds: [], tagIds: [] });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  const cards = page.locator(".library-card");
+  await expect(cards).toHaveCount(6);
+  await expectCardsNotToOverlap(page);
+  await expect(async () => {
+    const boxes = await cards.evaluateAll(nodes => nodes.map(node => {
+      const { x, y, width, height } = node.getBoundingClientRect();
+      return { x, y, width, height };
+    }));
+    const tallestBottom = Math.max(...boxes.slice(0, 3).map(box => box.y + box.height));
+    expect(boxes.slice(3).some(box => box.y < tallestBottom + 19)).toBe(true);
+  }).toPass({ timeout: 5000 });
+});
+
+test("masonry remeasures expanded cards and resizing without losing drafts", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const note = page.locator(".library-card").filter({ hasText: "Design notes" });
+  await note.hover();
+  await note.locator("summary").click();
+  await note.getByRole("button", { name: "Edit", exact: true }).click();
+  await note.getByLabel("Note content").fill("Keep this unsaved draft while resizing.");
+  await expectCardsNotToOverlap(page);
+  await page.getByRole("button", { name: "Collapse", exact: true }).click();
+  for (const width of [1024, 640, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect(note.getByLabel("Note content")).toHaveValue("Keep this unsaved draft while resizing.");
+    await expectCardsNotToOverlap(page);
+    expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  }
+  await note.getByRole("button", { name: "Cancel edit" }).click();
+  await expectCardsNotToOverlap(page);
+});
+
+test("masonry preserves ordering through search, sorting and view switching", async ({ page }) => {
+  const headings = page.locator(".library-card").getByRole("heading");
+  await expect(headings).toHaveText(["Customer support", "Design notes", "Footer reference", "example.com/fallback"]);
+  await page.getByRole("button", { name: "Sort library" }).click();
+  await page.getByRole("option", { name: "Oldest", exact: true }).click();
+  await expect(headings).toHaveText(["example.com/fallback", "Footer reference", "Design notes", "Customer support"]);
+  await expectCardsNotToOverlap(page);
+  await page.getByLabel("Search", { exact: true }).fill("Design notes");
+  await expect(headings).toHaveText(["Design notes"]);
+  await page.getByLabel("Search", { exact: true }).fill("");
+  await expect(headings).toHaveCount(4);
+  await page.getByRole("button", { name: "List view" }).click();
+  await expect(page.locator(".library-card")).toHaveCount(0);
+  await page.getByRole("button", { name: "Grid view" }).click();
+  await expect(headings).toHaveCount(4);
+  await expectCardsNotToOverlap(page);
+});
+
+test("opening and closing an image keeps the masonry card in place", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const card = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Customer support" }) });
+  await expect(card.locator("img")).toBeVisible();
+  await card.locator("img").evaluate(img => (img as HTMLImageElement).decode());
+  const before = (await card.boundingBox())!;
+  await card.getByRole("button", { name: "Open Customer support", exact: true }).click();
+  const detail = page.getByRole("dialog");
+  await expect(detail).toBeVisible();
+  await expect(detail.locator("img").first()).toBeVisible();
+  await detail.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(detail).toBeHidden();
+  await expect(async () => {
+    const after = (await card.boundingBox())!;
+    expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
+  }).toPass({ timeout: 5000 });
+  await expectCardsNotToOverlap(page);
+});
+
+test("a large library keeps measured card virtualization and reaches the last card", async ({ page }) => {
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>(resolve => {
       const request = indexedDB.open("keepall");
@@ -156,6 +264,14 @@ test("a large library keeps measured row virtualization and reaches the last car
   }).toPass();
   expect(await page.locator(".library-card").count()).toBeLessThan(124);
   expect(await main.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await expectCardsNotToOverlap(page);
+  await page.getByRole("button", { name: "UI inspiration", exact: true }).click();
+  await expect(page.locator(".library-card")).toHaveCount(4);
+  await expect.poll(() => main.evaluate(el => el.scrollTop)).toBe(0);
+  await expectCardsNotToOverlap(page);
+  await page.getByRole("button", { name: "All items", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Reference 119", exact: true })).toBeVisible();
+  expect(await page.locator(".library-card").count()).toBeLessThan(124);
 });
 
 for (const width of [320, 768, 1024]) {

@@ -25,6 +25,14 @@ import {
   LIBRARY_ITEM_DRAG_MIME,
 } from "./library-drag";
 import type { Item } from "@/domain/item";
+import type { ReactNode } from "react";
+
+// jsdom has no layout. Masonry measurement and windowing are covered in e2e.
+vi.mock("./library-masonry", () => ({
+  LibraryMasonry: ({ items, renderItem }: { items: Item[]; renderItem: (item: Item) => ReactNode }) => (
+    <ul>{items.map(item => renderItem(item))}</ul>
+  ),
+}));
 
 function pickTopMenu(menuLabel: string, optionLabel: string) {
   fireEvent.click(screen.getByRole("button", { name: menuLabel }));
