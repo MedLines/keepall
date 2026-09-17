@@ -219,6 +219,85 @@ test("masonry preserves ordering through search, sorting and view switching", as
   await expectCardsNotToOverlap(page);
 });
 
+test("list rows use open surfaces with thumbnails, excerpts and collection context", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("button", { name: "List view" }).click();
+  const rows = page.locator(".library-list-row");
+  await expect(rows).toHaveCount(4);
+  const image = rows.filter({ hasText: "Customer support" });
+  const note = rows.filter({ hasText: "Design notes" });
+  const link = rows.filter({ hasText: "Footer reference" });
+  await expect(image).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(image).toHaveCSS("border-top-width", "0px");
+  await expect(image).toHaveCSS("border-bottom-width", "1px");
+  await expect(image.locator('img[src^="blob:"]')).toBeVisible();
+  await expect(link.locator('img[src^="blob:"]')).toBeVisible();
+  await expect(note.getByRole("button", { name: "Open Design notes", exact: true })).toContainText("Let the image lead.");
+  await expect(link).toContainText("A spacious footer for a portfolio.");
+  await expect(note.getByLabel("Collections", { exact: true })).toContainText("UI inspiration");
+  await expect(note.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "UI inspiration", exact: true }).click();
+  await expect(note.getByLabel("Collections", { exact: true })).toHaveCount(0);
+});
+
+test("list menus support editing, cancel-delete, selection and collection pinning", async ({ page }) => {
+  await page.getByRole("button", { name: "List view" }).click();
+  const note = page.locator(".library-list-row").filter({ hasText: "Design notes" });
+  await page.mouse.move(0, 0);
+  await expect(note.locator("details")).toHaveCSS("opacity", "0");
+  await note.locator("summary").focus();
+  await expect(note.locator("details")).toHaveCSS("opacity", "1");
+  await page.keyboard.press("Enter");
+  await note.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(note.getByLabel("Note content")).toBeFocused();
+  await note.getByLabel("Note content").fill("Updated from the open list.");
+  await note.getByRole("button", { name: "Save note" }).click();
+  await expect(note).toContainText("Updated from the open list.");
+  await note.hover();
+  await note.locator("summary").click();
+  await note.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(note.getByRole("button", { name: "Confirm delete" })).toBeFocused();
+  await note.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(note.getByRole("button", { name: "Delete", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await note.getByRole("checkbox").check();
+  await expect(note.getByRole("checkbox")).toBeChecked();
+  await note.getByRole("checkbox").uncheck();
+  await page.getByRole("button", { name: "UI inspiration", exact: true }).click();
+  await note.hover();
+  await note.locator("summary").click();
+  await note.getByRole("button", { name: "Pin", exact: true }).click();
+  await expect(note.getByText("Pinned in this collection", { exact: true })).toBeAttached();
+  await expect(note.getByRole("button", { name: "Unpin", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await note.getByRole("button", { name: "Open Design notes", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+});
+
+for (const width of [320, 768, 1024, 1440]) {
+  test(`open list fits at ${width}px in both themes`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const close = page.getByRole("button", { name: "Close navigation", exact: true });
+    if (width < 768) {
+      await expect(close).toBeVisible();
+      await close.click();
+    }
+    await page.getByRole("button", { name: "List view" }).click();
+    const row = page.locator(".library-list-row").first();
+    for (const theme of ["light", "dark"]) {
+      await page.getByRole("combobox", { name: "Theme" }).selectOption(theme);
+      await expect(row).toBeVisible();
+      expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      await row.hover();
+      await row.locator("summary").click();
+      await expect(row.getByRole("button", { name: "Edit", exact: true })).toBeInViewport();
+      await row.locator("summary").press("Escape");
+    }
+  });
+}
+
 test("opening and closing an image keeps the masonry card in place", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const card = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Customer support" }) });
@@ -272,6 +351,14 @@ test("a large library keeps measured card virtualization and reaches the last ca
   await page.getByRole("button", { name: "All items", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Reference 119", exact: true })).toBeVisible();
   expect(await page.locator(".library-card").count()).toBeLessThan(124);
+  await page.getByRole("button", { name: "List view" }).click();
+  await expect(page.locator(".library-list-row").first()).toBeVisible();
+  expect(await page.locator(".library-list-row").count()).toBeLessThan(124);
+  await expect(async () => {
+    await main.evaluate(el => el.scrollTo(0, el.scrollHeight));
+    await expect(page.locator(".library-list-row").filter({ hasText: "example.com/fallback" })).toBeInViewport();
+  }).toPass({ timeout: 10000 });
+  expect(await page.locator(".library-list-row").count()).toBeLessThan(124);
 });
 
 for (const width of [320, 768, 1024]) {
@@ -296,6 +383,32 @@ test.describe("touch card controls", () => {
     await expect(card.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
     await expect(card.getByRole("button", { name: "Delete", exact: true })).toBeInViewport();
   });
+
+  test("list actions and selection work without hover", async ({ page }) => {
+    await page.getByRole("button", { name: "Close navigation", exact: true }).tap();
+    await page.getByRole("button", { name: "List view" }).tap();
+    const row = page.locator(".library-list-row").first();
+    await expect(row.locator("details")).toHaveCSS("opacity", "1");
+    await row.getByRole("checkbox").check();
+    await expect(row.getByRole("checkbox")).toBeChecked();
+    await row.getByRole("checkbox").uncheck();
+    await row.locator("summary").tap();
+    await expect(row.getByRole("button", { name: "Edit", exact: true })).toBeInViewport();
+  });
+});
+
+test("list thumbnail and action placement mirror in RTL", async ({ page }) => {
+  await page.getByRole("button", { name: "List view" }).click();
+  await page.evaluate(() => { document.documentElement.dir = "rtl"; });
+  const row = page.locator(".library-list-row").first();
+  await row.hover();
+  const bounds = (await row.boundingBox())!;
+  const thumbnail = (await row.locator(".library-list-thumbnail").boundingBox())!;
+  const actions = (await row.locator("summary").boundingBox())!;
+  expect(Math.abs(thumbnail.x + thumbnail.width - bounds.x - bounds.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(actions.x - bounds.x)).toBeLessThanOrEqual(1);
+  await row.locator("summary").click();
+  await expect(row.getByRole("button", { name: "Edit", exact: true })).toBeInViewport();
 });
 
 test("action controls mirror in RTL and respect reduced motion", async ({ page }) => {

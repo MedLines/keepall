@@ -26,6 +26,7 @@ export function LibraryVirtualItems({
 }: Props) {
   const rowVirtualizer = useVirtualizer({
     count: items.length,
+    getItemKey: (index) => items[index].id,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => LIBRARY_LIST_ROW_ESTIMATE_PX,
     overscan: 10,
@@ -52,10 +53,10 @@ export function LibraryVirtualItems({
             key={virtualRow.key}
             ref={rowVirtualizer.measureElement}
             data-index={virtualRow.index}
-            className="absolute left-0 top-0 w-full"
+            className="absolute left-0 top-0 w-full focus-within:z-10 has-[details[open]]:z-10"
             style={{ transform: `translateY(${virtualRow.start}px)` }}
           >
-            <ul className="flex flex-col gap-2">
+            <ul className="flex flex-col">
               {renderItem(items[rowIndex])}
             </ul>
           </div>

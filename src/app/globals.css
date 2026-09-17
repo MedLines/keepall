@@ -75,6 +75,21 @@
   transition: opacity 100ms ease-out;
 }
 
+.library-list-thumbnail { width: 88px; height: 64px; }
+.library-list-body { padding-inline-end: 156px; }
+.library-list-date { position: absolute; inset-inline-end: 64px; top: 28px; }
+.library-list-select { transition: opacity 100ms ease-out; }
+
+@container (max-width: 640px) {
+  .library-list-body { padding-inline-end: 44px; }
+  .library-list-date { display: none; }
+  .library-list-thumbnail { width: 64px; height: 56px; }
+}
+
+@container (max-width: 320px) {
+  .library-list-thumbnail { width: 48px; height: 48px; }
+}
+
 /* Touch devices keep a discoverable action trigger without requiring hover. */
 @media (hover: hover) and (pointer: fine) {
   .library-card-actions {
@@ -84,14 +99,20 @@
 
   .library-card:hover .library-card-actions,
   .library-card:focus-within .library-card-actions,
+  .library-list-row:hover .library-card-actions,
+  .library-list-row:focus-within .library-card-actions,
   .library-card-actions[open] {
     opacity: 1;
     pointer-events: auto;
   }
+
+  .library-list-select:not([data-visible="true"]) { opacity: 0; pointer-events: none; }
+  .library-list-row:hover .library-list-select,
+  .library-list-row:focus-within .library-list-select { opacity: 1; pointer-events: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .library-card-actions { transition: none; }
+  .library-card-actions, .library-list-select { transition: none; }
 }
 
 /* The invisible native select keeps a visible focus target in the icon rail. */

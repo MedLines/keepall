@@ -5,6 +5,7 @@ import { imageCoverAssetId } from "@/domain/image";
 import type { Item } from "@/domain/item";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useEffect, useState } from "react";
+import { ImageIcon, LinkIcon, NoteIcon } from "./shell-icons";
 
 type Props = {
   item: Item;
@@ -98,7 +99,7 @@ export function LibraryItemMedia({
             : isInspect
             ? `mx-auto max-h-[min(78vh,56rem)] w-full object-contain outline outline-1 -outline-offset-1 outline-white/10 ${className}`
             : compact
-              ? `size-full object-cover outline outline-1 -outline-offset-1 outline-black/10 ${className}`
+              ? `size-full rounded-[inherit] object-cover outline outline-1 -outline-offset-1 outline-border-media ${className}`
               : `aspect-[16/10] h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/10 ${className}`
         }
         src={imageSrc}
@@ -128,7 +129,7 @@ export function LibraryItemMedia({
             : `flex aspect-[16/10] items-center justify-center bg-bg-raised text-4xl font-semibold text-text-primary ${className}`
       }
     >
-      {cardInitial(item)}
+      {compact ? item.type === "note" ? <NoteIcon className="size-6" /> : item.type === "link" ? <LinkIcon className="size-6" /> : <ImageIcon className="size-6" /> : cardInitial(item)}
     </div>
   );
 }

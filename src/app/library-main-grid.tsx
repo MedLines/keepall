@@ -47,7 +47,7 @@ export function LibraryMainGrid({
   }
 
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className="flex flex-col" aria-label="Library items">
       {visibleItems.map((item) => renderItem(item))}
     </ul>
   );

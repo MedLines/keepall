@@ -10,7 +10,6 @@ import {
   useState,
 } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { cardSecondaryLine } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
 import type { LibraryLayout } from "@/domain/library-view";
 import {
@@ -24,14 +23,7 @@ import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content"
 import { CollectionIcon, DeleteIcon, EditIcon, HashIcon, MoreIcon, PinIcon } from "./shell-icons";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
-
-function formatListDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
+import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
@@ -173,7 +165,6 @@ export function LibraryItem({
   );
 
   const title = itemListTitle(item);
-  const secondary = cardSecondaryLine(item);
   const isList = layoutMode === "list";
   const previewKey = item.type === "link"
     ? `${item.previewAssetId}:${item.previewImageUrl}`
@@ -200,9 +191,6 @@ export function LibraryItem({
     }
   }, [editing, pendingDelete]);
 
-  const typeLabel =
-    item.type === "link" ? "Link" : item.type === "image" ? "Image" : "Note";
-
   const chromeVisible = useBrowseChromeVisible(layoutMode, reduceMotion);
   const chromeMotion = {
     initial: false as const,
@@ -218,13 +206,13 @@ export function LibraryItem({
     <div
       className={
         isList
-          ? "relative size-10 shrink-0"
+          ? "library-list-thumbnail relative shrink-0"
           : "relative mb-3 w-full"
       }
     >
       {inspected ? (
         <div
-          className={isList ? "size-10" : "w-full"}
+          className={isList ? "size-full" : "w-full"}
           style={isList ? undefined : { aspectRatio: imageRatio }}
           aria-hidden
         />
@@ -233,7 +221,7 @@ export function LibraryItem({
           {...itemMediaLayoutProps(item.id, layoutMode, reduceMotion)}
           className={
             isList
-              ? `size-10 overflow-hidden ${item.type === "link" ? "bg-bg-surface shadow-[0_0_0_1px_rgba(0,0,0,0.06)]" : "bg-bg-raised"}`
+              ? "size-full overflow-hidden bg-bg-raised"
               : item.type === "link"
                 ? "w-full overflow-hidden bg-bg-surface"
                 : "w-full cursor-pointer overflow-hidden bg-bg-raised"
@@ -283,10 +271,10 @@ export function LibraryItem({
     </div>
   );
 
-  const cardActions = !isList && !inspected && !editing && !pendingDelete ? (
+  const cardActions = !inspected && !editing && !pendingDelete ? (
     <details
       ref={actionsRef}
-      className="library-card-actions absolute end-3 top-3 z-30"
+      className={`library-card-actions absolute z-30 ${isList ? "end-0 top-5" : "end-3 top-3"}`}
       onKeyDown={(event) => {
         if (event.key === "Escape" && actionsRef.current) {
           event.preventDefault();
@@ -297,7 +285,7 @@ export function LibraryItem({
     >
       <summary
         aria-label={`Actions for ${title}`}
-        className="relative flex size-8 cursor-pointer list-none items-center justify-center rounded-control bg-bg-surface/95 text-text-secondary shadow-edge after:absolute after:-inset-1 hover:text-text-primary [&::-webkit-details-marker]:hidden"
+        className={`relative flex cursor-pointer list-none items-center justify-center rounded-control text-text-secondary hover:text-text-primary [&::-webkit-details-marker]:hidden ${isList ? "size-10 hover:bg-bg-raised" : "size-8 bg-bg-surface/95 shadow-edge after:absolute after:-inset-1"}`}
       >
         <MoreIcon />
       </summary>
@@ -441,15 +429,15 @@ export function LibraryItem({
       style={placement?.style}
       data-index={placement?.index}
       draggable={dragEnabled}
-      className={`min-w-0 focus-within:z-10 has-[details[open]]:z-10 ${isDragging ? "opacity-50" : ""}`}
+      className={`min-w-0 focus-within:z-10 has-[details[open]]:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
     >
       <div
         className={
           isList
-            ? `group flex items-center gap-2 rounded-lg border border-border-edge bg-bg-surface px-2 py-2 ${
-                inspected || selected ? "ring-2 ring-border-focus" : ""
+            ? `library-list-row group relative flex items-start gap-3 border-b border-border-edge py-4 ${
+                selected ? "bg-bg-raised" : ""
               }`
             : `library-card group relative flex flex-col rounded-panel p-2 ${
                 selected ? "outline-2 outline-border-focus" : ""
@@ -464,15 +452,10 @@ export function LibraryItem({
         </span>
       ) : null}
       <label
+        data-visible={checkboxVisible}
         className={
           isList
-            ? `flex size-8 shrink-0 items-center justify-center transition-opacity duration-100 ${
-                !chromeVisible
-                  ? "opacity-0"
-                  : checkboxVisible
-                    ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-100"
-              }`
+            ? `library-list-select absolute start-1 top-5 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-edge ${editing || pendingDelete ? "hidden" : ""}`
             : `absolute start-3 top-3 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity duration-100 ${
                 !chromeVisible
                   ? "pointer-events-none opacity-0"
@@ -492,35 +475,12 @@ export function LibraryItem({
           onClick={(event) => event.stopPropagation()}
         />
       </label>
-      <div
-        className={
-          isList && pinVisible
-            ? `shrink-0 transition-opacity duration-100 ${
-                chromeVisible ? "opacity-100" : "opacity-0"
-              }`
-            : "pointer-events-none hidden"
-        }
-      >
-        {isList && pinVisible ? (
-          <button
-            type="button"
-            className="rounded-md border border-border-edge bg-bg-surface px-2 py-1 text-xs font-medium text-text-primary"
-            aria-label={pinned ? "Unpin" : "Pin"}
-            onClick={(event) => {
-              event.stopPropagation();
-              onTogglePin();
-            }}
-          >
-            {pinned ? "Unpin" : "Pin"}
-          </button>
-        ) : null}
-      </div>
-      {isList || hasMedia ? mediaSlot : null}
+      {isList ? !editing && !pendingDelete ? <button type="button" onClick={onOpenInspect} aria-label={`Preview ${title}`} className="shrink-0 rounded-lg">{mediaSlot}</button> : null : hasMedia ? mediaSlot : null}
       <motion.div
         {...chromeMotion}
         className={
           isList
-            ? "flex min-w-0 flex-1 items-center gap-3"
+            ? `min-w-0 flex-1 ${editing || pendingDelete ? "" : "library-list-body"}`
             : hasMedia ? "px-2 pb-1" : "px-2 pb-1 pt-3"
         }
         style={{ pointerEvents: chromeVisible ? "auto" : "none" }}
@@ -529,26 +489,12 @@ export function LibraryItem({
           <LibraryCardContent item={item} onOpen={onOpenInspect} />
         ) : (
           <div className={isList ? "min-w-0 flex-1 text-left" : undefined}>
-            {isList ? (
-              <button type="button" onClick={onOpenInspect} aria-label={`Open ${title}`} className="block w-full text-left">
-                <span className="block truncate text-sm font-medium">{title}</span>
-                {secondary ? <span className="block truncate text-xs text-text-secondary">{secondary}</span> : null}
-              </button>
+            {isList && !editing && !pendingDelete ? (
+              <LibraryListContent item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} />
             ) : <p className="text-sm font-medium">{title}</p>}
           </div>
         )}
-        {isList ? (
-          <span className="hidden shrink-0 items-center gap-3 text-xs text-text-secondary sm:flex">
-            <span className="rounded bg-bg-raised px-1.5 py-0.5 font-medium text-text-secondary">
-              {typeLabel}
-            </span>
-            <time dateTime={new Date(item.createdAt).toISOString()}>
-              {formatListDate(item.createdAt)}
-            </time>
-          </span>
-        ) : null}
-        {!isList ? (
-          <>
+        {isList && !editing && !pendingDelete ? <LibraryListMetadata collections={collectionNames} tags={tagNames} onBrowseTag={onBrowseTag} /> : null}
 
         {item.type === "note" && editing ? (
           <div className="mt-2 flex flex-col gap-2">
@@ -711,7 +657,7 @@ export function LibraryItem({
             </div>
           </div>
         ) : null}
-        {!editing && !pendingDelete ? (
+        {!isList && !editing && !pendingDelete ? (
           <LibraryCardMetadata
             collections={collectionNames}
             tags={tagNames}
@@ -743,8 +689,6 @@ export function LibraryItem({
               Cancel
             </button>
           </div>
-        ) : null}
-          </>
         ) : null}
       </motion.div>
       </div>
