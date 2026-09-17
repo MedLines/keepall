@@ -288,6 +288,54 @@ test("desktop card actions reveal on hover or focus and stay visible while open"
   await expect(actions).toHaveCSS("opacity", "1");
 });
 
+test("organizer opens from the side without resizing the card", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const note = page.locator(".library-card").filter({ hasText: "Design notes" });
+  const before = (await note.boundingBox())!;
+
+  await note.hover();
+  await note.locator("summary").click();
+  await note.getByRole("button", { name: "Organize" }).click();
+
+  const drawer = page.getByRole("dialog", { name: "Organize Design notes" });
+  await expect(drawer).toBeVisible();
+  await expect(note.locator("details")).not.toHaveAttribute("open", "");
+  await expect.poll(async () => {
+    const box = await drawer.boundingBox();
+    return box ? Math.round(box.x + box.width) : null;
+  }).toBe(1432);
+  const drawerBox = (await drawer.boundingBox())!;
+  expect(Math.abs(drawerBox.x + drawerBox.width - 1432)).toBeLessThanOrEqual(1);
+  expect(drawerBox.width).toBeLessThanOrEqual(448);
+  expect(drawerBox.height).toBe(884);
+  expect(await note.boundingBox()).toEqual(before);
+  await expect(drawer.getByLabel("Add tag")).toBeVisible();
+  await expect(drawer.getByLabel("Move to collection")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+  await expect(note.locator("summary")).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const sidebarBackdrop = page.getByRole("button", { name: "Close sidebar" });
+  const sidebarBackdropBox = (await sidebarBackdrop.boundingBox())!;
+  await page.mouse.click(
+    sidebarBackdropBox.x + sidebarBackdropBox.width - 8,
+    sidebarBackdropBox.y + sidebarBackdropBox.height / 2,
+  );
+  await note.hover();
+  await note.locator("summary").click();
+  await note.getByRole("button", { name: "Organize" }).click();
+  await expect.poll(async () => {
+    const box = await drawer.boundingBox();
+    return box ? Math.round(box.x + box.width) : null;
+  }).toBe(382);
+  const narrowDrawerBox = (await drawer.boundingBox())!;
+  expect(narrowDrawerBox.x).toBe(8);
+  expect(narrowDrawerBox.height).toBe(828);
+  await page.keyboard.press("Escape");
+});
+
 test("image inset outlines follow the rounded preview in both themes", async ({ page }) => {
   const card = page.locator(".library-card").first();
   const image = card.locator("img");
@@ -368,7 +416,7 @@ test("opening one card menu closes the menu left open on another card", async ({
 test("selecting a card keeps the library still and draws the state inside the card", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const heading = page.getByRole("heading", { name: "All items", exact: true });
-  const header = page.locator("header").filter({ has: heading });
+  const header = page.locator("header").filter({ has: page.locator("#library-heading") });
   const layoutControls = page.getByRole("group", { name: "Library layout" });
   const card = page.locator(".library-card").filter({ hasText: "Customer support" });
   const headerBefore = (await header.boundingBox())!;
@@ -390,6 +438,26 @@ test("selecting a card keeps the library still and draws the state inside the ca
   const layoutBounds = (await layoutControls.boundingBox())!;
   expect(bulkBounds.x).toBeGreaterThanOrEqual(headingBounds.x + headingBounds.width);
   expect(bulkBounds.x + bulkBounds.width).toBeLessThanOrEqual(layoutBounds.x);
+
+  await bulkActions.getByRole("button", { name: "Add tag" }).click();
+  const addTagDrawer = page.getByRole("dialog", {
+    name: "Add tag to 1 selected item",
+  });
+  await expect(addTagDrawer).toBeVisible();
+  expect((await header.boundingBox())!.height).toBe(headerAfter.height);
+  expect((await card.boundingBox())!.y).toBe(cardAfter.y);
+  await page.keyboard.press("Escape");
+  await expect(addTagDrawer).toBeHidden();
+
+  await bulkActions.getByRole("button", { name: "Remove tag" }).click();
+  const removeTagDrawer = page.getByRole("dialog", {
+    name: "Remove tag from 1 selected item",
+  });
+  await expect(removeTagDrawer).toBeVisible();
+  expect((await header.boundingBox())!.height).toBe(headerAfter.height);
+  expect((await card.boundingBox())!.y).toBe(cardAfter.y);
+  await page.keyboard.press("Escape");
+  await expect(removeTagDrawer).toBeHidden();
 
   await expect(card).toHaveCSS("outline-style", "none");
   const lightSelection = await card.evaluate(element => getComputedStyle(element).boxShadow);

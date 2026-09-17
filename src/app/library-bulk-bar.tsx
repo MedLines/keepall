@@ -1,5 +1,6 @@
 "use client";
 
+import { SideDrawer } from "@/components/ui/side-drawer";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 
@@ -149,7 +150,23 @@ type PanelsProps = Pick<
   | "onBulkAddCollection"
 >;
 
-/** Confirm / form row under the top bar when a bulk panel is open. */
+function bulkPanelTitle(panel: BulkPanel, count: number): string {
+  const itemLabel = `${count} selected item${count === 1 ? "" : "s"}`;
+  switch (panel) {
+    case "add-tag":
+      return `Add tag to ${itemLabel}`;
+    case "remove-tag":
+      return `Remove tag from ${itemLabel}`;
+    case "add-collection":
+      return `Move ${itemLabel} to a collection`;
+    case "delete":
+      return `Delete ${itemLabel}`;
+    default:
+      return "Bulk action";
+  }
+}
+
+/** Drawer containing the active bulk action. */
 export function LibraryBulkPanels({
   count,
   panel,
@@ -178,98 +195,124 @@ export function LibraryBulkPanels({
     return null;
   }
 
+  const side =
+    typeof document !== "undefined" && document.documentElement.dir === "rtl"
+      ? "left"
+      : "right";
+
   return (
-    <div className="border-t border-border-subtle bg-bg-canvas/80 px-3 py-2 sm:px-4">
-      {panel === "delete" ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm text-text-primary">
-            Delete {count} item{count === 1 ? "" : "s"}? This cannot be undone.
+    <SideDrawer
+      open
+      side={side}
+      title={bulkPanelTitle(panel, count)}
+      description="This change applies to the current selection."
+      closeDisabled={busy}
+      onOpenChange={(open, eventDetails) => {
+        if (open) {
+          return;
+        }
+        if (busy) {
+          eventDetails.cancel();
+          return;
+        }
+        onClosePanel();
+      }}
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+        {panel === "delete" ? (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-text-primary">
+              Delete {count} item{count === 1 ? "" : "s"}? This cannot be
+              undone.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="min-h-10 rounded-control border border-border-danger bg-bg-surface px-3 text-sm font-medium text-text-danger disabled:opacity-60"
+                disabled={busy}
+                type="button"
+                onClick={onConfirmDelete}
+              >
+                {pendingDelete ? "Deleting…" : "Confirm delete"}
+              </button>
+              <button
+                className="min-h-10 rounded-control border border-border-edge bg-bg-surface px-3 text-sm font-medium text-text-primary disabled:opacity-60"
+                disabled={busy}
+                type="button"
+                onClick={onClosePanel}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {panel === "add-tag" ? (
+          <div>
+            <OrgNameSuggest
+              inputId="bulk-add-tag"
+              label="Add tag to selection"
+              placeholder="Search or create a tag"
+              value={tagDraft}
+              suggestions={tagSuggestions}
+              disabled={busy}
+              pending={pendingAddTag}
+              submitLabel="Add"
+              error={error}
+              suggestWhenEmpty={false}
+              onChange={onTagDraftChange}
+              onCancel={onClosePanel}
+              onSubmit={onBulkAddTag}
+            />
+          </div>
+        ) : null}
+
+        {panel === "remove-tag" ? (
+          <div>
+            <OrgNameSuggest
+              inputId="bulk-remove-tag"
+              label="Remove tag from selection"
+              placeholder="Search selected tags"
+              value={removeTagDraft}
+              suggestions={removeTagSuggestions}
+              disabled={busy}
+              pending={pendingRemoveTag}
+              submitLabel="Remove"
+              error={error}
+              suggestWhenEmpty={false}
+              onChange={onRemoveTagDraftChange}
+              onCancel={onClosePanel}
+              onSubmit={onBulkRemoveTag}
+            />
+          </div>
+        ) : null}
+
+        {panel === "add-collection" ? (
+          <div>
+            <OrgNameSuggest
+              inputId="bulk-add-collection"
+              label="Move selection to collection"
+              placeholder="Search or create a collection"
+              value={collectionDraft}
+              suggestions={collectionSuggestions}
+              disabled={busy}
+              pending={pendingAddCollection}
+              submitLabel="Move"
+              error={error}
+              suggestWhenEmpty={false}
+              onChange={onCollectionDraftChange}
+              onCancel={onClosePanel}
+              onSubmit={onBulkAddCollection}
+            />
+          </div>
+        ) : null}
+
+        {panel === null && error ? (
+          <p className="text-sm text-text-danger" role="alert">
+            {error}
           </p>
-          <button
-            className="rounded-md border border-border-danger bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-danger disabled:opacity-60"
-            disabled={busy}
-            type="button"
-            onClick={onConfirmDelete}
-          >
-            {pendingDelete ? "Deleting…" : "Confirm delete"}
-          </button>
-          <button
-            className="rounded-md border border-border-edge bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-primary disabled:opacity-60"
-            disabled={busy}
-            type="button"
-            onClick={onClosePanel}
-          >
-            Cancel
-          </button>
-        </div>
-      ) : null}
-
-      {panel === "add-tag" ? (
-        <div className="max-w-md">
-          <OrgNameSuggest
-            compact
-            inputId="bulk-add-tag"
-            label="Add tag to selection"
-            placeholder="Tag name"
-            value={tagDraft}
-            suggestions={tagSuggestions}
-            disabled={busy}
-            pending={pendingAddTag}
-            submitLabel="Add"
-            error={error}
-            onChange={onTagDraftChange}
-            onCancel={onClosePanel}
-            onSubmit={onBulkAddTag}
-          />
-        </div>
-      ) : null}
-
-      {panel === "remove-tag" ? (
-        <div className="max-w-md">
-          <OrgNameSuggest
-            compact
-            inputId="bulk-remove-tag"
-            label="Remove tag from selection"
-            placeholder="Tag name"
-            value={removeTagDraft}
-            suggestions={removeTagSuggestions}
-            disabled={busy}
-            pending={pendingRemoveTag}
-            submitLabel="Remove"
-            error={error}
-            onChange={onRemoveTagDraftChange}
-            onCancel={onClosePanel}
-            onSubmit={onBulkRemoveTag}
-          />
-        </div>
-      ) : null}
-
-      {panel === "add-collection" ? (
-        <div className="max-w-md">
-          <OrgNameSuggest
-            compact
-            inputId="bulk-add-collection"
-            label="Move selection to collection"
-            placeholder="Collection"
-            value={collectionDraft}
-            suggestions={collectionSuggestions}
-            disabled={busy}
-            pending={pendingAddCollection}
-            submitLabel="Move"
-            error={error}
-            onChange={onCollectionDraftChange}
-            onCancel={onClosePanel}
-            onSubmit={onBulkAddCollection}
-          />
-        </div>
-      ) : null}
-
-      {panel === null && error ? (
-        <p className="text-sm text-text-danger" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </div>
+        ) : null}
+      </div>
+    </SideDrawer>
   );
 }
 

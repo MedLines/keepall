@@ -43,6 +43,7 @@ import {
   captureTagConflict,
 } from "@/domain/link";
 import type { CaptureOrgDrafts } from "@/domain/capture-org";
+import { SideDrawer } from "@/components/ui/side-drawer";
 
 
 const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-8 px-3 text-xs disabled:opacity-60`;
@@ -135,7 +136,7 @@ export function CaptureHost() {
   const [linkConflict, setLinkConflict] = useState<CaptureLinkConflict | null>(
     null,
   );
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [captureSide, setCaptureSide] = useState<"left" | "right">("right");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveInFlightRef = useRef(false);
@@ -151,15 +152,22 @@ export function CaptureHost() {
   const orgLocked = state.status === "saving" || state.status === "reading";
 
   useEffect(() => {
+    function openCapture() {
+      setCaptureSide(
+        document.documentElement.dir === "rtl" ? "left" : "right",
+      );
+      dispatch({ type: "open" });
+    }
+
     function onKeyDown(event: KeyboardEvent) {
       if (isCaptureOpenShortcut(event)) {
         event.preventDefault();
-        dispatch({ type: "open" });
+        openCapture();
       }
     }
 
     function onOpenCapture() {
-      dispatch({ type: "open" });
+      openCapture();
     }
 
     window.addEventListener("keydown", onKeyDown);
@@ -169,21 +177,6 @@ export function CaptureHost() {
       window.removeEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
     };
   }, []);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) {
-      return;
-    }
-
-    if (isActive && !dialog.open) {
-      dialog.showModal();
-    }
-
-    if (!isActive && dialog.open) {
-      dialog.close();
-    }
-  }, [isActive]);
 
   useEffect(() => {
     if (state.status !== "reading") {
@@ -586,50 +579,27 @@ export function CaptureHost() {
 
   return (
     <>
-    <dialog
-      ref={dialogRef}
-      className="fixed inset-0 m-auto h-fit max-h-[min(90dvh,40rem)] w-[min(100%-2rem,32rem)] overflow-y-auto rounded-[12px] bg-bg-surface p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/20 [&::backdrop]:backdrop-blur-[1px]"
-      aria-labelledby="capture-title"
-      onCancel={(event) => {
-        if (shouldBlockDialogDismiss(state.status)) {
-          event.preventDefault();
-          event.stopPropagation();
+    <SideDrawer
+      open={isActive}
+      side={captureSide}
+      title="Save to Keepall"
+      description="Paste a link, write a note, or add images."
+      widthClassName="w-[min(32rem,calc(100vw-1rem))]"
+      closeDisabled={shouldBlockDialogDismiss(state.status)}
+      onOpenChange={(open, eventDetails) => {
+        if (open) {
+          return;
         }
-      }}
-      onClose={() => {
         if (shouldBlockDialogDismiss(state.status)) {
-          const dialog = dialogRef.current;
-          if (dialog && !dialog.open) {
-            try {
-              dialog.setAttribute("open", "");
-            } catch {
-              // ignore
-            }
-            try {
-              dialog.open = true;
-            } catch {
-              // ignore
-            }
-
-            window.setTimeout(() => {
-              try {
-                dialog.showModal();
-              } catch {
-                // ignore
-              }
-            }, 0);
-          }
+          eventDetails.cancel();
           return;
         }
         resetSession();
         dispatch({ type: "dismiss" });
       }}
     >
-      <h2 className="text-lg font-semibold tracking-tight" id="capture-title">
-        Save to Keepall
-      </h2>
       <form
-        className="mt-3 flex flex-col gap-4"
+        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5"
         onSubmit={onSubmit}
         onPaste={onPaste}
         onKeyDown={(event) => {
@@ -789,7 +759,7 @@ export function CaptureHost() {
             {state.error}
           </p>
         ) : null}
-        <div className="flex items-center gap-3">
+        <div className="-mx-5 mt-auto flex items-center gap-3 border-t border-border-edge px-5 pt-4">
           <button
             className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} px-4 disabled:opacity-60`}
             type="submit"
@@ -819,13 +789,13 @@ export function CaptureHost() {
           )}
         </div>
       </form>
-    </dialog>
-    <CaptureLinkConflictDialog
-      conflict={linkConflict}
-      busy={state.status === "saving"}
-      onConfirm={(choice) => void confirmLinkConflict(choice)}
-      onCancel={cancelLinkConflict}
-    />
+      <CaptureLinkConflictDialog
+        conflict={linkConflict}
+        busy={state.status === "saving"}
+        onConfirm={(choice) => void confirmLinkConflict(choice)}
+        onCancel={cancelLinkConflict}
+      />
+    </SideDrawer>
     </>
   );
 }

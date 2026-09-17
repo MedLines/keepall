@@ -109,7 +109,7 @@ describe("CaptureHost", () => {
     expect(await screen.findByRole("dialog")).toBeVisible();
   });
 
-  test("blocks the dialog cancel event while saving", async () => {
+  test("blocks drawer dismissal while saving", async () => {
     vi.mocked(createNote).mockImplementation(
       () =>
         new Promise(() => {
@@ -122,22 +122,10 @@ describe("CaptureHost", () => {
 
     expect(await screen.findByRole("button", { name: "Saving…" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Close drawer" })).toBeDisabled();
 
-    const dialog = screen.getByRole("dialog") as HTMLDialogElement;
-    const cancelEvent = new Event("cancel", { bubbles: true, cancelable: true });
-    dialog.dispatchEvent(cancelEvent);
-
-    expect(cancelEvent.defaultPrevented).toBe(true);
-    expect((screen.getByRole("dialog") as HTMLDialogElement).open).toBe(true);
-
-    // Regression: Escape/native close can still attempt to close the dialog while
-    // the reducer is in `saving`. We should re-open to keep UI+reducer consistent.
-    //
-    // jsdom's dialog.close() doesn't reliably trigger the same event sequence
-    // as a real browser Escape, so we dispatch the DOM "close" event directly.
-    dialog.removeAttribute("open");
-    dialog.dispatchEvent(new Event("close"));
-    await waitFor(() => expect(dialog.open).toBe(true));
+    fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
+    expect(screen.getByRole("dialog", { name: "Save to Keepall" })).toBeVisible();
   });
 
   test("ignores a second submit while a write is in flight", async () => {

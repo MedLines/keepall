@@ -58,7 +58,7 @@
 }
 
 @layer base {
-  body { font-family: var(--font-sans); }
+  body { position: relative; font-family: var(--font-sans); }
   button:not(:disabled), select { cursor: pointer; }
   :where(button, a, input, textarea, select, summary):focus-visible {
     outline: 2px solid var(--color-border-focus);

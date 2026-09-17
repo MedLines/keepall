@@ -561,8 +561,22 @@ describe("Library tags", () => {
     expect(await within(main).findByText("inspiration")).toBeInTheDocument();
     expect(within(main).queryByText("No tags yet.")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Add tag" }),
+      screen.getByRole("button", { name: "Organize" }),
     ).toBeInTheDocument();
+  });
+
+  test("opens item organization in a dedicated drawer", async () => {
+    vi.mocked(listItems).mockResolvedValue([note]);
+    render(<Library />);
+
+    await screen.findByText("A persisted note");
+    fireEvent.click(screen.getByRole("button", { name: "Organize" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Organize Untitled" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Add tag")).toBeInTheDocument();
+    expect(screen.getByLabelText("Move to collection")).toBeInTheDocument();
   });
 
   test("adds a tag to an item and shows the name after reload", async () => {
@@ -578,16 +592,17 @@ describe("Library tags", () => {
     vi.mocked(assignTagToItem).mockResolvedValue(tagged);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Add tag" }));
-    fireEvent.change(screen.getByPlaceholderText("Tag name"), {
+    fireEvent.click(await screen.findByRole("button", { name: "Organize" }));
+    fireEvent.change(screen.getByLabelText("Add tag"), {
       target: { value: "inspiration" },
     });
-    fireEvent.submit(screen.getByPlaceholderText("Tag name").closest("form")!);
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await waitFor(() => {
       expect(createTag).toHaveBeenCalledWith({ name: "inspiration" });
       expect(assignTagToItem).toHaveBeenCalledWith("n1", "t1");
     });
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
     fireEvent.click(await within(screen.getByRole("main")).findByRole("button", { name: "1 tag" }));
     await waitFor(() => {
       expect(
@@ -773,17 +788,18 @@ describe("Library collections", () => {
     await screen.findByText("A persisted note");
     const noteCard = screen.getByText("A persisted note").closest("li")!;
     fireEvent.click(
-      within(noteCard).getByRole("button", { name: "Add to collection" }),
+      within(noteCard).getByRole("button", { name: "Organize" }),
     );
-    fireEvent.change(document.getElementById("add-collection-n1")!, {
+    fireEvent.change(screen.getByLabelText("Move to collection"), {
       target: { value: "Reading" },
     });
-    fireEvent.click(within(noteCard).getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move" }));
 
     await waitFor(() => {
       expect(createCollection).toHaveBeenCalledWith({ name: "Reading" });
       expect(assignCollectionToItem).toHaveBeenCalledWith("n1", "c1");
     });
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(
       await within(screen.getByRole("complementary", { name: "Sidebar" }))
         .findByRole("button", { name: "Reading" }),

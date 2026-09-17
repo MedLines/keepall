@@ -5,7 +5,6 @@ import {
   type KeyboardEvent,
   type Ref,
   useCallback,
-  useEffect,
   useRef,
   useState,
 } from "react";
@@ -20,10 +19,11 @@ import {
 import { LibraryItemMedia } from "./library-item-media";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
-import { CollectionIcon, DeleteIcon, EditIcon, HashIcon, MoreIcon, PinIcon } from "./shell-icons";
-import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
+import { DeleteIcon, EditIcon, LayersIcon, MoreIcon, PinIcon } from "./shell-icons";
+import type { OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
 import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
+import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
@@ -157,9 +157,8 @@ export function LibraryItem({
   onTogglePin,
   layoutMode,
 }: LibraryItemProps) {
-  const [tagDraft, setTagDraft] = useState("");
-  const [collectionDraft, setCollectionDraft] = useState("");
-  const [orgPanel, setOrgPanel] = useState<"tag" | "collection" | null>(null);
+  const [organizerOpen, setOrganizerOpen] = useState(false);
+  const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
   const [imageRatio, setImageRatio] = useState(1.6);
   const [failedPreview, setFailedPreview] = useState<string | null>(null);
   const actionsRef = useRef<HTMLDetailsElement>(null);
@@ -193,12 +192,6 @@ export function LibraryItem({
     rowRef,
     item.type === "link" ? item : null,
   );
-
-  useEffect(() => {
-    if (editing || pendingDelete) {
-      setOrgPanel(null);
-    }
-  }, [editing, pendingDelete]);
 
   const chromeVisible = useBrowseChromeVisible(layoutMode, reduceMotion);
   const chromeMotion = {
@@ -285,14 +278,10 @@ export function LibraryItem({
       ref={actionsRef}
       name="library-card-actions"
       className={`library-card-actions absolute z-30 ${isList ? "end-0 top-5" : "end-3 top-3"}`}
-      onToggle={(event) => {
-        if (!event.currentTarget.open) setOrgPanel(null);
-      }}
       onKeyDown={(event) => {
         if (event.key === "Escape" && actionsRef.current) {
           event.preventDefault();
           actionsRef.current.open = false;
-          setOrgPanel(null);
           actionsRef.current.querySelector("summary")?.focus();
         }
       }}
@@ -313,10 +302,7 @@ export function LibraryItem({
                   className={ACTION_BTN}
                   aria-label={pinned ? "Unpin" : "Pin"}
                   disabled={mutationBusy}
-                  onClick={() => {
-                    setOrgPanel(null);
-                    onTogglePin();
-                  }}
+                  onClick={onTogglePin}
                 >
                   <PinIcon />
                   {pendingMutation?.op === "pin-item" &&
@@ -335,10 +321,7 @@ export function LibraryItem({
                 className={ACTION_BTN}
                 data-focus-return={`edit:${item.id}`}
                 disabled={mutationBusy}
-                onClick={() => {
-                  setOrgPanel(null);
-                  onStartEdit();
-                }}
+                onClick={onStartEdit}
               >
                 <EditIcon /> Edit
               </button>
@@ -348,94 +331,33 @@ export function LibraryItem({
                 aria-label="Delete"
                 data-focus-return={`delete:${item.id}`}
                 disabled={mutationBusy}
-                onClick={() => {
-                  setOrgPanel(null);
-                  onStartDelete();
-                }}
+                onClick={onStartDelete}
               >
                 <DeleteIcon /> Delete
               </button>
               <button
                 type="button"
                 className={ACTION_BTN}
-                aria-expanded={orgPanel === "tag"}
-                aria-label="Add tag"
+                aria-label="Organize"
                 disabled={mutationBusy}
-                onClick={() =>
-                  setOrgPanel((panel) => (panel === "tag" ? null : "tag"))
-                }
+                onClick={() => {
+                  setOrganizerSide(
+                    document.documentElement.dir === "rtl" ? "left" : "right",
+                  );
+                  if (actionsRef.current) actionsRef.current.open = false;
+                  setOrganizerOpen(true);
+                }}
               >
-                <HashIcon /> Add tag
-              </button>
-              <button
-                type="button"
-                className={ACTION_BTN}
-                aria-expanded={orgPanel === "collection"}
-                aria-label="Add to collection"
-                disabled={mutationBusy}
-                onClick={() =>
-                  setOrgPanel((panel) =>
-                    panel === "collection" ? null : "collection",
-                  )
-                }
-              >
-                <CollectionIcon /> Move to collection
+                <LayersIcon /> Organize
               </button>
             </div>
-            {orgPanel === "tag" ? (
-              <div className="min-w-0 p-1">
-                <OrgNameSuggest
-                  compact
-                  hideLabel
-                  inputId={`add-tag-${item.id}`}
-                  label="Add tag"
-                  placeholder="Tag name"
-                  value={tagDraft}
-                  suggestions={availableTagSuggestions}
-                  disabled={mutationBusy}
-                  pending={
-                    pendingMutation?.op === "assign-tag" &&
-                    pendingMutation.id === item.id
-                  }
-                  error={tagError}
-                  onChange={setTagDraft}
-                  onCancel={() => setOrgPanel(null)}
-                  onSubmit={(name) => {
-                    onAddTag(name);
-                    setTagDraft("");
-                  }}
-                />
-              </div>
-            ) : null}
-            {orgPanel === "collection" ? (
-              <div className="min-w-0 p-1">
-                <OrgNameSuggest
-                  compact
-                  hideLabel
-                  inputId={`add-collection-${item.id}`}
-                  label="Add to collection"
-                  placeholder="Collection"
-                  value={collectionDraft}
-                  suggestions={availableCollectionSuggestions}
-                  disabled={mutationBusy}
-                  pending={
-                    pendingMutation?.op === "assign-collection" &&
-                    pendingMutation.id === item.id
-                  }
-                  error={collectionError}
-                  onChange={setCollectionDraft}
-                  onCancel={() => setOrgPanel(null)}
-                  onSubmit={(name) => {
-                    onAddCollection(name);
-                    setCollectionDraft("");
-                    setOrgPanel(null);
-                  }}
-                />
-              </div>
-            ) : null}
           </div>
     </details>
   ) : null;
+
+  const assignedCollections = item.collectionIds
+    .map((id) => collectionSuggestions.find((entry) => entry.id === id))
+    .filter((entry): entry is OrgNameSuggestion => Boolean(entry));
 
   return (
     <li
@@ -449,6 +371,37 @@ export function LibraryItem({
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
     >
+      <ItemOrganizerDrawer
+        open={organizerOpen}
+        onOpenChange={(open) => {
+          setOrganizerOpen(open);
+          if (!open) {
+            window.requestAnimationFrame(() => {
+              actionsRef.current?.querySelector("summary")?.focus();
+            });
+          }
+        }}
+        side={organizerSide}
+        itemTitle={title}
+        tags={tagNames}
+        collections={assignedCollections}
+        tagSuggestions={availableTagSuggestions}
+        collectionSuggestions={availableCollectionSuggestions}
+        disabled={mutationBusy}
+        pendingTag={
+          pendingMutation?.op === "assign-tag" &&
+          pendingMutation.id === item.id
+        }
+        pendingCollection={
+          pendingMutation?.op === "assign-collection" &&
+          pendingMutation.id === item.id
+        }
+        tagError={tagError}
+        collectionError={collectionError}
+        onAddTag={onAddTag}
+        onRemoveTag={onRemoveTag}
+        onMoveToCollection={onAddCollection}
+      />
       <div
         data-selected={selected || undefined}
         className={
