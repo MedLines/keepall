@@ -59,7 +59,7 @@ export function LibraryItemMedia({
   const previewSrc = localObjectUrl ?? remoteUrl;
   const faviconSrc =
     item.type === "link" && !previewSrc && !faviconBroken
-      ? linkFaviconUrl(item.url, { size: compact ? 32 : 64 })
+      ? linkFaviconUrl(item.url, { size: 64 })
       : null;
   const imageSrc = previewSrc ?? faviconSrc;
   const isFaviconOnly = Boolean(faviconSrc && imageSrc === faviconSrc);
@@ -80,7 +80,7 @@ export function LibraryItemMedia({
         {/* eslint-disable-next-line @next/next/no-img-element -- remote favicon at native size */}
         <img
           alt=""
-          className={compact ? "size-5 object-contain" : "size-12 object-contain"}
+          className={compact ? "size-8 object-contain" : "size-12 object-contain"}
           src={faviconSrc}
           onError={() => setFaviconBroken(true)}
         />

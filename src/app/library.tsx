@@ -1322,6 +1322,7 @@ export function Library() {
           collectionErrorItemId === item.id ? collectionError : null
         }
         onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
+        onRemoveTag={(tagId: string) => void removeTagFromItem(item.id, tagId)}
         editing={editingId === item.id && inspectId !== item.id}
         pendingDelete={
           pendingDeleteId === item.id && inspectId !== item.id
@@ -1345,7 +1346,6 @@ export function Library() {
         onConfirmDelete={() => void confirmDelete(item.id)}
         onCancelDelete={cancelDelete}
         onAddTag={(name: string) => void addTagToItem(item.id, name)}
-        onRemoveTag={(tagId: string) => void removeTagFromItem(item.id, tagId)}
         onAddCollection={(name: string) =>
           void addCollectionToItem(item.id, name)
         }

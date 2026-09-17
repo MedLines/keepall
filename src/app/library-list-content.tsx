@@ -8,13 +8,13 @@ import { LinkIcon, PinIcon } from "./shell-icons";
 
 function LinkContext({ item }: { item: LinkItem }) {
   const [broken, setBroken] = useState(false);
-  const favicon = linkFaviconUrl(item.url, { size: 32 });
+  const favicon = linkFaviconUrl(item.url, { size: 64 });
   return (
     <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-text-secondary">
       {favicon && !broken ? (
         // eslint-disable-next-line @next/next/no-img-element -- small remote site favicon
-        <img src={favicon} alt="" className="size-4 shrink-0 rounded-sm" onError={() => setBroken(true)} />
-      ) : <LinkIcon className="size-4" />}
+        <img src={favicon} alt="" className="size-6 shrink-0 rounded-md" onError={() => setBroken(true)} />
+      ) : <LinkIcon className="size-6" />}
       <span className="truncate">{linkCardHost(item)}{item.previewDescription ? ` · ${item.previewDescription}` : ""}</span>
     </span>
   );

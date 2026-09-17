@@ -71,9 +71,8 @@ for (const width of [320, 768, 1024, 1440]) {
 test("a populated grid fits the narrow content panel", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto("/");
-  if (await page.getByRole("button", { name: "Close navigation", exact: true }).isVisible()) {
-    await page.getByRole("button", { name: "Close navigation", exact: true }).click();
-  }
+  await expect(page.getByRole("button", { name: "Close navigation", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Close navigation", exact: true }).click();
   await page.getByRole("button", { name: "Save item", exact: true }).click();
   await page.getByLabel("Link, note, or image").fill("A narrow-screen note");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -89,10 +88,10 @@ test("desktop shell keeps search and view controls inside the inset panel", asyn
   const bounds = await panel.boundingBox();
   // Runtime storage/offline notices sit above the shell, outside the design frame.
   const shellTop = (await panel.locator("..").boundingBox())!.y;
-  expect(bounds).toMatchObject({ x: 224, y: shellTop + 10, width: 1206, height: 1100 - shellTop });
+  expect(bounds).toMatchObject({ x: 256, y: shellTop + 10, width: 1174, height: 1100 - shellTop });
   await expect(panel).toHaveCSS("border-radius", "20px");
-  expect(await page.getByRole("searchbox", { name: "Search", exact: true }).boundingBox()).toMatchObject({ x: 304, y: shellTop + 34, width: 360, height: 44 });
-  expect(await page.getByRole("button", { name: "Collapse", exact: true }).boundingBox()).toMatchObject({ x: 248, y: shellTop + 34, width: 44, height: 44 });
+  expect(await page.getByRole("searchbox", { name: "Search", exact: true }).boundingBox()).toMatchObject({ x: 336, y: shellTop + 34, width: 360, height: 44 });
+  expect(await page.getByRole("button", { name: "Collapse", exact: true }).boundingBox()).toMatchObject({ x: 280, y: shellTop + 34, width: 44, height: 44 });
   expect(await page.getByRole("group", { name: "Library layout" }).boundingBox()).toMatchObject({ x: 1262, y: shellTop + 102, width: 88, height: 44 });
   expect(await page.getByRole("button", { name: "Sort library" }).boundingBox()).toMatchObject({ x: 1362, y: shellTop + 102, width: 44, height: 44 });
   await page.getByRole("button", { name: "Collapse", exact: true }).click();
@@ -100,5 +99,5 @@ test("desktop shell keeps search and view controls inside the inset panel", asyn
   await expect(page.getByRole("button", { name: "Images", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Expand", exact: true }).focus();
   await page.keyboard.press("Enter");
-  await expect.poll(async () => (await panel.boundingBox())?.x).toBe(224);
+  await expect.poll(async () => (await panel.boundingBox())?.x).toBe(256);
 });

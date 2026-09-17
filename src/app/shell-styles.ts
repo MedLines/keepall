@@ -45,7 +45,7 @@ export function writeShellTagsOpen(open: boolean): void {
 }
 
 /** Expanded navigation width; the content panel begins at this edge. */
-export const SHELL_SIDEBAR_EXPANDED = "w-56";
+export const SHELL_SIDEBAR_EXPANDED = "w-64";
 
 /** Collapsed sidebar width (icon rail). */
 export const SHELL_SIDEBAR_COLLAPSED = "w-14";

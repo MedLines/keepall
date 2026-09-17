@@ -78,9 +78,9 @@ export type LibraryItemProps = {
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
   onAddTag: (name: string) => void;
-  onRemoveTag: (tagId: string) => void;
   onAddCollection: (name: string) => void;
   onBrowseTag: (tagId: string) => void;
+  onRemoveTag: (tagId: string) => void;
   onStartEdit: () => void;
   onStartDelete: () => void;
   selected: boolean;
@@ -129,9 +129,9 @@ export function LibraryItem({
   onConfirmDelete,
   onCancelDelete,
   onAddTag,
-  onRemoveTag,
   onAddCollection,
   onBrowseTag,
+  onRemoveTag,
   onStartEdit,
   onStartDelete,
   selected,
@@ -429,7 +429,7 @@ export function LibraryItem({
       style={placement?.style}
       data-index={placement?.index}
       draggable={dragEnabled}
-      className={`min-w-0 focus-within:z-10 has-[details[open]]:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
+      className={`library-item-root min-w-0 focus-within:z-10 has-[details[open]]:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
     >
@@ -661,7 +661,6 @@ export function LibraryItem({
           <LibraryCardMetadata
             collections={collectionNames}
             tags={tagNames}
-            mutationBusy={mutationBusy}
             onBrowseTag={onBrowseTag}
             onRemoveTag={onRemoveTag}
           />

@@ -32,11 +32,12 @@ export function ItemTagChips({
         return (
           <li
             key={tag.id}
-            className="inline-flex items-center rounded bg-bg-raised text-xs text-text-secondary"
+            className="inline-flex min-w-0 max-w-full items-center rounded-md bg-bg-raised text-xs text-text-secondary"
           >
             <button
               type="button"
-              className="px-1.5 py-0.5 transition-colors hover:bg-bg-raised"
+              title={tag.name}
+              className="min-h-8 min-w-0 truncate px-2 text-start transition-colors hover:text-text-primary"
               onClick={() => {
                 setPendingRemoveId(null);
                 onBrowseTag(tag.id);
@@ -47,7 +48,7 @@ export function ItemTagChips({
             {confirming ? (
               <button
                 type="button"
-                className="border-l border-border-edge px-1.5 py-0.5 font-medium text-text-primary transition-colors hover:bg-bg-raised"
+                className="min-h-8 shrink-0 border-s border-border-edge px-2 font-medium text-text-primary transition-colors hover:bg-bg-raised"
                 aria-label={`Confirm remove tag ${tag.name}`}
                 disabled={mutationBusy}
                 onClick={() => {
@@ -60,7 +61,7 @@ export function ItemTagChips({
             ) : (
               <button
                 type="button"
-                className="border-l border-border-edge px-1.5 py-0.5 transition-colors hover:bg-bg-raised"
+                className="min-h-8 shrink-0 border-s border-border-edge px-2 transition-colors hover:bg-bg-raised"
                 aria-label={`Remove tag ${tag.name}`}
                 disabled={mutationBusy}
                 onClick={() => setPendingRemoveId(tag.id)}

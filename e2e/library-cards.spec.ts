@@ -62,6 +62,109 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+for (const view of ["Grid", "List"] as const) {
+  for (const title of ["Customer support", "Footer reference"]) {
+    test(`${view}: ${title} exposes tags that open the tag view`, async ({ page }) => {
+      await page.getByRole("button", { name: `${view} view`, exact: true }).click();
+      const item = page.locator(view === "Grid" ? ".library-card" : ".library-list-row").filter({ hasText: title });
+      if (view === "Grid") {
+        await item.hover();
+        await item.getByRole("button", { name: "1 tag" }).click();
+      }
+      await expect(item.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
+      await item.getByRole("button", { name: "minimal", exact: true }).click();
+      await expect(page).toHaveURL(/tag=t(?:&|$)/);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(item).toBeVisible();
+    });
+  }
+
+  test(`${view}: extra image tags expand and navigate without opening the image`, async ({ page }) => {
+    await page.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>(resolve => {
+        const request = indexedDB.open("keepall");
+        request.onsuccess = () => resolve(request.result);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(["items", "tags"], "readwrite");
+        tx.objectStore("tags").put({ id: "t2", name: "motion", createdAt: 2 });
+        tx.objectStore("tags").put({ id: "t3", name: "typography", createdAt: 3 });
+        const request = tx.objectStore("items").get("image");
+        request.onsuccess = () => tx.objectStore("items").put({ ...request.result, tagIds: ["t", "t2", "t3"] });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    });
+    await page.reload();
+    await page.getByRole("button", { name: `${view} view`, exact: true }).click();
+    const item = page.locator(view === "Grid" ? ".library-card" : ".library-list-row").filter({ hasText: "Customer support" });
+    if (view === "Grid") await item.hover();
+    const overflow = item.getByRole("button", { name: view === "Grid" ? "3 tags" : "Show 1 more tags" });
+    await expect(item.getByRole("button", { name: "typography", exact: true })).toHaveCount(0);
+    await overflow.click();
+    const tag = item.getByRole("button", { name: "typography", exact: true });
+    await tag.focus();
+    await page.keyboard.press("Escape");
+    await expect(overflow).toBeFocused();
+    await overflow.click();
+    await tag.click();
+    await expect(page).toHaveURL(/tag=t3(?:&|$)/);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator(view === "Grid" ? ".library-card" : ".library-list-row")).toHaveCount(1);
+  });
+}
+
+test("tagged images stay discoverable in All items and Unsorted in a large library", async ({ page }) => {
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>(resolve => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("items", "readwrite");
+      const image = tx.objectStore("items").get("image");
+      image.onsuccess = () => tx.objectStore("items").put({ ...image.result, collectionIds: [], createdAt: 10000 });
+      for (let i = 0; i < 70; i++) tx.objectStore("items").put({ id: `unsorted-${i}`, type: "note", title: `Unsorted ${i}`, content: "A design reference.", createdAt: 100 + i, updatedAt: 1, collectionIds: [], tagIds: [] });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  for (const view of ["Grid", "List"]) {
+    await page.getByRole("button", { name: `${view} view`, exact: true }).click();
+    for (const scope of ["All items", "Unsorted", "All items"]) {
+      await page.getByRole("button", { name: scope, exact: true }).click();
+      const item = page.locator(view === "Grid" ? ".library-card" : ".library-list-row").filter({ hasText: "Customer support" });
+      if (view === "Grid") {
+        await item.hover();
+        const trigger = item.getByRole("button", { name: "1 tag" });
+        await expect(trigger).toBeVisible();
+        if (await trigger.getAttribute("aria-expanded") === "false") await trigger.click();
+      }
+      await expect(item.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
+      await item.getByRole("button", { name: "minimal", exact: true }).click();
+      await expect(page).toHaveURL(/tag=t(?:&|$)/);
+      await expect(item.getByRole("button", { name: view === "Grid" ? "1 tag" : "minimal", exact: true })).toBeVisible();
+    }
+  }
+});
+
+test("list links show larger favicons while retaining preview images", async ({ page }) => {
+  await page.route("https://www.google.com/s2/favicons**", route => route.fulfill({
+    contentType: "image/svg+xml",
+    body: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#2563eb"/></svg>',
+  }));
+  await page.reload();
+  await page.getByRole("button", { name: "List view", exact: true }).click();
+  const link = page.locator(".library-list-row").filter({ hasText: "Footer reference" });
+  await expect(link.locator('img[src^="blob:"]')).toBeVisible();
+  await expect(link.locator('img[src*="favicons"]')).toHaveCSS("width", "24px");
+  const fallback = page.locator(".library-list-row").filter({ hasText: "example.com/fallback" });
+  await expect(fallback.locator('img[src*="favicons"]').first()).toHaveCSS("width", "32px");
+});
+
 test("mixed cards preserve image proportions, readable notes and compact fallbacks", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const image = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Customer support" }) });
@@ -124,12 +227,23 @@ test("image inset outlines follow the rounded preview in both themes", async ({ 
 
 test("card actions, tag disclosure, selection and collection context work", async ({ page }) => {
   const note = page.locator(".library-card").filter({ hasText: "Design notes" });
-  await note.getByRole("button", { name: "1 tag" }).focus();
-  await page.keyboard.press("Enter");
+  const tagControl = note.locator(".library-card-tag-control");
+  await page.mouse.move(0, 0);
+  await expect(tagControl).toHaveCSS("opacity", "1");
+  const heightBeforeTags = (await note.boundingBox())!.height;
+  await note.getByRole("button", { name: "1 tag" }).click();
   await expect(note.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
-  await note.getByRole("button", { name: "minimal", exact: true }).focus();
-  await page.keyboard.press("Escape");
-  await expect(note.getByRole("button", { name: "1 tag" })).toBeFocused();
+  await expect(note.locator("..")).toHaveCSS("z-index", "40");
+  const removeTag = note.getByRole("button", { name: "Remove tag minimal" });
+  await expect(removeTag).toBeVisible();
+  await expect(removeTag.locator("svg")).toHaveCount(1);
+  await removeTag.click();
+  const confirmRemove = note.getByRole("button", { name: "Confirm remove tag minimal" });
+  await expect(confirmRemove).toBeVisible();
+  await confirmRemove.click();
+  await expect(note.getByRole("button", { name: "1 tag" })).toHaveCount(0);
+  expect((await note.boundingBox())!.height).toBe(heightBeforeTags);
+  await note.hover();
   await note.locator("summary").click();
   await note.getByRole("button", { name: "Edit", exact: true }).click();
   await note.getByRole("button", { name: "Cancel edit" }).click();
@@ -379,6 +493,9 @@ test.describe("touch card controls", () => {
     await closeNavigation.tap();
     const card = page.locator(".library-card").first();
     await expect(card.locator("details")).toHaveCSS("opacity", "1");
+    await expect(card.locator(".library-card-tag-control")).toHaveCSS("opacity", "1");
+    await card.getByRole("button", { name: "1 tag" }).tap();
+    await expect(card.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
     await card.locator("summary").tap();
     await expect(card.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
     await expect(card.getByRole("button", { name: "Delete", exact: true })).toBeInViewport();

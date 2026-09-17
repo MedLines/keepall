@@ -553,6 +553,7 @@ describe("Library tags", () => {
     render(<Library />);
 
     const main = await screen.findByRole("main");
+    fireEvent.click(await within(main).findByRole("button", { name: "1 tag" }));
     expect(await within(main).findByText("inspiration")).toBeInTheDocument();
     expect(within(main).queryByText("No tags yet.")).not.toBeInTheDocument();
     expect(
@@ -583,6 +584,7 @@ describe("Library tags", () => {
       expect(createTag).toHaveBeenCalledWith({ name: "inspiration" });
       expect(assignTagToItem).toHaveBeenCalledWith("n1", "t1");
     });
+    fireEvent.click(await within(screen.getByRole("main")).findByRole("button", { name: "1 tag" }));
     await waitFor(() => {
       expect(
         within(screen.getByRole("main")).getByText("inspiration"),
@@ -599,7 +601,7 @@ describe("Library tags", () => {
     render(<Library />);
 
     await screen.findByText("A persisted note");
-    fireEvent.click(screen.getByRole("button", { name: "1 tag" }));
+    fireEvent.click(within(screen.getByRole("main")).getByRole("button", { name: "1 tag" }));
     fireEvent.click(
       within(screen.getByRole("main")).getByRole("button", {
         name: "inspiration",
@@ -632,7 +634,8 @@ describe("Library tags", () => {
     vi.mocked(unassignTagFromItem).mockResolvedValue(untagged);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "1 tag" }));
+    fireEvent.click(await within(screen.getByRole("main")).findByRole("button", { name: "Untitled" }));
+    await within(screen.getByRole("dialog")).findByRole("button", { name: "Remove tag inspiration" });
     fireEvent.click(
       screen.getByRole("button", { name: "Remove tag inspiration" }),
     );
@@ -643,9 +646,10 @@ describe("Library tags", () => {
     await waitFor(() => {
       expect(unassignTagFromItem).toHaveBeenCalledWith("n1", "t1");
     });
+    fireEvent.click(screen.getByRole("button", { name: "Close detail" }));
     await waitFor(() => {
       expect(
-        within(screen.getByRole("main")).queryByText("inspiration"),
+        within(screen.getByRole("main")).queryByRole("button", { name: "1 tag" }),
       ).not.toBeInTheDocument();
     });
     expect(screen.getByRole("button", { name: "Tag inspiration" })).toBeInTheDocument();
@@ -694,7 +698,7 @@ describe("Library type filter", () => {
     expect(screen.getByText("Design link")).toBeInTheDocument();
     expect(screen.getByText("Other link")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "1 tag" }));
+    fireEvent.click(within(screen.getByRole("main")).getByRole("button", { name: "1 tag" }));
     fireEvent.click(screen.getByRole("button", { name: "design" }));
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?tag=t1&type=link", {
