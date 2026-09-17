@@ -62,6 +62,61 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("item types live in the toolbar while library destinations stay in the sidebar", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+  for (const label of ["All items", "Unsorted"]) {
+    await expect(sidebar.getByRole("button", { name: label, exact: true })).toBeVisible();
+  }
+  for (const label of ["Images", "Links", "Notes"]) {
+    await expect(sidebar.getByRole("button", { name: label, exact: true })).toHaveCount(0);
+  }
+
+  const typeMenu = page.getByRole("button", { name: "Filter by type" });
+  const layoutControls = page.getByRole("group", { name: "Library layout" });
+  const sortMenu = page.getByRole("button", { name: "Sort library" });
+  const scopeBounds = (await typeMenu.boundingBox())!;
+  const layoutBounds = (await layoutControls.boundingBox())!;
+  const sortBounds = (await sortMenu.boundingBox())!;
+  expect(scopeBounds.x + scopeBounds.width).toBeLessThanOrEqual(layoutBounds.x);
+  expect(layoutBounds.x + layoutBounds.width).toBeLessThanOrEqual(sortBounds.x);
+
+  await typeMenu.click();
+  const menu = page.getByRole("listbox", { name: "Filter by type" });
+  const expectedCounts = new Map([
+    ["All types", "4"],
+    ["Images", "1"],
+    ["Links", "2"],
+    ["Notes", "1"],
+  ]);
+  for (const [label, count] of expectedCounts) {
+    await expect(menu.getByRole("option", { name: new RegExp(label) })).toContainText(count);
+  }
+
+  await menu.getByRole("option", { name: /Images/ }).click();
+  await expect(page).toHaveURL(/type=image/);
+  await expect(page.getByRole("heading", { name: "Images", exact: true })).toBeVisible();
+  await typeMenu.click();
+  await page.getByRole("option", { name: /All types/ }).click();
+  await expect(page).not.toHaveURL(/type=/);
+  await expect(page.getByRole("heading", { name: "All items", exact: true })).toBeVisible();
+});
+
+for (const view of ["Grid", "List"] as const) {
+  test(`${view}: collection context opens that collection`, async ({ page }) => {
+    await page.getByRole("button", { name: `${view} view`, exact: true }).click();
+    const item = page.locator(view === "Grid" ? ".library-card" : ".library-list-row").filter({ hasText: "Customer support" });
+    const collection = item.getByRole("button", {
+      name: view === "Grid" ? "UI inspiration" : "in UI inspiration",
+      exact: true,
+    });
+    await collection.click();
+    await expect(page).toHaveURL(/collection=c(?:&|$)/);
+    await expect(page.getByRole("heading", { name: "UI inspiration", exact: true })).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+}
+
 for (const view of ["Grid", "List"] as const) {
   for (const title of ["Customer support", "Footer reference"]) {
     test(`${view}: ${title} exposes tags that open the tag view`, async ({ page }) => {
@@ -282,6 +337,51 @@ test("opening one card menu closes the menu left open on another card", async ({
 
   await first.locator(".library-card-tag-control > button").click();
   await expect(second.getByRole("button", { name: "Edit", exact: true })).toBeHidden();
+});
+
+test("selecting a card keeps the library still and draws the state inside the card", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const heading = page.getByRole("heading", { name: "All items", exact: true });
+  const header = page.locator("header").filter({ has: heading });
+  const layoutControls = page.getByRole("group", { name: "Library layout" });
+  const card = page.locator(".library-card").filter({ hasText: "Customer support" });
+  const headerBefore = (await header.boundingBox())!;
+  const cardBefore = (await card.boundingBox())!;
+  const shadowBefore = await card.evaluate(element => getComputedStyle(element).boxShadow);
+
+  await card.hover();
+  await card.getByRole("checkbox").check();
+
+  const bulkActions = page.getByRole("region", { name: "Bulk actions" });
+  await expect(bulkActions).toBeVisible();
+  const headerAfter = (await header.boundingBox())!;
+  const cardAfter = (await card.boundingBox())!;
+  expect(headerAfter.height).toBe(headerBefore.height);
+  expect(cardAfter.y).toBe(cardBefore.y);
+
+  const headingBounds = (await heading.boundingBox())!;
+  const bulkBounds = (await bulkActions.boundingBox())!;
+  const layoutBounds = (await layoutControls.boundingBox())!;
+  expect(bulkBounds.x).toBeGreaterThanOrEqual(headingBounds.x + headingBounds.width);
+  expect(bulkBounds.x + bulkBounds.width).toBeLessThanOrEqual(layoutBounds.x);
+
+  await expect(card).toHaveCSS("outline-style", "none");
+  const lightSelection = await card.evaluate(element => getComputedStyle(element).boxShadow);
+  expect(lightSelection).not.toBe(shadowBefore);
+
+  await page.getByRole("combobox", { name: "Theme" }).selectOption("dark");
+  await expect.poll(() => card.evaluate(element => getComputedStyle(element).boxShadow))
+    .not.toBe(lightSelection);
+
+  await page.setViewportSize({ width: 320, height: 900 });
+  const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
+  if (await closeNavigation.isVisible()) await closeNavigation.click();
+  await expect(bulkActions).toBeVisible();
+  await expect(bulkActions.getByRole("button", { name: "Deselect all" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filter by type" })).toBeVisible();
+  await expect(layoutControls).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sort library" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test("masonry places the next card below a shorter card, not a full row", async ({ page }) => {

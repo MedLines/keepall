@@ -29,7 +29,7 @@ describe("grid card content", () => {
   it("uses a compact tag count before disclosing browse and removal actions", () => {
     const browse = vi.fn();
     const remove = vi.fn();
-    render(<LibraryCardMetadata collections={[]} tags={[{ id: "t", name: "minimal" }]} onBrowseTag={browse} onRemoveTag={remove} />);
+    render(<LibraryCardMetadata collections={[]} tags={[{ id: "t", name: "minimal" }]} onBrowseCollection={vi.fn()} onBrowseTag={browse} onRemoveTag={remove} />);
     expect(screen.queryByRole("list", { name: "Collections" })).toBeNull();
     expect(screen.queryByRole("button", { name: "minimal" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "1 tag" }));
@@ -44,8 +44,11 @@ describe("grid card content", () => {
   });
 
   it("does not add tag UI when the item has no tags", () => {
-    render(<LibraryCardMetadata collections={["Design Inspiration"]} tags={[]} onBrowseTag={vi.fn()} onRemoveTag={vi.fn()} />);
+    const browseCollection = vi.fn();
+    render(<LibraryCardMetadata collections={[{ id: "c", name: "Design Inspiration" }]} tags={[]} onBrowseCollection={browseCollection} onBrowseTag={vi.fn()} onRemoveTag={vi.fn()} />);
     expect(screen.queryByText("No tags")).toBeNull();
     expect(screen.queryByRole("button", { name: /tags?/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Design Inspiration" }));
+    expect(browseCollection).toHaveBeenCalledWith("c");
   });
 });

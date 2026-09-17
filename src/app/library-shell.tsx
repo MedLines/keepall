@@ -22,12 +22,9 @@ import {
   CollectionIcon,
   HashIcon,
   InboxIcon,
-  ImageIcon,
   LibraryIcon,
-  LinkIcon,
   LogoIcon,
   MoreIcon,
-  NoteIcon,
   PlusIcon,
   SearchIcon,
 } from "./shell-icons";
@@ -71,7 +68,6 @@ type Props = {
   onGoUnsorted: () => void;
   onGoCollection: (id: string) => void;
   onGoTag: (id: string) => void;
-  onGoType: (type: LibraryTypeFilter | null) => void;
   onCollectionDragOver: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onCollectionDragLeave: () => void;
   onCollectionDrop: (id: string, event: DragEvent<HTMLDivElement>) => void;
@@ -103,7 +99,6 @@ export function LibraryShell({
   onGoUnsorted,
   onGoCollection,
   onGoTag,
-  onGoType,
   onCollectionDragOver,
   onCollectionDragLeave,
   onCollectionDrop,
@@ -202,25 +197,6 @@ export function LibraryShell({
           closeOnMobile();
         }}
       />
-      {([
-        { type: "image", label: "Images", icon: <ImageIcon /> },
-        { type: "link", label: "Links", icon: <LinkIcon /> },
-        { type: "note", label: "Notes", icon: <NoteIcon /> },
-      ] as const).map((item) => (
-        <ShellNavItem
-          key={item.type}
-          expanded={expanded}
-          active={!backupOpen && browseType === item.type}
-          label={item.label}
-          count={libraryLoading ? undefined : counts.byType[item.type]}
-          icon={item.icon}
-          onClick={() => {
-            leaveBackup();
-            onGoType(browseType === item.type ? null : item.type);
-            closeOnMobile();
-          }}
-        />
-      ))}
     </>
   );
 

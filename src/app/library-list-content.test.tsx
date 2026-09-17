@@ -6,8 +6,11 @@ const tags = ["minimal", "typography", "motion", "reference"].map(name => ({ id:
 
 test("list metadata shows two tags and expands the rest without navigation", () => {
   const browse = vi.fn();
-  render(<LibraryListMetadata collections={["UI inspiration"]} tags={tags} onBrowseTag={browse} />);
+  const browseCollection = vi.fn();
+  render(<LibraryListMetadata collections={[{ id: "c", name: "UI inspiration" }]} tags={tags} onBrowseCollection={browseCollection} onBrowseTag={browse} />);
   expect(screen.getByLabelText("Collections")).toHaveTextContent("in UI inspiration");
+  fireEvent.click(screen.getByRole("button", { name: "in UI inspiration" }));
+  expect(browseCollection).toHaveBeenCalledWith("c");
   expect(screen.queryByRole("button", { name: "motion" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Show 2 more tags" }));
   expect(browse).not.toHaveBeenCalled();
@@ -20,7 +23,7 @@ test("list metadata shows two tags and expands the rest without navigation", () 
 });
 
 test("collection context disappears when no collection names are passed", () => {
-  render(<LibraryListMetadata collections={[]} tags={tags.slice(0, 1)} onBrowseTag={vi.fn()} />);
+  render(<LibraryListMetadata collections={[]} tags={tags.slice(0, 1)} onBrowseCollection={vi.fn()} onBrowseTag={vi.fn()} />);
   expect(screen.queryByLabelText("Collections")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "minimal" })).toBeVisible();
   expect(screen.queryByRole("button", { name: /more tags/ })).not.toBeInTheDocument();

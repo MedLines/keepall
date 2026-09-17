@@ -45,9 +45,10 @@ export function LibraryCardContent({ item, onOpen }: { item: Item; onOpen: () =>
   );
 }
 
-export function LibraryCardMetadata({ collections, tags, onBrowseTag, onRemoveTag }: {
-  collections: string[];
+export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onBrowseTag, onRemoveTag }: {
+  collections: { id: string; name: string }[];
   tags: { id: string; name: string }[];
+  onBrowseCollection: (id: string) => void;
   onBrowseTag: (id: string) => void;
   onRemoveTag: (id: string) => void;
 }) {
@@ -84,7 +85,12 @@ export function LibraryCardMetadata({ collections, tags, onBrowseTag, onRemoveTa
     <div className="mt-1 text-xs text-text-secondary">
       <div className="flex min-h-8 items-center justify-between gap-2">
         {collections.length ? <ul aria-label="Collections" className="min-w-0 flex-1">
-          {collections.map(name => <li key={name} className="flex min-w-0 items-center gap-1.5"><CollectionIcon className="size-4" /><span className="truncate" title={name}>{name}</span></li>)}
+          {collections.map(collection => <li key={collection.id} className="min-w-0">
+            <button type="button" className="flex min-h-8 max-w-full items-center gap-1.5 rounded-md px-1.5 text-left hover:bg-bg-raised hover:text-text-primary" title={collection.name} onClick={() => onBrowseCollection(collection.id)}>
+              <CollectionIcon className="size-4 shrink-0" />
+              <span className="truncate">{collection.name}</span>
+            </button>
+          </li>)}
         </ul> : <span />}
         {tags.length ? <div ref={rootRef} className="library-card-tag-control relative shrink-0" data-open={expanded || undefined}>
           <button ref={triggerRef} type="button" aria-expanded={expanded} aria-controls={id} className="min-h-8 rounded-control bg-bg-raised px-2 text-text-primary transition-[background-color,color,scale] duration-150 ease-out hover:bg-bg-canvas active:scale-[0.96] motion-reduce:transition-[background-color,color] motion-reduce:active:scale-100" onClick={() => {

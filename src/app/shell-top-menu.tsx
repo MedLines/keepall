@@ -12,6 +12,7 @@ type Option<T extends string> = {
   value: T;
   label: string;
   icon?: ReactNode;
+  count?: number;
 };
 
 type Props<T extends string> = {
@@ -86,7 +87,7 @@ export function ShellTopMenu<T extends string>({
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[9rem] overflow-hidden rounded-control border border-border-edge bg-bg-surface py-1 shadow-menu"
+          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[11rem] overflow-hidden rounded-control border border-border-edge bg-bg-surface py-1 shadow-menu"
         >
           {options.map((option) => (
             <li key={option.value} role="presentation">
@@ -106,6 +107,11 @@ export function ShellTopMenu<T extends string>({
               >
                 {option.icon}
                 {option.label}
+                {option.count !== undefined ? (
+                  <span className="ml-auto pl-3 text-xs tabular-nums text-text-secondary">
+                    {option.count}
+                  </span>
+                ) : null}
               </button>
             </li>
           ))}

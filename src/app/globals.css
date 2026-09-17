@@ -30,6 +30,7 @@
   --color-bg-surface: light-dark(var(--white), var(--neutral-800));
   --color-bg-card-end: light-dark(var(--white), var(--neutral-950));
   --color-bg-raised: light-dark(var(--neutral-100), var(--neutral-750));
+  --color-bg-selected: light-dark(#e9edf1, #272c33);
   --color-bg-overlay: #09090b;
   --color-bg-media: #18181a;
   --color-text-primary: light-dark(var(--neutral-850), var(--paper));
@@ -40,6 +41,7 @@
   --color-border-media: light-dark(rgb(0 0 0 / 10%), rgb(255 255 255 / 10%));
   --color-border-control: light-dark(#7d8085, #767b83);
   --color-border-focus: light-dark(var(--neutral-900), var(--white));
+  --color-border-selected: light-dark(#697583, #939eac);
   --color-action-primary: light-dark(var(--neutral-900), var(--white));
   --color-text-on-action: light-dark(var(--white), var(--neutral-900));
   --color-text-danger: light-dark(#b91c1c, #fca5a5);
@@ -69,6 +71,15 @@
 .library-card {
   background: linear-gradient(to bottom, var(--color-bg-surface) 42%, var(--color-bg-card-end));
   box-shadow: inset 0 0 0 1px var(--color-border-edge), 0 2px 4px #0000000a;
+}
+
+.library-card[data-selected="true"] {
+  background: linear-gradient(to bottom, var(--color-bg-selected) 42%, var(--color-bg-card-end));
+  box-shadow: inset 0 0 0 2px var(--color-border-selected), 0 2px 4px #0000000a;
+}
+
+.library-list-row[data-selected="true"] {
+  background: var(--color-bg-selected);
 }
 
 .library-card-actions {

@@ -52,7 +52,7 @@ export type LibraryItemProps = {
   onOpenInspect: () => void;
   tagNames: { id: string; name: string }[];
   tagError: string | null;
-  collectionNames: string[];
+  collections: { id: string; name: string }[];
   collectionError: string | null;
   editing: boolean;
   pendingDelete: boolean;
@@ -79,6 +79,7 @@ export type LibraryItemProps = {
   onCancelDelete: () => void;
   onAddTag: (name: string) => void;
   onAddCollection: (name: string) => void;
+  onBrowseCollection: (collectionId: string) => void;
   onBrowseTag: (tagId: string) => void;
   onRemoveTag: (tagId: string) => void;
   onStartEdit: () => void;
@@ -115,7 +116,7 @@ export function LibraryItem({
   onOpenInspect,
   tagNames,
   tagError,
-  collectionNames,
+  collections,
   collectionError,
   editing,
   pendingDelete,
@@ -137,6 +138,7 @@ export function LibraryItem({
   onCancelDelete,
   onAddTag,
   onAddCollection,
+  onBrowseCollection,
   onBrowseTag,
   onRemoveTag,
   onStartEdit,
@@ -448,14 +450,11 @@ export function LibraryItem({
       onDragEnd={onItemDragEnd}
     >
       <div
+        data-selected={selected || undefined}
         className={
           isList
-            ? `library-list-row group relative flex items-start gap-3 border-b border-border-edge py-4 ${
-                selected ? "bg-bg-raised" : ""
-              }`
-            : `library-card group relative flex flex-col rounded-panel p-2 ${
-                selected ? "outline-2 outline-border-focus" : ""
-              }`
+            ? "library-list-row group relative flex items-start gap-3 border-b border-border-edge py-4"
+            : "library-card group relative flex flex-col rounded-panel p-2"
         }
       >
       {cardActions}
@@ -508,7 +507,7 @@ export function LibraryItem({
             ) : <p className="text-sm font-medium">{title}</p>}
           </div>
         )}
-        {isList && !editing && !pendingDelete ? <LibraryListMetadata collections={collectionNames} tags={tagNames} onBrowseTag={onBrowseTag} /> : null}
+        {isList && !editing && !pendingDelete ? <LibraryListMetadata collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} /> : null}
 
         {item.type === "note" && editing ? (
           <div className="mt-2 flex flex-col gap-2">
@@ -673,8 +672,9 @@ export function LibraryItem({
         ) : null}
         {!isList && !editing && !pendingDelete ? (
           <LibraryCardMetadata
-            collections={collectionNames}
+            collections={collections}
             tags={tagNames}
+            onBrowseCollection={onBrowseCollection}
             onBrowseTag={onBrowseTag}
             onRemoveTag={onRemoveTag}
           />

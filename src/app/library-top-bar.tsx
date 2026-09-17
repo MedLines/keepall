@@ -1,7 +1,11 @@
 "use client";
 
 import { type Ref } from "react";
-import type { LibraryLayout, LibrarySort } from "@/domain/library-view";
+import type {
+  LibraryLayout,
+  LibrarySort,
+  LibraryTypeFilter,
+} from "@/domain/library-view";
 import { openCaptureDialog } from "./capture-events";
 import {
   LibraryBulkPanels,
@@ -9,6 +13,8 @@ import {
   type LibraryBulkBarProps,
 } from "./library-bulk-bar";
 import { GridIcon, ListIcon, PlusIcon, SearchIcon, SortAscIcon, SortDescIcon } from "./shell-icons";
+import type { LibrarySidebarCounts } from "./library-sidebar-counts";
+import { LibraryTypeFilterMenu } from "./library-type-filter-menu";
 import { ShellPanelIcon } from "./shell-panel-icon";
 import { ShellTopMenu } from "./shell-top-menu";
 import { ThemeControl } from "./theme-control";
@@ -23,6 +29,9 @@ type Props = {
   onSortChange: (sort: LibrarySort) => void;
   layout: LibraryLayout;
   onLayoutChange: (layout: LibraryLayout) => void;
+  typeFilter: LibraryTypeFilter | null;
+  sidebarCounts: LibrarySidebarCounts;
+  onTypeFilterChange: (type: LibraryTypeFilter | null) => void;
   panelOpen: boolean;
   onPanelOpenChange: (open: boolean) => void;
   bulk?: LibraryBulkBarProps;
@@ -32,8 +41,10 @@ type Props = {
 export function LibraryTopBar({
   headingRef, title, itemCount, searchQuery, onSearchChange,
   sort, onSortChange, layout, onLayoutChange, panelOpen, onPanelOpenChange,
-  bulk, libraryLoading = false,
+  typeFilter, sidebarCounts, onTypeFilterChange, bulk, libraryLoading = false,
 }: Props) {
+  const hasSelection = Boolean(bulk && bulk.count > 0);
+
   return (
     <header className="relative z-40 flex shrink-0 flex-col gap-6 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3 sm:flex-nowrap">
@@ -75,8 +86,8 @@ export function LibraryTopBar({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="grid min-h-[98px] grid-cols-1 content-start gap-3 sm:min-h-[42px] sm:grid-cols-[minmax(0,auto)_minmax(0,1fr)_auto] sm:items-center">
+        <div className={`${hasSelection ? "hidden sm:flex" : "flex"} row-start-1 min-w-0 items-center gap-3 sm:col-start-1 sm:row-start-1 sm:max-w-[18rem]`}>
           <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-[34px] text-text-primary sm:text-[28px]">
             {title}
           </h1>
@@ -84,7 +95,25 @@ export function LibraryTopBar({
             {libraryLoading ? "…" : itemCount}
           </span>
         </div>
-        <div className="ml-auto flex shrink-0 items-center gap-3">
+        <div className={`${hasSelection ? "block" : "hidden"} row-start-1 min-w-0 sm:col-start-2 sm:row-start-1 sm:block`}>
+          {hasSelection && bulk ? (
+            <LibraryBulkToolbar
+              allVisibleSelected={bulk.allVisibleSelected}
+              busy={bulk.busy}
+              count={bulk.count}
+              onClearSelection={bulk.onClearSelection}
+              onOpenPanel={bulk.onOpenPanel}
+              onSelectAllVisible={bulk.onSelectAllVisible}
+            />
+          ) : null}
+        </div>
+        <div className="row-start-2 flex shrink-0 items-center justify-end gap-3 sm:col-start-3 sm:row-start-1">
+          <LibraryTypeFilterMenu
+            value={typeFilter}
+            counts={sidebarCounts}
+            loading={libraryLoading}
+            onChange={onTypeFilterChange}
+          />
           <div className="flex rounded-xl border border-border-edge" role="group" aria-label="Library layout">
             {([
               { value: "grid", label: "Grid view", icon: <GridIcon /> },
@@ -116,16 +145,6 @@ export function LibraryTopBar({
         </div>
       </div>
 
-      {bulk && bulk.count > 0 ? (
-        <LibraryBulkToolbar
-          allVisibleSelected={bulk.allVisibleSelected}
-          busy={bulk.busy}
-          count={bulk.count}
-          onClearSelection={bulk.onClearSelection}
-          onOpenPanel={bulk.onOpenPanel}
-          onSelectAllVisible={bulk.onSelectAllVisible}
-        />
-      ) : null}
       {bulk && (bulk.panel !== null || bulk.error) ? <LibraryBulkPanels {...bulk} /> : null}
     </header>
   );

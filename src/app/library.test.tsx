@@ -36,7 +36,11 @@ vi.mock("./library-masonry", () => ({
 
 function pickTopMenu(menuLabel: string, optionLabel: string) {
   fireEvent.click(screen.getByRole("button", { name: menuLabel }));
-  fireEvent.click(screen.getByRole("option", { name: optionLabel }));
+  fireEvent.click(
+    screen.getByRole("option", {
+      name: new RegExp(`^${optionLabel}`),
+    }),
+  );
 }
 
 vi.mock("@/persistence/items", () => ({
@@ -689,7 +693,7 @@ describe("Library type filter", () => {
     render(<Library />);
 
     await screen.findByText("design note");
-    fireEvent.click(screen.getByRole("button", { name: "Links" }));
+    pickTopMenu("Filter by type", "Links");
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?type=link", {
       scroll: false,
@@ -708,7 +712,7 @@ describe("Library type filter", () => {
     expect(screen.queryByText("Other link")).not.toBeInTheDocument();
     expect(screen.queryByText("design note")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "All items" }));
+    pickTopMenu("Filter by type", "All types");
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?tag=t1", {
       scroll: false,
@@ -764,7 +768,10 @@ describe("Library collections", () => {
     expect(mockNavigation.push).toHaveBeenCalledWith("/?collection=c1", {
       scroll: false,
     });
-    expect(await screen.findByRole("button", { name: "Reading" })).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole("complementary", { name: "Sidebar" }))
+        .findByRole("button", { name: "Reading" }),
+    ).toBeInTheDocument();
   });
 
   test("assigns a collection and browses to only that collection", async () => {
@@ -800,9 +807,15 @@ describe("Library collections", () => {
       expect(createCollection).toHaveBeenCalledWith({ name: "Reading" });
       expect(assignCollectionToItem).toHaveBeenCalledWith("n1", "c1");
     });
-    expect(await screen.findByRole("button", { name: "Reading" })).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole("complementary", { name: "Sidebar" }))
+        .findByRole("button", { name: "Reading" }),
+    ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Reading" }));
+    fireEvent.click(
+      within(screen.getByRole("complementary", { name: "Sidebar" }))
+        .getByRole("button", { name: "Reading" }),
+    );
 
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
     expect(screen.queryByText("other note")).not.toBeInTheDocument();
@@ -839,7 +852,10 @@ describe("Library collections", () => {
     );
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Reading" }));
+    fireEvent.click(
+      await within(screen.getByRole("complementary", { name: "Sidebar" }))
+        .findByRole("button", { name: "Reading" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Reading actions" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
     fireEvent.change(screen.getByLabelText("Rename collection"), {
@@ -853,7 +869,10 @@ describe("Library collections", () => {
       expect(renameCollection).toHaveBeenCalledWith("c1", "Later");
     });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Later" }));
+    fireEvent.click(
+      await within(screen.getByRole("complementary", { name: "Sidebar" }))
+        .findByRole("button", { name: "Later" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Later actions" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
 
@@ -1012,7 +1031,7 @@ describe("Library view state", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Notes" }));
+    pickTopMenu("Filter by type", "Notes");
 
     expect(mockNavigation.push).toHaveBeenCalledWith(
       "/?type=note&layout=list",

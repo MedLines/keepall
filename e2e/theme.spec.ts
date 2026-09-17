@@ -48,8 +48,10 @@ for (const width of [320, 768, 1024, 1440]) {
     await theme.selectOption("dark");
     await theme.focus();
     await expect(theme).toBeFocused();
-    await page.getByRole("button", { name: "Images", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Images", exact: true })).toHaveAttribute("aria-current", "page");
+    const typeFilter = page.getByRole("button", { name: "Filter by type" });
+    await typeFilter.click();
+    await page.getByRole("option", { name: /Images/ }).click();
+    await expect(typeFilter).toHaveAttribute("title", "Filter by type: Images");
     await page.getByRole("button", { name: "Sort library" }).click();
     await expect(page.getByRole("option", { name: "Oldest" })).toBeVisible();
     await page.keyboard.press("Escape");
@@ -96,7 +98,7 @@ test("desktop shell keeps search and view controls inside the inset panel", asyn
   expect(await page.getByRole("button", { name: "Sort library" }).boundingBox()).toMatchObject({ x: 1362, y: shellTop + 102, width: 44, height: 44 });
   await page.getByRole("button", { name: "Collapse", exact: true }).click();
   await expect.poll(async () => (await panel.boundingBox())?.x).toBe(56);
-  await expect(page.getByRole("button", { name: "Images", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filter by type" })).toBeVisible();
   await page.getByRole("button", { name: "Expand", exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect.poll(async () => (await panel.boundingBox())?.x).toBe(256);

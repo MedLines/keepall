@@ -19,6 +19,7 @@ import {
 import {
   itemInCollection,
   resolveItemCollectionNames,
+  resolveItemCollections,
   resolveItemTags,
   type Item,
 } from "@/domain/item";
@@ -1317,9 +1318,16 @@ export function Library() {
         onOpenInspect={() => openInspect(item.id)}
         tagNames={resolveItemTags(item, tagsById)}
         tagError={tagErrorItemId === item.id ? tagError : null}
-        collectionNames={browseCollectionId ? [] : resolveItemCollectionNames(item, collectionsById)}
+        collections={
+          browseCollectionId
+            ? []
+            : resolveItemCollections(item, collectionsById)
+        }
         collectionError={
           collectionErrorItemId === item.id ? collectionError : null
+        }
+        onBrowseCollection={(collectionId) =>
+          updateView({ collection: collectionId }, "push")
         }
         onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
         onRemoveTag={(tagId: string) => void removeTagFromItem(item.id, tagId)}
@@ -1410,6 +1418,12 @@ export function Library() {
         onSortChange={(sort) => updateView({ sort }, "push")}
         layout={browseLayout}
         onLayoutChange={(layout) => updateView({ layout }, "replace")}
+        typeFilter={browseType}
+        sidebarCounts={sidebarCounts}
+        onTypeFilterChange={(type) => {
+          setBackupOpen(false);
+          updateView({ type }, "push");
+        }}
         panelOpen={panelOpen}
         onPanelOpenChange={setPanelOpen}
         libraryLoading={loadState === "loading"}
@@ -1492,7 +1506,6 @@ export function Library() {
           }
           onGoCollection={(id) => updateView({ collection: id }, "push")}
           onGoTag={(id) => updateView({ tag: id }, "push")}
-          onGoType={(type) => updateView({ type }, "push")}
           onCollectionDragOver={handleCollectionDragOver}
           onCollectionDragLeave={() => setDropTargetCollectionId(null)}
           onCollectionDrop={handleCollectionDrop}

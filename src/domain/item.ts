@@ -83,6 +83,21 @@ export function resolveItemCollectionNames(
     .filter((name): name is string => Boolean(name));
 }
 
+export function resolveItemCollections(
+  item: Item,
+  collectionsById: Map<string, { name: string }>,
+): { id: string; name: string }[] {
+  return item.collectionIds
+    .map((id) => {
+      const name = collectionsById.get(id)?.name;
+      return name ? { id, name } : null;
+    })
+    .filter(
+      (collection): collection is { id: string; name: string } =>
+        collection !== null,
+    );
+}
+
 export function itemInCollection(item: Item, collectionId: string): boolean {
   return item.collectionIds.includes(collectionId);
 }

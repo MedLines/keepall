@@ -62,7 +62,7 @@ export function LibraryBulkToolbar({
 
   return (
     <div
-      className="flex min-w-0 items-center gap-1 overflow-x-auto"
+      className="flex h-9 w-full min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap"
       role="region"
       aria-label="Bulk actions"
     >

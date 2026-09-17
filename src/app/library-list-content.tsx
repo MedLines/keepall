@@ -47,9 +47,10 @@ export function LibraryListContent({ item, pinned, onOpen }: {
   );
 }
 
-export function LibraryListMetadata({ collections, tags, onBrowseTag }: {
-  collections: string[];
+export function LibraryListMetadata({ collections, tags, onBrowseCollection, onBrowseTag }: {
+  collections: { id: string; name: string }[];
   tags: { id: string; name: string }[];
+  onBrowseCollection: (id: string) => void;
   onBrowseTag: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -59,7 +60,11 @@ export function LibraryListMetadata({ collections, tags, onBrowseTag }: {
   const visibleTags = expanded ? tags : tags.slice(0, 2);
   return (
     <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
-      {collections.length ? <span aria-label="Collections" className="min-w-0 truncate" title={collections.join(", ")}>in {collections.join(", ")}</span> : null}
+      {collections.length ? <ul aria-label="Collections" className="flex min-w-0 flex-wrap gap-1">
+        {collections.map(collection => <li key={collection.id} className="min-w-0 max-w-full">
+          <button type="button" className="block min-h-8 max-w-full truncate rounded-md px-2 text-start hover:bg-bg-raised hover:text-text-primary" title={collection.name} onClick={() => onBrowseCollection(collection.id)}>in {collection.name}</button>
+        </li>)}
+      </ul> : null}
       {tags.length ? <ul id={id} aria-label="Tags" className="flex min-w-0 flex-wrap gap-1" onKeyDown={event => {
         if (event.key === "Escape" && expanded) {
           setExpanded(false);
