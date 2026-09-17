@@ -1,6 +1,6 @@
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
-  Add01Icon as Add01, ArrowDown01Icon as ArrowDown01, Bookmark01Icon as Bookmark01,
+  Add01Icon as Add01, AllBookmarkIcon as AllBookmark, ArrowDown01Icon as ArrowDown01, Bookmark01Icon as Bookmark01,
   Cancel01Icon as Cancel01, Archive01Icon as Archive01,
   Folder01Icon as Folder01, GridViewIcon as GridView,
   Image01Icon as Image01, InboxIcon as Inbox, Layers01Icon as Layers01,
@@ -21,7 +21,7 @@ export function LogoIcon({ className = "" }: IconProps) {
   return <ShellIcon icon={Bookmark01} className={className} />;
 }
 
-export function LibraryIcon(props: IconProps) { return <ShellIcon icon={GridView} {...props} />; }
+export function LibraryIcon(props: IconProps) { return <ShellIcon icon={AllBookmark} {...props} />; }
 export function CollectionIcon(props: IconProps) { return <ShellIcon icon={Folder01} {...props} />; }
 export function LinkIcon(props: IconProps) { return <ShellIcon icon={Link01} {...props} />; }
 export function NoteIcon(props: IconProps) { return <ShellIcon icon={Note01} {...props} />; }

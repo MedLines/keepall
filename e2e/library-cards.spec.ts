@@ -102,6 +102,29 @@ test("item types live in the toolbar while library destinations stay in the side
   await expect(page.getByRole("heading", { name: "All items", exact: true })).toBeVisible();
 });
 
+test("sidebar section icons align and All items does not reuse the Grid icon", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+  const allItemsIcon = sidebar
+    .getByRole("button", { name: "All items", exact: true })
+    .locator("svg");
+  const collectionsIcon = sidebar
+    .getByRole("button", { name: "Collections", exact: true })
+    .locator("svg")
+    .first();
+  const gridIcon = page
+    .getByRole("button", { name: "Grid view", exact: true })
+    .locator("svg");
+
+  const allItemsBounds = (await allItemsIcon.boundingBox())!;
+  const collectionsBounds = (await collectionsIcon.boundingBox())!;
+  expect(Math.abs(allItemsBounds.x - collectionsBounds.x)).toBeLessThanOrEqual(1);
+  expect(await allItemsIcon.innerHTML()).not.toBe(await gridIcon.innerHTML());
+  await expect(
+    sidebar.getByRole("button", { name: "New collection" }),
+  ).toHaveCount(0);
+});
+
 for (const view of ["Grid", "List"] as const) {
   test(`${view}: collection context opens that collection`, async ({ page }) => {
     await page.getByRole("button", { name: `${view} view`, exact: true }).click();

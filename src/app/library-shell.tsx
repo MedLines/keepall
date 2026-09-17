@@ -25,7 +25,6 @@ import {
   LibraryIcon,
   LogoIcon,
   MoreIcon,
-  PlusIcon,
   SearchIcon,
 } from "./shell-icons";
 import {
@@ -59,7 +58,6 @@ type Props = {
   tags: Tag[];
   sidebarCounts: LibrarySidebarCounts;
   dropTargetCollectionId: string | null;
-  newCollectionDraft: string;
   collectionManageError: string | null;
   dragError: string | null;
   mutationBusy: boolean;
@@ -71,8 +69,6 @@ type Props = {
   onCollectionDragOver: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onCollectionDragLeave: () => void;
   onCollectionDrop: (id: string, event: DragEvent<HTMLDivElement>) => void;
-  onNewCollectionDraftChange: (value: string) => void;
-  onCreateCollection: () => void;
   onRenameCollection: (id: string, name: string) => void;
   onDeleteCollection: (id: string) => void;
 };
@@ -90,7 +86,6 @@ export function LibraryShell({
   tags,
   sidebarCounts: counts,
   dropTargetCollectionId,
-  newCollectionDraft,
   collectionManageError,
   dragError,
   mutationBusy,
@@ -102,8 +97,6 @@ export function LibraryShell({
   onCollectionDragOver,
   onCollectionDragLeave,
   onCollectionDrop,
-  onNewCollectionDraftChange,
-  onCreateCollection,
   onRenameCollection,
   onDeleteCollection,
 }: Props) {
@@ -249,7 +242,6 @@ export function LibraryShell({
                     browseCollectionId={browseCollectionId}
                     counts={counts.byCollectionId}
                     dropTargetCollectionId={dropTargetCollectionId}
-                    newCollectionDraft={newCollectionDraft}
                     collectionManageError={collectionManageError}
                     dragError={dragError}
                     mutationBusy={mutationBusy}
@@ -262,8 +254,6 @@ export function LibraryShell({
                     onCollectionDragOver={onCollectionDragOver}
                     onCollectionDragLeave={onCollectionDragLeave}
                     onCollectionDrop={onCollectionDrop}
-                    onNewCollectionDraftChange={onNewCollectionDraftChange}
-                    onCreateCollection={onCreateCollection}
                     onRenameCollection={onRenameCollection}
                     onDeleteCollection={onDeleteCollection}
                   />
@@ -378,7 +368,6 @@ function CollectionsSection({
   browseCollectionId,
   counts,
   dropTargetCollectionId,
-  newCollectionDraft,
   collectionManageError,
   dragError,
   mutationBusy,
@@ -387,8 +376,6 @@ function CollectionsSection({
   onCollectionDragOver,
   onCollectionDragLeave,
   onCollectionDrop,
-  onNewCollectionDraftChange,
-  onCreateCollection,
   onRenameCollection,
   onDeleteCollection,
 }: {
@@ -401,7 +388,6 @@ function CollectionsSection({
   browseCollectionId: string | null;
   counts: Record<string, number>;
   dropTargetCollectionId: string | null;
-  newCollectionDraft: string;
   collectionManageError: string | null;
   dragError: string | null;
   mutationBusy: boolean;
@@ -410,12 +396,9 @@ function CollectionsSection({
   onCollectionDragOver: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onCollectionDragLeave: () => void;
   onCollectionDrop: (id: string, event: DragEvent<HTMLDivElement>) => void;
-  onNewCollectionDraftChange: (value: string) => void;
-  onCreateCollection: () => void;
   onRenameCollection: (id: string, name: string) => void;
   onDeleteCollection: (id: string) => void;
 }) {
-  const [createOpen, setCreateOpen] = useState(false);
   const [renamingCollectionId, setRenamingCollectionId] = useState<
     string | null
   >(null);
@@ -427,48 +410,7 @@ function CollectionsSection({
       icon={<CollectionIcon />}
       open={collectionsOpen}
       onOpenChange={onCollectionsOpenChange}
-      trailing={
-        <button
-          type="button"
-          className={`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_IDLE} size-7 justify-center px-0 text-text-secondary`}
-          aria-label="New collection"
-          aria-expanded={createOpen}
-          onClick={() => {
-            setCreateOpen((open) => !open);
-            onNewCollectionDraftChange("");
-            if (!collectionsOpen) {
-              onCollectionsOpenChange(true);
-            }
-          }}
-        >
-          <PlusIcon />
-        </button>
-      }
     >
-      {createOpen ? (
-        <form
-          className="pb-2 pl-2 pr-1"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!newCollectionDraft.trim() || mutationBusy) {
-              return;
-            }
-            onCreateCollection();
-            setCreateOpen(false);
-          }}
-        >
-          <input
-            className="w-full rounded-[8px] border border-border-edge/80 bg-bg-surface px-2 py-1 text-xs outline-none transition-[border-color] duration-150 ease-out focus:border-border-focus"
-            autoFocus
-            value={newCollectionDraft}
-            disabled={mutationBusy}
-            placeholder="Collection name"
-            aria-label="New collection name"
-            onChange={(event) => onNewCollectionDraftChange(event.target.value)}
-          />
-        </form>
-      ) : null}
-
       <SidebarSearch
         label="Search collections"
         value={collectionFilter}
@@ -891,22 +833,20 @@ function CollapsibleSection({
   icon,
   open,
   onOpenChange,
-  trailing,
   children,
 }: {
   title: string;
   icon: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  trailing?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className={`${open ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} pt-4`}>
-      <div className="mb-1 flex h-10 shrink-0 items-center gap-0.5">
+      <div className="mb-1 flex h-10 shrink-0 items-center">
         <button
           type="button"
-          className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-control px-2 text-left text-text-primary transition-[background-color] duration-150 hover:bg-bg-raised"
+          className="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-control px-3 text-left text-text-primary transition-[background-color] duration-150 hover:bg-bg-raised"
           aria-expanded={open}
           onClick={() => onOpenChange(!open)}
         >
@@ -918,7 +858,6 @@ function CollapsibleSection({
             }`}
           />
         </button>
-        {trailing}
       </div>
       {open ? <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">{children}</div> : null}
     </div>

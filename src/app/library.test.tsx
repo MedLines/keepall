@@ -740,38 +740,15 @@ describe("Library collections", () => {
     vi.mocked(assignCollectionToItem).mockReset();
   });
 
-  test("creates a collection with no items and browses it", async () => {
-    const collection = {
-      id: "c1",
-      name: "Reading",
-      createdAt: 1,
-      pinnedItemIds: [],
-    };
+  test("does not expose collection creation in the sidebar", async () => {
     vi.mocked(listItems).mockResolvedValue([]);
-    vi.mocked(listCollections)
-      .mockResolvedValueOnce([])
-      .mockResolvedValue([collection]);
-    vi.mocked(createCollection).mockResolvedValue(collection);
+    vi.mocked(listCollections).mockResolvedValue([]);
     render(<Library />);
 
     expect(await screen.findByText("No collections yet.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "New collection" }));
-    const nameInput = screen.getByLabelText("New collection name");
-    fireEvent.change(nameInput, {
-      target: { value: "Reading" },
-    });
-    fireEvent.submit(nameInput.closest("form")!);
-
-    await waitFor(() => {
-      expect(createCollection).toHaveBeenCalledWith({ name: "Reading" });
-    });
-    expect(mockNavigation.push).toHaveBeenCalledWith("/?collection=c1", {
-      scroll: false,
-    });
     expect(
-      await within(screen.getByRole("complementary", { name: "Sidebar" }))
-        .findByRole("button", { name: "Reading" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "New collection" }),
+    ).not.toBeInTheDocument();
   });
 
   test("assigns a collection and browses to only that collection", async () => {

@@ -221,7 +221,6 @@ export function Library() {
   const [collectionManageError, setCollectionManageError] = useState<
     string | null
   >(null);
-  const [newCollectionDraft, setNewCollectionDraft] = useState("");
   const [galleryError, setGalleryError] = useState<string | null>(null);
   const [pendingMutation, setPendingMutation] = useState<PendingMutation | null>(
     null,
@@ -1214,31 +1213,6 @@ export function Library() {
       : false;
   }
 
-  async function createLibraryCollection() {
-    const name = newCollectionDraft.trim();
-    if (!name || pendingMutation) {
-      return;
-    }
-
-    setPendingMutation({ op: "create-collection" });
-    setCollectionManageError(null);
-
-    try {
-      const collection = await createCollection({ name });
-      setNewCollectionDraft("");
-      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-      updateView({ collection: collection.id }, "push");
-    } catch (caught) {
-      if (caught instanceof CollectionValidationError) {
-        setCollectionManageError(caught.message);
-      } else {
-        setCollectionManageError("Couldn't create collection.");
-      }
-    } finally {
-      setPendingMutation(null);
-    }
-  }
-
   async function renameCollectionById(id: string, name: string) {
     if (pendingMutation) {
       return;
@@ -1490,7 +1464,6 @@ export function Library() {
           tags={tags}
           sidebarCounts={sidebarCounts}
           dropTargetCollectionId={dropTargetCollectionId}
-          newCollectionDraft={newCollectionDraft}
           collectionManageError={collectionManageError}
           dragError={dragError}
           mutationBusy={mutationBusy}
@@ -1509,8 +1482,6 @@ export function Library() {
           onCollectionDragOver={handleCollectionDragOver}
           onCollectionDragLeave={() => setDropTargetCollectionId(null)}
           onCollectionDrop={handleCollectionDrop}
-          onNewCollectionDraftChange={setNewCollectionDraft}
-          onCreateCollection={() => void createLibraryCollection()}
           onRenameCollection={(id, name) => void renameCollectionById(id, name)}
           onDeleteCollection={(id) => void deleteCollectionById(id)}
         />
