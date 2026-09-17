@@ -41,7 +41,7 @@ export function PersistentStorageStatusLine({
 
   return (
     <p
-      className="border-b border-zinc-200 bg-zinc-100 px-4 py-1.5 text-center text-xs text-zinc-600"
+      className="border-b border-border-edge bg-bg-raised px-4 py-1.5 text-center text-xs text-text-secondary"
       data-testid="persistent-storage-status"
     >
       {persistentStorageMessage(storageStatus)}

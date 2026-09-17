@@ -83,7 +83,7 @@ export function OfflineBanner() {
   return (
     <div
       data-testid="offline-banner"
-      className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950"
+      className="border-b border-border-warning bg-bg-warning px-4 py-2 text-center text-sm text-text-warning"
       role="status"
     >
       You are offline. Your library on this device still works.

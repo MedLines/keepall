@@ -588,7 +588,7 @@ export function CaptureHost() {
     <>
     <dialog
       ref={dialogRef}
-      className="fixed inset-0 m-auto h-fit max-h-[min(90dvh,40rem)] w-[min(100%-2rem,32rem)] overflow-y-auto rounded-[12px] bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-zinc-900/20 [&::backdrop]:backdrop-blur-[1px]"
+      className="fixed inset-0 m-auto h-fit max-h-[min(90dvh,40rem)] w-[min(100%-2rem,32rem)] overflow-y-auto rounded-[12px] bg-bg-surface p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/20 [&::backdrop]:backdrop-blur-[1px]"
       aria-labelledby="capture-title"
       onCancel={(event) => {
         if (shouldBlockDialogDismiss(state.status)) {
@@ -650,7 +650,7 @@ export function CaptureHost() {
                 className={imageDrafts.length === 1 ? "shrink-0" : "min-w-0 flex-1"}
               >
                 <div
-                  className={`overflow-hidden rounded-lg bg-zinc-100 shadow-[0_0_0_1px_rgba(0,0,0,0.05)] ${
+                  className={`overflow-hidden rounded-lg bg-bg-raised shadow-[0_0_0_1px_rgba(0,0,0,0.05)] ${
                     imageDrafts.length === 1
                       ? "size-16"
                       : `aspect-square w-full ${imageDraftPreviewMaxHeightClass(imageDrafts.length)}`
@@ -675,7 +675,7 @@ export function CaptureHost() {
           </label>
           <textarea
             ref={inputRef}
-            className={`w-full rounded-[10px] border border-zinc-200/80 bg-zinc-50 px-3 py-2 text-sm outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out focus:border-zinc-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)] disabled:opacity-60 ${
+            className={`w-full rounded-[10px] border border-border-edge/80 bg-bg-canvas px-3 py-2 text-sm outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out focus:border-border-focus focus:bg-bg-surface focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)] disabled:opacity-60 ${
               savingImage ? "min-h-16" : "min-h-24"
             }`}
             id="capture-input"
@@ -755,7 +755,7 @@ export function CaptureHost() {
               </button>
             </div>
           ) : (
-            <p className="ml-auto text-xs text-zinc-500">
+            <p className="ml-auto text-xs text-text-secondary">
               {imageDrafts.length > 1
                 ? "One item, several photos"
                 : "Saving as image"}
@@ -785,7 +785,7 @@ export function CaptureHost() {
           onClearCollection={() => setDraftCollectionName(null)}
         />
         {state.error ? (
-          <p className="text-sm text-red-700" role="alert">
+          <p className="text-sm text-text-danger" role="alert">
             {state.error}
           </p>
         ) : null}
@@ -813,9 +813,9 @@ export function CaptureHost() {
             Cancel
           </button>
           {state.status === "saved" ? (
-            <p className="text-xs text-zinc-500">Saved.</p>
+            <p className="text-xs text-text-secondary">Saved.</p>
           ) : (
-            <p className="ml-auto text-xs text-zinc-500">⌘Enter to save</p>
+            <p className="ml-auto text-xs text-text-secondary">⌘Enter to save</p>
           )}
         </div>
       </form>

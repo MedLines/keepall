@@ -43,6 +43,7 @@ import {
 } from "./shell-styles";
 import { useShellMobile } from "./use-shell-mobile";
 import { ShellPanelIcon } from "./shell-panel-icon";
+import { ThemeControl } from "./theme-control";
 
 type Props = {
   panelOpen: boolean;
@@ -112,6 +113,7 @@ export function LibraryShell({
   );
   const [tagsOpen, setTagsOpen] = useState(readShellTagsOpen);
   const isMobile = useShellMobile();
+  const mobileSidebarOpen = isMobile && expanded;
 
   const collectionQuery = collectionFilter.trim().toLowerCase();
   const filteredCollections = useMemo(() => {
@@ -175,7 +177,7 @@ export function LibraryShell({
         active={allItemsActive}
         label="All items"
         count={libraryLoading ? undefined : counts.all}
-        icon={<LibraryIcon className="size-4 shrink-0 text-zinc-500" />}
+        icon={<LibraryIcon className="size-4 shrink-0 text-text-secondary" />}
         onClick={() => {
           leaveBackup();
           onGoAll();
@@ -187,7 +189,7 @@ export function LibraryShell({
         active={unsortedActive}
         label="Unsorted"
         count={libraryLoading ? undefined : counts.unsorted}
-        icon={<InboxIcon className="size-4 shrink-0 text-zinc-500" />}
+        icon={<InboxIcon className="size-4 shrink-0 text-text-secondary" />}
         onClick={() => {
           leaveBackup();
           onGoUnsorted();
@@ -199,20 +201,23 @@ export function LibraryShell({
 
   return (
     <>
-      {isMobile && expanded ? (
+      {mobileSidebarOpen ? (
+        <>
+        <div className="w-14 shrink-0" aria-hidden="true" />
         <button
           type="button"
           className={SHELL_BACKDROP}
           aria-label="Close sidebar"
           onClick={() => onPanelOpenChange(false)}
         />
+        </>
       ) : null}
 
       <aside
         aria-label="Sidebar"
         className={`${SHELL_ASIDE} transition-[width] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
           expanded ? SHELL_SIDEBAR_EXPANDED : SHELL_SIDEBAR_COLLAPSED
-        }`}
+        } ${mobileSidebarOpen ? "absolute inset-y-0 left-0 z-50 shadow-menu" : "relative z-30"}`}
       >
         {backupOpen && expanded ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4">
@@ -221,7 +226,7 @@ export function LibraryShell({
         ) : (
           <nav
             aria-label="Sidebar navigation"
-            className={`grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden py-2 ${SHELL_NAV_GUTTER}`}
+            className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden py-2 ${SHELL_NAV_GUTTER}`}
           >
             <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto overscroll-contain">
               <ShellNavItem
@@ -296,7 +301,7 @@ export function LibraryShell({
                     active={browseCollectionId !== null}
                     label={collectionsCollapsedLabel}
                     icon={
-                      <CollectionIcon className="size-4 shrink-0 text-zinc-500" />
+                      <CollectionIcon className="size-4 shrink-0 text-text-secondary" />
                     }
                     onClick={() => {
                       onPanelOpenChange(true);
@@ -309,7 +314,7 @@ export function LibraryShell({
                     active={browseTagId !== null}
                     label={tagsCollapsedLabel}
                     icon={
-                      <HashIcon className="size-4 shrink-0 text-zinc-500" />
+                      <HashIcon className="size-4 shrink-0 text-text-secondary" />
                     }
                     onClick={() => {
                       onPanelOpenChange(true);
@@ -326,7 +331,7 @@ export function LibraryShell({
               active={backupOpen}
               label="Backup"
               icon={
-                <BackupIcon className="size-4 shrink-0 text-zinc-500" />
+                <BackupIcon className="size-4 shrink-0 text-text-secondary" />
               }
               onClick={() => {
                 const next = !backupOpen;
@@ -338,6 +343,9 @@ export function LibraryShell({
             />
           </nav>
         )}
+        <div className="shrink-0 px-2 pb-3">
+          <ThemeControl compact={!expanded} />
+        </div>
       </aside>
     </>
   );
@@ -399,12 +407,13 @@ function CollectionsSection({
   return (
     <CollapsibleSection
       title="Collections"
+      icon={<CollectionIcon />}
       open={collectionsOpen}
       onOpenChange={onCollectionsOpenChange}
       trailing={
         <button
           type="button"
-          className={`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_IDLE} size-7 justify-center px-0 text-zinc-500`}
+          className={`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_IDLE} size-7 justify-center px-0 text-text-secondary`}
           aria-label="New collection"
           aria-expanded={createOpen}
           onClick={() => {
@@ -432,7 +441,7 @@ function CollectionsSection({
           }}
         >
           <input
-            className="w-full rounded-[8px] border border-zinc-200/80 bg-white px-2 py-1 text-xs outline-none transition-[border-color] duration-150 ease-out focus:border-zinc-400"
+            className="w-full rounded-[8px] border border-border-edge/80 bg-bg-surface px-2 py-1 text-xs outline-none transition-[border-color] duration-150 ease-out focus:border-border-focus"
             autoFocus
             value={newCollectionDraft}
             disabled={mutationBusy}
@@ -450,7 +459,7 @@ function CollectionsSection({
       />
 
       {filteredCollections.length === 0 ? (
-        <p className="px-2 pb-2 text-pretty text-xs text-zinc-500">
+        <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
           {libraryLoading
             ? "Loading…"
             : collections.length === 0
@@ -502,13 +511,13 @@ function CollectionsSection({
       )}
 
       {dragError ? (
-        <p className="mt-2 px-2 text-pretty text-xs text-red-700" role="alert">
+        <p className="mt-2 px-2 text-pretty text-xs text-text-danger" role="alert">
           {dragError}
         </p>
       ) : null}
 
       {collectionManageError ? (
-        <p className="mt-2 px-2 text-pretty text-xs text-red-700" role="alert">
+        <p className="mt-2 px-2 text-pretty text-xs text-text-danger" role="alert">
           {collectionManageError}
         </p>
       ) : null}
@@ -541,6 +550,7 @@ function TagsSection({
 }) {
   return (
     <CollapsibleSection
+      icon={<HashIcon />}
       title={
         libraryLoading
           ? "Tags"
@@ -558,7 +568,7 @@ function TagsSection({
       />
 
       {filteredTags.length === 0 ? (
-        <p className="px-2 pb-2 text-pretty text-xs text-zinc-500">
+        <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
           {libraryLoading
             ? "Loading…"
             : tags.length === 0
@@ -574,7 +584,6 @@ function TagsSection({
             label={tag.name}
             ariaLabel={`Tag ${tag.name}`}
             count={libraryLoading ? undefined : (counts[tag.id] ?? 0)}
-            icon={<HashIcon className="size-4 shrink-0 text-zinc-500" />}
             onClick={() => onGoTag(tag.id)}
           />
         ))
@@ -618,10 +627,6 @@ function CollectionNavRow({
   onSubmitRename: () => void;
   onDelete: () => void;
 }) {
-  const icon = (
-    <CollectionIcon className="size-4 shrink-0 text-zinc-500" />
-  );
-
   if (renaming) {
     return (
       <form
@@ -631,11 +636,8 @@ function CollectionNavRow({
           onSubmitRename();
         }}
       >
-        <span className="flex size-4 shrink-0 items-center justify-center">
-          {icon}
-        </span>
         <input
-          className="min-w-0 flex-1 rounded-[6px] border border-zinc-200/80 bg-white px-1.5 py-0.5 text-sm outline-none focus:border-zinc-400"
+          className="min-w-0 flex-1 rounded-[6px] border border-border-edge/80 bg-bg-surface px-1.5 py-0.5 text-sm outline-none focus:border-border-focus"
           autoFocus
           value={renameDraft}
           disabled={mutationBusy}
@@ -664,25 +666,22 @@ function CollectionNavRow({
     <div
       className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-1 text-sm ${
         active
-          ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-zinc-900`
-          : "text-zinc-600"
-      } ${dropHighlight ? "shadow-[0_0_0_2px_rgba(24,24,27,0.9)]" : ""}`}
+          ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary`
+          : "text-text-secondary"
+      } ${dropHighlight ? "ring-2 ring-border-focus" : ""}`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
       <button
         type="button"
-        className={`flex min-w-0 flex-1 self-stretch items-center gap-2 rounded-[10px] py-2.5 pl-2 text-left outline-none transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500 ${
+        className={`flex min-w-0 flex-1 self-stretch items-center gap-2 rounded-[10px] py-2.5 pl-2 text-left outline-none transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus ${
           active ? "" : SHELL_NAV_ITEM_IDLE
         }`}
         aria-label={collection.name}
         aria-current={active ? "page" : undefined}
         onClick={onNavigate}
       >
-        <span className="flex size-4 shrink-0 items-center justify-center">
-          {icon}
-        </span>
         <span className="truncate">{collection.name}</span>
         {count !== undefined ? <NavCount value={count} /> : null}
       </button>
@@ -741,7 +740,7 @@ function CollectionRowMenu({
     <div ref={rootRef} className="relative shrink-0">
       <button
         type="button"
-        className={`flex size-7 shrink-0 items-center justify-center rounded-[6px] text-zinc-500 transition-[opacity,background-color] duration-150 hover:bg-zinc-200/70 focus-visible:bg-zinc-200/70 ${
+        className={`flex size-7 shrink-0 items-center justify-center rounded-[6px] text-text-secondary transition-[opacity,background-color] duration-150 hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 ${
           visible || open
             ? "opacity-100"
             : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
@@ -763,13 +762,13 @@ function CollectionRowMenu({
           id={menuId}
           role="menu"
           aria-label={actionsLabel}
-          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[8.5rem] overflow-hidden rounded-[10px] border border-zinc-200/80 bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
+          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[8.5rem] overflow-hidden rounded-control border border-border-edge bg-bg-surface py-1 shadow-menu"
         >
           <li role="presentation">
             <button
               type="button"
               role="menuitem"
-              className="flex w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
+              className="flex w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-canvas"
               onClick={() => {
                 setOpen(false);
                 onRename();
@@ -782,7 +781,7 @@ function CollectionRowMenu({
             <button
               type="button"
               role="menuitem"
-              className="flex w-full px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50"
+              className="flex w-full px-3 py-2 text-left text-sm text-text-danger hover:bg-bg-danger"
               onClick={() => {
                 setOpen(false);
                 onDelete();
@@ -814,7 +813,7 @@ function ShellNavItem({
   active?: boolean;
   label: string;
   ariaLabel?: string;
-  icon: ReactNode;
+  icon?: ReactNode;
   count?: number;
   dropHighlight?: boolean;
   onClick: () => void;
@@ -830,7 +829,7 @@ function ShellNavItem({
           ? "w-full gap-2 px-2 py-1.5 text-left text-sm"
           : "mx-auto size-10 justify-center px-0"
       } ${active ? SHELL_NAV_ITEM_ACTIVE : SHELL_NAV_ITEM_IDLE} ${
-        dropHighlight ? "shadow-[0_0_0_2px_rgba(24,24,27,0.9)]" : ""
+        dropHighlight ? "ring-2 ring-border-focus" : ""
       }`}
       aria-label={ariaLabel ?? label}
       aria-current={active ? "page" : undefined}
@@ -840,7 +839,7 @@ function ShellNavItem({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
+      {icon ? <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span> : null}
       {expanded ? (
         <>
           <span className="min-w-0 flex-1 truncate">{label}</span>
@@ -855,7 +854,7 @@ function NavCount({ value }: { value: number }) {
   return (
     <span
       aria-hidden
-      className="ml-auto shrink-0 pl-2 text-[11px] tabular-nums text-zinc-400"
+      className="ml-auto shrink-0 pl-2 text-[11px] tabular-nums text-text-secondary"
     >
       {value}
     </span>
@@ -864,34 +863,35 @@ function NavCount({ value }: { value: number }) {
 
 function CollapsibleSection({
   title,
+  icon,
   open,
   onOpenChange,
   trailing,
   children,
 }: {
   title: string;
+  icon: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trailing?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <div className="pt-1">
+    <div className="pt-5">
       <div className="flex items-center gap-0.5 pb-0.5 pl-1 pr-1">
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-1 rounded-[8px] px-1 py-1 text-left transition-[background-color] duration-150 hover:bg-zinc-50"
+          className="flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-control px-1 py-1 text-left text-text-primary transition-[background-color] duration-150 hover:bg-bg-raised"
           aria-expanded={open}
           onClick={() => onOpenChange(!open)}
         >
+          {icon}
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</span>
           <ChevronDownIcon
-            className={`size-3.5 text-zinc-400 transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
+            className={`size-3.5 text-text-secondary transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
               open ? "" : "-rotate-90"
             }`}
           />
-          <span className="truncate text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-            {title}
-          </span>
         </button>
         {trailing}
       </div>
@@ -913,9 +913,9 @@ function SidebarSearch({
     <div className="pb-2 pl-2 pr-1">
       <label className="relative block">
         <span className="sr-only">{label}</span>
-        <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400" />
+        <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
         <input
-          className="w-full rounded-[8px] border border-zinc-200/80 bg-zinc-50 py-1 pl-7 pr-2 text-xs outline-none transition-[border-color,box-shadow] duration-150 ease-out focus:border-zinc-400 focus:shadow-[0_0_0_2px_rgba(24,24,27,0.08)]"
+          className="h-8 w-full rounded-control border border-border-edge bg-bg-canvas pl-7 pr-2 text-xs outline-none focus:border-border-focus"
           placeholder="Search"
           aria-label={label}
           value={value}

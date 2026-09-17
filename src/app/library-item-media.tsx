@@ -66,8 +66,8 @@ export function LibraryItemMedia({
         aria-hidden="true"
         className={
           compact
-            ? `flex size-full items-center justify-center bg-white ${className}`
-            : `flex aspect-[16/10] h-full w-full items-center justify-center bg-white ${className}`
+            ? `flex size-full items-center justify-center bg-bg-surface ${className}`
+            : `flex aspect-[16/10] h-full w-full items-center justify-center bg-bg-surface ${className}`
         }
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- remote favicon at native size */}
@@ -112,10 +112,10 @@ export function LibraryItemMedia({
       aria-hidden="true"
       className={
         isInspect
-          ? `flex min-h-48 items-center justify-center bg-zinc-900 text-5xl font-semibold text-zinc-400 ${className}`
+          ? `flex min-h-48 items-center justify-center bg-bg-media text-5xl font-semibold text-text-on-media ${className}`
           : compact
-            ? `flex size-full items-center justify-center bg-zinc-200 text-sm font-semibold text-zinc-700 ${className}`
-            : `flex aspect-[16/10] items-center justify-center bg-zinc-200 text-4xl font-semibold text-zinc-700 ${className}`
+            ? `flex size-full items-center justify-center bg-bg-raised text-sm font-semibold text-text-primary ${className}`
+            : `flex aspect-[16/10] items-center justify-center bg-bg-raised text-4xl font-semibold text-text-primary ${className}`
       }
     >
       {cardInitial(item)}

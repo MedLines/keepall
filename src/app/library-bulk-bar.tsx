@@ -66,7 +66,7 @@ export function LibraryBulkToolbar({
       role="region"
       aria-label="Bulk actions"
     >
-      <span className="shrink-0 pr-1 text-xs font-medium tabular-nums text-zinc-800">
+      <span className="shrink-0 pr-1 text-xs font-medium tabular-nums text-text-primary">
         {count} selected
       </span>
       {!allVisibleSelected ? (
@@ -179,14 +179,14 @@ export function LibraryBulkPanels({
   }
 
   return (
-    <div className="border-t border-zinc-100 bg-zinc-50/80 px-3 py-2 sm:px-4">
+    <div className="border-t border-border-subtle bg-bg-canvas/80 px-3 py-2 sm:px-4">
       {panel === "delete" ? (
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm text-zinc-700">
+          <p className="text-sm text-text-primary">
             Delete {count} item{count === 1 ? "" : "s"}? This cannot be undone.
           </p>
           <button
-            className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-800 disabled:opacity-60"
+            className="rounded-md border border-border-danger bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-danger disabled:opacity-60"
             disabled={busy}
             type="button"
             onClick={onConfirmDelete}
@@ -194,7 +194,7 @@ export function LibraryBulkPanels({
             {pendingDelete ? "Deleting…" : "Confirm delete"}
           </button>
           <button
-            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 disabled:opacity-60"
+            className="rounded-md border border-border-edge bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-primary disabled:opacity-60"
             disabled={busy}
             type="button"
             onClick={onClosePanel}
@@ -265,7 +265,7 @@ export function LibraryBulkPanels({
       ) : null}
 
       {panel === null && error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-text-danger" role="alert">
           {error}
         </p>
       ) : null}
@@ -280,7 +280,7 @@ export function LibraryBulkBar(props: LibraryBulkBarProps) {
   }
 
   return (
-    <div className="mt-3 rounded-lg border border-zinc-300 bg-zinc-50 p-3">
+    <div className="mt-3 rounded-lg border border-border-edge bg-bg-canvas p-3">
       <LibraryBulkToolbar {...props} />
       <div className="mt-2">
         <LibraryBulkPanels {...props} />

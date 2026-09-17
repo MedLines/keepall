@@ -24,13 +24,13 @@ const PICK_CHIP =
   "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs transition-[background-color,border-color,color] duration-150 ease-out disabled:opacity-60";
 
 const PICK_CHIP_OUTLINE =
-  "border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 hover:bg-zinc-50";
+  "border-border-edge bg-bg-surface text-text-primary hover:border-border-edge hover:bg-bg-canvas";
 
 const PICK_CHIP_SELECTED =
-  "border-zinc-900 bg-zinc-900 text-white";
+  "border-action-primary bg-action-primary text-text-on-action";
 
 const FIELD_INPUT =
-  "w-full rounded-[8px] border border-zinc-200/80 bg-white px-2.5 py-1.5 text-sm outline-none transition-[border-color,box-shadow] duration-150 ease-out placeholder:text-zinc-400 focus:border-zinc-400 focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)] disabled:opacity-60";
+  "w-full rounded-[8px] border border-border-edge/80 bg-bg-surface px-2.5 py-1.5 text-sm outline-none transition-[border-color,box-shadow] duration-150 ease-out placeholder:text-text-secondary focus:border-border-focus focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)] disabled:opacity-60";
 
 function filterByQuery(entries: OrgNameSuggestion[], query: string) {
   const normalized = query.trim().toLowerCase();
@@ -114,17 +114,17 @@ export function CaptureOrgPanel({
 
   return (
     <div className={`${SHELL_MANAGE_SURFACE} flex flex-col gap-3`}>
-      <p className="text-xs font-medium text-zinc-500">Optional</p>
+      <p className="text-xs font-medium text-text-secondary">Optional</p>
 
       <div className="flex flex-col gap-1.5">
-        <p className="text-xs font-medium text-zinc-700">Tags</p>
+        <p className="text-xs font-medium text-text-primary">Tags</p>
         {tagNames.length > 0 ? (
           <ul className="flex flex-wrap gap-1" aria-label="Selected tags">
             {tagNames.map((name) => (
               <li key={name} className={`${PICK_CHIP} ${PICK_CHIP_SELECTED} pr-0.5`}>
                 {name}
                 <button
-                  className="flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] leading-none text-zinc-400 transition-[background-color,color] duration-150 ease-out hover:bg-white/15 hover:text-white disabled:opacity-60"
+                  className="flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] leading-none text-text-secondary transition-[background-color,color] duration-150 ease-out hover:bg-bg-surface/15 hover:text-text-on-action disabled:opacity-60"
                   type="button"
                   disabled={disabled}
                   aria-label={`Remove tag ${name}`}
@@ -155,7 +155,7 @@ export function CaptureOrgPanel({
             ))}
           </ul>
         ) : tagSuggestions.length > 0 && tagQuery ? (
-          <p className="text-xs text-zinc-500">No matching tags — Enter creates one.</p>
+          <p className="text-xs text-text-secondary">No matching tags — Enter creates one.</p>
         ) : null}
         <input
           autoComplete="off"
@@ -172,14 +172,14 @@ export function CaptureOrgPanel({
           onKeyDown={onTagFieldKeyDown}
         />
         {tagQuery && !tagQueryMatchesExisting ? (
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-text-secondary">
             Enter to create “{tagQuery}”
           </p>
         ) : null}
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <p className="text-xs font-medium text-zinc-700">Collection</p>
+        <p className="text-xs font-medium text-text-primary">Collection</p>
         <ul
           className="flex flex-wrap gap-1"
           aria-label="Collections"
@@ -217,7 +217,7 @@ export function CaptureOrgPanel({
         </ul>
         {collectionSuggestions.length > 0 && collectionQuery ? (
           visibleCollections.length === 0 ? (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-text-secondary">
               No matching collections — Enter creates one.
             </p>
           ) : null
@@ -237,7 +237,7 @@ export function CaptureOrgPanel({
           onKeyDown={onCollectionFieldKeyDown}
         />
         {collectionQuery && !collectionQueryMatchesExisting ? (
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-text-secondary">
             Enter to create “{collectionQuery}”
           </p>
         ) : null}

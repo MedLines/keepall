@@ -26,7 +26,6 @@ import { ShellTopMenu } from "./shell-top-menu";
 import {
   SHELL_NAV_ITEM,
   SHELL_NAV_ITEM_IDLE,
-  SHELL_SIDEBAR_EXPANDED,
   SHELL_TOP_BTN,
   SHELL_TOP_BTN_ACTIVE,
 } from "./shell-styles";
@@ -64,18 +63,19 @@ export function LibraryTopBar({
   bulk,
   libraryLoading = false,
 }: Props) {
-  const showBulkSlot = bulk !== undefined && bulk.visibleCount > 0;
+  const showBulkSlot = bulk !== undefined && bulk.count > 0;
   const bulkPanelOpen = bulk?.panel !== null && bulk?.panel !== undefined;
 
   return (
-    <header className="shrink-0 border-b border-zinc-200/80 bg-white">
-      <div className="flex min-h-11 items-stretch">
+    <header className="relative z-40 shrink-0 bg-bg-shell">
+      <h2 ref={headingRef} className="sr-only" id="library-heading" tabIndex={-1}>Library</h2>
+      <div className="flex flex-wrap items-center gap-y-2 px-3 py-3 md:flex-nowrap md:px-0">
         <div
-          className={`${SHELL_SIDEBAR_EXPANDED} flex shrink-0 items-center border-r border-zinc-200/80 px-3`}
+          className="flex w-full shrink-0 items-center md:w-60 md:px-3"
         >
           <Link
             href="/"
-            className={`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_IDLE} min-w-0 flex-1 gap-2 px-2 text-zinc-900`}
+            className={`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_IDLE} min-h-10 min-w-0 gap-2 px-2 text-text-primary`}
             aria-label="Keepall home"
             onClick={() => onHomeClick?.()}
           >
@@ -84,19 +84,11 @@ export function LibraryTopBar({
           </Link>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex min-h-11 min-w-0 items-center gap-2 px-3 py-1 sm:gap-2 sm:px-4">
-            <div className="hidden min-w-0 shrink-0 sm:block sm:w-28 lg:w-32">
-              <h2
-                ref={headingRef}
-                className="sr-only"
-                id="library-heading"
-                tabIndex={-1}
-              >
-                Library
-              </h2>
-              <p className="truncate text-sm font-semibold text-zinc-900">{title}</p>
-              <p className="text-[11px] tabular-nums text-zinc-500">
+        <div className="flex min-w-0 flex-1 basis-full flex-col md:basis-0 md:pr-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="hidden min-w-0 max-w-44 shrink-0 pr-3 lg:block">
+              <p className="truncate text-sm font-semibold text-text-primary">{title}</p>
+              <p className="text-[11px] tabular-nums text-text-secondary">
                 {libraryLoading
                   ? "Loading…"
                   : `${itemCount} item${itemCount === 1 ? "" : "s"}`}
@@ -105,8 +97,7 @@ export function LibraryTopBar({
 
             {showBulkSlot ? (
               <div
-                className="flex min-h-8 min-w-[12rem] flex-1 items-center overflow-hidden"
-                aria-hidden={bulk!.count === 0}
+                className="order-last flex min-h-10 w-full min-w-0 items-center overflow-hidden"
               >
                 <LibraryBulkToolbar
                   allVisibleSelected={bulk!.allVisibleSelected}
@@ -119,15 +110,15 @@ export function LibraryTopBar({
               </div>
             ) : null}
 
-            <div className="min-w-0 shrink-0 sm:w-44 lg:w-52">
+            <div className="order-first w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
               <label className="relative block" htmlFor="library-search">
                 <span className="sr-only">Search</span>
-                <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+                <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-text-secondary" />
                 <input
-                  className="h-8 w-full rounded-[10px] border border-zinc-200/80 bg-zinc-50 pl-8 pr-2.5 text-sm outline-none transition-[border-color,box-shadow] duration-150 ease-out focus:border-zinc-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)]"
+                  className="h-10 w-full rounded-control border border-border-edge bg-bg-surface pl-9 pr-3 text-sm outline-none focus:border-border-focus"
                   id="library-search"
                   type="search"
-                  placeholder="Search…"
+                  placeholder="Search your library…"
                   value={searchQuery}
                   onChange={(event) => onSearchChange(event.target.value)}
                 />
@@ -176,9 +167,9 @@ export function LibraryTopBar({
         </div>
       </div>
 
-      <div className="border-t border-zinc-100 px-3 py-1.5 sm:hidden">
-        <p className="truncate text-sm font-semibold text-zinc-900">{title}</p>
-        <p className="text-[11px] tabular-nums text-zinc-500">
+      <div className="px-4 pb-3 lg:hidden">
+        <p className="truncate text-sm font-semibold text-text-primary">{title}</p>
+        <p className="text-[11px] tabular-nums text-text-secondary">
           {libraryLoading
             ? "Loading…"
             : `${itemCount} item${itemCount === 1 ? "" : "s"}`}

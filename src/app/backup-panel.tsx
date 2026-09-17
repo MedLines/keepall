@@ -436,7 +436,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const imageFolderDialog = (
     <dialog
       ref={imageFolderDialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,28rem)] w-[min(100%-2rem,28rem)] overflow-y-auto rounded-[12px] bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-zinc-900/35 [&::backdrop]:backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,28rem)] w-[min(100%-2rem,28rem)] overflow-y-auto rounded-[12px] bg-bg-surface p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
       aria-labelledby={imageFolderTitleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -452,43 +452,43 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             >
               Import image folder
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+            <p className="mt-2 text-sm leading-relaxed text-text-secondary">
               {pendingImageFiles.length} file
               {pendingImageFiles.length === 1 ? "" : "s"} selected. Each image
               under 3MB becomes its own library item. Larger or unsupported
               files are skipped.
             </p>
-            <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+            <p className="mt-2 text-xs leading-relaxed text-text-secondary">
               Subfolders are not turned into collections — only one optional
               collection for the whole import (prefilled from the folder name).
               Nested collections are not supported.
             </p>
           </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-zinc-900">
+            <span className="font-medium text-text-primary">
               Collection for all imports (optional)
             </span>
             <input
-              className="rounded-[10px] border border-zinc-200 px-3 py-2 disabled:opacity-60"
+              className="rounded-[10px] border border-border-edge px-3 py-2 disabled:opacity-60"
               type="text"
               value={imageCollectionDraft}
               placeholder="e.g. Vacation 2024"
               disabled={busy}
               onChange={(event) => setImageCollectionDraft(event.target.value)}
             />
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-text-secondary">
               Leave blank to keep images unsorted. Clear the field to skip a
               collection.
             </span>
           </label>
           {imageQuotaWarning ? (
-            <p className="text-sm text-amber-800" role="status">
+            <p className="text-sm text-text-warning" role="status">
               {imageQuotaWarning}
             </p>
           ) : null}
           <div className="flex flex-col gap-2">
             <button
-              className="rounded-[10px] bg-zinc-900 px-3 py-2.5 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className="rounded-[10px] bg-action-primary px-3 py-2.5 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
               type="button"
               disabled={busy}
               onClick={() => void runImageFolderImport()}
@@ -498,7 +498,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
                 : "Import images"}
             </button>
             <button
-              className="rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-600 transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className="rounded-[10px] px-3 py-2 text-sm font-medium text-text-secondary transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
               type="button"
               disabled={busy}
               onClick={cancelImageFolderImport}
@@ -514,7 +514,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const choiceDialog = (
     <dialog
       ref={choiceDialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,24rem)] w-[min(100%-2rem,24rem)] overflow-y-auto rounded-[12px] bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-zinc-900/35 [&::backdrop]:backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,24rem)] w-[min(100%-2rem,24rem)] overflow-y-auto rounded-[12px] bg-bg-surface p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
       aria-labelledby={choiceTitleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -527,14 +527,14 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             <h2 className="text-lg font-semibold tracking-tight" id={choiceTitleId}>
               Import backup
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+            <p className="mt-2 text-sm leading-relaxed text-text-secondary">
               Merge keeps your current library and combines this file. Replace
               wipes this library, then loads only the file.
             </p>
           </div>
           <div className="flex flex-col gap-2">
             <button
-              className="rounded-[10px] bg-zinc-900 px-3 py-2.5 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className="rounded-[10px] bg-action-primary px-3 py-2.5 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
               type="button"
               disabled={busy}
               onClick={() => void runImport("merge")}
@@ -542,7 +542,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               Merge — keep both
             </button>
             <button
-              className="rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className="rounded-[10px] border border-border-edge bg-bg-surface px-3 py-2.5 text-sm font-medium text-text-primary transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
               type="button"
               disabled={busy}
               onClick={() => void runImport("replace")}
@@ -550,7 +550,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               Replace current data
             </button>
             <button
-              className="rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-600 transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className="rounded-[10px] px-3 py-2 text-sm font-medium text-text-secondary transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
               type="button"
               disabled={busy}
               onClick={cancelImportChoice}
@@ -566,7 +566,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const bookmarksDialog = (
     <dialog
       ref={bookmarksDialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,32rem)] w-[min(100%-2rem,28rem)] overflow-y-auto rounded-[12px] bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-zinc-900/35 [&::backdrop]:backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,32rem)] w-[min(100%-2rem,28rem)] overflow-y-auto rounded-[12px] bg-bg-surface p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
       aria-labelledby={bookmarksTitleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -579,22 +579,22 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             <h2 className="text-lg font-semibold tracking-tight" id={bookmarksTitleId}>
               Import browser bookmarks
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+            <p className="mt-2 text-sm leading-relaxed text-text-secondary">
               Adds links from your <strong className="font-medium">browser</strong>{" "}
               export into <strong className="font-medium">Keepall</strong>. Nothing
               in Keepall is deleted. Same URL in both places → one Keepall link.
             </p>
           </div>
           <fieldset className="flex flex-col gap-2 border-0 p-0">
-            <legend className="text-sm font-medium text-zinc-900">
+            <legend className="text-sm font-medium text-text-primary">
               Link already in Keepall — what about collections?
             </legend>
-            <p className="text-xs leading-relaxed text-zinc-600">
+            <p className="text-xs leading-relaxed text-text-secondary">
               Browser <em>tags</em> from the file are always added in Keepall.
               This choice is only about Keepall <em>collections</em> vs browser{" "}
               <em>folders</em>.
             </p>
-            <label className="flex cursor-pointer gap-2 rounded-[10px] border border-zinc-200 px-3 py-2 text-sm">
+            <label className="flex cursor-pointer gap-2 rounded-[10px] border border-border-edge px-3 py-2 text-sm">
               <input
                 type="radio"
                 name="collection-policy"
@@ -604,13 +604,13 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               />
               <span>
                 <span className="font-medium">Browser folder → Unsorted only</span>
-                <span className="mt-0.5 block text-xs text-zinc-600">
+                <span className="mt-0.5 block text-xs text-text-secondary">
                   Already in a Keepall collection → leave it. In Keepall Unsorted
                   → file using the browser folder name.
                 </span>
               </span>
             </label>
-            <label className="flex cursor-pointer gap-2 rounded-[10px] border border-zinc-200 px-3 py-2 text-sm">
+            <label className="flex cursor-pointer gap-2 rounded-[10px] border border-border-edge px-3 py-2 text-sm">
               <input
                 type="radio"
                 name="collection-policy"
@@ -620,13 +620,13 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               />
               <span>
                 <span className="font-medium">Keep Keepall collections</span>
-                <span className="mt-0.5 block text-xs text-zinc-600">
+                <span className="mt-0.5 block text-xs text-text-secondary">
                   Browser folders apply only to links not in Keepall yet. Existing
                   Keepall links keep their collection.
                 </span>
               </span>
             </label>
-            <label className="flex cursor-pointer gap-2 rounded-[10px] border border-zinc-200 px-3 py-2 text-sm">
+            <label className="flex cursor-pointer gap-2 rounded-[10px] border border-border-edge px-3 py-2 text-sm">
               <input
                 type="radio"
                 name="collection-policy"
@@ -636,7 +636,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               />
               <span>
                 <span className="font-medium">Browser folders win</span>
-                <span className="mt-0.5 block text-xs text-zinc-600">
+                <span className="mt-0.5 block text-xs text-text-secondary">
                   If the browser file has a folder, move the Keepall link into
                   that collection — even when already filed.
                 </span>
@@ -645,7 +645,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
           </fieldset>
           <div className="flex flex-col gap-2">
             <button
-              className="rounded-[10px] bg-zinc-900 px-3 py-2.5 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className="rounded-[10px] bg-action-primary px-3 py-2.5 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
               type="button"
               disabled={busy}
               onClick={() => void runBookmarksImport()}
@@ -653,7 +653,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               Import bookmarks
             </button>
             <button
-              className="rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-600 transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className="rounded-[10px] px-3 py-2 text-sm font-medium text-text-secondary transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
               type="button"
               disabled={busy}
               onClick={cancelBookmarksImport}
@@ -668,12 +668,12 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   const heading = (
     <div className="flex items-start gap-2">
-      <BackupIcon className="mt-0.5 size-5 shrink-0 text-zinc-500" />
+      <BackupIcon className="mt-0.5 size-5 shrink-0 text-text-secondary" />
       <div className="min-w-0 flex-1">
         <h2
           className={
             variant === "sidebar"
-              ? "text-sm font-semibold text-zinc-900"
+              ? "text-sm font-semibold text-text-primary"
               : "text-lg font-semibold"
           }
           id="backup-heading"
@@ -684,7 +684,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       {onClose ? (
         <button
           type="button"
-          className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800"
+          className="rounded-md p-1 text-text-secondary transition-colors hover:bg-bg-raised hover:text-text-primary"
           aria-label="Close backup"
           onClick={onClose}
         >
@@ -696,8 +696,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   const buttonClass =
     variant === "sidebar"
-      ? "rounded-[10px] border border-zinc-200/80 bg-white px-3 py-2 text-sm font-medium shadow-[0_0_0_1px_rgba(0,0,0,0.04)] transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
-      : "rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium disabled:opacity-60";
+      ? "rounded-[10px] border border-border-edge/80 bg-bg-surface px-3 py-2 text-sm font-medium shadow-[0_0_0_1px_rgba(0,0,0,0.04)] transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+      : "rounded-md border border-border-edge px-3 py-2 text-sm font-medium disabled:opacity-60";
 
   const actions = (
     <div
@@ -755,7 +755,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         >
           <p
             className={
-              variant === "sidebar" ? "text-xs text-zinc-700" : "text-sm text-zinc-700"
+              variant === "sidebar" ? "text-xs text-text-primary" : "text-sm text-text-primary"
             }
           >
             Importing images… {imageImportProgress.done} /{" "}
@@ -768,13 +768,13 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               : ""}
           </p>
           <progress
-            className="h-2 w-full overflow-hidden rounded-full accent-zinc-900"
+            className="h-2 w-full overflow-hidden rounded-full accent-action-primary"
             max={imageImportProgress.total}
             value={imageImportProgress.done}
           />
           <p
             className={
-              variant === "sidebar" ? "text-[11px] text-zinc-500" : "text-xs text-zinc-500"
+              variant === "sidebar" ? "text-[11px] text-text-secondary" : "text-xs text-text-secondary"
             }
           >
             {imageImportProgress.added > 0
@@ -788,8 +788,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         <p
           className={
             variant === "sidebar"
-              ? "mt-2 text-xs text-zinc-700"
-              : "mt-2 text-sm text-zinc-700"
+              ? "mt-2 text-xs text-text-primary"
+              : "mt-2 text-sm text-text-primary"
           }
         >
           {status}
@@ -799,8 +799,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         <button
           className={
             variant === "sidebar"
-              ? "mt-2 text-left text-xs font-medium text-zinc-800 underline"
-              : "mt-2 text-left text-sm font-medium text-zinc-800 underline"
+              ? "mt-2 text-left text-xs font-medium text-text-primary underline"
+              : "mt-2 text-left text-sm font-medium text-text-primary underline"
           }
           type="button"
           onClick={onDownloadSkippedLog}
@@ -812,8 +812,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         <p
           className={
             variant === "sidebar"
-              ? "mt-2 text-xs text-red-700"
-              : "mt-2 text-sm text-red-700"
+              ? "mt-2 text-xs text-text-danger"
+              : "mt-2 text-sm text-text-danger"
           }
           role="alert"
         >
@@ -825,7 +825,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   const description =
     variant === "sidebar" ? (
-      <p className="mt-2 text-xs leading-relaxed text-zinc-600">
+      <p className="mt-2 text-xs leading-relaxed text-text-secondary">
         <strong className="font-medium">Keepall</strong> backup: export or import
         a <code className="text-[11px]">.keepall</code> file.{" "}
         <strong className="font-medium">Browser</strong>: HTML bookmarks.{" "}
@@ -833,7 +833,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         each max).
       </p>
     ) : (
-      <p className="mt-2 text-sm text-zinc-600">
+      <p className="mt-2 text-sm text-text-secondary">
         <strong className="font-medium">Keepall</strong> backup: export or import
         a <code>.keepall</code> file. <strong className="font-medium">Browser</strong>
         : HTML bookmarks. <strong className="font-medium">Images</strong>: pick a
@@ -856,7 +856,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   }
 
   return (
-    <section className="mt-10 border-t border-zinc-200 pt-6" aria-labelledby="backup-heading">
+    <section className="mt-10 border-t border-border-edge pt-6" aria-labelledby="backup-heading">
       {heading}
       {description}
       {actions}

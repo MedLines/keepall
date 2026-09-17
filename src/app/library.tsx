@@ -1400,7 +1400,7 @@ export function Library() {
       generation={navigationGeneration}
       generationRef={navigationGenerationRef}
     >
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-zinc-50">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-shell">
       <LibraryTopBar
         headingRef={libraryHeadingRef}
         title={viewTitle}
@@ -1499,13 +1499,13 @@ export function Library() {
 
         <main
           ref={mainScrollRef}
-          className="min-w-0 flex-1 overflow-auto px-4 py-4 sm:px-5"
+          className="mb-2 mr-2 min-w-0 flex-1 overflow-auto rounded-panel border border-border-edge bg-bg-canvas px-4 py-4 sm:mb-3 sm:mr-3 sm:px-6 sm:py-6"
           aria-labelledby="library-heading"
         >
           {loadState === "loading" ? (
-            <p className="text-sm text-zinc-600">Loading…</p>
+            <p className="text-sm text-text-secondary">Loading…</p>
           ) : loadState === "error" ? (
-            <p className="text-sm text-red-700" role="alert">
+            <p className="text-sm text-text-danger" role="alert">
               {error ?? "Couldn't load items."}
             </p>
           ) : (
@@ -1515,11 +1515,11 @@ export function Library() {
                   className="mb-3 flex flex-wrap items-center gap-2"
                   role="status"
                 >
-                  <p className="text-sm text-zinc-700">
+                  <p className="text-sm text-text-primary">
                     Tag: <span className="font-medium">{browseTagName}</span>
                   </p>
                   <button
-                    className="rounded-md border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-800"
+                    className="rounded-md border border-border-edge bg-bg-surface px-3 py-1 text-sm font-medium text-text-primary"
                     type="button"
                     onClick={() => updateView({ tag: null }, "push")}
                   >
@@ -1528,14 +1528,14 @@ export function Library() {
                 </div>
               ) : null}
               {deleteError ? (
-                <p className="mb-3 text-sm text-red-700" role="alert">
+                <p className="mb-3 text-sm text-text-danger" role="alert">
                   {deleteError}
                 </p>
               ) : null}
               {previewEnrichProgress?.kind === "welcome" &&
               previewEnrichProgress.done < previewEnrichProgress.total ? (
                 <p
-                  className="mb-3 text-sm text-zinc-600"
+                  className="mb-3 text-sm text-text-secondary"
                   role="status"
                   aria-live="polite"
                 >
@@ -1544,7 +1544,7 @@ export function Library() {
                 </p>
               ) : null}
               {visibleItems.length === 0 ? (
-                <p className="text-sm text-zinc-600">
+                <p className="text-sm text-text-secondary">
                   {normalizeSearchQuery(view.q).length > 0
                     ? "No matching items."
                     : view.type !== null
@@ -1565,7 +1565,7 @@ export function Library() {
                   scrollRef={mainScrollRef}
                   renderItem={renderLibraryItem}
                   empty={
-                    <p className="text-sm text-zinc-600">
+                    <p className="text-sm text-text-secondary">
                       {normalizeSearchQuery(view.q).length > 0
                         ? "No matching items."
                         : view.type !== null

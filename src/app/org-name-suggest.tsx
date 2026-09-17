@@ -88,12 +88,12 @@ export function OrgNameSuggest({
   }
 
   const inputClass = compact
-    ? "min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-60"
-    : "rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60";
+    ? "min-w-0 flex-1 rounded-md border border-border-edge bg-bg-surface px-2 py-1.5 text-sm disabled:opacity-60"
+    : "rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60";
 
   const buttonClass = compact
-    ? "relative flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md bg-white/95 px-2 text-xs font-medium text-zinc-800 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06)] backdrop-blur-sm disabled:opacity-60"
-    : "rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-800 disabled:opacity-60";
+    ? "relative flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md bg-bg-surface/95 px-2 text-xs font-medium text-text-primary shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06)] backdrop-blur-sm disabled:opacity-60"
+    : "rounded-md border border-border-edge bg-bg-surface px-3 py-2 text-sm font-medium text-text-primary disabled:opacity-60";
 
   const fields = (
     <>
@@ -124,13 +124,13 @@ export function OrgNameSuggest({
           />
           {filtered.length > 0 ? (
             <ul
-              className="absolute z-20 mt-1 max-h-40 w-full overflow-auto rounded-md border border-zinc-200 bg-white py-1 shadow-md"
+              className="absolute z-20 mt-1 max-h-40 w-full overflow-auto rounded-md border border-border-edge bg-bg-surface py-1 shadow-md"
               role="listbox"
             >
               {filtered.map((entry) => (
                 <li key={entry.id} role="option">
                   <button
-                    className="block w-full px-3 py-1.5 text-left text-sm text-zinc-800 hover:bg-zinc-100"
+                    className="block w-full px-3 py-1.5 text-left text-sm text-text-primary hover:bg-bg-raised"
                     type="button"
                     disabled={disabled}
                     onMouseDown={(event) => event.preventDefault()}
@@ -163,7 +163,7 @@ export function OrgNameSuggest({
       </div>
       {error ? (
         <p
-          className={`${compact ? "mt-1 text-xs" : "mt-2 text-sm"} text-red-700`}
+          className={`${compact ? "mt-1 text-xs" : "mt-2 text-sm"} text-text-danger`}
           role="alert"
         >
           {error}

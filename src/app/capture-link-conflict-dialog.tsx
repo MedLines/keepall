@@ -65,7 +65,7 @@ export function CaptureLinkConflictDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,32rem)] w-[min(100%-2rem,28rem)] overflow-y-auto rounded-[12px] bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-zinc-900/35 [&::backdrop]:backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,32rem)] w-[min(100%-2rem,28rem)] overflow-y-auto rounded-[12px] bg-bg-surface p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -80,7 +80,7 @@ export function CaptureLinkConflictDialog({
             <h2 className="text-lg font-semibold tracking-tight" id={titleId}>
               Already saved
             </h2>
-            <p className="mt-1 text-sm text-zinc-600">
+            <p className="mt-1 text-sm text-text-secondary">
               This item is already in your library. Choose how to update tags
               and collection.
             </p>
@@ -88,10 +88,10 @@ export function CaptureLinkConflictDialog({
 
           {conflict.askCollection ? (
             <fieldset className="flex flex-col gap-2">
-              <legend className="text-xs font-medium text-zinc-700">
+              <legend className="text-xs font-medium text-text-primary">
                 Collection
               </legend>
-              <label className="flex items-start gap-2 text-sm text-zinc-800">
+              <label className="flex items-start gap-2 text-sm text-text-primary">
                 <input
                   className="mt-1"
                   type="radio"
@@ -104,7 +104,7 @@ export function CaptureLinkConflictDialog({
                   Keep in “{conflict.existingCollectionName}”
                 </span>
               </label>
-              <label className="flex items-start gap-2 text-sm text-zinc-800">
+              <label className="flex items-start gap-2 text-sm text-text-primary">
                 <input
                   className="mt-1"
                   type="radio"
@@ -125,10 +125,10 @@ export function CaptureLinkConflictDialog({
 
           {conflict.askTags ? (
             <fieldset className="flex flex-col gap-2">
-              <legend className="text-xs font-medium text-zinc-700">
+              <legend className="text-xs font-medium text-text-primary">
                 Tags
               </legend>
-              <label className="flex items-start gap-2 text-sm text-zinc-800">
+              <label className="flex items-start gap-2 text-sm text-text-primary">
                 <input
                   className="mt-1"
                   type="radio"
@@ -141,7 +141,7 @@ export function CaptureLinkConflictDialog({
                   Keep existing ({formatList(conflict.existingTagNames)})
                 </span>
               </label>
-              <label className="flex items-start gap-2 text-sm text-zinc-800">
+              <label className="flex items-start gap-2 text-sm text-text-primary">
                 <input
                   className="mt-1"
                   type="radio"
@@ -154,7 +154,7 @@ export function CaptureLinkConflictDialog({
                   Use new only ({formatList(conflict.nextTagNames)})
                 </span>
               </label>
-              <label className="flex items-start gap-2 text-sm text-zinc-800">
+              <label className="flex items-start gap-2 text-sm text-text-primary">
                 <input
                   className="mt-1"
                   type="radio"

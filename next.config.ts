@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
   turbopack: {},
   experimental: {
     useOffline: true,
+    optimizePackageImports: ["@hugeicons/core-free-icons"],
   },
   webpack: (config, { dev }) => {
     if (!dev) {

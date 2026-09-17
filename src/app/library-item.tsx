@@ -103,7 +103,7 @@ export type LibraryItemProps = {
 };
 
 const ACTION_BTN =
-  "relative flex h-8 min-w-8 items-center justify-center rounded-md bg-white/95 px-2 text-xs font-medium text-zinc-800 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06)] backdrop-blur-sm transition-[transform,box-shadow] duration-150 ease-out after:absolute after:left-1/2 after:top-1/2 after:size-10 after:-translate-x-1/2 after:-translate-y-1/2 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08)] active:scale-[0.96] disabled:opacity-60";
+  "relative flex h-8 min-w-8 items-center justify-center rounded-md bg-bg-surface/95 px-2 text-xs font-medium text-text-primary shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06)] backdrop-blur-sm transition-[transform,box-shadow] duration-150 ease-out after:absolute after:left-1/2 after:top-1/2 after:size-10 after:-translate-x-1/2 after:-translate-y-1/2 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08)] active:scale-[0.96] disabled:opacity-60";
 
 export function LibraryItem({
   item,
@@ -212,10 +212,10 @@ export function LibraryItem({
           {...itemMediaLayoutProps(item.id, layoutMode, reduceMotion)}
           className={
             isList
-              ? `size-10 overflow-hidden ${item.type === "link" ? "bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)]" : "bg-zinc-200"}`
+              ? `size-10 overflow-hidden ${item.type === "link" ? "bg-bg-surface shadow-[0_0_0_1px_rgba(0,0,0,0.06)]" : "bg-bg-raised"}`
               : item.type === "link"
-                ? "aspect-[16/10] w-full overflow-hidden bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
-                : "aspect-[16/10] w-full cursor-pointer overflow-hidden bg-zinc-200"
+                ? "aspect-[16/10] w-full overflow-hidden bg-bg-surface shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
+                : "aspect-[16/10] w-full cursor-pointer overflow-hidden bg-bg-raised"
           }
           style={{ borderRadius: isList ? 8 : 12 }}
           onClick={
@@ -341,7 +341,7 @@ export function LibraryItem({
               </button>
             </div>
             {orgPanel === "tag" ? (
-              <div className="w-56 rounded-lg bg-white/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+              <div className="w-56 rounded-lg bg-bg-surface/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm">
                 <OrgNameSuggest
                   compact
                   hideLabel
@@ -366,7 +366,7 @@ export function LibraryItem({
               </div>
             ) : null}
             {orgPanel === "collection" ? (
-              <div className="w-56 rounded-lg bg-white/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+              <div className="w-56 rounded-lg bg-bg-surface/95 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm">
                 <OrgNameSuggest
                   compact
                   hideLabel
@@ -407,11 +407,11 @@ export function LibraryItem({
       <div
         className={
           isList
-            ? `group flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2 py-2 ${
-                inspected || selected ? "ring-2 ring-zinc-900" : ""
+            ? `group flex items-center gap-2 rounded-lg border border-border-edge bg-bg-surface px-2 py-2 ${
+                inspected || selected ? "ring-2 ring-border-focus" : ""
               }`
-            : `group relative flex flex-col rounded-2xl bg-white p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06),0_2px_4px_0_rgba(0,0,0,0.04)] hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_-1px_rgba(0,0,0,0.08),0_2px_4px_0_rgba(0,0,0,0.06)] ${
-                selected ? "ring-2 ring-zinc-900" : ""
+            : `group relative flex flex-col rounded-2xl bg-bg-surface p-2 shadow-edge ${
+                selected ? "ring-2 ring-border-focus" : ""
               }`
         }
       >
@@ -425,7 +425,7 @@ export function LibraryItem({
                     ? "opacity-100"
                     : "opacity-0 group-hover:opacity-100"
               }`
-            : `absolute left-3 top-3 z-20 flex size-8 items-center justify-center rounded-md bg-white/95 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity duration-100 ${
+            : `absolute left-3 top-3 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity duration-100 ${
                 !chromeVisible
                   ? "pointer-events-none opacity-0"
                   : checkboxVisible
@@ -437,7 +437,7 @@ export function LibraryItem({
         <span className="sr-only">Select {title}</span>
         <input
           checked={selected}
-          className="size-4 rounded border-zinc-300"
+          className="size-4 rounded border-border-edge"
           disabled={mutationBusy}
           type="checkbox"
           onChange={onToggleSelect}
@@ -456,7 +456,7 @@ export function LibraryItem({
         {isList && pinVisible ? (
           <button
             type="button"
-            className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-800"
+            className="rounded-md border border-border-edge bg-bg-surface px-2 py-1 text-xs font-medium text-text-primary"
             aria-label={pinned ? "Unpin" : "Pin"}
             onClick={(event) => {
               event.stopPropagation();
@@ -499,13 +499,13 @@ export function LibraryItem({
           <div
             className={
               isList
-                ? "truncate text-sm font-medium text-zinc-900"
+                ? "truncate text-sm font-medium text-text-primary"
                 : "text-balance font-medium"
             }
           >
             {!isList && !editing && item.type === "link" ? (
               <a
-                className="break-words text-zinc-900 underline-offset-2 hover:underline"
+                className="break-words text-text-primary underline-offset-2 hover:underline"
                 href={item.url}
                 rel="noreferrer"
                 target="_blank"
@@ -515,7 +515,7 @@ export function LibraryItem({
             ) : !isList && !editing ? (
               <button
                 type="button"
-                className="break-words text-left text-zinc-900 underline-offset-2 hover:underline"
+                className="break-words text-left text-text-primary underline-offset-2 hover:underline"
                 onClick={onOpenInspect}
               >
                 {title}
@@ -526,7 +526,7 @@ export function LibraryItem({
           </div>
           {!isList ? (
             <p className="mt-1">
-              <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
+              <span className="inline-block rounded-full bg-bg-raised px-2 py-0.5 text-xs font-medium text-text-primary">
                 {typeLabel}
               </span>
             </p>
@@ -535,10 +535,10 @@ export function LibraryItem({
             <div
               className={
                 isList
-                  ? "truncate text-xs text-zinc-500"
+                  ? "truncate text-xs text-text-secondary"
                   : item.type === "link"
-                    ? "mt-1 line-clamp-2 text-pretty text-sm text-zinc-600"
-                    : "mt-1 line-clamp-2 w-full cursor-pointer text-left text-pretty text-sm text-zinc-600"
+                    ? "mt-1 line-clamp-2 text-pretty text-sm text-text-secondary"
+                    : "mt-1 line-clamp-2 w-full cursor-pointer text-left text-pretty text-sm text-text-secondary"
               }
               onClick={
                 !isList && item.type !== "link" ? onOpenInspect : undefined
@@ -561,8 +561,8 @@ export function LibraryItem({
           ) : null}
         </div>
         {isList ? (
-          <span className="hidden shrink-0 items-center gap-3 text-xs text-zinc-500 sm:flex">
-            <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-600">
+          <span className="hidden shrink-0 items-center gap-3 text-xs text-text-secondary sm:flex">
+            <span className="rounded bg-bg-raised px-1.5 py-0.5 font-medium text-text-secondary">
               {typeLabel}
             </span>
             <time dateTime={new Date(item.createdAt).toISOString()}>
@@ -582,7 +582,7 @@ export function LibraryItem({
               Note content
             </label>
             <textarea
-              className="min-h-24 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+              className="min-h-24 rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
               id={`edit-note-${item.id}`}
               ref={setFirstEditField}
               value={editDraft}
@@ -591,13 +591,13 @@ export function LibraryItem({
               onKeyDown={(event) => onEditSaveShortcut(event, onSaveNote)}
             />
             {editError ? (
-              <p className="text-sm text-red-700" role="alert">
+              <p className="text-sm text-text-danger" role="alert">
                 {editError}
               </p>
             ) : null}
             <div className="flex flex-wrap gap-3">
               <button
-                className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                className="rounded-md bg-action-primary px-3 py-1 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
                 type="button"
                 disabled={mutationBusy}
                 onClick={onSaveNote}
@@ -608,7 +608,7 @@ export function LibraryItem({
                   : "Save note"}
               </button>
               <button
-                className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                className="rounded-md border border-border-edge px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
                 type="button"
                 disabled={mutationBusy}
                 onClick={onCancelEdit}
@@ -626,7 +626,7 @@ export function LibraryItem({
               URL
             </label>
             <input
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+              className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
               id={`edit-link-url-${item.id}`}
               ref={setFirstEditField}
               value={editDraft}
@@ -641,7 +641,7 @@ export function LibraryItem({
               Title
             </label>
             <input
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+              className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
               id={`edit-link-title-${item.id}`}
               value={editTitleDraft}
               disabled={mutationBusy}
@@ -649,13 +649,13 @@ export function LibraryItem({
               onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
             />
             {editError ? (
-              <p className="text-sm text-red-700" role="alert">
+              <p className="text-sm text-text-danger" role="alert">
                 {editError}
               </p>
             ) : null}
             <div className="flex flex-wrap gap-3">
               <button
-                className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                className="rounded-md bg-action-primary px-3 py-1 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
                 type="button"
                 disabled={mutationBusy}
                 onClick={onSaveLink}
@@ -666,7 +666,7 @@ export function LibraryItem({
                   : "Save link"}
               </button>
               <button
-                className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                className="rounded-md border border-border-edge px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
                 type="button"
                 disabled={mutationBusy}
                 onClick={onCancelEdit}
@@ -684,7 +684,7 @@ export function LibraryItem({
               Caption
             </label>
             <textarea
-              className="min-h-20 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+              className="min-h-20 rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
               id={`edit-image-caption-${item.id}`}
               ref={setFirstEditField}
               value={editDraft}
@@ -699,7 +699,7 @@ export function LibraryItem({
               Source URL
             </label>
             <input
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+              className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
               id={`edit-image-source-${item.id}`}
               value={editTitleDraft}
               disabled={mutationBusy}
@@ -707,13 +707,13 @@ export function LibraryItem({
               onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
             />
             {editError ? (
-              <p className="text-sm text-red-700" role="alert">
+              <p className="text-sm text-text-danger" role="alert">
                 {editError}
               </p>
             ) : null}
             <div className="flex flex-wrap gap-3">
               <button
-                className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                className="rounded-md bg-action-primary px-3 py-1 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
                 type="button"
                 disabled={mutationBusy}
                 onClick={onSaveImage}
@@ -724,7 +724,7 @@ export function LibraryItem({
                   : "Save image"}
               </button>
               <button
-                className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+                className="rounded-md border border-border-edge px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
                 type="button"
                 disabled={mutationBusy}
                 onClick={onCancelEdit}
@@ -750,7 +750,7 @@ export function LibraryItem({
                   {collectionNames.map((name) => (
                     <li
                       key={name}
-                      className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600"
+                      className="rounded bg-bg-raised px-1.5 py-0.5 text-xs text-text-secondary"
                     >
                       {name}
                     </li>
@@ -762,9 +762,9 @@ export function LibraryItem({
         ) : null}
         {pendingDelete ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <p className="text-sm text-zinc-700">Delete this item?</p>
+            <p className="text-sm text-text-primary">Delete this item?</p>
             <button
-              className="rounded-md bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+              className="rounded-md bg-action-primary px-3 py-1 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
               type="button"
               ref={confirmDeleteRef}
               disabled={mutationBusy}
@@ -775,7 +775,7 @@ export function LibraryItem({
                 : "Confirm delete"}
             </button>
             <button
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
+              className="rounded-md border border-border-edge px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
               type="button"
               disabled={mutationBusy}
               onClick={onCancelDelete}

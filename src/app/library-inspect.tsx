@@ -72,7 +72,7 @@ type Props = {
 };
 
 const BTN =
-  "rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60";
+  "rounded-md border border-border-edge bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60";
 
 export function LibraryInspect({
   item,
@@ -214,7 +214,7 @@ export function LibraryInspect({
           <motion.button
             type="button"
             aria-label="Close detail"
-            className="absolute inset-0 bg-zinc-950/40"
+            className="absolute inset-0 bg-bg-overlay/40"
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.12 } }}
@@ -227,7 +227,7 @@ export function LibraryInspect({
           <motion.div
             ref={panelRef}
             tabIndex={-1}
-            className="relative z-10 flex max-h-[min(96vh,64rem)] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.18)] outline-none sm:rounded-2xl"
+            className="relative z-10 flex max-h-[min(96vh,64rem)] w-full max-w-4xl flex-col overflow-hidden bg-bg-surface shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.18)] outline-none sm:rounded-2xl"
             style={{ borderRadius: 16 }}
             initial={
               reduceMotion ? false : { opacity: 0, scale: 0.95 }
@@ -243,7 +243,7 @@ export function LibraryInspect({
               ease: [0.23, 1, 0.32, 1],
             }}
           >
-            <div className="relative shrink-0 bg-zinc-950">
+            <div className="relative shrink-0 bg-bg-media">
               <motion.div
                 layoutId={
                   reduceMotion ? undefined : itemMediaLayoutId(item.id)
@@ -262,19 +262,19 @@ export function LibraryInspect({
                 <div className="pointer-events-none absolute inset-x-0 bottom-3 flex items-center justify-center gap-3">
                   <button
                     type="button"
-                    className={`${BTN} pointer-events-auto bg-white/95 backdrop-blur-sm`}
+                    className={`${BTN} pointer-events-auto bg-bg-surface/95 backdrop-blur-sm`}
                     disabled={mutationBusy || imageSlide === 0}
                     aria-label="Previous image"
                     onClick={() => onSlideChange(imageSlide - 1)}
                   >
                     Previous
                   </button>
-                  <span className="rounded-md bg-zinc-950/70 px-2 py-1 text-xs font-medium text-white">
+                  <span className="rounded-md bg-bg-overlay/70 px-2 py-1 text-xs font-medium text-text-on-media">
                     {imageSlide + 1} / {imageSlideCount}
                   </span>
                   <button
                     type="button"
-                    className={`${BTN} pointer-events-auto bg-white/95 backdrop-blur-sm`}
+                    className={`${BTN} pointer-events-auto bg-bg-surface/95 backdrop-blur-sm`}
                     disabled={
                       mutationBusy || imageSlide >= imageSlideCount - 1
                     }
@@ -287,7 +287,7 @@ export function LibraryInspect({
               ) : null}
               <button
                 type="button"
-                className={`${BTN} absolute right-3 top-3 bg-white/95 backdrop-blur-sm`}
+                className={`${BTN} absolute right-3 top-3 bg-bg-surface/95 backdrop-blur-sm`}
                 onClick={onClose}
               >
                 Close
@@ -298,7 +298,7 @@ export function LibraryInspect({
               <h2 id={titleId} className="text-balance text-xl font-semibold">
                 {item.type === "link" ? (
                   <a
-                    className="text-zinc-900 underline-offset-2 hover:underline"
+                    className="text-text-primary underline-offset-2 hover:underline"
                     href={item.url}
                     rel="noreferrer"
                     target="_blank"
@@ -307,7 +307,7 @@ export function LibraryInspect({
                   </a>
                 ) : item.type === "image" && item.sourceUrl ? (
                   <a
-                    className="text-zinc-900 underline-offset-2 hover:underline"
+                    className="text-text-primary underline-offset-2 hover:underline"
                     href={item.sourceUrl}
                     rel="noreferrer"
                     target="_blank"
@@ -319,12 +319,12 @@ export function LibraryInspect({
                 )}
               </h2>
               <p className="mt-2">
-                <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
+                <span className="inline-block rounded-full bg-bg-raised px-2 py-0.5 text-xs font-medium text-text-primary">
                   {typeLabel}
                 </span>
               </p>
               {!editing ? (
-                <p className="mt-2 text-pretty text-sm text-zinc-600">
+                <p className="mt-2 text-pretty text-sm text-text-secondary">
                   {cardSecondaryLine(item)}
                 </p>
               ) : null}
@@ -395,7 +395,7 @@ export function LibraryInspect({
                       {collectionNames.map((name) => (
                         <li
                           key={name}
-                          className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600"
+                          className="rounded bg-bg-raised px-1.5 py-0.5 text-xs text-text-secondary"
                         >
                           {name}
                         </li>
@@ -440,7 +440,7 @@ export function LibraryInspect({
                               : "Pin to top of collection"}
                       </button>
                       {pinError ? (
-                        <p className="mt-2 text-sm text-red-700" role="alert">
+                        <p className="mt-2 text-sm text-text-danger" role="alert">
                           {pinError}
                         </p>
                       ) : null}
@@ -554,7 +554,7 @@ export function LibraryInspect({
                     </div>
                   ) : null}
                   {galleryError ? (
-                    <p className="mt-2 text-sm text-red-700" role="alert">
+                    <p className="mt-2 text-sm text-text-danger" role="alert">
                       {galleryError}
                     </p>
                   ) : null}
@@ -582,9 +582,9 @@ export function LibraryInspect({
 
               {pendingDelete ? (
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <p className="text-sm text-zinc-700">Delete this item?</p>
+                  <p className="text-sm text-text-primary">Delete this item?</p>
                   <button
-                    className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+                    className="rounded-md bg-action-primary px-3 py-1.5 text-sm font-medium text-text-on-action disabled:opacity-60"
                     type="button"
                     ref={confirmDeleteRef}
                     disabled={mutationBusy}
@@ -647,7 +647,7 @@ function EditNote({
         Note content
       </label>
       <textarea
-        className="min-h-32 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+        className="min-h-32 rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
         id={`inspect-edit-note-${itemId}`}
         ref={setFirstEditField}
         value={editDraft}
@@ -656,13 +656,13 @@ function EditNote({
         onKeyDown={(event) => onEditSaveShortcut(event, onSaveNote)}
       />
       {editError ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-text-danger" role="alert">
           {editError}
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
         <button
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+          className="rounded-md bg-action-primary px-3 py-1.5 text-sm font-medium text-text-on-action disabled:opacity-60"
           type="button"
           disabled={mutationBusy}
           onClick={onSaveNote}
@@ -725,7 +725,7 @@ function EditLink({
         URL
       </label>
       <input
-        className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+        className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
         id={`inspect-edit-link-url-${itemId}`}
         ref={setFirstEditField}
         value={editDraft}
@@ -740,7 +740,7 @@ function EditLink({
         Title
       </label>
       <input
-        className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+        className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
         id={`inspect-edit-link-title-${itemId}`}
         value={editTitleDraft}
         disabled={mutationBusy}
@@ -748,13 +748,13 @@ function EditLink({
         onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
       />
       {editError ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-text-danger" role="alert">
           {editError}
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
         <button
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+          className="rounded-md bg-action-primary px-3 py-1.5 text-sm font-medium text-text-on-action disabled:opacity-60"
           type="button"
           disabled={mutationBusy}
           onClick={onSaveLink}
@@ -817,7 +817,7 @@ function EditImage({
         Caption
       </label>
       <textarea
-        className="min-h-20 rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+        className="min-h-20 rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
         id={`inspect-edit-image-caption-${itemId}`}
         ref={setFirstEditField}
         value={editDraft}
@@ -832,7 +832,7 @@ function EditImage({
         Source URL
       </label>
       <input
-        className="rounded-md border border-zinc-300 bg-white px-3 py-2 disabled:opacity-60"
+        className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
         id={`inspect-edit-image-source-${itemId}`}
         value={editTitleDraft}
         disabled={mutationBusy}
@@ -840,13 +840,13 @@ function EditImage({
         onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
       />
       {editError ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-text-danger" role="alert">
           {editError}
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
         <button
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+          className="rounded-md bg-action-primary px-3 py-1.5 text-sm font-medium text-text-on-action disabled:opacity-60"
           type="button"
           disabled={mutationBusy}
           onClick={onSaveImage}

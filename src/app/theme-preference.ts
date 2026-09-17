@@ -1,0 +1,54 @@
+export type ThemePreference = "light" | "dark" | "system";
+
+export const THEME_STORAGE_KEY = "keepall-theme-v1";
+const THEME_CHANGED_EVENT = "keepall-theme-changed";
+
+function parseTheme(value: string | null | undefined): ThemePreference {
+  return value === "light" || value === "dark" ? value : "system";
+}
+
+function readSavedTheme(): ThemePreference {
+  try {
+    return parseTheme(localStorage.getItem(THEME_STORAGE_KEY));
+  } catch {
+    return "system";
+  }
+}
+
+export function getThemeSnapshot(): ThemePreference {
+  return parseTheme(document.documentElement.dataset.theme);
+}
+
+export function getServerThemeSnapshot(): ThemePreference {
+  return "system";
+}
+
+export function subscribeToTheme(onChange: () => void): () => void {
+  // Also restores the attribute after a development Strict Mode remount.
+  document.documentElement.dataset.theme = readSavedTheme();
+  function onStorage(event: StorageEvent) {
+    if (event.key !== null && event.key !== THEME_STORAGE_KEY) return;
+    document.documentElement.dataset.theme = readSavedTheme();
+    onChange();
+  }
+  window.addEventListener("storage", onStorage);
+  window.addEventListener(THEME_CHANGED_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener(THEME_CHANGED_EVENT, onChange);
+  };
+}
+
+export function setThemePreference(value: string): void {
+  const theme = parseTheme(value);
+  document.documentElement.dataset.theme = theme;
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    // The selection still works for this page when browser storage is blocked.
+  }
+  window.dispatchEvent(new Event(THEME_CHANGED_EVENT));
+}
+
+// Static, trusted source only. Runs before the first paint; CSS resolves System.
+export const THEME_INIT_SCRIPT = `(()=>{let t="system";try{const s=localStorage.getItem("${THEME_STORAGE_KEY}");if(s==="light"||s==="dark")t=s}catch{}document.documentElement.dataset.theme=t})()`;

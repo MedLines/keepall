@@ -1,1 +1,70 @@
 @import "tailwindcss";
+
+/* Fixed palette values. Components use the semantic roles below. */
+:root {
+  color-scheme: light dark;
+  --neutral-50: #f4f4f2;
+  --neutral-100: #eaeae7;
+  --neutral-150: #e7e7e3;
+  --neutral-200: #d8d9d5;
+  --neutral-500: #64666c;
+  --neutral-400: #aaaeb5;
+  --neutral-700: #36383c;
+  --neutral-750: #292b2e;
+  --neutral-800: #242529;
+  --neutral-850: #202124;
+  --neutral-900: #18181a;
+  --neutral-950: #171717;
+  --neutral-975: #121212;
+  --white: #ffffff;
+  --paper: #f2f2f0;
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+@theme inline {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-bg-shell: light-dark(var(--neutral-150), var(--neutral-950));
+  --color-bg-canvas: light-dark(var(--neutral-50), var(--neutral-975));
+  --color-bg-surface: light-dark(var(--white), var(--neutral-800));
+  --color-bg-raised: light-dark(var(--neutral-100), var(--neutral-750));
+  --color-bg-overlay: #09090b;
+  --color-bg-media: #18181a;
+  --color-text-primary: light-dark(var(--neutral-850), var(--paper));
+  --color-text-secondary: light-dark(var(--neutral-500), var(--neutral-400));
+  --color-text-on-media: #f2f2f0;
+  --color-border-subtle: light-dark(var(--neutral-200), var(--neutral-700));
+  --color-border-edge: light-dark(#00000024, #ffffff24);
+  --color-border-control: light-dark(#7d8085, #767b83);
+  --color-border-focus: light-dark(var(--neutral-900), var(--white));
+  --color-action-primary: light-dark(var(--neutral-900), var(--white));
+  --color-text-on-action: light-dark(var(--white), var(--neutral-900));
+  --color-text-danger: light-dark(#b91c1c, #fca5a5);
+  --color-bg-danger: light-dark(#fef2f2, #391c20);
+  --color-border-danger: light-dark(#fca5a5, #a44a52);
+  --color-text-warning: light-dark(#78350f, #fcd38b);
+  --color-bg-warning: light-dark(#fffbeb, #332619);
+  --color-border-warning: light-dark(#fde68a, #856435);
+  --radius-control: 0.625rem;
+  --radius-panel: 1.25rem;
+  --shadow-edge: 0 0 0 1px light-dark(#00000024, #ffffff24);
+  --shadow-menu: 0 8px 24px light-dark(#00000014, #00000040);
+}
+
+@layer base {
+  body { font-family: var(--font-sans); }
+  button:not(:disabled), select { cursor: pointer; }
+  :where(button, a, input, textarea, select):focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+  input::placeholder, textarea::placeholder { color: var(--color-text-secondary); }
+  select option { background: var(--color-bg-surface); color: var(--color-text-primary); }
+}
+
+/* The invisible native select keeps a visible focus target in the icon rail. */
+.theme-control:has(select:focus-visible) {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}

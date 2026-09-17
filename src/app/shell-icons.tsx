@@ -1,290 +1,51 @@
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import {
+  Add01Icon as Add01, ArrowDown01Icon as ArrowDown01,
+  Cancel01Icon as Cancel01, Download01Icon as Download01,
+  Folder01Icon as Folder01, GridViewIcon as GridView,
+  Image01Icon as Image01, InboxIcon as Inbox, Layers01Icon as Layers01,
+  Link01Icon as Link01, Menu01Icon as Menu01, MoreVerticalIcon as MoreVertical,
+  Note01Icon as Note01, Search01Icon as Search01, SidebarLeft01Icon as SidebarLeft01,
+  Sorting01Icon as Sorting01, Sorting02Icon as Sorting02,
+  Sun03Icon as Sun03, Tag01Icon as Tag01,
+} from "@hugeicons/core-free-icons";
+
 type IconProps = { className?: string };
 
-function iconClass(defaultSize: string, className?: string): string {
-  return className ? `${defaultSize} shrink-0 ${className}` : `${defaultSize} shrink-0`;
+function ShellIcon({ icon, className = "" }: IconProps & { icon: IconSvgElement }) {
+  return <HugeiconsIcon icon={icon} size={18} strokeWidth={1.5} className={`shrink-0 ${className}`} aria-hidden="true" />;
 }
 
-export function LogoIcon({ className }: IconProps) {
+export function LogoIcon({ className = "" }: IconProps) {
   return (
-    <svg className={iconClass("size-5", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
+    <svg className={`size-6 shrink-0 ${className}`} viewBox="0 0 20 20" fill="none" aria-hidden>
       <rect x="2" y="2" width="16" height="16" rx="4" stroke="currentColor" strokeWidth="1.5" />
       <path stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" d="M6 14V8M10 14V5M14 14V10" />
     </svg>
   );
 }
 
-export function LibraryIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-5", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 14.5v-9Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path d="M7 8h6M7 11h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
+export function LibraryIcon(props: IconProps) { return <ShellIcon icon={GridView} {...props} />; }
+export function CollectionIcon(props: IconProps) { return <ShellIcon icon={Folder01} {...props} />; }
+export function LinkIcon(props: IconProps) { return <ShellIcon icon={Link01} {...props} />; }
+export function NoteIcon(props: IconProps) { return <ShellIcon icon={Note01} {...props} />; }
+export function ImageIcon(props: IconProps) { return <ShellIcon icon={Image01} {...props} />; }
+export function BackupIcon(props: IconProps) { return <ShellIcon icon={Download01} {...props} />; }
+export function CloseIcon(props: IconProps) { return <ShellIcon icon={Cancel01} {...props} />; }
+export function SearchIcon(props: IconProps) { return <ShellIcon icon={Search01} {...props} />; }
+export function PanelIcon(props: IconProps) { return <ShellIcon icon={SidebarLeft01} {...props} />; }
+export function GridIcon(props: IconProps) { return <ShellIcon icon={GridView} {...props} />; }
+export function ListIcon(props: IconProps) { return <ShellIcon icon={Menu01} {...props} />; }
+export function LayersIcon(props: IconProps) { return <ShellIcon icon={Layers01} {...props} />; }
+export function ChevronDownIcon(props: IconProps) { return <ShellIcon icon={ArrowDown01} {...props} />; }
+export function SortDescIcon(props: IconProps) { return <ShellIcon icon={Sorting01} {...props} />; }
+export function SortAscIcon(props: IconProps) { return <ShellIcon icon={Sorting02} {...props} />; }
+export function PlusIcon(props: IconProps) { return <ShellIcon icon={Add01} {...props} />; }
+export function InboxIcon(props: IconProps) { return <ShellIcon icon={Inbox} {...props} />; }
+export function HashIcon(props: IconProps) { return <ShellIcon icon={Tag01} {...props} />; }
+export function MoreIcon(props: IconProps) { return <ShellIcon icon={MoreVertical} {...props} />; }
+export function ThemeIcon(props: IconProps) { return <ShellIcon icon={Sun03} {...props} />; }
 
-export function CollectionIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M4 6.5A1.5 1.5 0 0 1 5.5 5h5.172a1.5 1.5 0 0 1 1.06.439l1.318 1.318A1.5 1.5 0 0 0 14.05 7.5H14.5A1.5 1.5 0 0 1 16 9v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 14.5V6.5Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-    </svg>
-  );
-}
-
-export function LinkIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M8.5 11.5 11.5 8.5M9.5 7.5l1-1a2.121 2.121 0 1 1 3 3l-1 1M10.5 12.5l-1 1a2.121 2.121 0 1 1-3-3l1-1"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-export function NoteIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M6 4.5h8A1.5 1.5 0 0 1 15.5 6v9.5L12 14H6A1.5 1.5 0 0 1 4.5 12.5v-8A1.5 1.5 0 0 1 6 4.5Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-    </svg>
-  );
-}
-
-export function ImageIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <rect x="4" y="5" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="8" cy="9" r="1" fill="currentColor" />
-      <path d="m7 13 2.5-2.5L12 13l2-2 2 3H6l1-1Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-export function BackupIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-5", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M10 4v8m0 0 2.5-2.5M10 12 7.5 9.5M5.5 14.5v1A1.5 1.5 0 0 0 7 17h6a1.5 1.5 0 0 0 1.5-1.5v-1"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-export function CloseIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-5", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M6 6l8 8M14 6l-8 8"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-export function SearchIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <circle cx="9" cy="9" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M13 13l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-export function SidebarChevronIcon({
-  className,
-  expanded,
-}: IconProps & { expanded: boolean }) {
-  return (
-    <svg
-      className={iconClass("size-5", className)}
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden
-    >
-      {expanded ? (
-        <>
-          <path
-            d="M8 5v10M5.5 7.5 8 5l2.5 2.5M5.5 12.5 8 15l2.5-2.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path d="M12 5v10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </>
-      ) : (
-        <path
-          d="M7 5v10M9.5 7.5 7 5 4.5 7.5M9.5 12.5 7 15l2.5-2.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      )}
-    </svg>
-  );
-}
-
-export function PanelIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-5", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M7 4v12" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-export function GridIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <rect x="4" y="4" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="11" y="4" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="4" y="11" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="11" y="11" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-export function ListIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path d="M5 6h10M5 10h10M5 14h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-/** Stacked layers — “all types” / multi-category filter (not sort lines). */
-export function LayersIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M10 3.5 16.5 7 10 10.5 3.5 7 10 3.5Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3.5 10.5 10 14 16.5 10.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3.5 13.5 10 16.5 16.5 13.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export function ChevronDownIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M6 8.5 10 12.5 14 8.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export function SortDescIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M5 6h10M7 10h6M9.5 14h1"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-export function SortAscIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M9.5 6h1M7 10h6M5 14h10"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-export function PlusIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path d="M10 6v8M6 10h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-export function InboxIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M3.5 11.5 5.2 5.8A1.5 1.5 0 0 1 6.64 4.5h6.72a1.5 1.5 0 0 1 1.44 1.3l1.7 5.7"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3.5 11.5h3.2l.8 2h4.8l.8-2h3.2v3A1.5 1.5 0 0 1 15.3 16H4.7A1.5 1.5 0 0 1 3.2 14.5v-3Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export function HashIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M7.5 4.5 6 15.5M14 4.5 12.5 15.5M4.5 8h12M3.5 12h12"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-export function MoreIcon({ className }: IconProps) {
-  return (
-    <svg className={iconClass("size-4", className)} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <circle cx="10" cy="5" r="1.25" fill="currentColor" />
-      <circle cx="10" cy="10" r="1.25" fill="currentColor" />
-      <circle cx="10" cy="15" r="1.25" fill="currentColor" />
-    </svg>
-  );
+export function SidebarChevronIcon({ expanded, className = "" }: IconProps & { expanded: boolean }) {
+  return <ShellIcon icon={ArrowDown01} className={`${className} ${expanded ? "rotate-90" : "-rotate-90"}`} />;
 }

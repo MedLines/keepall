@@ -78,14 +78,14 @@ export function ShellTopMenu<T extends string>({
         ) : (
           <span>{activeOption?.label}</span>
         )}
-        <ChevronDownIcon className="text-zinc-400" />
+        <ChevronDownIcon className="text-text-secondary" />
       </button>
       {open ? (
         <ul
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[9rem] overflow-hidden rounded-[10px] border border-zinc-200/80 bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
+          className="absolute left-0 top-[calc(100%+4px)] z-50 min-w-[9rem] overflow-hidden rounded-control border border-border-edge bg-bg-surface py-1 shadow-menu sm:left-auto sm:right-0"
         >
           {options.map((option) => (
             <li key={option.value} role="presentation">
@@ -95,8 +95,8 @@ export function ShellTopMenu<T extends string>({
                 aria-selected={option.value === value}
                 className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
                   option.value === value
-                    ? "bg-zinc-100 font-medium text-zinc-900"
-                    : "text-zinc-700 hover:bg-zinc-50"
+                    ? "bg-bg-raised font-medium text-text-primary"
+                    : "text-text-primary hover:bg-bg-canvas"
                 }`}
                 onClick={() => {
                   onChange(option.value);

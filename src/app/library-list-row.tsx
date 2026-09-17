@@ -71,8 +71,8 @@ export function LibraryListRow({
   return (
     <li
       draggable={dragEnabled}
-      className={`group rounded-lg border border-zinc-200 bg-white transition-opacity duration-150 ease-out ${
-        inspected || selected ? "ring-2 ring-zinc-900" : ""
+      className={`group rounded-lg border border-border-edge bg-bg-surface transition-opacity duration-150 ease-out ${
+        inspected || selected ? "ring-2 ring-border-focus" : ""
       } ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
@@ -86,7 +86,7 @@ export function LibraryListRow({
           <span className="sr-only">Select {title}</span>
           <input
             checked={selected}
-            className="size-4 rounded border-zinc-300"
+            className="size-4 rounded border-border-edge"
             type="checkbox"
             onChange={onToggleSelect}
             onClick={(event) => event.stopPropagation()}
@@ -95,7 +95,7 @@ export function LibraryListRow({
         {pinVisible ? (
           <button
             type="button"
-            className="shrink-0 rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-800"
+            className="shrink-0 rounded-md border border-border-edge bg-bg-surface px-2 py-1 text-xs font-medium text-text-primary"
             aria-label={pinned ? "Unpin" : "Pin"}
             onClick={(event) => {
               event.stopPropagation();
@@ -107,7 +107,7 @@ export function LibraryListRow({
         ) : null}
         <button
           type="button"
-          className="group flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:bg-zinc-50"
+          className="group flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:bg-bg-canvas"
           onClick={onOpenInspect}
           aria-label={`Open ${title}`}
         >
@@ -117,8 +117,8 @@ export function LibraryListRow({
             <motion.span
               className={`flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] shadow-[0_0_0_1px_rgba(0,0,0,0.06)] ${
                 item.type === "link"
-                  ? "bg-white"
-                  : "bg-zinc-200 text-sm font-semibold text-zinc-700"
+                  ? "bg-bg-surface"
+                  : "bg-bg-raised text-sm font-semibold text-text-primary"
               }`}
               style={{ borderRadius: 8 }}
               {...itemMediaLayoutProps(item.id, layoutMode, reduceMotion)}
@@ -131,17 +131,17 @@ export function LibraryListRow({
             </motion.span>
           )}
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-zinc-900">
+          <span className="block truncate text-sm font-medium text-text-primary">
             {title}
           </span>
           {secondary ? (
-            <span className="block truncate text-xs text-zinc-500">
+            <span className="block truncate text-xs text-text-secondary">
               {secondary}
             </span>
           ) : null}
         </span>
-        <span className="hidden shrink-0 items-center gap-3 text-xs text-zinc-500 sm:flex">
-          <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-600">
+        <span className="hidden shrink-0 items-center gap-3 text-xs text-text-secondary sm:flex">
+          <span className="rounded bg-bg-raised px-1.5 py-0.5 font-medium text-text-secondary">
             {typeLabel(item)}
           </span>
           <time dateTime={new Date(item.createdAt).toISOString()}>
