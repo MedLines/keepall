@@ -101,6 +101,13 @@ export type LibraryItemProps = {
 const ACTION_BTN =
   "flex min-h-10 w-full items-center gap-2 rounded-control px-2 text-left text-sm text-text-primary hover:bg-bg-raised disabled:opacity-60";
 
+function closeCardActionMenusOutside(target: EventTarget | null) {
+  if (!(target instanceof Node)) return;
+  document.querySelectorAll<HTMLDetailsElement>("details.library-card-actions[open]").forEach((menu) => {
+    if (!menu.contains(target)) menu.open = false;
+  });
+}
+
 export function LibraryItem({
   placement,
   item,
@@ -274,11 +281,16 @@ export function LibraryItem({
   const cardActions = !inspected && !editing && !pendingDelete ? (
     <details
       ref={actionsRef}
+      name="library-card-actions"
       className={`library-card-actions absolute z-30 ${isList ? "end-0 top-5" : "end-3 top-3"}`}
+      onToggle={(event) => {
+        if (!event.currentTarget.open) setOrgPanel(null);
+      }}
       onKeyDown={(event) => {
         if (event.key === "Escape" && actionsRef.current) {
           event.preventDefault();
           actionsRef.current.open = false;
+          setOrgPanel(null);
           actionsRef.current.querySelector("summary")?.focus();
         }
       }}
@@ -430,6 +442,8 @@ export function LibraryItem({
       data-index={placement?.index}
       draggable={dragEnabled}
       className={`library-item-root min-w-0 focus-within:z-10 has-[details[open]]:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
+      onPointerDownCapture={(event) => closeCardActionMenusOutside(event.target)}
+      onFocusCapture={(event) => closeCardActionMenusOutside(event.target)}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
     >

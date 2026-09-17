@@ -267,6 +267,23 @@ test("card actions, tag disclosure, selection and collection context work", asyn
   await expect(note.getByRole("button", { name: "Unpin", exact: true })).toBeVisible();
 });
 
+test("opening one card menu closes the menu left open on another card", async ({ page }) => {
+  const first = page.locator(".library-card").filter({ hasText: "Customer support" });
+  const second = page.locator(".library-card").filter({ hasText: "Design notes" });
+
+  await first.hover();
+  await first.locator("summary").click();
+  await expect(first.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+
+  await second.hover();
+  await second.locator("summary").click();
+  await expect(second.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await expect(first.getByRole("button", { name: "Edit", exact: true })).toBeHidden();
+
+  await first.locator(".library-card-tag-control > button").click();
+  await expect(second.getByRole("button", { name: "Edit", exact: true })).toBeHidden();
+});
+
 test("masonry places the next card below a shorter card, not a full row", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.evaluate(async () => {
