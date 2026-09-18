@@ -22,7 +22,7 @@ export function ThemeControl({ compact = false }: { compact?: boolean }) {
       className={`theme-control flex h-11 items-center gap-2 rounded-xl text-text-secondary hover:bg-bg-raised ${compact ? "w-11 justify-center border border-border-edge" : "px-2"}`}
       onClick={() => setThemePreference(dark ? "light" : "dark")}
     >
-      {dark ? <DarkThemeIcon /> : <LightThemeIcon />}
+      {dark ? <LightThemeIcon /> : <DarkThemeIcon />}
       <span className={compact ? "sr-only" : "text-sm"}>
         {dark ? "Dark" : "Light"} theme
       </span>
