@@ -55,11 +55,11 @@ export const SHELL_NAV_GUTTER = "px-4";
 
 /** Visual surface shared by composite nav rows and interactive nav items. */
 export const SHELL_NAV_SURFACE =
-  "relative flex items-center rounded-[10px] text-text-secondary transition-[background-color,box-shadow,color] duration-150 ease-out";
+  "relative flex items-center rounded-[10px] text-text-secondary";
 
 /** Interactive sidebar nav item — icon always; label when expanded. */
 export const SHELL_NAV_ITEM =
-  `${SHELL_NAV_SURFACE} transition-transform active:scale-[0.98] motion-reduce:transition-[background-color,box-shadow,color] motion-reduce:active:scale-100`;
+  `${SHELL_NAV_SURFACE} transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100`;
 
 export const SHELL_NAV_ITEM_ACTIVE =
   "bg-bg-raised font-medium text-text-primary";

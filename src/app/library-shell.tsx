@@ -634,7 +634,7 @@ function CollectionNavRow({
       className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-1 text-sm ${
         active
           ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary`
-          : "text-text-secondary"
+          : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`
       } ${dropHighlight ? "ring-2 ring-border-focus" : ""}`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -642,9 +642,7 @@ function CollectionNavRow({
     >
       <button
         type="button"
-        className={`flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-[10px] py-2 pl-3 text-left outline-none transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus ${
-          active ? "" : SHELL_NAV_ITEM_IDLE
-        }`}
+        className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-[10px] py-2 pl-3 text-left outline-none transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus"
         aria-label={collection.name}
         aria-current={active ? "page" : undefined}
         onClick={onNavigate}
@@ -707,7 +705,7 @@ function CollectionRowMenu({
     <div ref={rootRef} className="relative shrink-0">
       <button
         type="button"
-        className={`flex size-7 shrink-0 items-center justify-center rounded-[6px] text-text-secondary transition-[opacity,background-color] duration-150 hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 ${
+        className={`flex size-7 shrink-0 items-center justify-center rounded-[6px] text-text-secondary hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 ${
           visible || open
             ? "opacity-100"
             : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
