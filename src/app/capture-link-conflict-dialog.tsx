@@ -65,7 +65,7 @@ export function CaptureLinkConflictDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,32rem)] w-[min(100%-2rem,28rem)] overflow-y-auto rounded-[12px] bg-bg-surface p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,32rem)] w-[min(100%-2rem,28rem)] overflow-hidden rounded-[12px] bg-bg-surface p-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -75,7 +75,7 @@ export function CaptureLinkConflictDialog({
       }}
     >
       {conflict ? (
-        <div className="flex flex-col gap-4">
+        <div className="scroll-fade flex max-h-[min(90dvh,32rem)] flex-col gap-4 overflow-y-auto p-5">
           <div>
             <h2 className="text-lg font-semibold tracking-tight" id={titleId}>
               Already saved

@@ -123,27 +123,29 @@ export function OrgNameSuggest({
             onKeyDown={handleKeyDown}
           />
           {filtered.length > 0 ? (
-            <ul
-              className="absolute z-20 mt-1 max-h-40 w-full overflow-auto rounded-md border border-border-edge bg-bg-surface py-1 shadow-md"
-              role="listbox"
-            >
-              {filtered.map((entry) => (
-                <li key={entry.id} role="option">
-                  <button
-                    className="block w-full px-3 py-1.5 text-left text-sm text-text-primary hover:bg-bg-raised"
-                    type="button"
-                    disabled={disabled}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => {
-                      onChange(entry.name);
-                      submitName(entry.name);
-                    }}
-                  >
-                    {entry.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-border-edge bg-bg-surface shadow-md">
+              <ul
+                className="scroll-fade max-h-40 overflow-y-auto py-1"
+                role="listbox"
+              >
+                {filtered.map((entry) => (
+                  <li key={entry.id} role="option">
+                    <button
+                      className="block w-full px-3 py-1.5 text-left text-sm text-text-primary hover:bg-bg-raised"
+                      type="button"
+                      disabled={disabled}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        onChange(entry.name);
+                        submitName(entry.name);
+                      }}
+                    >
+                      {entry.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
         </div>
         <button

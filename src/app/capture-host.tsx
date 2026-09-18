@@ -599,7 +599,7 @@ export function CaptureHost() {
       }}
     >
       <form
-        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5"
+        className="scroll-fade flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5"
         onSubmit={onSubmit}
         onPaste={onPaste}
         onKeyDown={(event) => {

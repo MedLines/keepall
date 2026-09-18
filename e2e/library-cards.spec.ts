@@ -229,6 +229,69 @@ test("tagged images stay discoverable in All items and Unsorted in a large libra
   }
 });
 
+test("long Library content fades only the edges with hidden items", async ({ page }) => {
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>(resolve => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("items", "readwrite");
+      for (let index = 0; index < 70; index++) {
+        tx.objectStore("items").put({
+          id: `fade-${index}`,
+          type: "note",
+          title: `Fade check ${index}`,
+          content: "A design reference.",
+          createdAt: 100 + index,
+          updatedAt: 1,
+          collectionIds: [],
+          tagIds: [],
+        });
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.reload();
+
+  const library = page.getByRole("main");
+  await expect(library).toHaveClass(/scroll-fade/);
+
+  const fadeVisible = async (edge: "t" | "b") =>
+    library.evaluate(
+      (element, property) => {
+        const value = getComputedStyle(element).getPropertyValue(property).trim();
+        return value !== "0px" && !value.includes("(0 *");
+      },
+      `--scroll-fade-${edge}`,
+    );
+
+  await expect.poll(() => fadeVisible("t")).toBe(false);
+  await expect.poll(() => fadeVisible("b")).toBe(true);
+
+  await library.evaluate((element) => {
+    element.scrollTop = (element.scrollHeight - element.clientHeight) / 2;
+  });
+  await expect.poll(() => fadeVisible("t")).toBe(true);
+  await expect.poll(() => fadeVisible("b")).toBe(true);
+
+  await library.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect.poll(() => fadeVisible("t")).toBe(true);
+  await expect.poll(() =>
+    library.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+      const value = getComputedStyle(element)
+        .getPropertyValue("--scroll-fade-b")
+        .trim();
+      return value !== "0px" && !value.includes("(0 *");
+    }),
+  ).toBe(false);
+});
+
 test("list links show larger favicons while retaining preview images", async ({ page }) => {
   await page.route("https://www.google.com/s2/favicons**", route => route.fulfill({
     contentType: "image/svg+xml",
@@ -561,7 +624,10 @@ test("list rows use open surfaces with thumbnails, excerpts and collection conte
   await expect(link).toContainText("A spacious footer for a portfolio.");
   await expect(note.getByLabel("Collections", { exact: true })).toContainText("UI inspiration");
   await expect(note.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "UI inspiration", exact: true }).click();
+  await page
+    .getByRole("complementary", { name: "Sidebar" })
+    .getByRole("button", { name: "UI inspiration", exact: true })
+    .click();
   await expect(note.getByLabel("Collections", { exact: true })).toHaveCount(0);
 });
 
@@ -588,7 +654,10 @@ test("list menus support editing, cancel-delete, selection and collection pinnin
   await note.getByRole("checkbox").check();
   await expect(note.getByRole("checkbox")).toBeChecked();
   await note.getByRole("checkbox").uncheck();
-  await page.getByRole("button", { name: "UI inspiration", exact: true }).click();
+  await page
+    .getByRole("complementary", { name: "Sidebar" })
+    .getByRole("button", { name: "UI inspiration", exact: true })
+    .click();
   await note.hover();
   await note.locator("summary").click();
   await note.getByRole("button", { name: "Pin", exact: true }).click();
@@ -669,7 +738,10 @@ test("a large library keeps measured card virtualization and reaches the last ca
   expect(await page.locator(".library-card").count()).toBeLessThan(124);
   expect(await main.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await expectCardsNotToOverlap(page);
-  await page.getByRole("button", { name: "UI inspiration", exact: true }).click();
+  await page
+    .getByRole("complementary", { name: "Sidebar" })
+    .getByRole("button", { name: "UI inspiration", exact: true })
+    .click();
   await expect(page.locator(".library-card")).toHaveCount(4);
   await expect.poll(() => main.evaluate(el => el.scrollTop)).toBe(0);
   await expectCardsNotToOverlap(page);

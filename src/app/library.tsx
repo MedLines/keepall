@@ -1490,7 +1490,7 @@ export function Library() {
         {topBar}
         <main
           ref={mainScrollRef}
-          className="min-h-0 min-w-0 flex-1 overflow-auto px-3 pb-6 sm:px-6"
+          className="scroll-fade min-h-0 min-w-0 flex-1 overflow-auto px-3 pb-6 sm:px-6"
           aria-labelledby="library-heading"
         >
           {loadState === "loading" ? (
@@ -1572,7 +1572,10 @@ export function Library() {
                   }
                 />
               )}
-              <LibraryInspect
+            </>
+          )}
+        </main>
+        <LibraryInspect
                 item={inspectedItem}
                 slide={view.slide}
                 galleryError={galleryError}
@@ -1714,10 +1717,7 @@ export function Library() {
                     void togglePinItem(inspectedItem.id);
                   }
                 }}
-              />
-            </>
-          )}
-        </main>
+        />
         </div>
       </div>
     </LibraryNavigationProvider>

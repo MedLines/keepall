@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./scroll-fade.css";
 
 /* Fixed palette values. Components use the semantic roles below. */
 :root {

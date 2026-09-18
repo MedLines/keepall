@@ -63,7 +63,7 @@ export function LibraryBulkToolbar({
 
   return (
     <div
-      className="flex h-9 w-full min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap"
+      className="scroll-fade-x flex h-9 w-full min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap"
       role="region"
       aria-label="Bulk actions"
     >
@@ -218,7 +218,7 @@ export function LibraryBulkPanels({
         onClosePanel();
       }}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+      <div className="scroll-fade min-h-0 flex-1 overflow-y-auto px-5 py-5">
         {panel === "delete" ? (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-text-primary">

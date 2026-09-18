@@ -436,7 +436,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const imageFolderDialog = (
     <dialog
       ref={imageFolderDialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,28rem)] w-[min(100%-2rem,28rem)] overflow-y-auto rounded-[12px] bg-bg-surface p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,28rem)] w-[min(100%-2rem,28rem)] overflow-hidden rounded-[12px] bg-bg-surface p-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
       aria-labelledby={imageFolderTitleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -444,7 +444,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       }}
     >
       {pendingImageFiles !== null ? (
-        <div className="flex flex-col gap-4">
+        <div className="scroll-fade flex max-h-[min(90dvh,28rem)] flex-col gap-4 overflow-y-auto p-5">
           <div>
             <h2
               className="text-lg font-semibold tracking-tight"
@@ -514,7 +514,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const choiceDialog = (
     <dialog
       ref={choiceDialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,24rem)] w-[min(100%-2rem,24rem)] overflow-y-auto rounded-[12px] bg-bg-surface p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,24rem)] w-[min(100%-2rem,24rem)] overflow-hidden rounded-[12px] bg-bg-surface p-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
       aria-labelledby={choiceTitleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -522,7 +522,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       }}
     >
       {pendingRaw !== null ? (
-        <div className="flex flex-col gap-4">
+        <div className="scroll-fade flex max-h-[min(90dvh,24rem)] flex-col gap-4 overflow-y-auto p-5">
           <div>
             <h2 className="text-lg font-semibold tracking-tight" id={choiceTitleId}>
               Import backup
@@ -566,7 +566,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const bookmarksDialog = (
     <dialog
       ref={bookmarksDialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,32rem)] w-[min(100%-2rem,28rem)] overflow-y-auto rounded-[12px] bg-bg-surface p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,32rem)] w-[min(100%-2rem,28rem)] overflow-hidden rounded-[12px] bg-bg-surface p-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
       aria-labelledby={bookmarksTitleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -574,7 +574,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       }}
     >
       {pendingBookmarksHtml !== null ? (
-        <div className="flex flex-col gap-4">
+        <div className="scroll-fade flex max-h-[min(90dvh,32rem)] flex-col gap-4 overflow-y-auto p-5">
           <div>
             <h2 className="text-lg font-semibold tracking-tight" id={bookmarksTitleId}>
               Import browser bookmarks

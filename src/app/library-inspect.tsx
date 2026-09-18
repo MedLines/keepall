@@ -294,7 +294,7 @@ export function LibraryInspect({
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <div className="scroll-fade min-h-0 flex-1 overflow-y-auto px-5 py-4">
               <h2 id={titleId} className="text-balance text-xl font-semibold">
                 {item.type === "link" ? (
                   <a

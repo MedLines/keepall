@@ -216,7 +216,7 @@ export function LibraryShell({
       >
         <SidebarBrand expanded={expanded} mobileSidebarOpen={mobileSidebarOpen} onHome={leaveBackup} onClose={() => onPanelOpenChange(false)} />
         {backupOpen && expanded ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4">
+          <div className="scroll-fade flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4">
             <BackupPanel variant="sidebar" onClose={leaveBackup} />
           </div>
         ) : (
@@ -224,7 +224,7 @@ export function LibraryShell({
             aria-label="Sidebar navigation"
             className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-[18px] ${expanded ? SHELL_NAV_GUTTER : "px-2"}`}
           >
-            <div className={`flex min-h-0 flex-col gap-1 ${expanded ? "overflow-hidden" : "overflow-y-auto overscroll-contain"}`}>
+            <div className={`flex min-h-0 flex-col gap-1 ${expanded ? "overflow-hidden" : "scroll-fade overflow-y-auto overscroll-contain"}`}>
               <div className="flex shrink-0 flex-col gap-1">{primaryNav}</div>
 
               {expanded ? (
@@ -417,7 +417,7 @@ function CollectionsSection({
         onChange={onCollectionFilterChange}
       />
 
-      <div className="library-sidebar-section-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+      <div className="library-sidebar-section-scroll scroll-fade min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         <div className="flex flex-col gap-1">
           {filteredCollections.length === 0 ? (
             <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
@@ -530,7 +530,7 @@ function TagsSection({
         onChange={onTagFilterChange}
       />
 
-      <div className="library-sidebar-section-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+      <div className="library-sidebar-section-scroll scroll-fade min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         <div className="flex flex-col gap-1">
           {filteredTags.length === 0 ? (
             <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
