@@ -3,65 +3,93 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeControl } from "./theme-control";
 import { THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "./theme-preference";
 
+function setSystemTheme(theme: "light" | "dark") {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(prefers-color-scheme: dark)" && theme === "dark",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+}
+
 beforeEach(() => {
   localStorage.clear();
   delete document.documentElement.dataset.theme;
+  setSystemTheme("light");
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("theme preference", () => {
-  it.each(["light", "dark", "system"])("applies saved %s before hydration", (theme) => {
+  it.each(["light", "dark"])("applies saved %s before hydration", (theme) => {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
     window.eval(THEME_INIT_SCRIPT);
     expect(document.documentElement.dataset.theme).toBe(theme);
   });
 
-  it.each([null, "invalid"])("defaults to system for %s", (theme) => {
+  it.each([null, "invalid", "system"])("resolves %s to the current browser theme", (theme) => {
     if (theme) localStorage.setItem(THEME_STORAGE_KEY, theme);
+    setSystemTheme("dark");
     window.eval(THEME_INIT_SCRIPT);
-    expect(document.documentElement.dataset.theme).toBe("system");
+    expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
-  it("uses system when storage cannot be read", () => {
+  it("uses the current browser theme when storage cannot be read", () => {
+    setSystemTheme("dark");
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
     expect(() => window.eval(THEME_INIT_SCRIPT)).not.toThrow();
-    expect(document.documentElement.dataset.theme).toBe("system");
+    expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
-  it("lets the user choose and persist a theme", () => {
+  it("toggles between light and dark and persists each choice", () => {
     render(<ThemeControl />);
-    const control = screen.getByRole("combobox", { name: "Theme" });
-    fireEvent.change(control, { target: { value: "dark" } });
+    const control = screen.getByRole("button", { name: "Theme" });
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(control).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(control);
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
-    fireEvent.change(control, { target: { value: "system" } });
-    expect(document.documentElement.dataset.theme).toBe("system");
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("system");
+    expect(control).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(control);
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
   });
 
-  it("restores the selected option and syncs another tab's changes", () => {
+  it("restores the saved choice and syncs another tab's changes", () => {
     localStorage.setItem(THEME_STORAGE_KEY, "dark");
     render(<ThemeControl />);
-    expect(screen.getByRole("combobox")).toHaveValue("dark");
+    const control = screen.getByRole("button", { name: "Theme" });
+    expect(control).toHaveAttribute("aria-pressed", "true");
     act(() => {
       localStorage.setItem(THEME_STORAGE_KEY, "light");
       window.dispatchEvent(new StorageEvent("storage", { key: THEME_STORAGE_KEY }));
     });
-    expect(screen.getByRole("combobox")).toHaveValue("light");
+    expect(control).toHaveAttribute("aria-pressed", "false");
     expect(document.documentElement.dataset.theme).toBe("light");
     act(() => {
       localStorage.clear();
       window.dispatchEvent(new StorageEvent("storage", { key: null }));
     });
-    expect(screen.getByRole("combobox")).toHaveValue("system");
+    expect(control).toHaveAttribute("aria-pressed", "false");
+    expect(document.documentElement.dataset.theme).toBe("light");
   });
 
   it("still switches when saving the preference is blocked", () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked"); });
     render(<ThemeControl />);
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "dark" } });
+    const control = screen.getByRole("button", { name: "Theme" });
+    fireEvent.click(control);
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(screen.getByRole("combobox")).toHaveValue("dark");
+    expect(control).toHaveAttribute("aria-pressed", "true");
   });
 });

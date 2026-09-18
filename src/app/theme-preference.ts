@@ -1,17 +1,23 @@
-export type ThemePreference = "light" | "dark" | "system";
+export type ThemePreference = "light" | "dark";
 
 export const THEME_STORAGE_KEY = "keepall-theme-v1";
 const THEME_CHANGED_EVENT = "keepall-theme-changed";
 
+function readBrowserTheme(): ThemePreference {
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
 function parseTheme(value: string | null | undefined): ThemePreference {
-  return value === "light" || value === "dark" ? value : "system";
+  return value === "light" || value === "dark" ? value : readBrowserTheme();
 }
 
 function readSavedTheme(): ThemePreference {
   try {
     return parseTheme(localStorage.getItem(THEME_STORAGE_KEY));
   } catch {
-    return "system";
+    return readBrowserTheme();
   }
 }
 
@@ -20,7 +26,7 @@ export function getThemeSnapshot(): ThemePreference {
 }
 
 export function getServerThemeSnapshot(): ThemePreference {
-  return "system";
+  return "light";
 }
 
 export function subscribeToTheme(onChange: () => void): () => void {
@@ -39,8 +45,7 @@ export function subscribeToTheme(onChange: () => void): () => void {
   };
 }
 
-export function setThemePreference(value: string): void {
-  const theme = parseTheme(value);
+export function setThemePreference(theme: ThemePreference): void {
   document.documentElement.dataset.theme = theme;
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -50,5 +55,5 @@ export function setThemePreference(value: string): void {
   window.dispatchEvent(new Event(THEME_CHANGED_EVENT));
 }
 
-// Static, trusted source only. Runs before the first paint; CSS resolves System.
-export const THEME_INIT_SCRIPT = `(()=>{let t="system";try{const s=localStorage.getItem("${THEME_STORAGE_KEY}");if(s==="light"||s==="dark")t=s}catch{}document.documentElement.dataset.theme=t})()`;
+// Static, trusted source only. Runs before the first paint.
+export const THEME_INIT_SCRIPT = `(()=>{let t=window.matchMedia?.("(prefers-color-scheme: dark)").matches?"dark":"light";try{const s=localStorage.getItem("${THEME_STORAGE_KEY}");if(s==="light"||s==="dark")t=s}catch{}document.documentElement.dataset.theme=t})()`;

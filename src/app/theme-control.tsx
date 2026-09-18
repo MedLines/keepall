@@ -7,26 +7,25 @@ import {
   setThemePreference,
   subscribeToTheme,
 } from "./theme-preference";
-import { ThemeIcon } from "./shell-icons";
+import { DarkThemeIcon, LightThemeIcon } from "./shell-icons";
 
 export function ThemeControl({ compact = false }: { compact?: boolean }) {
   const theme = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
+  const dark = theme === "dark";
 
   return (
-    <label className={`theme-control relative flex h-11 items-center gap-2 rounded-xl text-text-secondary hover:bg-bg-raised ${compact ? "w-11 justify-center border border-border-edge" : "px-2"}`}>
-      <ThemeIcon />
-      <span className={compact ? "sr-only" : "text-sm"}>Theme</span>
-      <select
-        aria-label="Theme"
-        title="Theme"
-        value={theme}
-        onChange={(event) => setThemePreference(event.target.value)}
-        className={compact ? "absolute inset-0 w-full cursor-pointer opacity-0" : "ml-auto min-w-0 cursor-pointer rounded-control bg-transparent py-1 text-sm text-text-primary"}
-      >
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
-    </label>
+    <button
+      type="button"
+      aria-label="Theme"
+      aria-pressed={dark}
+      title={`Switch to ${dark ? "light" : "dark"} theme`}
+      className={`theme-control flex h-11 items-center gap-2 rounded-xl text-text-secondary hover:bg-bg-raised ${compact ? "w-11 justify-center border border-border-edge" : "px-2"}`}
+      onClick={() => setThemePreference(dark ? "light" : "dark")}
+    >
+      {dark ? <DarkThemeIcon /> : <LightThemeIcon />}
+      <span className={compact ? "sr-only" : "text-sm"}>
+        {dark ? "Dark" : "Light"} theme
+      </span>
+    </button>
   );
 }

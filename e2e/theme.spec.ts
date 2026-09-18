@@ -2,25 +2,26 @@ import { expect, test } from "@playwright/test";
 
 test.use({ serviceWorkers: "block" });
 
-test("theme follows System, respects overrides, and survives reload", async ({ page }) => {
+test("theme toggles between light and dark and survives reload", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  const theme = page.getByRole("combobox", { name: "Theme" });
-  await expect(theme).toHaveValue("system");
+  const theme = page.getByRole("button", { name: "Theme" });
+  await expect(page.getByRole("combobox", { name: "Theme" })).toHaveCount(0);
+  await expect(theme).toHaveAttribute("aria-pressed", "false");
   const panel = page.getByRole("main").locator("..");
   await expect(panel).toHaveCSS("background-color", "rgb(244, 244, 242)");
-  await page.emulateMedia({ colorScheme: "dark" });
+  await theme.click();
   await expect(panel).toHaveCSS("background-color", "rgb(18, 18, 18)");
-  await theme.selectOption("light");
-  await expect(panel).toHaveCSS("background-color", "rgb(244, 244, 242)");
   await page.reload();
-  await expect(theme).toHaveValue("light");
-  await expect(panel).toHaveCSS("background-color", "rgb(244, 244, 242)");
-  await theme.selectOption("dark");
+  await expect(theme).toHaveAttribute("aria-pressed", "true");
+  await expect(panel).toHaveCSS("background-color", "rgb(18, 18, 18)");
   await page.emulateMedia({ colorScheme: "light" });
   await expect(panel).toHaveCSS("background-color", "rgb(18, 18, 18)");
+  await theme.click();
+  await expect(theme).toHaveAttribute("aria-pressed", "false");
+  await expect(panel).toHaveCSS("background-color", "rgb(244, 244, 242)");
   await page.getByRole("button", { name: "Save item", exact: true }).click();
   await page.getByLabel("Link, note, or image").fill("Theme review note");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -29,8 +30,9 @@ test("theme follows System, respects overrides, and survives reload", async ({ p
 });
 
 test("saved dark theme applies before the React bundles arrive", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  await page.getByRole("combobox", { name: "Theme" }).selectOption("dark");
+  await page.getByRole("button", { name: "Theme" }).click();
   await page.route("**/_next/static/**/*.js", (route) => route.abort());
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -44,8 +46,8 @@ for (const width of [320, 768, 1024, 1440]) {
     await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
     const close = page.getByRole("button", { name: width < 768 ? "Close navigation" : "Collapse", exact: true });
     if (await close.isVisible()) await close.click();
-    const theme = page.getByRole("combobox", { name: "Theme" });
-    await theme.selectOption("dark");
+    const theme = page.getByRole("button", { name: "Theme" });
+    if ((await theme.getAttribute("aria-pressed")) === "false") await theme.click();
     await theme.focus();
     await expect(theme).toBeFocused();
     const typeFilter = page.getByRole("button", { name: "Filter by type" });
