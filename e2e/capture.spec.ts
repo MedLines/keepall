@@ -47,6 +47,82 @@ test("Save item and Alt+K open the capture flow from the side", async ({ page },
   expect((await capture.boundingBox())!.x).toBe(0);
 });
 
+test("large organization lists keep capture compact and actions visible", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 560 });
+  await page.goto("/");
+  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(["collections", "tags", "items"], "readwrite");
+        for (let index = 1; index <= 8; index += 1) {
+          tx.objectStore("collections").put({
+            id: `c${index}`,
+            name: `Collection ${index}`,
+            createdAt: index,
+            pinnedItemIds: [],
+          });
+          tx.objectStore("tags").put({
+            id: `t${index}`,
+            name: `Tag ${index}`,
+            createdAt: index,
+          });
+        }
+        for (let index = 1; index <= 2; index += 1) {
+          tx.objectStore("items").put({
+            id: `popular-${index}`,
+            type: "note",
+            title: "",
+            content: `Popular item ${index}`,
+            collectionIds: ["c8"],
+            tagIds: ["t8"],
+            createdAt: index * 10,
+            updatedAt: index * 10,
+          });
+        }
+        tx.oncomplete = () => resolve();
+        tx.onabort = () => reject(tx.error);
+        tx.onerror = () => reject(tx.error);
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  await openCaptureFromShortcut(page);
+  const capture = page.getByRole("dialog", { name: "Save to Keepall" });
+  const collections = capture.getByRole("list", { name: "Collections" });
+  const tags = capture.getByRole("list", { name: "Existing tags" });
+  await expect(collections.getByRole("button")).toHaveCount(7);
+  await expect(tags.getByRole("button")).toHaveCount(6);
+  await expect(collections.getByRole("button", { name: "Collection 8" })).toBeVisible();
+  await expect(capture.getByRole("button", { name: "Save" })).toBeInViewport();
+  await expect(capture.getByRole("button", { name: "Cancel" })).toBeInViewport();
+
+  const scrollBox = await capture.getByTestId("capture-scroll-region").boundingBox();
+  const footerBox = await capture.getByTestId("capture-footer").boundingBox();
+  expect(scrollBox).not.toBeNull();
+  expect(footerBox).not.toBeNull();
+  expect(Math.round(scrollBox!.y + scrollBox!.height)).toBeLessThanOrEqual(
+    Math.round(footerBox!.y),
+  );
+  expect(Math.round(footerBox!.y + footerBox!.height)).toBeLessThanOrEqual(560);
+
+  await capture.getByRole("button", { name: "Browse all collections" }).click();
+  const chooser = page.getByRole("dialog", { name: "Choose a collection" });
+  await chooser.getByRole("searchbox", { name: "Search collections" }).fill("Collection 7");
+  await chooser.getByRole("button", { name: "Collection 7" }).click();
+  await expect(chooser).toBeHidden();
+  await expect(
+    collections.getByRole("button", { name: "Collection 7" }),
+  ).toHaveAttribute("aria-pressed", "true");
+});
+
 test("saving a note with Alt+K survives a reload", async ({ page }) => {
   await page.goto("/");
   await openCaptureFromShortcut(page);

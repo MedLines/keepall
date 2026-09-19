@@ -6,7 +6,10 @@ import {
   initialCaptureState,
   shouldBlockDialogDismiss,
 } from "@/domain/capture";
-import { captureOrgDrafts } from "@/domain/capture-org";
+import {
+  captureOrgDrafts,
+  rankCaptureOrganizations,
+} from "@/domain/capture-org";
 import { classifyCapture, resolveCapture } from "@/domain/classify";
 import {
   ImageValidationError,
@@ -22,6 +25,7 @@ import {
   createOrReuseLink,
   findImageByAssetPayloads,
   findLinkByNormalizedUrl,
+  listItems,
   replaceItemTagsByNames,
 } from "@/persistence/items";
 import { listCollections } from "@/persistence/collections";
@@ -247,17 +251,24 @@ export function CaptureHost() {
 
     let cancelled = false;
 
-    void Promise.all([listTags(), listCollections()])
-      .then(([tags, collections]) => {
+    void Promise.all([listTags(), listCollections(), listItems()])
+      .then(([tags, collections, items]) => {
         if (cancelled) {
           return;
         }
-        setTagSuggestions(tags.map((tag) => ({ id: tag.id, name: tag.name })));
-        setCollectionSuggestions(
-          collections.map((collection) => ({
-            id: collection.id,
-            name: collection.name,
+        setTagSuggestions(
+          rankCaptureOrganizations(tags, items, "tag").map((tag) => ({
+            id: tag.id,
+            name: tag.name,
           })),
+        );
+        setCollectionSuggestions(
+          rankCaptureOrganizations(collections, items, "collection").map(
+            (collection) => ({
+              id: collection.id,
+              name: collection.name,
+            }),
+          ),
         );
       })
       .catch(() => {
@@ -599,7 +610,7 @@ export function CaptureHost() {
       }}
     >
       <form
-        className="scroll-fade flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-7 pb-6 pt-2"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
         onSubmit={onSubmit}
         onPaste={onPaste}
         onKeyDown={(event) => {
@@ -609,6 +620,10 @@ export function CaptureHost() {
           }
         }}
       >
+        <div
+          className="scroll-fade flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-7 pb-5 pt-2"
+          data-testid="capture-scroll-region"
+        >
         {imageDrafts.length > 0 ? (
           <ul
             className={`flex gap-1.5 ${imageDrafts.length === 1 ? "" : "w-full"}`}
@@ -759,7 +774,11 @@ export function CaptureHost() {
             {state.error}
           </p>
         ) : null}
-        <div className="-mx-7 mt-auto flex items-center gap-3 border-t border-border-control px-7 pt-5">
+        </div>
+        <div
+          className="flex shrink-0 items-center gap-3 border-t border-border-control bg-bg-canvas px-7 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5"
+          data-testid="capture-footer"
+        >
           <button
             className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} px-4 disabled:opacity-60`}
             type="submit"

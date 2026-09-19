@@ -1,11 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildImageFromAssetIds } from "@/domain/image";
 import { buildLink } from "@/domain/link";
 import { buildNote } from "@/domain/note";
 import { applyItemOrg } from "@/persistence/apply-item-org";
 import { listCollections } from "@/persistence/collections";
-import { createOrReuseImage, createOrReuseLink, createNote, findImageByAssetPayloads, findLinkByNormalizedUrl, clearCollectionOnItem, replaceItemTagsByNames } from "@/persistence/items";
+import { createOrReuseImage, createOrReuseLink, createNote, findImageByAssetPayloads, findLinkByNormalizedUrl, clearCollectionOnItem, listItems, replaceItemTagsByNames } from "@/persistence/items";
 import { listTags } from "@/persistence/tags";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
@@ -20,6 +20,7 @@ vi.mock("@/persistence/items", () => ({
   findLinkByNormalizedUrl: vi.fn(),
   findImageByAssetPayloads: vi.fn(),
   clearCollectionOnItem: vi.fn(),
+  listItems: vi.fn(),
   replaceItemTagsByNames: vi.fn(),
 }));
 
@@ -84,6 +85,8 @@ describe("CaptureHost", () => {
     vi.mocked(findImageByAssetPayloads).mockReset();
     vi.mocked(findImageByAssetPayloads).mockResolvedValue(null);
     vi.mocked(clearCollectionOnItem).mockReset();
+    vi.mocked(listItems).mockReset();
+    vi.mocked(listItems).mockResolvedValue([]);
     vi.mocked(replaceItemTagsByNames).mockReset();
     vi.mocked(applyItemOrg).mockReset();
     vi.mocked(applyItemOrg).mockResolvedValue(undefined);
@@ -538,6 +541,99 @@ describe("CaptureHost", () => {
         collectionName: "Reading",
       });
     });
+  });
+
+  test("shows six ranked organization choices while idle", async () => {
+    vi.mocked(listTags).mockResolvedValue(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `t${index + 1}`,
+        name: `Tag ${index + 1}`,
+        createdAt: index + 1,
+      })),
+    );
+    vi.mocked(listCollections).mockResolvedValue(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `c${index + 1}`,
+        name: `Collection ${index + 1}`,
+        createdAt: index + 1,
+        pinnedItemIds: [],
+      })),
+    );
+    vi.mocked(listItems).mockResolvedValue([
+      {
+        ...buildNote({ content: "First popular item" }, { id: "n1", now: 10 }),
+        tagIds: ["t8"],
+        collectionIds: ["c8"],
+      },
+      {
+        ...buildNote({ content: "Second popular item" }, { id: "n2", now: 20 }),
+        tagIds: ["t8"],
+        collectionIds: ["c8"],
+      },
+      {
+        ...buildNote({ content: "Recent item" }, { id: "n3", now: 100 }),
+        tagIds: ["t7"],
+        collectionIds: ["c7"],
+      },
+    ]);
+
+    await openDraft("A compact capture drawer");
+
+    const collections = await screen.findByRole("list", {
+      name: "Collections",
+    });
+    expect(within(collections).getAllByRole("button")).toHaveLength(7);
+    expect(within(collections).getByRole("button", { name: "Collection 8" })).toBeVisible();
+    expect(within(collections).queryByRole("button", { name: "Collection 6" })).toBeNull();
+
+    const tags = screen.getByRole("list", { name: "Existing tags" });
+    expect(within(tags).getAllByRole("button")).toHaveLength(6);
+    expect(within(tags).getByRole("button", { name: "Tag 8" })).toBeVisible();
+    expect(within(tags).queryByRole("button", { name: "Tag 6" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Browse all collections" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Browse all tags" })).toBeVisible();
+
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Collection" }),
+      { target: { value: "Collection 6" } },
+    );
+    expect(
+      within(collections).getByRole("button", { name: "Collection 6" }),
+    ).toBeVisible();
+  });
+
+  test("browse all can select an organization outside the compact choices", async () => {
+    vi.mocked(listCollections).mockResolvedValue(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `c${index + 1}`,
+        name: `Collection ${index + 1}`,
+        createdAt: index + 1,
+        pinnedItemIds: [],
+      })),
+    );
+
+    await openDraft("Pick a less common collection");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Browse all collections" }),
+    );
+
+    const chooser = screen.getByRole("dialog", {
+      name: "Choose a collection",
+    });
+    fireEvent.change(
+      within(chooser).getByRole("searchbox", { name: "Search collections" }),
+      { target: { value: "Collection 8" } },
+    );
+    fireEvent.click(
+      within(chooser).getByRole("button", { name: "Collection 8" }),
+    );
+
+    expect(
+      screen.queryByRole("dialog", { name: "Choose a collection" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Collection 8" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   test("if filing fails, retry does not create a second item", async () => {
