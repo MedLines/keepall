@@ -174,7 +174,7 @@ test("desktop shell keeps search and view controls inside the inset panel", asyn
   // Runtime storage/offline notices sit above the shell, outside the design frame.
   const shellTop = (await panel.locator("..").boundingBox())!.y;
   expect(bounds).toMatchObject({ x: 256, y: shellTop + 10, width: 1174, height: 1100 - shellTop });
-  await expect(panel).toHaveCSS("border-radius", "20px");
+  await expect(panel).toHaveCSS("border-radius", "32px");
   expect(await page.getByRole("searchbox", { name: "Search", exact: true }).boundingBox()).toMatchObject({ x: 332, y: shellTop + 36, width: 250, height: 40 });
   expect(await page.getByRole("button", { name: "Collapse", exact: true }).boundingBox()).toMatchObject({ x: 280, y: shellTop + 36, width: 40, height: 40 });
   expect(await page.getByRole("group", { name: "Library layout" }).boundingBox()).toMatchObject({ x: 1318, y: shellTop + 102, width: 88, height: 44 });

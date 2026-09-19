@@ -64,7 +64,8 @@
   --radius-control-lg: 0.875rem;
   --radius-input: 1rem;
   --radius-panel: 1.25rem;
-  --radius-card: 2.5rem;
+  --radius-library-panel: 2rem;
+  --radius-card: 4rem;
   --spacing-card-inset: 0.5rem;
   --corner-shape-panel: squircle;
   --shadow-edge: 0 0 0 1px light-dark(#00000024, #ffffff24);
@@ -153,9 +154,18 @@
 }
 
 @supports (corner-shape: squircle) {
-  .library-panel, .library-card, .library-card-media {
+  .library-panel, .library-card, .library-card-media, .item-workspace-media {
     corner-shape: var(--corner-shape-panel);
   }
+}
+
+.library-panel {
+  border-radius: var(--radius-library-panel);
+}
+
+.item-workspace-media {
+  border: var(--spacing-card-inset) solid transparent;
+  box-shadow: inset 0 0 0 1px var(--color-border-media);
 }
 
 .library-card {

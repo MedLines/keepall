@@ -171,14 +171,14 @@ test("grid media has one clipping edge and keeps its inset across themes and wid
   const card = page.locator(".library-card").first();
   const media = card.locator(".library-card-media");
 
-  await expect(panel).toHaveCSS("border-radius", "20px");
-  await expect(card).toHaveCSS("border-radius", "40px");
-  await expect(media).toHaveCSS("border-radius", "40px");
+  await expect(panel).toHaveCSS("border-radius", "32px");
+  await expect(card).toHaveCSS("border-radius", "64px");
+  await expect(media).toHaveCSS("border-radius", "64px");
   await expect(media).toHaveCSS("border-width", "8px");
   await expect(media).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(media.locator("img")).toHaveCSS("border-radius", "0px");
 
-  for (const width of [1440, 390]) {
+  for (const width of [1707, 1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     if (width < 640) await page.getByRole("button", { name: "Close navigation", exact: true }).click();
     for (const theme of ["light", "dark"]) {
@@ -466,7 +466,7 @@ test("mixed cards preserve image proportions, readable notes and compact fallbac
   await expect(link.getByText("A spacious footer for a portfolio.")).toBeVisible();
   const fallback = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "example.com/fallback" }) });
   await expect(fallback.locator("img")).toHaveCount(0);
-  await expect(fallback).toHaveCSS("border-radius", "40px");
+  await expect(fallback).toHaveCSS("border-radius", "64px");
   expect((await fallback.boundingBox())!.height).toBeLessThan(200);
   await page.getByRole("button", { name: "Theme", exact: true }).click();
   await expect(fallback).toHaveCSS("background-image", "none");
@@ -568,7 +568,7 @@ test("image edge overlay follows the media clip in both themes", async ({ page }
   const card = page.locator(".library-card").first();
   const image = card.locator("img");
   await expect(image).toBeVisible();
-  await expect(card).toHaveCSS("border-radius", "40px");
+  await expect(card).toHaveCSS("border-radius", "64px");
   await expect(card).toHaveCSS("padding", "8px");
   await expect(image).toHaveCSS("border-radius", "0px");
   const media = card.locator(".library-card-media");
