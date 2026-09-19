@@ -155,6 +155,7 @@ export async function createImage(input: {
   sourceUrl?: string;
   caption?: string;
   title?: string;
+  sourceFileName?: string;
 }): Promise<ImageItem> {
   if (input.assets.length === 0) {
     throw new ImageValidationError("Image asset is required");
@@ -185,6 +186,7 @@ export async function createImage(input: {
       sourceUrl: input.sourceUrl,
       caption: input.caption,
       title: input.title,
+      sourceFileName: input.sourceFileName,
     });
     await db.items.add(image);
     return image;
@@ -264,6 +266,7 @@ export async function createOrReuseImage(input: {
   sourceUrl?: string;
   caption?: string;
   title?: string;
+  sourceFileName?: string;
 }): Promise<{ image: ImageItem; created: boolean }> {
   const existing = await findImageByAssetPayloads(input.assets);
   if (existing) {
@@ -358,7 +361,7 @@ export async function updateLink(
 
 export async function updateImage(
   id: string,
-  input: { sourceUrl?: string; caption?: string },
+  input: { title?: string; sourceUrl?: string; caption?: string },
 ): Promise<ImageItem> {
   const existing = await getDb().items.get(id);
 

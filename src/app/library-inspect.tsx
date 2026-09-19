@@ -36,6 +36,7 @@ type Props = {
   pendingMutation: PendingMutation | null;
   editDraft: string;
   editTitleDraft: string;
+  editImageTitleDraft: string;
   editError: string | null;
   setFirstEditField: (
     node: HTMLTextAreaElement | HTMLInputElement | null,
@@ -47,6 +48,7 @@ type Props = {
   onReplaceSlide: (file: File) => void;
   onEditDraftChange: (value: string) => void;
   onEditTitleChange: (value: string) => void;
+  onEditImageTitleChange: (value: string) => void;
   onEditSaveShortcut: (
     event: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
     save: () => void,
@@ -88,6 +90,7 @@ export function LibraryInspect({
   pendingMutation,
   editDraft,
   editTitleDraft,
+  editImageTitleDraft,
   editError,
   setFirstEditField,
   confirmDeleteRef,
@@ -97,6 +100,7 @@ export function LibraryInspect({
   onReplaceSlide,
   onEditDraftChange,
   onEditTitleChange,
+  onEditImageTitleChange,
   onEditSaveShortcut,
   onSaveNote,
   onSaveLink,
@@ -295,8 +299,8 @@ export function LibraryInspect({
             </div>
 
             <div className="scroll-fade min-h-0 flex-1 overflow-y-auto px-5 py-4">
-              <h2 id={titleId} className="text-balance text-xl font-semibold">
-                {item.type === "link" ? (
+              <h2 id={titleId} className={item.type === "image" && !item.title.trim() ? "sr-only" : "text-balance text-xl font-semibold"}>
+                {item.type === "image" && !item.title.trim() ? title : item.type === "link" ? (
                   <a
                     className="text-text-primary underline-offset-2 hover:underline"
                     href={item.url}
@@ -362,6 +366,9 @@ export function LibraryInspect({
               {item.type === "image" && editing ? (
                 <EditImage
                   itemId={item.id}
+                  sourceFileName={item.sourceFileName}
+                  editImageTitleDraft={editImageTitleDraft}
+                  onEditImageTitleChange={onEditImageTitleChange}
                   editDraft={editDraft}
                   editTitleDraft={editTitleDraft}
                   editError={editError}
@@ -777,6 +784,9 @@ function EditLink({
 }
 
 function EditImage({
+  sourceFileName,
+  editImageTitleDraft,
+  onEditImageTitleChange,
   itemId,
   editDraft,
   editTitleDraft,
@@ -790,6 +800,9 @@ function EditImage({
   onSaveImage,
   onCancelEdit,
 }: {
+  sourceFileName?: string;
+  editImageTitleDraft: string;
+  onEditImageTitleChange: (value: string) => void;
   itemId: string;
   editDraft: string;
   editTitleDraft: string;
@@ -810,6 +823,16 @@ function EditImage({
 }) {
   return (
     <div className="mt-3 flex flex-col gap-2">
+      <label className="text-sm font-medium" htmlFor={`inspect-edit-image-title-${itemId}`}>Title (optional)</label>
+      <input
+        className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
+        id={`inspect-edit-image-title-${itemId}`}
+        value={editImageTitleDraft}
+        disabled={mutationBusy}
+        onChange={(event) => onEditImageTitleChange(event.target.value)}
+        onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
+      />
+      {sourceFileName ? <p className="break-words text-xs text-text-secondary">Original filename: {sourceFileName}</p> : null}
       <label
         className="text-sm font-medium"
         htmlFor={`inspect-edit-image-caption-${itemId}`}

@@ -8,6 +8,7 @@ import { buildCollection } from "./collection";
 import { buildLink } from "./link";
 import { buildNote } from "./note";
 import { buildTag } from "./tag";
+import { buildImage } from "./image";
 
 describe("buildKeepallBackup", () => {
   test("wraps records with format and version", () => {
@@ -32,6 +33,15 @@ describe("buildKeepallBackup", () => {
 });
 
 describe("parseKeepallBackup", () => {
+  test("round-trips an untitled image with its original filename separately", () => {
+    const image = buildImage({ assetId: "a1", sourceFileName: "abc123.png" });
+    const backup = buildKeepallBackup({
+      items: [image], tags: [], collections: [],
+      assets: [{ id: "a1", mimeType: "image/png", byteLength: 1, dataBase64: "AQ==", createdAt: 1 }],
+    });
+    expect(parseKeepallBackup(JSON.parse(JSON.stringify(backup))).items).toEqual([image]);
+  });
+
   const tag = buildTag({ name: "design" }, { id: "t1", now: 1 });
   const collection = buildCollection({ name: "Reading" }, { id: "c1", now: 1 });
   const note = {

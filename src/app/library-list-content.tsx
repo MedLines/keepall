@@ -27,19 +27,20 @@ export function LibraryListContent({ item, pinned, onOpen }: {
 }) {
   const title = item.type === "link" && !item.title.trim() && !item.previewTitle.trim()
     ? item.url.replace(/^https?:\/\//, "")
-    : itemListTitle(item);
+    : item.type === "image" ? item.title.trim() : itemListTitle(item);
   const secondary = cardSecondaryLine(item);
+  const hasContent = Boolean(title || secondary || pinned || (item.type === "image" && item.assetIds.length > 1));
   return (
     <>
-      <button type="button" onClick={onOpen} aria-label={`Open ${itemListTitle(item)}`} className="block min-h-11 w-full min-w-0 rounded-sm text-start">
-        <span className="flex min-w-0 items-center gap-2">
+      {hasContent ? <button type="button" onClick={onOpen} aria-label={`Open ${itemListTitle(item)}`} className="block min-h-11 w-full min-w-0 rounded-sm text-start">
+        {title || pinned ? <span className="flex min-w-0 items-center gap-2">
           {pinned ? <span title="Pinned in this collection"><PinIcon className="size-4" /><span className="sr-only">Pinned in this collection</span></span> : null}
-          <span className="truncate text-base font-medium" title={title}>{title}</span>
-        </span>
+          {title ? <span className="truncate text-base font-medium" title={title}>{title}</span> : null}
+        </span> : null}
         {item.type === "link" ? <LinkContext key={item.url} item={item} /> : secondary ? (
           <span className="mt-1 block truncate text-xs text-text-secondary">{secondary}</span>
-        ) : <span className="mt-1 block text-xs text-text-secondary">{item.type === "note" ? "Note" : "Image"}{item.type === "image" && item.assetIds.length > 1 ? ` · ${item.assetIds.length} images` : ""}</span>}
-      </button>
+        ) : item.type === "note" ? <span className="mt-1 block text-xs text-text-secondary">Note</span> : item.assetIds.length > 1 ? <span className="mt-1 block text-xs text-text-secondary">{item.assetIds.length} images</span> : null}
+      </button> : null}
       <time className="library-list-date text-xs text-text-secondary" dateTime={new Date(item.createdAt).toISOString()} title="Saved date">
         {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
       </time>

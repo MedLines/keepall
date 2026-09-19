@@ -1,6 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import { LibraryListMetadata } from "./library-list-content";
+import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
+import { buildImage } from "@/domain/image";
+
+test("untitled images omit the empty title button and keep the saved date", () => {
+  const { container } = render(<LibraryListContent item={buildImage({ assetId: "a", sourceFileName: "abc123.png" })} pinned={false} onOpen={vi.fn()} />);
+  expect(screen.queryByRole("button")).toBeNull();
+  expect(container.querySelector("time")).toBeTruthy();
+});
 
 const tags = ["minimal", "typography", "motion", "reference"].map(name => ({ id: name, name }));
 

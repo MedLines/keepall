@@ -2,10 +2,28 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
 import { EMPTY_LINK_PREVIEW } from "@/domain/link";
+import { buildImage } from "@/domain/image";
 
 const base = { id: "item", createdAt: 1, updatedAt: 1, tagIds: [], collectionIds: [] };
 
 describe("grid card content", () => {
+  it("omits untitled image content without replacing it with a filename or placeholder", () => {
+    const { container } = render(<LibraryCardContent item={buildImage({ assetId: "a", sourceFileName: "abc123.png" })} onOpen={vi.fn()} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("keeps captions and pins without inventing an image title", () => {
+    render(<LibraryCardContent item={buildImage({ assetId: "a", caption: "Footer detail" })} pinned onOpen={vi.fn()} />);
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.getByText("Footer detail")).toBeVisible();
+    expect(screen.getByTitle("Pinned in this collection")).toBeVisible();
+  });
+
+  it("preserves a supplied title even if it resembles a filename", () => {
+    render(<LibraryCardContent item={buildImage({ assetId: "a", title: "abc123.png" })} onOpen={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: "abc123.png" })).toBeVisible();
+  });
+
   it("shows a readable note body and opens the note", () => {
     const open = vi.fn();
     const content = "Keep the card quiet.\n\nLet the image lead. ".repeat(5);

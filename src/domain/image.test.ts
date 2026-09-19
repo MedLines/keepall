@@ -144,6 +144,18 @@ describe("clampImageSlideIndex", () => {
 });
 
 describe("applyImageEdit", () => {
+  test("adds, preserves and clears a title without changing file information", () => {
+    const image = buildImage({ assetId: "a1", sourceFileName: "abc-123.png" });
+    expect(image.title).toBe("");
+    const titled = applyImageEdit(image, { title: "  Footer ideas  " });
+    expect(titled.title).toBe("Footer ideas");
+    expect(applyImageEdit(titled, { caption: "A reference" }).title).toBe("Footer ideas");
+    const cleared = applyImageEdit(titled, { title: "   " });
+    expect(cleared.title).toBe("");
+    expect(cleared.sourceFileName).toBe("abc-123.png");
+    expect(cleared.assetIds).toEqual(image.assetIds);
+  });
+
   test("updates caption and sourceUrl without changing assetIds", () => {
     const image = buildImage(
       { assetId: "a1", caption: "old", sourceUrl: "https://a.com" },

@@ -211,6 +211,7 @@ export function Library() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [editTitleDraft, setEditTitleDraft] = useState("");
+  const [editImageTitleDraft, setEditImageTitleDraft] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [tagErrorItemId, setTagErrorItemId] = useState<string | null>(null);
   const [tagError, setTagError] = useState<string | null>(null);
@@ -688,6 +689,7 @@ export function Library() {
     setEditingId(null);
     setEditDraft("");
     setEditTitleDraft("");
+    setEditImageTitleDraft("");
     setEditError(null);
   }
 
@@ -814,6 +816,7 @@ export function Library() {
 
     try {
       await updateImage(id, {
+        title: editImageTitleDraft,
         caption: editDraft,
         sourceUrl: editTitleDraft,
       });
@@ -1313,6 +1316,7 @@ export function Library() {
         pendingMutation={pendingMutation}
         editDraft={editDraft}
         editTitleDraft={editTitleDraft}
+        editImageTitleDraft={editImageTitleDraft}
         editError={editError}
         setFirstEditField={(node) => {
           firstEditFieldRef.current = node;
@@ -1320,6 +1324,7 @@ export function Library() {
         confirmDeleteRef={confirmDeleteRef}
         onEditDraftChange={setEditDraft}
         onEditTitleChange={setEditTitleDraft}
+        onEditImageTitleChange={setEditImageTitleDraft}
         onEditSaveShortcut={onEditSaveShortcut}
         onSaveNote={() => void saveNoteEdit(item.id)}
         onSaveLink={() => void saveLinkEdit(item.id)}
@@ -1345,6 +1350,7 @@ export function Library() {
             setEditTitleDraft("");
           } else if (item.type === "image") {
             setEditDraft(item.caption);
+            setEditImageTitleDraft(item.title);
             setEditTitleDraft(item.sourceUrl);
           } else {
             setEditDraft(item.url);
@@ -1486,7 +1492,7 @@ export function Library() {
           onDeleteCollection={(id) => void deleteCollectionById(id)}
         />
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel ring-1 ring-inset ring-border-subtle">
+        <div className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel ring-1 ring-inset ring-border-subtle">
         {topBar}
         <main
           ref={mainScrollRef}
@@ -1610,6 +1616,7 @@ export function Library() {
                 pendingMutation={pendingMutation}
                 editDraft={editDraft}
                 editTitleDraft={editTitleDraft}
+                editImageTitleDraft={editImageTitleDraft}
                 editError={editError}
                 setFirstEditField={(node) => {
                   firstEditFieldRef.current = node;
@@ -1629,6 +1636,7 @@ export function Library() {
                 }}
                 onEditDraftChange={setEditDraft}
                 onEditTitleChange={setEditTitleDraft}
+                onEditImageTitleChange={setEditImageTitleDraft}
                 onEditSaveShortcut={onEditSaveShortcut}
                 onSaveNote={() => {
                   if (inspectedItem) {
@@ -1685,6 +1693,7 @@ export function Library() {
                     setEditTitleDraft("");
                   } else if (target.type === "image") {
                     setEditDraft(target.caption);
+                    setEditImageTitleDraft(target.title);
                     setEditTitleDraft(target.sourceUrl);
                   } else {
                     setEditDraft(target.url);

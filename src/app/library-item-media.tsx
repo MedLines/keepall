@@ -95,12 +95,12 @@ export function LibraryItemMedia({
         alt=""
         className={
           variant === "grid"
-            ? `block h-auto w-full rounded-[inherit] outline outline-1 -outline-offset-1 outline-border-media ${className}`
+            ? `block h-auto w-full ${className}`
             : isInspect
-            ? `mx-auto max-h-[min(78vh,56rem)] w-full object-contain outline outline-1 -outline-offset-1 outline-white/10 ${className}`
+            ? `mx-auto max-h-[min(78vh,56rem)] w-full object-contain outline outline-1 -outline-offset-1 outline-border-media ${className}`
             : compact
               ? `size-full rounded-[inherit] object-cover outline outline-1 -outline-offset-1 outline-border-media ${className}`
-              : `aspect-[16/10] h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/10 ${className}`
+              : `aspect-[16/10] h-full w-full object-cover outline outline-1 -outline-offset-1 outline-border-media ${className}`
         }
         src={imageSrc}
         onLoad={(event) => onImageLoad?.(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)}

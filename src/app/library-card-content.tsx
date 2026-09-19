@@ -26,13 +26,15 @@ export function LibraryCardContent({ item, onOpen, pinned = false }: {
 }) {
   const title = item.type === "link" && !item.title.trim() && !item.previewTitle.trim()
     ? item.url.replace(/^https?:\/\//, "")
-    : itemListTitle(item);
+    : item.type === "image" ? item.title.trim() : itemListTitle(item);
   const description = item.type === "link" ? item.previewDescription : item.type === "image" ? imageCardSecondary(item) : "";
+  if (item.type === "image" && !title && !description && !pinned) return null;
+  const TitleRow = title ? "h2" : "div";
   return (
     <div className="min-w-0">
       {item.type === "note" ? <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary"><NoteIcon className="size-4" />Note</div> : null}
       {item.type === "link" ? <LinkSource key={item.url} url={item.url} host={linkCardHost(item)} /> : null}
-      <h2 className={`flex min-w-0 items-start gap-1.5 ${item.type === "note" ? "text-[17px] font-medium leading-snug" : "text-sm font-medium leading-snug"}`}>
+      {title || pinned ? <TitleRow className={`flex min-w-0 items-start gap-1.5 ${item.type === "note" ? "text-[17px] font-medium leading-snug" : "text-sm font-medium leading-snug"}`}>
         {pinned ? (
           <span
             title="Pinned in this collection"
@@ -44,10 +46,10 @@ export function LibraryCardContent({ item, onOpen, pinned = false }: {
         ) : null}
         {item.type === "link" ? (
           <a href={item.url} target="_blank" rel="noreferrer" title={title} className="min-w-0 flex-1 line-clamp-2 break-words underline-offset-2 hover:underline">{title}</a>
-        ) : (
+        ) : title ? (
           <button type="button" onClick={onOpen} title={title} className={`${item.type === "image" ? "truncate" : "line-clamp-2 break-words"} min-w-0 flex-1 text-left underline-offset-2 hover:underline`}>{title}</button>
-        )}
-      </h2>
+        ) : null}
+      </TitleRow> : null}
       {item.type === "note" ? (
         <>
           <button type="button" onClick={onOpen} aria-label={`Read ${title}`} className="mt-3 line-clamp-6 w-full whitespace-pre-line break-words text-left text-sm leading-relaxed text-text-secondary">{item.content.trim()}</button>

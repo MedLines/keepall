@@ -14,6 +14,7 @@ export type ImageItem = {
   id: string;
   type: "image";
   title: string;
+  sourceFileName?: string;
   /** Ordered gallery; cover / grid preview is always index 0. */
   assetIds: string[];
   sourceUrl: string;
@@ -28,6 +29,7 @@ export type CreateImageInput = {
   /** First (and initially only) asset. Becomes `assetIds: [assetId]`. */
   assetId: string;
   title?: string;
+  sourceFileName?: string;
   sourceUrl?: string;
   caption?: string;
 };
@@ -149,6 +151,7 @@ export function buildImage(
     {
       assetIds: [input.assetId],
       title: input.title,
+      sourceFileName: input.sourceFileName,
       sourceUrl: input.sourceUrl,
       caption: input.caption,
     },
@@ -160,6 +163,7 @@ export function buildImageFromAssetIds(
   input: {
     assetIds: string[];
     title?: string;
+    sourceFileName?: string;
     sourceUrl?: string;
     caption?: string;
   },
@@ -183,6 +187,7 @@ export function buildImageFromAssetIds(
     id: options?.id ?? crypto.randomUUID(),
     type: "image",
     title: (input.title ?? "").trim(),
+    ...(input.sourceFileName ? { sourceFileName: input.sourceFileName } : {}),
     assetIds,
     sourceUrl,
     caption: (input.caption ?? "").trim(),
@@ -195,7 +200,7 @@ export function buildImageFromAssetIds(
 
 export function applyImageEdit(
   image: ImageItem,
-  input: { sourceUrl?: string; caption?: string },
+  input: { title?: string; sourceUrl?: string; caption?: string },
   options?: { now?: number },
 ): ImageItem {
   const sourceUrl =
@@ -207,6 +212,7 @@ export function applyImageEdit(
   return {
     ...image,
     sourceUrl,
+    title: input.title !== undefined ? input.title.trim() : image.title,
     caption:
       input.caption !== undefined ? input.caption.trim() : image.caption,
     updatedAt: options?.now ?? Date.now(),
@@ -246,9 +252,10 @@ function coerceAssetIds(raw: ImageFieldsRaw | null | undefined): string[] {
 
 export function coerceImageFields(
   raw: ImageFieldsRaw | null | undefined,
-): Pick<ImageItem, "assetIds" | "sourceUrl" | "caption" | "title"> {
+): Pick<ImageItem, "assetIds" | "sourceUrl" | "caption" | "title" | "sourceFileName"> {
   return {
     title: typeof raw?.title === "string" ? raw.title : "",
+    ...(typeof raw?.sourceFileName === "string" ? { sourceFileName: raw.sourceFileName } : {}),
     assetIds: coerceAssetIds(raw),
     sourceUrl: typeof raw?.sourceUrl === "string" ? raw.sourceUrl : "",
     caption: typeof raw?.caption === "string" ? raw.caption : "",

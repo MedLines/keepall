@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { MAX_LOCAL_IMAGE_BYTES } from "@/domain/image";
 import { listCollections } from "./collections";
-import { listItems } from "./items";
+import { listItems, updateImage } from "./items";
 import { deleteKeepallDatabase } from "./db";
 import { importImageFolderEntries } from "./image-folder-import";
 
@@ -26,12 +26,16 @@ describe("importImageFolderEntries", () => {
     });
     const items = await listItems();
     expect(items.filter((item) => item.type === "image")).toHaveLength(2);
+    expect(items.every(item => item.title === "")).toBe(true);
+    expect(items.filter(item => item.type === "image").map(item => item.sourceFileName).sort()).toEqual(["a.png", "b.png"]);
   });
 
   test("reuses duplicate bytes and assigns optional collection", async () => {
     await importImageFolderEntries([
       { name: "first.png", bytes: PNG_A, mimeType: "image/png" },
     ]);
+    const [original] = await listItems();
+    await updateImage(original.id, { title: "My reference" });
     const second = await importImageFolderEntries(
       [{ name: "dup.png", bytes: PNG_A, mimeType: "image/png" }],
       { collectionName: "Scans" },
@@ -40,6 +44,7 @@ describe("importImageFolderEntries", () => {
     expect(second).toMatchObject({ added: 0, reused: 1 });
     const collections = await listCollections();
     expect(collections.map((c) => c.name)).toEqual(["Scans"]);
+    expect(await listItems()).toEqual([expect.objectContaining({ title: "My reference", sourceFileName: "first.png" })]);
   });
 
   test("re-importing a full batch reuses every item", async () => {

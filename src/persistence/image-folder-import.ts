@@ -6,6 +6,7 @@ import {
 } from "@/domain/image";
 import {
   classifyImageFolderFile,
+  imageFolderBaseName,
   imageTitleFromFileName,
   type ImageFolderImportSummary,
 } from "@/domain/image-folder-import";
@@ -125,7 +126,7 @@ async function importOneEntry(
         ctx.hashIndex.delete(contentHash);
         const result = await createOrReuseImage({
           assets: [{ bytes: entry.bytes, mimeType: mime }],
-          title: imageTitleFromFileName(entry.name),
+          sourceFileName: imageFolderBaseName(entry.name),
         });
         image = result.image;
         created = result.created;
@@ -134,7 +135,7 @@ async function importOneEntry(
     } else {
       const result = await createOrReuseImage({
         assets: [{ bytes: entry.bytes, mimeType: mime }],
-        title: imageTitleFromFileName(entry.name),
+        sourceFileName: imageFolderBaseName(entry.name),
       });
       image = result.image;
       created = result.created;

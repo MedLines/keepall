@@ -430,6 +430,7 @@ function parseItem(
       type: "image",
       title: item.title,
       assetIds: fields.assetIds,
+      ...(fields.sourceFileName ? { sourceFileName: fields.sourceFileName } : {}),
       sourceUrl: fields.sourceUrl,
       caption: fields.caption,
       tagIds: itemTagIds,

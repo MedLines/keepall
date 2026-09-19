@@ -62,6 +62,130 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("image titles can be cleared and restored without losing grid or list metadata", async ({ page }, testInfo) => {
+  const card = page.locator(".library-card").first();
+  await expect(card.getByRole("heading", { name: "Customer support" })).toBeVisible();
+  await card.hover();
+  await card.locator("summary").click();
+  await card.getByRole("button", { name: "Edit", exact: true }).click();
+  await card.getByLabel("Title (optional)").fill("");
+  await card.getByRole("button", { name: "Save image", exact: true }).click();
+  await expect(card.getByRole("heading")).toHaveCount(0);
+  await expect(card.getByRole("button", { name: "1 tag" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "UI inspiration", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(card).toBeVisible();
+  await expect(card.getByRole("heading")).toHaveCount(0);
+  await expect(card.getByText("Image", { exact: true })).toHaveCount(0);
+  await expectCardsNotToOverlap(page);
+  await expect(async () => {
+    const insets = await page.locator(".library-card").evaluateAll(cards => cards.flatMap(card => {
+      const image = card.querySelector(".library-card-media img");
+      if (!image) return [];
+      return [image.getBoundingClientRect().left - card.getBoundingClientRect().left];
+    }));
+    for (const inset of insets) expect(inset).toBeCloseTo(8, 0);
+  }).toPass();
+  await page.screenshot({ path: testInfo.outputPath("untitled-grid.png") });
+
+  await page.getByRole("button", { name: "List view", exact: true }).click();
+  const row = page.locator(".library-list-row").first();
+  await expect(row.getByRole("button", { name: "Preview Image", exact: true })).toBeVisible();
+  await expect(row.getByRole("button", { name: "Open Image", exact: true })).toHaveCount(0);
+  await expect(row.getByText("Image", { exact: true })).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
+  await row.hover();
+  await row.locator("summary").click();
+  await row.getByRole("button", { name: "Edit", exact: true }).click();
+  await row.getByLabel("Title (optional)").fill("My design reference");
+  await row.getByRole("button", { name: "Save image", exact: true }).click();
+  await expect(row.getByRole("button", { name: "Open My design reference", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(row.getByText("My design reference", { exact: true })).toBeVisible();
+});
+
+test("bare untitled image cards have no empty footer in either theme", async ({ page }, testInfo) => {
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>(resolve => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("items", "readwrite");
+      const store = tx.objectStore("items");
+      const request = store.get("image");
+      request.onsuccess = () => store.put({ ...request.result, title: "", tagIds: [], collectionIds: [] });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  const card = page.locator(".library-card").first();
+  for (const theme of ["light", "dark"]) {
+    if (await page.locator("html").getAttribute("data-theme") !== theme) {
+      await page.getByRole("button", { name: "Theme", exact: true }).click();
+    }
+    await expect(async () => {
+      const outer = (await card.boundingBox())!;
+      const picture = (await card.locator("img").boundingBox())!;
+      expect(outer.height - picture.height).toBeCloseTo(16, 0);
+      expect(picture.y - outer.y).toBeCloseTo(8, 0);
+    }).toPass();
+    await page.screenshot({ path: testInfo.outputPath(`bare-image-${theme}.png`) });
+  }
+  await card.getByRole("button", { name: "Open Image", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Edit", exact: true }).click();
+  await dialog.getByLabel("Title (optional)").fill("From the image viewer");
+  await dialog.getByRole("button", { name: "Save image", exact: true }).click();
+  await expect(dialog.getByRole("heading", { name: "From the image viewer" })).toBeVisible();
+});
+
+test("grid media has one clipping edge and keeps its inset across themes and widths", async ({ page }, testInfo) => {
+  const panel = page.locator(".library-panel");
+  const card = page.locator(".library-card").first();
+  const media = card.locator(".library-card-media");
+
+  await expect(panel).toHaveCSS("border-radius", "20px");
+  await expect(card).toHaveCSS("border-radius", "40px");
+  await expect(media).toHaveCSS("border-radius", "40px");
+  await expect(media).toHaveCSS("border-width", "8px");
+  await expect(media).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(media.locator("img")).toHaveCSS("border-radius", "0px");
+
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    if (width < 640) await page.getByRole("button", { name: "Close navigation", exact: true }).click();
+    for (const theme of ["light", "dark"]) {
+      if (await page.locator("html").getAttribute("data-theme") !== theme) {
+        await page.getByRole("button", { name: "Theme", exact: true }).click();
+      }
+      await expect(async () => {
+        const outer = (await card.boundingBox())!;
+        const picture = (await media.locator("img").boundingBox())!;
+        expect(picture.x - outer.x).toBeCloseTo(8, 0);
+        expect(picture.y - outer.y).toBeCloseTo(8, 0);
+        expect(outer.x + outer.width - picture.x - picture.width).toBeCloseTo(8, 0);
+      }).toPass();
+      await card.screenshot({ path: testInfo.outputPath(`card-${width}-${theme}.png`) });
+    }
+  }
+
+  const supportsSquircles = await page.evaluate(() =>
+    CSS.supports("corner-shape", "squircle"),
+  );
+  if (!supportsSquircles) return;
+
+  for (const surface of [panel, card, media]) {
+    const cornerShape = await surface.evaluate((element) =>
+      getComputedStyle(element).getPropertyValue("corner-shape"),
+    );
+    expect(cornerShape).toMatch(/^(squircle|superellipse\(2\))$/);
+  }
+});
+
 test("item types live in the toolbar while library destinations stay in the sidebar", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
@@ -322,9 +446,9 @@ test("mixed cards preserve image proportions, readable notes and compact fallbac
   await expect(link.getByText("A spacious footer for a portfolio.")).toBeVisible();
   const fallback = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "example.com/fallback" }) });
   await expect(fallback.locator("img")).toHaveCount(0);
-  await expect(fallback).toHaveCSS("border-radius", "20px");
+  await expect(fallback).toHaveCSS("border-radius", "40px");
   expect((await fallback.boundingBox())!.height).toBeLessThan(200);
-  await page.getByRole("combobox", { name: "Theme" }).selectOption("dark");
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
   await expect(fallback).toHaveCSS("background-image", /linear-gradient/);
   await expect(fallback).toHaveCSS("box-shadow", /255, 255, 255/);
 });
@@ -399,19 +523,25 @@ test("organizer opens from the side without resizing the card", async ({ page })
   await page.keyboard.press("Escape");
 });
 
-test("image inset outlines follow the rounded preview in both themes", async ({ page }) => {
+test("image edge overlay follows the media clip in both themes", async ({ page }) => {
   const card = page.locator(".library-card").first();
   const image = card.locator("img");
   await expect(image).toBeVisible();
-  await expect(card).toHaveCSS("border-radius", "20px");
+  await expect(card).toHaveCSS("border-radius", "40px");
   await expect(card).toHaveCSS("padding", "8px");
-  await expect(image).toHaveCSS("border-radius", "12px");
-  await expect(image).toHaveCSS("outline-offset", "-1px");
-  await expect(image).toHaveCSS("outline-width", "1px");
-  await page.getByRole("combobox", { name: "Theme" }).selectOption("light");
-  await expect(image).toHaveCSS("outline-color", "rgba(0, 0, 0, 0.1)");
-  await page.getByRole("combobox", { name: "Theme" }).selectOption("dark");
-  await expect(image).toHaveCSS("outline-color", "rgba(255, 255, 255, 0.1)");
+  await expect(image).toHaveCSS("border-radius", "0px");
+  const media = card.locator(".library-card-media");
+  for (const [theme, color] of [["light", "rgba(0, 0, 0, 0.08)"], ["dark", "rgba(255, 255, 255, 0.08)"]]) {
+    if (await page.locator("html").getAttribute("data-theme") !== theme) {
+      await page.getByRole("button", { name: "Theme", exact: true }).click();
+    }
+    const edge = await media.evaluate(element => {
+      const style = getComputedStyle(element, "::after");
+      return { shadow: style.boxShadow, pointerEvents: style.pointerEvents };
+    });
+    expect(edge.shadow).toContain(color);
+    expect(edge.pointerEvents).toBe("none");
+  }
 });
 
 test("card actions, tag disclosure, selection and collection context work", async ({ page }) => {

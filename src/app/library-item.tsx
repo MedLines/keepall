@@ -60,6 +60,7 @@ export type LibraryItemProps = {
   pendingMutation: PendingMutation | null;
   editDraft: string;
   editTitleDraft: string;
+  editImageTitleDraft: string;
   editError: string | null;
   setFirstEditField: (
     node: HTMLTextAreaElement | HTMLInputElement | null,
@@ -67,6 +68,7 @@ export type LibraryItemProps = {
   confirmDeleteRef: Ref<HTMLButtonElement | null>;
   onEditDraftChange: (value: string) => void;
   onEditTitleChange: (value: string) => void;
+  onEditImageTitleChange: (value: string) => void;
   onEditSaveShortcut: (
     event: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
     save: () => void,
@@ -124,11 +126,13 @@ export function LibraryItem({
   pendingMutation,
   editDraft,
   editTitleDraft,
+  editImageTitleDraft,
   editError,
   setFirstEditField,
   confirmDeleteRef,
   onEditDraftChange,
   onEditTitleChange,
+  onEditImageTitleChange,
   onEditSaveShortcut,
   onSaveNote,
   onSaveLink,
@@ -174,6 +178,10 @@ export function LibraryItem({
 
   const title = itemListTitle(item);
   const isList = layoutMode === "list";
+  const hasGridFooter = item.type !== "image" || Boolean(
+    item.title.trim() || item.caption.trim() || item.sourceUrl ||
+    (pinVisible && pinned) || collections.length || tagNames.length || editing || pendingDelete
+  );
   const previewKey = item.type === "link"
     ? `${item.previewAssetId}:${item.previewImageUrl}`
     : "";
@@ -209,7 +217,7 @@ export function LibraryItem({
       className={
         isList
           ? "library-list-thumbnail relative shrink-0"
-          : "relative mb-3 w-full"
+          : `relative w-full ${hasGridFooter ? "mb-3" : ""}`
       }
     >
       {inspected ? (
@@ -225,10 +233,10 @@ export function LibraryItem({
             isList
               ? "size-full overflow-hidden bg-bg-raised"
               : item.type === "link"
-                ? "w-full overflow-hidden bg-bg-surface"
-                : "w-full cursor-pointer overflow-hidden bg-bg-raised"
+                ? "library-card-media squircle-panel"
+                : "library-card-media squircle-panel cursor-pointer"
           }
-          style={{ borderRadius: isList ? 8 : 12 }}
+          style={isList ? { borderRadius: 8 } : undefined}
           onClick={
             isList || item.type === "link"
               ? undefined
@@ -407,7 +415,7 @@ export function LibraryItem({
         className={
           isList
             ? "library-list-row group relative flex items-start gap-3 border-b border-border-edge py-4"
-            : "library-card group relative flex flex-col rounded-panel p-2"
+            : "library-card squircle-panel group relative flex flex-col rounded-card p-card-inset"
         }
       >
       {cardActions}
@@ -438,6 +446,7 @@ export function LibraryItem({
       {isList ? !editing && !pendingDelete ? <button type="button" onClick={onOpenInspect} aria-label={`Preview ${title}`} className="shrink-0 rounded-lg">{mediaSlot}</button> : null : hasMedia ? mediaSlot : null}
       <motion.div
         {...chromeMotion}
+        hidden={!isList && !hasGridFooter}
         className={
           isList
             ? `min-w-0 flex-1 ${editing || pendingDelete ? "" : "library-list-body"}`
@@ -564,6 +573,16 @@ export function LibraryItem({
           </div>
         ) : item.type === "image" && editing ? (
           <div className="mt-2 flex flex-col gap-2">
+            <label className="text-sm font-medium" htmlFor={`edit-image-title-${item.id}`}>Title (optional)</label>
+            <input
+              className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
+              id={`edit-image-title-${item.id}`}
+              value={editImageTitleDraft}
+              disabled={mutationBusy}
+              onChange={(event) => onEditImageTitleChange(event.target.value)}
+              onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
+            />
+            {item.sourceFileName ? <p className="break-words text-xs text-text-secondary">Original filename: {item.sourceFileName}</p> : null}
             <label
               className="text-sm font-medium"
               htmlFor={`edit-image-caption-${item.id}`}
