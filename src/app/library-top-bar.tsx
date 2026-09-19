@@ -87,7 +87,7 @@ export function LibraryTopBar({
       </div>
 
       <div className="grid min-h-[98px] grid-cols-1 content-start gap-3 sm:min-h-[42px] sm:grid-cols-[minmax(0,auto)_minmax(0,1fr)_auto] sm:items-center">
-        <div className={`${hasSelection ? "hidden sm:flex sm:max-w-[18rem]" : "flex"} row-start-1 min-w-0 items-center gap-3 sm:col-start-1 sm:row-start-1`}>
+        <div className={`${hasSelection ? "hidden sm:flex" : "flex"} row-start-1 min-w-0 items-center gap-3 sm:col-start-1 sm:row-start-1`}>
           <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-[34px] text-text-primary sm:text-[28px]">
             {title}
           </h1>

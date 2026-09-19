@@ -105,6 +105,22 @@
     padding: 0.5rem;
     box-shadow: var(--shadow-menu);
   }
+  .ui-backdrop {
+    background: linear-gradient(135deg, rgb(0 0 0 / 14%), rgb(0 0 0 / 9%));
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  :root[data-theme="dark"] .ui-backdrop {
+    background: linear-gradient(135deg, rgb(255 255 255 / 7%), rgb(255 255 255 / 4%));
+  }
+  .ui-native-dialog::backdrop {
+    background: linear-gradient(135deg, rgb(0 0 0 / 14%), rgb(0 0 0 / 9%));
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  :root[data-theme="dark"] .ui-native-dialog::backdrop {
+    background: linear-gradient(135deg, rgb(255 255 255 / 7%), rgb(255 255 255 / 4%));
+  }
   .ui-menu-item {
     min-height: 2.5rem;
     border-radius: var(--radius-control-sm);

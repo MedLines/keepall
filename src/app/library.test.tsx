@@ -15,7 +15,7 @@ import {
   updateNote,
 } from "@/persistence/items";
 import { createCollection, listCollections, renameCollection, deleteCollection, pinItemInCollection, unpinItemInCollection } from "@/persistence/collections";
-import { createTag, listTags } from "@/persistence/tags";
+import { createTag, deleteTag, listTags } from "@/persistence/tags";
 import { mockNavigation } from "../../vitest.setup";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
@@ -79,6 +79,7 @@ vi.mock("./preview-enrich-coordinator", () => ({
 vi.mock("@/persistence/tags", () => ({
   listTags: vi.fn(),
   createTag: vi.fn(),
+  deleteTag: vi.fn(),
 }));
 
 vi.mock("@/persistence/collections", () => ({
@@ -106,6 +107,7 @@ describe("Library", () => {
     vi.mocked(listTags).mockReset();
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
+    vi.mocked(deleteTag).mockReset();
     vi.mocked(assignTagToItem).mockReset();
     vi.mocked(unassignTagFromItem).mockReset();
     vi.mocked(listCollections).mockReset();
@@ -513,12 +515,14 @@ describe("Library focus management", () => {
     expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus();
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-    expect(
-      screen.getByRole("button", { name: "Confirm delete" }),
-    ).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Confirm delete" })).toHaveFocus();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.getByRole("button", { name: "Delete" })).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Delete" })).toHaveFocus();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
@@ -567,6 +571,9 @@ describe("Library tags", () => {
 
   test("opens item organization in a dedicated drawer", async () => {
     vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(listTags).mockResolvedValue([
+      { id: "t1", name: "inspiration", createdAt: 1 },
+    ]);
     render(<Library />);
 
     await screen.findByText("A persisted note");
@@ -577,6 +584,11 @@ describe("Library tags", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Add tag")).toBeInTheDocument();
     expect(screen.getByLabelText("Move to collection")).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "inspiration" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Add tag"), { target: { value: "in" } });
+    expect(screen.getByRole("option", { name: "inspiration" })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByLabelText("Add tag"), { key: "Escape" });
+    expect(screen.queryByRole("option", { name: "inspiration" })).not.toBeInTheDocument();
   });
 
   test("adds a tag to an item and shows the name after reload", async () => {
@@ -839,10 +851,6 @@ describe("Library collections", () => {
       .mockResolvedValue([]);
     vi.mocked(renameCollection).mockResolvedValue(renamed);
     vi.mocked(deleteCollection).mockResolvedValue(undefined);
-    vi.stubGlobal(
-      "confirm",
-      vi.fn(() => true),
-    );
     render(<Library />);
 
     fireEvent.click(
@@ -868,12 +876,35 @@ describe("Library collections", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Later actions" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    expect(screen.getByRole("dialog", { name: "Delete collection?" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Delete collection" }));
 
     await waitFor(() => {
       expect(deleteCollection).toHaveBeenCalledWith("c1");
     });
     expect(mockNavigation.push).toHaveBeenCalledWith("/", { scroll: false });
     expect(await screen.findByText("A persisted note")).toBeInTheDocument();
+  });
+
+  test("deletes a tag through a centered confirmation", async () => {
+    const tag = { id: "t1", name: "inspiration", createdAt: 1 };
+    vi.mocked(listItems).mockResolvedValue([{ ...note, tagIds: [tag.id] }]);
+    vi.mocked(listTags).mockResolvedValueOnce([tag]).mockResolvedValue([]);
+    vi.mocked(deleteTag).mockResolvedValue(undefined);
+    render(<Library />);
+
+    const sidebar = screen.getByRole("complementary", { name: "Sidebar" });
+    fireEvent.click(await within(sidebar).findByRole("button", { name: "Tag inspiration" }));
+    fireEvent.click(within(sidebar).getByRole("button", { name: "inspiration actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+
+    expect(screen.getByRole("dialog", { name: "Delete tag?" })).toHaveTextContent(
+      "It will be removed from every item",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Delete tag" }));
+
+    await waitFor(() => expect(deleteTag).toHaveBeenCalledWith("t1"));
+    expect(mockNavigation.push).toHaveBeenCalledWith("/", { scroll: false });
   });
 
   test("Unsorted shows items that have no collection", async () => {
@@ -1036,8 +1067,11 @@ describe("Library view state", () => {
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
   });
 
-  test("bulk add tag applies to selected items", async () => {
-    const tagged = buildNote({ content: "one" }, { id: "n1", now: 1 });
+  test("bulk tag dialog applies tags and can remove every selected tag", async () => {
+    const tagged = {
+      ...buildNote({ content: "one" }, { id: "n1", now: 1 }),
+      tagIds: ["t1"],
+    };
     const other = buildNote({ content: "two" }, { id: "n2", now: 2 });
     vi.mocked(listItems).mockResolvedValue([tagged, other]);
     vi.mocked(listTags).mockResolvedValue([
@@ -1057,10 +1091,15 @@ describe("Library view state", () => {
     fireEvent.click(first);
     fireEvent.click(second);
     const bulk = screen.getByRole("region", { name: "Bulk actions" });
-    fireEvent.click(within(bulk).getByRole("button", { name: "Add tag" }));
+    fireEvent.click(within(bulk).getByRole("button", { name: "Tags" }));
+    expect(screen.getByRole("dialog", { name: "Tags for 2 selected items" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Add tag to selection"), {
       target: { value: "work" },
     });
+    const tagInput = screen.getByLabelText("Add tag to selection");
+    const tagOption = screen.getByRole("option", { name: "work" });
+    expect(tagInput).toHaveAttribute("aria-controls", tagOption.closest("ul")?.id);
+    expect(tagOption).toHaveAttribute("aria-selected", "true");
     const tagForm = screen.getByLabelText("Add tag to selection").closest("form");
     fireEvent.click(within(tagForm!).getByRole("button", { name: "Add" }));
 
@@ -1070,6 +1109,12 @@ describe("Library view state", () => {
     expect(assignTagToItem).toHaveBeenCalledTimes(2);
     expect(assignTagToItem).toHaveBeenCalledWith("n1", "t1");
     expect(assignTagToItem).toHaveBeenCalledWith("n2", "t1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove all tags" }));
+    await waitFor(() => {
+      expect(unassignTagFromItem).toHaveBeenCalledWith("n1", "t1");
+    });
+    expect(screen.getByRole("dialog", { name: "Tags for 2 selected items" })).toBeInTheDocument();
   });
 
   test("select all and deselect all visible items", async () => {

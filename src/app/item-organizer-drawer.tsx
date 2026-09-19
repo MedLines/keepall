@@ -98,6 +98,7 @@ export function ItemOrganizerDrawer({
               disabled={disabled}
               pending={pendingTag}
               error={tagError}
+              suggestWhenEmpty={false}
               onChange={setTagDraft}
               onSubmit={(name) => {
                 onAddTag(name);
@@ -129,6 +130,7 @@ export function ItemOrganizerDrawer({
               pending={pendingCollection}
               submitLabel="Move"
               error={collectionError}
+              suggestWhenEmpty={false}
               onChange={setCollectionDraft}
               onSubmit={(name) => {
                 onMoveToCollection(name);

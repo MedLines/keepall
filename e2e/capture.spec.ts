@@ -10,7 +10,7 @@ async function openCaptureFromShortcut(page: Page) {
   ).toBeVisible();
 }
 
-test("Save item and Alt+K open the capture flow from the side", async ({ page }) => {
+test("Save item and Alt+K open the capture flow from the side", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   const main = page.locator("main");
@@ -28,6 +28,10 @@ test("Save item and Alt+K open the capture flow from the side", async ({ page })
     x: mainBefore.x,
     width: mainBefore.width,
   });
+  const collectionField = capture.getByRole("textbox", { name: "Collection" });
+  const tagsField = capture.getByRole("textbox", { name: "Tags" });
+  expect((await collectionField.boundingBox())!.y).toBeLessThan((await tagsField.boundingBox())!.y);
+  await page.screenshot({ path: testInfo.outputPath("capture-drawer.png") });
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(capture).toBeHidden();
 

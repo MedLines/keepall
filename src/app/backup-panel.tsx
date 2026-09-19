@@ -433,10 +433,23 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     />
   );
 
+  const dialogClass =
+    "ui-native-dialog ui-popover fixed inset-0 z-50 m-auto h-fit w-[min(100%-2rem,30rem)] overflow-hidden p-0 text-text-primary";
+  const dialogHeaderClass =
+    "flex shrink-0 items-start gap-4 border-b border-border-control px-6 py-5";
+  const dialogBodyClass =
+    "scroll-fade min-h-0 flex-1 overflow-y-auto px-6 py-5";
+  const dialogFooterClass =
+    "flex shrink-0 flex-wrap justify-end gap-2 border-t border-border-control px-6 py-4";
+  const dialogCloseClass =
+    "ui-control flex size-10 shrink-0 items-center justify-center disabled:opacity-60";
+  const dialogButtonClass =
+    "ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60";
+
   const imageFolderDialog = (
     <dialog
       ref={imageFolderDialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,28rem)] w-[min(100%-2rem,28rem)] overflow-hidden rounded-[12px] bg-bg-surface p-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
+      className={`${dialogClass} max-h-[min(90dvh,32rem)]`}
       aria-labelledby={imageFolderTitleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -444,51 +457,63 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       }}
     >
       {pendingImageFiles !== null ? (
-        <div className="scroll-fade flex max-h-[min(90dvh,28rem)] flex-col gap-4 overflow-y-auto p-5">
-          <div>
-            <h2
-              className="text-lg font-semibold tracking-tight"
-              id={imageFolderTitleId}
-            >
-              Import image folder
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              {pendingImageFiles.length} file
-              {pendingImageFiles.length === 1 ? "" : "s"} selected. Each image
-              under 3MB becomes its own library item. Larger or unsupported
-              files are skipped.
-            </p>
-            <p className="mt-2 text-xs leading-relaxed text-text-secondary">
-              Subfolders are not turned into collections — only one optional
-              collection for the whole import (prefilled from the folder name).
-              Nested collections are not supported.
-            </p>
-          </div>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-text-primary">
-              Collection for all imports (optional)
-            </span>
-            <input
-              className="rounded-[10px] border border-border-edge px-3 py-2 disabled:opacity-60"
-              type="text"
-              value={imageCollectionDraft}
-              placeholder="e.g. Vacation 2024"
-              disabled={busy}
-              onChange={(event) => setImageCollectionDraft(event.target.value)}
-            />
-            <span className="text-xs text-text-secondary">
-              Leave blank to keep images unsorted. Clear the field to skip a
-              collection.
-            </span>
-          </label>
-          {imageQuotaWarning ? (
-            <p className="text-sm text-text-warning" role="status">
-              {imageQuotaWarning}
-            </p>
-          ) : null}
-          <div className="flex flex-col gap-2">
+        <div className="flex max-h-[min(90dvh,32rem)] flex-col">
+          <header className={dialogHeaderClass}>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl font-semibold" id={imageFolderTitleId}>
+                Import image folder
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-text-secondary">
+                {pendingImageFiles.length} file
+                {pendingImageFiles.length === 1 ? "" : "s"} selected. Images under
+                3MB become separate library items.
+              </p>
+            </div>
             <button
-              className="rounded-[10px] bg-action-primary px-3 py-2.5 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className={dialogCloseClass}
+              type="button"
+              aria-label="Close image import"
+              disabled={busy}
+              onClick={cancelImageFolderImport}
+            >
+              <CloseIcon />
+            </button>
+          </header>
+          <div className={dialogBodyClass}>
+            <label className="flex flex-col gap-2 text-sm">
+              <span className="font-medium text-text-primary">
+                Collection (optional)
+              </span>
+              <input
+                className="ui-field min-h-11 px-3 py-2 disabled:opacity-60"
+                type="text"
+                value={imageCollectionDraft}
+                placeholder="e.g. Vacation 2024"
+                disabled={busy}
+                onChange={(event) => setImageCollectionDraft(event.target.value)}
+              />
+              <span className="text-xs leading-relaxed text-text-secondary">
+                Leave blank to keep the images unsorted. Unsupported or larger
+                files are skipped. Subfolders are not converted into collections.
+              </span>
+            </label>
+            {imageQuotaWarning ? (
+              <p className="mt-4 text-sm text-text-warning" role="status">
+                {imageQuotaWarning}
+              </p>
+            ) : null}
+          </div>
+          <footer className={dialogFooterClass}>
+            <button
+              className={dialogButtonClass}
+              type="button"
+              disabled={busy}
+              onClick={cancelImageFolderImport}
+            >
+              Cancel
+            </button>
+            <button
+              className={`${dialogButtonClass} ui-primary`}
               type="button"
               disabled={busy}
               onClick={() => void runImageFolderImport()}
@@ -497,15 +522,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
                 ? `Importing… ${imageImportProgress.done} / ${imageImportProgress.total}`
                 : "Import images"}
             </button>
-            <button
-              className="rounded-[10px] px-3 py-2 text-sm font-medium text-text-secondary transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
-              type="button"
-              disabled={busy}
-              onClick={cancelImageFolderImport}
-            >
-              Cancel
-            </button>
-          </div>
+          </footer>
         </div>
       ) : null}
     </dialog>
@@ -514,7 +531,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const choiceDialog = (
     <dialog
       ref={choiceDialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,24rem)] w-[min(100%-2rem,24rem)] overflow-hidden rounded-[12px] bg-bg-surface p-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
+      className={`${dialogClass} max-h-[min(90dvh,26rem)]`}
       aria-labelledby={choiceTitleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -522,42 +539,53 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       }}
     >
       {pendingRaw !== null ? (
-        <div className="scroll-fade flex max-h-[min(90dvh,24rem)] flex-col gap-4 overflow-y-auto p-5">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight" id={choiceTitleId}>
-              Import backup
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              Merge keeps your current library and combines this file. Replace
-              wipes this library, then loads only the file.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2">
+        <div className="flex max-h-[min(90dvh,26rem)] flex-col">
+          <header className={dialogHeaderClass}>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl font-semibold" id={choiceTitleId}>
+                Import backup
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-text-secondary">
+                Merge combines this file with your library. Replace removes the
+                current library first.
+              </p>
+            </div>
             <button
-              className="rounded-[10px] bg-action-primary px-3 py-2.5 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className={dialogCloseClass}
               type="button"
+              aria-label="Close backup import"
               disabled={busy}
-              onClick={() => void runImport("merge")}
+              onClick={cancelImportChoice}
             >
-              Merge — keep both
+              <CloseIcon />
             </button>
+          </header>
+          <footer className={dialogFooterClass}>
             <button
-              className="rounded-[10px] border border-border-edge bg-bg-surface px-3 py-2.5 text-sm font-medium text-text-primary transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
-              type="button"
-              disabled={busy}
-              onClick={() => void runImport("replace")}
-            >
-              Replace current data
-            </button>
-            <button
-              className="rounded-[10px] px-3 py-2 text-sm font-medium text-text-secondary transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className={dialogButtonClass}
               type="button"
               disabled={busy}
               onClick={cancelImportChoice}
             >
               Cancel
             </button>
-          </div>
+            <button
+              className={`${dialogButtonClass} border-border-danger bg-bg-danger text-text-danger`}
+              type="button"
+              disabled={busy}
+              onClick={() => void runImport("replace")}
+            >
+              Replace
+            </button>
+            <button
+              className={`${dialogButtonClass} ui-primary`}
+              type="button"
+              disabled={busy}
+              onClick={() => void runImport("merge")}
+            >
+              Merge
+            </button>
+          </footer>
         </div>
       ) : null}
     </dialog>
@@ -566,7 +594,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const bookmarksDialog = (
     <dialog
       ref={bookmarksDialogRef}
-      className="fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,32rem)] w-[min(100%-2rem,28rem)] overflow-hidden rounded-[12px] bg-bg-surface p-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.16)] [&::backdrop]:bg-bg-overlay/35 [&::backdrop]:backdrop-blur-[1px]"
+      className={`${dialogClass} max-h-[min(90dvh,38rem)]`}
       aria-labelledby={bookmarksTitleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -574,27 +602,36 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       }}
     >
       {pendingBookmarksHtml !== null ? (
-        <div className="scroll-fade flex max-h-[min(90dvh,32rem)] flex-col gap-4 overflow-y-auto p-5">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight" id={bookmarksTitleId}>
-              Import browser bookmarks
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              Adds links from your <strong className="font-medium">browser</strong>{" "}
-              export into <strong className="font-medium">Keepall</strong>. Nothing
-              in Keepall is deleted. Same URL in both places → one Keepall link.
-            </p>
-          </div>
+        <div className="flex max-h-[min(90dvh,38rem)] flex-col">
+          <header className={dialogHeaderClass}>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl font-semibold" id={bookmarksTitleId}>
+                Import browser bookmarks
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-text-secondary">
+                Existing links are merged by URL. Nothing in Keepall is deleted.
+              </p>
+            </div>
+            <button
+              className={dialogCloseClass}
+              type="button"
+              aria-label="Close bookmarks import"
+              disabled={busy}
+              onClick={cancelBookmarksImport}
+            >
+              <CloseIcon />
+            </button>
+          </header>
+          <div className={dialogBodyClass}>
           <fieldset className="flex flex-col gap-2 border-0 p-0">
             <legend className="text-sm font-medium text-text-primary">
-              Link already in Keepall — what about collections?
+              When a link already exists, which collection wins?
             </legend>
             <p className="text-xs leading-relaxed text-text-secondary">
-              Browser <em>tags</em> from the file are always added in Keepall.
-              This choice is only about Keepall <em>collections</em> vs browser{" "}
-              <em>folders</em>.
+              Browser tags are always added. This choice only controls browser
+              folders and Keepall collections.
             </p>
-            <label className="flex cursor-pointer gap-2 rounded-[10px] border border-border-edge px-3 py-2 text-sm">
+            <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
               <input
                 type="radio"
                 name="collection-policy"
@@ -610,7 +647,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
                 </span>
               </span>
             </label>
-            <label className="flex cursor-pointer gap-2 rounded-[10px] border border-border-edge px-3 py-2 text-sm">
+            <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
               <input
                 type="radio"
                 name="collection-policy"
@@ -626,7 +663,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
                 </span>
               </span>
             </label>
-            <label className="flex cursor-pointer gap-2 rounded-[10px] border border-border-edge px-3 py-2 text-sm">
+            <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
               <input
                 type="radio"
                 name="collection-policy"
@@ -643,24 +680,25 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               </span>
             </label>
           </fieldset>
-          <div className="flex flex-col gap-2">
+          </div>
+          <footer className={dialogFooterClass}>
             <button
-              className="rounded-[10px] bg-action-primary px-3 py-2.5 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
-              type="button"
-              disabled={busy}
-              onClick={() => void runBookmarksImport()}
-            >
-              Import bookmarks
-            </button>
-            <button
-              className="rounded-[10px] px-3 py-2 text-sm font-medium text-text-secondary transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+              className={dialogButtonClass}
               type="button"
               disabled={busy}
               onClick={cancelBookmarksImport}
             >
               Cancel
             </button>
-          </div>
+            <button
+              className={`${dialogButtonClass} ui-primary`}
+              type="button"
+              disabled={busy}
+              onClick={() => void runBookmarksImport()}
+            >
+              Import bookmarks
+            </button>
+          </footer>
         </div>
       ) : null}
     </dialog>
@@ -684,7 +722,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       {onClose ? (
         <button
           type="button"
-          className="rounded-md p-1 text-text-secondary transition-colors hover:bg-bg-raised hover:text-text-primary"
+          className="ui-control flex size-9 items-center justify-center"
           aria-label="Close backup"
           onClick={onClose}
         >
@@ -696,8 +734,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   const buttonClass =
     variant === "sidebar"
-      ? "rounded-[10px] border border-border-edge/80 bg-bg-surface px-3 py-2 text-sm font-medium shadow-[0_0_0_1px_rgba(0,0,0,0.04)] transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
-      : "rounded-md border border-border-edge px-3 py-2 text-sm font-medium disabled:opacity-60";
+      ? "ui-control min-h-10 px-3 py-2 text-sm font-medium disabled:opacity-60"
+      : "ui-control min-h-10 px-4 py-2 text-sm font-medium disabled:opacity-60";
 
   const actions = (
     <div

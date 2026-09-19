@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { TagValidationError } from "@/domain/tag";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { assignTagToItem, createNote, listItems, unassignTagFromItem } from "./items";
-import { createTag, listTags } from "./tags";
+import { createTag, deleteTag, listTags } from "./tags";
 
 describe("tags persistence", () => {
   beforeEach(async () => {
@@ -66,5 +66,16 @@ describe("tags persistence", () => {
 
     expect(item?.tagIds).toEqual([]);
     expect(item?.collectionIds).toEqual([]);
+  });
+
+  test("deleting a tag removes it from every item and the tags table", async () => {
+    const tag = await createTag({ name: "obsolete" });
+    const note = await createNote({ content: "Tagged note" });
+    await assignTagToItem(note.id, tag.id);
+
+    await deleteTag(tag.id);
+
+    expect(await listTags()).toEqual([]);
+    expect((await listItems())[0]?.tagIds).toEqual([]);
   });
 });

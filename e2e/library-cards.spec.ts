@@ -500,6 +500,21 @@ test("desktop card actions reveal on hover or focus and stay visible while open"
 
 test("organizer opens from the side without resizing the card", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("tags", "readwrite");
+      tx.objectStore("tags").put({ id: "t2", name: "research", createdAt: 2 });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+    window.dispatchEvent(new Event("keepall:items-changed"));
+  });
   const note = page.locator(".library-card").filter({ hasText: "Design notes" });
   const before = (await note.boundingBox())!;
 
@@ -521,6 +536,12 @@ test("organizer opens from the side without resizing the card", async ({ page })
   expect(await note.boundingBox()).toEqual(before);
   await expect(drawer.getByLabel("Add tag")).toBeVisible();
   await expect(drawer.getByLabel("Move to collection")).toBeVisible();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await drawer.getByLabel("Add tag").fill("res");
+  await expect(page.getByRole("listbox")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(drawer).toBeVisible();
 
   await page.keyboard.press("Escape");
   await expect(drawer).toBeHidden();
@@ -655,25 +676,50 @@ test("selecting a card keeps the library still and draws the state inside the ca
   expect(bulkBounds.x).toBeGreaterThanOrEqual(headingBounds.x + headingBounds.width);
   expect(bulkBounds.x + bulkBounds.width).toBeLessThanOrEqual(layoutBounds.x);
 
-  await bulkActions.getByRole("button", { name: "Add tag" }).click();
-  const addTagDrawer = page.getByRole("dialog", {
-    name: "Add tag to 1 selected item",
+  await expect(bulkActions).toHaveCSS("overflow-x", "visible");
+  await expect(bulkActions.getByRole("button", { name: "Tags" })).toBeVisible();
+  await bulkActions.getByRole("button", { name: "Tags" }).click();
+  const tagDialog = page.getByRole("dialog", {
+    name: "Tags for 1 selected item",
   });
-  await expect(addTagDrawer).toBeVisible();
+  await expect(tagDialog).toBeVisible();
+  const dialogBox = (await tagDialog.boundingBox())!;
+  expect(Math.abs(dialogBox.x + dialogBox.width / 2 - 720)).toBeLessThanOrEqual(2);
+  expect(Math.abs(dialogBox.y + dialogBox.height / 2 - 500)).toBeLessThanOrEqual(2);
+  await page.screenshot({ path: testInfo.outputPath("bulk-tags-dialog.png") });
+  await tagDialog.getByRole("button", { name: "Remove all tags" }).click();
+  await expect(tagDialog.getByText("The selected items have no tags.")).toBeVisible();
   expect((await header.boundingBox())!.height).toBe(headerAfter.height);
   expect((await card.boundingBox())!.y).toBe(cardAfter.y);
   await page.keyboard.press("Escape");
-  await expect(addTagDrawer).toBeHidden();
+  await expect(tagDialog).toBeHidden();
 
-  await bulkActions.getByRole("button", { name: "Remove tag" }).click();
-  const removeTagDrawer = page.getByRole("dialog", {
-    name: "Remove tag from 1 selected item",
+  await bulkActions.getByRole("button", { name: "Collection" }).click();
+  const collectionDialog = page.getByRole("dialog", {
+    name: "Move 1 selected item to a collection",
   });
-  await expect(removeTagDrawer).toBeVisible();
+  await collectionDialog.getByLabel("Move selection to collection").fill("UI");
+  const collectionOptions = page.getByRole("listbox");
+  await expect(collectionOptions).toBeVisible();
+  expect(await collectionOptions.evaluate(element => element.closest("[role=dialog]") === null)).toBe(true);
+  const optionBounds = (await collectionOptions.boundingBox())!;
+  expect(optionBounds.y).toBeGreaterThanOrEqual(8);
+  expect(optionBounds.y + optionBounds.height).toBeLessThanOrEqual(992);
+  await page.screenshot({ path: testInfo.outputPath("bulk-collection-suggestions.png") });
+  await page.keyboard.press("Escape");
+  await expect(collectionOptions).toBeHidden();
+  await page.keyboard.press("Escape");
+  await expect(collectionDialog).toBeHidden();
+
+  await bulkActions.getByRole("button", { name: "Delete" }).click();
+  const deleteDialog = page.getByRole("dialog", {
+    name: "Delete 1 selected item",
+  });
+  await expect(deleteDialog).toBeVisible();
   expect((await header.boundingBox())!.height).toBe(headerAfter.height);
   expect((await card.boundingBox())!.y).toBe(cardAfter.y);
   await page.keyboard.press("Escape");
-  await expect(removeTagDrawer).toBeHidden();
+  await expect(deleteDialog).toBeHidden();
 
   await expect(card).toHaveCSS("outline-style", "none");
   const lightSelection = await card.evaluate(element => getComputedStyle(element).backgroundColor);
@@ -803,8 +849,9 @@ test("list menus support editing, cancel-delete, selection and collection pinnin
   await note.hover();
   await note.locator("summary").click();
   await note.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(note.getByRole("button", { name: "Confirm delete" })).toBeFocused();
-  await note.getByRole("button", { name: "Cancel", exact: true }).click();
+  const deleteDialog = page.getByRole("dialog", { name: "Delete this item?" });
+  await expect(deleteDialog.getByRole("button", { name: "Confirm delete" })).toBeFocused();
+  await deleteDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(note.getByRole("button", { name: "Delete", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await note.getByRole("checkbox").check();

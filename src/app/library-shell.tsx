@@ -72,6 +72,7 @@ type Props = {
   onCollectionDrop: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onRenameCollection: (id: string, name: string) => void;
   onDeleteCollection: (id: string) => void;
+  onDeleteTag: (id: string) => void;
 };
 
 export function LibraryShell({
@@ -100,6 +101,7 @@ export function LibraryShell({
   onCollectionDrop,
   onRenameCollection,
   onDeleteCollection,
+  onDeleteTag,
 }: Props) {
   const [collectionFilter, setCollectionFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
@@ -277,6 +279,8 @@ export function LibraryShell({
                       onGoTag(id);
                       closeOnMobile();
                     }}
+                    mutationBusy={mutationBusy}
+                    onDeleteTag={onDeleteTag}
                   />
                 </div>
               ) : (
@@ -500,6 +504,8 @@ function TagsSection({
   counts,
   libraryLoading = false,
   onGoTag,
+  mutationBusy,
+  onDeleteTag,
 }: {
   tagsOpen: boolean;
   onTagsOpenChange: (open: boolean) => void;
@@ -511,6 +517,8 @@ function TagsSection({
   counts: Record<string, number>;
   libraryLoading?: boolean;
   onGoTag: (id: string) => void;
+  mutationBusy: boolean;
+  onDeleteTag: (id: string) => void;
 }) {
   return (
     <CollapsibleSection
@@ -543,14 +551,14 @@ function TagsSection({
             </p>
           ) : (
             filteredTags.map((tag) => (
-              <ShellNavItem
+              <TagNavRow
                 key={tag.id}
-                expanded
+                tag={tag}
                 active={browseTagId === tag.id}
-                label={tag.name}
-                ariaLabel={`Tag ${tag.name}`}
                 count={libraryLoading ? undefined : (counts[tag.id] ?? 0)}
-                onClick={() => onGoTag(tag.id)}
+                mutationBusy={mutationBusy}
+                onNavigate={() => onGoTag(tag.id)}
+                onDelete={() => onDeleteTag(tag.id)}
               />
             ))
           )}
@@ -596,6 +604,43 @@ function SidebarSectionScroll({ activeId, filter, itemCount, children }: {
       }}
     >
       {children}
+    </div>
+  );
+}
+
+function TagNavRow({
+  tag,
+  count,
+  active,
+  mutationBusy,
+  onNavigate,
+  onDelete,
+}: {
+  tag: Tag;
+  count?: number;
+  active: boolean;
+  mutationBusy: boolean;
+  onNavigate: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-1 text-sm ${active ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary` : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`}`}>
+      <button
+        type="button"
+        className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 pl-3 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+        aria-label={`Tag ${tag.name}`}
+        aria-current={active ? "page" : undefined}
+        onClick={onNavigate}
+      >
+        <span className="min-w-0 flex-1 truncate">{tag.name}</span>
+        {count !== undefined ? <span className="shrink-0 text-xs tabular-nums text-text-secondary">{count}</span> : null}
+      </button>
+      <SidebarRowMenu
+        label={tag.name}
+        visible={active}
+        mutationBusy={mutationBusy}
+        onDelete={onDelete}
+      />
     </div>
   );
 }
@@ -694,8 +739,8 @@ function CollectionNavRow({
         <span className="truncate">{collection.name}</span>
         {count !== undefined ? <NavCount value={count} /> : null}
       </button>
-      <CollectionRowMenu
-        collectionName={collection.name}
+      <SidebarRowMenu
+        label={collection.name}
         visible={active}
         mutationBusy={mutationBusy}
         onRename={onStartRename}
@@ -705,21 +750,21 @@ function CollectionNavRow({
   );
 }
 
-function CollectionRowMenu({
-  collectionName,
+function SidebarRowMenu({
+  label,
   visible,
   mutationBusy,
   onRename,
   onDelete,
 }: {
-  collectionName: string;
+  label: string;
   visible: boolean;
   mutationBusy: boolean;
-  onRename: () => void;
+  onRename?: () => void;
   onDelete: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const actionsLabel = `${collectionName} actions`;
+  const actionsLabel = `${label} actions`;
 
   return (
     <Menu.Root open={open} onOpenChange={setOpen} modal={false}>
@@ -737,9 +782,11 @@ function CollectionRowMenu({
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
           <Menu.Popup aria-label={actionsLabel} className="ui-popover flex max-h-[var(--available-height)] min-w-[8.5rem] flex-col gap-1 overflow-y-auto outline-none">
-            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onRename}>
-              Rename
-            </Menu.Item>
+            {onRename ? (
+              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onRename}>
+                Rename
+              </Menu.Item>
+            ) : null}
             <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-danger hover:bg-bg-danger data-[highlighted]:bg-bg-danger" onClick={onDelete}>
               Delete
             </Menu.Item>

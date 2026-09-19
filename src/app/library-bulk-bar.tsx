@@ -1,10 +1,11 @@
 "use client";
 
-import { SideDrawer } from "@/components/ui/side-drawer";
+import { Dialog } from "@base-ui/react/dialog";
+import { CloseIcon } from "./shell-icons";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 
-export type BulkPanel = null | "delete" | "add-tag" | "remove-tag" | "add-collection";
+export type BulkPanel = null | "delete" | "tags" | "collection";
 
 export type LibraryBulkBarProps = {
   count: number;
@@ -14,7 +15,6 @@ export type LibraryBulkBarProps = {
   busy: boolean;
   error: string | null;
   tagDraft: string;
-  removeTagDraft: string;
   collectionDraft: string;
   tagSuggestions: OrgNameSuggestion[];
   removeTagSuggestions: OrgNameSuggestion[];
@@ -29,14 +29,14 @@ export type LibraryBulkBarProps = {
   onClearSelection: () => void;
   onConfirmDelete: () => void;
   onTagDraftChange: (value: string) => void;
-  onRemoveTagDraftChange: (value: string) => void;
   onCollectionDraftChange: (value: string) => void;
   onBulkAddTag: (name: string) => void;
   onBulkRemoveTag: (name: string) => void;
+  onBulkRemoveAllTags: () => void;
   onBulkAddCollection: (name: string) => void;
 };
 
-const BULK_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-8 shrink-0 px-2 text-xs`;
+const BULK_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-10 shrink-0 px-3 text-xs`;
 
 type ToolbarProps = Pick<
   LibraryBulkBarProps,
@@ -63,7 +63,7 @@ export function LibraryBulkToolbar({
 
   return (
     <div
-      className="scroll-fade-x flex h-9 w-full min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap"
+      className="flex min-h-10 w-full min-w-0 flex-wrap items-center gap-1.5"
       role="region"
       aria-label="Bulk actions"
     >
@@ -92,33 +92,25 @@ export function LibraryBulkToolbar({
         className={BULK_BTN}
         disabled={busy}
         type="button"
+        onClick={() => onOpenPanel("tags")}
+      >
+        Tags
+      </button>
+      <button
+        className={BULK_BTN}
+        disabled={busy}
+        type="button"
+        onClick={() => onOpenPanel("collection")}
+      >
+        Collection
+      </button>
+      <button
+        className={BULK_BTN}
+        disabled={busy}
+        type="button"
         onClick={() => onOpenPanel("delete")}
       >
         Delete
-      </button>
-      <button
-        className={BULK_BTN}
-        disabled={busy}
-        type="button"
-        onClick={() => onOpenPanel("add-tag")}
-      >
-        Add tag
-      </button>
-      <button
-        className={BULK_BTN}
-        disabled={busy}
-        type="button"
-        onClick={() => onOpenPanel("remove-tag")}
-      >
-        Remove tag
-      </button>
-      <button
-        className={BULK_BTN}
-        disabled={busy}
-        type="button"
-        onClick={() => onOpenPanel("add-collection")}
-      >
-        Add to collection
       </button>
     </div>
   );
@@ -131,7 +123,6 @@ type PanelsProps = Pick<
   | "busy"
   | "error"
   | "tagDraft"
-  | "removeTagDraft"
   | "collectionDraft"
   | "tagSuggestions"
   | "removeTagSuggestions"
@@ -143,21 +134,19 @@ type PanelsProps = Pick<
   | "onClosePanel"
   | "onConfirmDelete"
   | "onTagDraftChange"
-  | "onRemoveTagDraftChange"
   | "onCollectionDraftChange"
   | "onBulkAddTag"
   | "onBulkRemoveTag"
+  | "onBulkRemoveAllTags"
   | "onBulkAddCollection"
 >;
 
 function bulkPanelTitle(panel: BulkPanel, count: number): string {
   const itemLabel = `${count} selected item${count === 1 ? "" : "s"}`;
   switch (panel) {
-    case "add-tag":
-      return `Add tag to ${itemLabel}`;
-    case "remove-tag":
-      return `Remove tag from ${itemLabel}`;
-    case "add-collection":
+    case "tags":
+      return `Tags for ${itemLabel}`;
+    case "collection":
       return `Move ${itemLabel} to a collection`;
     case "delete":
       return `Delete ${itemLabel}`;
@@ -166,14 +155,13 @@ function bulkPanelTitle(panel: BulkPanel, count: number): string {
   }
 }
 
-/** Drawer containing the active bulk action. */
+/** Centered modal containing the active bulk action. */
 export function LibraryBulkPanels({
   count,
   panel,
   busy,
   error,
   tagDraft,
-  removeTagDraft,
   collectionDraft,
   tagSuggestions,
   removeTagSuggestions,
@@ -185,28 +173,20 @@ export function LibraryBulkPanels({
   onClosePanel,
   onConfirmDelete,
   onTagDraftChange,
-  onRemoveTagDraftChange,
   onCollectionDraftChange,
   onBulkAddTag,
   onBulkRemoveTag,
+  onBulkRemoveAllTags,
   onBulkAddCollection,
 }: PanelsProps) {
   if (panel === null && !error) {
     return null;
   }
 
-  const side =
-    typeof document !== "undefined" && document.documentElement.dir === "rtl"
-      ? "left"
-      : "right";
-
   return (
-    <SideDrawer
-      open
-      side={side}
-      title={bulkPanelTitle(panel, count)}
-      description="This change applies to the current selection."
-      closeDisabled={busy}
+    <Dialog.Root
+      open={panel !== null || Boolean(error)}
+      disablePointerDismissal={busy}
       onOpenChange={(open, eventDetails) => {
         if (open) {
           return;
@@ -218,7 +198,24 @@ export function LibraryBulkPanels({
         onClosePanel();
       }}
     >
-      <div className="scroll-fade min-h-0 flex-1 overflow-y-auto px-5 py-5">
+      <Dialog.Portal>
+        <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[70]" />
+        <Dialog.Viewport className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto p-4">
+          <Dialog.Popup className="ui-popover flex max-h-[min(90dvh,36rem)] w-full max-w-[30rem] flex-col overflow-hidden p-0 outline-none">
+            <header className="flex shrink-0 items-start gap-4 border-b border-border-control px-6 py-5">
+              <div className="min-w-0 flex-1">
+                <Dialog.Title className="text-xl font-semibold text-text-primary">
+                  {bulkPanelTitle(panel, count)}
+                </Dialog.Title>
+                <Dialog.Description className="mt-1 text-sm text-text-secondary">
+                  This change applies to the current selection.
+                </Dialog.Description>
+              </div>
+              <Dialog.Close className="ui-control flex size-10 shrink-0 items-center justify-center" aria-label="Close" disabled={busy}>
+                <CloseIcon />
+              </Dialog.Close>
+            </header>
+            <div className="scroll-fade min-h-0 flex-1 overflow-y-auto px-6 py-5">
         {panel === "delete" ? (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-text-primary">
@@ -246,8 +243,8 @@ export function LibraryBulkPanels({
           </div>
         ) : null}
 
-        {panel === "add-tag" ? (
-          <div>
+        {panel === "tags" ? (
+          <div className="flex flex-col gap-6">
             <OrgNameSuggest
               inputId="bulk-add-tag"
               label="Add tag to selection"
@@ -263,30 +260,31 @@ export function LibraryBulkPanels({
               onCancel={onClosePanel}
               onSubmit={onBulkAddTag}
             />
+            {removeTagSuggestions.length > 0 ? (
+              <section aria-labelledby="bulk-current-tags">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 id="bulk-current-tags" className="text-sm font-medium text-text-primary">Tags on the selection</h3>
+                  <button className="text-sm font-medium text-text-danger hover:underline disabled:opacity-60" type="button" disabled={busy} onClick={onBulkRemoveAllTags}>
+                    {pendingRemoveTag ? "Removing…" : "Remove all tags"}
+                  </button>
+                </div>
+                <ul className="flex flex-wrap gap-2" aria-label="Tags on selected items">
+                  {removeTagSuggestions.map((tag) => (
+                    <li key={tag.id}>
+                      <button className="ui-control flex min-h-10 items-center gap-2 px-3 text-sm" type="button" disabled={busy} aria-label={`Remove tag ${tag.name} from selection`} onClick={() => onBulkRemoveTag(tag.name)}>
+                        {tag.name}<CloseIcon className="size-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : (
+              <p className="text-sm text-text-secondary">The selected items have no tags.</p>
+            )}
           </div>
         ) : null}
 
-        {panel === "remove-tag" ? (
-          <div>
-            <OrgNameSuggest
-              inputId="bulk-remove-tag"
-              label="Remove tag from selection"
-              placeholder="Search selected tags"
-              value={removeTagDraft}
-              suggestions={removeTagSuggestions}
-              disabled={busy}
-              pending={pendingRemoveTag}
-              submitLabel="Remove"
-              error={error}
-              suggestWhenEmpty={false}
-              onChange={onRemoveTagDraftChange}
-              onCancel={onClosePanel}
-              onSubmit={onBulkRemoveTag}
-            />
-          </div>
-        ) : null}
-
-        {panel === "add-collection" ? (
+        {panel === "collection" ? (
           <div>
             <OrgNameSuggest
               inputId="bulk-add-collection"
@@ -311,8 +309,11 @@ export function LibraryBulkPanels({
             {error}
           </p>
         ) : null}
-      </div>
-    </SideDrawer>
+            </div>
+          </Dialog.Popup>
+        </Dialog.Viewport>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 

@@ -116,68 +116,6 @@ export function CaptureOrgPanel({
     <div className="flex flex-col gap-6 py-4">
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="capture-add-tag" className="text-sm font-medium text-text-secondary">Tags</label>
-        {tagNames.length > 0 ? (
-          <ul className="flex flex-wrap gap-1" aria-label="Selected tags">
-            {tagNames.map((name) => (
-              <li key={name} className={`${PICK_CHIP} ${PICK_CHIP_SELECTED} pr-0.5`}>
-                {name}
-                <button
-                  className="flex size-8 shrink-0 items-center justify-center rounded-control text-text-secondary hover:bg-bg-danger hover:text-text-danger disabled:opacity-60"
-                  type="button"
-                  disabled={disabled}
-                  aria-label={`Remove tag ${name}`}
-                  onClick={() => onRemoveTag(name)}
-                >
-                  <CloseIcon className="size-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {visibleTagPicks.length > 0 ? (
-          <ul
-            className="flex flex-wrap gap-1"
-            aria-label="Existing tags"
-          >
-            {visibleTagPicks.map((entry) => (
-              <li key={entry.id}>
-                <button
-                  className={`${PICK_CHIP} ${PICK_CHIP_OUTLINE}`}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => onAddTag(entry.name)}
-                >
-                  {entry.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : tagSuggestions.length > 0 && tagQuery ? (
-          <p className="text-xs text-text-secondary">No matching tags — Enter creates one.</p>
-        ) : null}
-        <input
-          autoComplete="off"
-          className={FIELD_INPUT}
-          disabled={disabled}
-          id="capture-add-tag"
-          placeholder={
-            tagSuggestions.length > 0
-              ? "Filter or create tag…"
-              : "Tag name"
-          }
-          value={tagInput}
-          onChange={(event) => onTagInputChange(event.target.value)}
-          onKeyDown={onTagFieldKeyDown}
-        />
-        {tagQuery && !tagQueryMatchesExisting ? (
-          <p className="text-xs text-text-secondary">
-            Enter to create “{tagQuery}”
-          </p>
-        ) : null}
-      </div>
-
-      <div className="flex flex-col gap-1.5">
         <label htmlFor="capture-add-collection" className="text-sm font-medium text-text-secondary">Collection</label>
         <ul
           className="flex flex-wrap gap-1"
@@ -239,6 +177,59 @@ export function CaptureOrgPanel({
           <p className="text-xs text-text-secondary">
             Enter to create “{collectionQuery}”
           </p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="capture-add-tag" className="text-sm font-medium text-text-secondary">Tags</label>
+        {tagNames.length > 0 ? (
+          <ul className="flex flex-wrap gap-1" aria-label="Selected tags">
+            {tagNames.map((name) => (
+              <li key={name} className={`${PICK_CHIP} ${PICK_CHIP_SELECTED} pr-0.5`}>
+                {name}
+                <button
+                  className="flex size-8 shrink-0 items-center justify-center rounded-control text-text-secondary hover:bg-bg-danger hover:text-text-danger disabled:opacity-60"
+                  type="button"
+                  disabled={disabled}
+                  aria-label={`Remove tag ${name}`}
+                  onClick={() => onRemoveTag(name)}
+                >
+                  <CloseIcon className="size-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {visibleTagPicks.length > 0 ? (
+          <ul className="flex flex-wrap gap-1" aria-label="Existing tags">
+            {visibleTagPicks.map((entry) => (
+              <li key={entry.id}>
+                <button
+                  className={`${PICK_CHIP} ${PICK_CHIP_OUTLINE}`}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onAddTag(entry.name)}
+                >
+                  {entry.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : tagSuggestions.length > 0 && tagQuery ? (
+          <p className="text-xs text-text-secondary">No matching tags — Enter creates one.</p>
+        ) : null}
+        <input
+          autoComplete="off"
+          className={FIELD_INPUT}
+          disabled={disabled}
+          id="capture-add-tag"
+          placeholder={tagSuggestions.length > 0 ? "Filter or create tag…" : "Tag name"}
+          value={tagInput}
+          onChange={(event) => onTagInputChange(event.target.value)}
+          onKeyDown={onTagFieldKeyDown}
+        />
+        {tagQuery && !tagQueryMatchesExisting ? (
+          <p className="text-xs text-text-secondary">Enter to create “{tagQuery}”</p>
         ) : null}
       </div>
     </div>

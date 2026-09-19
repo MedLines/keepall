@@ -1,8 +1,21 @@
 "use client";
 
-import { type FormEvent, type KeyboardEvent, useMemo } from "react";
+import {
+  type CSSProperties,
+  type FormEvent,
+  type KeyboardEvent,
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 
 export type OrgNameSuggestion = { id: string; name: string };
+
+type SuggestionPosition = Pick<CSSProperties, "top" | "left" | "width" | "maxHeight">;
 
 type Props = {
   inputId: string;
@@ -44,6 +57,10 @@ export function OrgNameSuggest({
   embedded = false,
   suggestWhenEmpty = true,
 }: Props) {
+  const listboxId = useId();
+  const [listOpen, setListOpen] = useState(false);
+  const [suggestionPosition, setSuggestionPosition] = useState<SuggestionPosition | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const filtered = useMemo(() => {
     const query = value.trim().toLowerCase();
     const matches = query
@@ -55,12 +72,51 @@ export function OrgNameSuggest({
         : [];
     return matches.slice(0, 8);
   }, [value, suggestions, suggestWhenEmpty]);
+  const suggestionsVisible = listOpen && filtered.length > 0;
+
+  const positionSuggestions = useCallback(() => {
+    const input = inputRef.current;
+    if (!input) {
+      return;
+    }
+
+    const rect = input.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const margin = 8;
+    const preferredHeight = Math.min(160, filtered.length * 40 + 8);
+    const spaceBelow = viewportHeight - rect.bottom - margin;
+    const spaceAbove = rect.top - margin;
+    const openBelow = spaceBelow >= preferredHeight || spaceBelow >= spaceAbove;
+    const maxHeight = Math.max(80, Math.min(preferredHeight, openBelow ? spaceBelow : spaceAbove));
+
+    setSuggestionPosition({
+      left: rect.left,
+      top: openBelow ? rect.bottom + margin : rect.top - margin - maxHeight,
+      width: rect.width,
+      maxHeight,
+    });
+  }, [filtered.length]);
+
+  useLayoutEffect(() => {
+    if (!suggestionsVisible) {
+      return;
+    }
+
+    positionSuggestions();
+    window.addEventListener("resize", positionSuggestions);
+    window.addEventListener("scroll", positionSuggestions, true);
+    return () => {
+      window.removeEventListener("resize", positionSuggestions);
+      window.removeEventListener("scroll", positionSuggestions, true);
+    };
+  }, [positionSuggestions, suggestionsVisible]);
 
   function submitName(name: string) {
     const trimmed = name.trim();
     if (!trimmed || disabled) {
       return;
     }
+    setListOpen(false);
     onSubmit(trimmed);
   }
 
@@ -71,8 +127,13 @@ export function OrgNameSuggest({
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
-      event.preventDefault();
-      onCancel?.();
+      if (listOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        setListOpen(false);
+      } else {
+        onCancel?.();
+      }
       return;
     }
 
@@ -109,6 +170,7 @@ export function OrgNameSuggest({
       >
         <div className={compact ? "relative min-w-0 flex-1" : "relative min-w-40 flex-1"}>
           <input
+            ref={inputRef}
             autoComplete="off"
             className={`${inputClass} w-full`}
             disabled={disabled}
@@ -117,22 +179,34 @@ export function OrgNameSuggest({
             placeholder={placeholder}
             role="combobox"
             aria-autocomplete="list"
-            aria-expanded={filtered.length > 0}
+            aria-expanded={suggestionsVisible}
+            aria-controls={suggestionsVisible ? listboxId : undefined}
             value={value}
-            onChange={(event) => onChange(event.target.value)}
+            onFocus={() => setListOpen(true)}
+            onBlur={() => setListOpen(false)}
+            onChange={(event) => {
+              setListOpen(true);
+              onChange(event.target.value);
+            }}
             onKeyDown={handleKeyDown}
           />
-          {filtered.length > 0 ? (
-            <div className="ui-popover absolute z-20 mt-2 w-full overflow-hidden">
+          {suggestionsVisible && suggestionPosition
+            ? createPortal(
+            <div
+              className="ui-popover scroll-fade fixed z-[100] overflow-y-auto py-1"
+              style={suggestionPosition}
+            >
               <ul
-                className="scroll-fade max-h-40 overflow-y-auto py-1"
+                id={listboxId}
                 role="listbox"
               >
                 {filtered.map((entry) => (
-                  <li key={entry.id} role="option">
+                  <li key={entry.id} role="presentation">
                     <button
                       className="ui-menu-item block w-full text-left text-sm text-text-primary"
                       type="button"
+                      role="option"
+                      aria-selected={entry.name === value}
                       disabled={disabled}
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
@@ -145,8 +219,10 @@ export function OrgNameSuggest({
                   </li>
                 ))}
               </ul>
-            </div>
-          ) : null}
+            </div>,
+            document.body,
+          )
+            : null}
         </div>
         <button
           className={buttonClass}

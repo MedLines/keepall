@@ -18,7 +18,6 @@ import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
 import {
   type KeyboardEvent,
-  type Ref,
   useState,
 } from "react";
 
@@ -41,7 +40,6 @@ type Props = {
   setFirstEditField: (
     node: HTMLTextAreaElement | HTMLInputElement | null,
   ) => void;
-  confirmDeleteRef: Ref<HTMLButtonElement | null>;
   onClose: () => void;
   onSlideChange: (slide: number) => void;
   onAddImages: (files: File[]) => void;
@@ -57,8 +55,6 @@ type Props = {
   onSaveLink: () => void;
   onSaveImage: () => void;
   onCancelEdit: () => void;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
   onAddTag: (name: string) => void;
   onRemoveTag: (tagId: string) => void;
   onAddCollection: (name: string) => void;
@@ -93,7 +89,6 @@ export function LibraryInspect({
   editImageTitleDraft,
   editError,
   setFirstEditField,
-  confirmDeleteRef,
   onClose,
   onSlideChange,
   onAddImages,
@@ -106,8 +101,6 @@ export function LibraryInspect({
   onSaveLink,
   onSaveImage,
   onCancelEdit,
-  onConfirmDelete,
-  onCancelDelete,
   onAddTag,
   onRemoveTag,
   onAddCollection,
@@ -587,31 +580,6 @@ export function LibraryInspect({
                 </>
               ) : null}
 
-              {pendingDelete ? (
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <p className="text-sm text-text-primary">Delete this item?</p>
-                  <button
-                    className="rounded-md bg-action-primary px-3 py-1.5 text-sm font-medium text-text-on-action disabled:opacity-60"
-                    type="button"
-                    ref={confirmDeleteRef}
-                    disabled={mutationBusy}
-                    onClick={onConfirmDelete}
-                  >
-                    {pendingMutation?.op === "delete" &&
-                    pendingMutation.id === item.id
-                      ? "Deleting…"
-                      : "Confirm delete"}
-                  </button>
-                  <button
-                    className={BTN}
-                    type="button"
-                    disabled={mutationBusy}
-                    onClick={onCancelDelete}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : null}
             </div>
           </motion.div>
         </motion.div>

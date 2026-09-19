@@ -58,11 +58,23 @@ test("collection actions remain inside the same hovered sidebar row", async ({ p
   await collectionActions.hover();
   await expect(collectionRow).toHaveCSS("background-color", "rgb(230, 230, 227)");
   await tag.hover();
-  await expect(tag).toHaveCSS("background-color", "rgb(230, 230, 227)");
+  await expect(tag.locator("..")).toHaveCSS("background-color", "rgb(230, 230, 227)");
   await expect(tag).toHaveCSS(
     "transition-property",
     /^(transform|transform, translate, scale, rotate)$/,
   );
+
+  await sidebar.getByRole("button", { name: "Typography actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+  const tagDialog = page.getByRole("dialog", { name: "Delete tag?" });
+  await expect(tagDialog).toContainText("removed from every item");
+  await tagDialog.getByRole("button", { name: "Cancel" }).click();
+
+  await collectionActions.click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+  const collectionDialog = page.getByRole("dialog", { name: "Delete collection?" });
+  await expect(collectionDialog).toContainText("items stay in your library");
+  await collectionDialog.getByRole("button", { name: "Cancel" }).click();
 });
 
 test("long collection and tag lists scroll inside separate sidebar sections", async ({ page }) => {

@@ -18,6 +18,7 @@ import {
 } from "@/domain/collection";
 import {
   itemInCollection,
+  itemListTitle,
   resolveItemCollectionNames,
   resolveItemCollections,
   resolveItemTags,
@@ -55,7 +56,8 @@ import {
   updateLink,
   updateNote,
 } from "@/persistence/items";
-import { createTag, listTags } from "@/persistence/tags";
+import { createTag, deleteTag, listTags } from "@/persistence/tags";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ITEMS_CHANGED_EVENT, enrichChangedItemId, isEnrichItemsChanged, PREVIEW_WELCOME_EVENT, type PreviewWelcomeDetail } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import {
@@ -232,8 +234,10 @@ export function Library() {
   const [bulkPanel, setBulkPanel] = useState<BulkPanel>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [bulkTagDraft, setBulkTagDraft] = useState("");
-  const [bulkRemoveTagDraft, setBulkRemoveTagDraft] = useState("");
   const [bulkCollectionDraft, setBulkCollectionDraft] = useState("");
+  const [pendingCollectionDeleteId, setPendingCollectionDeleteId] = useState<string | null>(null);
+  const [pendingTagDeleteId, setPendingTagDeleteId] = useState<string | null>(null);
+  const [tagManageError, setTagManageError] = useState<string | null>(null);
   const [draggingIds, setDraggingIds] = useState<Set<string>>(() => new Set());
   const [dropTargetCollectionId, setDropTargetCollectionId] = useState<
     string | null
@@ -454,7 +458,6 @@ export function Library() {
     setBulkPanel(null);
     setBulkError(null);
     setBulkTagDraft("");
-    setBulkRemoveTagDraft("");
     setBulkCollectionDraft("");
   }, []);
 
@@ -525,6 +528,13 @@ export function Library() {
 
   const selectionActive = selectedIds.size > 0;
   const itemsById = new Map(items.map((item) => [item.id, item]));
+  const deleteItemTarget = pendingDeleteId ? itemsById.get(pendingDeleteId) ?? null : null;
+  const deleteCollectionTarget = pendingCollectionDeleteId
+    ? collections.find((entry) => entry.id === pendingCollectionDeleteId) ?? null
+    : null;
+  const deleteTagTarget = pendingTagDeleteId
+    ? tags.find((entry) => entry.id === pendingTagDeleteId) ?? null
+    : null;
   const tagSuggestions: OrgNameSuggestion[] = tags.map((tag) => ({
     id: tag.id,
     name: tag.name,
@@ -1006,8 +1016,6 @@ export function Library() {
         await assignTagToItem(itemId, tag.id);
       }
       setBulkTagDraft("");
-      setBulkPanel(null);
-      clearSelection();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch (caught) {
       if (caught instanceof TagValidationError) {
@@ -1041,12 +1049,35 @@ export function Library() {
       for (const itemId of ids) {
         await unassignTagFromItem(itemId, tag.id);
       }
-      setBulkRemoveTagDraft("");
-      setBulkPanel(null);
-      clearSelection();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
       setBulkError("Couldn't remove tag from all items.");
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  async function bulkRemoveAllTags() {
+    const selected = [...selectedIds]
+      .map((id) => itemsById.get(id))
+      .filter((item): item is Item => Boolean(item));
+    if (selected.length === 0 || pendingMutation) {
+      return;
+    }
+
+    setPendingMutation({ op: "bulk-unassign-tag" });
+    setBulkError(null);
+
+    try {
+      for (const item of selected) {
+        for (const tagId of item.tagIds) {
+          await unassignTagFromItem(item.id, tagId);
+        }
+      }
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setBulkError("Couldn't remove all tags from the selection.");
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } finally {
       setPendingMutation(null);
@@ -1251,13 +1282,6 @@ export function Library() {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Delete collection “${collection.name}”? Items in it become Unsorted. Items are not deleted.`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
     setPendingMutation({
       op: "delete-collection",
       id,
@@ -1269,9 +1293,33 @@ export function Library() {
       if (browseCollectionId === id) {
         updateView({ collection: null }, "push");
       }
+      setPendingCollectionDeleteId(null);
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
       setCollectionManageError("Couldn't delete collection.");
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  async function deleteTagById(id: string) {
+    const tag = tags.find((entry) => entry.id === id);
+    if (!tag || pendingMutation) {
+      return;
+    }
+
+    setPendingMutation({ op: "delete-tag", id });
+    setTagManageError(null);
+
+    try {
+      await deleteTag(id);
+      if (browseTagId === id) {
+        updateView({ tag: null }, "push");
+      }
+      setPendingTagDeleteId(null);
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setTagManageError("Couldn't delete tag.");
     } finally {
       setPendingMutation(null);
     }
@@ -1309,9 +1357,7 @@ export function Library() {
         onBrowseTag={(tagId) => updateView({ tag: tagId }, "push")}
         onRemoveTag={(tagId: string) => void removeTagFromItem(item.id, tagId)}
         editing={editingId === item.id && inspectId !== item.id}
-        pendingDelete={
-          pendingDeleteId === item.id && inspectId !== item.id
-        }
+        pendingDelete={false}
         mutationBusy={mutationBusy}
         pendingMutation={pendingMutation}
         editDraft={editDraft}
@@ -1321,7 +1367,6 @@ export function Library() {
         setFirstEditField={(node) => {
           firstEditFieldRef.current = node;
         }}
-        confirmDeleteRef={confirmDeleteRef}
         onEditDraftChange={setEditDraft}
         onEditTitleChange={setEditTitleDraft}
         onEditImageTitleChange={setEditImageTitleDraft}
@@ -1330,8 +1375,6 @@ export function Library() {
         onSaveLink={() => void saveLinkEdit(item.id)}
         onSaveImage={() => void saveImageEdit(item.id)}
         onCancelEdit={() => clearEdit({ restoreFocus: true })}
-        onConfirmDelete={() => void confirmDelete(item.id)}
-        onCancelDelete={cancelDelete}
         onAddTag={(name: string) => void addTagToItem(item.id, name)}
         onAddCollection={(name: string) =>
           void addCollectionToItem(item.id, name)
@@ -1420,7 +1463,6 @@ export function Library() {
           pendingAddTag: pendingMutation?.op === "bulk-assign-tag",
           pendingDelete: pendingMutation?.op === "bulk-delete",
           pendingRemoveTag: pendingMutation?.op === "bulk-unassign-tag",
-          removeTagDraft: bulkRemoveTagDraft,
           removeTagSuggestions: bulkRemoveTagSuggestions,
           tagDraft: bulkTagDraft,
           tagSuggestions,
@@ -1428,6 +1470,7 @@ export function Library() {
           onBulkAddCollection: (name) => void bulkAddCollection(name),
           onBulkAddTag: (name) => void bulkAddTag(name),
           onBulkRemoveTag: (name) => void bulkRemoveTag(name),
+          onBulkRemoveAllTags: () => void bulkRemoveAllTags(),
           onClearSelection: clearSelection,
           onSelectAllVisible: selectAllVisible,
           onClosePanel: () => {
@@ -1440,7 +1483,6 @@ export function Library() {
             setBulkError(null);
             setBulkPanel(panel);
           },
-          onRemoveTagDraftChange: setBulkRemoveTagDraft,
           onTagDraftChange: setBulkTagDraft,
         }}
       />
@@ -1489,7 +1531,14 @@ export function Library() {
           onCollectionDragLeave={() => setDropTargetCollectionId(null)}
           onCollectionDrop={handleCollectionDrop}
           onRenameCollection={(id, name) => void renameCollectionById(id, name)}
-          onDeleteCollection={(id) => void deleteCollectionById(id)}
+          onDeleteCollection={(id) => {
+            setCollectionManageError(null);
+            setPendingCollectionDeleteId(id);
+          }}
+          onDeleteTag={(id) => {
+            setTagManageError(null);
+            setPendingTagDeleteId(id);
+          }}
         />
 
         <div className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel">
@@ -1609,9 +1658,7 @@ export function Library() {
                 editing={
                   inspectedItem !== null && editingId === inspectedItem.id
                 }
-                pendingDelete={
-                  inspectedItem !== null && pendingDeleteId === inspectedItem.id
-                }
+                pendingDelete={false}
                 mutationBusy={mutationBusy}
                 pendingMutation={pendingMutation}
                 editDraft={editDraft}
@@ -1621,7 +1668,6 @@ export function Library() {
                 setFirstEditField={(node) => {
                   firstEditFieldRef.current = node;
                 }}
-                confirmDeleteRef={confirmDeleteRef}
                 onClose={closeInspect}
                 onSlideChange={setInspectSlide}
                 onAddImages={(files) => {
@@ -1654,12 +1700,6 @@ export function Library() {
                   }
                 }}
                 onCancelEdit={() => clearEdit()}
-                onConfirmDelete={() => {
-                  if (inspectedItem) {
-                    void confirmDelete(inspectedItem.id);
-                  }
-                }}
-                onCancelDelete={cancelDelete}
                 onAddTag={(name: string) => {
                   if (inspectedItem) {
                     void addTagToItem(inspectedItem.id, name);
@@ -1728,6 +1768,58 @@ export function Library() {
                 }}
         />
         </div>
+        <ConfirmDialog
+          open={deleteItemTarget !== null}
+          title="Delete this item?"
+          description={deleteItemTarget ? `Delete “${itemListTitle(deleteItemTarget)}”? This cannot be undone.` : ""}
+          confirmLabel="Confirm delete"
+          pendingLabel="Deleting…"
+          busy={pendingMutation?.op === "delete"}
+          error={deleteError}
+          confirmRef={confirmDeleteRef}
+          onConfirm={() => {
+            if (deleteItemTarget) void confirmDelete(deleteItemTarget.id);
+          }}
+          onOpenChange={(open) => {
+            if (!open) cancelDelete();
+          }}
+        />
+        <ConfirmDialog
+          open={deleteCollectionTarget !== null}
+          title="Delete collection?"
+          description={deleteCollectionTarget ? `Delete “${deleteCollectionTarget.name}”? Its items stay in your library.` : ""}
+          confirmLabel="Delete collection"
+          pendingLabel="Deleting…"
+          busy={pendingMutation?.op === "delete-collection"}
+          error={collectionManageError}
+          onConfirm={() => {
+            if (deleteCollectionTarget) void deleteCollectionById(deleteCollectionTarget.id);
+          }}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPendingCollectionDeleteId(null);
+              setCollectionManageError(null);
+            }
+          }}
+        />
+        <ConfirmDialog
+          open={deleteTagTarget !== null}
+          title="Delete tag?"
+          description={deleteTagTarget ? `Delete “${deleteTagTarget.name}”? It will be removed from every item.` : ""}
+          confirmLabel="Delete tag"
+          pendingLabel="Deleting…"
+          busy={pendingMutation?.op === "delete-tag"}
+          error={tagManageError}
+          onConfirm={() => {
+            if (deleteTagTarget) void deleteTagById(deleteTagTarget.id);
+          }}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPendingTagDeleteId(null);
+              setTagManageError(null);
+            }
+          }}
+        />
       </div>
     </LibraryNavigationProvider>
   );

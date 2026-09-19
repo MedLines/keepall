@@ -38,6 +38,7 @@ export type PendingMutation =
   | { op: "create-collection" }
   | { op: "rename-collection"; id: string }
   | { op: "delete-collection"; id: string }
+  | { op: "delete-tag"; id: string }
   | { op: "bulk-delete" }
   | { op: "bulk-assign-tag" }
   | { op: "bulk-unassign-tag" }
@@ -65,7 +66,6 @@ export type LibraryItemProps = {
   setFirstEditField: (
     node: HTMLTextAreaElement | HTMLInputElement | null,
   ) => void;
-  confirmDeleteRef: Ref<HTMLButtonElement | null>;
   onEditDraftChange: (value: string) => void;
   onEditTitleChange: (value: string) => void;
   onEditImageTitleChange: (value: string) => void;
@@ -77,8 +77,6 @@ export type LibraryItemProps = {
   onSaveLink: () => void;
   onSaveImage: () => void;
   onCancelEdit: () => void;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
   onAddTag: (name: string) => void;
   onAddCollection: (name: string) => void;
   onBrowseCollection: (collectionId: string) => void;
@@ -129,7 +127,6 @@ export function LibraryItem({
   editImageTitleDraft,
   editError,
   setFirstEditField,
-  confirmDeleteRef,
   onEditDraftChange,
   onEditTitleChange,
   onEditImageTitleChange,
@@ -138,8 +135,6 @@ export function LibraryItem({
   onSaveLink,
   onSaveImage,
   onCancelEdit,
-  onConfirmDelete,
-  onCancelDelete,
   onAddTag,
   onAddCollection,
   onBrowseCollection,
@@ -648,30 +643,6 @@ export function LibraryItem({
             onBrowseTag={onBrowseTag}
             onRemoveTag={onRemoveTag}
           />
-        ) : null}
-        {pendingDelete ? (
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <p className="text-sm text-text-primary">Delete this item?</p>
-            <button
-              className="rounded-md bg-action-primary px-3 py-1 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
-              type="button"
-              ref={confirmDeleteRef}
-              disabled={mutationBusy}
-              onClick={onConfirmDelete}
-            >
-              {pendingMutation?.op === "delete" && pendingMutation.id === item.id
-                ? "Deleting…"
-                : "Confirm delete"}
-            </button>
-            <button
-              className="rounded-md border border-border-edge px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
-              type="button"
-              disabled={mutationBusy}
-              onClick={onCancelDelete}
-            >
-              Cancel
-            </button>
-          </div>
         ) : null}
       </motion.div>
       </div>

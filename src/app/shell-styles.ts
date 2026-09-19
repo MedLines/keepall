@@ -93,7 +93,7 @@ export const SHELL_ASIDE =
   "flex h-full max-h-full min-h-0 shrink-0 flex-col overflow-hidden bg-bg-shell";
 
 export const SHELL_BACKDROP =
-  "fixed inset-y-0 right-0 left-14 z-40 bg-bg-overlay/20 backdrop-blur-[1px] transition-[opacity] duration-200 ease-out md:hidden";
+  "ui-backdrop fixed inset-y-0 right-0 left-14 z-40 transition-[opacity] duration-200 ease-out md:hidden";
 
 export const SHELL_FORM_SURFACE =
   "squircle-panel rounded-control-sm bg-bg-canvas p-3";
