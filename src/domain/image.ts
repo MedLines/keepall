@@ -130,6 +130,26 @@ export function replaceImageAssetAt(
   };
 }
 
+export function removeImageAssetAt(
+  image: ImageItem,
+  index: number,
+  options?: { now?: number },
+): ImageItem {
+  if (image.assetIds.length <= 1) {
+    throw new ImageValidationError(
+      "Delete the item instead of removing its last image",
+    );
+  }
+  if (index < 0 || index >= image.assetIds.length) {
+    throw new ImageValidationError("Image slide is out of range");
+  }
+  return {
+    ...image,
+    assetIds: image.assetIds.filter((_, assetIndex) => assetIndex !== index),
+    updatedAt: options?.now ?? Date.now(),
+  };
+}
+
 export function clampImageSlideIndex(
   assetIds: string[],
   slide: number,

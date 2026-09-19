@@ -14,6 +14,7 @@ import {
   deleteItem,
   listItems,
   listNotes,
+  removeImageAssetAtIndex,
   replaceImageAssetAtIndex,
   saveLinkPreviewResult,
   setLinkPreviewPending,
@@ -273,5 +274,36 @@ describe("items persistence", () => {
     expect(Array.from((await getAsset(updated.assetIds[1]!))?.bytes ?? [])).toEqual(
       [9],
     );
+  });
+
+  test("removeImageAssetAtIndex removes one slide and its unreferenced asset", async () => {
+    const image = await createImage({
+      assets: [
+        { bytes: new Uint8Array([1]), mimeType: "image/png" },
+        { bytes: new Uint8Array([2]), mimeType: "image/png" },
+      ],
+    });
+    const removedAssetId = image.assetIds[0]!;
+
+    const updated = await removeImageAssetAtIndex(image.id, 0);
+
+    expect(updated.assetIds).toEqual([image.assetIds[1]]);
+    expect(await getAsset(removedAssetId)).toBeUndefined();
+  });
+
+  test("removeImageAssetAtIndex keeps an asset referenced by another slide", async () => {
+    const image = await createImage({
+      assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }],
+    });
+    const withDuplicate = await appendImageAssetToItem(image.id, {
+      bytes: new Uint8Array([1]),
+      mimeType: "image/png",
+    });
+    expect(withDuplicate.assetIds[0]).toBe(withDuplicate.assetIds[1]);
+
+    const updated = await removeImageAssetAtIndex(image.id, 0);
+
+    expect(updated.assetIds).toHaveLength(1);
+    expect(await getAsset(updated.assetIds[0]!)).toBeDefined();
   });
 });

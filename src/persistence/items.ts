@@ -5,6 +5,7 @@ import {
   applyImageEdit,
   buildImageFromAssetIds,
   ImageValidationError,
+  removeImageAssetAt,
   replaceImageAssetAt,
   type ImageItem,
 } from "@/domain/image";
@@ -415,6 +416,41 @@ export async function replaceImageAssetAtIndex(
   await getDb().items.put(next);
   await deleteAsset(previousAssetId);
   return next;
+}
+
+export async function removeImageAssetAtIndex(
+  id: string,
+  slideIndex: number,
+): Promise<ImageItem> {
+  const db = getDb();
+  return db.transaction("rw", db.items, db.assets, async () => {
+    const existing = await db.items.get(id);
+    if (!existing || existing.type !== "image") {
+      throw new Error("Image not found");
+    }
+
+    const current = normalizeItem(existing);
+    const removedAssetId = current.assetIds[slideIndex];
+    if (!removedAssetId) {
+      throw new Error("Image slide not found");
+    }
+
+    const next = removeImageAssetAt(current, slideIndex);
+    await db.items.put(next);
+
+    const rows = await db.items.toArray();
+    const stillReferenced = rows.some((row) => {
+      const item = normalizeItem(row);
+      return item.type === "image"
+        ? item.assetIds.includes(removedAssetId)
+        : item.type === "link" && item.previewAssetId === removedAssetId;
+    });
+    if (!stillReferenced) {
+      await db.assets.delete(removedAssetId);
+    }
+
+    return next;
+  });
 }
 
 export async function setLinkPreviewPending(id: string): Promise<LinkItem> {

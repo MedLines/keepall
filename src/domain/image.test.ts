@@ -11,6 +11,7 @@ import {
   imageListTitle,
   ImageValidationError,
   MAX_LOCAL_IMAGE_BYTES,
+  removeImageAssetAt,
   replaceImageAssetAt,
   textFieldsFromAccompanyingText,
 } from "./image";
@@ -132,6 +133,23 @@ describe("replaceImageAssetAt", () => {
     expect(() => replaceImageAssetAt(image, 1, "a2")).toThrow(
       ImageValidationError,
     );
+  });
+});
+
+describe("removeImageAssetAt", () => {
+  test("removes one image and keeps the remaining order", () => {
+    const image = buildImageFromAssetIds(
+      { assetIds: ["a1", "a2", "a3"] },
+      { id: "i1", now: 1 },
+    );
+    const next = removeImageAssetAt(image, 1, { now: 3 });
+    expect(next.assetIds).toEqual(["a1", "a3"]);
+    expect(next.updatedAt).toBe(3);
+  });
+
+  test("keeps at least one image in the item", () => {
+    const image = buildImage({ assetId: "a1" }, { id: "i1", now: 1 });
+    expect(() => removeImageAssetAt(image, 0)).toThrow(ImageValidationError);
   });
 });
 
