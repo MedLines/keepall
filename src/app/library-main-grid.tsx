@@ -30,7 +30,7 @@ export function LibraryMainGrid({
   }
 
   if (layout === "grid") {
-    return <LibraryMasonry items={visibleItems} scopeKey={scopeKey} scrollRef={scrollRef} renderItem={renderItem} />;
+    return <LibraryMasonry key={scopeKey} items={visibleItems} scopeKey={scopeKey} scrollRef={scrollRef} renderItem={renderItem} />;
   }
 
   const useVirtualList = visibleItems.length >= LIBRARY_VIRTUALIZE_MIN;
@@ -38,7 +38,7 @@ export function LibraryMainGrid({
   if (useVirtualList) {
     return (
       <LibraryVirtualItems
-        scopeKey={scopeKey}
+        key={scopeKey}
         items={visibleItems}
         scrollRef={scrollRef}
         renderItem={renderItem}

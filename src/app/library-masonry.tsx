@@ -16,6 +16,7 @@ import {
   LIBRARY_GRID_GAP_PX,
   LIBRARY_GRID_ROW_ESTIMATE_PX,
   LIBRARY_VIRTUALIZE_MIN,
+  estimateLibraryGridItemHeight,
 } from "./library-scale";
 
 export type MasonryPlacement = {
@@ -36,8 +37,18 @@ export function LibraryMasonry({ items, scrollRef, scopeKey, renderItem }: Props
   const [width, setWidth] = useState(0);
   const [scrollMargin, setScrollMargin] = useState(0);
   const columns = gridColumnCount(width);
+  const columnWidth = width
+    ? (width - (columns - 1) * LIBRARY_GRID_GAP_PX) / columns
+    : 0;
   const virtualized = items.length >= LIBRARY_VIRTUALIZE_MIN;
   const getItemKey = useCallback((index: number) => items[index].id, [items]);
+  const estimateSize = useCallback(
+    (index: number) =>
+      items[index]
+        ? estimateLibraryGridItemHeight(items[index], columnWidth)
+        : LIBRARY_GRID_ROW_ESTIMATE_PX,
+    [columnWidth, items],
+  );
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => (
     virtualized
       ? defaultRangeExtractor(range)
@@ -47,7 +58,7 @@ export function LibraryMasonry({ items, scrollRef, scopeKey, renderItem }: Props
     count: items.length,
     getScrollElement: () => scrollRef.current,
     getItemKey,
-    estimateSize: () => LIBRARY_GRID_ROW_ESTIMATE_PX,
+    estimateSize,
     lanes: columns,
     // Keep each card in its column as images load; only its vertical position changes.
     laneAssignmentMode: "estimate",
@@ -55,15 +66,35 @@ export function LibraryMasonry({ items, scrollRef, scopeKey, renderItem }: Props
     overscan: columns * 4,
     scrollMargin,
     rangeExtractor,
+    directDomUpdates: true,
+    useAnimationFrameWithResizeObserver: true,
+    useFlushSync: false,
   });
+
+  const setGridRef = useCallback((node: HTMLUListElement | null) => {
+    gridRef.current = node;
+    virtualizer.containerRef(node);
+  }, [virtualizer]);
 
   useLayoutEffect(() => {
     const grid = gridRef.current;
     if (!grid) return;
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
-    setWidth(grid.clientWidth);
+    let frame = 0;
+    let nextWidth = Math.round(grid.clientWidth);
+    const commitWidth = () => {
+      frame = 0;
+      setWidth((current) => current === nextWidth ? current : nextWidth);
+    };
+    const observer = new ResizeObserver(([entry]) => {
+      nextWidth = Math.round(entry.contentRect.width);
+      if (!frame) frame = requestAnimationFrame(commitWidth);
+    });
+    setWidth(nextWidth);
     observer.observe(grid);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
   // Status messages above the grid are part of the same scroll container.
@@ -74,23 +105,14 @@ export function LibraryMasonry({ items, scrollRef, scopeKey, renderItem }: Props
       const margin = grid.getBoundingClientRect().top - scroll.getBoundingClientRect().top + scroll.scrollTop;
       if (margin !== scrollMargin) setScrollMargin(margin);
     }
-  }, [scrollRef, scrollMargin, width, renderItem]);
+  }, [scrollRef, scrollMargin, width]);
 
   useLayoutEffect(() => {
     virtualizer.measure();
-    // Width changes invalidate off-screen sizes too. Refresh mounted cards now,
-    // even when their height stayed the same and ResizeObserver would stay silent.
-    gridRef.current?.querySelectorAll<HTMLLIElement>(":scope > li").forEach(virtualizer.measureElement);
   }, [width, virtualizer]);
 
-  useLayoutEffect(() => {
-    virtualizer.scrollToOffset(0);
-  }, [scopeKey, virtualizer]);
-
-  const columnWidth = (width - (columns - 1) * LIBRARY_GRID_GAP_PX) / columns;
-
   return (
-    <ul ref={gridRef} aria-label="Library items" className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+    <ul ref={setGridRef} aria-label="Library items" data-masonry-scope={scopeKey} className="relative w-full">
       {virtualizer.getVirtualItems().map(cell => renderItem(items[cell.index], {
         index: cell.index,
         measureElement: virtualizer.measureElement,
@@ -99,7 +121,6 @@ export function LibraryMasonry({ items, scrollRef, scopeKey, renderItem }: Props
           top: 0,
           insetInlineStart: cell.lane * (columnWidth + LIBRARY_GRID_GAP_PX),
           width: width ? columnWidth : "100%",
-          transform: `translateY(${cell.start - scrollMargin}px)`,
         },
       }))}
     </ul>
