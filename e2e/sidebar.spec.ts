@@ -148,6 +148,18 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
   await expect(sidebar.getByRole("textbox", { name: "Search tags" })).toBeVisible();
   expect((await backup.boundingBox())!.y).toBe(backupY);
 
+  const scrollTopBeforeToggle = await collectionsScroll.evaluate(element => element.scrollTop);
+  const sectionIconsBeforeToggle = await sidebar.locator("[data-sidebar-anchor] [data-sidebar-icon] svg").evaluateAll(
+    icons => icons.map(icon => icon.getBoundingClientRect().y),
+  );
+  await page.getByRole("button", { name: "Collapse", exact: true }).click();
+  await expect(sidebar.getByRole("textbox", { name: "Search collections" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Expand", exact: true }).click();
+  expect(await collectionsScroll.evaluate(element => element.scrollTop)).toBe(scrollTopBeforeToggle);
+  expect(await sidebar.locator("[data-sidebar-anchor] [data-sidebar-icon] svg").evaluateAll(
+    icons => icons.map(icon => icon.getBoundingClientRect().y),
+  )).toEqual(sectionIconsBeforeToggle);
+
   // A popup must escape the masked scroll area, not merely have a higher z-index.
   for (const colorScheme of ["light", "dark"] as const) {
     if (await page.locator("html").getAttribute("data-theme") !== colorScheme) {

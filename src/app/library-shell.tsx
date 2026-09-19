@@ -6,7 +6,8 @@ import {
   type DragEvent,
   type ReactNode,
   useCallback,
-  useEffect,
+    useEffect,
+    useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -48,6 +49,12 @@ import { ShellPanelIcon } from "./shell-panel-icon";
 import { collectionMarkerStyle } from "./collection-marker";
 
 const COLLECTION_REORDER_MIME = "application/x-keepall-pinned-collection";
+
+type SidebarRailAction = {
+  label: string;
+  active: boolean;
+  onExpand: () => void;
+};
 
 type Props = {
   panelOpen: boolean;
@@ -176,10 +183,10 @@ export function LibraryShell({
   const tagsCollapsedLabel =
     tags.find((tag) => tag.id === browseTagId)?.name ?? "Tags";
 
-  const primaryNav = (
+  const renderPrimaryNav = (contentExpanded: boolean) => (
     <>
       <ShellNavItem
-        expanded={expanded}
+        expanded={contentExpanded}
         active={allItemsActive}
         label="All items"
         count={libraryLoading ? undefined : counts.all}
@@ -191,7 +198,7 @@ export function LibraryShell({
         }}
       />
       <ShellNavItem
-        expanded={expanded}
+        expanded={contentExpanded}
         active={unsortedActive}
         label="Unsorted"
         count={libraryLoading ? undefined : counts.unsorted}
@@ -202,6 +209,148 @@ export function LibraryShell({
           closeOnMobile();
         }}
       />
+    </>
+  );
+
+  const contentExpanded = isMobile ? expanded : true;
+  const sidebarBody = (
+    <>
+      <SidebarBrand
+        expanded={contentExpanded}
+        mobileSidebarOpen={mobileSidebarOpen}
+        onHome={leaveBackup}
+        onClose={() => onPanelOpenChange(false)}
+      />
+      {backupOpen && expanded ? (
+        <div className="scroll-fade flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4">
+          <BackupPanel variant="sidebar" onClose={leaveBackup} />
+        </div>
+      ) : (
+        <nav
+          data-sidebar-nav
+          aria-label="Sidebar navigation"
+          className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-[18px] ${contentExpanded ? SHELL_NAV_GUTTER : "px-2"}`}
+        >
+          <div className={`flex min-h-0 flex-col gap-1 ${contentExpanded ? "overflow-hidden" : "scroll-fade overflow-y-auto overscroll-contain"}`}>
+            <div className="flex shrink-0 flex-col gap-1">
+              {renderPrimaryNav(contentExpanded)}
+            </div>
+
+            {contentExpanded ? (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <CollectionsSection
+                  rail={!isMobile && !expanded ? {
+                    label: collectionsCollapsedLabel,
+                    active: browseCollectionId !== null,
+                    onExpand: () => onPanelOpenChange(true),
+                  } : undefined}
+                  collectionsOpen={collectionsOpen}
+                  onCollectionsOpenChange={(open) => {
+                    setCollectionsOpen(open);
+                    writeShellCollectionsOpen(open);
+                  }}
+                  collectionFilter={collectionFilter}
+                  onCollectionFilterChange={setCollectionFilter}
+                  filteredCollections={filteredCollections}
+                  collections={collections}
+                  pinnedCollectionIds={pinnedCollectionIds}
+                  browseCollectionId={browseCollectionId}
+                  counts={counts.byCollectionId}
+                  dropTargetCollectionId={dropTargetCollectionId}
+                  collectionManageError={collectionManageError}
+                  dragError={dragError}
+                  mutationBusy={mutationBusy}
+                  libraryLoading={libraryLoading}
+                  onGoCollection={(id) => {
+                    leaveBackup();
+                    onGoCollection(id);
+                    closeOnMobile();
+                  }}
+                  onCollectionDragOver={onCollectionDragOver}
+                  onCollectionDragLeave={onCollectionDragLeave}
+                  onCollectionDrop={onCollectionDrop}
+                  onRenameCollection={onRenameCollection}
+                  onTogglePinnedCollection={onTogglePinnedCollection}
+                  onMovePinnedCollection={onMovePinnedCollection}
+                  onDeleteCollection={onDeleteCollection}
+                />
+
+                <TagsSection
+                  rail={!isMobile && !expanded ? {
+                    label: tagsCollapsedLabel,
+                    active: browseTagId !== null,
+                    onExpand: () => onPanelOpenChange(true),
+                  } : undefined}
+                  tagsOpen={tagsOpen}
+                  onTagsOpenChange={(open) => {
+                    setTagsOpen(open);
+                    writeShellTagsOpen(open);
+                  }}
+                  tagFilter={tagFilter}
+                  onTagFilterChange={setTagFilter}
+                  filteredTags={filteredTags}
+                  tags={tags}
+                  browseTagId={browseTagId}
+                  counts={counts.byTagId}
+                  libraryLoading={libraryLoading}
+                  onGoTag={(id) => {
+                    leaveBackup();
+                    onGoTag(id);
+                    closeOnMobile();
+                  }}
+                  mutationBusy={mutationBusy}
+                  onDeleteTag={onDeleteTag}
+                />
+              </div>
+            ) : (
+              <div className="flex shrink-0 flex-col gap-1">
+                <ShellNavItem
+                  expanded={false}
+                  active={browseCollectionId !== null}
+                  label={collectionsCollapsedLabel}
+                  icon={
+                    <CollectionIcon className="size-4 shrink-0 text-text-secondary" />
+                  }
+                  onClick={() => {
+                    onPanelOpenChange(true);
+                    setCollectionsOpen(true);
+                    writeShellCollectionsOpen(true);
+                  }}
+                />
+                <ShellNavItem
+                  expanded={false}
+                  active={browseTagId !== null}
+                  label={tagsCollapsedLabel}
+                  icon={
+                    <HashIcon className="size-4 shrink-0 text-text-secondary" />
+                  }
+                  onClick={() => {
+                    onPanelOpenChange(true);
+                    setTagsOpen(true);
+                    writeShellTagsOpen(true);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          <ShellNavItem
+            expanded={contentExpanded}
+            active={backupOpen}
+            label="Backup & restore"
+            icon={
+              <BackupIcon className="size-[18px] shrink-0 text-text-secondary" />
+            }
+            onClick={() => {
+              const next = !backupOpen || !expanded;
+              onBackupOpenChange(next);
+              if (next) {
+                onPanelOpenChange(true);
+              }
+            }}
+          />
+        </nav>
+      )}
     </>
   );
 
@@ -219,132 +368,31 @@ export function LibraryShell({
         </>
       ) : null}
 
-      <aside
-        id="library-sidebar"
-        aria-label="Sidebar"
-        className={`${SHELL_ASIDE} ${
-          expanded ? SHELL_SIDEBAR_EXPANDED : SHELL_SIDEBAR_COLLAPSED
-        } ${mobileSidebarOpen ? "absolute inset-y-0 left-0 z-50 shadow-menu" : "relative z-30"}`}
-      >
-        <SidebarBrand expanded={expanded} mobileSidebarOpen={mobileSidebarOpen} onHome={leaveBackup} onClose={() => onPanelOpenChange(false)} />
-        {backupOpen && expanded ? (
-          <div className="scroll-fade flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4">
-            <BackupPanel variant="sidebar" onClose={leaveBackup} />
-          </div>
-        ) : (
-          <nav
-            aria-label="Sidebar navigation"
-            className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-[18px] ${expanded ? SHELL_NAV_GUTTER : "px-2"}`}
+      {isMobile ? (
+        <aside
+          id="library-sidebar"
+          aria-label="Sidebar"
+          className={`${SHELL_ASIDE} ${
+            expanded ? SHELL_SIDEBAR_EXPANDED : SHELL_SIDEBAR_COLLAPSED
+          } ${mobileSidebarOpen ? "absolute inset-y-0 left-0 z-50 shadow-menu" : "relative z-30"}`}
+        >
+          {sidebarBody}
+        </aside>
+      ) : (
+        <aside
+          id="library-sidebar"
+          aria-label="Sidebar"
+          className={`relative z-50 h-full max-h-full min-h-0 shrink-0 overflow-visible ${expanded ? SHELL_SIDEBAR_EXPANDED : SHELL_SIDEBAR_COLLAPSED}`}
+        >
+          <div
+            className={`${SHELL_ASIDE} library-sidebar-panel absolute inset-y-0 left-0 z-10 w-64 shadow-menu`}
+            data-sidebar-panel
+            data-state={expanded ? "open" : "closed"}
           >
-            <div className={`flex min-h-0 flex-col gap-1 ${expanded ? "overflow-hidden" : "scroll-fade overflow-y-auto overscroll-contain"}`}>
-              <div className="flex shrink-0 flex-col gap-1">{primaryNav}</div>
-
-              {expanded ? (
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                  <CollectionsSection
-                    collectionsOpen={collectionsOpen}
-                    onCollectionsOpenChange={(open) => {
-                      setCollectionsOpen(open);
-                      writeShellCollectionsOpen(open);
-                    }}
-                    collectionFilter={collectionFilter}
-                    onCollectionFilterChange={setCollectionFilter}
-                    filteredCollections={filteredCollections}
-                    collections={collections}
-                    pinnedCollectionIds={pinnedCollectionIds}
-                    browseCollectionId={browseCollectionId}
-                    counts={counts.byCollectionId}
-                    dropTargetCollectionId={dropTargetCollectionId}
-                    collectionManageError={collectionManageError}
-                    dragError={dragError}
-                    mutationBusy={mutationBusy}
-                    libraryLoading={libraryLoading}
-                    onGoCollection={(id) => {
-                      leaveBackup();
-                      onGoCollection(id);
-                      closeOnMobile();
-                    }}
-                    onCollectionDragOver={onCollectionDragOver}
-                    onCollectionDragLeave={onCollectionDragLeave}
-                    onCollectionDrop={onCollectionDrop}
-                    onRenameCollection={onRenameCollection}
-                    onTogglePinnedCollection={onTogglePinnedCollection}
-                    onMovePinnedCollection={onMovePinnedCollection}
-                    onDeleteCollection={onDeleteCollection}
-                  />
-
-                  <TagsSection
-                    tagsOpen={tagsOpen}
-                    onTagsOpenChange={(open) => {
-                      setTagsOpen(open);
-                      writeShellTagsOpen(open);
-                    }}
-                    tagFilter={tagFilter}
-                    onTagFilterChange={setTagFilter}
-                    filteredTags={filteredTags}
-                    tags={tags}
-                    browseTagId={browseTagId}
-                    counts={counts.byTagId}
-                    libraryLoading={libraryLoading}
-                    onGoTag={(id) => {
-                      leaveBackup();
-                      onGoTag(id);
-                      closeOnMobile();
-                    }}
-                    mutationBusy={mutationBusy}
-                    onDeleteTag={onDeleteTag}
-                  />
-                </div>
-              ) : (
-                <div className="flex shrink-0 flex-col gap-1">
-                  <ShellNavItem
-                    expanded={false}
-                    active={browseCollectionId !== null}
-                    label={collectionsCollapsedLabel}
-                    icon={
-                      <CollectionIcon className="size-4 shrink-0 text-text-secondary" />
-                    }
-                    onClick={() => {
-                      onPanelOpenChange(true);
-                      setCollectionsOpen(true);
-                      writeShellCollectionsOpen(true);
-                    }}
-                  />
-                  <ShellNavItem
-                    expanded={false}
-                    active={browseTagId !== null}
-                    label={tagsCollapsedLabel}
-                    icon={
-                      <HashIcon className="size-4 shrink-0 text-text-secondary" />
-                    }
-                    onClick={() => {
-                      onPanelOpenChange(true);
-                      setTagsOpen(true);
-                      writeShellTagsOpen(true);
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            <ShellNavItem
-              expanded={expanded}
-              active={backupOpen}
-              label="Backup & restore"
-              icon={
-                <BackupIcon className="size-[18px] shrink-0 text-text-secondary" />
-              }
-              onClick={() => {
-                const next = !backupOpen;
-                onBackupOpenChange(next);
-                if (next) {
-                  onPanelOpenChange(true);
-                }
-              }}
-            />
-          </nav>
-        )}
-      </aside>
+            {sidebarBody}
+          </div>
+        </aside>
+      )}
     </>
   );
 }
@@ -356,15 +404,16 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onHome, onClose }: {
   onClose: () => void;
 }) {
   return (
-    <div className={`mb-5 mt-[18px] flex h-10 shrink-0 items-center ${expanded ? "mx-4" : "mx-2"}`}>
+    <div data-sidebar-brand className={`mb-5 mt-[18px] flex h-10 shrink-0 items-center ${expanded ? "mx-4" : "mx-2"}`}>
       <Link
         href="/"
         aria-label="Keepall home"
+        data-sidebar-anchor="logo"
         className={`flex h-10 min-w-0 items-center gap-2.5 rounded-control text-text-primary hover:bg-bg-raised ${expanded ? "flex-1 px-3" : "w-10 justify-center"}`}
         onClick={onHome}
       >
-        <LogoIcon className="size-[22px]" />
-        {expanded ? <span className="text-[23px] font-semibold leading-7">keepall</span> : null}
+        <span data-sidebar-icon className="flex shrink-0 items-center justify-center"><LogoIcon className="size-[22px]" /></span>
+        {expanded ? <span data-sidebar-copy className="shrink-0 text-[23px] font-semibold leading-7">keepall</span> : null}
       </Link>
       {mobileSidebarOpen ? (
         <button type="button" aria-label="Close navigation" title="Close sidebar" className="flex size-8 shrink-0 items-center justify-center rounded-control hover:bg-bg-raised" onClick={onClose}>
@@ -376,6 +425,7 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onHome, onClose }: {
 }
 
 function CollectionsSection({
+  rail,
   collectionsOpen,
   onCollectionsOpenChange,
   collectionFilter,
@@ -399,6 +449,7 @@ function CollectionsSection({
   onMovePinnedCollection,
   onDeleteCollection,
 }: {
+  rail?: SidebarRailAction;
   collectionsOpen: boolean;
   onCollectionsOpenChange: (open: boolean) => void;
   collectionFilter: string;
@@ -434,6 +485,7 @@ function CollectionsSection({
 
   return (
     <CollapsibleSection
+      rail={rail}
       title="Collections"
       icon={<CollectionIcon />}
       open={collectionsOpen}
@@ -574,6 +626,7 @@ function CollectionsSection({
 }
 
 function TagsSection({
+  rail,
   tagsOpen,
   onTagsOpenChange,
   tagFilter,
@@ -587,6 +640,7 @@ function TagsSection({
   mutationBusy,
   onDeleteTag,
 }: {
+  rail?: SidebarRailAction;
   tagsOpen: boolean;
   onTagsOpenChange: (open: boolean) => void;
   tagFilter: string;
@@ -602,6 +656,7 @@ function TagsSection({
 }) {
   return (
     <CollapsibleSection
+      rail={rail}
       icon={<HashIcon />}
       title={
         libraryLoading
@@ -971,6 +1026,7 @@ function ShellNavItem({
         dropHighlight ? "ring-2 ring-border-focus" : ""
       }`}
       aria-label={ariaLabel ?? label}
+      data-sidebar-anchor={icon ? label : undefined}
       aria-current={active ? "page" : undefined}
       title={!expanded ? label : undefined}
       onClick={onClick}
@@ -978,7 +1034,7 @@ function ShellNavItem({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {icon ? <span className="flex size-[18px] shrink-0 items-center justify-center">{icon}</span> : null}
+      {icon ? <span data-sidebar-icon className="flex size-[18px] shrink-0 items-center justify-center">{icon}</span> : null}
       {expanded ? (
         <>
           <span className="min-w-0 flex-1 truncate">{label}</span>
@@ -1001,28 +1057,41 @@ function NavCount({ value }: { value: number }) {
 }
 
 function CollapsibleSection({
+  rail,
   title,
   icon,
   open,
   onOpenChange,
   children,
 }: {
+  rail?: SidebarRailAction;
   title: string;
   icon: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
 }) {
+  const detailsRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (rail && detailsRef.current?.contains(document.activeElement)) {
+      document.querySelector<HTMLButtonElement>('button[aria-controls="library-sidebar"]')?.focus();
+    }
+  }, [rail]);
+
   return (
     <div className={`${open ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} pt-4`}>
       <div className="mb-1 flex h-10 shrink-0 items-center">
         <button
           type="button"
-          className="squircle-panel flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-control-md px-3 text-left text-text-primary hover:bg-bg-raised"
-          aria-expanded={open}
-          onClick={() => onOpenChange(!open)}
+          data-sidebar-anchor={title}
+          aria-label={rail?.label ?? title}
+          title={rail?.label}
+          aria-current={rail?.active ? "page" : undefined}
+          className={`squircle-panel flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-control-md px-3 text-left text-text-primary hover:bg-bg-raised ${rail?.active ? SHELL_NAV_ITEM_ACTIVE : ""}`}
+          aria-expanded={rail ? false : open}
+          onClick={() => rail ? rail.onExpand() : onOpenChange(!open)}
         >
-          {icon}
+          <span data-sidebar-icon className="flex size-[18px] shrink-0 items-center justify-center">{icon}</span>
           <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{title}</span>
           <ChevronDownIcon
             className={`size-3.5 text-text-secondary transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
@@ -1031,7 +1100,17 @@ function CollapsibleSection({
           />
         </button>
       </div>
-      {open ? <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">{children}</div> : null}
+      {open ? (
+        <div
+          ref={detailsRef}
+          data-sidebar-details
+          inert={Boolean(rail)}
+          aria-hidden={rail ? true : undefined}
+          className={`flex min-h-0 flex-1 flex-col gap-1 overflow-hidden ${rail ? "invisible" : ""}`}
+        >
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }

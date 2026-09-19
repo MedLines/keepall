@@ -1,8 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
 
+type SidebarMotionMeasurements = {
+  sidebarWidths: number[];
+  mainWidths: number[];
+  copyScaleRatios: number[];
+  clipPaths: string[];
+  transforms: string[];
+};
+
 declare global {
   interface Window {
     __keepallObjectUrlCounts?: { created: number; revoked: number };
+    __sidebarMotionMeasurements?: SidebarMotionMeasurements;
   }
 }
 
@@ -88,20 +97,197 @@ async function seedMeasuredLibrary(page: Page, options?: { imageOnly?: boolean }
   await page.reload();
 }
 
-test("sidebar toggles do not animate the masonry container width", async ({ page }) => {
+test("sidebar reveals without scaling text or repeatedly resizing the library", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await seedMeasuredLibrary(page);
+  await expect(page.locator(".library-item-root").first()).toBeVisible();
+
+  const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+  await expect(sidebar).toBeVisible();
+  await expect(sidebar).toHaveCSS("width", "256px");
+  await expect(sidebar).not.toHaveCSS("transition-property", /(^|, )width(,|$)/);
+  const sidebarPanel = sidebar.locator("[data-sidebar-panel]");
+  await expect(sidebarPanel).toHaveAttribute("data-state", "open");
+  expect(
+    await sidebarPanel.evaluate((panel) =>
+      panel.contains(document.elementFromPoint(160, 96)),
+    ),
+  ).toBe(true);
+
+  await sidebar.evaluate((element) => {
+    const panel = element.querySelector<HTMLElement>("[data-sidebar-panel]");
+    const copy = element.querySelector<HTMLElement>("[data-sidebar-copy]");
+    const main = document.querySelector<HTMLElement>(".library-panel");
+    if (!panel || !copy || !main) {
+      throw new Error("Sidebar motion probes are missing");
+    }
+    const measurements = {
+      sidebarWidths: [element.getBoundingClientRect().width],
+      mainWidths: [main.getBoundingClientRect().width],
+      copyScaleRatios: [copy.getBoundingClientRect().width / copy.offsetWidth],
+      clipPaths: [getComputedStyle(panel).clipPath],
+      transforms: [] as string[],
+    };
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      measurements.sidebarWidths.push(entry.contentRect.width);
+    });
+    resizeObserver.observe(element);
+
+    const stopAt = performance.now() + 300;
+    const sampleFrame = () => {
+      const currentPanel = element.querySelector<HTMLElement>("[data-sidebar-panel]");
+      const currentCopy = element.querySelector<HTMLElement>("[data-sidebar-copy]");
+      measurements.mainWidths.push(main.getBoundingClientRect().width);
+      if (currentPanel && currentCopy) {
+        measurements.copyScaleRatios.push(
+          currentCopy.getBoundingClientRect().width / currentCopy.offsetWidth,
+        );
+        const style = getComputedStyle(currentPanel);
+        measurements.clipPaths.push(style.clipPath);
+        measurements.transforms.push(style.transform);
+      }
+      if (performance.now() < stopAt) {
+        requestAnimationFrame(sampleFrame);
+      } else {
+        resizeObserver.disconnect();
+      }
+    };
+    requestAnimationFrame(sampleFrame);
+    window.__sidebarMotionMeasurements = measurements;
+  });
+
+  await page.getByRole("button", { name: "Collapse", exact: true }).click();
+  await expect(sidebar).toHaveCSS("width", "56px");
+  await expect.poll(() => page.evaluate(() =>
+    new Set(window.__sidebarMotionMeasurements?.clipPaths).size > 1,
+  )).toBe(true);
+
+  await page.waitForTimeout(350);
+  const collapseMeasurements = await page.evaluate(() =>
+    window.__sidebarMotionMeasurements,
+  );
+  expect(collapseMeasurements).toBeDefined();
+  expect(new Set(
+    (collapseMeasurements?.sidebarWidths ?? []).map(Math.round),
+  )).toEqual(new Set([56, 256]));
+  const observedMainWidths = new Set(
+    collapseMeasurements!.mainWidths.map(Math.round),
+  );
+  expect(observedMainWidths.size).toBeLessThanOrEqual(2);
+  expect(
+    Math.max(...observedMainWidths) - Math.min(...observedMainWidths),
+  ).toBeGreaterThanOrEqual(199);
+  expect(collapseMeasurements!.copyScaleRatios.every(
+    (ratio) => Math.abs(ratio - 1) <= 0.01,
+  )).toBe(true);
+  expect(collapseMeasurements!.transforms.every(
+    (transform) => transform === "none" || transform === "matrix(1, 0, 0, 1, 0, 0)",
+  )).toBe(true);
+  await expect(sidebarPanel).toHaveAttribute("data-state", "closed");
+  await expect(sidebarPanel).toHaveCSS("clip-path", "inset(0px 200px 0px 0px)");
+
+  await page.getByRole("button", { name: "Expand", exact: true }).click();
+  await expect(sidebar).toHaveCSS("width", "256px");
+  await expect(sidebar.locator("[data-sidebar-panel]")).toHaveAttribute("data-state", "open");
+  await page.waitForTimeout(60);
+  await page.getByRole("button", { name: "Collapse", exact: true }).click();
+  await expect(sidebar).toHaveCSS("width", "56px");
+  await page.waitForTimeout(250);
+  await expect(sidebar.locator("[data-sidebar-panel]")).toHaveCSS(
+    "clip-path",
+    "inset(0px 200px 0px 0px)",
+  );
+});
+
+test("sidebar animation respects reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
 
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
-  await expect(sidebar).toBeVisible();
-  await expect(sidebar).not.toHaveCSS("transition-property", /(^|, )width(,|$)/);
-
-  await page.getByRole("button", { name: "Collapse" }).click();
+  await expect(sidebar.locator("[data-sidebar-panel]")).toHaveCSS(
+    "transition-duration",
+    "0s",
+  );
+  await page.getByRole("button", { name: "Collapse", exact: true }).click();
   await expect(sidebar).toHaveCSS("width", "56px");
-  await page.getByRole("button", { name: "Expand" }).click();
-  await expect(sidebar).toHaveCSS("width", "256px");
+  await expect(sidebar.locator("[data-sidebar-panel]")).toHaveCSS(
+    "clip-path",
+    "inset(0px 200px 0px 0px)",
+  );
 });
+
+for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }]) {
+  test(`sidebar icons remain stationary at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+
+    // Exercise every section-open combination without changing flags mid-toggle.
+    for (const sectionToToggle of [null, "Collections", "Tags", "Collections"]) {
+      if (sectionToToggle) {
+        await sidebar.getByRole("button", { name: sectionToToggle, exact: true }).click();
+      }
+      for (const action of ["Collapse", "Expand"]) {
+        const samples = sidebar.evaluate(async (element) => {
+          const icons = Array.from(element.querySelectorAll<SVGElement>("[data-sidebar-anchor] [data-sidebar-icon] svg"));
+          const bounds = icons.map((icon) => icon.getBoundingClientRect());
+          const sidebarX = element.getBoundingClientRect().x;
+          let maxShift = 0;
+          let maxSizeChange = 0;
+          let retained = true;
+          let visible = true;
+          const until = performance.now() + 450;
+          await new Promise<void>((resolve) => {
+            const sample = () => {
+              icons.forEach((icon, index) => {
+                const rect = icon.getBoundingClientRect();
+                const start = bounds[index];
+                maxShift = Math.max(maxShift, Math.abs(rect.x - start.x), Math.abs(rect.y - start.y));
+                maxSizeChange = Math.max(maxSizeChange, Math.abs(rect.width - start.width), Math.abs(rect.height - start.height));
+                retained &&= icon.isConnected;
+                visible &&= getComputedStyle(icon).visibility === "visible";
+              });
+              if (performance.now() < until) requestAnimationFrame(sample);
+              else resolve();
+            };
+            requestAnimationFrame(sample);
+          });
+          return {
+            count: icons.length, maxShift, maxSizeChange, retained, visible,
+            centers: bounds.map((rect) => rect.x + rect.width / 2 - sidebarX),
+          };
+        });
+        await page.getByRole("button", { name: action, exact: true }).click();
+        const result = await samples;
+        expect(result.count).toBe(6);
+        expect(result.retained).toBe(true);
+        expect(result.visible).toBe(true);
+        expect(result.maxShift).toBeLessThanOrEqual(1);
+        expect(result.maxSizeChange).toBeLessThanOrEqual(1);
+        expect(result.centers.every((center) => Math.abs(center - 28) <= 1)).toBe(true);
+      }
+    }
+
+    await sidebar.getByRole("textbox", { name: "Search collections" }).fill("retained filter");
+    // Closing without moving focus first must not strand it in inert details.
+    await page.getByRole("button", { name: "Collapse", exact: true }).evaluate(button => button.click());
+    await expect(page.getByRole("button", { name: "Expand", exact: true })).toBeFocused();
+    await expect(sidebar.getByRole("textbox")).toHaveCount(0);
+    expect(await sidebar.locator("[data-sidebar-details]").evaluateAll((elements) =>
+      elements.every((element) => element.hasAttribute("inert")),
+    )).toBe(true);
+    await page.getByRole("searchbox", { name: "Search", exact: true }).click();
+    await expect(page.getByRole("searchbox", { name: "Search", exact: true })).toBeFocused();
+    await page.getByRole("button", { name: "Expand", exact: true }).click();
+    await expect(sidebar.getByRole("textbox", { name: "Search collections" })).toHaveValue("retained filter");
+  });
+}
 
 test("collection switches keep one stable card for every rendered item", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
