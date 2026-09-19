@@ -276,7 +276,12 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
 
     await sidebar.getByRole("textbox", { name: "Search collections" }).fill("retained filter");
     // Closing without moving focus first must not strand it in inert details.
-    await page.getByRole("button", { name: "Collapse", exact: true }).evaluate(button => button.click());
+    await page.getByRole("button", { name: "Collapse", exact: true }).evaluate((button) => {
+      if (!(button instanceof HTMLButtonElement)) {
+        throw new Error("Collapse control must be a button.");
+      }
+      button.click();
+    });
     await expect(page.getByRole("button", { name: "Expand", exact: true })).toBeFocused();
     await expect(sidebar.getByRole("textbox")).toHaveCount(0);
     expect(await sidebar.locator("[data-sidebar-details]").evaluateAll((elements) =>
