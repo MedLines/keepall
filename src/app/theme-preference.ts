@@ -21,6 +21,17 @@ function readSavedTheme(): ThemePreference {
   }
 }
 
+function applyTheme(theme: ThemePreference): void {
+  if (document.documentElement.dataset.theme === theme) return;
+  const override = document.createElement("style");
+  override.dataset.themeSwap = "";
+  override.textContent = "*,*::before,*::after{transition:none !important}";
+  document.head.append(override);
+  document.documentElement.dataset.theme = theme;
+  void document.body.offsetHeight;
+  requestAnimationFrame(() => requestAnimationFrame(() => override.remove()));
+}
+
 export function getThemeSnapshot(): ThemePreference {
   return parseTheme(document.documentElement.dataset.theme);
 }
@@ -34,7 +45,7 @@ export function subscribeToTheme(onChange: () => void): () => void {
   document.documentElement.dataset.theme = readSavedTheme();
   function onStorage(event: StorageEvent) {
     if (event.key !== null && event.key !== THEME_STORAGE_KEY) return;
-    document.documentElement.dataset.theme = readSavedTheme();
+    applyTheme(readSavedTheme());
     onChange();
   }
   window.addEventListener("storage", onStorage);
@@ -46,7 +57,7 @@ export function subscribeToTheme(onChange: () => void): () => void {
 }
 
 export function setThemePreference(theme: ThemePreference): void {
-  document.documentElement.dataset.theme = theme;
+  applyTheme(theme);
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {

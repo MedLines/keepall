@@ -3,13 +3,13 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { itemListTitle, type Item } from "@/domain/item";
 import { imageCardSecondary, linkCardHost, linkFaviconUrl } from "@/domain/card-display";
-import { CloseIcon, CollectionIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
+import { CloseIcon, CollectionIcon, HashIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
 
 function LinkSource({ url, host }: { url: string; host: string }) {
   const [broken, setBroken] = useState(false);
   const favicon = linkFaviconUrl(url, { size: 32 });
   return (
-    <div className="mb-1 flex min-w-0 items-center gap-1.5 pr-9 text-xs text-text-secondary">
+    <div className="mb-3 flex min-w-0 items-center gap-2 pr-9 text-xs text-text-secondary">
       {favicon && !broken ? (
         // eslint-disable-next-line @next/next/no-img-element -- small remote site favicon
         <img src={favicon} alt="" className="size-4 shrink-0 rounded-sm" onError={() => setBroken(true)} />
@@ -34,7 +34,7 @@ export function LibraryCardContent({ item, onOpen, pinned = false }: {
     <div className="min-w-0">
       {item.type === "note" ? <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary"><NoteIcon className="size-4" />Note</div> : null}
       {item.type === "link" ? <LinkSource key={item.url} url={item.url} host={linkCardHost(item)} /> : null}
-      {title || pinned ? <TitleRow className={`flex min-w-0 items-start gap-1.5 ${item.type === "note" ? "text-[17px] font-medium leading-snug" : "text-sm font-medium leading-snug"}`}>
+      {title || pinned ? <TitleRow className={`flex min-w-0 items-start gap-1.5 leading-snug ${item.type === "note" ? "text-[23px] font-semibold" : item.type === "link" ? "text-xl font-semibold" : "text-sm font-medium"}`}>
         {pinned ? (
           <span
             title="Pinned in this collection"
@@ -52,10 +52,10 @@ export function LibraryCardContent({ item, onOpen, pinned = false }: {
       </TitleRow> : null}
       {item.type === "note" ? (
         <>
-          <button type="button" onClick={onOpen} aria-label={`Read ${title}`} className="mt-3 line-clamp-6 w-full whitespace-pre-line break-words text-left text-sm leading-relaxed text-text-secondary">{item.content.trim()}</button>
+          <button type="button" onClick={onOpen} aria-label={`Read ${title}`} className="mt-3 line-clamp-6 w-full whitespace-pre-line break-words text-left text-base leading-relaxed text-text-primary">{item.content.trim()}</button>
           <p className="mt-3 text-xs text-text-secondary">Edited <time dateTime={new Date(item.updatedAt).toISOString()}>{new Date(item.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</time></p>
         </>
-      ) : description ? <p className="mt-1 line-clamp-2 break-words text-xs leading-relaxed text-text-secondary">{description}</p> : null}
+      ) : description ? <p className="mt-2 line-clamp-2 break-words text-sm leading-relaxed text-text-secondary">{description}</p> : null}
     </div>
   );
 }
@@ -108,16 +108,16 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
           </li>)}
         </ul> : <span />}
         {tags.length ? <div ref={rootRef} className="library-card-tag-control relative shrink-0" data-open={expanded || undefined}>
-          <button ref={triggerRef} type="button" aria-expanded={expanded} aria-controls={id} className="min-h-8 rounded-control bg-bg-raised px-2 text-text-primary transition-[background-color,color,scale] duration-150 ease-out hover:bg-bg-canvas active:scale-[0.96] motion-reduce:transition-[background-color,color] motion-reduce:active:scale-100" onClick={() => {
+          <button ref={triggerRef} type="button" aria-expanded={expanded} aria-controls={id} className="squircle-panel flex min-h-8 items-center gap-1.5 rounded-control bg-bg-raised px-2 text-text-secondary hover:text-text-primary active:scale-[0.96] motion-reduce:active:scale-100" onClick={() => {
             setExpanded(!expanded);
             setPendingRemoveId(null);
-          }}>{tags.length} {tags.length === 1 ? "tag" : "tags"}</button>
-          {expanded ? <div id={id} className="absolute right-0 top-[calc(100%+4px)] z-40 min-w-40 rounded-control border border-border-edge bg-bg-surface p-1.5 shadow-menu">
+          }}><HashIcon className="size-3.5" />{tags.length} {tags.length === 1 ? "tag" : "tags"}</button>
+          {expanded ? <div id={id} className="ui-popover absolute right-0 top-[calc(100%+8px)] z-40 w-64 max-w-[calc(100vw-6rem)]">
             <ul aria-label="Tags" className="flex min-w-0 flex-col gap-1">
               {tags.map(tag => {
                 const confirming = pendingRemoveId === tag.id;
-                return <li key={tag.id} className="flex min-w-0 items-center rounded-md hover:bg-bg-raised">
-                  <button type="button" title={tag.name} className="min-h-9 min-w-0 flex-1 truncate rounded-md px-2 text-start text-sm text-text-primary" onClick={() => {
+                return <li key={tag.id} className="squircle-panel flex min-w-0 items-center rounded-control-sm hover:bg-bg-active focus-within:bg-bg-active">
+                  <button type="button" title={tag.name} className="ui-menu-item min-w-0 flex-1 truncate text-start text-sm text-text-primary hover:bg-transparent" onClick={() => {
                     setExpanded(false);
                     setPendingRemoveId(null);
                     onBrowseTag(tag.id);
@@ -125,7 +125,7 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
                   {confirming ? <button type="button" aria-label={`Confirm remove tag ${tag.name}`} className="min-h-8 shrink-0 rounded-md bg-bg-danger px-2 text-xs font-medium text-text-danger transition-transform duration-150 ease-out active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100" onClick={() => {
                     onRemoveTag(tag.id);
                     setPendingRemoveId(null);
-                  }}>Remove</button> : <button type="button" title={`Remove ${tag.name}`} aria-label={`Remove tag ${tag.name}`} className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-secondary hover:bg-bg-danger hover:text-text-danger" onClick={() => setPendingRemoveId(tag.id)}><CloseIcon /></button>}
+                  }}>Remove</button> : <button type="button" title={`Remove ${tag.name}`} aria-label={`Remove tag ${tag.name}`} className="squircle-panel flex size-10 shrink-0 items-center justify-center rounded-control-sm text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => setPendingRemoveId(tag.id)}><CloseIcon /></button>}
                 </li>;
               })}
             </ul>

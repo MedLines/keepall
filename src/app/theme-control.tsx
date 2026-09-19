@@ -19,7 +19,7 @@ export function ThemeControl({ compact = false }: { compact?: boolean }) {
       aria-label="Theme"
       aria-pressed={dark}
       title={`Switch to ${dark ? "light" : "dark"} theme`}
-      className={`theme-control flex h-11 items-center gap-2 rounded-xl text-text-secondary hover:bg-bg-raised ${compact ? "w-11 justify-center border border-border-edge" : "px-2"}`}
+      className={`theme-control ui-control flex h-11 items-center gap-2 rounded-control-lg ${compact ? "w-11 justify-center" : "px-2"}`}
       onClick={() => setThemePreference(dark ? "light" : "dark")}
     >
       {dark ? <LightThemeIcon /> : <DarkThemeIcon />}

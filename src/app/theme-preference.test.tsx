@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeControl } from "./theme-control";
-import { THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "./theme-preference";
+import { setThemePreference, THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "./theme-preference";
 
 function setSystemTheme(theme: "light" | "dark") {
   vi.stubGlobal(
@@ -20,6 +20,7 @@ function setSystemTheme(theme: "light" | "dark") {
 }
 
 beforeEach(() => {
+  document.querySelectorAll("style[data-theme-swap]").forEach(style => style.remove());
   localStorage.clear();
   delete document.documentElement.dataset.theme;
   setSystemTheme("light");
@@ -31,6 +32,17 @@ afterEach(() => {
 });
 
 describe("theme preference", () => {
+  it("suppresses transitions during the theme swap and restores them after paint", () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => frames.push(callback));
+    setThemePreference("dark");
+    const override = document.querySelector("style[data-theme-swap]");
+    expect(override).toHaveTextContent("transition:none !important");
+    frames.shift()!(0);
+    expect(override).toBeInTheDocument();
+    frames.shift()!(16);
+    expect(override?.isConnected).toBe(false);
+  });
   it.each(["light", "dark"])("applies saved %s before hydration", (theme) => {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
     window.eval(THEME_INIT_SCRIPT);

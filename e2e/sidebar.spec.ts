@@ -52,13 +52,13 @@ test("collection actions remain inside the same hovered sidebar row", async ({ p
   });
 
   await collection.hover();
-  await expect(collectionRow).toHaveCSS("background-color", "rgb(234, 234, 231)");
+  await expect(collectionRow).toHaveCSS("background-color", "rgb(230, 230, 227)");
   await expect(collectionRow).toHaveCSS("transition-duration", "0s");
   await expect(collectionActions).toHaveCSS("transition-duration", "0s");
   await collectionActions.hover();
-  await expect(collectionRow).toHaveCSS("background-color", "rgb(234, 234, 231)");
+  await expect(collectionRow).toHaveCSS("background-color", "rgb(230, 230, 227)");
   await tag.hover();
-  await expect(tag).toHaveCSS("background-color", "rgb(234, 234, 231)");
+  await expect(tag).toHaveCSS("background-color", "rgb(230, 230, 227)");
   await expect(tag).toHaveCSS(
     "transition-property",
     /^(transform|transform, translate, scale, rotate)$/,
@@ -105,6 +105,18 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
 
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
   const sectionScrolls = sidebar.locator(".library-sidebar-section-scroll");
+  const markers = sidebar.locator(".bg-collection-marker");
+  await expect(markers).toHaveCount(36);
+  const colors = await markers.evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor));
+  expect(new Set(colors).size).toBe(36);
+  const folderSearch = sidebar.getByRole("textbox", { name: "Search collections" });
+  await folderSearch.fill("Collection 01");
+  await expect(markers).toHaveCount(1);
+  await expect(markers).toHaveCSS("background-color", colors[0]);
+  await folderSearch.fill("");
+  await page.reload();
+  await expect(markers).toHaveCount(36);
+  expect(await markers.evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))).toEqual(colors);
   await expect(sectionScrolls).toHaveCount(2);
   const collectionsScroll = sectionScrolls.nth(0);
   const tagsScroll = sectionScrolls.nth(1);
@@ -123,6 +135,69 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
   await expect(sidebar.getByRole("textbox", { name: "Search collections" })).toBeVisible();
   await expect(sidebar.getByRole("textbox", { name: "Search tags" })).toBeVisible();
   expect((await backup.boundingBox())!.y).toBe(backupY);
+
+  // A popup must escape the masked scroll area, not merely have a higher z-index.
+  for (const colorScheme of ["light", "dark"] as const) {
+    if (await page.locator("html").getAttribute("data-theme") !== colorScheme) {
+      await page.getByRole("button", { name: "Theme", exact: true }).click();
+    }
+    await expect(page.locator("html")).toHaveAttribute("data-theme", colorScheme);
+    const actions = sidebar.getByRole("button", { name: "Collection 36 actions" });
+    await actions.click();
+    const menu = page.getByRole("menu", { name: "Collection 36 actions" });
+    await expect(menu).toBeVisible();
+    expect(await menu.evaluate(element => element.closest(".scroll-fade") === null)).toBe(true);
+    const remove = menu.getByRole("menuitem", { name: "Delete" });
+    await expect.poll(() => remove.evaluate(element => {
+      const rect = element.getBoundingClientRect();
+      return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+    })).toBe(true);
+    const menuBounds = (await menu.boundingBox())!;
+    expect(menuBounds.y).toBeGreaterThanOrEqual(8);
+    expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(752);
+    await page.screenshot({ path: `/tmp/keepall-sidebar-menu-${colorScheme}.png` });
+    await page.keyboard.press("Escape");
+    await expect(menu).not.toBeVisible();
+    await expect(actions).toBeFocused();
+  }
+
+  // Place an interior row at either faded edge, then select it without scrolling
+  // the other section or the document.
+  for (const [scroll, name] of [[collectionsScroll, "Collection 20"], [tagsScroll, "Tag Tag 20"]] as const) {
+    const row = sidebar.getByRole("button", { name, exact: true });
+    for (const edge of ["bottom", "top"] as const) {
+      await sidebar.getByRole("button", { name: "All items", exact: true }).click();
+      await row.evaluate((element, edge) => {
+        const container = element.closest(".library-sidebar-section-scroll")!;
+        const rect = element.getBoundingClientRect();
+        const bounds = container.getBoundingClientRect();
+        container.scrollTop += edge === "bottom" ? rect.bottom - bounds.bottom : rect.top - bounds.top;
+      }, edge);
+      await row.click();
+      await expect(row).toHaveAttribute("aria-current", "page");
+      await expect.poll(() => row.evaluate(element => {
+        const container = element.closest(".library-sidebar-section-scroll")!;
+        const rect = element.getBoundingClientRect();
+        const bounds = container.getBoundingClientRect();
+        const margin = Math.min(container.clientHeight * 0.12, 40);
+        return Math.min(rect.top - bounds.top - margin, bounds.bottom - rect.bottom - margin);
+      }), { message: `${name} must clear the ${edge} fade` }).toBeGreaterThanOrEqual(0);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      expect(await scroll.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+    }
+  }
+
+  const topActions = sidebar.getByRole("button", { name: "Collection 20 actions" });
+  await topActions.evaluate(element => {
+    const container = element.closest(".library-sidebar-section-scroll")!;
+    container.scrollTop += element.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  });
+  await topActions.click();
+  await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
+  const rename = sidebar.getByRole("textbox", { name: "Rename collection" });
+  await expect(rename).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(rename).not.toBeVisible();
 
   await sidebar.getByRole("button", { name: "Collections", exact: true }).click();
   await expect(sectionScrolls).toHaveCount(1);

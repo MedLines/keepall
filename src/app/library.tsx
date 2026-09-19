@@ -1492,7 +1492,7 @@ export function Library() {
           onDeleteCollection={(id) => void deleteCollectionById(id)}
         />
 
-        <div className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel ring-1 ring-inset ring-border-subtle">
+        <div className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel">
         {topBar}
         <main
           ref={mainScrollRef}

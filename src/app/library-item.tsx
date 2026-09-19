@@ -102,7 +102,7 @@ export type LibraryItemProps = {
 };
 
 const ACTION_BTN =
-  "flex min-h-10 w-full items-center gap-2 rounded-control px-2 text-left text-sm text-text-primary hover:bg-bg-raised disabled:opacity-60";
+  "ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary disabled:opacity-60";
 
 function closeCardActionMenusOutside(target: EventTarget | null) {
   if (!(target instanceof Node)) return;
@@ -296,12 +296,12 @@ export function LibraryItem({
     >
       <summary
         aria-label={`Actions for ${title}`}
-        className={`relative flex cursor-pointer list-none items-center justify-center rounded-control text-text-secondary hover:text-text-primary [&::-webkit-details-marker]:hidden ${isList ? "size-10 hover:bg-bg-raised" : "size-8 bg-bg-surface/95 shadow-edge after:absolute after:-inset-1"}`}
+        className={`relative flex cursor-pointer list-none items-center justify-center text-text-secondary hover:text-text-primary [&::-webkit-details-marker]:hidden ${isList ? "size-10 rounded-control hover:bg-bg-raised" : "ui-control size-10"}`}
       >
         <MoreIcon />
       </summary>
           <div
-            className="absolute end-0 mt-2 flex w-56 max-w-[calc(100vw-5rem)] flex-col gap-2 rounded-control bg-bg-surface p-2 shadow-menu ring-1 ring-border-edge"
+            className="ui-popover absolute end-0 mt-2 flex w-56 max-w-[calc(100vw-5rem)] flex-col gap-2"
           >
             <div className="flex flex-col">
               {pinVisible ? (
@@ -450,7 +450,7 @@ export function LibraryItem({
         className={
           isList
             ? `min-w-0 flex-1 ${editing || pendingDelete ? "" : "library-list-body"}`
-            : hasMedia ? "px-2 pb-1" : "px-2 pb-1 pt-3"
+            : item.type === "image" ? "px-2 pb-1" : hasMedia ? "px-4 pb-3 pt-3" : "px-4 pb-3 pt-4"
         }
         style={{ pointerEvents: chromeVisible ? "auto" : "none" }}
       >

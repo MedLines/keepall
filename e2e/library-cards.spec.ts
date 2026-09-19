@@ -62,6 +62,29 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("tag hover paints one full row with a separate remove highlight", async ({ page }, testInfo) => {
+  const card = page.locator(".library-card").first();
+  for (const theme of ["light", "dark"]) {
+    if (await page.locator("html").getAttribute("data-theme") !== theme) await page.getByRole("button", { name: "Theme", exact: true }).click();
+    await card.getByRole("button", { name: "1 tag" }).click();
+    const tags = card.getByRole("list", { name: "Tags" });
+    const row = tags.getByRole("listitem");
+    const tag = row.getByRole("button", { name: "minimal", exact: true });
+    const remove = row.getByRole("button", { name: "Remove tag minimal" });
+    await tag.hover();
+    await expect(tag).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    const rowFill = await row.evaluate(el => getComputedStyle(el).backgroundColor);
+    expect(rowFill).not.toBe("rgba(0, 0, 0, 0)");
+    await expect(remove).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await tags.screenshot({ path: testInfo.outputPath(`${theme}-row.png`) });
+    await remove.hover();
+    await expect(row).toHaveCSS("background-color", rowFill);
+    await expect(remove).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await tags.screenshot({ path: testInfo.outputPath(`${theme}-remove.png`) });
+    await page.keyboard.press("Escape");
+  }
+});
+
 test("image titles can be cleared and restored without losing grid or list metadata", async ({ page }, testInfo) => {
   const card = page.locator(".library-card").first();
   await expect(card.getByRole("heading", { name: "Customer support" })).toBeVisible();
@@ -202,8 +225,8 @@ test("item types live in the toolbar while library destinations stay in the side
   const scopeBounds = (await typeMenu.boundingBox())!;
   const layoutBounds = (await layoutControls.boundingBox())!;
   const sortBounds = (await sortMenu.boundingBox())!;
-  expect(scopeBounds.x + scopeBounds.width).toBeLessThanOrEqual(layoutBounds.x);
-  expect(layoutBounds.x + layoutBounds.width).toBeLessThanOrEqual(sortBounds.x);
+  expect(scopeBounds.x + scopeBounds.width).toBeLessThanOrEqual(sortBounds.x);
+  expect(sortBounds.x + sortBounds.width).toBeLessThanOrEqual(layoutBounds.x);
 
   await typeMenu.click();
   const menu = page.getByRole("listbox", { name: "Filter by type" });
@@ -449,8 +472,8 @@ test("mixed cards preserve image proportions, readable notes and compact fallbac
   await expect(fallback).toHaveCSS("border-radius", "40px");
   expect((await fallback.boundingBox())!.height).toBeLessThan(200);
   await page.getByRole("button", { name: "Theme", exact: true }).click();
-  await expect(fallback).toHaveCSS("background-image", /linear-gradient/);
-  await expect(fallback).toHaveCSS("box-shadow", /255, 255, 255/);
+  await expect(fallback).toHaveCSS("background-image", "none");
+  await expect(fallback).toHaveCSS("background-color", "rgb(35, 37, 38)");
 });
 
 test("desktop card actions reveal on hover or focus and stay visible while open", async ({ page }) => {
@@ -490,11 +513,11 @@ test("organizer opens from the side without resizing the card", async ({ page })
   await expect.poll(async () => {
     const box = await drawer.boundingBox();
     return box ? Math.round(box.x + box.width) : null;
-  }).toBe(1432);
+  }).toBe(1440);
   const drawerBox = (await drawer.boundingBox())!;
-  expect(Math.abs(drawerBox.x + drawerBox.width - 1432)).toBeLessThanOrEqual(1);
-  expect(drawerBox.width).toBeLessThanOrEqual(448);
-  expect(drawerBox.height).toBe(884);
+  expect(Math.abs(drawerBox.x + drawerBox.width - 1440)).toBeLessThanOrEqual(1);
+  expect(drawerBox.width).toBeLessThanOrEqual(480);
+  expect(drawerBox.height).toBe(900);
   expect(await note.boundingBox()).toEqual(before);
   await expect(drawer.getByLabel("Add tag")).toBeVisible();
   await expect(drawer.getByLabel("Move to collection")).toBeVisible();
@@ -516,10 +539,10 @@ test("organizer opens from the side without resizing the card", async ({ page })
   await expect.poll(async () => {
     const box = await drawer.boundingBox();
     return box ? Math.round(box.x + box.width) : null;
-  }).toBe(382);
+  }).toBe(390);
   const narrowDrawerBox = (await drawer.boundingBox())!;
-  expect(narrowDrawerBox.x).toBe(8);
-  expect(narrowDrawerBox.height).toBe(828);
+  expect(narrowDrawerBox.x).toBe(0);
+  expect(narrowDrawerBox.height).toBe(844);
   await page.keyboard.press("Escape");
 });
 
@@ -606,7 +629,7 @@ test("opening one card menu closes the menu left open on another card", async ({
   await expect(second.getByRole("button", { name: "Edit", exact: true })).toBeHidden();
 });
 
-test("selecting a card keeps the library still and draws the state inside the card", async ({ page }) => {
+test("selecting a card keeps the library still and draws the state inside the card", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const heading = page.getByRole("heading", { name: "All items", exact: true });
   const header = page.locator("header").filter({ has: page.locator("#library-heading") });
@@ -614,7 +637,7 @@ test("selecting a card keeps the library still and draws the state inside the ca
   const card = page.locator(".library-card").filter({ hasText: "Customer support" });
   const headerBefore = (await header.boundingBox())!;
   const cardBefore = (await card.boundingBox())!;
-  const shadowBefore = await card.evaluate(element => getComputedStyle(element).boxShadow);
+  const fillBefore = await card.evaluate(element => getComputedStyle(element).backgroundColor);
 
   await card.hover();
   await card.getByRole("checkbox").check();
@@ -653,12 +676,15 @@ test("selecting a card keeps the library still and draws the state inside the ca
   await expect(removeTagDrawer).toBeHidden();
 
   await expect(card).toHaveCSS("outline-style", "none");
-  const lightSelection = await card.evaluate(element => getComputedStyle(element).boxShadow);
-  expect(lightSelection).not.toBe(shadowBefore);
+  const lightSelection = await card.evaluate(element => getComputedStyle(element).backgroundColor);
+  expect(lightSelection).not.toBe(fillBefore);
+  await expect(card.getByRole("checkbox")).toBeChecked();
+  await card.screenshot({ path: testInfo.outputPath("selected-light.png") });
 
-  await page.getByRole("combobox", { name: "Theme" }).selectOption("dark");
-  await expect.poll(() => card.evaluate(element => getComputedStyle(element).boxShadow))
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  await expect.poll(() => card.evaluate(element => getComputedStyle(element).backgroundColor))
     .not.toBe(lightSelection);
+  await card.screenshot({ path: testInfo.outputPath("selected-dark.png") });
 
   await page.setViewportSize({ width: 320, height: 900 });
   const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
@@ -811,7 +837,8 @@ for (const width of [320, 768, 1024, 1440]) {
     await page.getByRole("button", { name: "List view" }).click();
     const row = page.locator(".library-list-row").first();
     for (const theme of ["light", "dark"]) {
-      await page.getByRole("combobox", { name: "Theme" }).selectOption(theme);
+      const themeButton = page.getByRole("button", { name: "Theme", exact: true });
+      if ((await themeButton.getAttribute("aria-pressed")) !== String(theme === "dark")) await themeButton.click();
       await expect(row).toBeVisible();
       expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
       await row.hover();

@@ -22,8 +22,8 @@ test("Save item and Alt+K open the capture flow from the side", async ({ page })
   await expect.poll(async () => {
     const box = await capture.boundingBox();
     return box ? Math.round(box.x + box.width) : null;
-  }).toBe(1432);
-  expect((await capture.boundingBox())!.height).toBe(884);
+  }).toBe(1440);
+  expect((await capture.boundingBox())!.height).toBe(900);
   expect(await main.boundingBox()).toMatchObject({
     x: mainBefore.x,
     width: mainBefore.width,
@@ -39,8 +39,8 @@ test("Save item and Alt+K open the capture flow from the side", async ({ page })
   await expect.poll(async () => {
     const box = await capture.boundingBox();
     return box ? Math.round(box.x + box.width) : null;
-  }).toBe(382);
-  expect((await capture.boundingBox())!.x).toBe(8);
+  }).toBe(390);
+  expect((await capture.boundingBox())!.x).toBe(0);
 });
 
 test("saving a note with Alt+K survives a reload", async ({ page }) => {

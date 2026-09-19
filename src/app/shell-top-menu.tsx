@@ -66,7 +66,7 @@ export function ShellTopMenu<T extends string>({
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className={iconOnly ? `flex size-11 items-center justify-center rounded-xl border border-border-edge ${emphasized ? "bg-action-primary text-text-on-action" : "text-text-secondary hover:bg-bg-raised hover:text-text-primary"}` : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`}
+        className={iconOnly ? `ui-control flex size-11 items-center justify-center rounded-control-lg ${emphasized ? "ui-selected" : ""}` : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`}
         aria-label={ariaLabel}
         title={`${ariaLabel}: ${activeOption?.label}`}
         aria-expanded={open}
@@ -87,7 +87,7 @@ export function ShellTopMenu<T extends string>({
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[11rem] overflow-hidden rounded-control border border-border-edge bg-bg-surface py-1 shadow-menu"
+          className="ui-popover absolute right-0 top-[calc(100%+8px)] z-50 flex min-w-[11rem] flex-col gap-1 overflow-hidden"
         >
           {options.map((option) => (
             <li key={option.value} role="presentation">
@@ -95,10 +95,10 @@ export function ShellTopMenu<T extends string>({
                 type="button"
                 role="option"
                 aria-selected={option.value === value}
-                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                className={`ui-menu-item flex w-full items-center gap-2 text-left text-sm ${
                   option.value === value
-                    ? "bg-bg-raised font-medium text-text-primary"
-                    : "text-text-primary hover:bg-bg-canvas"
+                    ? "ui-selected font-medium"
+                    : "text-text-primary"
                 }`}
                 onClick={() => {
                   onChange(option.value);

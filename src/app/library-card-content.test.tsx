@@ -73,6 +73,8 @@ describe("grid card content", () => {
     expect(screen.queryByRole("list", { name: "Collections" })).toBeNull();
     expect(screen.queryByRole("button", { name: "minimal" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "1 tag" }));
+    expect(screen.queryByText("Tags", { exact: true })).toBeNull();
+    expect(screen.getByRole("list", { name: "Tags" })).toBeVisible();
     expect(screen.getByRole("button", { name: "minimal" })).toBeVisible();
     const removeButton = screen.getByRole("button", { name: "Remove tag minimal" });
     expect(removeButton.querySelector("svg")).toBeTruthy();

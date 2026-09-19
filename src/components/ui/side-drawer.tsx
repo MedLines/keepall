@@ -27,7 +27,7 @@ export function SideDrawer({
   side = "right",
   title,
   description,
-  widthClassName = "w-[min(28rem,calc(100vw-1rem))]",
+  widthClassName = "w-[min(30rem,100vw)]",
   closeDisabled = false,
   children,
 }: SideDrawerProps) {
@@ -40,23 +40,23 @@ export function SideDrawer({
       swipeDirection={side}
     >
       <Drawer.Portal>
-        <Drawer.Backdrop className="fixed inset-0 z-[70] bg-bg-overlay/35 opacity-100 backdrop-blur-[1px] transition-opacity duration-200 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
+        <Drawer.Backdrop className="fixed inset-0 z-[70] bg-bg-scrim opacity-100 transition-opacity duration-200 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
         <Drawer.Viewport
-          className={`fixed inset-0 z-[70] flex overflow-hidden p-2 ${
+          className={`fixed inset-0 z-[70] flex overflow-hidden ${
             fromRight ? "justify-end" : "justify-start"
           }`}
         >
           <Drawer.Popup
-            className={`flex h-[calc(100dvh-1rem)] ${widthClassName} flex-col overflow-hidden rounded-panel border border-border-edge bg-bg-surface text-text-primary shadow-menu transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
+            className={`flex h-dvh ${widthClassName} flex-col overflow-hidden border-border-control bg-bg-canvas text-text-primary shadow-menu transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
               fromRight
-                ? "data-[ending-style]:translate-x-[calc(100%+0.5rem)] data-[starting-style]:translate-x-[calc(100%+0.5rem)]"
-                : "data-[ending-style]:-translate-x-[calc(100%+0.5rem)] data-[starting-style]:-translate-x-[calc(100%+0.5rem)]"
+                ? "border-l data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full"
+                : "border-r data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full"
             }`}
           >
             <Drawer.Content className="flex min-h-0 flex-1 flex-col">
-              <header className="flex shrink-0 items-start gap-4 border-b border-border-edge px-5 py-4">
+              <header className="flex shrink-0 items-start gap-4 px-7 py-6">
                 <div className="min-w-0 flex-1">
-                  <Drawer.Title className="text-lg font-semibold tracking-tight">
+                  <Drawer.Title className="text-[22px] font-semibold tracking-tight">
                     {title}
                   </Drawer.Title>
                   {description ? (
@@ -68,7 +68,7 @@ export function SideDrawer({
                 <Drawer.Close
                   aria-label="Close drawer"
                   disabled={closeDisabled}
-                  className="flex size-10 shrink-0 items-center justify-center rounded-control text-text-secondary transition-[background-color,color,scale] duration-150 ease-out hover:bg-bg-raised hover:text-text-primary active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-[background-color,color] motion-reduce:active:scale-100"
+                  className="ui-control flex size-10 shrink-0 items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <CloseIcon />
                 </Drawer.Close>

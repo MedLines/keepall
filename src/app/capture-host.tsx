@@ -46,7 +46,7 @@ import type { CaptureOrgDrafts } from "@/domain/capture-org";
 import { SideDrawer } from "@/components/ui/side-drawer";
 
 
-const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-8 px-3 text-xs disabled:opacity-60`;
+const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-3 text-xs disabled:opacity-60`;
 
 function imageDraftPreviewMaxHeightClass(count: number): string {
   if (count <= 2) {
@@ -584,7 +584,7 @@ export function CaptureHost() {
       side={captureSide}
       title="Save to Keepall"
       description="Paste a link, write a note, or add images."
-      widthClassName="w-[min(32rem,calc(100vw-1rem))]"
+      widthClassName="w-[min(30rem,100vw)]"
       closeDisabled={shouldBlockDialogDismiss(state.status)}
       onOpenChange={(open, eventDetails) => {
         if (open) {
@@ -599,7 +599,7 @@ export function CaptureHost() {
       }}
     >
       <form
-        className="scroll-fade flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5"
+        className="scroll-fade flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-7 pb-6 pt-2"
         onSubmit={onSubmit}
         onPaste={onPaste}
         onKeyDown={(event) => {
@@ -645,7 +645,7 @@ export function CaptureHost() {
           </label>
           <textarea
             ref={inputRef}
-            className={`w-full rounded-[10px] border border-border-edge/80 bg-bg-canvas px-3 py-2 text-sm outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out focus:border-border-focus focus:bg-bg-surface focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)] disabled:opacity-60 ${
+            className={`ui-field w-full rounded-input px-4 py-3 text-sm disabled:opacity-60 ${
               savingImage ? "min-h-16" : "min-h-24"
             }`}
             id="capture-input"
@@ -759,7 +759,7 @@ export function CaptureHost() {
             {state.error}
           </p>
         ) : null}
-        <div className="-mx-5 mt-auto flex items-center gap-3 border-t border-border-edge px-5 pt-4">
+        <div className="-mx-7 mt-auto flex items-center gap-3 border-t border-border-control px-7 pt-5">
           <button
             className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} px-4 disabled:opacity-60`}
             type="submit"

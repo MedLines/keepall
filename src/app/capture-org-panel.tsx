@@ -1,7 +1,7 @@
 "use client";
 
 import { type KeyboardEvent, useMemo } from "react";
-import { SHELL_MANAGE_SURFACE } from "./shell-styles";
+import { CloseIcon } from "./shell-icons";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 
 type Props = {
@@ -21,16 +21,16 @@ type Props = {
 };
 
 const PICK_CHIP =
-  "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs transition-[background-color,border-color,color] duration-150 ease-out disabled:opacity-60";
+  "squircle-panel inline-flex min-h-9 shrink-0 items-center gap-1 rounded-control border px-2 py-1 text-xs disabled:opacity-60";
 
 const PICK_CHIP_OUTLINE =
-  "border-border-edge bg-bg-surface text-text-primary hover:border-border-edge hover:bg-bg-canvas";
+  "border-border-control bg-bg-control text-text-secondary hover:bg-bg-raised hover:text-text-primary";
 
 const PICK_CHIP_SELECTED =
-  "border-action-primary bg-action-primary text-text-on-action";
+  "border-border-control bg-bg-active text-text-primary";
 
 const FIELD_INPUT =
-  "w-full rounded-[8px] border border-border-edge/80 bg-bg-surface px-2.5 py-1.5 text-sm outline-none transition-[border-color,box-shadow] duration-150 ease-out placeholder:text-text-secondary focus:border-border-focus focus:shadow-[0_0_0_3px_rgba(24,24,27,0.08)] disabled:opacity-60";
+  "ui-field h-11 w-full px-3 text-sm disabled:opacity-60";
 
 function filterByQuery(entries: OrgNameSuggestion[], query: string) {
   const normalized = query.trim().toLowerCase();
@@ -113,24 +113,23 @@ export function CaptureOrgPanel({
   }
 
   return (
-    <div className={`${SHELL_MANAGE_SURFACE} flex flex-col gap-3`}>
-      <p className="text-xs font-medium text-text-secondary">Optional</p>
+    <div className="flex flex-col gap-6 py-4">
 
       <div className="flex flex-col gap-1.5">
-        <p className="text-xs font-medium text-text-primary">Tags</p>
+        <label htmlFor="capture-add-tag" className="text-sm font-medium text-text-secondary">Tags</label>
         {tagNames.length > 0 ? (
           <ul className="flex flex-wrap gap-1" aria-label="Selected tags">
             {tagNames.map((name) => (
               <li key={name} className={`${PICK_CHIP} ${PICK_CHIP_SELECTED} pr-0.5`}>
                 {name}
                 <button
-                  className="flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] leading-none text-text-secondary transition-[background-color,color] duration-150 ease-out hover:bg-bg-surface/15 hover:text-text-on-action disabled:opacity-60"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-control text-text-secondary hover:bg-bg-danger hover:text-text-danger disabled:opacity-60"
                   type="button"
                   disabled={disabled}
                   aria-label={`Remove tag ${name}`}
                   onClick={() => onRemoveTag(name)}
                 >
-                  ×
+                  <CloseIcon className="size-4" />
                 </button>
               </li>
             ))}
@@ -179,7 +178,7 @@ export function CaptureOrgPanel({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <p className="text-xs font-medium text-text-primary">Collection</p>
+        <label htmlFor="capture-add-collection" className="text-sm font-medium text-text-secondary">Collection</label>
         <ul
           className="flex flex-wrap gap-1"
           aria-label="Collections"

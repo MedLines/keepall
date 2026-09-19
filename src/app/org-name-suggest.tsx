@@ -88,12 +88,12 @@ export function OrgNameSuggest({
   }
 
   const inputClass = compact
-    ? "min-w-0 flex-1 rounded-md border border-border-edge bg-bg-surface px-2 py-1.5 text-sm disabled:opacity-60"
-    : "rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60";
+    ? "ui-field min-h-10 min-w-0 flex-1 px-3 py-2 text-sm disabled:opacity-60"
+    : "ui-field min-h-11 px-3 py-2 disabled:opacity-60";
 
   const buttonClass = compact
-    ? "relative flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md bg-bg-surface/95 px-2 text-xs font-medium text-text-primary shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06)] backdrop-blur-sm disabled:opacity-60"
-    : "rounded-md border border-border-edge bg-bg-surface px-3 py-2 text-sm font-medium text-text-primary disabled:opacity-60";
+    ? "ui-control relative flex h-10 min-w-10 shrink-0 items-center justify-center px-3 text-xs font-medium disabled:opacity-60"
+    : "ui-control min-h-11 px-3 py-2 text-sm font-medium disabled:opacity-60";
 
   const fields = (
     <>
@@ -123,7 +123,7 @@ export function OrgNameSuggest({
             onKeyDown={handleKeyDown}
           />
           {filtered.length > 0 ? (
-            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-border-edge bg-bg-surface shadow-md">
+            <div className="ui-popover absolute z-20 mt-2 w-full overflow-hidden">
               <ul
                 className="scroll-fade max-h-40 overflow-y-auto py-1"
                 role="listbox"
@@ -131,7 +131,7 @@ export function OrgNameSuggest({
                 {filtered.map((entry) => (
                   <li key={entry.id} role="option">
                     <button
-                      className="block w-full px-3 py-1.5 text-left text-sm text-text-primary hover:bg-bg-raised"
+                      className="ui-menu-item block w-full text-left text-sm text-text-primary"
                       type="button"
                       disabled={disabled}
                       onMouseDown={(event) => event.preventDefault()}

@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { Menu } from "@base-ui/react/menu";
 import {
   type DragEvent,
   type ReactNode,
   useCallback,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -44,6 +44,7 @@ import {
 } from "./shell-styles";
 import { useShellMobile } from "./use-shell-mobile";
 import { ShellPanelIcon } from "./shell-panel-icon";
+import { collectionMarkerStyle } from "./collection-marker";
 
 type Props = {
   panelOpen: boolean;
@@ -138,7 +139,7 @@ export function LibraryShell({
       return;
     }
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !event.defaultPrevented) {
         onPanelOpenChange(false);
       }
     }
@@ -417,7 +418,7 @@ function CollectionsSection({
         onChange={onCollectionFilterChange}
       />
 
-      <div className="library-sidebar-section-scroll scroll-fade min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+      <SidebarSectionScroll activeId={browseCollectionId} filter={collectionFilter} itemCount={filteredCollections.length}>
         <div className="flex flex-col gap-1">
           {filteredCollections.length === 0 ? (
             <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
@@ -483,7 +484,7 @@ function CollectionsSection({
             </p>
           ) : null}
         </div>
-      </div>
+      </SidebarSectionScroll>
     </CollapsibleSection>
   );
 }
@@ -530,7 +531,7 @@ function TagsSection({
         onChange={onTagFilterChange}
       />
 
-      <div className="library-sidebar-section-scroll scroll-fade min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+      <SidebarSectionScroll activeId={browseTagId} filter={tagFilter} itemCount={filteredTags.length}>
         <div className="flex flex-col gap-1">
           {filteredTags.length === 0 ? (
             <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
@@ -554,8 +555,48 @@ function TagsSection({
             ))
           )}
         </div>
-      </div>
+      </SidebarSectionScroll>
     </CollapsibleSection>
+  );
+}
+
+function SidebarSectionScroll({ activeId, filter, itemCount, children }: {
+  activeId: string | null;
+  filter: string;
+  itemCount: number;
+  children: ReactNode;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const revealSelected = useCallback(() => {
+    const container = scrollRef.current;
+    const selected = container?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!container || !selected) return;
+
+    const bounds = container.getBoundingClientRect();
+    const row = selected.getBoundingClientRect();
+    // Clear the scroll-fade's min(12%, 40px) band plus a little breathing room.
+    const inset = Math.min(container.clientHeight * 0.12, 40) + 8;
+    const top = bounds.top + inset;
+    const bottom = bounds.bottom - inset;
+    if (row.top < top) container.scrollTop += row.top - top;
+    else if (row.bottom > bottom) container.scrollTop += row.bottom - bottom;
+  }, []);
+
+  useEffect(() => {
+    revealSelected();
+  }, [activeId, filter, itemCount, revealSelected]);
+
+  return (
+    <div
+      ref={scrollRef}
+      className="library-sidebar-section-scroll scroll-fade min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
+      onClick={(event) => {
+        if ((event.target as Element).closest('[aria-current="page"]')) revealSelected();
+      }}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -642,11 +683,14 @@ function CollectionNavRow({
     >
       <button
         type="button"
-        className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-[10px] py-2 pl-3 text-left outline-none transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus"
+        className="squircle-panel flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 pl-3 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
         aria-label={collection.name}
         aria-current={active ? "page" : undefined}
         onClick={onNavigate}
       >
+        <span aria-hidden="true" className="flex size-[18px] shrink-0 items-center justify-center">
+          <span className="size-2 rounded-full bg-collection-marker" style={collectionMarkerStyle(collection.id)} />
+        </span>
         <span className="truncate">{collection.name}</span>
         {count !== undefined ? <NavCount value={count} /> : null}
       </button>
@@ -675,89 +719,34 @@ function CollectionRowMenu({
   onDelete: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const menuId = useId();
   const actionsLabel = `${collectionName} actions`;
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    function onPointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    }
-    window.addEventListener("mousedown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("mousedown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
-
   return (
-    <div ref={rootRef} className="relative shrink-0">
-      <button
-        type="button"
+    <Menu.Root open={open} onOpenChange={setOpen} modal={false}>
+      <Menu.Trigger
         className={`flex size-7 shrink-0 items-center justify-center rounded-[6px] text-text-secondary hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 ${
           visible || open
             ? "opacity-100"
             : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
         }`}
         aria-label={actionsLabel}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-controls={menuId}
         disabled={mutationBusy}
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen((current) => !current);
-        }}
       >
         <MoreIcon />
-      </button>
-      {open ? (
-        <ul
-          id={menuId}
-          role="menu"
-          aria-label={actionsLabel}
-          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[8.5rem] overflow-hidden rounded-control border border-border-edge bg-bg-surface py-1 shadow-menu"
-        >
-          <li role="presentation">
-            <button
-              type="button"
-              role="menuitem"
-              className="flex w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-canvas"
-              onClick={() => {
-                setOpen(false);
-                onRename();
-              }}
-            >
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
+          <Menu.Popup aria-label={actionsLabel} className="ui-popover flex max-h-[var(--available-height)] min-w-[8.5rem] flex-col gap-1 overflow-y-auto outline-none">
+            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onRename}>
               Rename
-            </button>
-          </li>
-          <li role="presentation">
-            <button
-              type="button"
-              role="menuitem"
-              className="flex w-full px-3 py-2 text-left text-sm text-text-danger hover:bg-bg-danger"
-              onClick={() => {
-                setOpen(false);
-                onDelete();
-              }}
-            >
+            </Menu.Item>
+            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-danger hover:bg-bg-danger data-[highlighted]:bg-bg-danger" onClick={onDelete}>
               Delete
-            </button>
-          </li>
-        </ul>
-      ) : null}
-    </div>
+            </Menu.Item>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   );
 }
 
@@ -791,7 +780,7 @@ function ShellNavItem({
       type="button"
       className={`${SHELL_NAV_ITEM} ${
         expanded
-          ? "min-h-10 w-full gap-2.5 px-3 py-2 text-left text-sm"
+          ? icon ? "min-h-10 w-full gap-2.5 px-3 py-2 text-left text-sm" : "min-h-8 w-full gap-2.5 ps-[38px] pe-3 py-1 text-left text-xs"
           : "mx-auto size-10 justify-center px-0"
       } ${active ? SHELL_NAV_ITEM_ACTIVE : SHELL_NAV_ITEM_IDLE} ${
         dropHighlight ? "ring-2 ring-border-focus" : ""
@@ -844,7 +833,7 @@ function CollapsibleSection({
       <div className="mb-1 flex h-10 shrink-0 items-center">
         <button
           type="button"
-          className="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-control px-3 text-left text-text-primary transition-[background-color] duration-150 hover:bg-bg-raised"
+          className="squircle-panel flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-control-md px-3 text-left text-text-primary hover:bg-bg-raised"
           aria-expanded={open}
           onClick={() => onOpenChange(!open)}
         >
@@ -872,13 +861,13 @@ function SidebarSearch({
   onChange: (value: string) => void;
 }) {
   return (
-    <div>
+    <div className="shrink-0 px-3">
       <label className="relative block">
         <span className="sr-only">{label}</span>
-        <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
+        <SearchIcon className="pointer-events-none absolute left-0 top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
         <input
-          className="h-9 w-full rounded-control border border-border-edge bg-bg-canvas pl-7 pr-2 text-xs outline-none focus:border-border-focus"
-          placeholder="Search"
+          className="h-7 w-full rounded-control border border-transparent bg-transparent pl-6 pr-2 text-xs"
+          placeholder={label === "Search collections" ? "Search folders" : label}
           aria-label={label}
           value={value}
           onChange={(event) => onChange(event.target.value)}
