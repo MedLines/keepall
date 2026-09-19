@@ -30,6 +30,7 @@ import {
 } from "@/persistence/items";
 import { listCollections } from "@/persistence/collections";
 import { listTags } from "@/persistence/tags";
+import { getLibraryPreferences } from "@/persistence/library-preferences";
 import { CaptureOrgPanel } from "./capture-org-panel";
 import {
   CaptureLinkConflictDialog,
@@ -251,8 +252,13 @@ export function CaptureHost() {
 
     let cancelled = false;
 
-    void Promise.all([listTags(), listCollections(), listItems()])
-      .then(([tags, collections, items]) => {
+    void Promise.all([
+      listTags(),
+      listCollections(),
+      listItems(),
+      getLibraryPreferences(),
+    ])
+      .then(([tags, collections, items, preferences]) => {
         if (cancelled) {
           return;
         }
@@ -263,12 +269,15 @@ export function CaptureHost() {
           })),
         );
         setCollectionSuggestions(
-          rankCaptureOrganizations(collections, items, "collection").map(
-            (collection) => ({
-              id: collection.id,
-              name: collection.name,
-            }),
-          ),
+          rankCaptureOrganizations(
+            collections,
+            items,
+            "collection",
+            preferences.pinnedCollectionIds,
+          ).map((collection) => ({
+            id: collection.id,
+            name: collection.name,
+          })),
         );
       })
       .catch(() => {

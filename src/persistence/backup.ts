@@ -7,6 +7,7 @@ import { base64ToBytes, bytesToBase64 } from "@/domain/backup-encoding";
 import { isIncomingNewer, unionIds } from "@/domain/backup-merge";
 import { buildAsset, sameContentHashMultiset } from "@/domain/asset";
 import { normalizeCollection } from "@/domain/collection";
+import { normalizePinnedCollectionIds } from "@/domain/library-preferences";
 import { normalizeItem, type Item } from "@/domain/item";
 import type { ImageItem } from "@/domain/image";
 import type { LinkItem } from "@/domain/link";
@@ -15,17 +16,22 @@ import type { NoteItem } from "@/domain/note";
 import { listAssets, putAsset, ensureContentHash, getAsset } from "./assets";
 import { createCollection } from "./collections";
 import { getDb } from "./db";
+import {
+  getLibraryPreferences,
+  putLibraryPreferences,
+} from "./library-preferences";
 import { createTag } from "./tags";
 
 export async function exportKeepallBackup(
   exportedAt?: number,
 ): Promise<KeepallBackup> {
   const db = getDb();
-  const [rawItems, tags, collections, assets] = await Promise.all([
+  const [rawItems, tags, collections, assets, preferences] = await Promise.all([
     db.items.toArray(),
     db.tags.toArray(),
     db.collections.toArray(),
     listAssets(),
+    getLibraryPreferences(),
   ]);
 
   const backupAssets = assets.map((asset) => ({
@@ -43,6 +49,12 @@ export async function exportKeepallBackup(
     collections,
     assets: backupAssets,
     exportedAt,
+    preferences: {
+      pinnedCollectionIds: normalizePinnedCollectionIds(
+        preferences.pinnedCollectionIds,
+        collections.map((collection) => collection.id),
+      ),
+    },
   });
 }
 
@@ -69,12 +81,14 @@ export async function importKeepallBackupReplace(
     db.tags,
     db.collections,
     db.assets,
+    db.preferences,
     async () => {
       await Promise.all([
         db.items.clear(),
         db.tags.clear(),
         db.collections.clear(),
         db.assets.clear(),
+        db.preferences.clear(),
       ]);
 
       if (backup.tags.length > 0) {
@@ -92,6 +106,10 @@ export async function importKeepallBackupReplace(
       if (backup.items.length > 0) {
         await db.items.bulkAdd(backup.items);
       }
+      await db.preferences.put({
+        id: "library",
+        pinnedCollectionIds: backup.preferences.pinnedCollectionIds,
+      });
     },
   );
 
@@ -127,6 +145,17 @@ export async function importKeepallBackupMerge(
     const local = await createCollection({ name: collection.name });
     collectionIdMap.set(collection.id, local.id);
   }
+
+  const localPreferences = await getLibraryPreferences();
+  const importedPinnedCollectionIds = backup.preferences.pinnedCollectionIds
+    .map((id) => collectionIdMap.get(id))
+    .filter((id): id is string => Boolean(id));
+  await putLibraryPreferences(
+    unionIds(
+      localPreferences.pinnedCollectionIds,
+      importedPinnedCollectionIds,
+    ),
+  );
 
   const assetIdMap = new Map<string, string>();
   for (const record of backup.assets) {

@@ -81,4 +81,25 @@ describe("captureOrgDrafts", () => {
       rankCaptureOrganizations(entries, items, "tag").map((entry) => entry.id),
     ).toEqual(["common", "recent", "unused"]);
   });
+
+  test("keeps pinned collections ahead of automatic usage ranking", () => {
+    const entries = [
+      { id: "popular", name: "Popular" },
+      { id: "pinned-second", name: "Pinned second" },
+      { id: "pinned-first", name: "Pinned first" },
+    ];
+    const items = [
+      {
+        ...buildNote({ content: "Popular" }, { id: "n1", now: 100 }),
+        collectionIds: ["popular"],
+      },
+    ];
+
+    expect(
+      rankCaptureOrganizations(entries, items, "collection", [
+        "pinned-first",
+        "pinned-second",
+      ]).map((entry) => entry.id),
+    ).toEqual(["pinned-first", "pinned-second", "popular"]);
+  });
 });

@@ -35,6 +35,7 @@ import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
 import { matchesSearchQuery, normalizeSearchQuery } from "@/domain/search";
 import { TagValidationError, normalizeTagName, type Tag } from "@/domain/tag";
+import { orderCollectionsByPins } from "@/domain/library-preferences";
 import {
   createCollection,
   deleteCollection,
@@ -57,6 +58,12 @@ import {
   updateNote,
 } from "@/persistence/items";
 import { createTag, deleteTag, listTags } from "@/persistence/tags";
+import {
+  getLibraryPreferences,
+  movePinnedCollectionBefore,
+  pinCollection,
+  unpinCollection,
+} from "@/persistence/library-preferences";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ITEMS_CHANGED_EVENT, enrichChangedItemId, isEnrichItemsChanged, PREVIEW_WELCOME_EVENT, type PreviewWelcomeDetail } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
@@ -204,6 +211,7 @@ export function Library() {
   const [items, setItems] = useState<Item[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [pinnedCollectionIds, setPinnedCollectionIds] = useState<string[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -228,6 +236,8 @@ export function Library() {
   const [pendingMutation, setPendingMutation] = useState<PendingMutation | null>(
     null,
   );
+  const [pendingCollectionPreferenceId, setPendingCollectionPreferenceId] =
+    useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -283,10 +293,11 @@ export function Library() {
       setError(null);
 
       try {
-        const [nextItems, nextTags, nextCollections] = await Promise.all([
+        const [nextItems, nextTags, nextCollections, preferences] = await Promise.all([
           listItems(),
           listTags(),
           listCollections(),
+          getLibraryPreferences(),
         ]);
         if (!cancelled) {
           browseIndexesRef.current = buildLibraryBrowseIndexes(nextItems);
@@ -294,6 +305,7 @@ export function Library() {
           setItems(nextItems);
           setTags(nextTags);
           setCollections(nextCollections);
+          setPinnedCollectionIds(preferences.pinnedCollectionIds);
           setLoadState("ready");
           setError(null);
         }
@@ -473,7 +485,8 @@ export function Library() {
     });
   }
 
-  const mutationBusy = pendingMutation !== null;
+  const mutationBusy =
+    pendingMutation !== null || pendingCollectionPreferenceId !== null;
   const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
   const collectionsById = useMemo(
     () => new Map(collections.map((collection) => [collection.id, collection])),
@@ -494,6 +507,10 @@ export function Library() {
   const searchQuery = view.q;
   const browseIndexes = browseIndexesRef.current;
   const sidebarCounts = useMemo(() => countSidebarItems(items), [items]);
+  const orderedCollections = useMemo(
+    () => orderCollectionsByPins(collections, pinnedCollectionIds),
+    [collections, pinnedCollectionIds],
+  );
   const headerItemCount = useMemo(
     () =>
       filterAndSortLibraryItems(
@@ -1302,6 +1319,43 @@ export function Library() {
     }
   }
 
+  async function togglePinnedCollection(id: string) {
+    if (mutationBusy) {
+      return;
+    }
+    const pinned = pinnedCollectionIds.includes(id);
+    setPendingCollectionPreferenceId(id);
+    setCollectionManageError(null);
+
+    try {
+      const preferences = pinned
+        ? await unpinCollection(id)
+        : await pinCollection(id);
+      setPinnedCollectionIds(preferences.pinnedCollectionIds);
+    } catch {
+      setCollectionManageError("Couldn't update collection pin.");
+    } finally {
+      setPendingCollectionPreferenceId(null);
+    }
+  }
+
+  async function reorderPinnedCollection(sourceId: string, targetId: string) {
+    if (mutationBusy || sourceId === targetId) {
+      return;
+    }
+    setPendingCollectionPreferenceId(sourceId);
+    setCollectionManageError(null);
+
+    try {
+      const preferences = await movePinnedCollectionBefore(sourceId, targetId);
+      setPinnedCollectionIds(preferences.pinnedCollectionIds);
+    } catch {
+      setCollectionManageError("Couldn't reorder pinned collections.");
+    } finally {
+      setPendingCollectionPreferenceId(null);
+    }
+  }
+
   async function deleteTagById(id: string) {
     const tag = tags.find((entry) => entry.id === id);
     if (!tag || pendingMutation) {
@@ -1508,7 +1562,8 @@ export function Library() {
           browseUnsorted={browseUnsorted}
           browseType={browseType}
           browseTagId={browseTagId}
-          collections={collections}
+          collections={orderedCollections}
+          pinnedCollectionIds={pinnedCollectionIds}
           tags={tags}
           sidebarCounts={sidebarCounts}
           dropTargetCollectionId={dropTargetCollectionId}
@@ -1531,6 +1586,10 @@ export function Library() {
           onCollectionDragLeave={() => setDropTargetCollectionId(null)}
           onCollectionDrop={handleCollectionDrop}
           onRenameCollection={(id, name) => void renameCollectionById(id, name)}
+          onTogglePinnedCollection={(id) => void togglePinnedCollection(id)}
+          onMovePinnedCollection={(sourceId, targetId) =>
+            void reorderPinnedCollection(sourceId, targetId)
+          }
           onDeleteCollection={(id) => {
             setCollectionManageError(null);
             setPendingCollectionDeleteId(id);

@@ -9,6 +9,7 @@ import {
   type CreateCollectionInput,
   CollectionValidationError,
 } from "@/domain/collection";
+import { unpinCollectionId } from "@/domain/library-preferences";
 import { normalizeItem, type Item } from "@/domain/item";
 import { getDb } from "./db";
 
@@ -72,7 +73,7 @@ export async function deleteCollection(collectionId: string): Promise<void> {
   }
 
   const db = getDb();
-  await db.transaction("rw", db.collections, db.items, async () => {
+  await db.transaction("rw", db.collections, db.items, db.preferences, async () => {
     const items = await db.items.toArray();
     const now = Date.now();
     for (const raw of items) {
@@ -88,6 +89,16 @@ export async function deleteCollection(collectionId: string): Promise<void> {
       await db.items.put(next);
     }
     await db.collections.delete(collectionId);
+    const preferences = await db.preferences.get("library");
+    if (preferences?.pinnedCollectionIds.includes(collectionId)) {
+      await db.preferences.put({
+        ...preferences,
+        pinnedCollectionIds: unpinCollectionId(
+          preferences.pinnedCollectionIds,
+          collectionId,
+        ),
+      });
+    }
   });
 }
 

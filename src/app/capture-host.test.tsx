@@ -7,6 +7,7 @@ import { applyItemOrg } from "@/persistence/apply-item-org";
 import { listCollections } from "@/persistence/collections";
 import { createOrReuseImage, createOrReuseLink, createNote, findImageByAssetPayloads, findLinkByNormalizedUrl, clearCollectionOnItem, listItems, replaceItemTagsByNames } from "@/persistence/items";
 import { listTags } from "@/persistence/tags";
+import { getLibraryPreferences } from "@/persistence/library-preferences";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
@@ -36,6 +37,10 @@ vi.mock("@/persistence/tags", () => ({
 vi.mock("@/persistence/collections", () => ({
   listCollections: vi.fn(),
   createCollection: vi.fn(),
+}));
+
+vi.mock("@/persistence/library-preferences", () => ({
+  getLibraryPreferences: vi.fn(),
 }));
 
 vi.mock("./enrich-link-preview", () => ({
@@ -94,6 +99,11 @@ describe("CaptureHost", () => {
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(listCollections).mockReset();
     vi.mocked(listCollections).mockResolvedValue([]);
+    vi.mocked(getLibraryPreferences).mockReset();
+    vi.mocked(getLibraryPreferences).mockResolvedValue({
+      id: "library",
+      pinnedCollectionIds: [],
+    });
     vi.mocked(enrichLinkPreview).mockReset();
     vi.mocked(readClipboardImageAndText).mockReset();
     vi.mocked(readClipboardImageAndText).mockResolvedValue({
@@ -600,6 +610,34 @@ describe("CaptureHost", () => {
     expect(
       within(collections).getByRole("button", { name: "Collection 6" }),
     ).toBeVisible();
+  });
+
+  test("shows pinned collections before automatically ranked collections", async () => {
+    vi.mocked(listCollections).mockResolvedValue([
+      { id: "popular", name: "Popular", createdAt: 1, pinnedItemIds: [] },
+      { id: "pinned", name: "Pinned", createdAt: 2, pinnedItemIds: [] },
+    ]);
+    vi.mocked(listItems).mockResolvedValue([
+      {
+        ...buildNote({ content: "Popular item" }, { id: "n1", now: 100 }),
+        collectionIds: ["popular"],
+      },
+    ]);
+    vi.mocked(getLibraryPreferences).mockResolvedValue({
+      id: "library",
+      pinnedCollectionIds: ["pinned"],
+    });
+
+    await openDraft("Pinned capture choice");
+
+    const buttons = within(
+      await screen.findByRole("list", { name: "Collections" }),
+    ).getAllByRole("button");
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      "Unsorted",
+      "Pinned",
+      "Popular",
+    ]);
   });
 
   test("browse all can select an organization outside the compact choices", async () => {

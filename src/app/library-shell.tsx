@@ -25,6 +25,7 @@ import {
   LibraryIcon,
   LogoIcon,
   MoreIcon,
+  PinIcon,
   SearchIcon,
 } from "./shell-icons";
 import {
@@ -46,6 +47,8 @@ import { useShellMobile } from "./use-shell-mobile";
 import { ShellPanelIcon } from "./shell-panel-icon";
 import { collectionMarkerStyle } from "./collection-marker";
 
+const COLLECTION_REORDER_MIME = "application/x-keepall-pinned-collection";
+
 type Props = {
   panelOpen: boolean;
   onPanelOpenChange: (open: boolean) => void;
@@ -56,6 +59,7 @@ type Props = {
   browseType: LibraryTypeFilter | null;
   browseTagId: string | null;
   collections: Collection[];
+  pinnedCollectionIds: string[];
   tags: Tag[];
   sidebarCounts: LibrarySidebarCounts;
   dropTargetCollectionId: string | null;
@@ -71,6 +75,8 @@ type Props = {
   onCollectionDragLeave: () => void;
   onCollectionDrop: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onRenameCollection: (id: string, name: string) => void;
+  onTogglePinnedCollection: (id: string) => void;
+  onMovePinnedCollection: (sourceId: string, targetId: string) => void;
   onDeleteCollection: (id: string) => void;
   onDeleteTag: (id: string) => void;
 };
@@ -85,6 +91,7 @@ export function LibraryShell({
   browseType,
   browseTagId,
   collections,
+  pinnedCollectionIds,
   tags,
   sidebarCounts: counts,
   dropTargetCollectionId,
@@ -100,6 +107,8 @@ export function LibraryShell({
   onCollectionDragLeave,
   onCollectionDrop,
   onRenameCollection,
+  onTogglePinnedCollection,
+  onMovePinnedCollection,
   onDeleteCollection,
   onDeleteTag,
 }: Props) {
@@ -213,7 +222,7 @@ export function LibraryShell({
       <aside
         id="library-sidebar"
         aria-label="Sidebar"
-        className={`${SHELL_ASIDE} transition-[width] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
+        className={`${SHELL_ASIDE} ${
           expanded ? SHELL_SIDEBAR_EXPANDED : SHELL_SIDEBAR_COLLAPSED
         } ${mobileSidebarOpen ? "absolute inset-y-0 left-0 z-50 shadow-menu" : "relative z-30"}`}
       >
@@ -242,6 +251,7 @@ export function LibraryShell({
                     onCollectionFilterChange={setCollectionFilter}
                     filteredCollections={filteredCollections}
                     collections={collections}
+                    pinnedCollectionIds={pinnedCollectionIds}
                     browseCollectionId={browseCollectionId}
                     counts={counts.byCollectionId}
                     dropTargetCollectionId={dropTargetCollectionId}
@@ -258,6 +268,8 @@ export function LibraryShell({
                     onCollectionDragLeave={onCollectionDragLeave}
                     onCollectionDrop={onCollectionDrop}
                     onRenameCollection={onRenameCollection}
+                    onTogglePinnedCollection={onTogglePinnedCollection}
+                    onMovePinnedCollection={onMovePinnedCollection}
                     onDeleteCollection={onDeleteCollection}
                   />
 
@@ -370,6 +382,7 @@ function CollectionsSection({
   onCollectionFilterChange,
   filteredCollections,
   collections,
+  pinnedCollectionIds,
   browseCollectionId,
   counts,
   dropTargetCollectionId,
@@ -382,6 +395,8 @@ function CollectionsSection({
   onCollectionDragLeave,
   onCollectionDrop,
   onRenameCollection,
+  onTogglePinnedCollection,
+  onMovePinnedCollection,
   onDeleteCollection,
 }: {
   collectionsOpen: boolean;
@@ -390,6 +405,7 @@ function CollectionsSection({
   onCollectionFilterChange: (value: string) => void;
   filteredCollections: Collection[];
   collections: Collection[];
+  pinnedCollectionIds: string[];
   browseCollectionId: string | null;
   counts: Record<string, number>;
   dropTargetCollectionId: string | null;
@@ -402,12 +418,19 @@ function CollectionsSection({
   onCollectionDragLeave: () => void;
   onCollectionDrop: (id: string, event: DragEvent<HTMLDivElement>) => void;
   onRenameCollection: (id: string, name: string) => void;
+  onTogglePinnedCollection: (id: string) => void;
+  onMovePinnedCollection: (sourceId: string, targetId: string) => void;
   onDeleteCollection: (id: string) => void;
 }) {
   const [renamingCollectionId, setRenamingCollectionId] = useState<
     string | null
   >(null);
   const [renameDraft, setRenameDraft] = useState("");
+  const [reorderTargetId, setReorderTargetId] = useState<string | null>(null);
+  const pinnedPositions = useMemo(
+    () => new Map(pinnedCollectionIds.map((id, index) => [id, index])),
+    [pinnedCollectionIds],
+  );
 
   return (
     <CollapsibleSection
@@ -433,13 +456,26 @@ function CollectionsSection({
                   : "No matches."}
             </p>
           ) : (
-            filteredCollections.map((collection) => (
-              <CollectionNavRow
+            filteredCollections.map((collection) => {
+              const pinnedIndex = pinnedPositions.get(collection.id) ?? -1;
+              const pinned = pinnedIndex >= 0;
+              const previousPinnedId =
+                pinnedIndex > 0 ? pinnedCollectionIds[pinnedIndex - 1] : null;
+              const nextPinnedId =
+                pinnedIndex >= 0 && pinnedIndex < pinnedCollectionIds.length - 1
+                  ? pinnedCollectionIds[pinnedIndex + 1]
+                  : null;
+
+              return <CollectionNavRow
                 key={collection.id}
                 collection={collection}
+                pinned={pinned}
                 count={libraryLoading ? undefined : (counts[collection.id] ?? 0)}
                 active={browseCollectionId === collection.id}
-                dropHighlight={dropTargetCollectionId === collection.id}
+                dropHighlight={
+                  dropTargetCollectionId === collection.id ||
+                  reorderTargetId === collection.id
+                }
                 renaming={renamingCollectionId === collection.id}
                 renameDraft={renameDraft}
                 mutationBusy={mutationBusy}
@@ -447,6 +483,37 @@ function CollectionsSection({
                 onDragOver={(event) => onCollectionDragOver(collection.id, event)}
                 onDragLeave={onCollectionDragLeave}
                 onDrop={(event) => onCollectionDrop(collection.id, event)}
+                onReorderDragStart={(event) => {
+                  event.dataTransfer.setData(
+                    COLLECTION_REORDER_MIME,
+                    collection.id,
+                  );
+                  event.dataTransfer.effectAllowed = "move";
+                }}
+                onReorderDragOver={(event) => {
+                  if (
+                    !event.dataTransfer.types.includes(COLLECTION_REORDER_MIME)
+                  ) {
+                    return false;
+                  }
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  setReorderTargetId(collection.id);
+                  return true;
+                }}
+                onReorderDrop={(event) => {
+                  const sourceId = event.dataTransfer.getData(
+                    COLLECTION_REORDER_MIME,
+                  );
+                  if (!sourceId) {
+                    return false;
+                  }
+                  event.preventDefault();
+                  setReorderTargetId(null);
+                  onMovePinnedCollection(sourceId, collection.id);
+                  return true;
+                }}
+                onReorderDragEnd={() => setReorderTargetId(null)}
                 onStartRename={() => {
                   setRenamingCollectionId(collection.id);
                   setRenameDraft(collection.name);
@@ -471,9 +538,22 @@ function CollectionsSection({
                   setRenamingCollectionId(null);
                   setRenameDraft("");
                 }}
+                onTogglePin={() => onTogglePinnedCollection(collection.id)}
+                onMoveUp={
+                  previousPinnedId
+                    ? () =>
+                        onMovePinnedCollection(collection.id, previousPinnedId)
+                    : undefined
+                }
+                onMoveDown={
+                  nextPinnedId
+                    ? () =>
+                        onMovePinnedCollection(nextPinnedId, collection.id)
+                    : undefined
+                }
                 onDelete={() => onDeleteCollection(collection.id)}
-              />
-            ))
+              />;
+            })
           )}
 
           {dragError ? (
@@ -647,6 +727,7 @@ function TagNavRow({
 
 function CollectionNavRow({
   collection,
+  pinned,
   count,
   active,
   dropHighlight,
@@ -657,13 +738,21 @@ function CollectionNavRow({
   onDragOver,
   onDragLeave,
   onDrop,
+  onReorderDragStart,
+  onReorderDragOver,
+  onReorderDrop,
+  onReorderDragEnd,
   onStartRename,
   onRenameDraftChange,
   onCancelRename,
   onSubmitRename,
+  onTogglePin,
+  onMoveUp,
+  onMoveDown,
   onDelete,
 }: {
   collection: Collection;
+  pinned: boolean;
   count?: number;
   active: boolean;
   dropHighlight: boolean;
@@ -674,10 +763,17 @@ function CollectionNavRow({
   onDragOver: (event: DragEvent<HTMLDivElement>) => void;
   onDragLeave: () => void;
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
+  onReorderDragStart: (event: DragEvent<HTMLDivElement>) => void;
+  onReorderDragOver: (event: DragEvent<HTMLDivElement>) => boolean;
+  onReorderDrop: (event: DragEvent<HTMLDivElement>) => boolean;
+  onReorderDragEnd: () => void;
   onStartRename: () => void;
   onRenameDraftChange: (value: string) => void;
   onCancelRename: () => void;
   onSubmitRename: () => void;
+  onTogglePin: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   onDelete: () => void;
 }) {
   if (renaming) {
@@ -722,9 +818,19 @@ function CollectionNavRow({
           ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary`
           : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`
       } ${dropHighlight ? "ring-2 ring-border-focus" : ""}`}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
+      draggable={pinned && !mutationBusy}
+      onDragStart={onReorderDragStart}
+      onDragOver={(event) => {
+        if (!onReorderDragOver(event)) onDragOver(event);
+      }}
+      onDragLeave={() => {
+        onReorderDragEnd();
+        onDragLeave();
+      }}
+      onDrop={(event) => {
+        if (!onReorderDrop(event)) onDrop(event);
+      }}
+      onDragEnd={onReorderDragEnd}
     >
       <button
         type="button"
@@ -737,12 +843,21 @@ function CollectionNavRow({
           <span className="size-2 rounded-full bg-collection-marker" style={collectionMarkerStyle(collection.id)} />
         </span>
         <span className="truncate">{collection.name}</span>
+        {pinned ? (
+          <span title="Pinned collection" className="shrink-0 text-text-secondary">
+            <PinIcon className="size-3.5" />
+          </span>
+        ) : null}
         {count !== undefined ? <NavCount value={count} /> : null}
       </button>
       <SidebarRowMenu
         label={collection.name}
         visible={active}
         mutationBusy={mutationBusy}
+        pinned={pinned}
+        onTogglePin={onTogglePin}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
         onRename={onStartRename}
         onDelete={onDelete}
       />
@@ -754,12 +869,20 @@ function SidebarRowMenu({
   label,
   visible,
   mutationBusy,
+  pinned,
+  onTogglePin,
+  onMoveUp,
+  onMoveDown,
   onRename,
   onDelete,
 }: {
   label: string;
   visible: boolean;
   mutationBusy: boolean;
+  pinned?: boolean;
+  onTogglePin?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   onRename?: () => void;
   onDelete: () => void;
 }) {
@@ -782,6 +905,21 @@ function SidebarRowMenu({
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
           <Menu.Popup aria-label={actionsLabel} className="ui-popover flex max-h-[var(--available-height)] min-w-[8.5rem] flex-col gap-1 overflow-y-auto outline-none">
+            {onTogglePin ? (
+              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onTogglePin}>
+                {pinned ? "Unpin" : "Pin to top"}
+              </Menu.Item>
+            ) : null}
+            {pinned && onMoveUp ? (
+              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onMoveUp}>
+                Move up
+              </Menu.Item>
+            ) : null}
+            {pinned && onMoveDown ? (
+              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onMoveDown}>
+                Move down
+              </Menu.Item>
+            ) : null}
             {onRename ? (
               <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onRename}>
                 Rename

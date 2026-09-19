@@ -16,6 +16,12 @@ import {
 } from "@/persistence/items";
 import { createCollection, listCollections, renameCollection, deleteCollection, pinItemInCollection, unpinItemInCollection } from "@/persistence/collections";
 import { createTag, deleteTag, listTags } from "@/persistence/tags";
+import {
+  getLibraryPreferences,
+  movePinnedCollectionBefore,
+  pinCollection,
+  unpinCollection,
+} from "@/persistence/library-preferences";
 import { mockNavigation } from "../../vitest.setup";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
@@ -91,6 +97,13 @@ vi.mock("@/persistence/collections", () => ({
   unpinItemInCollection: vi.fn(),
 }));
 
+vi.mock("@/persistence/library-preferences", () => ({
+  getLibraryPreferences: vi.fn(),
+  movePinnedCollectionBefore: vi.fn(),
+  pinCollection: vi.fn(),
+  unpinCollection: vi.fn(),
+}));
+
 const note = buildNote({ content: "A persisted note" }, { id: "n1", now: 1 });
 const link = buildLink(
   { url: "https://example.com/old" },
@@ -116,6 +129,64 @@ describe("Library", () => {
     vi.mocked(assignCollectionToItem).mockReset();
     vi.mocked(pinItemInCollection).mockReset();
     vi.mocked(unpinItemInCollection).mockReset();
+    vi.mocked(getLibraryPreferences).mockReset();
+    vi.mocked(getLibraryPreferences).mockResolvedValue({
+      id: "library",
+      pinnedCollectionIds: [],
+    });
+    vi.mocked(pinCollection).mockReset();
+    vi.mocked(unpinCollection).mockReset();
+    vi.mocked(movePinnedCollectionBefore).mockReset();
+  });
+
+  test("pins a collection from its sidebar menu", async () => {
+    const collection = {
+      id: "c1",
+      name: "Reading",
+      createdAt: 1,
+      pinnedItemIds: [],
+    };
+    vi.mocked(listItems).mockResolvedValue([]);
+    vi.mocked(listCollections).mockResolvedValue([collection]);
+    vi.mocked(pinCollection).mockResolvedValue({
+      id: "library",
+      pinnedCollectionIds: [collection.id],
+    });
+
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Reading actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Pin to top" }));
+
+    await waitFor(() => {
+      expect(pinCollection).toHaveBeenCalledWith(collection.id);
+    });
+  });
+
+  test("renders persisted pinned collections before unpinned collections", async () => {
+    vi.mocked(listItems).mockResolvedValue([]);
+    vi.mocked(listCollections).mockResolvedValue([
+      { id: "alpha", name: "Alpha", createdAt: 1, pinnedItemIds: [] },
+      { id: "beta", name: "Beta", createdAt: 2, pinnedItemIds: [] },
+    ]);
+    vi.mocked(getLibraryPreferences).mockResolvedValue({
+      id: "library",
+      pinnedCollectionIds: ["beta"],
+    });
+
+    render(<Library />);
+
+    await screen.findByRole("button", { name: "Beta" });
+    const collectionButtons = [
+      screen.getByRole("button", { name: "Beta" }),
+      screen.getByRole("button", { name: "Alpha" }),
+    ];
+    expect(
+      collectionButtons.map((button) => button.compareDocumentPosition(collectionButtons[1])),
+    ).toEqual([
+      Node.DOCUMENT_POSITION_FOLLOWING,
+      0,
+    ]);
   });
 
   test("does not show the empty copy when loading fails", async () => {
@@ -349,7 +420,7 @@ describe("Library", () => {
     });
   });
 
-  test("shows preview image when ready with image URL", async () => {
+  test("does not load a remote preview until local preview bytes exist", async () => {
     const ready = {
       ...link,
       previewStatus: "ready" as const,
@@ -359,11 +430,10 @@ describe("Library", () => {
     vi.mocked(listItems).mockResolvedValue([ready]);
     render(<Library />);
 
-    await waitFor(() => {
-      expect(
-        document.querySelector('img[src="https://cdn.example.com/og.png"]'),
-      ).not.toBeNull();
-    });
+    await screen.findByRole("link", { name: "Example Site" });
+    expect(
+      document.querySelector('img[src="https://cdn.example.com/og.png"]'),
+    ).toBeNull();
     const links = screen.getAllByRole("link", { name: "Example Site" });
     expect(links.length).toBeGreaterThanOrEqual(1);
     expect(links[0]).toHaveAttribute("href", "https://example.com/old");

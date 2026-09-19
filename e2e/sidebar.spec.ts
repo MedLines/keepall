@@ -216,3 +216,97 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
   await expect.poll(() => sectionScrolls.first().evaluate(element => element.clientHeight)).toBeGreaterThan(tagHeight);
   await expect(backup).toBeVisible();
 });
+
+test("pinned collections persist, reorder, and lead compact capture", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(["collections", "preferences"], "readwrite");
+        for (const [id, name, createdAt] of [
+          ["alpha", "Alpha", 1],
+          ["beta", "Beta", 2],
+          ["gamma", "Gamma", 3],
+        ] as const) {
+          tx.objectStore("collections").put({
+            id,
+            name,
+            createdAt,
+            pinnedItemIds: [],
+          });
+        }
+        tx.objectStore("preferences").put({
+          id: "library",
+          pinnedCollectionIds: ["beta", "alpha"],
+        });
+        tx.oncomplete = () => resolve();
+        tx.onabort = () => reject(tx.error);
+        tx.onerror = () => reject(tx.error);
+      });
+    } finally {
+      db.close();
+    }
+  });
+  await page.reload();
+
+  const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+  const collectionNames = () =>
+    sidebar
+      .locator(".library-sidebar-section-scroll")
+      .first()
+      .locator('button[aria-label]:not([aria-label$=" actions"])')
+      .evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute("aria-label")),
+      );
+
+  await expect.poll(collectionNames).toEqual([
+    "Beta",
+    "Alpha",
+    "Gamma",
+  ]);
+
+  const alphaActions = sidebar.getByRole("button", { name: "Alpha actions" });
+  await alphaActions.focus();
+  await alphaActions.press("Enter");
+  await page.getByRole("menuitem", { name: "Move up" }).press("Enter");
+  await expect.poll(collectionNames).toEqual([
+    "Alpha",
+    "Beta",
+    "Gamma",
+  ]);
+
+  await sidebar
+    .getByRole("button", { name: "Beta" })
+    .locator("..")
+    .dragTo(sidebar.getByRole("button", { name: "Alpha" }).locator(".."));
+  await expect.poll(collectionNames).toEqual([
+    "Beta",
+    "Alpha",
+    "Gamma",
+  ]);
+
+  await page.reload();
+  await expect.poll(collectionNames).toEqual([
+    "Beta",
+    "Alpha",
+    "Gamma",
+  ]);
+
+  await page.keyboard.press("Alt+k");
+  const captureCollections = page
+    .getByRole("dialog", { name: "Save to Keepall" })
+    .getByRole("list", { name: "Collections" });
+  await expect(captureCollections.getByRole("button")).toHaveText([
+    "Unsorted",
+    "Beta",
+    "Alpha",
+    "Gamma",
+  ]);
+});

@@ -19,8 +19,10 @@ export function rankCaptureOrganizations<T extends CaptureOrganization>(
   entries: T[],
   items: Item[],
   kind: CaptureOrganizationKind,
+  pinnedIds: string[] = [],
 ): T[] {
   const usage = new Map<string, { count: number; lastUsedAt: number }>();
+  const pinPosition = new Map(pinnedIds.map((id, index) => [id, index]));
 
   for (const entry of entries) {
     usage.set(entry.id, { count: 0, lastUsedAt: 0 });
@@ -39,6 +41,13 @@ export function rankCaptureOrganizations<T extends CaptureOrganization>(
   }
 
   return [...entries].sort((left, right) => {
+    const leftPin = pinPosition.get(left.id);
+    const rightPin = pinPosition.get(right.id);
+    if (leftPin !== undefined || rightPin !== undefined) {
+      if (leftPin === undefined) return 1;
+      if (rightPin === undefined) return -1;
+      return leftPin - rightPin;
+    }
     const leftUsage = usage.get(left.id)!;
     const rightUsage = usage.get(right.id)!;
     return (

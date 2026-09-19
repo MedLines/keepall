@@ -22,12 +22,13 @@ describe("buildKeepallBackup", () => {
 
     expect(backup).toEqual({
       format: "keepall",
-      version: 1,
+      version: 2,
       exportedAt: 99,
       items: [note],
       tags: [],
       collections: [],
       assets: [],
+      preferences: { pinnedCollectionIds: [] },
     });
   });
 });
@@ -61,13 +62,50 @@ describe("parseKeepallBackup", () => {
     expect(parseKeepallBackup(valid)).toEqual(valid);
   });
 
-  test("rejects wrong format or version", () => {
+  test("rejects wrong format or a future version", () => {
     expect(() => parseKeepallBackup({ ...valid, format: "other" })).toThrow(
       BackupValidationError,
     );
-    expect(() => parseKeepallBackup({ ...valid, version: 2 })).toThrow(
+    expect(() => parseKeepallBackup({ ...valid, version: 3 })).toThrow(
       BackupValidationError,
     );
+  });
+
+  test("migrates a version 1 backup to empty collection preferences", () => {
+    const withoutPreferences: Record<string, unknown> = { ...valid };
+    delete withoutPreferences.preferences;
+
+    expect(
+      parseKeepallBackup({ ...withoutPreferences, version: 1 }).preferences,
+    ).toEqual({ pinnedCollectionIds: [] });
+  });
+
+  test("round-trips ordered pinned collections", () => {
+    const second = buildCollection(
+      { name: "Second" },
+      { id: "c2", now: 2 },
+    );
+    const backup = buildKeepallBackup({
+      items: [],
+      tags: [],
+      collections: [collection, second],
+      preferences: { pinnedCollectionIds: [second.id, collection.id] },
+      exportedAt: 10,
+    });
+
+    expect(parseKeepallBackup(backup).preferences.pinnedCollectionIds).toEqual([
+      second.id,
+      collection.id,
+    ]);
+  });
+
+  test("rejects a pinned collection that is not in the backup", () => {
+    expect(() =>
+      parseKeepallBackup({
+        ...valid,
+        preferences: { pinnedCollectionIds: ["missing"] },
+      }),
+    ).toThrow(/missing collection id/);
   });
 
   test("rejects duplicate ids", () => {

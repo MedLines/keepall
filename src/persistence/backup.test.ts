@@ -14,6 +14,10 @@ import { createTag, listTags } from "./tags";
 import { createCollection, listCollections } from "./collections";
 import { buildLink } from "@/domain/link";
 import { buildCollection } from "@/domain/collection";
+import {
+  getLibraryPreferences,
+  pinCollection,
+} from "./library-preferences";
 
 describe("backup persistence", () => {
   beforeEach(async () => {
@@ -27,12 +31,28 @@ describe("backup persistence", () => {
     const backup = await exportKeepallBackup(123);
 
     expect(backup.format).toBe("keepall");
-    expect(backup.version).toBe(1);
+    expect(backup.version).toBe(2);
     expect(backup.exportedAt).toBe(123);
     expect(backup.items).toEqual([note]);
     expect(backup.tags).toEqual([tag]);
     expect(backup.collections).toEqual([]);
     expect(backup.assets).toEqual([]);
+    expect(backup.preferences).toEqual({ pinnedCollectionIds: [] });
+  });
+
+  test("export and replace import preserve pinned collection order", async () => {
+    const alpha = await createCollection({ name: "Alpha" });
+    const beta = await createCollection({ name: "Beta" });
+    await pinCollection(beta.id);
+    await pinCollection(alpha.id);
+
+    const backup = await exportKeepallBackup(125);
+    await importKeepallBackupReplace(backup);
+
+    expect((await getLibraryPreferences()).pinnedCollectionIds).toEqual([
+      beta.id,
+      alpha.id,
+    ]);
   });
 
   test("export → import round-trips preview assets", async () => {
@@ -201,6 +221,35 @@ describe("backup persistence", () => {
     expect(second.summary.added).toBe(0);
     expect(second.summary.unchanged).toBe(1);
     expect(await listItems()).toHaveLength(2);
+  });
+
+  test("merge import appends remapped pinned collections after local pins", async () => {
+    const local = await createCollection({ name: "Local" });
+    await pinCollection(local.id);
+    const incoming = buildCollection(
+      { name: "Incoming" },
+      { id: "incoming-id", now: 10 },
+    );
+
+    await importKeepallBackupMerge({
+      format: "keepall",
+      version: 2,
+      exportedAt: 20,
+      items: [],
+      tags: [],
+      collections: [incoming],
+      assets: [],
+      preferences: { pinnedCollectionIds: [incoming.id] },
+    });
+
+    const mergedCollections = await listCollections();
+    const mergedIncoming = mergedCollections.find(
+      (collection) => collection.name === "Incoming",
+    );
+    expect((await getLibraryPreferences()).pinnedCollectionIds).toEqual([
+      local.id,
+      mergedIncoming?.id,
+    ]);
   });
 
   test("importKeepallBackupMerge matches links by URL and applies newer title", async () => {

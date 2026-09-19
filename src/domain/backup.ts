@@ -8,9 +8,10 @@ import type { LinkItem } from "./link";
 import { coerceLinkPreviewFields } from "./link";
 import type { NoteItem } from "./note";
 import type { Tag } from "./tag";
+import { normalizePinnedCollectionIds } from "./library-preferences";
 
 export const KEEPALL_BACKUP_FORMAT = "keepall";
-export const KEEPALL_BACKUP_VERSION = 1;
+export const KEEPALL_BACKUP_VERSION = 2;
 
 /** Asset row serialized for JSON backup (bytes as base64). */
 export type BackupAssetRecord = {
@@ -30,6 +31,9 @@ export type KeepallBackup = {
   tags: Tag[];
   collections: Collection[];
   assets: BackupAssetRecord[];
+  preferences: {
+    pinnedCollectionIds: string[];
+  };
 };
 
 export class BackupValidationError extends Error {
@@ -44,6 +48,7 @@ export function buildKeepallBackup(input: {
   tags: Tag[];
   collections: Collection[];
   assets?: BackupAssetRecord[];
+  preferences?: { pinnedCollectionIds: string[] };
   exportedAt?: number;
 }): KeepallBackup {
   return {
@@ -54,6 +59,7 @@ export function buildKeepallBackup(input: {
     tags: input.tags,
     collections: input.collections,
     assets: input.assets ?? [],
+    preferences: input.preferences ?? { pinnedCollectionIds: [] },
   };
 }
 
@@ -68,9 +74,9 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
     throw new BackupValidationError('Backup format must be "keepall"');
   }
 
-  if (candidate.version !== KEEPALL_BACKUP_VERSION) {
+  if (candidate.version !== 1 && candidate.version !== KEEPALL_BACKUP_VERSION) {
     throw new BackupValidationError(
-      `Unsupported backup version (supported: ${KEEPALL_BACKUP_VERSION})`,
+      `Unsupported backup version (supported: 1-${KEEPALL_BACKUP_VERSION})`,
     );
   }
 
@@ -120,6 +126,11 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
 
   const tagIds = new Set(tags.map((tag) => tag.id));
   const collectionIds = new Set(collections.map((collection) => collection.id));
+  const preferences = parseBackupPreferences(
+    candidate.version,
+    candidate.preferences,
+    collectionIds,
+  );
   const assetIds = new Set(assets.map((asset) => asset.id));
   const items = candidate.items.map((item, index) =>
     parseItem(item, index, tagIds, collectionIds, assetIds),
@@ -137,7 +148,47 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
     tags,
     collections,
     assets,
+    preferences,
   };
+}
+
+function parseBackupPreferences(
+  version: unknown,
+  raw: unknown,
+  collectionIds: Set<string>,
+): KeepallBackup["preferences"] {
+  if (version === 1) {
+    return { pinnedCollectionIds: [] };
+  }
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new BackupValidationError("Backup preferences must be an object");
+  }
+
+  const ids = (raw as Record<string, unknown>).pinnedCollectionIds;
+  if (!Array.isArray(ids)) {
+    throw new BackupValidationError(
+      "Backup preferences need pinnedCollectionIds as an array",
+    );
+  }
+  for (const [index, id] of ids.entries()) {
+    if (typeof id !== "string" || !id) {
+      throw new BackupValidationError(
+        `Backup preferences have an invalid pinned collection at ${index}`,
+      );
+    }
+    if (!collectionIds.has(id)) {
+      throw new BackupValidationError(
+        `Backup preferences reference missing collection id: ${id}`,
+      );
+    }
+  }
+  if (new Set(ids).size !== ids.length) {
+    throw new BackupValidationError(
+      "Backup preferences contain duplicate pinned collection ids",
+    );
+  }
+
+  return { pinnedCollectionIds: normalizePinnedCollectionIds(ids) };
 }
 
 function assertUniqueIds(ids: string[], label: string) {
