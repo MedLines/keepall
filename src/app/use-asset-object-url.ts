@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAsset, assetToBlob } from "@/persistence/assets";
 import {
   isLibraryNavigationStale,
   useLibraryNavigationGenerationRef,
 } from "./library-navigation";
+import { acquireAssetObjectUrl } from "./asset-object-url-cache";
 
 /**
- * Load a local asset Blob and expose a short-lived object URL for <img src>.
- * Revokes the URL on change/unmount so memory does not leak.
+ * Load a local asset Blob and expose a shared object URL for <img src>.
+ * Recently unmounted assets stay in a small cache so virtual scrolling does
+ * not keep reading IndexedDB and rebuilding the same URL.
  */
 export function useAssetObjectUrl(
   assetId: string | null,
@@ -17,38 +18,37 @@ export function useAssetObjectUrl(
 ): string | null {
   const enabled = options?.enabled !== false;
   const navigationGenerationRef = useLibraryNavigationGenerationRef();
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [resolved, setResolved] = useState<{
+    assetId: string;
+    url: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!assetId || !enabled) {
-      setObjectUrl(null);
       return;
     }
 
     let cancelled = false;
-    let createdUrl: string | null = null;
     const capturedGeneration = navigationGenerationRef?.current ?? 0;
+    const handle = acquireAssetObjectUrl(assetId);
 
-    void getAsset(assetId).then((asset) => {
+    void handle.promise.then((url) => {
       if (
         cancelled ||
-        !asset ||
+        !url ||
         (navigationGenerationRef !== null &&
           isLibraryNavigationStale(navigationGenerationRef, capturedGeneration))
       ) {
         return;
       }
-      createdUrl = URL.createObjectURL(assetToBlob(asset));
-      setObjectUrl(createdUrl);
+      setResolved({ assetId, url });
     });
 
     return () => {
       cancelled = true;
-      if (createdUrl) {
-        URL.revokeObjectURL(createdUrl);
-      }
+      handle.release();
     };
   }, [assetId, enabled, navigationGenerationRef]);
 
-  return objectUrl;
+  return enabled && resolved?.assetId === assetId ? resolved.url : null;
 }

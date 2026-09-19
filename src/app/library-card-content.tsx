@@ -2,18 +2,13 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { itemListTitle, type Item } from "@/domain/item";
-import { imageCardSecondary, linkCardHost, linkFaviconUrl } from "@/domain/card-display";
+import { imageCardSecondary, linkCardHost } from "@/domain/card-display";
 import { CloseIcon, CollectionIcon, HashIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
 
-function LinkSource({ url, host }: { url: string; host: string }) {
-  const [broken, setBroken] = useState(false);
-  const favicon = linkFaviconUrl(url, { size: 32 });
+function LinkSource({ host }: { host: string }) {
   return (
     <div className="mb-3 flex min-w-0 items-center gap-2 pr-9 text-xs text-text-secondary">
-      {favicon && !broken ? (
-        // eslint-disable-next-line @next/next/no-img-element -- small remote site favicon
-        <img src={favicon} alt="" className="size-4 shrink-0 rounded-sm" onError={() => setBroken(true)} />
-      ) : <LinkIcon className="size-4" />}
+      <LinkIcon className="size-4" />
       <span className="truncate">{host}</span>
     </div>
   );
@@ -33,7 +28,7 @@ export function LibraryCardContent({ item, onOpen, pinned = false }: {
   return (
     <div className="min-w-0">
       {item.type === "note" ? <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary"><NoteIcon className="size-4" />Note</div> : null}
-      {item.type === "link" ? <LinkSource key={item.url} url={item.url} host={linkCardHost(item)} /> : null}
+      {item.type === "link" ? <LinkSource key={item.url} host={linkCardHost(item)} /> : null}
       {title || pinned ? <TitleRow className={`flex min-w-0 items-start gap-1.5 leading-snug ${item.type === "note" ? "text-[23px] font-semibold" : item.type === "link" ? "text-xl font-semibold" : "text-sm font-medium"}`}>
         {pinned ? (
           <span

@@ -34,12 +34,11 @@ describe("grid card content", () => {
     expect(screen.getByText(/Edited/)).toBeTruthy();
   });
 
-  it("keeps link metadata and replaces a broken favicon with a glyph", () => {
+  it("keeps link metadata local and uses a glyph instead of a remote favicon", () => {
     const { container } = render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "", url: "https://example.com/components/footer", previewDescription: "A spacious footer." }} onOpen={vi.fn()} />);
     expect(screen.getByRole("link").getAttribute("href")).toBe("https://example.com/components/footer");
     expect(screen.getByRole("link").textContent).toContain("example.com/components/footer");
     expect(screen.getByText("A spacious footer.")).toBeTruthy();
-    fireEvent.error(container.querySelector("img")!);
     expect(container.querySelector("img")).toBeNull();
     expect(container.querySelector("svg")).toBeTruthy();
   });

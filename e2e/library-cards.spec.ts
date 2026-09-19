@@ -439,18 +439,15 @@ test("long Library content fades only the edges with hidden items", async ({ pag
   ).toBe(false);
 });
 
-test("list links show larger favicons while retaining preview images", async ({ page }) => {
-  await page.route("https://www.google.com/s2/favicons**", route => route.fulfill({
-    contentType: "image/svg+xml",
-    body: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#2563eb"/></svg>',
-  }));
+test("list links use local preview images and offline-safe link glyphs", async ({ page }) => {
   await page.reload();
   await page.getByRole("button", { name: "List view", exact: true }).click();
   const link = page.locator(".library-list-row").filter({ hasText: "Footer reference" });
   await expect(link.locator('img[src^="blob:"]')).toBeVisible();
-  await expect(link.locator('img[src*="favicons"]')).toHaveCSS("width", "24px");
+  await expect(link.locator('img[src^="http"]')).toHaveCount(0);
   const fallback = page.locator(".library-list-row").filter({ hasText: "example.com/fallback" });
-  await expect(fallback.locator('img[src*="favicons"]').first()).toHaveCSS("width", "32px");
+  await expect(fallback.locator('img[src^="http"]')).toHaveCount(0);
+  await expect(fallback.locator("svg").first()).toBeVisible();
 });
 
 test("mixed cards preserve image proportions, readable notes and compact fallbacks", async ({ page }) => {

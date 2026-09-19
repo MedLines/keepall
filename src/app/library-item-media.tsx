@@ -1,10 +1,10 @@
 "use client";
 
-import { cardInitial, linkFaviconUrl } from "@/domain/card-display";
+import { cardInitial } from "@/domain/card-display";
 import { imageCoverAssetId } from "@/domain/image";
 import type { Item } from "@/domain/item";
 import { useAssetObjectUrl } from "./use-asset-object-url";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ImageIcon, LinkIcon, NoteIcon } from "./shell-icons";
 
 type Props = {
@@ -12,7 +12,6 @@ type Props = {
   /** Grid preserves image proportions; compact rows crop; inspect contains. */
   variant?: "card" | "grid" | "inspect";
   onImageLoad?: (ratio: number) => void;
-  onPreviewUnavailable?: () => void;
   /** Inspect gallery: show this asset instead of the cover. */
   assetId?: string | null;
   /** Smaller favicon for list-row thumbs. */
@@ -27,7 +26,6 @@ export function LibraryItemMedia({
   assetId,
   compact = false,
   onImageLoad,
-  onPreviewUnavailable,
   className = "",
 }: Props) {
   const assetIdForDisplay =
@@ -39,54 +37,11 @@ export function LibraryItemMedia({
           ? imageCoverAssetId(item)
           : null;
   const localObjectUrl = useAssetObjectUrl(assetIdForDisplay);
-  const [remoteBroken, setRemoteBroken] = useState(false);
-  const [faviconBroken, setFaviconBroken] = useState(false);
-  const remotePreviewUrl =
-    item.type === "link" ? item.previewImageUrl : "";
-
-  useEffect(() => {
-    setRemoteBroken(false);
-    setFaviconBroken(false);
-  }, [item.id, remotePreviewUrl, assetIdForDisplay]);
-
-  const remoteUrl =
-    item.type === "link" &&
-    item.previewStatus === "ready" &&
-    remotePreviewUrl &&
-    !remoteBroken
-      ? remotePreviewUrl
-      : null;
-  const previewSrc = localObjectUrl ?? remoteUrl;
-  const faviconSrc =
-    item.type === "link" && !previewSrc && !faviconBroken
-      ? linkFaviconUrl(item.url, { size: 64 })
-      : null;
-  const imageSrc = previewSrc ?? faviconSrc;
-  const isFaviconOnly = Boolean(faviconSrc && imageSrc === faviconSrc);
+  const [brokenAssetId, setBrokenAssetId] = useState<string | null>(null);
+  const imageSrc = brokenAssetId === assetIdForDisplay ? null : localObjectUrl;
   const isInspect = variant === "inspect";
 
-  if (variant === "grid" && item.type === "link" && !previewSrc) return null;
-
-  if (isFaviconOnly && faviconSrc) {
-    return (
-      <div
-        aria-hidden="true"
-        className={
-          compact
-            ? `flex size-full items-center justify-center bg-bg-surface ${className}`
-            : `flex aspect-[16/10] h-full w-full items-center justify-center bg-bg-surface ${className}`
-        }
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- remote favicon at native size */}
-        <img
-          alt=""
-          className={compact ? "size-8 object-contain" : "size-12 object-contain"}
-          src={faviconSrc}
-          onError={() => setFaviconBroken(true)}
-        />
-      </div>
-    );
-  }
+  if (variant === "grid" && item.type === "link" && !imageSrc) return null;
 
   if (imageSrc && (item.type === "link" || item.type === "image")) {
     return (
@@ -105,14 +60,7 @@ export function LibraryItemMedia({
         src={imageSrc}
         onLoad={(event) => onImageLoad?.(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)}
         onError={() => {
-          if (variant === "grid" && item.type === "link") onPreviewUnavailable?.();
-          if (previewSrc) {
-            if (!localObjectUrl) {
-              setRemoteBroken(true);
-            }
-            return;
-          }
-          setFaviconBroken(true);
+          setBrokenAssetId(assetIdForDisplay);
         }}
       />
     );
