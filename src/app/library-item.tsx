@@ -159,7 +159,6 @@ export function LibraryItem({
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
   const [imageRatio, setImageRatio] = useState(1.6);
-  const [failedPreview, setFailedPreview] = useState<string | null>(null);
   const actionsRef = useRef<HTMLDetailsElement>(null);
   const reduceMotion = useReducedMotion();
 
@@ -177,13 +176,9 @@ export function LibraryItem({
     item.title.trim() || item.caption.trim() || item.sourceUrl ||
     (pinVisible && pinned) || collections.length || tagNames.length || editing || pendingDelete
   );
-  const previewKey = item.type === "link"
-    ? `${item.previewAssetId}:${item.previewImageUrl}`
-    : "";
   const hasMedia = item.type === "image" || (
     item.type === "link" &&
-    failedPreview !== previewKey &&
-    Boolean(item.previewAssetId || (item.previewStatus === "ready" && item.previewImageUrl))
+    Boolean(item.previewAssetId)
   );
   const rowRef = useRef<HTMLLIElement>(null);
   const measureElement = placement?.measureElement;
@@ -258,7 +253,6 @@ export function LibraryItem({
             variant={isList ? "card" : "grid"}
             compact={isList}
             onImageLoad={setImageRatio}
-            onPreviewUnavailable={() => setFailedPreview(previewKey)}
             className={isList ? "!aspect-auto h-full w-full object-cover" : ""}
           />
         </motion.div>
@@ -367,6 +361,7 @@ export function LibraryItem({
       ref={setRowRef}
       style={placement?.style}
       data-index={placement?.index}
+      data-item-id={item.id}
       draggable={dragEnabled}
       className={`library-item-root min-w-0 focus-within:z-10 has-[details[open]]:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
       onPointerDownCapture={(event) => closeCardActionMenusOutside(event.target)}
