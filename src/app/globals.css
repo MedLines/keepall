@@ -157,6 +157,9 @@
   .library-panel, .library-card, .library-card-media, .item-workspace-media {
     corner-shape: var(--corner-shape-panel);
   }
+  .library-card-media-chrome {
+    corner-shape: var(--corner-shape-panel);
+  }
 }
 
 .library-panel {
@@ -192,6 +195,35 @@
   corner-shape: inherit;
   box-shadow: inset 0 0 0 1px var(--color-border-media);
   pointer-events: none;
+}
+
+.library-card-media-chrome {
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 1.375rem;
+  background: rgb(9 9 11 / 72%);
+  color: var(--color-text-on-media);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: transform 150ms ease-out;
+}
+
+.library-card-media-chrome:hover {
+  background: rgb(9 9 11 / 84%);
+  color: var(--color-text-on-media);
+}
+
+.library-card-media-chrome:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-card-media-chrome {
+    transition: none;
+  }
+
+  .library-card-media-chrome:active {
+    transform: none;
+  }
 }
 
 .library-card[data-selected="true"] {
@@ -252,17 +284,28 @@
   .library-sidebar-panel[data-state="open"] { transition: none; }
 }
 
+.ui-scrollbar,
+.scroll-fade,
 .library-sidebar-section-scroll {
   scrollbar-color: var(--color-border-subtle) transparent;
   scrollbar-width: thin;
 }
 
+.ui-scrollbar::-webkit-scrollbar,
+.scroll-fade::-webkit-scrollbar,
 .library-sidebar-section-scroll::-webkit-scrollbar { width: 6px; }
+.ui-scrollbar::-webkit-scrollbar-track,
+.scroll-fade::-webkit-scrollbar-track,
 .library-sidebar-section-scroll::-webkit-scrollbar-track { background: transparent; }
+.ui-scrollbar::-webkit-scrollbar-thumb,
+.scroll-fade::-webkit-scrollbar-thumb,
 .library-sidebar-section-scroll::-webkit-scrollbar-thumb {
   background: var(--color-border-subtle);
   border-radius: 999px;
 }
+
+.ui-scrollbar-hidden { scrollbar-width: none; }
+.ui-scrollbar-hidden::-webkit-scrollbar { display: none; }
 
 .library-list-thumbnail { width: 88px; height: 64px; }
 .library-list-body { padding-inline-end: 156px; }

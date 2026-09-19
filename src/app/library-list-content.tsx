@@ -25,17 +25,34 @@ export function LibraryListContent({ item, pinned, onOpen }: {
     : item.type === "image" ? item.title.trim() : itemListTitle(item);
   const secondary = cardSecondaryLine(item);
   const hasContent = Boolean(title || secondary || pinned || (item.type === "image" && item.assetIds.length > 1));
+  const content = (
+    <>
+      {title || pinned ? <span className="flex min-w-0 items-center gap-2">
+        {pinned ? <span title="Pinned in this collection"><PinIcon className="size-4" /><span className="sr-only">Pinned in this collection</span></span> : null}
+        {title ? <span className="truncate text-base font-medium" title={title}>{title}</span> : null}
+      </span> : null}
+      {item.type === "link" ? <LinkContext key={item.url} item={item} /> : secondary ? (
+        <span className="mt-1 block truncate text-xs text-text-secondary">{secondary}</span>
+      ) : item.type === "note" ? <span className="mt-1 block text-xs text-text-secondary">Note</span> : item.assetIds.length > 1 ? <span className="mt-1 block text-xs text-text-secondary">{item.assetIds.length} images</span> : null}
+    </>
+  );
   return (
     <>
-      {hasContent ? <button type="button" onClick={onOpen} aria-label={`Open ${itemListTitle(item)}`} className="block min-h-11 w-full min-w-0 rounded-sm text-start">
-        {title || pinned ? <span className="flex min-w-0 items-center gap-2">
-          {pinned ? <span title="Pinned in this collection"><PinIcon className="size-4" /><span className="sr-only">Pinned in this collection</span></span> : null}
-          {title ? <span className="truncate text-base font-medium" title={title}>{title}</span> : null}
-        </span> : null}
-        {item.type === "link" ? <LinkContext key={item.url} item={item} /> : secondary ? (
-          <span className="mt-1 block truncate text-xs text-text-secondary">{secondary}</span>
-        ) : item.type === "note" ? <span className="mt-1 block text-xs text-text-secondary">Note</span> : item.assetIds.length > 1 ? <span className="mt-1 block text-xs text-text-secondary">{item.assetIds.length} images</span> : null}
-      </button> : null}
+      {hasContent ? item.type === "link" ? (
+        <a
+          href={item.url}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Open ${itemListTitle(item)}`}
+          className="block min-h-11 w-full min-w-0 rounded-sm text-start"
+        >
+          {content}
+        </a>
+      ) : (
+        <button type="button" onClick={onOpen} aria-label={`Open ${itemListTitle(item)}`} className="block min-h-11 w-full min-w-0 rounded-sm text-start">
+          {content}
+        </button>
+      ) : null}
       <time className="library-list-date text-xs text-text-secondary" dateTime={new Date(item.createdAt).toISOString()} title="Saved date">
         {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
       </time>

@@ -34,7 +34,7 @@ describe("grid card content", () => {
     expect(screen.getByText(/Edited/)).toBeTruthy();
   });
 
-  it("keeps link metadata local and uses a glyph instead of a remote favicon", () => {
+  it("keeps link metadata local and labels the source with a glyph", () => {
     const { container } = render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "", url: "https://example.com/components/footer", previewDescription: "A spacious footer." }} onOpen={vi.fn()} />);
     expect(screen.getByRole("link").getAttribute("href")).toBe("https://example.com/components/footer");
     expect(screen.getByRole("link").textContent).toContain("example.com/components/footer");

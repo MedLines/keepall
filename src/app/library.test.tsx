@@ -1,15 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildLink, LinkValidationError } from "@/domain/link";
-import { buildImage, ImageValidationError } from "@/domain/image";
+import { buildImage } from "@/domain/image";
 import { buildNote, NoteValidationError } from "@/domain/note";
 import {
-  appendImageAssetToItem,
   assignCollectionToItem,
   assignTagToItem,
   deleteItem,
   listItems,
-  replaceImageAssetAtIndex,
   unassignTagFromItem,
   updateLink,
   updateNote,
@@ -420,7 +418,7 @@ describe("Library", () => {
     });
   });
 
-  test("does not load a remote preview until local preview bytes exist", async () => {
+  test("uses the site favicon without loading the remote preview image", async () => {
     const ready = {
       ...link,
       previewStatus: "ready" as const,
@@ -430,10 +428,15 @@ describe("Library", () => {
     vi.mocked(listItems).mockResolvedValue([ready]);
     render(<Library />);
 
-    await screen.findByRole("link", { name: "Example Site" });
+    await screen.findByRole("heading", { name: "Example Site" });
     expect(
       document.querySelector('img[src="https://cdn.example.com/og.png"]'),
     ).toBeNull();
+    expect(
+      document.querySelector(
+        'img[src="https://www.google.com/s2/favicons?domain=example.com&sz=128"]',
+      ),
+    ).toBeInTheDocument();
     const links = screen.getAllByRole("link", { name: "Example Site" });
     expect(links.length).toBeGreaterThanOrEqual(1);
     expect(links[0]).toHaveAttribute("href", "https://example.com/old");
@@ -714,7 +717,9 @@ describe("Library tags", () => {
     });
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
     expect(screen.queryByText("other note")).not.toBeInTheDocument();
-    expect(screen.getByText(/Tag:/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "inspiration" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Clear tag" }));
 
@@ -1386,47 +1391,20 @@ describe("Library inspect", () => {
     ).toBeInTheDocument();
   });
 
-  test("image inspect can add a gallery slide and update slide in the URL", async () => {
+  test("opens an image on its own page and keeps the current Library view", async () => {
     const image = buildImage({ assetId: "a1" }, { id: "i1", now: 1 });
-    const withTwo = { ...image, assetIds: ["a1", "a2"] as string[] };
-    const withThree = { ...image, assetIds: ["a1", "a2", "a3"] as string[] };
     vi.mocked(listItems).mockResolvedValue([image]);
-    let appendCount = 0;
-    vi.mocked(appendImageAssetToItem).mockImplementation(async () => {
-      appendCount += 1;
-      const next = appendCount >= 2 ? withThree : withTwo;
-      vi.mocked(listItems).mockResolvedValue([next]);
-      return next;
-    });
+    mockNavigation.push("/?layout=list");
+    mockNavigation.push.mockClear();
 
     render(<Library />);
-    fireEvent.click(await screen.findByRole("button", { name: "Open Image" }));
-
-    const dialog = await screen.findByRole("dialog", { name: "Image" });
-    const fileInputs = dialog.querySelectorAll('input[type="file"]');
-
-    fireEvent.change(fileInputs[0]!, {
-      target: {
-        files: [
-          new File([new Uint8Array([1, 2])], "two.png", { type: "image/png" }),
-          new File([new Uint8Array([3, 4])], "three.png", { type: "image/png" }),
-        ],
-      },
-    });
-
-    await waitFor(() => {
-      expect(appendImageAssetToItem).toHaveBeenCalledTimes(2);
-      expect(appendImageAssetToItem).toHaveBeenNthCalledWith(1, "i1", {
-        bytes: expect.any(Uint8Array),
-        mimeType: "image/png",
-      });
-      expect(appendImageAssetToItem).toHaveBeenNthCalledWith(2, "i1", {
-        bytes: expect.any(Uint8Array),
-        mimeType: "image/png",
-      });
-      expect(
-        String(mockNavigation.replace.mock.calls.at(-1)?.[0] ?? ""),
-      ).toContain("slide=2");
-    });
+    expect(
+      await screen.findByRole("link", { name: "Open Image" }),
+    ).toHaveAttribute(
+      "href",
+      "/items/i1?from=%2F%3Flayout%3Dlist",
+    );
+    expect(screen.queryByRole("dialog", { name: "Image" })).not.toBeInTheDocument();
   });
+
 });

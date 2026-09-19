@@ -364,7 +364,7 @@ test("virtualized cards share one object URL for the same local asset", async ({
   });
 });
 
-test("cards never load third-party preview or favicon URLs", async ({ page }) => {
+test("cards load only a favicon when local preview bytes are missing", async ({ page }) => {
   const externalImageRequests: string[] = [];
   await page.route(/https:\/\/(cdn\.example\.com|www\.google\.com)\/.*/, async (route) => {
     externalImageRequests.push(route.request().url());
@@ -407,6 +407,11 @@ test("cards never load third-party preview or favicon URLs", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Local-only preview" })).toBeVisible();
   await page.waitForTimeout(100);
 
-  expect(externalImageRequests).toEqual([]);
-  await expect(page.locator('.library-card img[src^="http"]')).toHaveCount(0);
+  expect(externalImageRequests).not.toContain(
+    "https://cdn.example.com/preview.png",
+  );
+  expect(externalImageRequests).toContain(
+    "https://www.google.com/s2/favicons?domain=example.com&sz=128",
+  );
+  await expect(page.locator('.library-card img[src^="https://cdn.example.com"]')).toHaveCount(0);
 });

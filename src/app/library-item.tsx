@@ -3,27 +3,30 @@
 import {
   type DragEvent,
   type KeyboardEvent,
-  type Ref,
   useCallback,
   useRef,
   useState,
 } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import Link from "next/link";
 import { itemListTitle, type Item } from "@/domain/item";
 import type { LibraryLayout } from "@/domain/library-view";
 import {
   BROWSE_CHROME_FADE_S,
-  itemMediaLayoutProps,
   useBrowseChromeVisible,
 } from "./item-media-layout";
 import { LibraryItemMedia } from "./library-item-media";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
-import { DeleteIcon, EditIcon, LayersIcon, MoreIcon, PinIcon } from "./shell-icons";
+import { DeleteIcon, EditIcon, ImagesIcon, LayersIcon, MoreIcon, PinIcon } from "./shell-icons";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
 import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
+import {
+  ImageItemEditDialog,
+  type ImageDetailsDraft,
+} from "./image-item-edit-dialog";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
@@ -50,6 +53,7 @@ export type LibraryItemProps = {
   placement?: MasonryPlacement;
   item: Item;
   inspected: boolean;
+  openHref?: string;
   onOpenInspect: () => void;
   tagNames: { id: string; name: string }[];
   tagError: string | null;
@@ -61,21 +65,19 @@ export type LibraryItemProps = {
   pendingMutation: PendingMutation | null;
   editDraft: string;
   editTitleDraft: string;
-  editImageTitleDraft: string;
   editError: string | null;
   setFirstEditField: (
     node: HTMLTextAreaElement | HTMLInputElement | null,
   ) => void;
   onEditDraftChange: (value: string) => void;
   onEditTitleChange: (value: string) => void;
-  onEditImageTitleChange: (value: string) => void;
   onEditSaveShortcut: (
     event: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
     save: () => void,
   ) => void;
   onSaveNote: () => void;
   onSaveLink: () => void;
-  onSaveImage: () => void;
+  onSaveImage: (draft?: ImageDetailsDraft) => void;
   onCancelEdit: () => void;
   onAddTag: (name: string) => void;
   onAddCollection: (name: string) => void;
@@ -113,6 +115,7 @@ export function LibraryItem({
   placement,
   item,
   inspected,
+  openHref,
   onOpenInspect,
   tagNames,
   tagError,
@@ -124,12 +127,10 @@ export function LibraryItem({
   pendingMutation,
   editDraft,
   editTitleDraft,
-  editImageTitleDraft,
   editError,
   setFirstEditField,
   onEditDraftChange,
   onEditTitleChange,
-  onEditImageTitleChange,
   onEditSaveShortcut,
   onSaveNote,
   onSaveLink,
@@ -172,14 +173,12 @@ export function LibraryItem({
 
   const title = itemListTitle(item);
   const isList = layoutMode === "list";
+  const inlineEditing = editing && item.type !== "image";
   const hasGridFooter = item.type !== "image" || Boolean(
     item.title.trim() || item.caption.trim() || item.sourceUrl ||
-    (pinVisible && pinned) || collections.length || tagNames.length || editing || pendingDelete
+    (pinVisible && pinned) || collections.length || tagNames.length || inlineEditing || pendingDelete
   );
-  const hasMedia = item.type === "image" || (
-    item.type === "link" &&
-    Boolean(item.previewAssetId)
-  );
+  const hasMedia = item.type === "image" || item.type === "link";
   const rowRef = useRef<HTMLLIElement>(null);
   const measureElement = placement?.measureElement;
   const setRowRef = useCallback((node: HTMLLIElement | null) => {
@@ -206,8 +205,8 @@ export function LibraryItem({
     <div
       className={
         isList
-          ? "library-list-thumbnail relative shrink-0"
-          : `relative w-full ${hasGridFooter ? "mb-3" : ""}`
+          ? "library-list-thumbnail relative shrink-0 overflow-hidden rounded-lg bg-bg-raised"
+          : `library-card-media squircle-panel relative ${hasGridFooter && !openHref ? "mb-3" : ""}`
       }
     >
       {inspected ? (
@@ -217,23 +216,21 @@ export function LibraryItem({
           aria-hidden
         />
       ) : (
-        <motion.div
-          {...itemMediaLayoutProps(item.id, layoutMode, reduceMotion)}
+        <div
           className={
             isList
-              ? "size-full overflow-hidden bg-bg-raised"
+              ? "size-full"
               : item.type === "link"
-                ? "library-card-media squircle-panel"
-                : "library-card-media squircle-panel cursor-pointer"
+                ? "w-full"
+                : "w-full cursor-pointer"
           }
-          style={isList ? { borderRadius: 8 } : undefined}
           onClick={
-            isList || item.type === "link"
+            isList || item.type === "link" || openHref
               ? undefined
               : onOpenInspect
           }
           onKeyDown={
-            isList || item.type === "link"
+            isList || item.type === "link" || openHref
               ? undefined
               : (e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -242,10 +239,10 @@ export function LibraryItem({
                   }
                 }
           }
-          role={isList || item.type === "link" ? undefined : "button"}
-          tabIndex={isList || item.type === "link" ? undefined : 0}
+          role={isList || item.type === "link" || openHref ? undefined : "button"}
+          tabIndex={isList || item.type === "link" || openHref ? undefined : 0}
           aria-label={
-            isList || item.type === "link" ? undefined : `Open ${title}`
+            isList || item.type === "link" || openHref ? undefined : `Open ${title}`
           }
         >
           <LibraryItemMedia
@@ -255,7 +252,7 @@ export function LibraryItem({
             onImageLoad={setImageRatio}
             className={isList ? "!aspect-auto h-full w-full object-cover" : ""}
           />
-        </motion.div>
+        </div>
       )}
       {!isList && item.type === "link" && !inspected ? (
         <a
@@ -267,6 +264,15 @@ export function LibraryItem({
           target="_blank"
         />
       ) : null}
+      {!isList && item.type === "image" && item.assetIds.length > 1 && !inspected ? (
+        <span
+          className="library-card-media-chrome pointer-events-none absolute bottom-3 end-3 z-10 flex min-h-11 items-center gap-1.5 px-3 text-xs font-medium tabular-nums"
+          aria-label={`${item.assetIds.length} images`}
+        >
+          <ImagesIcon className="size-4" />
+          {item.assetIds.length}
+        </span>
+      ) : null}
     </div>
   );
 
@@ -274,7 +280,7 @@ export function LibraryItem({
     <details
       ref={actionsRef}
       name="library-card-actions"
-      className={`library-card-actions absolute z-30 ${isList ? "end-0 top-5" : "end-3 top-3"}`}
+      className={`library-card-actions absolute z-30 ${isList ? "end-0 top-5" : "end-5 top-5"}`}
       onKeyDown={(event) => {
         if (event.key === "Escape" && actionsRef.current) {
           event.preventDefault();
@@ -285,7 +291,7 @@ export function LibraryItem({
     >
       <summary
         aria-label={`Actions for ${title}`}
-        className={`relative flex cursor-pointer list-none items-center justify-center text-text-secondary hover:text-text-primary [&::-webkit-details-marker]:hidden ${isList ? "size-10 rounded-control hover:bg-bg-raised" : "ui-control size-10"}`}
+        className={`relative flex cursor-pointer list-none items-center justify-center text-text-secondary hover:text-text-primary [&::-webkit-details-marker]:hidden ${isList ? "size-10 rounded-control hover:bg-bg-raised" : "library-card-media-chrome size-11"}`}
       >
         <MoreIcon />
       </summary>
@@ -318,7 +324,10 @@ export function LibraryItem({
                 className={ACTION_BTN}
                 data-focus-return={`edit:${item.id}`}
                 disabled={mutationBusy}
-                onClick={onStartEdit}
+                onClick={() => {
+                  if (actionsRef.current) actionsRef.current.open = false;
+                  onStartEdit();
+                }}
               >
                 <EditIcon /> Edit
               </button>
@@ -400,6 +409,21 @@ export function LibraryItem({
         onRemoveTag={onRemoveTag}
         onMoveToCollection={onAddCollection}
       />
+      {item.type === "image" && editing ? (
+        <ImageItemEditDialog
+          item={item}
+          open
+          busy={
+            pendingMutation?.op === "save-image" &&
+            pendingMutation.id === item.id
+          }
+          error={editError}
+          onSave={onSaveImage}
+          onOpenChange={(open) => {
+            if (!open) onCancelEdit();
+          }}
+        />
+      ) : null}
       <div
         data-selected={selected || undefined}
         className={
@@ -414,7 +438,7 @@ export function LibraryItem({
         className={
           isList
             ? `library-list-select absolute start-1 top-5 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-edge ${editing || pendingDelete ? "hidden" : ""}`
-            : `absolute start-3 top-3 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity duration-100 ${
+            : `library-card-media-chrome absolute start-5 top-5 z-20 flex size-11 items-center justify-center ${
                 !chromeVisible
                   ? "pointer-events-none opacity-0"
                   : checkboxVisible
@@ -433,18 +457,52 @@ export function LibraryItem({
           onClick={(event) => event.stopPropagation()}
         />
       </label>
-      {isList ? !editing && !pendingDelete ? <button type="button" onClick={onOpenInspect} aria-label={`Preview ${title}`} className="shrink-0 rounded-lg">{mediaSlot}</button> : null : hasMedia ? mediaSlot : null}
+      {isList ? !inlineEditing && !pendingDelete ? (
+        openHref ? (
+          <Link
+            href={openHref}
+            prefetch={false}
+            aria-label={`Open ${title}`}
+            className="shrink-0 rounded-lg"
+          >
+            {mediaSlot}
+          </Link>
+        ) : item.type === "link" ? (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Open ${title}`}
+            className="shrink-0 rounded-lg"
+          >
+            {mediaSlot}
+          </a>
+        ) : (
+          <button type="button" onClick={onOpenInspect} aria-label={`Preview ${title}`} className="shrink-0 rounded-lg">{mediaSlot}</button>
+        )
+      ) : null : hasMedia ? (
+        openHref ? (
+          <Link
+            href={openHref}
+            prefetch={false}
+            aria-label={`Open ${title}`}
+            className={`block ${hasGridFooter ? "mb-5" : ""}`}
+          >
+            {mediaSlot}
+          </Link>
+        ) : mediaSlot
+      ) : null}
       <motion.div
         {...chromeMotion}
         hidden={!isList && !hasGridFooter}
         className={
           isList
-            ? `min-w-0 flex-1 ${editing || pendingDelete ? "" : "library-list-body"}`
+            ? `min-w-0 flex-1 ${inlineEditing || pendingDelete ? "" : "library-list-body"}`
             : item.type === "image" ? "px-2 pb-1" : hasMedia ? "px-4 pb-3 pt-3" : "px-4 pb-3 pt-4"
         }
         style={{ pointerEvents: chromeVisible ? "auto" : "none" }}
       >
-        {!isList && !editing ? (
+        {!isList && !inlineEditing ? (
           <LibraryCardContent
             item={item}
             onOpen={onOpenInspect}
@@ -452,12 +510,12 @@ export function LibraryItem({
           />
         ) : (
           <div className={isList ? "min-w-0 flex-1 text-left" : undefined}>
-            {isList && !editing && !pendingDelete ? (
+            {isList && !inlineEditing && !pendingDelete ? (
               <LibraryListContent item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} />
             ) : <p className="text-sm font-medium">{title}</p>}
           </div>
         )}
-        {isList && !editing && !pendingDelete ? <LibraryListMetadata collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} /> : null}
+        {isList && !inlineEditing && !pendingDelete ? <LibraryListMetadata collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} /> : null}
 
         {item.type === "note" && editing ? (
           <div className="mt-2 flex flex-col gap-2">
@@ -561,76 +619,8 @@ export function LibraryItem({
               </button>
             </div>
           </div>
-        ) : item.type === "image" && editing ? (
-          <div className="mt-2 flex flex-col gap-2">
-            <label className="text-sm font-medium" htmlFor={`edit-image-title-${item.id}`}>Title (optional)</label>
-            <input
-              className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
-              id={`edit-image-title-${item.id}`}
-              value={editImageTitleDraft}
-              disabled={mutationBusy}
-              onChange={(event) => onEditImageTitleChange(event.target.value)}
-              onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
-            />
-            {item.sourceFileName ? <p className="break-words text-xs text-text-secondary">Original filename: {item.sourceFileName}</p> : null}
-            <label
-              className="text-sm font-medium"
-              htmlFor={`edit-image-caption-${item.id}`}
-            >
-              Caption
-            </label>
-            <textarea
-              className="min-h-20 rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
-              id={`edit-image-caption-${item.id}`}
-              ref={setFirstEditField}
-              value={editDraft}
-              disabled={mutationBusy}
-              onChange={(event) => onEditDraftChange(event.target.value)}
-              onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
-            />
-            <label
-              className="text-sm font-medium"
-              htmlFor={`edit-image-source-${item.id}`}
-            >
-              Source URL
-            </label>
-            <input
-              className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
-              id={`edit-image-source-${item.id}`}
-              value={editTitleDraft}
-              disabled={mutationBusy}
-              onChange={(event) => onEditTitleChange(event.target.value)}
-              onKeyDown={(event) => onEditSaveShortcut(event, onSaveImage)}
-            />
-            {editError ? (
-              <p className="text-sm text-text-danger" role="alert">
-                {editError}
-              </p>
-            ) : null}
-            <div className="flex flex-wrap gap-3">
-              <button
-                className="rounded-md bg-action-primary px-3 py-1 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
-                type="button"
-                disabled={mutationBusy}
-                onClick={onSaveImage}
-              >
-                {pendingMutation?.op === "save-image" &&
-                pendingMutation.id === item.id
-                  ? "Saving…"
-                  : "Save image"}
-              </button>
-              <button
-                className="rounded-md border border-border-edge px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
-                type="button"
-                disabled={mutationBusy}
-                onClick={onCancelEdit}
-              >
-                Cancel edit
-              </button>
-            </div>
-          </div>
         ) : null}
-        {!isList && !editing && !pendingDelete ? (
+        {!isList && !inlineEditing && !pendingDelete ? (
           <LibraryCardMetadata
             collections={collections}
             tags={tagNames}

@@ -91,8 +91,11 @@ test("image titles can be cleared and restored without losing grid or list metad
   await card.hover();
   await card.locator("summary").click();
   await card.getByRole("button", { name: "Edit", exact: true }).click();
-  await card.getByLabel("Title (optional)").fill("");
-  await card.getByRole("button", { name: "Save image", exact: true }).click();
+  let editDialog = page.getByRole("dialog", { name: "Edit image details" });
+  await expect(editDialog).toBeVisible();
+  await editDialog.getByLabel("Title (optional)").fill("");
+  await editDialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(editDialog).toBeHidden();
   await expect(card.getByRole("heading")).toHaveCount(0);
   await expect(card.getByRole("button", { name: "1 tag" })).toBeVisible();
   await expect(card.getByRole("button", { name: "UI inspiration", exact: true })).toBeVisible();
@@ -113,16 +116,18 @@ test("image titles can be cleared and restored without losing grid or list metad
 
   await page.getByRole("button", { name: "List view", exact: true }).click();
   const row = page.locator(".library-list-row").first();
-  await expect(row.getByRole("button", { name: "Preview Image", exact: true })).toBeVisible();
-  await expect(row.getByRole("button", { name: "Open Image", exact: true })).toHaveCount(0);
+  await expect(row.getByRole("link", { name: "Open Image", exact: true })).toBeVisible();
   await expect(row.getByText("Image", { exact: true })).toHaveCount(0);
   await expect(row.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
   await row.hover();
   await row.locator("summary").click();
   await row.getByRole("button", { name: "Edit", exact: true }).click();
-  await row.getByLabel("Title (optional)").fill("My design reference");
-  await row.getByRole("button", { name: "Save image", exact: true }).click();
-  await expect(row.getByRole("button", { name: "Open My design reference", exact: true })).toBeVisible();
+  editDialog = page.getByRole("dialog", { name: "Edit image details" });
+  await expect(editDialog).toBeVisible();
+  await editDialog.getByLabel("Title (optional)").fill("My design reference");
+  await editDialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(editDialog).toBeHidden();
+  await expect(row.getByRole("link", { name: "Open My design reference", exact: true })).toBeVisible();
   await page.reload();
   await expect(row.getByText("My design reference", { exact: true })).toBeVisible();
 });
@@ -157,13 +162,77 @@ test("bare untitled image cards have no empty footer in either theme", async ({ 
     }).toPass();
     await page.screenshot({ path: testInfo.outputPath(`bare-image-${theme}.png`) });
   }
-  await card.getByRole("button", { name: "Open Image", exact: true }).click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Edit", exact: true }).click();
+  const imageLink = card.getByRole("link", { name: "Open Image", exact: true });
+  await expect(imageLink).toHaveAttribute("href", /\/items\/image\?from=/);
+  await imageLink.click();
+  await expect(page).toHaveURL(/\/items\/image\?from=/);
+  await page.getByRole("button", { name: "Edit details" }).click();
+  const dialog = page.getByRole("dialog", { name: "Edit image details" });
   await dialog.getByLabel("Title (optional)").fill("From the image viewer");
-  await dialog.getByRole("button", { name: "Save image", exact: true }).click();
-  await expect(dialog.getByRole("heading", { name: "From the image viewer" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("heading", { name: "From the image viewer" })).toBeVisible();
+});
+
+test("multi-image cards show a count and align their overlay controls", async ({ page }, testInfo) => {
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction("items", "readwrite");
+      const store = transaction.objectStore("items");
+      const request = store.get("image");
+      request.onsuccess = () => {
+        store.put({ ...request.result, assetIds: ["asset", "asset"] });
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+  });
+  await page.reload();
+
+  const card = page.locator(".library-card").filter({
+    has: page.getByRole("heading", { name: "Customer support" }),
+  });
+  await expect(card.getByLabel("2 images")).toBeVisible();
+  const count = card.getByLabel("2 images");
+  await card.hover();
+  const select = card.locator("label:has(input[type=checkbox])");
+  const actions = card.locator("summary");
+  await expect(select).toBeVisible();
+  await expect(actions).toBeVisible();
+
+  const cardBox = (await card.boundingBox())!;
+  const mediaBox = (await card.locator(".library-card-media").boundingBox())!;
+  const titleBox = (await card.getByRole("heading", { name: "Customer support" }).boundingBox())!;
+  const selectBox = (await select.boundingBox())!;
+  const actionsBox = (await actions.boundingBox())!;
+  const countBox = (await count.boundingBox())!;
+  expect(selectBox.width).toBe(44);
+  expect(selectBox.height).toBe(44);
+  expect(actionsBox.width).toBe(44);
+  expect(actionsBox.height).toBe(44);
+  expect(selectBox.x - cardBox.x).toBeCloseTo(20, 0);
+  expect(selectBox.y - cardBox.y).toBeCloseTo(20, 0);
+  expect(cardBox.x + cardBox.width - actionsBox.x - actionsBox.width).toBeCloseTo(20, 0);
+  expect(actionsBox.y - cardBox.y).toBeCloseTo(20, 0);
+  expect(cardBox.x + cardBox.width - countBox.x - countBox.width).toBeCloseTo(20, 0);
+  expect(titleBox.y - mediaBox.y - mediaBox.height).toBeGreaterThanOrEqual(12);
+  await expect(select).toHaveCSS("border-radius", "22px");
+  await expect(actions).toHaveCSS("border-radius", "22px");
+
+  if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+    for (const control of [select, actions]) {
+      await expect(control).toHaveCSS(
+        "corner-shape",
+        /^(squircle|superellipse\(2\))$/,
+      );
+    }
+  }
+  await card.screenshot({ path: testInfo.outputPath("multi-image-card.png") });
 });
 
 test("grid media has one clipping edge and keeps its inset across themes and widths", async ({ page }, testInfo) => {
@@ -207,6 +276,96 @@ test("grid media has one clipping edge and keeps its inset across themes and wid
     );
     expect(cornerShape).toMatch(/^(squircle|superellipse\(2\))$/);
   }
+});
+
+test("media keeps its grid clipping after switching through list view", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("button", { name: "List view", exact: true }).click();
+  await expect(page.locator(".library-list-row").first()).toBeVisible();
+  await page.getByRole("button", { name: "Grid view", exact: true }).click();
+
+  const cards = page.locator(".library-card");
+  await expect(cards.first()).toBeVisible();
+  for (const delay of [0, 75, 150, 250, 400]) {
+    if (delay) await page.waitForTimeout(delay);
+    const mediaFrames = await cards.evaluateAll((nodes) =>
+      nodes.flatMap((card) => {
+        const media = card.querySelector<HTMLElement>(".library-card-media");
+        if (!media) return [];
+        const cardBox = card.getBoundingClientRect();
+        const mediaBox = media.getBoundingClientRect();
+        const picture = media.querySelector<HTMLElement>("img");
+        const pictureBox = picture?.getBoundingClientRect();
+        const style = getComputedStyle(media);
+        return [{
+          cardLeft: cardBox.left,
+          cardRight: cardBox.right,
+          mediaLeft: mediaBox.left,
+          mediaRight: mediaBox.right,
+          overflow: style.overflow,
+          radius: style.borderRadius,
+          pictureLeft: pictureBox?.left,
+          pictureRight: pictureBox?.right,
+        }];
+      }),
+    );
+    expect(mediaFrames.length).toBeGreaterThan(1);
+    for (const frame of mediaFrames) {
+      expect(frame.overflow).toBe("hidden");
+      expect(frame.radius).toBe("64px");
+      expect(frame.mediaLeft).toBeGreaterThanOrEqual(frame.cardLeft - 1);
+      expect(frame.mediaRight).toBeLessThanOrEqual(frame.cardRight + 1);
+      if (frame.pictureLeft !== undefined && frame.pictureRight !== undefined) {
+        expect(frame.pictureLeft - frame.cardLeft).toBeCloseTo(8, 0);
+        expect(frame.cardRight - frame.pictureRight).toBeCloseTo(8, 0);
+      }
+    }
+  }
+
+  await page.screenshot({
+    path: testInfo.outputPath("grid-after-list.png"),
+    fullPage: true,
+  });
+});
+
+test("a link without preview bytes shows its favicon", async ({ page }, testInfo) => {
+  await page.unroute("https://www.google.com/s2/favicons**");
+  await page.route("https://www.google.com/s2/favicons**", (route) =>
+    route.fulfill({
+      body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#725cff"/><path d="M9 16h14M16 9v14" stroke="white" stroke-width="3"/></svg>',
+      contentType: "image/svg+xml",
+      status: 200,
+    }),
+  );
+  await page.reload();
+
+  const card = page.locator(".library-card").filter({
+    has: page.getByRole("heading", { name: "example.com/fallback" }),
+  });
+  const favicon = card.locator('img[src*="google.com/s2/favicons"]');
+  await expect(favicon).toBeVisible();
+  await expect(favicon).toHaveAttribute("src", /domain=example\.com/);
+  await card.screenshot({ path: testInfo.outputPath("favicon-fallback.png") });
+});
+
+test("list link media and title open the saved website", async ({ page }) => {
+  await page.getByRole("button", { name: "List view", exact: true }).click();
+  const row = page.locator(".library-list-row").filter({
+    hasText: "Footer reference",
+  });
+  const links = row.getByRole("link", {
+    name: "Open Footer reference",
+    exact: true,
+  });
+
+  await expect(links).toHaveCount(2);
+  for (const link of await links.all()) {
+    await expect(link).toHaveAttribute("href", "https://example.com/footer");
+    await expect(link).toHaveAttribute("target", "_blank");
+  }
+  await expect(
+    row.getByRole("button", { name: "Open Footer reference", exact: true }),
+  ).toHaveCount(0);
 });
 
 test("item types live in the toolbar while library destinations stay in the sidebar", async ({ page }) => {
@@ -286,6 +445,29 @@ for (const view of ["Grid", "List"] as const) {
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 }
+
+test("active tag clears from the library title row", async ({ page }, testInfo) => {
+  const card = page.locator(".library-card").filter({ hasText: "Customer support" });
+  await card.hover();
+  await card.getByRole("button", { name: "1 tag" }).click();
+  await card.getByRole("button", { name: "minimal", exact: true }).click();
+
+  const header = page.getByRole("banner");
+  const heading = header.getByRole("heading", { name: "minimal" });
+  const clear = header.getByRole("button", { name: "Clear tag" });
+  await expect(heading).toBeVisible();
+  await expect(clear).toBeVisible();
+  await expect(page.getByRole("main")).toHaveCSS("scrollbar-width", "thin");
+  const headingBox = (await heading.boundingBox())!;
+  const clearBox = (await clear.boundingBox())!;
+  expect(Math.abs(headingBox.y + headingBox.height / 2 - clearBox.y - clearBox.height / 2)).toBeLessThanOrEqual(1);
+  await expect(page.getByRole("main").getByText(/Tag:/)).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath("active-tag-title.png") });
+
+  await clear.click();
+  await expect(page).toHaveURL("/");
+  await expect(header.getByRole("heading", { name: "All items" })).toBeVisible();
+});
 
 for (const view of ["Grid", "List"] as const) {
   for (const title of ["Customer support", "Footer reference"]) {
@@ -466,8 +648,10 @@ test("mixed cards preserve image proportions, readable notes and compact fallbac
   await expect(link.getByText("A spacious footer for a portfolio.")).toBeVisible();
   const fallback = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "example.com/fallback" }) });
   await expect(fallback.locator("img")).toHaveCount(0);
+  await expect(fallback.locator(".library-card-media svg")).toBeVisible();
   await expect(fallback).toHaveCSS("border-radius", "64px");
-  expect((await fallback.boundingBox())!.height).toBeLessThan(200);
+  const fallbackMedia = (await fallback.locator(".library-card-media").boundingBox())!;
+  expect(fallbackMedia.width / fallbackMedia.height).toBeCloseTo(1.6, 1);
   await page.getByRole("button", { name: "Theme", exact: true }).click();
   await expect(fallback).toHaveCSS("background-image", "none");
   await expect(fallback).toHaveCSS("background-color", "rgb(35, 37, 38)");
@@ -893,24 +1077,239 @@ for (const width of [320, 768, 1024, 1440]) {
   });
 }
 
-test("opening and closing an image keeps the masonry card in place", async ({ page }) => {
+test("image page shares the rounder card and panel curves", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1707, height: 825 });
+  await page.getByRole("link", { name: "Open Customer support", exact: true }).click();
+  const gallery = page.locator(".item-workspace-media");
+  const imageButton = page.getByRole("button", { name: "View image full screen" });
+  const details = page.getByRole("complementary", { name: "Image details" });
+  await expect(gallery.locator("img")).toBeVisible();
+  await gallery.locator("img").evaluate(img => (img as HTMLImageElement).decode());
+  await page.screenshot({ path: testInfo.outputPath("image-page-desktop.png") });
+  await expect(gallery).toHaveCSS("border-radius", "64px");
+  await expect(gallery).toHaveCSS("border-width", "8px");
+  await expect(imageButton).toHaveCSS("border-radius", "0px");
+  await expect(details).toHaveCSS("border-radius", "32px");
+  for (const width of [1707, 390]) {
+    await page.setViewportSize({ width, height: 825 });
+    const outer = (await gallery.boundingBox())!;
+    const inner = (await imageButton.boundingBox())!;
+    expect(inner.x - outer.x).toBeCloseTo(8, 0);
+    expect(inner.y - outer.y).toBeCloseTo(8, 0);
+    expect(outer.width - inner.width).toBeCloseTo(16, 0);
+    expect(outer.height - inner.height).toBeCloseTo(16, 0);
+    await page.screenshot({ path: testInfo.outputPath(`image-page-${width}.png`) });
+  }
+  if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+    for (const surface of [gallery, details]) {
+      await expect(surface).toHaveCSS("corner-shape", /^(squircle|superellipse\(2\))$/);
+    }
+  }
+});
+
+test("image page returns to a card with the same clipped media frame", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const card = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Customer support" }) });
   await expect(card.locator("img")).toBeVisible();
   await card.locator("img").evaluate(img => (img as HTMLImageElement).decode());
   const before = (await card.boundingBox())!;
-  await card.getByRole("button", { name: "Open Customer support", exact: true }).click();
-  const detail = page.getByRole("dialog");
-  await expect(detail).toBeVisible();
-  await expect(detail.locator("img").first()).toBeVisible();
-  await detail.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(detail).toBeHidden();
+  const clipBefore = await card.locator(".library-card-media").evaluate(element => {
+    const style = getComputedStyle(element);
+    return {
+      borderRadius: style.borderRadius,
+      cornerShape: style.getPropertyValue("corner-shape"),
+      overflow: style.overflow,
+    };
+  });
+  await card.getByRole("link", { name: "Open Customer support", exact: true }).click();
+  await expect(page).toHaveURL(/\/items\/image\?from=/);
+  await expect(page.getByRole("region", { name: "Image gallery" })).toBeVisible();
+  await page.getByRole("button", { name: "View image full screen" }).click();
+  const viewer = page.getByRole("dialog", { name: "Focused image viewer" });
+  await expect(viewer).toBeVisible();
+  await expect(page.getByTestId("focused-image-scroll")).toHaveCSS(
+    "overflow-y",
+    "auto",
+  );
+  expect(
+    await viewer.locator("img").evaluate((image) => getComputedStyle(image).maxHeight),
+  ).toBe("none");
+  await page.screenshot({ path: testInfo.outputPath("focused-image-viewer.png") });
+  await page.keyboard.press("Escape");
+  await expect(viewer).toBeHidden();
+  await page.getByRole("link", { name: "Back to library" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(card.locator("img")).toBeVisible();
   await expect(async () => {
     const after = (await card.boundingBox())!;
     expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
     expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
   }).toPass({ timeout: 5000 });
+  const clipAfter = await card.locator(".library-card-media").evaluate(element => {
+    const style = getComputedStyle(element);
+    return {
+      borderRadius: style.borderRadius,
+      cornerShape: style.getPropertyValue("corner-shape"),
+      overflow: style.overflow,
+    };
+  });
+  expect(clipAfter).toEqual(clipBefore);
+  expect(clipAfter.overflow).toBe("hidden");
   await expectCardsNotToOverlap(page);
+});
+
+test("image page fits a narrow viewport with visual gallery controls", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Close navigation", exact: true }).click();
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction("items", "readwrite");
+      const store = transaction.objectStore("items");
+      const request = store.get("image");
+      request.onsuccess = () => {
+        store.put({
+          ...request.result,
+          assetIds: Array.from({ length: 8 }, () => "asset"),
+        });
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "Close navigation", exact: true }).click();
+  const card = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Customer support" }) });
+  await card.getByRole("link", { name: "Open Customer support", exact: true }).click();
+
+  await expect(page.getByRole("region", { name: "Image gallery" })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Image details" })).toBeAttached();
+  await expect(page.getByRole("button", { name: /Show image/ })).toHaveCount(8);
+  const media = page.locator(".item-workspace-media");
+  const previous = page.getByRole("button", { name: "Previous image", exact: true });
+  const next = page.getByRole("button", { name: "Next image", exact: true });
+  const firstPreview = page.getByRole("button", { name: "Show image 1" });
+  const mediaBox = (await media.boundingBox())!;
+  for (const control of [previous, next]) {
+    const box = (await control.boundingBox())!;
+    expect(Math.abs(box.y + box.height / 2 - mediaBox.y - mediaBox.height / 2)).toBeLessThanOrEqual(1);
+  }
+  const previewBox = (await firstPreview.boundingBox())!;
+  expect(previewBox.x - mediaBox.x).toBeLessThanOrEqual(8);
+  expect(await page.locator("body").evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("image-item-page-mobile.png"), fullPage: true });
+});
+
+test("long image notes scroll inside the item page", async ({ page }) => {
+  await page.setViewportSize({ width: 1707, height: 825 });
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction("items", "readwrite");
+      const store = transaction.objectStore("items");
+      const request = store.get("image");
+      request.onsuccess = () => {
+        store.put({
+          ...request.result,
+          caption: Array.from(
+            { length: 80 },
+            (_, index) => `Design observation ${index + 1}.`,
+          ).join("\n\n"),
+        });
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  const card = page.locator(".library-card").filter({
+    has: page.getByRole("heading", { name: "Customer support" }),
+  });
+  await card.getByRole("link", { name: "Open Customer support", exact: true }).click();
+
+  const scroller = page.getByTestId("item-page-scroll");
+  await expect(scroller).toBeVisible();
+  await expect(scroller).toHaveCSS("scrollbar-width", "thin");
+  const scrollerBox = (await scroller.boundingBox())!;
+  expect(scrollerBox.x + scrollerBox.width).toBeCloseTo(1707, 0);
+  expect(
+    await scroller.evaluate((element) => element.scrollHeight > element.clientHeight),
+  ).toBe(true);
+  await scroller.evaluate((element) => element.scrollTo(0, element.scrollHeight));
+  await expect(page.getByText("Design observation 80.")).toBeInViewport();
+});
+
+test("image page edits details, removes a tag, and deletes the item", async ({ page }, testInfo) => {
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction("items", "readwrite");
+      const store = transaction.objectStore("items");
+      const request = store.get("image");
+      request.onsuccess = () => {
+        store.put({ ...request.result, assetIds: ["asset", "asset"] });
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  const card = page.locator(".library-card").filter({
+    has: page.getByRole("heading", { name: "Customer support" }),
+  });
+  await card.getByRole("link", { name: "Open Customer support", exact: true }).click();
+
+  await page.getByRole("button", { name: "Edit details" }).click();
+  const editDialog = page.getByRole("dialog", { name: "Edit image details" });
+  await editDialog.getByLabel("Title (optional)").fill("Checkout flow");
+  await editDialog.getByLabel("Notes").fill("Compare the empty and populated states.");
+  await editDialog.getByLabel("Source URL (optional)").fill("https://example.com/checkout");
+  await editDialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(editDialog).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Checkout flow" })).toBeVisible();
+  await expect(page.getByRole("article", { name: "Notes" })).toContainText(
+    "Compare the empty and populated states.",
+  );
+
+  await page.getByRole("button", { name: "Organize" }).click();
+  const organizer = page.getByRole("dialog", { name: "Organize Checkout flow" });
+  await expect(organizer).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath("image-item-page-organizer.png") });
+  await organizer.getByRole("button", { name: "Remove tag minimal" }).click();
+  await expect(organizer.getByText("No tags added.")).toBeVisible();
+  await organizer.getByRole("button", { name: "Done" }).click();
+  await expect(organizer).toBeHidden();
+
+  await page.getByRole("button", { name: "Remove current image" }).click();
+  const removeImageDialog = page.getByRole("dialog", {
+    name: "Remove this image?",
+  });
+  await expect(removeImageDialog).toBeInViewport();
+  await removeImageDialog.getByRole("button", { name: "Remove image" }).click();
+  await expect(removeImageDialog).toBeHidden();
+  await expect(page.getByRole("button", { name: "Remove current image" })).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("image-item-page-actions.png"),
+  });
+
+  await page.getByRole("button", { name: "Delete item" }).click();
+  const confirmation = page.getByRole("dialog", { name: "Delete this item?" });
+  await expect(confirmation).toBeInViewport();
+  await confirmation.getByRole("button", { name: "Confirm delete" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("heading", { name: "Checkout flow" })).toHaveCount(0);
 });
 
 test("a large library keeps measured card virtualization and reaches the last card", async ({ page }) => {
@@ -1021,7 +1420,7 @@ test("action controls mirror in RTL and respect reduced motion", async ({ page }
   await expect(actions).toHaveCSS("transition-duration", "0s");
   const cardBox = (await card.boundingBox())!;
   const triggerBox = (await actions.locator("summary").boundingBox())!;
-  expect(triggerBox.x - cardBox.x).toBeCloseTo(12, 0);
+  expect(triggerBox.x - cardBox.x).toBeCloseTo(20, 0);
   await actions.locator("summary").click();
   await expect(card.getByRole("button", { name: "Edit", exact: true })).toBeInViewport();
 });

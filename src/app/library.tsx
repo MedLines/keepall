@@ -107,6 +107,8 @@ import {
 } from "./library-drag";
 import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
 import { isPreviewEnrichPaused } from "./preview-enrich-pause";
+import { imageItemHref } from "./item-page-navigation";
+import type { ImageDetailsDraft } from "./image-item-edit-dialog";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
 
@@ -727,8 +729,16 @@ export function Library() {
     setGalleryError(null);
   }
 
-  function openInspect(id: string) {
-    updateView({ item: id, slide: 0 }, "push");
+  function openInspect(item: Item) {
+    if (item.type === "image") {
+      const returnView = mergeLibraryViewState(viewRef.current, {
+        item: null,
+        slide: 0,
+      });
+      router.push(imageItemHref(item.id, libraryViewHref(pathname, returnView)));
+      return;
+    }
+    updateView({ item: item.id, slide: 0 }, "push");
   }
 
   function setInspectSlide(slide: number) {
@@ -833,7 +843,7 @@ export function Library() {
     }
   }
 
-  async function saveImageEdit(id: string) {
+  async function saveImageEdit(id: string, draft?: ImageDetailsDraft) {
     if (pendingMutation) {
       return;
     }
@@ -842,11 +852,14 @@ export function Library() {
     setEditError(null);
 
     try {
-      await updateImage(id, {
-        title: editImageTitleDraft,
-        caption: editDraft,
-        sourceUrl: editTitleDraft,
-      });
+      await updateImage(
+        id,
+        draft ?? {
+          title: editImageTitleDraft,
+          caption: editDraft,
+          sourceUrl: editTitleDraft,
+        },
+      );
       clearEdit();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch (caught) {
@@ -1394,7 +1407,18 @@ export function Library() {
         item={item}
         inspected={inspectId === item.id}
         layoutMode={browseLayout}
-        onOpenInspect={() => openInspect(item.id)}
+        openHref={
+          item.type === "image"
+            ? imageItemHref(
+                item.id,
+                libraryViewHref(
+                  pathname,
+                  mergeLibraryViewState(view, { item: null, slide: 0 }),
+                ),
+              )
+            : undefined
+        }
+        onOpenInspect={() => openInspect(item)}
         tagNames={resolveItemTags(item, tagsById)}
         tagError={tagErrorItemId === item.id ? tagError : null}
         collections={
@@ -1416,18 +1440,16 @@ export function Library() {
         pendingMutation={pendingMutation}
         editDraft={editDraft}
         editTitleDraft={editTitleDraft}
-        editImageTitleDraft={editImageTitleDraft}
         editError={editError}
         setFirstEditField={(node) => {
           firstEditFieldRef.current = node;
         }}
         onEditDraftChange={setEditDraft}
         onEditTitleChange={setEditTitleDraft}
-        onEditImageTitleChange={setEditImageTitleDraft}
         onEditSaveShortcut={onEditSaveShortcut}
         onSaveNote={() => void saveNoteEdit(item.id)}
         onSaveLink={() => void saveLinkEdit(item.id)}
-        onSaveImage={() => void saveImageEdit(item.id)}
+        onSaveImage={(draft) => void saveImageEdit(item.id, draft)}
         onCancelEdit={() => clearEdit({ restoreFocus: true })}
         onAddTag={(name: string) => void addTagToItem(item.id, name)}
         onAddCollection={(name: string) =>
@@ -1501,6 +1523,8 @@ export function Library() {
           setBackupOpen(false);
           updateView({ type }, "push");
         }}
+        tagFilterActive={browseTagId !== null && browseTagName !== null}
+        onClearTagFilter={() => updateView({ tag: null }, "push")}
         panelOpen={panelOpen}
         onPanelOpenChange={setPanelOpen}
         libraryLoading={loadState === "loading"}
@@ -1615,23 +1639,6 @@ export function Library() {
             </p>
           ) : (
             <>
-              {browseTagId !== null && browseTagName !== null ? (
-                <div
-                  className="mb-3 flex flex-wrap items-center gap-2"
-                  role="status"
-                >
-                  <p className="text-sm text-text-primary">
-                    Tag: <span className="font-medium">{browseTagName}</span>
-                  </p>
-                  <button
-                    className="rounded-md border border-border-edge bg-bg-surface px-3 py-1 text-sm font-medium text-text-primary"
-                    type="button"
-                    onClick={() => updateView({ tag: null }, "push")}
-                  >
-                    Clear tag
-                  </button>
-                </div>
-              ) : null}
               {deleteError ? (
                 <p className="mb-3 text-sm text-text-danger" role="alert">
                   {deleteError}

@@ -12,7 +12,15 @@ import {
   LibraryBulkToolbar,
   type LibraryBulkBarProps,
 } from "./library-bulk-bar";
-import { GridIcon, ListIcon, PlusIcon, SearchIcon, SortAscIcon, SortDescIcon } from "./shell-icons";
+import {
+  CloseIcon,
+  GridIcon,
+  ListIcon,
+  PlusIcon,
+  SearchIcon,
+  SortAscIcon,
+  SortDescIcon,
+} from "./shell-icons";
 import type { LibrarySidebarCounts } from "./library-sidebar-counts";
 import { LibraryTypeFilterMenu } from "./library-type-filter-menu";
 import { ShellPanelIcon } from "./shell-panel-icon";
@@ -32,6 +40,8 @@ type Props = {
   typeFilter: LibraryTypeFilter | null;
   sidebarCounts: LibrarySidebarCounts;
   onTypeFilterChange: (type: LibraryTypeFilter | null) => void;
+  tagFilterActive: boolean;
+  onClearTagFilter: () => void;
   panelOpen: boolean;
   onPanelOpenChange: (open: boolean) => void;
   bulk?: LibraryBulkBarProps;
@@ -41,7 +51,8 @@ type Props = {
 export function LibraryTopBar({
   headingRef, title, itemCount, searchQuery, onSearchChange,
   sort, onSortChange, layout, onLayoutChange, panelOpen, onPanelOpenChange,
-  typeFilter, sidebarCounts, onTypeFilterChange, bulk, libraryLoading = false,
+  typeFilter, sidebarCounts, onTypeFilterChange, tagFilterActive,
+  onClearTagFilter, bulk, libraryLoading = false,
 }: Props) {
   const hasSelection = Boolean(bulk && bulk.count > 0);
 
@@ -94,6 +105,17 @@ export function LibraryTopBar({
           <span className="squircle-panel flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} items`}>
             {libraryLoading ? "…" : itemCount}
           </span>
+          {tagFilterActive ? (
+            <button
+              type="button"
+              className="ui-control flex size-10 shrink-0 items-center justify-center text-text-secondary hover:text-text-primary"
+              aria-label="Clear tag"
+              title="Clear tag filter"
+              onClick={onClearTagFilter}
+            >
+              <CloseIcon className="size-4" />
+            </button>
+          ) : null}
         </div>
         <div className={`${hasSelection ? "block" : "hidden"} row-start-1 min-w-0 sm:col-start-2 sm:row-start-1 sm:block`}>
           {hasSelection && bulk ? (
