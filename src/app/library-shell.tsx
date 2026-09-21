@@ -121,12 +121,18 @@ export function LibraryShell({
 }: Props) {
   const [collectionFilter, setCollectionFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
-  const [collectionsOpen, setCollectionsOpen] = useState(
-    readShellCollectionsOpen,
-  );
-  const [tagsOpen, setTagsOpen] = useState(readShellTagsOpen);
+  const [collectionsOpen, setCollectionsOpen] = useState(true);
+  const [tagsOpen, setTagsOpen] = useState(true);
   const isMobile = useShellMobile();
   const mobileSidebarOpen = isMobile && expanded;
+
+  useLayoutEffect(() => {
+    // Match the server during hydration, then restore browser-only preferences
+    // before paint.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCollectionsOpen(readShellCollectionsOpen());
+    setTagsOpen(readShellTagsOpen());
+  }, []);
 
   const collectionQuery = collectionFilter.trim().toLowerCase();
   const filteredCollections = useMemo(() => {

@@ -2,6 +2,37 @@ import { expect, test } from "@playwright/test";
 
 test.use({ serviceWorkers: "block" });
 
+test("persisted collapsed sections hydrate without replacing the sidebar", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    window.localStorage.setItem("keepall-shell-collections-open", "closed");
+    window.localStorage.setItem("keepall-shell-tags-open", "closed");
+  });
+
+  const hydrationErrors: string[] = [];
+  page.on("console", (message) => {
+    if (/Hydration failed|Minified React error #418|server rendered HTML/i.test(message.text())) {
+      hydrationErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    if (/Hydration failed|Minified React error #418|server rendered HTML/i.test(error.message)) {
+      hydrationErrors.push(error.message);
+    }
+  });
+
+  await page.reload();
+
+  const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+  await expect(
+    sidebar.getByRole("button", { name: "Collections", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    sidebar.getByRole("button", { name: "Tags", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false");
+  expect(hydrationErrors).toEqual([]);
+});
+
 test("collection actions remain inside the same hovered sidebar row", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
