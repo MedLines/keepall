@@ -68,6 +68,7 @@
   --radius-card: 4rem;
   --spacing-card-inset: 0.5rem;
   --corner-shape-panel: squircle;
+  --corner-shape-control: superellipse(1.5);
   --shadow-edge: 0 0 0 1px light-dark(#00000024, #ffffff24);
   --shadow-menu: 0 4px 16px light-dark(#0000000f, #00000040);
   --shadow-panel: 0 3px 12px #00000012;
@@ -157,9 +158,36 @@
   .library-panel, .library-card, .library-card-media, .item-workspace-media {
     corner-shape: var(--corner-shape-panel);
   }
-  .library-card-media-chrome {
-    corner-shape: var(--corner-shape-panel);
+  :where(
+    button:not(.ui-backdrop):not(.control-shape-none),
+    summary,
+    .ui-control,
+    .ui-primary,
+    .ui-menu-item,
+    .control-squircle
+  ),
+  .library-top-bar :is(input, .library-layout-switch, .library-layout-thumb),
+  .library-card-tag-control :is(button, li),
+  #library-sidebar :is(input, a, form, .library-sidebar-interactive) {
+    corner-shape: var(--corner-shape-control);
   }
+  .library-card-media-chrome {
+    corner-shape: var(--corner-shape-control);
+  }
+}
+
+:where(
+  button:not(.ui-backdrop):not(.control-shape-none),
+  summary,
+  .ui-control,
+  .ui-primary,
+  .ui-menu-item,
+  .control-squircle
+),
+.library-top-bar :is(input, .library-layout-switch, .library-layout-thumb),
+.library-card-tag-control :is(button, li),
+#library-sidebar :is(input, a, form, .library-sidebar-interactive) {
+  border-radius: 999px;
 }
 
 .library-panel {
@@ -199,7 +227,7 @@
 
 .library-card-media-chrome {
   border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 1.375rem;
+  border-radius: 999px;
   background: rgb(9 9 11 / 72%);
   color: var(--color-text-on-media);
   -webkit-backdrop-filter: blur(8px);
@@ -234,8 +262,6 @@
   background: var(--color-action-primary);
   color: var(--color-text-on-action);
 }
-
-.library-card input[type="checkbox"] { accent-color: var(--color-action-primary); }
 
 .library-list-row[data-selected="true"] {
   background: var(--color-bg-selected);

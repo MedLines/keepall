@@ -32,7 +32,7 @@ export function ItemTagChips({
         return (
           <li
             key={tag.id}
-            className="inline-flex min-w-0 max-w-full items-center rounded-md bg-bg-raised text-xs text-text-secondary"
+            className="control-squircle inline-flex min-w-0 max-w-full items-center rounded-md bg-bg-raised text-xs text-text-secondary"
           >
             <button
               type="button"

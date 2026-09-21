@@ -55,7 +55,7 @@ export const SHELL_NAV_GUTTER = "px-4";
 
 /** Visual surface shared by composite nav rows and interactive nav items. */
 export const SHELL_NAV_SURFACE =
-  "squircle-panel relative flex items-center rounded-control-md text-text-secondary";
+  "library-sidebar-interactive squircle-panel relative flex items-center rounded-control-md text-text-secondary";
 
 /** Interactive sidebar nav item — icon always; label when expanded. */
 export const SHELL_NAV_ITEM =

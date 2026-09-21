@@ -18,7 +18,7 @@ import {
 import { LibraryItemMedia } from "./library-item-media";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
-import { DeleteIcon, EditIcon, ImagesIcon, LayersIcon, MoreIcon, PinIcon } from "./shell-icons";
+import { DeleteIcon, EditIcon, ImagesIcon, LayersIcon, MoreIcon, PinIcon, SelectionCheckedIcon, SelectionEmptyIcon } from "./shell-icons";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
 import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
@@ -266,7 +266,7 @@ export function LibraryItem({
       ) : null}
       {!isList && item.type === "image" && item.assetIds.length > 1 && !inspected ? (
         <span
-          className="library-card-media-chrome pointer-events-none absolute bottom-3 end-3 z-10 flex min-h-11 items-center gap-1.5 px-3 text-xs font-medium tabular-nums"
+          className="library-card-media-chrome pointer-events-none absolute bottom-2 end-2 z-10 flex min-h-11 items-center gap-1.5 px-3 text-xs font-medium tabular-nums"
           aria-label={`${item.assetIds.length} images`}
         >
           <ImagesIcon className="size-4" />
@@ -280,7 +280,7 @@ export function LibraryItem({
     <details
       ref={actionsRef}
       name="library-card-actions"
-      className={`library-card-actions absolute z-30 ${isList ? "end-0 top-5" : "end-5 top-5"}`}
+      className={`library-card-actions absolute z-30 ${isList ? "end-0 top-5" : "end-4 top-4"}`}
       onKeyDown={(event) => {
         if (event.key === "Escape" && actionsRef.current) {
           event.preventDefault();
@@ -438,7 +438,7 @@ export function LibraryItem({
         className={
           isList
             ? `library-list-select absolute start-1 top-5 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-edge ${editing || pendingDelete ? "hidden" : ""}`
-            : `library-card-media-chrome absolute start-5 top-5 z-20 flex size-11 items-center justify-center ${
+            : `library-card-media-chrome absolute start-4 top-4 z-20 flex size-11 items-center justify-center ${
                 !chromeVisible
                   ? "pointer-events-none opacity-0"
                   : checkboxVisible
@@ -450,12 +450,23 @@ export function LibraryItem({
         <span className="sr-only">Select {title}</span>
         <input
           checked={selected}
-          className="size-4 rounded border-border-edge"
+          className="peer sr-only"
           disabled={mutationBusy}
           type="checkbox"
           onChange={onToggleSelect}
           onClick={(event) => event.stopPropagation()}
         />
+        <span
+          aria-hidden="true"
+          className="flex size-5 items-center justify-center rounded-full peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-border-focus"
+          data-selection-indicator={selected ? "checked" : "empty"}
+        >
+          {selected ? (
+            <SelectionCheckedIcon className="size-5" />
+          ) : (
+            <SelectionEmptyIcon className="size-5" />
+          )}
+        </span>
       </label>
       {isList ? !inlineEditing && !pendingDelete ? (
         openHref ? (

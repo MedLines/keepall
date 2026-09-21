@@ -34,11 +34,11 @@ test("layout switch slides one inset thumb and respects reduced motion", async (
   await expect(thumb).toHaveCount(1);
   expect(await control.boundingBox()).toMatchObject({ width: 88, height: 44 });
   expect(await thumb.boundingBox()).toMatchObject({ width: 42, height: 40 });
-  await expect(control).toHaveCSS("border-radius", "14px");
-  await expect(thumb).toHaveCSS("border-radius", "12px");
-  if (await page.evaluate(() => CSS.supports("corner-shape", "round"))) {
-    await expect(control).toHaveCSS("corner-shape", "round");
-    await expect(thumb).toHaveCSS("corner-shape", "round");
+  await expect(control).toHaveCSS("border-radius", "999px");
+  await expect(thumb).toHaveCSS("border-radius", "999px");
+  if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+    await expect(control).toHaveCSS("corner-shape", "superellipse(1.5)");
+    await expect(thumb).toHaveCSS("corner-shape", "superellipse(1.5)");
   }
   await expect(thumb).toHaveCSS("transition-property", "transform");
   await expect(thumb).toHaveCSS("transition-duration", "0.18s");
@@ -72,10 +72,18 @@ test("shared controls use flat surfaces in both themes", async ({ page }) => {
     for (const name of ["Theme", "Save item", "Collapse", "Filter by type", "Sort library"]) {
       const button = page.getByRole("button", { name, exact: true });
       await expect(button).toHaveCSS("box-shadow", "none");
+      await expect(button).toHaveCSS("border-radius", "999px");
+      if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+        await expect(button).toHaveCSS("corner-shape", "superellipse(1.5)");
+      }
       expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(40);
     }
     const search = page.getByRole("searchbox", { name: "Search", exact: true });
     await expect(search).toHaveCSS("box-shadow", "none");
+    await expect(search).toHaveCSS("border-radius", "999px");
+    if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+      await expect(search).toHaveCSS("corner-shape", "superellipse(1.5)");
+    }
     expect((await search.boundingBox())!.width).toBe(250);
     const folderSearch = page.getByRole("textbox", { name: "Search collections" });
     await expect(folderSearch).toHaveAttribute("placeholder", "Search folders");

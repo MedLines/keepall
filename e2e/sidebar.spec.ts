@@ -82,6 +82,23 @@ test("collection actions remain inside the same hovered sidebar row", async ({ p
     exact: true,
   });
 
+  const sidebarControls = [
+    sidebar.getByRole("button", { name: "All items", exact: true }),
+    sidebar.getByRole("button", { name: "Collections", exact: true }),
+    sidebar.getByRole("textbox", { name: "Search collections" }),
+    collectionRow,
+    collection,
+    collectionActions,
+    tag.locator(".."),
+    tag,
+  ];
+  for (const control of sidebarControls) {
+    await expect(control).toHaveCSS("border-radius", "999px");
+    if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+      await expect(control).toHaveCSS("corner-shape", "superellipse(1.5)");
+    }
+  }
+
   await collection.hover();
   await expect(collectionRow).toHaveCSS("background-color", "rgb(230, 230, 227)");
   await expect(collectionRow).toHaveCSS("transition-duration", "0s");
@@ -96,7 +113,12 @@ test("collection actions remain inside the same hovered sidebar row", async ({ p
   );
 
   await sidebar.getByRole("button", { name: "Typography actions" }).click();
-  await page.getByRole("menuitem", { name: "Delete" }).click();
+  const deleteTag = page.getByRole("menuitem", { name: "Delete" });
+  await expect(deleteTag).toHaveCSS("border-radius", "999px");
+  if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+    await expect(deleteTag).toHaveCSS("corner-shape", "superellipse(1.5)");
+  }
+  await deleteTag.click();
   const tagDialog = page.getByRole("dialog", { name: "Delete tag?" });
   await expect(tagDialog).toContainText("removed from every item");
   await tagDialog.getByRole("button", { name: "Cancel" }).click();

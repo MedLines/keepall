@@ -11,6 +11,7 @@ import {
   Edit02Icon as Edit02, Delete02Icon as Delete02, PinIcon as Pin,
   ArrowLeft01Icon as ArrowLeft01, ArrowRight01Icon as ArrowRight01,
   FullScreenIcon as FullScreen,
+  CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle,
 } from "@hugeicons/core-free-icons";
 
 type IconProps = { className?: string };
@@ -49,6 +50,8 @@ export function PinIcon(props: IconProps) { return <ShellIcon icon={Pin} {...pro
 export function ArrowLeftIcon(props: IconProps) { return <ShellIcon icon={ArrowLeft01} {...props} />; }
 export function ArrowRightIcon(props: IconProps) { return <ShellIcon icon={ArrowRight01} {...props} />; }
 export function FullScreenIcon(props: IconProps) { return <ShellIcon icon={FullScreen} {...props} />; }
+export function SelectionEmptyIcon(props: IconProps) { return <ShellIcon icon={Circle} {...props} />; }
+export function SelectionCheckedIcon(props: IconProps) { return <ShellIcon icon={CheckmarkCircle02} {...props} />; }
 export function LightThemeIcon(props: IconProps) { return <ShellIcon icon={Sun03} {...props} />; }
 export function DarkThemeIcon(props: IconProps) { return <ShellIcon icon={Moon02} {...props} />; }
 

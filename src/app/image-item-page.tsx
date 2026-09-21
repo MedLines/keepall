@@ -592,7 +592,7 @@ function ImageWorkspace({
               <div className="item-workspace-media relative flex h-[min(76dvh,54rem)] min-h-[24rem] items-center justify-center overflow-hidden rounded-card bg-bg-media">
                 <button
                   type="button"
-                  className="group relative flex size-full min-h-0 items-center justify-center overflow-hidden"
+                  className="control-shape-none group relative flex size-full min-h-0 items-center justify-center overflow-hidden"
                   aria-label="View image full screen"
                   onClick={() => onViewerOpenChange(true)}
                 >

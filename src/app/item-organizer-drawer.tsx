@@ -70,7 +70,7 @@ export function ItemOrganizerDrawer({
                 {tags.map((tag) => (
                   <li
                     key={tag.id}
-                    className="flex min-h-10 items-center gap-1 rounded-control bg-bg-raised ps-3 text-sm"
+                    className="control-squircle flex min-h-10 items-center gap-1 rounded-control bg-bg-raised ps-3 text-sm"
                   >
                     <span>{tag.name}</span>
                     <button

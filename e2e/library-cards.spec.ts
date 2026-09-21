@@ -66,11 +66,18 @@ test("tag hover paints one full row with a separate remove highlight", async ({ 
   const card = page.locator(".library-card").first();
   for (const theme of ["light", "dark"]) {
     if (await page.locator("html").getAttribute("data-theme") !== theme) await page.getByRole("button", { name: "Theme", exact: true }).click();
-    await card.getByRole("button", { name: "1 tag" }).click();
+    const trigger = card.getByRole("button", { name: "1 tag" });
+    await trigger.click();
     const tags = card.getByRole("list", { name: "Tags" });
     const row = tags.getByRole("listitem");
     const tag = row.getByRole("button", { name: "minimal", exact: true });
     const remove = row.getByRole("button", { name: "Remove tag minimal" });
+    for (const control of [trigger, row, tag, remove]) {
+      await expect(control).toHaveCSS("border-radius", "999px");
+      if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+        await expect(control).toHaveCSS("corner-shape", "superellipse(1.5)");
+      }
+    }
     await tag.hover();
     await expect(tag).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
     const rowFill = await row.evaluate(el => getComputedStyle(el).backgroundColor);
@@ -215,21 +222,20 @@ test("multi-image cards show a count and align their overlay controls", async ({
   expect(selectBox.height).toBe(44);
   expect(actionsBox.width).toBe(44);
   expect(actionsBox.height).toBe(44);
-  expect(selectBox.x - cardBox.x).toBeCloseTo(20, 0);
-  expect(selectBox.y - cardBox.y).toBeCloseTo(20, 0);
-  expect(cardBox.x + cardBox.width - actionsBox.x - actionsBox.width).toBeCloseTo(20, 0);
-  expect(actionsBox.y - cardBox.y).toBeCloseTo(20, 0);
-  expect(cardBox.x + cardBox.width - countBox.x - countBox.width).toBeCloseTo(20, 0);
+  expect(selectBox.x - cardBox.x).toBeCloseTo(16, 0);
+  expect(selectBox.y - cardBox.y).toBeCloseTo(16, 0);
+  expect(cardBox.x + cardBox.width - actionsBox.x - actionsBox.width).toBeCloseTo(16, 0);
+  expect(actionsBox.y - cardBox.y).toBeCloseTo(16, 0);
+  expect(cardBox.x + cardBox.width - countBox.x - countBox.width).toBeCloseTo(16, 0);
+  expect(cardBox.y + cardBox.height - countBox.y - countBox.height).toBeCloseTo(16, 0);
   expect(titleBox.y - mediaBox.y - mediaBox.height).toBeGreaterThanOrEqual(12);
-  await expect(select).toHaveCSS("border-radius", "22px");
-  await expect(actions).toHaveCSS("border-radius", "22px");
-
+  await expect(select).toHaveCSS("border-radius", "999px");
+  await expect(actions).toHaveCSS("border-radius", "999px");
+  await expect(count).toHaveCSS("border-radius", "999px");
+  await expect(select.locator('[data-selection-indicator="empty"]')).toBeVisible();
   if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
-    for (const control of [select, actions]) {
-      await expect(control).toHaveCSS(
-        "corner-shape",
-        /^(squircle|superellipse\(2\))$/,
-      );
+    for (const control of [select, actions, count]) {
+      await expect(control).toHaveCSS("corner-shape", "superellipse(1.5)");
     }
   }
   await card.screenshot({ path: testInfo.outputPath("multi-image-card.png") });
@@ -1090,6 +1096,20 @@ test("image page shares the rounder card and panel curves", async ({ page }, tes
   await expect(gallery).toHaveCSS("border-width", "8px");
   await expect(imageButton).toHaveCSS("border-radius", "0px");
   await expect(details).toHaveCSS("border-radius", "32px");
+  const itemControls = [
+    page.getByRole("link", { name: "Back to library" }),
+    page.getByRole("button", { name: "Edit details" }),
+    page.getByRole("button", { name: "Organize" }),
+    page.getByRole("button", { name: "Delete item" }),
+    details.getByRole("link", { name: "UI inspiration", exact: true }),
+    details.getByRole("link", { name: "minimal", exact: true }),
+  ];
+  for (const control of itemControls) {
+    await expect(control).toHaveCSS("border-radius", "999px");
+    if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+      await expect(control).toHaveCSS("corner-shape", "superellipse(1.5)");
+    }
+  }
   for (const width of [1707, 390]) {
     await page.setViewportSize({ width, height: 825 });
     const outer = (await gallery.boundingBox())!;
@@ -1273,6 +1293,14 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
 
   await page.getByRole("button", { name: "Edit details" }).click();
   const editDialog = page.getByRole("dialog", { name: "Edit image details" });
+  const editActions = [
+    editDialog.getByRole("button", { name: "Close" }),
+    editDialog.getByRole("button", { name: "Cancel" }),
+    editDialog.getByRole("button", { name: "Save changes" }),
+  ];
+  for (const control of editActions) {
+    await expect(control).toHaveCSS("border-radius", "999px");
+  }
   await editDialog.getByLabel("Title (optional)").fill("Checkout flow");
   await editDialog.getByLabel("Notes").fill("Compare the empty and populated states.");
   await editDialog.getByLabel("Source URL (optional)").fill("https://example.com/checkout");
@@ -1286,6 +1314,17 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
   await page.getByRole("button", { name: "Organize" }).click();
   const organizer = page.getByRole("dialog", { name: "Organize Checkout flow" });
   await expect(organizer).toBeInViewport();
+  const organizerTag = organizer.getByRole("list", { name: "Current tags" }).getByRole("listitem");
+  for (const control of [
+    organizerTag,
+    organizer.getByRole("button", { name: "Remove tag minimal" }),
+    organizer.getByRole("button", { name: "Done" }),
+  ]) {
+    await expect(control).toHaveCSS("border-radius", "999px");
+    if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+      await expect(control).toHaveCSS("corner-shape", "superellipse(1.5)");
+    }
+  }
   await page.screenshot({ path: testInfo.outputPath("image-item-page-organizer.png") });
   await organizer.getByRole("button", { name: "Remove tag minimal" }).click();
   await expect(organizer.getByText("No tags added.")).toBeVisible();
@@ -1297,7 +1336,9 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
     name: "Remove this image?",
   });
   await expect(removeImageDialog).toBeInViewport();
-  await removeImageDialog.getByRole("button", { name: "Remove image" }).click();
+  const removeImage = removeImageDialog.getByRole("button", { name: "Remove image" });
+  await expect(removeImage).toHaveCSS("border-radius", "999px");
+  await removeImage.click();
   await expect(removeImageDialog).toBeHidden();
   await expect(page.getByRole("button", { name: "Remove current image" })).toHaveCount(0);
   await page.screenshot({
@@ -1307,7 +1348,9 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
   await page.getByRole("button", { name: "Delete item" }).click();
   const confirmation = page.getByRole("dialog", { name: "Delete this item?" });
   await expect(confirmation).toBeInViewport();
-  await confirmation.getByRole("button", { name: "Confirm delete" }).click();
+  const confirmDelete = confirmation.getByRole("button", { name: "Confirm delete" });
+  await expect(confirmDelete).toHaveCSS("border-radius", "999px");
+  await confirmDelete.click();
   await expect(page).toHaveURL("/");
   await expect(page.getByRole("heading", { name: "Checkout flow" })).toHaveCount(0);
 });

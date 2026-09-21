@@ -57,7 +57,7 @@ export function LibraryTopBar({
   const hasSelection = Boolean(bulk && bulk.count > 0);
 
   return (
-    <header className="relative z-40 flex shrink-0 flex-col gap-6 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
+    <header className="library-top-bar relative z-40 flex shrink-0 flex-col gap-6 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3 sm:flex-nowrap">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button

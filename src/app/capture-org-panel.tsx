@@ -22,7 +22,7 @@ type Props = {
 };
 
 const PICK_CHIP =
-  "squircle-panel inline-flex min-h-9 shrink-0 items-center gap-1 rounded-control border px-2 py-1 text-xs disabled:opacity-60";
+  "control-squircle squircle-panel inline-flex min-h-9 shrink-0 items-center gap-1 rounded-control border px-2 py-1 text-xs disabled:opacity-60";
 
 const PICK_CHIP_OUTLINE =
   "border-border-control bg-bg-control text-text-secondary hover:bg-bg-raised hover:text-text-primary";
