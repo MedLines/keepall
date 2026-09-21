@@ -16,9 +16,7 @@ import type { Collection } from "@/domain/collection";
 import type { LibraryTypeFilter } from "@/domain/library-view";
 import type { Tag } from "@/domain/tag";
 import type { LibrarySidebarCounts } from "./library-sidebar-counts";
-import { BackupPanel } from "./backup-panel";
 import {
-  BackupIcon,
   ChevronDownIcon,
   CollectionIcon,
   HashIcon,
@@ -28,6 +26,7 @@ import {
   MoreIcon,
   PinIcon,
   SearchIcon,
+  SettingsIcon,
 } from "./shell-icons";
 import {
   readShellCollectionsOpen,
@@ -59,8 +58,6 @@ type SidebarRailAction = {
 type Props = {
   panelOpen: boolean;
   onPanelOpenChange: (open: boolean) => void;
-  backupOpen: boolean;
-  onBackupOpenChange: (open: boolean) => void;
   browseCollectionId: string | null;
   browseUnsorted: boolean;
   browseType: LibraryTypeFilter | null;
@@ -91,8 +88,6 @@ type Props = {
 export function LibraryShell({
   panelOpen: expanded,
   onPanelOpenChange,
-  backupOpen,
-  onBackupOpenChange,
   browseCollectionId,
   browseUnsorted,
   browseType,
@@ -171,17 +166,12 @@ export function LibraryShell({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [expanded, isMobile, onPanelOpenChange]);
 
-  function leaveBackup() {
-    onBackupOpenChange(false);
-  }
-
   const allItemsActive =
-    !backupOpen &&
     browseCollectionId === null &&
     !browseUnsorted &&
     browseType === null;
 
-  const unsortedActive = !backupOpen && browseUnsorted;
+  const unsortedActive = browseUnsorted;
 
   const collectionsCollapsedLabel =
     collections.find((collection) => collection.id === browseCollectionId)
@@ -198,7 +188,6 @@ export function LibraryShell({
         count={libraryLoading ? undefined : counts.all}
         icon={<LibraryIcon className="size-[18px] shrink-0 text-text-secondary" />}
         onClick={() => {
-          leaveBackup();
           onGoAll();
           closeOnMobile();
         }}
@@ -210,7 +199,6 @@ export function LibraryShell({
         count={libraryLoading ? undefined : counts.unsorted}
         icon={<InboxIcon className="size-[18px] shrink-0 text-text-secondary" />}
         onClick={() => {
-          leaveBackup();
           onGoUnsorted();
           closeOnMobile();
         }}
@@ -224,15 +212,9 @@ export function LibraryShell({
       <SidebarBrand
         expanded={contentExpanded}
         mobileSidebarOpen={mobileSidebarOpen}
-        onHome={leaveBackup}
         onClose={() => onPanelOpenChange(false)}
       />
-      {backupOpen && expanded ? (
-        <div className="scroll-fade flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4">
-          <BackupPanel variant="sidebar" onClose={leaveBackup} />
-        </div>
-      ) : (
-        <nav
+      <nav
           data-sidebar-nav
           aria-label="Sidebar navigation"
           className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-[18px] ${contentExpanded ? SHELL_NAV_GUTTER : "px-2"}`}
@@ -268,7 +250,6 @@ export function LibraryShell({
                   mutationBusy={mutationBusy}
                   libraryLoading={libraryLoading}
                   onGoCollection={(id) => {
-                    leaveBackup();
                     onGoCollection(id);
                     closeOnMobile();
                   }}
@@ -300,7 +281,6 @@ export function LibraryShell({
                   counts={counts.byTagId}
                   libraryLoading={libraryLoading}
                   onGoTag={(id) => {
-                    leaveBackup();
                     onGoTag(id);
                     closeOnMobile();
                   }}
@@ -340,23 +320,15 @@ export function LibraryShell({
             )}
           </div>
 
-          <ShellNavItem
+          <ShellNavLink
             expanded={contentExpanded}
-            active={backupOpen}
-            label="Backup & restore"
+            label="Settings"
+            href="/settings"
             icon={
-              <BackupIcon className="size-[18px] shrink-0 text-text-secondary" />
+              <SettingsIcon className="size-[18px] shrink-0 text-text-secondary" />
             }
-            onClick={() => {
-              const next = !backupOpen || !expanded;
-              onBackupOpenChange(next);
-              if (next) {
-                onPanelOpenChange(true);
-              }
-            }}
           />
         </nav>
-      )}
     </>
   );
 
@@ -403,10 +375,9 @@ export function LibraryShell({
   );
 }
 
-function SidebarBrand({ expanded, mobileSidebarOpen, onHome, onClose }: {
+function SidebarBrand({ expanded, mobileSidebarOpen, onClose }: {
   expanded: boolean;
   mobileSidebarOpen: boolean;
-  onHome: () => void;
   onClose: () => void;
 }) {
   return (
@@ -416,7 +387,6 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onHome, onClose }: {
         aria-label="Keepall home"
         data-sidebar-anchor="logo"
         className={`flex h-10 min-w-0 items-center gap-2.5 rounded-control text-text-primary hover:bg-bg-raised ${expanded ? "flex-1 px-3" : "w-10 justify-center"}`}
-        onClick={onHome}
       >
         <span data-sidebar-icon className="flex shrink-0 items-center justify-center"><LogoIcon className="size-[22px]" /></span>
         {expanded ? <span data-sidebar-copy className="shrink-0 text-[23px] font-semibold leading-7">keepall</span> : null}
@@ -427,6 +397,32 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onHome, onClose }: {
         </button>
       ) : null}
     </div>
+  );
+}
+
+function ShellNavLink({ expanded, label, href, icon }: {
+  expanded: boolean;
+  label: string;
+  href: string;
+  icon: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_IDLE} ${
+        expanded
+          ? "min-h-10 w-full gap-2.5 px-3 py-2 text-left text-sm"
+          : "mx-auto size-10 justify-center px-0"
+      }`}
+      aria-label={label}
+      data-sidebar-anchor={label}
+      title={!expanded ? label : undefined}
+    >
+      <span data-sidebar-icon className="flex size-[18px] shrink-0 items-center justify-center">
+        {icon}
+      </span>
+      {expanded ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
+    </Link>
   );
 }
 

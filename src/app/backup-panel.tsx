@@ -79,6 +79,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     useState<BookmarksHtmlImportSummary | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackSection, setFeedbackSection] =
+    useState<"backup" | "import">("backup");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -121,6 +123,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   }, [pendingImageFiles]);
 
   async function onExport() {
+    setFeedbackSection("backup");
     setBusy(true);
     setError(null);
     setStatus(null);
@@ -162,6 +165,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     if (!file) {
       return;
     }
+    setFeedbackSection("backup");
 
     setBusy(true);
     setError(null);
@@ -196,6 +200,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     if (!file) {
       return;
     }
+    setFeedbackSection("import");
 
     setBusy(true);
     setError(null);
@@ -310,6 +315,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     if (!fileList || fileList.length === 0) {
       return;
     }
+    setFeedbackSection("import");
 
     setBusy(true);
     setError(null);
@@ -894,14 +900,73 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   }
 
   return (
-    <section className="mt-10 border-t border-border-edge pt-6" aria-labelledby="backup-heading">
-      {heading}
-      {description}
-      {actions}
-      {feedback}
+    <>
+      <section
+        className="library-panel border border-border-control bg-bg-surface p-5 sm:p-7"
+        aria-labelledby="backup-heading"
+      >
+        {heading}
+        <p className="mt-1 text-sm leading-6 text-text-secondary">
+          Download a <code>.keepall</code> recovery copy, or restore one into
+          this browser.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            className={buttonClass}
+            type="button"
+            disabled={busy}
+            onClick={() => void onExport()}
+          >
+            Export backup
+          </button>
+          <button
+            className={buttonClass}
+            type="button"
+            disabled={busy}
+            onClick={onPickImport}
+          >
+            Import backup
+          </button>
+          {fileInput}
+        </div>
+        {feedbackSection === "backup" ? feedback : null}
+      </section>
+      <section
+        className="library-panel border border-border-control bg-bg-surface p-5 sm:p-7"
+        aria-labelledby="import-heading"
+      >
+        <h2 id="import-heading" className="text-lg font-semibold text-text-primary">
+          Import
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-text-secondary">
+          Add browser bookmarks or an image folder to your existing library.
+          Images are limited to 3 MB per file.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            className={buttonClass}
+            type="button"
+            disabled={busy}
+            onClick={onPickBookmarksImport}
+          >
+            Import bookmarks
+          </button>
+          <button
+            className={buttonClass}
+            type="button"
+            disabled={busy}
+            onClick={onPickImageFolder}
+          >
+            Import images
+          </button>
+          {bookmarksFileInput}
+          {imageFolderInput}
+        </div>
+        {feedbackSection === "import" ? feedback : null}
+      </section>
       {choiceDialog}
       {bookmarksDialog}
       {imageFolderDialog}
-    </section>
+    </>
   );
 }

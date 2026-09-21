@@ -8,5 +8,9 @@ test("renders the Keepall home link and library shell", async () => {
     "href",
     "/",
   );
+  expect(await screen.findByRole("link", { name: "Settings" })).toHaveAttribute(
+    "href",
+    "/settings",
+  );
   expect(await screen.findByText("No items yet.")).toBeInTheDocument();
 });

@@ -191,15 +191,15 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
   await expect.poll(() => tagsScroll.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
   expect(await sidebar.evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
 
-  const backup = sidebar.getByRole("button", { name: "Backup & restore" });
-  const backupY = (await backup.boundingBox())!.y;
+  const settings = sidebar.getByRole("link", { name: "Settings" });
+  const settingsY = (await settings.boundingBox())!.y;
   const tagHeight = await tagsScroll.evaluate(element => element.clientHeight);
   await collectionsScroll.evaluate(element => { element.scrollTop = element.scrollHeight; });
   await expect(sidebar.getByRole("button", { name: "Collection 36", exact: true })).toBeVisible();
   expect(await tagsScroll.evaluate(element => element.scrollTop)).toBe(0);
   await expect(sidebar.getByRole("textbox", { name: "Search collections" })).toBeVisible();
   await expect(sidebar.getByRole("textbox", { name: "Search tags" })).toBeVisible();
-  expect((await backup.boundingBox())!.y).toBe(backupY);
+  expect((await settings.boundingBox())!.y).toBe(settingsY);
 
   const scrollTopBeforeToggle = await collectionsScroll.evaluate(element => element.scrollTop);
   const sectionIconsBeforeToggle = await sidebar.locator("[data-sidebar-anchor] [data-sidebar-icon] svg").evaluateAll(
@@ -279,7 +279,7 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
   await sidebar.getByRole("button", { name: "Collections", exact: true }).click();
   await expect(sectionScrolls).toHaveCount(1);
   await expect.poll(() => sectionScrolls.first().evaluate(element => element.clientHeight)).toBeGreaterThan(tagHeight);
-  await expect(backup).toBeVisible();
+  await expect(settings).toBeVisible();
 });
 
 test("pinned collections persist, reorder, and lead compact capture", async ({ page }) => {

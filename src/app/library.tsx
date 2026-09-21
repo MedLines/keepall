@@ -257,7 +257,6 @@ export function Library() {
   const [dragError, setDragError] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
-  const [backupOpen, setBackupOpen] = useState(false);
   const [previewEnrichProgress, setPreviewEnrichProgress] =
     useState<PreviewEnrichProgress>(null);
 
@@ -1519,10 +1518,7 @@ export function Library() {
         onLayoutChange={(layout) => updateView({ layout }, "replace")}
         typeFilter={browseType}
         sidebarCounts={sidebarCounts}
-        onTypeFilterChange={(type) => {
-          setBackupOpen(false);
-          updateView({ type }, "push");
-        }}
+        onTypeFilterChange={(type) => updateView({ type }, "push")}
         tagFilterActive={browseTagId !== null && browseTagName !== null}
         onClearTagFilter={() => updateView({ tag: null }, "push")}
         panelOpen={panelOpen}
@@ -1575,13 +1571,6 @@ export function Library() {
         <LibraryShell
           panelOpen={panelOpen}
           onPanelOpenChange={setPanelOpen}
-          backupOpen={backupOpen}
-          onBackupOpenChange={(open) => {
-            setBackupOpen(open);
-            if (open) {
-              setPanelOpen(true);
-            }
-          }}
           browseCollectionId={browseCollectionId}
           browseUnsorted={browseUnsorted}
           browseType={browseType}
