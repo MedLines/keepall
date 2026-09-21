@@ -45,7 +45,7 @@ export function ConfirmDialog({
         <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[80]" />
         <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
           <Dialog.Popup
-            className="ui-popover w-full max-w-[28rem] overflow-hidden p-0 outline-none"
+            className="confirm-dialog-popup ui-popover w-full max-w-[28rem] overflow-hidden p-0 outline-none"
             initialFocus={confirmRef}
           >
             <header className="flex items-start gap-4 border-b border-border-control px-6 py-5">

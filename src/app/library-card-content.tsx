@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { itemListTitle, type Item } from "@/domain/item";
 import { imageCardSecondary, linkCardHost } from "@/domain/card-display";
 import { CloseIcon, CollectionIcon, HashIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
@@ -11,6 +12,45 @@ function LinkSource({ host }: { host: string }) {
       <LinkIcon className="size-4" />
       <span className="truncate">{host}</span>
     </div>
+  );
+}
+
+function TagPopover({ id, tags, pendingRemoveId, onBrowseTag, onRemoveTag, onPendingRemoveChange }: {
+  id: string;
+  tags: { id: string; name: string }[];
+  pendingRemoveId: string | null;
+  onBrowseTag: (id: string) => void;
+  onRemoveTag: (id: string) => void;
+  onPendingRemoveChange: (id: string | null) => void;
+}) {
+  const isPresent = useIsPresent();
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      id={id}
+      className="ui-popover absolute right-0 top-[calc(100%+8px)] z-40 w-64 max-w-[calc(100vw-6rem)]"
+      style={{ transformOrigin: "top right", pointerEvents: isPresent ? "auto" : "none" }}
+      inert={!isPresent}
+      aria-hidden={!isPresent}
+      initial={reduceMotion ? false : { opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={reduceMotion ? undefined : { opacity: 0, scale: 0.95, transition: { duration: 0.1, ease: [0.2, 0, 0, 1] } }}
+      transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.2, 0, 0, 1] }}
+    >
+      <ul aria-label="Tags" className="flex min-w-0 flex-col gap-1">
+        {tags.map(tag => {
+          const confirming = pendingRemoveId === tag.id;
+          return <li key={tag.id} className="squircle-panel flex min-w-0 items-center rounded-control-sm hover:bg-bg-active focus-within:bg-bg-active">
+            <button type="button" title={tag.name} className="ui-menu-item min-w-0 flex-1 truncate text-start text-sm text-text-primary hover:bg-transparent" onClick={() => onBrowseTag(tag.id)}>{tag.name}</button>
+            {confirming ? <button type="button" aria-label={`Confirm remove tag ${tag.name}`} className="min-h-8 shrink-0 rounded-md bg-bg-danger px-2 text-xs font-medium text-text-danger transition-transform duration-150 ease-out active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100" onClick={() => {
+              onRemoveTag(tag.id);
+              onPendingRemoveChange(null);
+            }}>Remove</button> : <button type="button" title={`Remove ${tag.name}`} aria-label={`Remove tag ${tag.name}`} className="squircle-panel flex size-10 shrink-0 items-center justify-center rounded-control-sm text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => onPendingRemoveChange(tag.id)}><CloseIcon /></button>}
+          </li>;
+        })}
+      </ul>
+    </motion.div>
   );
 }
 
@@ -102,29 +142,26 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
             </button>
           </li>)}
         </ul> : <span />}
-        {tags.length ? <div ref={rootRef} className="library-card-tag-control relative shrink-0" data-open={expanded || undefined}>
+        {tags.length ? <div ref={rootRef} className="library-card-tag-control relative shrink-0">
           <button ref={triggerRef} type="button" aria-expanded={expanded} aria-controls={id} className="squircle-panel flex min-h-8 items-center gap-1.5 rounded-control bg-bg-raised px-2 text-text-secondary hover:text-text-primary active:scale-[0.96] motion-reduce:active:scale-100" onClick={() => {
             setExpanded(!expanded);
             setPendingRemoveId(null);
           }}><HashIcon className="size-3.5" />{tags.length} {tags.length === 1 ? "tag" : "tags"}</button>
-          {expanded ? <div id={id} className="ui-popover absolute right-0 top-[calc(100%+8px)] z-40 w-64 max-w-[calc(100vw-6rem)]">
-            <ul aria-label="Tags" className="flex min-w-0 flex-col gap-1">
-              {tags.map(tag => {
-                const confirming = pendingRemoveId === tag.id;
-                return <li key={tag.id} className="squircle-panel flex min-w-0 items-center rounded-control-sm hover:bg-bg-active focus-within:bg-bg-active">
-                  <button type="button" title={tag.name} className="ui-menu-item min-w-0 flex-1 truncate text-start text-sm text-text-primary hover:bg-transparent" onClick={() => {
-                    setExpanded(false);
-                    setPendingRemoveId(null);
-                    onBrowseTag(tag.id);
-                  }}>{tag.name}</button>
-                  {confirming ? <button type="button" aria-label={`Confirm remove tag ${tag.name}`} className="min-h-8 shrink-0 rounded-md bg-bg-danger px-2 text-xs font-medium text-text-danger transition-transform duration-150 ease-out active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100" onClick={() => {
-                    onRemoveTag(tag.id);
-                    setPendingRemoveId(null);
-                  }}>Remove</button> : <button type="button" title={`Remove ${tag.name}`} aria-label={`Remove tag ${tag.name}`} className="squircle-panel flex size-10 shrink-0 items-center justify-center rounded-control-sm text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => setPendingRemoveId(tag.id)}><CloseIcon /></button>}
-                </li>;
-              })}
-            </ul>
-          </div> : null}
+          <AnimatePresence>
+            {expanded ? <TagPopover
+              key="tags"
+              id={id}
+              tags={tags}
+              pendingRemoveId={pendingRemoveId}
+              onBrowseTag={(tagId) => {
+                setExpanded(false);
+                setPendingRemoveId(null);
+                onBrowseTag(tagId);
+              }}
+              onRemoveTag={onRemoveTag}
+              onPendingRemoveChange={setPendingRemoveId}
+            /> : null}
+          </AnimatePresence>
         </div> : null}
       </div>
     </div>
