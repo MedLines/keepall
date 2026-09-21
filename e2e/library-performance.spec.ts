@@ -235,7 +235,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
       }
       for (const action of ["Collapse", "Expand"]) {
         const samples = sidebar.evaluate(async (element) => {
-          const icons = Array.from(element.querySelectorAll<SVGElement>("[data-sidebar-anchor] [data-sidebar-icon] svg"));
+          const icons = Array.from(element.querySelectorAll<HTMLElement>("[data-sidebar-anchor] [data-sidebar-icon] :is(svg, img)"));
           const bounds = icons.map((icon) => icon.getBoundingClientRect());
           const sidebarX = element.getBoundingClientRect().x;
           let maxShift = 0;

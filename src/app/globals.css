@@ -305,10 +305,12 @@
   gap: 8px;
   padding-inline: 0 8px;
 }
+.library-sidebar-panel [data-sidebar-anchor="logo"] { gap: 0; }
 .library-sidebar-panel [data-sidebar-icon] {
   width: 40px;
   flex-shrink: 0;
 }
+
 .library-sidebar-panel[data-state="closed"] [data-sidebar-anchor] {
   width: 40px;
   flex: none;
@@ -321,6 +323,23 @@
 @media (prefers-reduced-motion: reduce) {
   .library-sidebar-panel,
   .library-sidebar-panel[data-state="open"] { transition: none; }
+}
+
+.keepall-logo-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.keepall-logo-link:is(:hover, :focus-visible) .keepall-logo-top { transform: translateY(-3px); }
+.keepall-logo-link:is(:hover, :focus-visible) .keepall-logo-bottom { transform: translateY(3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .keepall-logo-layer { transition: none; }
+  .keepall-logo-link:is(:hover, :focus-visible) .keepall-logo-layer { transform: none; }
 }
 
 .ui-scrollbar,

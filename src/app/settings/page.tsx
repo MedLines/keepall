@@ -16,10 +16,10 @@ export default function SettingsPage() {
           <Link
             href="/"
             aria-label="Keepall home"
-            className="flex min-h-11 items-center gap-2.5 rounded-control-lg px-2 text-text-primary hover:bg-bg-raised"
+            className="keepall-logo-link flex min-h-11 items-center gap-0 rounded-control-lg px-2 text-text-primary"
           >
-            <LogoIcon className="size-5" />
-            <span className="text-lg font-semibold">keepall</span>
+            <LogoIcon className="size-8" />
+            <span className="text-lg font-medium">keepall</span>
           </Link>
         </header>
 

@@ -386,13 +386,13 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onClose }: {
         href="/"
         aria-label="Keepall home"
         data-sidebar-anchor="logo"
-        className={`flex h-10 min-w-0 items-center gap-2.5 rounded-control text-text-primary hover:bg-bg-raised ${expanded ? "flex-1 px-3" : "w-10 justify-center"}`}
+        className={`keepall-logo-link flex h-10 min-w-0 items-center gap-0 rounded-control text-text-primary ${expanded ? "w-fit px-3" : "w-10 justify-center"}`}
       >
-        <span data-sidebar-icon className="flex shrink-0 items-center justify-center"><LogoIcon className="size-[22px]" /></span>
-        {expanded ? <span data-sidebar-copy className="shrink-0 text-[23px] font-semibold leading-7">keepall</span> : null}
+        <span data-sidebar-icon className="flex shrink-0 items-center justify-center"><LogoIcon className="size-9" /></span>
+        {expanded ? <span data-sidebar-copy className="shrink-0 text-xl font-medium leading-7">keepall</span> : null}
       </Link>
       {mobileSidebarOpen ? (
-        <button type="button" aria-label="Close navigation" title="Close sidebar" className="flex size-8 shrink-0 items-center justify-center rounded-control hover:bg-bg-raised" onClick={onClose}>
+        <button type="button" aria-label="Close navigation" title="Close sidebar" className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-control hover:bg-bg-raised" onClick={onClose}>
           <ShellPanelIcon open />
         </button>
       ) : null}

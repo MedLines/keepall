@@ -1,6 +1,6 @@
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
-  Add01Icon as Add01, AllBookmarkIcon as AllBookmark, ArrowDown01Icon as ArrowDown01, Bookmark01Icon as Bookmark01,
+  Add01Icon as Add01, AllBookmarkIcon as AllBookmark, ArrowDown01Icon as ArrowDown01,
   Cancel01Icon as Cancel01, Archive01Icon as Archive01,
   Folder01Icon as Folder01, GridViewIcon as GridView,
   Image01Icon as Image01, ImagesIcon as Images, InboxIcon as Inbox, Layers01Icon as Layers01,
@@ -22,7 +22,15 @@ function ShellIcon({ icon, className = "" }: IconProps & { icon: IconSvgElement 
 }
 
 export function LogoIcon({ className = "" }: IconProps) {
-  return <ShellIcon icon={Bookmark01} className={className} />;
+  return (
+    <span className={`relative block shrink-0 ${className}`} aria-hidden="true">
+      {/* eslint-disable @next/next/no-img-element -- transparent SVG layers keep the brand mark animated */}
+      <img src="/icons/keepall-bottom.svg" alt="" className="keepall-logo-layer keepall-logo-bottom" draggable={false} />
+      <img src="/icons/keepall-middle.svg" alt="" className="keepall-logo-layer" draggable={false} />
+      <img src="/icons/keepall-top.svg" alt="" className="keepall-logo-layer keepall-logo-top" draggable={false} />
+      {/* eslint-enable @next/next/no-img-element */}
+    </span>
+  );
 }
 
 export function LibraryIcon(props: IconProps) { return <ShellIcon icon={AllBookmark} {...props} />; }
