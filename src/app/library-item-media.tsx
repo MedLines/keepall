@@ -95,17 +95,19 @@ function imageClassName(
   compact: boolean,
   className: string,
 ) {
-  if (variant === "grid") return `block h-auto w-full ${className}`;
+  if (variant === "grid") {
+    return `media-outline media-squircle-inset block h-auto w-full ${className}`;
+  }
   if (variant === "viewer") {
-    return `mx-auto block h-auto w-auto max-w-full ${className}`;
+    return `media-outline media-squircle mx-auto block h-auto w-auto max-w-full ${className}`;
   }
   if (variant === "inspect") {
-    return `mx-auto max-h-[min(78vh,56rem)] w-full object-contain ${className}`;
+    return `media-outline media-squircle-inset mx-auto max-h-[min(78vh,56rem)] w-full object-contain ${className}`;
   }
   if (compact) {
-    return `size-full rounded-[inherit] object-cover outline outline-1 -outline-offset-1 outline-border-media ${className}`;
+    return `media-outline size-full rounded-[inherit] object-cover ${className}`;
   }
-  return `aspect-[16/10] h-full w-full object-cover outline outline-1 -outline-offset-1 outline-border-media ${className}`;
+  return `media-outline aspect-[16/10] h-full w-full object-cover ${className}`;
 }
 
 function fallbackClassName(

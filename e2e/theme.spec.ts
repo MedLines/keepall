@@ -78,6 +78,9 @@ test("shared controls use flat surfaces in both themes", async ({ page }) => {
       }
       expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(40);
     }
+    const saveItem = page.getByRole("button", { name: "Save item", exact: true });
+    await expect(saveItem).toHaveCSS("padding-left", "12px");
+    await expect(saveItem).toHaveCSS("padding-right", "16px");
     const search = page.getByRole("searchbox", { name: "Search", exact: true });
     await expect(search).toHaveCSS("box-shadow", "none");
     await expect(search).toHaveCSS("border-radius", "999px");

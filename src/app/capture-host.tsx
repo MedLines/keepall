@@ -653,7 +653,7 @@ export function CaptureHost() {
                   {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
                   <img
                     alt=""
-                    className="size-full object-cover"
+                    className="media-outline size-full object-cover"
                     src={draft.previewUrl}
                   />
                 </div>

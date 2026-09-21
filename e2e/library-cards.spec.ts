@@ -1085,12 +1085,30 @@ for (const width of [320, 768, 1024, 1440]) {
 
 test("image page shares the rounder card and panel curves", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1707, height: 825 });
+  const libraryImage = page.locator(".library-card-media img").first();
+  for (const theme of ["light", "dark"]) {
+    const toggle = page.getByRole("button", { name: "Theme", exact: true });
+    if ((await toggle.getAttribute("aria-pressed")) !== String(theme === "dark")) await toggle.click();
+    await expect(libraryImage).toHaveCSS(
+      "outline-color",
+      theme === "light" ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)",
+    );
+  }
+  await expect(libraryImage).toHaveCSS("border-radius", "56px");
+  if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+    await expect(libraryImage).toHaveCSS("corner-shape", /^(squircle|superellipse\(2\))$/);
+  }
   await page.getByRole("link", { name: "Open Customer support", exact: true }).click();
   const gallery = page.locator(".item-workspace-media");
   const imageButton = page.getByRole("button", { name: "View image full screen" });
   const details = page.getByRole("complementary", { name: "Image details" });
   await expect(gallery.locator("img")).toBeVisible();
   await gallery.locator("img").evaluate(img => (img as HTMLImageElement).decode());
+  await expect(gallery.locator("img")).toHaveCSS("outline-style", "solid");
+  await expect(gallery.locator("img")).toHaveCSS("outline-width", "1px");
+  await expect(gallery.locator("img")).toHaveCSS("outline-offset", "-1px");
+  await expect(gallery.locator("img")).toHaveCSS("border-radius", "56px");
+  await expect(gallery).not.toHaveCSS("box-shadow", "none");
   await page.screenshot({ path: testInfo.outputPath("image-page-desktop.png") });
   await expect(gallery).toHaveCSS("border-radius", "64px");
   await expect(gallery).toHaveCSS("border-width", "8px");
@@ -1121,6 +1139,7 @@ test("image page shares the rounder card and panel curves", async ({ page }, tes
     await page.screenshot({ path: testInfo.outputPath(`image-page-${width}.png`) });
   }
   if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+    await expect(gallery.locator("img")).toHaveCSS("corner-shape", /^(squircle|superellipse\(2\))$/);
     for (const surface of [gallery, details]) {
       await expect(surface).toHaveCSS("corner-shape", /^(squircle|superellipse\(2\))$/);
     }
@@ -1151,8 +1170,15 @@ test("image page returns to a card with the same clipped media frame", async ({ 
     "overflow-y",
     "auto",
   );
+  const viewerImage = viewer.locator("img");
+  await expect(viewerImage).toHaveCSS("outline-width", "1px");
+  await expect(viewerImage).toHaveCSS("outline-offset", "-1px");
+  await expect(viewerImage).toHaveCSS("border-radius", "64px");
+  if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
+    await expect(viewerImage).toHaveCSS("corner-shape", /^(squircle|superellipse\(2\))$/);
+  }
   expect(
-    await viewer.locator("img").evaluate((image) => getComputedStyle(image).maxHeight),
+    await viewerImage.evaluate((image) => getComputedStyle(image).maxHeight),
   ).toBe("none");
   await page.screenshot({ path: testInfo.outputPath("focused-image-viewer.png") });
   await page.keyboard.press("Escape");

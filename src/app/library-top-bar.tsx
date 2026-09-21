@@ -88,7 +88,7 @@ export function LibraryTopBar({
           <ThemeControl compact />
           <button
             type="button"
-            className="ui-control ui-primary inline-flex h-11 shrink-0 items-center gap-2 rounded-control-lg px-4 text-sm font-medium"
+            className="ui-control ui-primary inline-flex h-11 shrink-0 items-center gap-2 rounded-control-lg ps-3 pe-4 text-sm font-medium"
             onClick={() => openCaptureDialog()}
           >
             <PlusIcon />
