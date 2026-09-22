@@ -147,6 +147,15 @@ describe("items persistence", () => {
     expect(await listItems()).toEqual([updated]);
   });
 
+  test("keeps a personal link note separate from fetched preview metadata", async () => {
+    const link = await createLink({ url: "https://example.com", noteContent: "## Mine", noteFormat: "markdown" });
+    const withPreview = await saveLinkPreviewResult(link.id, { status: "ready", title: "Site title", description: "Website copy", imageUrl: "" });
+    expect(withPreview.noteContent).toBe("## Mine");
+    const edited = await updateLink(link.id, { url: link.url, noteContent: "## Revised", noteFormat: "markdown" });
+    expect(edited.previewDescription).toBe("Website copy");
+    expect((await listItems())[0]).toMatchObject({ noteContent: "## Revised", noteFormat: "markdown", previewDescription: "Website copy" });
+  });
+
   test("updateLink does not write javascript URLs", async () => {
     const created = await createLink({ url: "https://example.com" });
     await expect(
@@ -248,6 +257,13 @@ describe("items persistence", () => {
     expect(updated.caption).toBe("new");
     expect(updated.sourceUrl).toBe("https://example.com");
     expect(updated.assetIds).toEqual(image.assetIds);
+  });
+
+  test("stores the Markdown choice for an image caption", async () => {
+    const image = await createImage({ assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }], caption: "## Study", captionFormat: "markdown" });
+    expect((await listItems())[0]).toMatchObject({ id: image.id, caption: "## Study", captionFormat: "markdown" });
+    const plain = await updateImage(image.id, { captionFormat: "plain" });
+    expect(plain.captionFormat).toBeUndefined();
   });
 
   test("appendImageAssetToItem adds a second asset at the end", async () => {

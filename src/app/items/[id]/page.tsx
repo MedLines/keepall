@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { ImageItemPage } from "../../image-item-page";
+import { ItemPageContent } from "../../item-page-content";
 import { safeLibraryReturnHref } from "../../item-page-navigation";
 
 export default function ItemPage(props: PageProps<"/items/[id]">) {
   return (
-    <Suspense fallback={<div className="grid min-h-dvh place-items-center bg-bg-shell text-sm text-text-secondary">Loading image…</div>}>
+    <Suspense fallback={<div className="grid min-h-dvh place-items-center bg-bg-shell text-sm text-text-secondary">Loading item…</div>}>
       <ResolvedItemPage params={props.params} searchParams={props.searchParams} />
     </Suspense>
   );
@@ -19,5 +19,5 @@ async function ResolvedItemPage({
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const from = typeof query.from === "string" ? query.from : undefined;
-  return <ImageItemPage itemId={id} returnHref={safeLibraryReturnHref(from)} />;
+  return <ItemPageContent itemId={id} returnHref={safeLibraryReturnHref(from)} />;
 }

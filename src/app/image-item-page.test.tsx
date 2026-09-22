@@ -178,6 +178,17 @@ describe("ImageItemPage", () => {
     expect(screen.getAllByTestId("rendered-asset")[0]).toHaveTextContent("asset-2");
   });
 
+  test("renders an opted-in Markdown image note", async () => {
+    vi.mocked(getItem).mockResolvedValue(buildImageFromAssetIds(
+      { assetIds: ["asset-1"], caption: "## Design details\n\n- Keep the image crisp", captionFormat: "markdown" },
+      { id: "image-1", now: 1 },
+    ));
+    render(<ImageItemPage itemId="image-1" returnHref="/" />);
+    const notes = await screen.findByRole("article", { name: "Notes" });
+    expect(within(notes).getByRole("heading", { name: "Design details" })).toBeVisible();
+    expect(within(notes).getByRole("listitem")).toHaveTextContent("Keep the image crisp");
+  });
+
   test("shows every gallery preview up to fifteen and then moves the preview window", async () => {
     const assetIds = Array.from({ length: 16 }, (_, index) => `asset-${index + 1}`);
     vi.mocked(getItem).mockResolvedValue(
@@ -280,6 +291,7 @@ describe("ImageItemPage", () => {
       expect(updateImage).toHaveBeenCalledWith("image-1", {
         title: "Checkout flow",
         caption: "A much longer design note.",
+        captionFormat: "plain",
         sourceUrl: "https://example.com/new",
       });
       expect(screen.getByRole("article", { name: "Notes" })).toHaveTextContent(

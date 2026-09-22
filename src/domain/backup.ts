@@ -11,7 +11,7 @@ import type { Tag } from "./tag";
 import { normalizePinnedCollectionIds } from "./library-preferences";
 
 export const KEEPALL_BACKUP_FORMAT = "keepall";
-export const KEEPALL_BACKUP_VERSION = 3;
+export const KEEPALL_BACKUP_VERSION = 4;
 
 /** Asset row serialized for JSON backup (bytes as base64). */
 export type BackupAssetRecord = {
@@ -74,7 +74,7 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
     throw new BackupValidationError('Backup format must be "keepall"');
   }
 
-  if (candidate.version !== 1 && candidate.version !== 2 && candidate.version !== KEEPALL_BACKUP_VERSION) {
+  if (candidate.version !== 1 && candidate.version !== 2 && candidate.version !== 3 && candidate.version !== KEEPALL_BACKUP_VERSION) {
     throw new BackupValidationError(
       `Unsupported backup version (supported: 1-${KEEPALL_BACKUP_VERSION})`,
     );
@@ -442,6 +442,12 @@ function parseItem(
         `Link at index ${index} needs an http or https URL`,
       );
     }
+    if (item.noteContent !== undefined && typeof item.noteContent !== "string") {
+      throw new BackupValidationError(`Link at index ${index} has an invalid personal note`);
+    }
+    if (item.noteFormat !== undefined && item.noteFormat !== "markdown") {
+      throw new BackupValidationError(`Link at index ${index} has an unknown note format`);
+    }
 
     const preview = coerceLinkPreviewFields(item as Partial<LinkItem>);
     const previewAssetId =
@@ -454,6 +460,8 @@ function parseItem(
       type: "link",
       title: item.title,
       url: item.url,
+      ...(typeof item.noteContent === "string" ? { noteContent: item.noteContent } : {}),
+      ...(item.noteFormat === "markdown" ? { noteFormat: "markdown" as const } : {}),
       ...preview,
       previewAssetId,
       tagIds: itemTagIds,
@@ -465,6 +473,9 @@ function parseItem(
   }
 
   if (item.type === "image") {
+    if (item.captionFormat !== undefined && item.captionFormat !== "markdown") {
+      throw new BackupValidationError(`Image at index ${index} has an unknown caption format`);
+    }
     const fields = coerceImageFields(item as Partial<ImageItem>);
     if (
       fields.assetIds.length === 0 ||
@@ -488,6 +499,7 @@ function parseItem(
       ...(fields.sourceFileName ? { sourceFileName: fields.sourceFileName } : {}),
       sourceUrl: fields.sourceUrl,
       caption: fields.caption,
+      ...(fields.captionFormat === "markdown" ? { captionFormat: "markdown" as const } : {}),
       tagIds: itemTagIds,
       collectionIds: itemCollectionIds,
       createdAt: item.createdAt,

@@ -28,6 +28,7 @@ import {
   type ImageDetailsDraft,
 } from "./image-item-edit-dialog";
 import { NoteEditor } from "./note-editor";
+import { NoteFormatControl } from "./note-format-control";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
@@ -66,6 +67,7 @@ export type LibraryItemProps = {
   pendingMutation: PendingMutation | null;
   editDraft: string;
   noteFormatDraft: "plain" | "markdown";
+  linkNoteDraft: string;
   editTitleDraft: string;
   editError: string | null;
   setFirstEditField: (
@@ -73,6 +75,7 @@ export type LibraryItemProps = {
   ) => void;
   onEditDraftChange: (value: string) => void;
   onNoteFormatChange: (format: "plain" | "markdown") => void;
+  onLinkNoteChange: (value: string) => void;
   onEditTitleChange: (value: string) => void;
   onEditSaveShortcut: (
     event: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
@@ -130,11 +133,13 @@ export function LibraryItem({
   pendingMutation,
   editDraft,
   noteFormatDraft,
+  linkNoteDraft,
   editTitleDraft,
   editError,
   setFirstEditField,
   onEditDraftChange,
   onNoteFormatChange,
+  onLinkNoteChange,
   onEditTitleChange,
   onEditSaveShortcut,
   onSaveNote,
@@ -522,12 +527,13 @@ export function LibraryItem({
           <LibraryCardContent
             item={item}
             onOpen={onOpenInspect}
+            openHref={openHref}
             pinned={pinVisible && pinned}
           />
         ) : (
           <div className={isList ? "min-w-0 flex-1 text-left" : undefined}>
             {isList && !inlineEditing && !pendingDelete ? (
-              <LibraryListContent item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} />
+              <LibraryListContent item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} openHref={openHref} />
             ) : <p className="text-sm font-medium">{title}</p>}
           </div>
         )}
@@ -580,6 +586,18 @@ export function LibraryItem({
               onChange={(event) => onEditTitleChange(event.target.value)}
               onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
             />
+            <label className="text-sm font-medium" htmlFor={`edit-link-note-${item.id}`}>
+              My note (optional)
+            </label>
+            <textarea
+              className="ui-field min-h-32 resize-y px-3 py-2 text-sm"
+              id={`edit-link-note-${item.id}`}
+              value={linkNoteDraft}
+              disabled={mutationBusy}
+              onChange={(event) => onLinkNoteChange(event.target.value)}
+              onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
+            />
+            <NoteFormatControl format={noteFormatDraft} onChange={onNoteFormatChange} disabled={mutationBusy} />
             {editError ? (
               <p className="text-sm text-text-danger" role="alert">
                 {editError}

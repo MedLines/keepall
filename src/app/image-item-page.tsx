@@ -33,6 +33,7 @@ import {
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
+import { NoteContent } from "./note-content";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -693,9 +694,7 @@ function ImageWorkspace({
                 <h2 id="image-notes-heading" className="text-2xl font-semibold leading-tight text-text-primary">
                   Notes
                 </h2>
-                <p className="mt-5 whitespace-pre-wrap text-base leading-7 text-text-primary">
-                  {item.caption}
-                </p>
+                <NoteContent content={item.caption} format={item.captionFormat === "markdown" ? "markdown" : "plain"} className="mt-5 text-text-primary" />
               </article>
             ) : null}
             </div>

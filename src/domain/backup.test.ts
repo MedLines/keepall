@@ -22,7 +22,7 @@ describe("buildKeepallBackup", () => {
 
     expect(backup).toEqual({
       format: "keepall",
-      version: 3,
+      version: 4,
       exportedAt: 99,
       items: [note],
       tags: [],
@@ -60,13 +60,14 @@ describe("parseKeepallBackup", () => {
 
   test("accepts a valid versioned backup", () => {
     expect(parseKeepallBackup(valid)).toEqual(valid);
+    expect(parseKeepallBackup({ ...valid, version: 3 }).version).toBe(4);
   });
 
   test("rejects wrong format or a future version", () => {
     expect(() => parseKeepallBackup({ ...valid, format: "other" })).toThrow(
       BackupValidationError,
     );
-    expect(() => parseKeepallBackup({ ...valid, version: 4 })).toThrow(
+    expect(() => parseKeepallBackup({ ...valid, version: 5 })).toThrow(
       BackupValidationError,
     );
   });
@@ -87,6 +88,30 @@ describe("parseKeepallBackup", () => {
       items: [{ ...markdown, format: undefined }],
     });
     expect(legacy.items[0]).not.toHaveProperty("format");
+  });
+
+  test("round-trips image captions and personal link notes without mixing preview text", () => {
+    const image = buildImage({ assetId: "a1", caption: "## Image", captionFormat: "markdown" });
+    const link = buildLink({ url: "https://example.com", noteContent: "## Mine", noteFormat: "markdown" });
+    link.previewDescription = "Website text";
+    const exported = buildKeepallBackup({
+      items: [image, link], tags: [], collections: [],
+      assets: [{ id: "a1", mimeType: "image/png", byteLength: 1, dataBase64: "AQ==", createdAt: 1 }],
+    });
+    const [restoredImage, restoredLink] = parseKeepallBackup(JSON.parse(JSON.stringify(exported))).items;
+    expect(restoredImage).toMatchObject({ caption: "## Image", captionFormat: "markdown" });
+    expect(restoredLink).toMatchObject({ noteContent: "## Mine", noteFormat: "markdown", previewDescription: "Website text" });
+  });
+
+  test("rejects unknown attached-note formats", () => {
+    const link = buildLink({ url: "https://example.com" });
+    expect(() => parseKeepallBackup({ ...valid, items: [{ ...link, noteFormat: "html" }] })).toThrow(/note format/);
+    const image = buildImage({ assetId: "a1" });
+    expect(() => parseKeepallBackup({
+      ...valid,
+      items: [{ ...image, captionFormat: "html" }],
+      assets: [{ id: "a1", mimeType: "image/png", byteLength: 1, dataBase64: "AQ==", createdAt: 1 }],
+    })).toThrow(/caption format/);
   });
 
   test("rejects an unknown note format instead of changing its meaning", () => {

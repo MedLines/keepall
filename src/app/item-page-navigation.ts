@@ -5,9 +5,11 @@ export function safeLibraryReturnHref(value: string | undefined): string {
   return value;
 }
 
-export function imageItemHref(itemId: string, returnHref: string): string {
+export function itemPageHref(itemId: string, returnHref: string): string {
   const query = new URLSearchParams({
     from: safeLibraryReturnHref(returnHref),
   });
   return `/items/${encodeURIComponent(itemId)}?${query.toString()}`;
 }
+
+export const imageItemHref = itemPageHref;

@@ -156,11 +156,11 @@ test("a Markdown note keeps its source and formatting after offline reload", asy
   await capture.getByRole("button", { name: "Save", exact: true }).click();
 
   await page.reload();
-  await page.getByRole("button", { name: "Read Untitled" }).click();
-  const detail = page.getByRole("dialog");
-  await expect(detail.getByRole("heading", { name: "Card idea" })).toBeVisible();
-  await expect(detail.getByRole("checkbox", { name: "Completed checklist item" })).toBeDisabled();
-  await expect(detail.getByText("const gap = 8;")).toBeVisible();
+  await page.getByRole("link", { name: /Card idea.*Read note/ }).click();
+  await expect(page).toHaveURL(/\/items\//);
+  await expect(page.getByRole("heading", { level: 1, name: "Card idea" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Completed checklist item" })).toBeDisabled();
+  await expect(page.getByText("const gap = 8;")).toBeVisible();
 
   await expect.poll(() => page.evaluate(async () => {
     await navigator.serviceWorker.ready;
@@ -168,8 +168,24 @@ test("a Markdown note keeps its source and formatting after offline reload", asy
   }), { timeout: 20_000 }).toBe(true);
   await context.setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "Read Untitled" }).click();
-  await expect(page.getByRole("dialog").getByRole("heading", { name: "Card idea" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Card idea" })).toBeVisible();
+});
+
+test("a long note scrolls to the end on its own page", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 600 });
+  await page.goto("/");
+  await openCaptureFromShortcut(page);
+  const paragraphs = Array.from({ length: 40 }, (_, index) => `Paragraph ${index}: an observation about the interface.`);
+  await page.getByLabel("Link, note, or image").fill(`# Long note\n\n${paragraphs.join("\n\n")}`);
+  await page.getByRole("button", { name: "Markdown" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("link", { name: /Long note.*Read note/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Long note" })).toBeVisible();
+
+  const scrollRegion = page.locator(".ui-scrollbar").first();
+  await expect.poll(() => scrollRegion.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await scrollRegion.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await expect(page.getByText(paragraphs.at(-1)!)).toBeInViewport();
 });
 
 test("saving a link with Alt+K survives a reload", async ({ page }) => {

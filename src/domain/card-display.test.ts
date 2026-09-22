@@ -5,6 +5,7 @@ import {
   linkCardHost,
   linkFaviconUrl,
   noteCardSnippet,
+  noteCardExcerpt,
   noteCardText,
   NOTE_SNIPPET_MAX_LENGTH,
 } from "./card-display";
@@ -20,9 +21,9 @@ describe("cardInitial", () => {
     expect(cardInitial(note)).toBe("R");
   });
 
-  test("uses U from Untitled when the note has no title", () => {
+  test("uses the first letter of an untitled note's content", () => {
     const note = buildNote({ content: "flour" }, { id: "n1", now: 1 });
-    expect(cardInitial(note)).toBe("U");
+    expect(cardInitial(note)).toBe("F");
   });
 
   test("uses the hostname letter when a link has no title", () => {
@@ -79,6 +80,23 @@ describe("noteCardSnippet", () => {
     });
     expect(noteCardText(note)).toBe("Card study Check corners See source. Code example");
     expect(noteCardSnippet(note)).not.toContain("#");
+  });
+});
+
+describe("noteCardExcerpt", () => {
+  test("starts after the Markdown title and stops at a short sentence", () => {
+    const note = buildNote({ content: "# Image card redesign\n\nThe image should lead. Controls should help without competing.\n\n## Details\n\nMore content follows.", format: "markdown" });
+    expect(noteCardExcerpt(note)).toBe("The image should lead. Controls should help without competing.");
+  });
+
+  test("does not repeat a plain note's first line as both title and excerpt", () => {
+    const note = buildNote({ content: "Card layout\n\nLeave space below the image." });
+    expect(noteCardExcerpt(note)).toBe("Leave space below the image.");
+  });
+
+  test("shows body text even when it directly follows the first line", () => {
+    const note = buildNote({ content: "Card layout\nKeep the whole image visible.\nUse a calm border." });
+    expect(noteCardExcerpt(note)).toBe("Keep the whole image visible. Use a calm border.");
   });
 });
 

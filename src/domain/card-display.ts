@@ -2,6 +2,7 @@ import { itemListTitle, type Item } from "./item";
 import type { ImageItem } from "./image";
 import type { LinkItem } from "./link";
 import type { NoteItem } from "./note";
+import { noteReadingBody } from "./note";
 
 /** Default max length for the note secondary line on a library card. */
 export const NOTE_SNIPPET_MAX_LENGTH = 80;
@@ -50,7 +51,7 @@ export function linkFaviconUrl(
 }
 
 /** Short plain-text preview of note content for the secondary line. */
-export function noteCardText(note: NoteItem): string {
+export function noteCardText(note: Pick<NoteItem, "content" | "format">): string {
   if (note.format !== "markdown") return note.content.trim();
 
   return note.content
@@ -62,6 +63,16 @@ export function noteCardText(note: NoteItem): string {
     .replace(/[`*_~]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** One short block for the card; the item page owns the complete note. */
+export function noteCardExcerpt(note: NoteItem): string {
+  const blocks = noteReadingBody(note).trim().split(/\n\s*\n/).filter(Boolean);
+  const firstBody = blocks.find((block) => !/^\s{0,3}#{1,6}\s/.test(block)) ?? "";
+  const text = noteCardText({ ...note, content: firstBody }).replace(/\s+/g, " ");
+  if (text.length <= 145) return text;
+  const cutoff = text.slice(0, 144).lastIndexOf(" ");
+  return `${text.slice(0, cutoff > 100 ? cutoff : 144).trimEnd()}…`;
 }
 
 export function noteCardSnippet(
@@ -79,7 +90,7 @@ export function noteCardSnippet(
 /** Secondary line for image cards: caption, else source host, else empty. */
 export function imageCardSecondary(image: ImageItem): string {
   if (image.caption) {
-    return image.caption;
+    return noteCardText({ content: image.caption, format: image.captionFormat });
   }
   if (image.sourceUrl) {
     try {

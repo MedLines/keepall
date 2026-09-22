@@ -23,6 +23,7 @@ import {
   createNote,
   createOrReuseImage,
   createOrReuseLink,
+  updateLink,
   findImageByAssetPayloads,
   findLinkByNormalizedUrl,
   listItems,
@@ -146,6 +147,8 @@ export function CaptureHost() {
   const [captureSide, setCaptureSide] = useState<"left" | "right">("right");
   const [noteFormat, setNoteFormat] = useState<"plain" | "markdown">("plain");
   const [notePreview, setNotePreview] = useState(false);
+  const [linkNoteOpen, setLinkNoteOpen] = useState(false);
+  const [linkNoteDraft, setLinkNoteDraft] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveInFlightRef = useRef(false);
@@ -308,6 +311,8 @@ export function CaptureHost() {
     setCollectionInput("");
     setNoteFormat("plain");
     setNotePreview(false);
+    setLinkNoteOpen(false);
+    setLinkNoteDraft("");
     clearImageDrafts();
   }
 
@@ -499,6 +504,10 @@ export function CaptureHost() {
           resolved.classification.url,
         );
         if (existing) {
+          if (linkNoteDraft.trim() && existing.noteContent?.trim() && existing.noteContent.trim() !== linkNoteDraft.trim()) {
+            dispatch({ type: "failed", message: "This link already has a personal note. Edit that note from the library." });
+            return;
+          }
           const ok = await resolveExistingOrgConflict(existing);
           if (!ok) {
             return;
@@ -528,6 +537,7 @@ export function CaptureHost() {
             })),
             sourceUrl: fields.sourceUrl || undefined,
             caption: fields.caption || undefined,
+            ...(fields.caption && noteFormat === "markdown" ? { captionFormat: "markdown" as const } : {}),
           });
           itemId = image.id;
         } else {
@@ -540,8 +550,17 @@ export function CaptureHost() {
           if (resolved.classification.type === "link") {
             const { link, created } = await createOrReuseLink({
               url: resolved.classification.url,
+              ...(linkNoteDraft.trim() ? { noteContent: linkNoteDraft.trim() } : {}),
+              ...(linkNoteDraft.trim() && noteFormat === "markdown" ? { noteFormat: "markdown" as const } : {}),
             });
             itemId = link.id;
+            if (!created && linkNoteDraft.trim() && !link.noteContent?.trim()) {
+              await updateLink(link.id, {
+                url: link.url,
+                noteContent: linkNoteDraft,
+                noteFormat,
+              });
+            }
             if (created) {
               void enrichLinkPreview(link.id, link.url);
             }
@@ -708,6 +727,43 @@ export function CaptureHost() {
             {noteFormat === "markdown" && notePreview ? (
               <div aria-label="Markdown preview" className="rounded-input border border-border-control bg-bg-control p-4">
                 <NoteContent content={state.input} format="markdown" />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {savingImage && textFieldsFromAccompanyingText(state.input).caption ? (
+          <div className="flex flex-col gap-3">
+            <NoteFormatControl format={noteFormat} disabled={composeLocked} onChange={setNoteFormat} />
+            {noteFormat === "markdown" ? (
+              <section aria-label="Image note preview" className="rounded-input border border-border-control bg-bg-control p-4">
+                <NoteContent content={state.input} format="markdown" />
+              </section>
+            ) : null}
+          </div>
+        ) : null}
+        {kind === "link" && !savingImage ? (
+          <div className="flex flex-col gap-3">
+            <button type="button" aria-expanded={linkNoteOpen} className="self-start rounded-control-sm text-sm font-medium text-text-secondary underline-offset-2 hover:text-text-primary hover:underline" disabled={composeLocked} onClick={() => {
+              if (linkNoteOpen) {
+                setLinkNoteDraft("");
+                setNoteFormat("plain");
+              }
+              setLinkNoteOpen(!linkNoteOpen);
+            }}>
+              {linkNoteOpen ? "Hide personal note" : "Add a personal note"}
+            </button>
+            {linkNoteOpen ? (
+              <div className="flex flex-col gap-3">
+                <label className="grid gap-2 text-sm font-medium text-text-primary" htmlFor="capture-link-note">
+                  My note
+                  <textarea id="capture-link-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm font-normal" value={linkNoteDraft} disabled={composeLocked} onChange={(event) => setLinkNoteDraft(event.target.value)} />
+                </label>
+                <NoteFormatControl format={noteFormat} disabled={composeLocked} onChange={setNoteFormat} />
+                {noteFormat === "markdown" && linkNoteDraft.trim() ? (
+                  <section aria-label="Personal note preview" className="rounded-input border border-border-control bg-bg-control p-4">
+                    <NoteContent content={linkNoteDraft} format="markdown" />
+                  </section>
+                ) : null}
               </div>
             ) : null}
           </div>

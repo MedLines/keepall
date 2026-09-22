@@ -19,6 +19,8 @@ export type ImageItem = {
   assetIds: string[];
   sourceUrl: string;
   caption: string;
+  /** Absence means plain text for older images. */
+  captionFormat?: "markdown";
   tagIds: string[];
   collectionIds: string[];
   createdAt: number;
@@ -32,6 +34,7 @@ export type CreateImageInput = {
   sourceFileName?: string;
   sourceUrl?: string;
   caption?: string;
+  captionFormat?: "plain" | "markdown";
 };
 
 /** Raw row may still have legacy `assetId` before coerce. */
@@ -174,6 +177,7 @@ export function buildImage(
       sourceFileName: input.sourceFileName,
       sourceUrl: input.sourceUrl,
       caption: input.caption,
+      captionFormat: input.captionFormat,
     },
     options,
   );
@@ -186,6 +190,7 @@ export function buildImageFromAssetIds(
     sourceFileName?: string;
     sourceUrl?: string;
     caption?: string;
+    captionFormat?: "plain" | "markdown";
   },
   options?: { id?: string; now?: number },
 ): ImageItem {
@@ -211,6 +216,7 @@ export function buildImageFromAssetIds(
     assetIds,
     sourceUrl,
     caption: (input.caption ?? "").trim(),
+    ...(input.captionFormat === "markdown" ? { captionFormat: "markdown" as const } : {}),
     tagIds: [],
     collectionIds: [],
     createdAt: now,
@@ -220,7 +226,7 @@ export function buildImageFromAssetIds(
 
 export function applyImageEdit(
   image: ImageItem,
-  input: { title?: string; sourceUrl?: string; caption?: string },
+  input: { title?: string; sourceUrl?: string; caption?: string; captionFormat?: "plain" | "markdown" },
   options?: { now?: number },
 ): ImageItem {
   const sourceUrl =
@@ -235,6 +241,9 @@ export function applyImageEdit(
     title: input.title !== undefined ? input.title.trim() : image.title,
     caption:
       input.caption !== undefined ? input.caption.trim() : image.caption,
+    ...(input.captionFormat !== undefined
+      ? { captionFormat: input.captionFormat === "markdown" ? "markdown" as const : undefined }
+      : {}),
     updatedAt: options?.now ?? Date.now(),
   };
 }
@@ -244,7 +253,9 @@ export function imageListTitle(image: ImageItem): string {
     return image.title;
   }
   if (image.caption) {
-    return image.caption;
+    return image.captionFormat === "markdown"
+      ? image.caption.replace(/^\s{0,3}#{1,6}\s+/, "").split(/\r?\n/)[0] ?? "Image"
+      : image.caption;
   }
   if (image.sourceUrl) {
     try {
@@ -272,12 +283,13 @@ function coerceAssetIds(raw: ImageFieldsRaw | null | undefined): string[] {
 
 export function coerceImageFields(
   raw: ImageFieldsRaw | null | undefined,
-): Pick<ImageItem, "assetIds" | "sourceUrl" | "caption" | "title" | "sourceFileName"> {
+): Pick<ImageItem, "assetIds" | "sourceUrl" | "caption" | "captionFormat" | "title" | "sourceFileName"> {
   return {
     title: typeof raw?.title === "string" ? raw.title : "",
     ...(typeof raw?.sourceFileName === "string" ? { sourceFileName: raw.sourceFileName } : {}),
     assetIds: coerceAssetIds(raw),
     sourceUrl: typeof raw?.sourceUrl === "string" ? raw.sourceUrl : "",
     caption: typeof raw?.caption === "string" ? raw.caption : "",
+    ...(raw?.captionFormat === "markdown" ? { captionFormat: "markdown" as const } : {}),
   };
 }

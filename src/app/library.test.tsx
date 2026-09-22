@@ -326,7 +326,7 @@ describe("Library", () => {
     expect(await screen.findByText("changed")).toBeInTheDocument();
   });
 
-  test("renders Markdown in the opened note and previews a format edit", async () => {
+  test("opens a Markdown note on its own page", async () => {
     const markdown = buildNote(
       { content: "# Card study\n\n- Check corners", format: "markdown" },
       { id: "n-md", now: 1 },
@@ -335,21 +335,8 @@ describe("Library", () => {
     vi.mocked(updateNote).mockResolvedValue(markdown);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Read Untitled" }));
-    const dialog = await screen.findByRole("dialog", { name: "Untitled" });
-    expect(within(dialog).getByRole("heading", { name: "Card study" })).toBeVisible();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Edit" }));
-    expect(within(dialog).getByRole("button", { name: "Markdown" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.change(within(dialog).getByLabelText("Note content"), {
-      target: { value: "## Updated study" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Preview" }));
-    expect(within(dialog).getByRole("heading", { name: "Updated study" })).toBeVisible();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save note" }));
-    await waitFor(() => expect(updateNote).toHaveBeenCalledWith("n-md", {
-      content: "## Updated study",
-      format: "markdown",
-    }));
+    expect(await screen.findByRole("link", { name: /Card study.*Read note/ })).toHaveAttribute("href", "/items/n-md?from=%2F");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   test("Ctrl+Enter saves a note edit from the textarea", async () => {
@@ -411,6 +398,8 @@ describe("Library", () => {
     expect(updateLink).toHaveBeenCalledWith("l1", {
       url: "javascript:alert(1)",
       title: "",
+      noteContent: "",
+      noteFormat: "plain",
     });
   });
 
@@ -432,6 +421,8 @@ describe("Library", () => {
       expect(updateLink).toHaveBeenCalledWith("l1", {
         url: "https://example.com/new",
         title: "",
+        noteContent: "",
+        noteFormat: "plain",
       });
     });
     expect(enrichLinkPreview).toHaveBeenCalledWith(
@@ -443,6 +434,33 @@ describe("Library", () => {
         screen.getAllByRole("link", { name: "example.com/new" })[0],
       ).toHaveAttribute("href", "https://example.com/new");
     });
+  });
+
+  test("saves a Markdown personal link note without changing preview metadata", async () => {
+    const withNote = { ...link, noteContent: "## Why I saved this", noteFormat: "markdown" as const, previewDescription: "Website description" };
+    vi.mocked(listItems).mockResolvedValueOnce([link]).mockResolvedValue([withNote]);
+    vi.mocked(updateLink).mockResolvedValue(withNote);
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("My note (optional)"), { target: { value: "## Why I saved this" } });
+    fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save link" }));
+
+    await waitFor(() => expect(updateLink).toHaveBeenCalledWith("l1", {
+      url: link.url,
+      title: link.title,
+      noteContent: "## Why I saved this",
+      noteFormat: "markdown",
+    }));
+  });
+
+  test("opens a saved personal link note without replacing website description", async () => {
+    vi.mocked(listItems).mockResolvedValue([{ ...link, noteContent: "## Why I saved this", noteFormat: "markdown", previewDescription: "Website description" }]);
+    render(<Library />);
+    fireEvent.click(await screen.findByRole("button", { name: /Read my note/ }));
+    expect(await screen.findByRole("heading", { name: "Why I saved this" })).toBeVisible();
+    expect(screen.getByText("Website description")).toBeInTheDocument();
   });
 
   test("uses the site favicon without loading the remote preview image", async () => {
@@ -475,7 +493,7 @@ describe("Library", () => {
 
     expect(await screen.findByText("Note")).toBeInTheDocument();
     expect(screen.queryByText("Link")).not.toBeInTheDocument();
-    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+    expect(screen.getAllByText("A persisted note").length).toBeGreaterThan(0);
     expect(
       screen.getAllByRole("link", { name: "example.com/old" })[0],
     ).toHaveAttribute("href", "https://example.com/old");
@@ -680,7 +698,7 @@ describe("Library tags", () => {
     fireEvent.click(screen.getByRole("button", { name: "Organize" }));
 
     expect(
-      screen.getByRole("dialog", { name: "Organize Untitled" }),
+      screen.getByRole("dialog", { name: "Organize A persisted note" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Add tag")).toBeInTheDocument();
     expect(screen.getByLabelText("Move to collection")).toBeInTheDocument();
@@ -767,8 +785,8 @@ describe("Library tags", () => {
     vi.mocked(unassignTagFromItem).mockResolvedValue(untagged);
     render(<Library />);
 
-    fireEvent.click(await within(screen.getByRole("main")).findByRole("button", { name: "Untitled" }));
-    await within(screen.getByRole("dialog")).findByRole("button", { name: "Remove tag inspiration" });
+    fireEvent.click(await within(screen.getByRole("main")).findByRole("button", { name: "1 tag" }));
+    await within(screen.getByRole("main")).findByRole("button", { name: "Remove tag inspiration" });
     fireEvent.click(
       screen.getByRole("button", { name: "Remove tag inspiration" }),
     );
@@ -779,7 +797,6 @@ describe("Library tags", () => {
     await waitFor(() => {
       expect(unassignTagFromItem).toHaveBeenCalledWith("n1", "t1");
     });
-    fireEvent.click(screen.getByRole("button", { name: "Close detail" }));
     await waitFor(() => {
       expect(
         within(screen.getByRole("main")).queryByRole("button", { name: "1 tag" }),
@@ -1077,9 +1094,7 @@ describe("Library search", () => {
 
     expect(screen.getByText("A persisted note about Design")).toBeInTheDocument();
     expect(screen.queryByText("grocery list")).not.toBeInTheDocument();
-    expect(
-      within(screen.getByRole("main")).queryByRole("link"),
-    ).not.toBeInTheDocument();
+    expect(within(screen.getByRole("main")).queryByRole("link", { name: "API Docs" })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Search"), {
       target: { value: "inspiration" },
@@ -1153,9 +1168,9 @@ describe("Library view state", () => {
       scroll: false,
     });
     expect(
-      screen.getByRole("button", { name: "Open Untitled" }),
+      screen.getAllByRole("link", { name: "Open A persisted note" })[0],
     ).toBeInTheDocument();
-    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+    expect(screen.getAllByText("A persisted note").length).toBeGreaterThan(0);
 
     pickTopMenu("Filter by type", "Notes");
 
@@ -1166,7 +1181,7 @@ describe("Library view state", () => {
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "Open example.com" })).not.toBeInTheDocument();
     });
-    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+    expect(screen.getAllByText("A persisted note").length).toBeGreaterThan(0);
   });
 
   test("bulk tag dialog applies tags and can remove every selected tag", async () => {
@@ -1402,20 +1417,12 @@ describe("Library inspect", () => {
     vi.mocked(assignCollectionToItem).mockReset();
   });
 
-  test("opens detail from the card and sets item in the URL", async () => {
+  test("links from the note card to its page", async () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Read Untitled" }),
-    );
-
-    expect(mockNavigation.push).toHaveBeenCalled();
-    const href = String(mockNavigation.push.mock.calls.at(-1)?.[0] ?? "");
-    expect(href).toContain("item=n1");
-    expect(
-      await screen.findByRole("dialog", { name: "Untitled" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /A persisted note.*Read note/ })).toHaveAttribute("href", "/items/n1?from=%2F");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   test("opens an image on its own page and keeps the current Library view", async () => {

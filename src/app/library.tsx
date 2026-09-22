@@ -107,7 +107,7 @@ import {
 } from "./library-drag";
 import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
 import { isPreviewEnrichPaused } from "./preview-enrich-pause";
-import { imageItemHref } from "./item-page-navigation";
+import { itemPageHref } from "./item-page-navigation";
 import type { ImageDetailsDraft } from "./image-item-edit-dialog";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
@@ -223,6 +223,7 @@ export function Library() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [noteFormatDraft, setNoteFormatDraft] = useState<"plain" | "markdown">("plain");
+  const [linkNoteDraft, setLinkNoteDraft] = useState("");
   const [editTitleDraft, setEditTitleDraft] = useState("");
   const [editImageTitleDraft, setEditImageTitleDraft] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
@@ -731,12 +732,12 @@ export function Library() {
   }
 
   function openInspect(item: Item) {
-    if (item.type === "image") {
+    if (item.type === "image" || item.type === "note") {
       const returnView = mergeLibraryViewState(viewRef.current, {
         item: null,
         slide: 0,
       });
-      router.push(imageItemHref(item.id, libraryViewHref(pathname, returnView)));
+      router.push(itemPageHref(item.id, libraryViewHref(pathname, returnView)));
       return;
     }
     updateView({ item: item.id, slide: 0 }, "push");
@@ -827,6 +828,8 @@ export function Library() {
       const updated = await updateLink(id, {
         url: editDraft,
         title: editTitleDraft,
+        noteContent: linkNoteDraft,
+        noteFormat: noteFormatDraft,
       });
       clearEdit();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
@@ -1409,8 +1412,8 @@ export function Library() {
         inspected={inspectId === item.id}
         layoutMode={browseLayout}
         openHref={
-          item.type === "image"
-            ? imageItemHref(
+          item.type === "image" || item.type === "note"
+            ? itemPageHref(
                 item.id,
                 libraryViewHref(
                   pathname,
@@ -1441,6 +1444,7 @@ export function Library() {
         pendingMutation={pendingMutation}
         editDraft={editDraft}
         noteFormatDraft={noteFormatDraft}
+        linkNoteDraft={linkNoteDraft}
         editTitleDraft={editTitleDraft}
         editError={editError}
         setFirstEditField={(node) => {
@@ -1448,6 +1452,7 @@ export function Library() {
         }}
         onEditDraftChange={setEditDraft}
         onNoteFormatChange={setNoteFormatDraft}
+        onLinkNoteChange={setLinkNoteDraft}
         onEditTitleChange={setEditTitleDraft}
         onEditSaveShortcut={onEditSaveShortcut}
         onSaveNote={() => void saveNoteEdit(item.id)}
@@ -1478,6 +1483,8 @@ export function Library() {
           } else {
             setEditDraft(item.url);
             setEditTitleDraft(item.title);
+            setLinkNoteDraft(item.noteContent ?? "");
+            setNoteFormatDraft(item.noteFormat === "markdown" ? "markdown" : "plain");
           }
         }}
         onStartDelete={() => {
@@ -1723,6 +1730,7 @@ export function Library() {
                 pendingMutation={pendingMutation}
                 editDraft={editDraft}
                 noteFormatDraft={noteFormatDraft}
+                linkNoteDraft={linkNoteDraft}
                 editTitleDraft={editTitleDraft}
                 editImageTitleDraft={editImageTitleDraft}
                 editError={editError}
@@ -1743,6 +1751,7 @@ export function Library() {
                 }}
                 onEditDraftChange={setEditDraft}
                 onNoteFormatChange={setNoteFormatDraft}
+                onLinkNoteChange={setLinkNoteDraft}
                 onEditTitleChange={setEditTitleDraft}
                 onEditImageTitleChange={setEditImageTitleDraft}
                 onEditSaveShortcut={onEditSaveShortcut}
@@ -1801,6 +1810,8 @@ export function Library() {
                   } else {
                     setEditDraft(target.url);
                     setEditTitleDraft(target.title);
+                    setLinkNoteDraft(target.noteContent ?? "");
+                    setNoteFormatDraft(target.noteFormat === "markdown" ? "markdown" : "plain");
                   }
                 }}
                 onStartDelete={() => {

@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { itemListTitle, type Item } from "@/domain/item";
-import { imageCardSecondary, linkCardHost, noteCardText } from "@/domain/card-display";
+import { imageCardSecondary, linkCardHost, noteCardExcerpt } from "@/domain/card-display";
 import { CloseIcon, CollectionIcon, HashIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
 
 function LinkSource({ host }: { host: string }) {
@@ -54,11 +55,28 @@ function TagPopover({ id, tags, pendingRemoveId, onBrowseTag, onRemoveTag, onPen
   );
 }
 
-export function LibraryCardContent({ item, onOpen, pinned = false }: {
+export function LibraryCardContent({ item, onOpen, openHref, pinned = false }: {
   item: Item;
   onOpen: () => void;
+  openHref?: string;
   pinned?: boolean;
 }) {
+  if (item.type === "note") {
+    const title = itemListTitle(item);
+    const excerpt = noteCardExcerpt(item);
+    const body = <>
+      <h2 className="text-lg font-semibold leading-snug text-text-primary">{title}</h2>
+      {excerpt ? <p className="mt-2 break-words text-sm leading-6 text-text-secondary">{excerpt}</p> : null}
+      <span className="mt-4 block text-xs font-medium text-text-secondary">Read note →</span>
+    </>;
+    return (
+      <div className="min-w-0">
+        <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary"><NoteIcon className="size-4" />Note{pinned ? <PinIcon className="ms-auto size-4" /> : null}</div>
+        {openHref ? <Link href={openHref} prefetch={false} className="block min-w-0 rounded-control-sm text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">{body}</Link> : <button type="button" onClick={onOpen} className="block min-w-0 w-full rounded-control-sm text-start">{body}</button>}
+        <p className="mt-4 text-xs text-text-secondary">Edited <time dateTime={new Date(item.updatedAt).toISOString()}>{new Date(item.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</time></p>
+      </div>
+    );
+  }
   const title = item.type === "link" && !item.title.trim() && !item.previewTitle.trim()
     ? item.url.replace(/^https?:\/\//, "")
     : item.type === "image" ? item.title.trim() : itemListTitle(item);
@@ -67,9 +85,8 @@ export function LibraryCardContent({ item, onOpen, pinned = false }: {
   const TitleRow = title ? "h2" : "div";
   return (
     <div className="min-w-0">
-      {item.type === "note" ? <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary"><NoteIcon className="size-4" />Note</div> : null}
       {item.type === "link" ? <LinkSource key={item.url} host={linkCardHost(item)} /> : null}
-      {title || pinned ? <TitleRow className={`flex min-w-0 items-start gap-1.5 leading-snug ${item.type === "note" ? "text-[23px] font-semibold" : item.type === "link" ? "text-xl font-semibold" : "text-sm font-medium"}`}>
+      {title || pinned ? <TitleRow className={`flex min-w-0 items-start gap-1.5 leading-snug ${item.type === "link" ? "text-xl font-semibold" : "text-sm font-medium"}`}>
         {pinned ? (
           <span
             title="Pinned in this collection"
@@ -85,12 +102,12 @@ export function LibraryCardContent({ item, onOpen, pinned = false }: {
           <button type="button" onClick={onOpen} title={title} className={`${item.type === "image" ? "truncate" : "line-clamp-2 break-words"} min-w-0 flex-1 text-left underline-offset-2 hover:underline`}>{title}</button>
         ) : null}
       </TitleRow> : null}
-      {item.type === "note" ? (
-        <>
-          <button type="button" onClick={onOpen} aria-label={`Read ${title}`} className="mt-3 line-clamp-6 w-full whitespace-pre-line break-words text-left text-base leading-relaxed text-text-primary">{noteCardText(item)}</button>
-          <p className="mt-3 text-xs text-text-secondary">Edited <time dateTime={new Date(item.updatedAt).toISOString()}>{new Date(item.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</time></p>
-        </>
-      ) : description ? <p className="mt-2 line-clamp-2 break-words text-sm leading-relaxed text-text-secondary">{description}</p> : null}
+      {description ? <p className="mt-2 line-clamp-2 break-words text-sm leading-relaxed text-text-secondary">{description}</p> : null}
+      {item.type === "link" && item.noteContent?.trim() ? (
+        <button type="button" onClick={onOpen} className="mt-3 min-h-8 rounded-control-sm text-sm font-medium text-text-primary underline-offset-2 hover:underline">
+          Read my note →
+        </button>
+      ) : null}
     </div>
   );
 }

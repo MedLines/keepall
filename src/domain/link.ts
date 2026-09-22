@@ -13,6 +13,10 @@ export type LinkItem = {
   type: "link";
   title: string;
   url: string;
+  /** User-written note; unrelated to website previewDescription. */
+  noteContent?: string;
+  /** Absence means plain text for older links. */
+  noteFormat?: "markdown";
   previewStatus: LinkPreviewStatus;
   previewTitle: string;
   previewDescription: string;
@@ -31,6 +35,8 @@ export type LinkItem = {
 export type CreateLinkInput = {
   title?: string;
   url: string;
+  noteContent?: string;
+  noteFormat?: "plain" | "markdown";
 };
 
 export type LinkPreviewFields = {
@@ -212,6 +218,8 @@ export function buildLink(
     type: "link",
     title: (input.title ?? "").trim(),
     url,
+    ...(input.noteContent?.trim() ? { noteContent: input.noteContent.trim() } : {}),
+    ...(input.noteFormat === "markdown" ? { noteFormat: "markdown" as const } : {}),
     ...EMPTY_LINK_PREVIEW,
     tagIds: [],
     collectionIds: [],
@@ -222,7 +230,7 @@ export function buildLink(
 
 export function applyLinkEdit(
   link: LinkItem,
-  input: { url: string; title?: string },
+  input: { url: string; title?: string; noteContent?: string; noteFormat?: "plain" | "markdown" },
   options?: { now?: number },
 ): LinkItem {
   const url = input.url.trim();
@@ -237,6 +245,10 @@ export function applyLinkEdit(
     ...link,
     url,
     title: input.title !== undefined ? input.title.trim() : link.title,
+    ...(input.noteContent !== undefined ? { noteContent: input.noteContent.trim() } : {}),
+    ...(input.noteFormat !== undefined
+      ? { noteFormat: input.noteFormat === "markdown" ? "markdown" as const : undefined }
+      : {}),
     ...(urlChanged ? EMPTY_LINK_PREVIEW : {}),
     updatedAt: options?.now ?? Date.now(),
   };

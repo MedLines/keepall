@@ -4,10 +4,13 @@ import { Dialog } from "@base-ui/react/dialog";
 import { useState } from "react";
 import type { ImageItem } from "@/domain/image";
 import { CloseIcon } from "./shell-icons";
+import { NoteContent } from "./note-content";
+import { NoteFormatControl } from "./note-format-control";
 
 export type ImageDetailsDraft = {
   title: string;
   caption: string;
+  captionFormat: "plain" | "markdown";
   sourceUrl: string;
 };
 
@@ -30,6 +33,7 @@ export function ImageItemEditDialog({
 }: Props) {
   const [title, setTitle] = useState(item.title);
   const [caption, setCaption] = useState(item.caption);
+  const [captionFormat, setCaptionFormat] = useState<"plain" | "markdown">(item.captionFormat === "markdown" ? "markdown" : "plain");
   const [sourceUrl, setSourceUrl] = useState(item.sourceUrl);
 
   return (
@@ -70,7 +74,7 @@ export function ImageItemEditDialog({
               className="flex min-h-0 flex-1 flex-col"
               onSubmit={(event) => {
                 event.preventDefault();
-                onSave({ title, caption, sourceUrl });
+                onSave({ title, caption, captionFormat, sourceUrl });
               }}
             >
               <div className="scroll-fade min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
@@ -90,6 +94,13 @@ export function ImageItemEditDialog({
                     onChange={(event) => setCaption(event.target.value)}
                   />
                 </label>
+                <NoteFormatControl format={captionFormat} onChange={setCaptionFormat} disabled={busy} />
+                {captionFormat === "markdown" && caption.trim() ? (
+                  <section aria-label="Notes preview" className="rounded-control-md border border-border-control bg-bg-raised p-4 text-text-primary">
+                    <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">Preview</p>
+                    <NoteContent content={caption} format="markdown" />
+                  </section>
+                ) : null}
                 <label className="grid gap-2 text-sm font-medium text-text-primary">
                   Source URL (optional)
                   <input

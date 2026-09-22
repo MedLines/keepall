@@ -44,6 +44,14 @@ describe("buildLink", () => {
 });
 
 describe("applyLinkEdit", () => {
+  test("keeps a personal note separate from fetched description", () => {
+    const link = { ...buildLink({ url: "https://example.com" }), previewDescription: "Website copy" };
+    const edited = applyLinkEdit(link, { url: link.url, noteContent: "## My note", noteFormat: "markdown" });
+    expect(edited.previewDescription).toBe("Website copy");
+    expect(edited.noteContent).toBe("## My note");
+    expect(edited.noteFormat).toBe("markdown");
+    expect(applyLinkEdit(edited, { url: link.url, noteFormat: "plain" }).noteFormat).toBeUndefined();
+  });
   test("keeps id and createdAt and updates url", () => {
     const link = buildLink(
       { url: "https://example.com/old" },

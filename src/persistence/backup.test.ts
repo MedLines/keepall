@@ -31,7 +31,7 @@ describe("backup persistence", () => {
     const backup = await exportKeepallBackup(123);
 
     expect(backup.format).toBe("keepall");
-    expect(backup.version).toBe(3);
+    expect(backup.version).toBe(4);
     expect(backup.exportedAt).toBe(123);
     expect(backup.items).toEqual([note]);
     expect(backup.tags).toEqual([tag]);

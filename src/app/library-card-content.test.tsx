@@ -25,13 +25,14 @@ describe("grid card content", () => {
   });
 
   it("shows a readable note body and opens the note", () => {
-    const open = vi.fn();
-    const content = "Keep the card quiet.\n\nLet the image lead. ".repeat(5);
-    render(<LibraryCardContent item={{ ...base, type: "note", title: "Image ideas", content }} onOpen={open} />);
-    expect(screen.getByRole("button", { name: "Read Image ideas" }).textContent).toBe(content.trim());
-    fireEvent.click(screen.getByRole("button", { name: "Image ideas" }));
-    expect(open).toHaveBeenCalledOnce();
-    expect(screen.getByText(/Edited/)).toBeTruthy();
+    const content = "# Image card redesign\n\nThe image should lead.\n\n## Details\n\n" + "More ideas. ".repeat(60);
+    render(<LibraryCardContent item={{ ...base, type: "note", title: "", content, format: "markdown" }} onOpen={vi.fn()} openHref="/items/item?from=%2F" />);
+    expect(screen.getByRole("heading", { name: "Image card redesign" })).toBeVisible();
+    expect(screen.queryByText("Untitled")).toBeNull();
+    expect(screen.getByText("The image should lead.")).toBeVisible();
+    expect(screen.queryByText(/More ideas/)).toBeNull();
+    expect(screen.getByRole("link", { name: /Image card redesign/ })).toHaveAttribute("href", "/items/item?from=%2F");
+    expect(screen.getByText(/Edited/)).toBeVisible();
   });
 
   it("keeps link metadata local and labels the source with a glyph", () => {

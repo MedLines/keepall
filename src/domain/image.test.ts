@@ -96,6 +96,10 @@ describe("buildImageFromAssetIds", () => {
 });
 
 describe("coerceImageFields", () => {
+  test("keeps opt-in Markdown and treats older captions as plain text", () => {
+    expect(coerceImageFields({ caption: "# Old" }).captionFormat).toBeUndefined();
+    expect(coerceImageFields({ caption: "# New", captionFormat: "markdown" }).captionFormat).toBe("markdown");
+  });
   test("migrates legacy assetId to a one-item assetIds list", () => {
     expect(coerceImageFields({ assetId: "abc" }).assetIds).toEqual(["abc"]);
   });
@@ -162,6 +166,13 @@ describe("clampImageSlideIndex", () => {
 });
 
 describe("applyImageEdit", () => {
+  test("switches caption format without changing its text", () => {
+    const image = buildImage({ assetId: "a1", caption: "# Design" }, { id: "i1", now: 1 });
+    const markdown = applyImageEdit(image, { captionFormat: "markdown" }, { now: 2 });
+    expect(markdown.caption).toBe("# Design");
+    expect(markdown.captionFormat).toBe("markdown");
+    expect(applyImageEdit(markdown, { captionFormat: "plain" }).captionFormat).toBeUndefined();
+  });
   test("adds, preserves and clears a title without changing file information", () => {
     const image = buildImage({ assetId: "a1", sourceFileName: "abc-123.png" });
     expect(image.title).toBe("");

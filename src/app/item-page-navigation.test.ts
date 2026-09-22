@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   imageItemHref,
+  itemPageHref,
   safeLibraryReturnHref,
 } from "./item-page-navigation";
 
@@ -14,6 +15,10 @@ describe("image item navigation", () => {
     ).toBe(
       "/items/image%2Fone?from=%2F%3Fcollection%3Ddesign%26layout%3Dlist",
     );
+  });
+
+  test("uses the same item route for notes", () => {
+    expect(itemPageHref("note/one", "/?tag=ideas")).toBe("/items/note%2Fone?from=%2F%3Ftag%3Dideas");
   });
 
   test("accepts only local Library return URLs", () => {

@@ -18,6 +18,7 @@ import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
 import { NoteContent } from "./note-content";
 import { NoteEditor } from "./note-editor";
+import { NoteFormatControl } from "./note-format-control";
 import {
   type KeyboardEvent,
   useState,
@@ -37,6 +38,7 @@ type Props = {
   pendingMutation: PendingMutation | null;
   editDraft: string;
   noteFormatDraft: "plain" | "markdown";
+  linkNoteDraft: string;
   editTitleDraft: string;
   editImageTitleDraft: string;
   editError: string | null;
@@ -49,6 +51,7 @@ type Props = {
   onReplaceSlide: (file: File) => void;
   onEditDraftChange: (value: string) => void;
   onNoteFormatChange: (format: "plain" | "markdown") => void;
+  onLinkNoteChange: (value: string) => void;
   onEditTitleChange: (value: string) => void;
   onEditImageTitleChange: (value: string) => void;
   onEditSaveShortcut: (
@@ -90,6 +93,7 @@ export function LibraryInspect({
   pendingMutation,
   editDraft,
   noteFormatDraft,
+  linkNoteDraft,
   editTitleDraft,
   editImageTitleDraft,
   editError,
@@ -100,6 +104,7 @@ export function LibraryInspect({
   onReplaceSlide,
   onEditDraftChange,
   onNoteFormatChange,
+  onLinkNoteChange,
   onEditTitleChange,
   onEditImageTitleChange,
   onEditSaveShortcut,
@@ -328,10 +333,19 @@ export function LibraryInspect({
               </p>
               {!editing && item.type === "note" ? (
                 <NoteContent content={item.content} format={item.format === "markdown" ? "markdown" : "plain"} className="mt-4" />
+              ) : !editing && item.type === "image" && item.caption ? (
+                <NoteContent content={item.caption} format={item.captionFormat === "markdown" ? "markdown" : "plain"} className="mt-4 text-text-primary" />
               ) : !editing ? (
                 <p className="mt-2 text-pretty text-sm text-text-secondary">
                   {cardSecondaryLine(item)}
                 </p>
+              ) : null}
+
+              {!editing && item.type === "link" && item.noteContent ? (
+                <section aria-label="My note" className="mt-6 border-t border-border-control pt-5">
+                  <h3 className="text-sm font-semibold text-text-primary">My note</h3>
+                  <NoteContent content={item.noteContent} format={item.noteFormat === "markdown" ? "markdown" : "plain"} className="mt-3 text-text-primary" />
+                </section>
               ) : null}
 
               {item.type === "note" && editing ? (
@@ -356,12 +370,16 @@ export function LibraryInspect({
                   itemId={item.id}
                   editDraft={editDraft}
                   editTitleDraft={editTitleDraft}
+                  linkNoteDraft={linkNoteDraft}
+                  noteFormatDraft={noteFormatDraft}
                   editError={editError}
                   mutationBusy={mutationBusy}
                   pendingMutation={pendingMutation}
                   setFirstEditField={setFirstEditField}
                   onEditDraftChange={onEditDraftChange}
                   onEditTitleChange={onEditTitleChange}
+                  onLinkNoteChange={onLinkNoteChange}
+                  onNoteFormatChange={onNoteFormatChange}
                   onEditSaveShortcut={onEditSaveShortcut}
                   onSaveLink={onSaveLink}
                   onCancelEdit={onCancelEdit}
@@ -603,12 +621,16 @@ function EditLink({
   itemId,
   editDraft,
   editTitleDraft,
+  linkNoteDraft,
+  noteFormatDraft,
   editError,
   mutationBusy,
   pendingMutation,
   setFirstEditField,
   onEditDraftChange,
   onEditTitleChange,
+  onLinkNoteChange,
+  onNoteFormatChange,
   onEditSaveShortcut,
   onSaveLink,
   onCancelEdit,
@@ -616,6 +638,8 @@ function EditLink({
   itemId: string;
   editDraft: string;
   editTitleDraft: string;
+  linkNoteDraft: string;
+  noteFormatDraft: "plain" | "markdown";
   editError: string | null;
   mutationBusy: boolean;
   pendingMutation: PendingMutation | null;
@@ -624,6 +648,8 @@ function EditLink({
   ) => void;
   onEditDraftChange: (value: string) => void;
   onEditTitleChange: (value: string) => void;
+  onLinkNoteChange: (value: string) => void;
+  onNoteFormatChange: (format: "plain" | "markdown") => void;
   onEditSaveShortcut: (
     event: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
     save: () => void,
@@ -662,6 +688,24 @@ function EditLink({
         onChange={(event) => onEditTitleChange(event.target.value)}
         onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
       />
+      <label className="text-sm font-medium" htmlFor={`inspect-edit-link-note-${itemId}`}>
+        My note (optional)
+      </label>
+      <textarea
+        className="ui-field min-h-40 resize-y px-3 py-2 text-sm"
+        id={`inspect-edit-link-note-${itemId}`}
+        value={linkNoteDraft}
+        disabled={mutationBusy}
+        onChange={(event) => onLinkNoteChange(event.target.value)}
+        onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
+      />
+      <NoteFormatControl format={noteFormatDraft} onChange={onNoteFormatChange} disabled={mutationBusy} />
+      {noteFormatDraft === "markdown" && linkNoteDraft.trim() ? (
+        <section aria-label="My note preview" className="rounded-control-md border border-border-control bg-bg-raised p-4">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">Preview</p>
+          <NoteContent content={linkNoteDraft} format="markdown" />
+        </section>
+      ) : null}
       {editError ? (
         <p className="text-sm text-text-danger" role="alert">
           {editError}

@@ -75,5 +75,22 @@ export function applyNoteEdit(
 }
 
 export function noteListTitle(note: NoteItem): string {
-  return note.title || "Untitled";
+  if (note.title) return note.title;
+  const firstLine = note.content.split(/\r?\n/).find((line) => line.trim())?.trim() ?? "";
+  if (note.format === "markdown" && /^(?:```|~~~|---+$)/.test(firstLine)) return "Untitled note";
+  const readable = note.format === "markdown"
+    ? firstLine.replace(/^#{1,6}\s+/, "").replace(/^[-*+]\s+(?:\[[ xX]\]\s*)?/, "").replace(/[`*_~]/g, "").trim()
+    : firstLine;
+  if (!readable || /^```|^---+$/.test(readable)) return "Untitled note";
+  if (readable.length <= 64) return readable;
+  const cutoff = readable.slice(0, 63).lastIndexOf(" ");
+  return `${readable.slice(0, cutoff > 40 ? cutoff : 63).trimEnd()}…`;
+}
+
+/** An inferred display title is shown once, above the reading body. */
+export function noteReadingBody(note: NoteItem): string {
+  if (note.title || noteListTitle(note) === "Untitled note") return note.content;
+  const lines = note.content.split(/\r?\n/);
+  const firstLine = lines.findIndex((line) => line.trim());
+  return lines.slice(firstLine + 1).join("\n").trimStart();
 }

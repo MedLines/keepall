@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildNote, noteListTitle, applyNoteEdit, NoteValidationError } from "./note";
+import { buildNote, noteListTitle, noteReadingBody, applyNoteEdit, NoteValidationError } from "./note";
 
 describe("buildNote", () => {
   test("creates a note with trimmed content and an empty title", () => {
@@ -88,9 +88,25 @@ describe("applyNoteEdit", () => {
 });
 
 describe("noteListTitle", () => {
-  test("returns Untitled when the title is empty", () => {
+  test("keeps a leading code fence in the reading body when no title can be inferred", () => {
+    const note = buildNote({ content: "```tsx\nconst card = true;\n```", format: "markdown" });
+    expect(noteListTitle(note)).toBe("Untitled note");
+    expect(noteReadingBody(note)).toBe(note.content);
+  });
+  test("uses the first plain-text line when the title is empty", () => {
     const note = buildNote({ content: "body" }, { id: "n1", now: 1 });
-    expect(noteListTitle(note)).toBe("Untitled");
+    expect(noteListTitle(note)).toBe("body");
+  });
+
+  test("uses a Markdown heading instead of showing Untitled", () => {
+    const note = buildNote({ content: "# Image card redesign\n\nThe image should lead.", format: "markdown" });
+    expect(noteListTitle(note)).toBe("Image card redesign");
+  });
+
+  test("keeps long first lines short enough for cards and lists", () => {
+    const note = buildNote({ content: "A long observation about how the image card should behave when the library gets crowded and the viewport narrows." });
+    expect(noteListTitle(note).length).toBeLessThanOrEqual(64);
+    expect(noteListTitle(note)).toMatch(/…$/);
   });
 
   test("returns the title when one exists", () => {

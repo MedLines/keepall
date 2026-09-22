@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useRef, useState } from "react";
 import { cardSecondaryLine, linkCardHost } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
@@ -15,10 +16,11 @@ function LinkContext({ item }: { item: LinkItem }) {
   );
 }
 
-export function LibraryListContent({ item, pinned, onOpen }: {
+export function LibraryListContent({ item, pinned, onOpen, openHref }: {
   item: Item;
   pinned: boolean;
   onOpen: () => void;
+  openHref?: string;
 }) {
   const title = item.type === "link" && !item.title.trim() && !item.previewTitle.trim()
     ? item.url.replace(/^https?:\/\//, "")
@@ -48,9 +50,16 @@ export function LibraryListContent({ item, pinned, onOpen }: {
         >
           {content}
         </a>
+      ) : item.type === "note" && openHref ? (
+        <Link href={openHref} prefetch={false} aria-label={`Open ${itemListTitle(item)}`} className="block min-h-11 w-full min-w-0 rounded-sm text-start">{content}</Link>
       ) : (
         <button type="button" onClick={onOpen} aria-label={`Open ${itemListTitle(item)}`} className="block min-h-11 w-full min-w-0 rounded-sm text-start">
           {content}
+        </button>
+      ) : null}
+      {item.type === "link" && item.noteContent?.trim() ? (
+        <button type="button" onClick={onOpen} className="shrink-0 rounded-control-sm px-2 py-1 text-xs font-medium text-text-secondary hover:text-text-primary">
+          My note
         </button>
       ) : null}
       <time className="library-list-date text-xs text-text-secondary" dateTime={new Date(item.createdAt).toISOString()} title="Saved date">

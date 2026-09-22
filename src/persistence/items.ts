@@ -155,6 +155,7 @@ export async function createImage(input: {
   assets: { bytes: Uint8Array; mimeType: string }[];
   sourceUrl?: string;
   caption?: string;
+  captionFormat?: "plain" | "markdown";
   title?: string;
   sourceFileName?: string;
 }): Promise<ImageItem> {
@@ -186,6 +187,7 @@ export async function createImage(input: {
       assetIds,
       sourceUrl: input.sourceUrl,
       caption: input.caption,
+      captionFormat: input.captionFormat,
       title: input.title,
       sourceFileName: input.sourceFileName,
     });
@@ -266,6 +268,7 @@ export async function createOrReuseImage(input: {
   assets: { bytes: Uint8Array; mimeType: string }[];
   sourceUrl?: string;
   caption?: string;
+  captionFormat?: "plain" | "markdown";
   title?: string;
   sourceFileName?: string;
 }): Promise<{ image: ImageItem; created: boolean }> {
@@ -343,7 +346,7 @@ export async function updateNote(
 
 export async function updateLink(
   id: string,
-  input: { url: string; title?: string },
+  input: { url: string; title?: string; noteContent?: string; noteFormat?: "plain" | "markdown" },
 ): Promise<LinkItem> {
   const existing = await getDb().items.get(id);
 
@@ -362,7 +365,7 @@ export async function updateLink(
 
 export async function updateImage(
   id: string,
-  input: { title?: string; sourceUrl?: string; caption?: string },
+  input: { title?: string; sourceUrl?: string; caption?: string; captionFormat?: "plain" | "markdown" },
 ): Promise<ImageItem> {
   const existing = await getDb().items.get(id);
 
