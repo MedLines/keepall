@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BackupPanel } from "../backup-panel";
 import { ArrowLeftIcon, LogoIcon } from "../shell-icons";
 import { ThemeControl } from "../theme-control";
+import { StorageHealth } from "./storage-health";
 
 export const metadata: Metadata = {
   title: "Settings · Keepall",
@@ -79,8 +80,9 @@ export default function SettingsPage() {
               <p className="mt-1 text-sm leading-6 text-text-secondary">
                 Your library currently lives in this browser. A downloaded backup is the way to recover it if browser data is cleared.
               </p>
+              <StorageHealth />
               <p className="mt-4 text-xs text-text-secondary">
-                <span className="font-medium">Planned:</span> storage health, a local file vault for large originals, and recovery from that vault.
+                <span className="font-medium">Planned:</span> a local file vault for large originals and recovery from that vault.
               </p>
             </section>
 

@@ -19,7 +19,10 @@ test("settings owns backup and import recovery", async ({ page }, testInfo) => {
   const backupInput = backup.locator('input[accept*="application/json"]');
   await expect(backup.getByRole("button", { name: "Export backup" })).toBeVisible();
   await expect(importSection.getByRole("button", { name: "Import bookmarks" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Storage" })).toContainText("Planned");
+  const storage = page.getByRole("region", { name: "Storage" });
+  await expect(storage).toContainText("Planned");
+  await expect(storage.getByText("Site storage used")).toBeVisible();
+  await expect(storage.getByRole("button", { name: "Refresh storage status" })).toBeEnabled();
   await page.screenshot({ path: testInfo.outputPath("settings-desktop.png"), fullPage: true });
 
   for (const theme of ["light", "dark"] as const) {
@@ -70,4 +73,6 @@ test("settings owns backup and import recovery", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("heading", { name: "Help" })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("settings-mobile.png"), fullPage: true });
+  await storage.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath("storage-mobile.png") });
 });

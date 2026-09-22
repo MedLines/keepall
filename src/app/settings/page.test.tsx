@@ -10,6 +10,8 @@ test("groups working settings and labels future controls", () => {
   expect(screen.getByRole("region", { name: "Backup" })).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "Import" })).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "Storage" })).toHaveTextContent("Planned");
+  expect(screen.getByRole("region", { name: "Storage" })).toHaveTextContent("Site storage used");
+  expect(screen.getByRole("button", { name: "Refresh storage status" })).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "Help" })).toHaveTextContent("Alt + K");
   expect(screen.getByRole("region", { name: "Link previews" })).toHaveTextContent("Planned");
   expect(screen.queryByRole("button", { name: /OS vault|system theme/i })).not.toBeInTheDocument();
