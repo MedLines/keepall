@@ -320,9 +320,9 @@
 .library-sidebar-panel [data-sidebar-brand] { margin-inline: 8px; }
 .library-sidebar-panel [data-sidebar-anchor] {
   gap: 8px;
-  padding-inline: 0 8px;
+  padding-inline: 0 12px;
 }
-.library-sidebar-panel [data-sidebar-anchor="logo"] { gap: 0; }
+.library-sidebar-panel [data-sidebar-anchor="logo"] { gap: 8px; }
 .library-sidebar-panel [data-sidebar-icon] {
   width: 40px;
   flex-shrink: 0;
@@ -363,6 +363,12 @@
 .scroll-fade,
 .library-sidebar-section-scroll {
   scrollbar-color: var(--color-border-subtle) transparent;
+  scrollbar-width: thin;
+}
+
+.library-sidebar-primary-nav,
+.library-sidebar-section-scroll {
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
 

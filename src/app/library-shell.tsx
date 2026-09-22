@@ -220,7 +220,7 @@ export function LibraryShell({
           className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-[18px] ${contentExpanded ? SHELL_NAV_GUTTER : "px-2"}`}
         >
           <div className={`flex min-h-0 flex-col gap-1 ${contentExpanded ? "overflow-hidden" : "scroll-fade overflow-y-auto overscroll-contain"}`}>
-            <div className="flex shrink-0 flex-col gap-1">
+            <div className={`flex shrink-0 flex-col gap-1 ${contentExpanded ? "library-sidebar-primary-nav overflow-hidden" : ""}`}>
               {renderPrimaryNav(contentExpanded)}
             </div>
 
@@ -502,7 +502,7 @@ function CollectionsSection({
       <SidebarSectionScroll activeId={browseCollectionId} filter={collectionFilter} itemCount={filteredCollections.length}>
         <div className="flex flex-col gap-1">
           {filteredCollections.length === 0 ? (
-            <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
+            <p className="pb-2 pl-12 text-pretty text-xs text-text-secondary">
               {libraryLoading
                 ? "Loading…"
                 : collections.length === 0
@@ -611,13 +611,13 @@ function CollectionsSection({
           )}
 
           {dragError ? (
-            <p className="mt-2 px-2 text-pretty text-xs text-text-danger" role="alert">
+            <p className="mt-2 pl-12 text-pretty text-xs text-text-danger" role="alert">
               {dragError}
             </p>
           ) : null}
 
           {collectionManageError ? (
-            <p className="mt-2 px-2 text-pretty text-xs text-text-danger" role="alert">
+            <p className="mt-2 pl-12 text-pretty text-xs text-text-danger" role="alert">
               {collectionManageError}
             </p>
           ) : null}
@@ -679,7 +679,7 @@ function TagsSection({
       <SidebarSectionScroll activeId={browseTagId} filter={tagFilter} itemCount={filteredTags.length}>
         <div className="flex flex-col gap-1">
           {filteredTags.length === 0 ? (
-            <p className="px-2 pb-2 text-pretty text-xs text-text-secondary">
+            <p className="pb-2 pl-12 text-pretty text-xs text-text-secondary">
               {libraryLoading
                 ? "Loading…"
                 : tags.length === 0
@@ -761,20 +761,19 @@ function TagNavRow({
   onDelete: () => void;
 }) {
   return (
-    <div className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-1 text-sm ${active ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary` : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`}`}>
+    <div className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${active ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary` : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`}`}>
       <button
         type="button"
-        className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 pl-3 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+        className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 pl-12 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
         aria-label={`Tag ${tag.name}`}
         aria-current={active ? "page" : undefined}
         onClick={onNavigate}
       >
-        <span className="min-w-0 flex-1 truncate">{tag.name}</span>
-        {count !== undefined ? <span className="shrink-0 text-xs tabular-nums text-text-secondary">{count}</span> : null}
+        <span className="min-w-0 flex-1 truncate" title={tag.name}>{tag.name}</span>
+        {count !== undefined ? <NavCount value={count} /> : null}
       </button>
       <SidebarRowMenu
         label={tag.name}
-        visible={active}
         mutationBusy={mutationBusy}
         onDelete={onDelete}
       />
@@ -836,7 +835,7 @@ function CollectionNavRow({
   if (renaming) {
     return (
       <form
-        className={`${SHELL_NAV_SURFACE} ${SHELL_NAV_ITEM_ACTIVE} w-full gap-2 px-2 py-1.5`}
+        className={`${SHELL_NAV_SURFACE} ${SHELL_NAV_ITEM_ACTIVE} w-full gap-2 py-1.5 pl-12 pr-2`}
         onSubmit={(event) => {
           event.preventDefault();
           onSubmitRename();
@@ -870,7 +869,7 @@ function CollectionNavRow({
 
   return (
     <div
-      className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-1 text-sm ${
+      className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${
         active
           ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary`
           : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`
@@ -891,25 +890,24 @@ function CollectionNavRow({
     >
       <button
         type="button"
-        className="squircle-panel flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 pl-3 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+        className="squircle-panel flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
         aria-label={collection.name}
         aria-current={active ? "page" : undefined}
         onClick={onNavigate}
       >
-        <span aria-hidden="true" className="flex size-[18px] shrink-0 items-center justify-center">
-          <span className="size-2 rounded-full bg-collection-marker" style={collectionMarkerStyle(collection.id)} />
+        <span
+          aria-hidden="true"
+          className="flex h-[18px] w-10 shrink-0 translate-x-[18px] items-center justify-center text-collection-marker"
+          style={collectionMarkerStyle(collection.id)}
+          title={pinned ? "Pinned collection" : undefined}
+        >
+          {pinned ? <PinIcon className="size-3" fill="currentColor" /> : <span className="size-2 rounded-full bg-collection-marker" />}
         </span>
-        <span className="truncate">{collection.name}</span>
-        {pinned ? (
-          <span title="Pinned collection" className="shrink-0 text-text-secondary">
-            <PinIcon className="size-3.5" />
-          </span>
-        ) : null}
+        <span className="min-w-0 flex-1 truncate" title={collection.name}>{collection.name}</span>
         {count !== undefined ? <NavCount value={count} /> : null}
       </button>
       <SidebarRowMenu
         label={collection.name}
-        visible={active}
         mutationBusy={mutationBusy}
         pinned={pinned}
         onTogglePin={onTogglePin}
@@ -924,7 +922,6 @@ function CollectionNavRow({
 
 function SidebarRowMenu({
   label,
-  visible,
   mutationBusy,
   pinned,
   onTogglePin,
@@ -934,7 +931,6 @@ function SidebarRowMenu({
   onDelete,
 }: {
   label: string;
-  visible: boolean;
   mutationBusy: boolean;
   pinned?: boolean;
   onTogglePin?: () => void;
@@ -949,10 +945,10 @@ function SidebarRowMenu({
   return (
     <Menu.Root open={open} onOpenChange={setOpen} modal={false}>
       <Menu.Trigger
-        className={`flex size-7 shrink-0 items-center justify-center rounded-[6px] text-text-secondary hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 ${
-          visible || open
+        className={`absolute right-0 flex size-7 shrink-0 items-center justify-center rounded-[6px] text-text-secondary hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 ${
+          open
             ? "opacity-100"
-            : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
         }`}
         aria-label={actionsLabel}
         disabled={mutationBusy}
@@ -1051,7 +1047,7 @@ function NavCount({ value }: { value: number }) {
   return (
     <span
       aria-hidden
-      className="ml-auto shrink-0 pl-2 text-[11px] tabular-nums text-text-secondary"
+      className="ml-auto shrink-0 pl-2 text-[11px] tabular-nums text-text-secondary group-hover:opacity-0 group-focus-within:opacity-0"
     >
       {value}
     </span>
@@ -1130,9 +1126,9 @@ function SidebarSearch({
     <div className="shrink-0 px-3">
       <label className="relative block">
         <span className="sr-only">{label}</span>
-        <SearchIcon className="pointer-events-none absolute left-0 top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
+        <SearchIcon className="pointer-events-none absolute left-[19px] top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
         <input
-          className="h-7 w-full rounded-control border border-transparent bg-transparent pl-6 pr-2 text-xs"
+          className="h-7 w-full rounded-control border border-transparent bg-transparent pl-9 pr-2 text-xs"
           placeholder={label === "Search collections" ? "Search folders" : label}
           aria-label={label}
           value={value}

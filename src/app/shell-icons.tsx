@@ -15,10 +15,10 @@ import {
   Settings02Icon as Settings02,
 } from "@hugeicons/core-free-icons";
 
-type IconProps = { className?: string };
+type IconProps = { className?: string; fill?: "none" | "currentColor" };
 
-function ShellIcon({ icon, className = "" }: IconProps & { icon: IconSvgElement }) {
-  return <HugeiconsIcon icon={icon} size={18} strokeWidth={1.5} className={`shrink-0 ${className}`} aria-hidden="true" />;
+function ShellIcon({ icon, className = "", fill = "none" }: IconProps & { icon: IconSvgElement }) {
+  return <HugeiconsIcon icon={icon} size={18} strokeWidth={1.5} fill={fill} className={`shrink-0 ${className}`} aria-hidden="true" />;
 }
 
 export function LogoIcon({ className = "" }: IconProps) {
