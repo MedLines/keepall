@@ -16,7 +16,7 @@ saved link alone. If the shortcut is already claimed, assign it at
 `chrome://extensions/shortcuts`. Chrome does not allow injection on its internal
 pages, so those pages cannot be captured.
 
-The extension uses `https://keepall.app` by default. To test against a local
+The extension uses `https://www.keepall.app` by default. To test against a local
 server, open the extension's **Options** page and enter its localhost address,
 such as `http://localhost:3001`. The browser profile, origin, and IndexedDB
 must match the Keepall library you intend to use. The hosted bridge route must

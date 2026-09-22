@@ -6,7 +6,7 @@
   "minimum_chrome_version": "116",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA16KKQIpbUvjhofHCDutZKhkkKxAdhSuAi0mKhFkzRW4JCbzoezWvAEgV9y51DagmAxFv1torv8zNMiE3LbODVaWY6suVqv3vKxfzNCCaBaAdhloMAiWeK5GRFMaBnvPD5jNTJh4pGhxj3f5OSTk2Sl0hP2XW7NCzyLnCXyztcBKhIsl9utNjDKTjYI6zeqlVWnAZaBhzlEjznE3LLffHI+77iz1lU48VAhR6OfXzHLsy5hBCPsY6EraJd7q+6whXwmsB5RnStCzqq5x6ZAs5G58qVroLr+e8OBsmK8wHiZS8wim4iBQYgrQ9PoJyhFmn1j/C7iUWMBMlpSoRm2B0iwIDAQAB",
   "permissions": ["activeTab", "scripting", "offscreen", "storage", "alarms"],
-  "host_permissions": ["https://keepall.app/*", "http://localhost/*"],
+  "host_permissions": ["https://www.keepall.app/*", "http://localhost/*"],
   "web_accessible_resources": [{
     "resources": ["inter-latin-wght-normal.woff2"],
     "matches": ["http://*/*", "https://*/*"]

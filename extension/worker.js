@@ -1,4 +1,4 @@
-const DEFAULT_ORIGIN = "https://keepall.app";
+const DEFAULT_ORIGIN = "https://www.keepall.app";
 const PENDING_LIFETIME_MS = 10 * 60 * 1000;
 let creatingOffscreen;
 

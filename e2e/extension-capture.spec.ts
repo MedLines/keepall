@@ -13,6 +13,41 @@ declare const chrome: {
 };
 declare function saveTab(tab: ExtensionTab): Promise<void>;
 declare function openEditor(tab: ExtensionTab): Promise<void>;
+declare function keepallOrigin(): Promise<string>;
+
+test("extension uses the canonical production library address", async () => {
+  const profile = await mkdtemp(path.join(tmpdir(), "keepall-extension-origin-"));
+  const extensionPath = path.resolve("extension");
+  const context = await chromium.launchPersistentContext(profile, {
+    channel: "chromium",
+    headless: true,
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`,
+    ],
+  });
+
+  try {
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
+    expect(await worker.evaluate(() => keepallOrigin())).toBe("https://www.keepall.app");
+
+    await worker.evaluate(() => chrome.storage.local.set({ origin: "https://keepall.app" }));
+    expect(await worker.evaluate(() => keepallOrigin())).toBe("https://www.keepall.app");
+
+    const options = await context.newPage();
+    await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
+    await expect(options.getByLabel("Keepall address")).toHaveValue("https://www.keepall.app");
+    await expect(options.getByRole("link", { name: "Open library" })).toHaveAttribute("href", "https://www.keepall.app/");
+    await options.getByLabel("Keepall address").fill("https://keepall.app");
+    await options.getByRole("button", { name: "Save address" }).click();
+    await expect(options.getByRole("status")).toHaveText("Address saved.");
+    await expect(options.getByLabel("Keepall address")).toHaveValue("https://www.keepall.app");
+    expect(await worker.evaluate(() => keepallOrigin())).toBe("https://www.keepall.app");
+  } finally {
+    await context.close();
+    await rm(profile, { recursive: true, force: true });
+  }
+});
 
 test("extension saves and edits links through the hidden Keepall bridge", async () => {
   test.setTimeout(60_000);
@@ -88,11 +123,11 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await organizationSetup.close();
 
     const editorPage = await context.newPage();
-    await editorPage.route("https://keepall.app/note-article", (route) => route.fulfill({
+    await editorPage.route("http://localhost:3200/note-article", (route) => route.fulfill({
       contentType: "text/html",
       body: "<!doctype html><title>Note article</title><h1>Another page</h1>",
     }));
-    await editorPage.goto("https://keepall.app/note-article");
+    await editorPage.goto("http://localhost:3200/note-article");
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await openEditor(tab);
@@ -115,11 +150,11 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await editorPage.close();
 
     const newNamesPage = await context.newPage();
-    await newNamesPage.route("https://keepall.app/new-name-article", (route) => route.fulfill({
+    await newNamesPage.route("http://localhost:3200/new-name-article", (route) => route.fulfill({
       contentType: "text/html",
       body: "<!doctype html><title>New names article</title><h1>New names</h1>",
     }));
-    await newNamesPage.goto("https://keepall.app/new-name-article");
+    await newNamesPage.goto("http://localhost:3200/new-name-article");
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await openEditor(tab);
@@ -155,7 +190,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     }));
     expect(items).toHaveLength(3);
     expect(items).toContainEqual(expect.objectContaining({
-      url: "https://keepall.app/note-article",
+      url: "http://localhost:3200/note-article",
       title: "Chosen title",
       noteContent: "Read for layout ideas",
       collectionIds: ["collection-reading"],
@@ -180,7 +215,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     expect(newCollection).toBeDefined();
     expect(newTag).toBeDefined();
     expect(items).toContainEqual(expect.objectContaining({
-      url: "https://keepall.app/new-name-article",
+      url: "http://localhost:3200/new-name-article",
       collectionIds: [newCollection?.id],
       tagIds: [newTag?.id],
     }));
