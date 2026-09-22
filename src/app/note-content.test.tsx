@@ -1,6 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { NoteContent } from "./note-content";
+
+vi.mock("./use-asset-object-url", () => ({
+  useAssetObjectUrl: (id: string | null) => id ? `blob:local-${id}` : null,
+}));
 
 describe("NoteContent", () => {
   test("keeps quick notes literal", () => {
@@ -24,5 +28,19 @@ describe("NoteContent", () => {
     expect(container.querySelector("script, img")).toBeNull();
     expect(screen.getByText(/Image: remote/)).toBeVisible();
     expect(screen.queryByRole("link", { name: "unsafe" })).toBeNull();
+  });
+
+  test.each(["plain", "markdown"] as const)("renders a local image between %s paragraphs", (format) => {
+    const { container } = render(<NoteContent content={"Before\n\n![Sketch](keepall-image:a1)\n\nAfter"} format={format} />);
+    const image = screen.getByRole("img", { name: "Sketch" });
+    expect(image).toHaveAttribute("src", "blob:local-a1");
+    const text = container.textContent ?? "";
+    expect(text.indexOf("Before")).toBeLessThan(text.indexOf("After"));
+  });
+
+  test("does not turn a local-looking link into an image or open a remote image", () => {
+    const { container } = render(<NoteContent content="[not an image](keepall-image:a1)\n\n![remote](https://example.com/a.png)" format="markdown" />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.queryByRole("link", { name: "not an image" })).toBeNull();
   });
 });

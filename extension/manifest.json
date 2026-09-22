@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Keepall Capture",
+  "version": "0.1.0",
+  "description": "Save the current page to your local Keepall library.",
+  "minimum_chrome_version": "116",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA16KKQIpbUvjhofHCDutZKhkkKxAdhSuAi0mKhFkzRW4JCbzoezWvAEgV9y51DagmAxFv1torv8zNMiE3LbODVaWY6suVqv3vKxfzNCCaBaAdhloMAiWeK5GRFMaBnvPD5jNTJh4pGhxj3f5OSTk2Sl0hP2XW7NCzyLnCXyztcBKhIsl9utNjDKTjYI6zeqlVWnAZaBhzlEjznE3LLffHI+77iz1lU48VAhR6OfXzHLsy5hBCPsY6EraJd7q+6whXwmsB5RnStCzqq5x6ZAs5G58qVroLr+e8OBsmK8wHiZS8wim4iBQYgrQ9PoJyhFmn1j/C7iUWMBMlpSoRm2B0iwIDAQAB",
+  "permissions": ["activeTab", "scripting", "offscreen", "storage"],
+  "host_permissions": ["https://keepall.app/*", "http://localhost:3100/*"],
+  "background": { "service_worker": "worker.js" },
+  "action": {
+    "default_title": "Save page to Keepall",
+    "default_icon": "icon.png"
+  },
+  "icons": { "128": "icon.png" },
+  "commands": {
+    "open-editor": {
+      "suggested_key": "Alt+K",
+      "description": "Open Keepall capture on this page"
+    }
+  }
+}

@@ -22,7 +22,7 @@ describe("buildKeepallBackup", () => {
 
     expect(backup).toEqual({
       format: "keepall",
-      version: 4,
+      version: 5,
       exportedAt: 99,
       items: [note],
       tags: [],
@@ -60,14 +60,14 @@ describe("parseKeepallBackup", () => {
 
   test("accepts a valid versioned backup", () => {
     expect(parseKeepallBackup(valid)).toEqual(valid);
-    expect(parseKeepallBackup({ ...valid, version: 3 }).version).toBe(4);
+    expect(parseKeepallBackup({ ...valid, version: 3 }).version).toBe(5);
   });
 
   test("rejects wrong format or a future version", () => {
     expect(() => parseKeepallBackup({ ...valid, format: "other" })).toThrow(
       BackupValidationError,
     );
-    expect(() => parseKeepallBackup({ ...valid, version: 5 })).toThrow(
+    expect(() => parseKeepallBackup({ ...valid, version: 6 })).toThrow(
       BackupValidationError,
     );
   });
@@ -88,6 +88,14 @@ describe("parseKeepallBackup", () => {
       items: [{ ...markdown, format: undefined }],
     });
     expect(legacy.items[0]).not.toHaveProperty("format");
+  });
+
+  test("requires each inline note image to exist in the backup", () => {
+    const note = buildNote({ content: "Before\n\n![Image](keepall-image:a1)\n\nAfter" });
+    const backup = buildKeepallBackup({ items: [note], tags: [], collections: [] });
+    expect(() => parseKeepallBackup(backup)).toThrow(/missing image/);
+    const complete = { ...backup, assets: [{ id: "a1", mimeType: "image/png", byteLength: 1, dataBase64: "AQ==", createdAt: 1 }] };
+    expect(parseKeepallBackup(complete).items[0]).toEqual(note);
   });
 
   test("round-trips image captions and personal link notes without mixing preview text", () => {

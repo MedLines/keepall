@@ -24,6 +24,8 @@ import {
 import {
   applyNoteEdit,
   buildNote,
+  noteImageAssetIds,
+  replaceNoteImageAssetIds,
   type CreateNoteInput,
   type NoteItem,
 } from "@/domain/note";
@@ -31,7 +33,6 @@ import { assignCollectionId } from "@/domain/collection";
 import { assignTagId, removeTagId } from "@/domain/tag";
 import { hashAssetBytes, sameContentHashMultiset } from "@/domain/asset";
 import {
-  deleteAsset,
   ensureContentHash,
   findAssetByContentHash,
   getAsset,
@@ -40,15 +41,15 @@ import {
 import { getDb } from "./db";
 import { createTag } from "./tags";
 
-async function deleteLinkedPreviewAsset(link: LinkItem): Promise<void> {
-  if (link.previewAssetId) {
-    await deleteAsset(link.previewAssetId);
-  }
-}
-
 export async function createNote(input: CreateNoteInput): Promise<NoteItem> {
   const note = buildNote(input);
-  await getDb().items.add(note);
+  const db = getDb();
+  await db.transaction("rw", db.items, db.assets, async () => {
+    for (const assetId of noteImageAssetIds(note.content)) {
+      if (!await db.assets.get(assetId)) throw new Error("Note image is missing");
+    }
+    await db.items.add(note);
+  });
   return note;
 }
 
@@ -316,32 +317,77 @@ export async function getItem(id: string): Promise<Item | null> {
 }
 
 export async function deleteItem(id: string): Promise<void> {
-  const existing = await getDb().items.get(id);
-  if (existing?.type === "link") {
-    await deleteLinkedPreviewAsset(normalizeItem(existing));
-  }
-  if (existing?.type === "image") {
-    const image = normalizeItem(existing);
-    for (const assetId of image.assetIds) {
-      await deleteAsset(assetId);
-    }
-  }
-  await getDb().items.delete(id);
+  const db = getDb();
+  await db.transaction("rw", db.items, db.assets, async () => {
+    const existing = await db.items.get(id);
+    if (!existing) return;
+    const item = normalizeItem(existing);
+    const assetIds = itemAssetIds(item);
+    await db.items.delete(id);
+    await deleteUnreferencedAssets(assetIds);
+  });
+}
+
+function itemAssetIds(item: Item): string[] {
+  if (item.type === "image") return item.assetIds;
+  if (item.type === "link") return item.previewAssetId ? [item.previewAssetId] : [];
+  return noteImageAssetIds(item.content);
+}
+
+async function deleteUnreferencedAssets(assetIds: string[]): Promise<void> {
+  if (!assetIds.length) return;
+  const db = getDb();
+  const items = await db.items.toArray();
+  const used = new Set(items.flatMap((item) => itemAssetIds(normalizeItem(item))));
+  await db.assets.bulkDelete([...new Set(assetIds)].filter((assetId) => !used.has(assetId)));
+}
+
+async function deleteUnreferencedAsset(assetId: string): Promise<void> {
+  await deleteUnreferencedAssets([assetId]);
 }
 
 export async function updateNote(
   id: string,
   input: { content: string; format?: "plain" | "markdown" },
 ): Promise<NoteItem> {
-  const existing = await getDb().items.get(id);
+  return saveNoteWithImages(id, input, []);
+}
 
-  if (!existing || existing.type !== "note") {
-    throw new Error("Note not found");
-  }
-
-  const next = applyNoteEdit(normalizeItem(existing), input);
-  await getDb().items.put(next);
-  return next;
+export async function saveNoteWithImages(
+  id: string,
+  input: { content: string; format?: "plain" | "markdown" },
+  uploads: { id: string; bytes: Uint8Array; mimeType: string }[],
+): Promise<NoteItem> {
+  // Web Crypto is asynchronous; finish hashing before entering Dexie's transaction.
+  const prepared = await Promise.all(uploads.map(async (upload) => ({
+    id: upload.id,
+    bytes: upload.bytes,
+    mimeType: assertLocalImageBytes(upload.bytes, upload.mimeType),
+    contentHash: await hashAssetBytes(upload.bytes),
+  })));
+  const db = getDb();
+  return db.transaction("rw", db.items, db.assets, async () => {
+    const existing = await db.items.get(id);
+    if (!existing || existing.type !== "note") throw new Error("Note not found");
+    const previous = normalizeItem(existing);
+    const wanted = new Set(noteImageAssetIds(input.content));
+    const replacements = new Map<string, string>();
+    for (const upload of prepared) {
+      if (!wanted.has(upload.id)) continue;
+      const asset = await putAsset(upload);
+      replacements.set(upload.id, asset.id);
+    }
+    const content = replaceNoteImageAssetIds(input.content, replacements);
+    for (const assetId of noteImageAssetIds(content)) {
+      if (!await db.assets.get(assetId)) throw new Error("Note image is missing");
+    }
+    const next = applyNoteEdit(previous, { ...input, content });
+    await db.items.put(next);
+    const nextAssetIds = new Set(noteImageAssetIds(next.content));
+    await deleteUnreferencedAssets(noteImageAssetIds(previous.content)
+      .filter((assetId) => !nextAssetIds.has(assetId)));
+    return next;
+  });
 }
 
 export async function updateLink(
@@ -356,10 +402,10 @@ export async function updateLink(
 
   const current = normalizeItem(existing);
   const next = applyLinkEdit(current, input);
-  if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
-    await deleteAsset(current.previewAssetId);
-  }
   await getDb().items.put(next);
+  if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
+    await deleteUnreferencedAsset(current.previewAssetId);
+  }
   return next;
 }
 
@@ -417,7 +463,7 @@ export async function replaceImageAssetAtIndex(
   const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
   const next = replaceImageAssetAt(current, slideIndex, asset.id);
   await getDb().items.put(next);
-  await deleteAsset(previousAssetId);
+  await deleteUnreferencedAsset(previousAssetId);
   return next;
 }
 
@@ -441,16 +487,7 @@ export async function removeImageAssetAtIndex(
     const next = removeImageAssetAt(current, slideIndex);
     await db.items.put(next);
 
-    const rows = await db.items.toArray();
-    const stillReferenced = rows.some((row) => {
-      const item = normalizeItem(row);
-      return item.type === "image"
-        ? item.assetIds.includes(removedAssetId)
-        : item.type === "link" && item.previewAssetId === removedAssetId;
-    });
-    if (!stillReferenced) {
-      await db.assets.delete(removedAssetId);
-    }
+    await deleteUnreferencedAsset(removedAssetId);
 
     return next;
   });
@@ -464,12 +501,12 @@ export async function setLinkPreviewPending(id: string): Promise<LinkItem> {
   }
 
   const current = normalizeItem(existing);
-  await deleteLinkedPreviewAsset(current);
   const next = {
     ...markLinkPreviewPending(current),
     previewAssetId: null,
   };
   await getDb().items.put(next);
+  if (current.previewAssetId) await deleteUnreferencedAsset(current.previewAssetId);
   return next;
 }
 
@@ -487,10 +524,10 @@ export async function saveLinkPreviewResult(
 
   const current = normalizeItem(existing);
   const next = applyLinkPreviewResult(current, result);
-  if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
-    await deleteAsset(current.previewAssetId);
-  }
   await getDb().items.put(next);
+  if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
+    await deleteUnreferencedAsset(current.previewAssetId);
+  }
   return next;
 }
 
@@ -521,11 +558,11 @@ export async function setLinkPreviewAssetId(
   }
 
   const current = normalizeItem(existing);
-  if (current.previewAssetId && current.previewAssetId !== previewAssetId) {
-    await deleteAsset(current.previewAssetId);
-  }
   const next = applyLinkPreviewAssetId(current, previewAssetId);
   await getDb().items.put(next);
+  if (current.previewAssetId && current.previewAssetId !== previewAssetId) {
+    await deleteUnreferencedAsset(current.previewAssetId);
+  }
   return next;
 }
 

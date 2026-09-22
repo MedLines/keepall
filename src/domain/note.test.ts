@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildNote, noteListTitle, noteReadingBody, applyNoteEdit, NoteValidationError } from "./note";
+import { buildNote, noteListTitle, noteReadingBody, applyNoteEdit, NoteValidationError, noteImageAssetIds, noteImageMarkers, insertNoteImageMarker, removeNoteImageMarkerAt, replaceNoteImageAssetIds } from "./note";
 
 describe("buildNote", () => {
   test("creates a note with trimmed content and an empty title", () => {
@@ -88,6 +88,12 @@ describe("applyNoteEdit", () => {
 });
 
 describe("noteListTitle", () => {
+  test("finds the title after an inline image and keeps the image in the reading body", () => {
+    const note = buildNote({ content: "![Image](keepall-image:a1)\n\n# Spacing study\n\nKeep this.", format: "markdown" });
+    expect(noteListTitle(note)).toBe("Spacing study");
+    expect(noteReadingBody(note)).toContain("![Image](keepall-image:a1)");
+    expect(noteReadingBody(note)).not.toContain("# Spacing study");
+  });
   test("keeps a leading code fence in the reading body when no title can be inferred", () => {
     const note = buildNote({ content: "```tsx\nconst card = true;\n```", format: "markdown" });
     expect(noteListTitle(note)).toBe("Untitled note");
@@ -115,5 +121,31 @@ describe("noteListTitle", () => {
       { id: "n2", now: 1 },
     );
     expect(noteListTitle(note)).toBe("Sketch");
+  });
+});
+
+describe("inline note images", () => {
+  test("inserts an image between paragraphs and finds unique saved image references", () => {
+    const content = insertNoteImageMarker("Before\n\nAfter", 8, 8, "a1");
+    expect(content).toBe("Before\n\n![Image](keepall-image:a1)\n\nAfter");
+    expect(noteImageAssetIds(`${content}\n\n![Image](keepall-image:a1)`)).toEqual(["a1"]);
+    expect(noteImageAssetIds("![Remote](https://example.com/a.png)")).toEqual([]);
+  });
+
+  test("remaps temporary image references without changing other text", () => {
+    expect(replaceNoteImageAssetIds("Before\n\n![Image](keepall-image:temp)\n\nAfter", new Map([["temp", "saved"]])))
+      .toBe("Before\n\n![Image](keepall-image:saved)\n\nAfter");
+  });
+
+  test("removes an inline image without merging the surrounding paragraphs", () => {
+    expect(removeNoteImageMarkerAt("Before\n\n![Image](keepall-image:a1)\n\nAfter", 0))
+      .toBe("Before\n\nAfter");
+    expect(removeNoteImageMarkerAt("![Image](keepall-image:a1)\n\nAfter", 0))
+      .toBe("After");
+    expect(removeNoteImageMarkerAt("Before\n\n![Image](keepall-image:a1)", 0))
+      .toBe("Before");
+    const repeated = "![Image](keepall-image:a1)\n\n![Image](keepall-image:a1)";
+    expect(noteImageMarkers(repeated)).toHaveLength(2);
+    expect(noteImageMarkers(removeNoteImageMarkerAt(repeated, 1))).toHaveLength(1);
   });
 });

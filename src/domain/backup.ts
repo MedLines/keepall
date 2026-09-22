@@ -6,12 +6,12 @@ import type { ImageItem } from "./image";
 import { coerceImageFields } from "./image";
 import type { LinkItem } from "./link";
 import { coerceLinkPreviewFields } from "./link";
-import type { NoteItem } from "./note";
+import { noteImageAssetIds, type NoteItem } from "./note";
 import type { Tag } from "./tag";
 import { normalizePinnedCollectionIds } from "./library-preferences";
 
 export const KEEPALL_BACKUP_FORMAT = "keepall";
-export const KEEPALL_BACKUP_VERSION = 4;
+export const KEEPALL_BACKUP_VERSION = 5;
 
 /** Asset row serialized for JSON backup (bytes as base64). */
 export type BackupAssetRecord = {
@@ -74,7 +74,7 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
     throw new BackupValidationError('Backup format must be "keepall"');
   }
 
-  if (candidate.version !== 1 && candidate.version !== 2 && candidate.version !== 3 && candidate.version !== KEEPALL_BACKUP_VERSION) {
+  if (![1, 2, 3, 4, KEEPALL_BACKUP_VERSION].includes(candidate.version as number)) {
     throw new BackupValidationError(
       `Unsupported backup version (supported: 1-${KEEPALL_BACKUP_VERSION})`,
     );
@@ -420,6 +420,11 @@ function parseItem(
     }
     if (item.format !== undefined && item.format !== "markdown") {
       throw new BackupValidationError(`Note at index ${index} has an unknown format`);
+    }
+    for (const assetId of noteImageAssetIds(item.content)) {
+      if (!assetIds.has(assetId)) {
+        throw new BackupValidationError(`Note at index ${index} references missing image: ${assetId}`);
+      }
     }
 
     const note: NoteItem = {

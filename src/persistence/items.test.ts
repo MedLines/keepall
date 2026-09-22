@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { ImageValidationError } from "@/domain/image";
 import { LinkValidationError } from "@/domain/link";
-import { buildNote, NoteValidationError } from "@/domain/note";
+import { buildNote, noteImageAssetIds, NoteValidationError } from "@/domain/note";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { getAsset } from "./assets";
 import {
@@ -21,6 +21,7 @@ import {
   updateImage,
   updateLink,
   updateNote,
+  saveNoteWithImages,
 } from "./items";
 
 describe("items persistence", () => {
@@ -53,6 +54,12 @@ describe("items persistence", () => {
     await expect(createNote({ content: "   " })).rejects.toBeInstanceOf(
       NoteValidationError,
     );
+    expect(await listNotes()).toEqual([]);
+  });
+
+  test("createNote rejects a local image reference without stored bytes", async () => {
+    await expect(createNote({ content: "![Image](keepall-image:missing)" }))
+      .rejects.toThrow(/image is missing/);
     expect(await listNotes()).toEqual([]);
   });
 
@@ -133,6 +140,41 @@ describe("items persistence", () => {
       NoteValidationError,
     );
     expect(await listNotes()).toEqual([created]);
+  });
+
+  test("saves an inline image between note paragraphs and removes it with the note", async () => {
+    const note = await createNote({ content: "Before\n\nAfter" });
+    const saved = await saveNoteWithImages(note.id, {
+      content: "Before\n\n![Image](keepall-image:pending-one)\n\nAfter",
+      format: "plain",
+    }, [{ id: "pending-one", bytes: new Uint8Array([1, 2, 3]), mimeType: "image/png" }]);
+    const [assetId] = noteImageAssetIds(saved.content);
+    expect(saved.content).toBe(`Before\n\n![Image](keepall-image:${assetId})\n\nAfter`);
+    expect(await getAsset(assetId)).toMatchObject({ mimeType: "image/png" });
+    await deleteItem(note.id);
+    expect(await getAsset(assetId)).toBeUndefined();
+  });
+
+  test("rejects missing inline images without changing the saved note", async () => {
+    const note = await createNote({ content: "Before" });
+    await expect(updateNote(note.id, { content: "![Image](keepall-image:missing)" }))
+      .rejects.toThrow(/image/i);
+    expect((await listNotes())[0]).toEqual(note);
+  });
+
+  test("does not delete an image still used by another item", async () => {
+    const bytes = new Uint8Array([7, 8, 9]);
+    const image = await createImage({ assets: [{ bytes, mimeType: "image/png" }] });
+    const note = await createNote({ content: "Shared image" });
+    const saved = await saveNoteWithImages(note.id, {
+      content: "Shared image\n\n![Image](keepall-image:pending)",
+    }, [{ id: "pending", bytes, mimeType: "image/png" }]);
+    const assetId = image.assetIds[0]!;
+    expect(noteImageAssetIds(saved.content)).toEqual([assetId]);
+    await deleteItem(image.id);
+    expect(await getAsset(assetId)).toBeDefined();
+    await updateNote(note.id, { content: "No image now" });
+    expect(await getAsset(assetId)).toBeUndefined();
   });
 
   test("updateLink changes url and keeps id and createdAt", async () => {

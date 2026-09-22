@@ -62,6 +62,107 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("note page shows organization and keeps changes after reload", async ({ page }, testInfo) => {
+  await page.goto("/items/note");
+  await expect(page.getByRole("heading", { level: 1, name: "Design notes" })).toBeVisible();
+  const details = page.getByRole("complementary", { name: "Note details" });
+  await expect(details.getByRole("link", { name: "UI inspiration" })).toHaveAttribute("href", "/?collection=c");
+  await expect(details.getByRole("link", { name: "minimal" })).toHaveAttribute("href", "/?tag=t");
+
+  await page.getByRole("button", { name: "Organize" }).click();
+  await page.getByRole("combobox", { name: "Add tag" }).fill("writing");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("list", { name: "Current tags" })).toContainText("writing");
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(details.getByRole("link", { name: "writing" })).toBeVisible();
+  await page.reload();
+  await expect(details.getByRole("link", { name: "writing" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("note-details-desktop.png") });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("button", { name: "Organize" })).toBeVisible();
+  await expect(details).toBeVisible();
+  await expect(page.getByText("Let the image lead.")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("note-details-mobile.png"), fullPage: true });
+
+  await page.getByRole("button", { name: "Delete note" }).click();
+  await expect(page.getByRole("heading", { name: "Delete this note?" })).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Design notes" })).toBeVisible();
+  await page.getByRole("button", { name: "Delete note" }).click();
+  await page.getByRole("button", { name: "Confirm delete" }).click();
+  await expect(page).toHaveURL(/localhost:3100\/$/);
+  await expect(page.locator(".library-card").filter({ hasText: "Design notes" })).toHaveCount(0);
+});
+
+test("open note saves an image between paragraphs and keeps it after reload", async ({ page }, testInfo) => {
+  await page.goto("/items/note");
+  await page.getByRole("button", { name: "Add image", exact: true }).click();
+  const editor = page.getByRole("textbox", { name: "Note content" });
+  await editor.evaluate((element: HTMLTextAreaElement) => {
+    const cursor = element.value.indexOf("Let the image lead.");
+    element.setSelectionRange(cursor, cursor);
+  });
+  const image = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 2;
+    canvas.getContext("2d")!.fillRect(0, 0, 2, 2);
+    return canvas.toDataURL("image/png").split(",")[1]!;
+  });
+  await page.getByRole("button", { name: "Add image at cursor" }).click();
+  await page.getByLabel("Choose note images").setInputFiles({
+    name: "card.png", mimeType: "image/png", buffer: Buffer.from(image, "base64"),
+  });
+  await expect(editor).toHaveValue(/Keep the card quiet\.\n\n!\[Image\]\(keepall-image:[^)]+\)\n\nLet the image lead\./);
+  const images = page.getByRole("region", { name: "Images in this note" });
+  await expect(images).toContainText("Image 1");
+  await expect(images.locator("img[src^='blob:']")).toBeVisible();
+  await expect(images.getByRole("button", { name: "Remove image 1" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("note-editor-with-image.png") });
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(page.getByLabel("Note preview").locator("img[src^='blob:']")).toBeVisible();
+  await page.getByRole("button", { name: "Save note" }).click();
+  await expect(page.locator("article img[src^='blob:']")).toBeVisible();
+  await expect.poll(() => page.locator("article").locator("p, img").evaluateAll((nodes) =>
+    nodes.map((node) => node.tagName === "IMG" ? "image" : node.textContent?.trim()),
+  )).toEqual(["Keep the card quiet.", "image", "Let the image lead."]);
+  await page.reload();
+  await expect(page.locator("article img[src^='blob:']")).toBeVisible();
+  await page.getByRole("button", { name: "Edit note" }).click();
+  await page.getByRole("region", { name: "Images in this note" }).getByRole("button", { name: "Remove image 1" }).click();
+  await expect(page.getByRole("textbox", { name: "Note content" })).not.toHaveValue(/keepall-image:/);
+  await page.getByRole("button", { name: "Save note" }).click();
+  await expect(page.locator("article img")).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator("article img")).toHaveCount(0);
+});
+
+test("note editor grows to fit long content without an inner scrollbar", async ({ page }, testInfo) => {
+  await page.goto("/items/note");
+  await page.getByRole("button", { name: "Edit note" }).click();
+  const editor = page.getByRole("textbox", { name: "Note content" });
+  const initialHeight = await editor.evaluate((node) => node.clientHeight);
+  await editor.fill(Array.from({ length: 40 }, (_, index) => `Paragraph ${index + 1}: design notes`).join("\n\n"));
+  await expect.poll(() => editor.evaluate((node) => node.clientHeight)).toBeGreaterThan(initialHeight);
+  const size = await editor.evaluate((node) => ({ height: node.clientHeight, content: node.scrollHeight }));
+  expect(size.height).toBeGreaterThan(initialHeight);
+  expect(size.content).toBeLessThanOrEqual(size.height + 2);
+  await page.screenshot({ path: testInfo.outputPath("long-note-editor.png") });
+});
+
+test("open link with a personal note can be organized", async ({ page }) => {
+  await page.goto("/items/link");
+  await expect(page.getByRole("link", { name: /Open website/ })).toHaveAttribute("href", "https://example.com/footer");
+  await page.getByRole("button", { name: "Organize" }).click();
+  await page.getByRole("combobox", { name: "Add tag" }).fill("reference");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("complementary", { name: "Link details" }).getByRole("link", { name: "reference" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("complementary", { name: "Link details" }).getByRole("link", { name: "reference" })).toBeVisible();
+});
+
 test("saved link preview stays visible while its personal note is added", async ({ page }, testInfo) => {
   const card = page.locator(".library-card").filter({ hasText: "Footer reference" });
   await expect(card.locator(".library-card-media a")).toHaveAttribute("href", "https://example.com/footer");

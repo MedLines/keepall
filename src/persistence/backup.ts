@@ -12,7 +12,7 @@ import { normalizeItem, type Item } from "@/domain/item";
 import type { ImageItem } from "@/domain/image";
 import type { LinkItem } from "@/domain/link";
 import { normalizeLinkUrl } from "@/domain/link";
-import type { NoteItem } from "@/domain/note";
+import { replaceNoteImageAssetIds, type NoteItem } from "@/domain/note";
 import { listAssets, putAsset, ensureContentHash, getAsset } from "./assets";
 import { createCollection } from "./collections";
 import { getDb } from "./db";
@@ -279,6 +279,7 @@ export async function importKeepallBackupMerge(
         const next: NoteItem = {
           ...incoming,
           id,
+          content: replaceNoteImageAssetIds(incoming.content, assetIdMap),
           tagIds: remapTagIds(incoming.tagIds),
           collectionIds: remapCollectionIds(incoming.collectionIds),
         };
@@ -303,6 +304,7 @@ export async function importKeepallBackupMerge(
         ? {
             ...incoming,
             id: local.id,
+            content: replaceNoteImageAssetIds(incoming.content, assetIdMap),
             tagIds: org.tagIds,
             collectionIds: org.collectionIds,
           }

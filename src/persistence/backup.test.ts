@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { BackupValidationError } from "@/domain/backup";
-import { buildNote } from "@/domain/note";
+import { buildNote, noteImageAssetIds } from "@/domain/note";
 import { buildTag } from "@/domain/tag";
 import {
   exportKeepallBackup,
@@ -9,7 +9,7 @@ import {
   libraryHasLocalData,
 } from "./backup";
 import { deleteKeepallDatabase, getDb } from "./db";
-import { createLink, createNote, listItems } from "./items";
+import { createLink, createNote, listItems, saveNoteWithImages } from "./items";
 import { createTag, listTags } from "./tags";
 import { createCollection, listCollections } from "./collections";
 import { buildLink } from "@/domain/link";
@@ -31,7 +31,7 @@ describe("backup persistence", () => {
     const backup = await exportKeepallBackup(123);
 
     expect(backup.format).toBe("keepall");
-    expect(backup.version).toBe(4);
+    expect(backup.version).toBe(5);
     expect(backup.exportedAt).toBe(123);
     expect(backup.items).toEqual([note]);
     expect(backup.tags).toEqual([tag]);
@@ -52,6 +52,25 @@ describe("backup persistence", () => {
       content: source,
       format: "markdown",
     });
+  });
+
+  test("inline note image survives replace and merge imports", async () => {
+    const note = await createNote({ content: "Before\n\nAfter", format: "markdown" });
+    const saved = await saveNoteWithImages(note.id, {
+      content: "Before\n\n![Image](keepall-image:pending)\n\nAfter",
+      format: "markdown",
+    }, [{ id: "pending", bytes: new Uint8Array([1, 2, 3]), mimeType: "image/png" }]);
+    const backup = await exportKeepallBackup();
+    await importKeepallBackupReplace(backup);
+    expect((await listItems())[0]).toEqual(saved);
+
+    await deleteKeepallDatabase();
+    await importKeepallBackupMerge(backup);
+    const restored = (await listItems())[0];
+    expect(restored?.type).toBe("note");
+    if (restored?.type !== "note") throw new Error("Expected note");
+    expect(noteImageAssetIds(restored.content)).toHaveLength(1);
+    expect((await getDb().assets.get(noteImageAssetIds(restored.content)[0]!))?.byteLength).toBe(3);
   });
 
   test("export and replace import preserve pinned collection order", async () => {
