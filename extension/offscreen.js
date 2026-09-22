@@ -2,15 +2,25 @@ let frame;
 let frameOrigin;
 let frameReady;
 let resolveReady;
+let readyTimer;
 const waiting = new Map();
+const organizationWaiting = new Map();
 
 function ensureFrame(origin) {
   if (frame && frameOrigin === origin) return frameReady;
   frame?.remove();
+  clearTimeout(readyTimer);
   frameOrigin = origin;
   frameReady = new Promise((resolve, reject) => {
     resolveReady = resolve;
-    setTimeout(() => reject(new Error("Keepall did not load")), 15000);
+    readyTimer = setTimeout(() => {
+      if (!resolveReady) return;
+      resolveReady = undefined;
+      frame?.remove();
+      frame = undefined;
+      frameOrigin = undefined;
+      reject(new Error("Keepall did not load"));
+    }, 15000);
   });
   frame = document.createElement("iframe");
   frame.src = `${origin}/extension-bridge`;
@@ -23,35 +33,69 @@ window.addEventListener("message", (event) => {
   if (event.source !== frame?.contentWindow || event.origin !== frameOrigin) return;
   if (event.data?.channel !== "keepall-extension") return;
   if (event.data.type === "ready") {
+    clearTimeout(readyTimer);
     resolveReady?.();
     resolveReady = undefined;
     return;
   }
   if (event.data.type === "result" && typeof event.data.captureId === "string") {
-    waiting.get(event.data.captureId)?.(event.data);
+    waiting.get(event.data.captureId)?.resolve(event.data);
+  }
+  if (event.data.type === "organizations" && typeof event.data.requestId === "string") {
+    organizationWaiting.get(event.data.requestId)?.resolve(event.data);
   }
 });
 
 async function capture(origin, payload) {
   await ensureFrame(origin);
-  return new Promise((resolve, reject) => {
+  if (waiting.has(payload.captureId)) return waiting.get(payload.captureId).promise;
+  let finish;
+  const promise = new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       waiting.delete(payload.captureId);
       reject(new Error("Keepall did not confirm the save"));
     }, 15000);
-    waiting.set(payload.captureId, (result) => {
+    finish = (result) => {
       clearTimeout(timer);
       waiting.delete(payload.captureId);
       resolve(result);
-    });
-    frame.contentWindow.postMessage({ channel: "keepall-extension", type: "capture", payload }, origin);
+    };
   });
+  waiting.set(payload.captureId, { promise, resolve: finish });
+  frame.contentWindow.postMessage({ channel: "keepall-extension", type: "capture", payload }, origin);
+  return promise;
+}
+
+async function organizations(origin, url) {
+  await ensureFrame(origin);
+  const requestId = crypto.randomUUID();
+  const promise = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      organizationWaiting.delete(requestId);
+      reject(new Error("Keepall did not load collections and tags"));
+    }, 15000);
+    organizationWaiting.set(requestId, {
+      resolve(result) {
+        clearTimeout(timer);
+        organizationWaiting.delete(requestId);
+        resolve(result);
+      },
+    });
+  });
+  frame.contentWindow.postMessage({ channel: "keepall-extension", type: "organizations", requestId, url }, origin);
+  return promise;
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.target !== "offscreen" || message.type !== "capture") return;
-  capture(message.origin, message.payload)
+  if (message?.target !== "offscreen") return;
+  const operation = message.type === "capture"
+    ? capture(message.origin, message.payload)
+    : message.type === "organizations"
+      ? organizations(message.origin, message.url)
+      : null;
+  if (!operation) return;
+  operation
     .then((result) => sendResponse(result))
-    .catch((error) => sendResponse({ error: error.message }));
+    .catch((error) => sendResponse({ error: error.message, retryable: true }));
   return true;
 });

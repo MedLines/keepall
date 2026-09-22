@@ -1,0 +1,74 @@
+@font-face {
+  font-family: "Keepall Inter";
+  src: url("inter-latin-wght-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --shell: #ecece9;
+  --canvas: #f5f5f3;
+  --surface: #fff;
+  --control: #fdfdfc;
+  --raised: #e6e6e3;
+  --text: #232526;
+  --muted: #62656b;
+  --border: #00000014;
+  --focus: #737b84;
+  --action: #232526;
+  --on-action: #fff;
+  --danger: #b42318;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --shell: #171717;
+    --canvas: #0e0e0f;
+    --surface: #242424;
+    --control: #1b1c1d;
+    --raised: #292b2e;
+    --text: #f2f2f0;
+    --muted: #aaaeb5;
+    --border: #ffffff14;
+    --focus: #8d959f;
+    --action: #f2f2f0;
+    --on-action: #18181a;
+    --danger: #fca5a5;
+  }
+}
+
+* { box-sizing: border-box; }
+body { min-height: 100vh; margin: 0; padding: 10px; background: var(--shell); color: var(--text); font: 14px/1.5 "Keepall Inter", Inter, ui-sans-serif, system-ui, sans-serif; }
+.app-frame { min-height: calc(100vh - 20px); padding: 28px 32px 64px; border-radius: 32px; background: var(--canvas); }
+.site-header { max-width: 1024px; margin: 0 auto; }
+.brand { display: inline-flex; min-height: 44px; align-items: center; gap: 0; padding: 0 8px; color: var(--text); font-size: 18px; font-weight: 500; }
+.brand img { display: block; flex: none; }
+.page-content { width: 100%; max-width: 768px; margin: 64px auto 0; }
+.back-link { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--control); color: var(--muted); font-weight: 500; text-decoration: none; }
+.back-link:hover { background: var(--raised); color: var(--text); }
+.page-heading { margin-top: 28px; }
+.eyebrow { margin: 0; color: var(--muted); font-size: 12px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
+h1 { margin: 8px 0 0; font-size: clamp(30px, 4vw, 36px); font-weight: 600; letter-spacing: -.03em; line-height: 1.2; }
+.intro { max-width: 640px; margin: 12px 0 0; color: var(--muted); font-size: 16px; line-height: 1.5; }
+.settings-card { margin-top: 32px; padding: 28px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
+h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.section-description { margin: 4px 0 0; color: var(--muted); line-height: 1.7; }
+form { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+label { display: block; margin-bottom: 8px; font-weight: 500; }
+input { display: block; width: 100%; min-height: 48px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--control); color: var(--text); font: inherit; }
+.hint { margin: 9px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+code { font: inherit; color: var(--text); }
+.form-footer { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 20px; }
+button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--action); color: var(--on-action); font: 600 14px "Keepall Inter", Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+button:hover { opacity: .9; }
+#status { margin: 0; color: var(--muted); }
+#status[data-state="error"] { color: var(--danger); }
+:where(input, button, a):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .app-frame { padding: 20px 16px 48px; border-radius: 24px; }
+  .page-content { margin-top: 40px; }
+  .settings-card { padding: 20px; }
+}

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { deleteKeepallDatabase } from "./db";
 import { createLink, listItems } from "./items";
-import { saveExtensionLink } from "./extension-capture";
+import { createCollection, listCollections } from "./collections";
+import { createTag, listTags } from "./tags";
+import { getExtensionOrganizationOptions, saveExtensionLink } from "./extension-capture";
 
 beforeEach(async () => {
   await deleteKeepallDatabase();
@@ -64,5 +66,128 @@ describe("saveExtensionLink", () => {
       title: "Bad",
     })).rejects.toThrow();
     expect(await listItems()).toHaveLength(0);
+  });
+
+  test("lists existing organization and saves a new link into selected collection and tags", async () => {
+    const collection = await createCollection({ name: "Reading" });
+    const tag = await createTag({ name: "Design" });
+    const url = "https://example.com/organized";
+
+    expect(await getExtensionOrganizationOptions(url)).toEqual({
+      collections: [{ id: collection.id, name: "Reading" }],
+      tags: [{ id: tag.id, name: "Design" }],
+      collectionId: null,
+      tagIds: [],
+    });
+
+    await saveExtensionLink({
+      captureId: "4bd8d64e-3b70-4554-b5d5-c041a72453a0",
+      url,
+      title: "Organized link",
+      collectionId: collection.id,
+      tagIds: [tag.id],
+    });
+
+    expect(await getExtensionOrganizationOptions(url)).toMatchObject({
+      collectionId: collection.id,
+      tagIds: [tag.id],
+    });
+    expect(await listItems()).toEqual([expect.objectContaining({
+      collectionIds: [collection.id],
+      tagIds: [tag.id],
+    })]);
+  });
+
+  test("editor selection can move a reused link while one click preserves its organization", async () => {
+    const reading = await createCollection({ name: "Reading" });
+    const later = await createCollection({ name: "Later" });
+    const design = await createTag({ name: "Design" });
+    const work = await createTag({ name: "Work" });
+    const url = "https://example.com/reuse";
+    await saveExtensionLink({
+      captureId: "3d4e463c-0b06-46d5-86d7-d054e6fba201",
+      url, title: "Reuse", collectionId: reading.id, tagIds: [design.id],
+    });
+    await saveExtensionLink({
+      captureId: "3d4e463c-0b06-46d5-86d7-d054e6fba202",
+      url, title: "Reuse", collectionId: later.id, tagIds: [work.id],
+    });
+    await saveExtensionLink({
+      captureId: "3d4e463c-0b06-46d5-86d7-d054e6fba203",
+      url, title: "Reuse",
+    });
+
+    expect(await listItems()).toEqual([expect.objectContaining({
+      collectionIds: [later.id], tagIds: [work.id],
+    })]);
+  });
+
+  test("choosing Unsorted and no tags clears a reused link's organization", async () => {
+    const collection = await createCollection({ name: "Reading" });
+    const tag = await createTag({ name: "Design" });
+    const url = "https://example.com/clear";
+    await saveExtensionLink({
+      captureId: "cf56b469-633a-4468-8767-4649a99fba25",
+      url, title: "Clear", collectionId: collection.id, tagIds: [tag.id],
+    });
+    await saveExtensionLink({
+      captureId: "cf56b469-633a-4468-8767-4649a99fba26",
+      url, title: "Clear", collectionId: null, tagIds: [],
+    });
+
+    expect(await listItems()).toEqual([expect.objectContaining({
+      collectionIds: [], tagIds: [],
+    })]);
+  });
+
+  test("rejects deleted organization choices without writing", async () => {
+    await expect(saveExtensionLink({
+      captureId: "720b337d-4137-4099-a858-220ced965540",
+      url: "https://example.com/missing",
+      title: "Missing",
+      collectionId: "missing",
+    })).rejects.toThrow("collection is no longer available");
+    expect(await listItems()).toHaveLength(0);
+  });
+
+  test("creates typed collection and tag choices with the link", async () => {
+    const existingTag = await createTag({ name: "Design" });
+    const capture = {
+      captureId: "993dc21b-32a4-4436-bfe5-bfc2568d498d",
+      url: "https://example.com/new-organization",
+      title: "New organization",
+      collectionId: null,
+      collectionName: "  Reading  ",
+      tagIds: [existingTag.id],
+      tagNames: ["  Research  ", "Research"],
+    };
+
+    await saveExtensionLink(capture);
+    await saveExtensionLink(capture);
+
+    const collections = await listCollections();
+    const tags = await listTags();
+    expect(collections.map((entry) => entry.name)).toEqual(["Reading"]);
+    expect(tags.map((entry) => entry.name).sort()).toEqual(["Design", "Research"]);
+    expect(await listItems()).toEqual([expect.objectContaining({
+      collectionIds: [collections[0].id],
+      tagIds: [existingTag.id, tags.find((entry) => entry.name === "Research")?.id],
+    })]);
+  });
+
+  test("rolls back typed organization when an existing note conflicts", async () => {
+    await createLink({ url: "https://example.com/conflict", noteContent: "Original" });
+
+    await expect(saveExtensionLink({
+      captureId: "d25ce29a-6db1-4dba-b74f-eb8a92fcfa0a",
+      url: "https://example.com/conflict",
+      title: "Conflict",
+      noteContent: "Replacement",
+      collectionName: "Temporary collection",
+      tagNames: ["Temporary tag"],
+    })).rejects.toThrow("already has a personal note");
+
+    expect(await listCollections()).toEqual([]);
+    expect(await listTags()).toEqual([]);
   });
 });
