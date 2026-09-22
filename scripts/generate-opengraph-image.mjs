@@ -4,7 +4,7 @@ import { chromium } from "@playwright/test";
 
 const root = process.cwd();
 const [logo, font] = await Promise.all([
-  readFile(join(root, "src/app/icon.svg")),
+  readFile(join(root, "public/icons/keepall.svg")),
   readFile(join(root, "node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2")),
 ]);
 
@@ -42,11 +42,10 @@ try {
       }
       .logo {
         position: absolute;
-        left: 77px;
-        top: 105px;
-        width: 430px;
-        height: 430px;
-        filter: drop-shadow(0 20px 45px rgba(255, 65, 108, .17));
+        left: 29px;
+        top: 47px;
+        width: 550px;
+        height: 550px;
       }
       .copy { position: absolute; left: 568px; top: 178px; width: 565px; }
       .eyebrow {
