@@ -122,6 +122,22 @@ describe("CaptureHost", () => {
     expect(await screen.findByRole("dialog")).toBeVisible();
   });
 
+  test("saves quick notes as plain and an opted-in note as Markdown", async () => {
+    vi.mocked(createNote).mockResolvedValue(buildNote({ content: "# Card study" }, { id: "n1", now: 1 }));
+    const input = await openDraft("# Card study");
+    expect(screen.getByRole("button", { name: "Plain text" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    expect(screen.getByRole("heading", { name: "Card study" })).toBeVisible();
+    fireEvent.submit(input.closest("form")!);
+
+    await waitFor(() => expect(createNote).toHaveBeenCalledWith({
+      content: "# Card study",
+      format: "markdown",
+    }));
+  });
+
   test("blocks drawer dismissal while saving", async () => {
     vi.mocked(createNote).mockImplementation(
       () =>

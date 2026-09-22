@@ -29,6 +29,19 @@ describe("buildNote", () => {
     expect(note.title).toBe("Draft");
   });
 
+  test("keeps Markdown source and marks only opted-in notes", () => {
+    const source = "# Card study\n\n- [ ] Compare corners";
+    const markdown = buildNote(
+      { content: source, format: "markdown" },
+      { id: "n-md", now: 1 },
+    );
+    const plain = buildNote({ content: source }, { id: "n-plain", now: 1 });
+
+    expect(markdown.content).toBe(source);
+    expect(markdown.format).toBe("markdown");
+    expect(plain).not.toHaveProperty("format");
+  });
+
   test("rejects content that is empty after trimming", () => {
     expect(() => buildNote({ content: "   " })).toThrow(NoteValidationError);
     expect(() => buildNote({ content: "   " })).toThrow(
@@ -53,6 +66,24 @@ describe("applyNoteEdit", () => {
     expect(() => applyNoteEdit(note, { content: "   " })).toThrow(
       NoteValidationError,
     );
+  });
+
+  test("changes format without changing the note identity", () => {
+    const plain = buildNote({ content: "# Study" }, { id: "n1", now: 1 });
+    const markdown = applyNoteEdit(
+      plain,
+      { content: "# Study", format: "markdown" },
+      { now: 2 },
+    );
+    const returnedToPlain = applyNoteEdit(
+      markdown,
+      { content: "# Study", format: "plain" },
+      { now: 3 },
+    );
+
+    expect(markdown).toMatchObject({ id: "n1", format: "markdown", updatedAt: 2 });
+    expect(returnedToPlain.id).toBe("n1");
+    expect(returnedToPlain).not.toHaveProperty("format");
   });
 });
 

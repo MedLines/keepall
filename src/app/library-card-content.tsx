@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { itemListTitle, type Item } from "@/domain/item";
-import { imageCardSecondary, linkCardHost } from "@/domain/card-display";
+import { imageCardSecondary, linkCardHost, noteCardText } from "@/domain/card-display";
 import { CloseIcon, CollectionIcon, HashIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
 
 function LinkSource({ host }: { host: string }) {
@@ -87,7 +87,7 @@ export function LibraryCardContent({ item, onOpen, pinned = false }: {
       </TitleRow> : null}
       {item.type === "note" ? (
         <>
-          <button type="button" onClick={onOpen} aria-label={`Read ${title}`} className="mt-3 line-clamp-6 w-full whitespace-pre-line break-words text-left text-base leading-relaxed text-text-primary">{item.content.trim()}</button>
+          <button type="button" onClick={onOpen} aria-label={`Read ${title}`} className="mt-3 line-clamp-6 w-full whitespace-pre-line break-words text-left text-base leading-relaxed text-text-primary">{noteCardText(item)}</button>
           <p className="mt-3 text-xs text-text-secondary">Edited <time dateTime={new Date(item.updatedAt).toISOString()}>{new Date(item.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</time></p>
         </>
       ) : description ? <p className="mt-2 line-clamp-2 break-words text-sm leading-relaxed text-text-secondary">{description}</p> : null}

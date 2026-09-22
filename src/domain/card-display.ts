@@ -50,11 +50,25 @@ export function linkFaviconUrl(
 }
 
 /** Short plain-text preview of note content for the secondary line. */
+export function noteCardText(note: NoteItem): string {
+  if (note.format !== "markdown") return note.content.trim();
+
+  return note.content
+    .replace(/```[\s\S]*?```/g, " Code example ")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s{0,3}(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s*)?/gm, "")
+    .replace(/[`*_~]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function noteCardSnippet(
   note: NoteItem,
   maxLength = NOTE_SNIPPET_MAX_LENGTH,
 ): string {
-  const text = note.content.trim().replace(/\s+/g, " ");
+  const text = noteCardText(note).replace(/\s+/g, " ");
   if (text.length <= maxLength) {
     return text;
   }

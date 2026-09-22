@@ -112,6 +112,21 @@ describe("items persistence", () => {
     expect(await listItems()).toEqual([updated]);
   });
 
+  test("stores a Markdown note and preserves its format when edited", async () => {
+    const source = "# Card study\n\n- [ ] Check dark mode";
+    const created = await createNote({ content: source, format: "markdown" });
+    expect((await listItems())[0]).toMatchObject({ content: source, format: "markdown" });
+
+    const updated = await updateNote(created.id, { content: `${source}\n`, format: "markdown" });
+    expect(updated.content).toBe(`${source}\n`);
+    expect(updated.format).toBe("markdown");
+    expect((await listItems())[0]).toEqual(updated);
+
+    const plain = await updateNote(created.id, { content: source, format: "plain" });
+    expect(plain).not.toHaveProperty("format");
+    expect((await listItems())[0]).toEqual(plain);
+  });
+
   test("updateNote does not write empty content", async () => {
     const created = await createNote({ content: "keep" });
     await expect(updateNote(created.id, { content: "   " })).rejects.toBeInstanceOf(

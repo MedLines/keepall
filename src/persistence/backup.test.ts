@@ -31,13 +31,27 @@ describe("backup persistence", () => {
     const backup = await exportKeepallBackup(123);
 
     expect(backup.format).toBe("keepall");
-    expect(backup.version).toBe(2);
+    expect(backup.version).toBe(3);
     expect(backup.exportedAt).toBe(123);
     expect(backup.items).toEqual([note]);
     expect(backup.tags).toEqual([tag]);
     expect(backup.collections).toEqual([]);
     expect(backup.assets).toEqual([]);
     expect(backup.preferences).toEqual({ pinnedCollectionIds: [] });
+  });
+
+  test("export and replace import keep Markdown note source and format", async () => {
+    const source = "# Design note\n\n- [ ] Check image quality\n";
+    const note = await createNote({ content: source, format: "markdown" });
+
+    const backup = await exportKeepallBackup(124);
+    await importKeepallBackupReplace(backup);
+
+    expect(await listItems()).toEqual([note]);
+    expect(backup.items[0]).toMatchObject({
+      content: source,
+      format: "markdown",
+    });
   });
 
   test("export and replace import preserve pinned collection order", async () => {

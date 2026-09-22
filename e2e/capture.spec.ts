@@ -143,6 +143,35 @@ test("saving a note with Alt+K survives a reload", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("a Markdown note keeps its source and formatting after offline reload", async ({ page, context }) => {
+  await page.goto("/");
+  await openCaptureFromShortcut(page);
+
+  const capture = page.getByRole("dialog", { name: "Save to Keepall" });
+  const source = "# Card idea\n\n- [x] Check spacing\n\n```tsx\nconst gap = 8;\n```";
+  await capture.getByLabel("Link, note, or image").fill(source);
+  await capture.getByRole("button", { name: "Markdown" }).click();
+  await capture.getByRole("button", { name: "Preview" }).click();
+  await expect(capture.getByRole("heading", { name: "Card idea" })).toBeVisible();
+  await capture.getByRole("button", { name: "Save", exact: true }).click();
+
+  await page.reload();
+  await page.getByRole("button", { name: "Read Untitled" }).click();
+  const detail = page.getByRole("dialog");
+  await expect(detail.getByRole("heading", { name: "Card idea" })).toBeVisible();
+  await expect(detail.getByRole("checkbox", { name: "Completed checklist item" })).toBeDisabled();
+  await expect(detail.getByText("const gap = 8;")).toBeVisible();
+
+  await expect.poll(() => page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    return Boolean(navigator.serviceWorker.controller);
+  }), { timeout: 20_000 }).toBe(true);
+  await context.setOffline(true);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Read Untitled" }).click();
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "Card idea" })).toBeVisible();
+});
+
 test("saving a link with Alt+K survives a reload", async ({ page }) => {
   await page.goto("/");
   await openCaptureFromShortcut(page);

@@ -11,7 +11,7 @@ import type { Tag } from "./tag";
 import { normalizePinnedCollectionIds } from "./library-preferences";
 
 export const KEEPALL_BACKUP_FORMAT = "keepall";
-export const KEEPALL_BACKUP_VERSION = 2;
+export const KEEPALL_BACKUP_VERSION = 3;
 
 /** Asset row serialized for JSON backup (bytes as base64). */
 export type BackupAssetRecord = {
@@ -74,7 +74,7 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
     throw new BackupValidationError('Backup format must be "keepall"');
   }
 
-  if (candidate.version !== 1 && candidate.version !== KEEPALL_BACKUP_VERSION) {
+  if (candidate.version !== 1 && candidate.version !== 2 && candidate.version !== KEEPALL_BACKUP_VERSION) {
     throw new BackupValidationError(
       `Unsupported backup version (supported: 1-${KEEPALL_BACKUP_VERSION})`,
     );
@@ -418,12 +418,16 @@ function parseItem(
         `Note at index ${index} needs non-empty content`,
       );
     }
+    if (item.format !== undefined && item.format !== "markdown") {
+      throw new BackupValidationError(`Note at index ${index} has an unknown format`);
+    }
 
     const note: NoteItem = {
       id: item.id,
       type: "note",
       title: item.title,
       content: item.content,
+      ...(item.format === "markdown" ? { format: "markdown" } : {}),
       tagIds: itemTagIds,
       collectionIds: itemCollectionIds,
       createdAt: item.createdAt,

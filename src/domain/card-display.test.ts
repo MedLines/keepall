@@ -5,6 +5,7 @@ import {
   linkCardHost,
   linkFaviconUrl,
   noteCardSnippet,
+  noteCardText,
   NOTE_SNIPPET_MAX_LENGTH,
 } from "./card-display";
 import { buildLink } from "./link";
@@ -69,6 +70,15 @@ describe("noteCardSnippet", () => {
     const snippet = noteCardSnippet(note);
     expect(snippet.endsWith("…")).toBe(true);
     expect(snippet.length).toBe(NOTE_SNIPPET_MAX_LENGTH + 1);
+  });
+
+  test("removes Markdown punctuation from a card preview", () => {
+    const note = buildNote({
+      content: "# Card study\n\n- [x] Check **corners**\n\nSee [source](https://example.com).\n\n```tsx\nconst gap = 8;\n```",
+      format: "markdown",
+    });
+    expect(noteCardText(note)).toBe("Card study Check corners See source. Code example");
+    expect(noteCardSnippet(note)).not.toContain("#");
   });
 });
 

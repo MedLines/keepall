@@ -3,6 +3,8 @@ export type NoteItem = {
   type: "note";
   title: string;
   content: string;
+  /** Missing on older and plain-text notes. */
+  format?: "markdown";
   tagIds: string[];
   collectionIds: string[];
   createdAt: number;
@@ -12,6 +14,7 @@ export type NoteItem = {
 export type CreateNoteInput = {
   title?: string;
   content: string;
+  format?: "plain" | "markdown";
 };
 
 export class NoteValidationError extends Error {
@@ -25,9 +28,9 @@ export function buildNote(
   input: CreateNoteInput,
   options?: { id?: string; now?: number },
 ): NoteItem {
-  const content = input.content.trim();
+  const content = input.format === "markdown" ? input.content : input.content.trim();
 
-  if (!content) {
+  if (!content.trim()) {
     throw new NoteValidationError("Note content is required");
   }
 
@@ -38,6 +41,7 @@ export function buildNote(
     type: "note",
     title: (input.title ?? "").trim(),
     content,
+    ...(input.format === "markdown" ? { format: "markdown" as const } : {}),
     tagIds: [],
     collectionIds: [],
     createdAt: now,
@@ -47,20 +51,27 @@ export function buildNote(
 
 export function applyNoteEdit(
   note: NoteItem,
-  input: { content: string },
+  input: { content: string; format?: "plain" | "markdown" },
   options?: { now?: number },
 ): NoteItem {
-  const content = input.content.trim();
+  const format = input.format ?? (note.format === "markdown" ? "markdown" : "plain");
+  const content = format === "markdown" ? input.content : input.content.trim();
 
-  if (!content) {
+  if (!content.trim()) {
     throw new NoteValidationError("Note content is required");
   }
 
-  return {
+  const next: NoteItem = {
     ...note,
     content,
     updatedAt: options?.now ?? Date.now(),
   };
+  if (format === "markdown") {
+    next.format = "markdown";
+  } else {
+    delete next.format;
+  }
+  return next;
 }
 
 export function noteListTitle(note: NoteItem): string {

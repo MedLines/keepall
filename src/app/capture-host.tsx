@@ -49,6 +49,8 @@ import {
 } from "@/domain/link";
 import type { CaptureOrgDrafts } from "@/domain/capture-org";
 import { SideDrawer } from "@/components/ui/side-drawer";
+import { NoteContent } from "./note-content";
+import { NoteFormatControl } from "./note-format-control";
 
 
 const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-3 text-xs disabled:opacity-60`;
@@ -142,6 +144,8 @@ export function CaptureHost() {
     null,
   );
   const [captureSide, setCaptureSide] = useState<"left" | "right">("right");
+  const [noteFormat, setNoteFormat] = useState<"plain" | "markdown">("plain");
+  const [notePreview, setNotePreview] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveInFlightRef = useRef(false);
@@ -302,6 +306,8 @@ export function CaptureHost() {
     setTagInput("");
     setDraftCollectionName(null);
     setCollectionInput("");
+    setNoteFormat("plain");
+    setNotePreview(false);
     clearImageDrafts();
   }
 
@@ -542,6 +548,7 @@ export function CaptureHost() {
           } else {
             const note = await createNote({
               content: resolved.classification.content,
+              ...(noteFormat === "markdown" ? { format: "markdown" as const } : {}),
             });
             itemId = note.id;
           }
@@ -685,6 +692,26 @@ export function CaptureHost() {
             disabled={composeLocked}
           />
         </div>
+        {kind === "note" && !savingImage ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <NoteFormatControl format={noteFormat} disabled={composeLocked} onChange={(next) => {
+                setNoteFormat(next);
+                if (next === "plain") setNotePreview(false);
+              }} />
+              {noteFormat === "markdown" ? (
+                <button type="button" aria-pressed={notePreview} className="ui-control min-h-9 px-3 text-xs font-medium" onClick={() => setNotePreview((current) => !current)}>
+                  {notePreview ? "Hide preview" : "Preview"}
+                </button>
+              ) : null}
+            </div>
+            {noteFormat === "markdown" && notePreview ? (
+              <div aria-label="Markdown preview" className="rounded-input border border-border-control bg-bg-control p-4">
+                <NoteContent content={state.input} format="markdown" />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <input
             ref={fileInputRef}

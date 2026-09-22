@@ -222,6 +222,7 @@ export function Library() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
+  const [noteFormatDraft, setNoteFormatDraft] = useState<"plain" | "markdown">("plain");
   const [editTitleDraft, setEditTitleDraft] = useState("");
   const [editImageTitleDraft, setEditImageTitleDraft] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
@@ -716,6 +717,7 @@ export function Library() {
     }
     setEditingId(null);
     setEditDraft("");
+    setNoteFormatDraft("plain");
     setEditTitleDraft("");
     setEditImageTitleDraft("");
     setEditError(null);
@@ -796,7 +798,7 @@ export function Library() {
     setEditError(null);
 
     try {
-      await updateNote(id, { content: editDraft });
+      await updateNote(id, { content: editDraft, format: noteFormatDraft });
       clearEdit();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch (caught) {
@@ -1438,12 +1440,14 @@ export function Library() {
         mutationBusy={mutationBusy}
         pendingMutation={pendingMutation}
         editDraft={editDraft}
+        noteFormatDraft={noteFormatDraft}
         editTitleDraft={editTitleDraft}
         editError={editError}
         setFirstEditField={(node) => {
           firstEditFieldRef.current = node;
         }}
         onEditDraftChange={setEditDraft}
+        onNoteFormatChange={setNoteFormatDraft}
         onEditTitleChange={setEditTitleDraft}
         onEditSaveShortcut={onEditSaveShortcut}
         onSaveNote={() => void saveNoteEdit(item.id)}
@@ -1465,6 +1469,7 @@ export function Library() {
           setEditingId(item.id);
           if (item.type === "note") {
             setEditDraft(item.content);
+            setNoteFormatDraft(item.format === "markdown" ? "markdown" : "plain");
             setEditTitleDraft("");
           } else if (item.type === "image") {
             setEditDraft(item.caption);
@@ -1717,6 +1722,7 @@ export function Library() {
                 mutationBusy={mutationBusy}
                 pendingMutation={pendingMutation}
                 editDraft={editDraft}
+                noteFormatDraft={noteFormatDraft}
                 editTitleDraft={editTitleDraft}
                 editImageTitleDraft={editImageTitleDraft}
                 editError={editError}
@@ -1736,6 +1742,7 @@ export function Library() {
                   }
                 }}
                 onEditDraftChange={setEditDraft}
+                onNoteFormatChange={setNoteFormatDraft}
                 onEditTitleChange={setEditTitleDraft}
                 onEditImageTitleChange={setEditImageTitleDraft}
                 onEditSaveShortcut={onEditSaveShortcut}
@@ -1785,6 +1792,7 @@ export function Library() {
                   setEditingId(target.id);
                   if (target.type === "note") {
                     setEditDraft(target.content);
+                    setNoteFormatDraft(target.format === "markdown" ? "markdown" : "plain");
                     setEditTitleDraft("");
                   } else if (target.type === "image") {
                     setEditDraft(target.caption);

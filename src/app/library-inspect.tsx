@@ -16,6 +16,8 @@ import { ItemTagChips } from "./item-tag-chips";
 import type { PendingMutation } from "./library-item";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
+import { NoteContent } from "./note-content";
+import { NoteEditor } from "./note-editor";
 import {
   type KeyboardEvent,
   useState,
@@ -34,6 +36,7 @@ type Props = {
   mutationBusy: boolean;
   pendingMutation: PendingMutation | null;
   editDraft: string;
+  noteFormatDraft: "plain" | "markdown";
   editTitleDraft: string;
   editImageTitleDraft: string;
   editError: string | null;
@@ -45,6 +48,7 @@ type Props = {
   onAddImages: (files: File[]) => void;
   onReplaceSlide: (file: File) => void;
   onEditDraftChange: (value: string) => void;
+  onNoteFormatChange: (format: "plain" | "markdown") => void;
   onEditTitleChange: (value: string) => void;
   onEditImageTitleChange: (value: string) => void;
   onEditSaveShortcut: (
@@ -85,6 +89,7 @@ export function LibraryInspect({
   mutationBusy,
   pendingMutation,
   editDraft,
+  noteFormatDraft,
   editTitleDraft,
   editImageTitleDraft,
   editError,
@@ -94,6 +99,7 @@ export function LibraryInspect({
   onAddImages,
   onReplaceSlide,
   onEditDraftChange,
+  onNoteFormatChange,
   onEditTitleChange,
   onEditImageTitleChange,
   onEditSaveShortcut,
@@ -320,24 +326,29 @@ export function LibraryInspect({
                   {typeLabel}
                 </span>
               </p>
-              {!editing ? (
+              {!editing && item.type === "note" ? (
+                <NoteContent content={item.content} format={item.format === "markdown" ? "markdown" : "plain"} className="mt-4" />
+              ) : !editing ? (
                 <p className="mt-2 text-pretty text-sm text-text-secondary">
                   {cardSecondaryLine(item)}
                 </p>
               ) : null}
 
               {item.type === "note" && editing ? (
-                <EditNote
+                <NoteEditor
+                  key={item.id}
                   itemId={item.id}
-                  editDraft={editDraft}
-                  editError={editError}
-                  mutationBusy={mutationBusy}
-                  pendingMutation={pendingMutation}
+                  content={editDraft}
+                  format={noteFormatDraft}
+                  error={editError}
+                  busy={mutationBusy}
+                  saving={pendingMutation?.op === "save-note" && pendingMutation.id === item.id}
                   setFirstEditField={setFirstEditField}
-                  onEditDraftChange={onEditDraftChange}
-                  onEditSaveShortcut={onEditSaveShortcut}
-                  onSaveNote={onSaveNote}
-                  onCancelEdit={onCancelEdit}
+                  onContentChange={onEditDraftChange}
+                  onFormatChange={onNoteFormatChange}
+                  onSaveShortcut={onEditSaveShortcut}
+                  onSave={onSaveNote}
+                  onCancel={onCancelEdit}
                 />
               ) : null}
               {item.type === "link" && editing ? (
@@ -585,77 +596,6 @@ export function LibraryInspect({
         </motion.div>
       ) : null}
     </AnimatePresence>
-  );
-}
-
-function EditNote({
-  itemId,
-  editDraft,
-  editError,
-  mutationBusy,
-  pendingMutation,
-  setFirstEditField,
-  onEditDraftChange,
-  onEditSaveShortcut,
-  onSaveNote,
-  onCancelEdit,
-}: {
-  itemId: string;
-  editDraft: string;
-  editError: string | null;
-  mutationBusy: boolean;
-  pendingMutation: PendingMutation | null;
-  setFirstEditField: (
-    node: HTMLTextAreaElement | HTMLInputElement | null,
-  ) => void;
-  onEditDraftChange: (value: string) => void;
-  onEditSaveShortcut: (
-    event: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
-    save: () => void,
-  ) => void;
-  onSaveNote: () => void;
-  onCancelEdit: () => void;
-}) {
-  return (
-    <div className="mt-3 flex flex-col gap-2">
-      <label className="text-sm font-medium" htmlFor={`inspect-edit-note-${itemId}`}>
-        Note content
-      </label>
-      <textarea
-        className="min-h-32 rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
-        id={`inspect-edit-note-${itemId}`}
-        ref={setFirstEditField}
-        value={editDraft}
-        disabled={mutationBusy}
-        onChange={(event) => onEditDraftChange(event.target.value)}
-        onKeyDown={(event) => onEditSaveShortcut(event, onSaveNote)}
-      />
-      {editError ? (
-        <p className="text-sm text-text-danger" role="alert">
-          {editError}
-        </p>
-      ) : null}
-      <div className="flex flex-wrap gap-2">
-        <button
-          className="rounded-md bg-action-primary px-3 py-1.5 text-sm font-medium text-text-on-action disabled:opacity-60"
-          type="button"
-          disabled={mutationBusy}
-          onClick={onSaveNote}
-        >
-          {pendingMutation?.op === "save-note" && pendingMutation.id === itemId
-            ? "Saving…"
-            : "Save note"}
-        </button>
-        <button
-          className={BTN}
-          type="button"
-          disabled={mutationBusy}
-          onClick={onCancelEdit}
-        >
-          Cancel edit
-        </button>
-      </div>
-    </div>
   );
 }
 

@@ -22,7 +22,7 @@ describe("buildKeepallBackup", () => {
 
     expect(backup).toEqual({
       format: "keepall",
-      version: 2,
+      version: 3,
       exportedAt: 99,
       items: [note],
       tags: [],
@@ -66,9 +66,34 @@ describe("parseKeepallBackup", () => {
     expect(() => parseKeepallBackup({ ...valid, format: "other" })).toThrow(
       BackupValidationError,
     );
-    expect(() => parseKeepallBackup({ ...valid, version: 3 })).toThrow(
+    expect(() => parseKeepallBackup({ ...valid, version: 4 })).toThrow(
       BackupValidationError,
     );
+  });
+
+  test("round-trips Markdown source and leaves legacy notes plain", () => {
+    const markdown = buildNote(
+      { content: "# Card study\n\n```tsx\nconst x = 1\n```", format: "markdown" },
+      { id: "n-md", now: 1 },
+    );
+    const exported = buildKeepallBackup({
+      items: [markdown], tags: [], collections: [], exportedAt: 2,
+    });
+    expect(parseKeepallBackup(JSON.parse(JSON.stringify(exported))).items[0]).toEqual(markdown);
+
+    const legacy = parseKeepallBackup({
+      ...exported,
+      version: 2,
+      items: [{ ...markdown, format: undefined }],
+    });
+    expect(legacy.items[0]).not.toHaveProperty("format");
+  });
+
+  test("rejects an unknown note format instead of changing its meaning", () => {
+    expect(() => parseKeepallBackup({
+      ...valid,
+      items: [{ ...note, format: "html" }],
+    })).toThrow(/format/);
   });
 
   test("migrates a version 1 backup to empty collection preferences", () => {

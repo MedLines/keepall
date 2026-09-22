@@ -27,6 +27,7 @@ import {
   ImageItemEditDialog,
   type ImageDetailsDraft,
 } from "./image-item-edit-dialog";
+import { NoteEditor } from "./note-editor";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
@@ -64,12 +65,14 @@ export type LibraryItemProps = {
   mutationBusy: boolean;
   pendingMutation: PendingMutation | null;
   editDraft: string;
+  noteFormatDraft: "plain" | "markdown";
   editTitleDraft: string;
   editError: string | null;
   setFirstEditField: (
     node: HTMLTextAreaElement | HTMLInputElement | null,
   ) => void;
   onEditDraftChange: (value: string) => void;
+  onNoteFormatChange: (format: "plain" | "markdown") => void;
   onEditTitleChange: (value: string) => void;
   onEditSaveShortcut: (
     event: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
@@ -126,10 +129,12 @@ export function LibraryItem({
   mutationBusy,
   pendingMutation,
   editDraft,
+  noteFormatDraft,
   editTitleDraft,
   editError,
   setFirstEditField,
   onEditDraftChange,
+  onNoteFormatChange,
   onEditTitleChange,
   onEditSaveShortcut,
   onSaveNote,
@@ -529,49 +534,21 @@ export function LibraryItem({
         {isList && !inlineEditing && !pendingDelete ? <LibraryListMetadata collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} /> : null}
 
         {item.type === "note" && editing ? (
-          <div className="mt-2 flex flex-col gap-2">
-            <label
-              className="text-sm font-medium"
-              htmlFor={`edit-note-${item.id}`}
-            >
-              Note content
-            </label>
-            <textarea
-              className="min-h-24 rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
-              id={`edit-note-${item.id}`}
-              ref={setFirstEditField}
-              value={editDraft}
-              disabled={mutationBusy}
-              onChange={(event) => onEditDraftChange(event.target.value)}
-              onKeyDown={(event) => onEditSaveShortcut(event, onSaveNote)}
-            />
-            {editError ? (
-              <p className="text-sm text-text-danger" role="alert">
-                {editError}
-              </p>
-            ) : null}
-            <div className="flex flex-wrap gap-3">
-              <button
-                className="rounded-md bg-action-primary px-3 py-1 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
-                type="button"
-                disabled={mutationBusy}
-                onClick={onSaveNote}
-              >
-                {pendingMutation?.op === "save-note" &&
-                pendingMutation.id === item.id
-                  ? "Saving…"
-                  : "Save note"}
-              </button>
-              <button
-                className="rounded-md border border-border-edge px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
-                type="button"
-                disabled={mutationBusy}
-                onClick={onCancelEdit}
-              >
-                Cancel edit
-              </button>
-            </div>
-          </div>
+          <NoteEditor
+            key={item.id}
+            itemId={item.id}
+            content={editDraft}
+            format={noteFormatDraft}
+            error={editError}
+            busy={mutationBusy}
+            saving={pendingMutation?.op === "save-note" && pendingMutation.id === item.id}
+            setFirstEditField={setFirstEditField}
+            onContentChange={onEditDraftChange}
+            onFormatChange={onNoteFormatChange}
+            onSaveShortcut={onEditSaveShortcut}
+            onSave={onSaveNote}
+            onCancel={onCancelEdit}
+          />
         ) : item.type === "link" && editing ? (
           <div className="mt-2 flex flex-col gap-2">
             <label

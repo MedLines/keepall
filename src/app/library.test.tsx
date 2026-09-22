@@ -321,9 +321,35 @@ describe("Library", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save note" }));
 
     await waitFor(() => {
-      expect(updateNote).toHaveBeenCalledWith("n1", { content: "changed" });
+      expect(updateNote).toHaveBeenCalledWith("n1", { content: "changed", format: "plain" });
     });
     expect(await screen.findByText("changed")).toBeInTheDocument();
+  });
+
+  test("renders Markdown in the opened note and previews a format edit", async () => {
+    const markdown = buildNote(
+      { content: "# Card study\n\n- Check corners", format: "markdown" },
+      { id: "n-md", now: 1 },
+    );
+    vi.mocked(listItems).mockResolvedValue([markdown]);
+    vi.mocked(updateNote).mockResolvedValue(markdown);
+    render(<Library />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Read Untitled" }));
+    const dialog = await screen.findByRole("dialog", { name: "Untitled" });
+    expect(within(dialog).getByRole("heading", { name: "Card study" })).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Edit" }));
+    expect(within(dialog).getByRole("button", { name: "Markdown" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.change(within(dialog).getByLabelText("Note content"), {
+      target: { value: "## Updated study" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Preview" }));
+    expect(within(dialog).getByRole("heading", { name: "Updated study" })).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save note" }));
+    await waitFor(() => expect(updateNote).toHaveBeenCalledWith("n-md", {
+      content: "## Updated study",
+      format: "markdown",
+    }));
   });
 
   test("Ctrl+Enter saves a note edit from the textarea", async () => {
@@ -342,6 +368,7 @@ describe("Library", () => {
     await waitFor(() => {
       expect(updateNote).toHaveBeenCalledWith("n1", {
         content: "from shortcut",
+        format: "plain",
       });
     });
   });

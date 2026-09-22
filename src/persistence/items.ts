@@ -328,7 +328,7 @@ export async function deleteItem(id: string): Promise<void> {
 
 export async function updateNote(
   id: string,
-  input: { content: string },
+  input: { content: string; format?: "plain" | "markdown" },
 ): Promise<NoteItem> {
   const existing = await getDb().items.get(id);
 
