@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getItem } from "@/persistence/items";
 import { ImageItemPage } from "./image-item-page";
+import { LinkItemPage } from "./link-item-page";
 import { NoteItemPage } from "./note-item-page";
 
 export function ItemPageContent({ itemId, returnHref }: { itemId: string; returnHref: string }) {
-  const [type, setType] = useState<"loading" | "image" | "note" | "missing" | "error">("loading");
+  const [type, setType] = useState<"loading" | "image" | "link" | "note" | "missing" | "error">("loading");
 
   useEffect(() => {
     let active = true;
@@ -15,7 +16,7 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
       .then((item) => {
         if (active) {
           setType(
-            item?.type === "image" || item?.type === "note"
+            item?.type === "image" || item?.type === "link" || item?.type === "note"
               ? item.type
               : "missing",
           );
@@ -30,6 +31,7 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
   }, [itemId]);
 
   if (type === "image") return <ImageItemPage itemId={itemId} returnHref={returnHref} />;
+  if (type === "link") return <LinkItemPage itemId={itemId} returnHref={returnHref} />;
   if (type === "note") return <NoteItemPage itemId={itemId} returnHref={returnHref} />;
   const message =
     type === "loading"

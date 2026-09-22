@@ -62,6 +62,22 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("saved link preview stays visible while its personal note is added", async ({ page }, testInfo) => {
+  const card = page.locator(".library-card").filter({ hasText: "Footer reference" });
+  await expect(card.locator(".library-card-media a")).toHaveAttribute("href", "https://example.com/footer");
+  await card.getByRole("link", { name: /Add a note/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Footer reference" })).toBeVisible();
+  await expect(page.getByText("A spacious footer for a portfolio.")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Open website/ })).toHaveAttribute("href", "https://example.com/footer");
+  await expect(page.locator("main img[src^='blob:']")).toBeVisible();
+  await page.getByRole("button", { name: "Write a note" }).click();
+  await page.getByRole("textbox", { name: "Your note" }).fill("The spacing works well here.");
+  await page.getByRole("button", { name: "Save note" }).click();
+  await expect(page.getByText("The spacing works well here.")).toBeVisible();
+  await expect(page.locator("main img[src^='blob:']")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("link-with-preview-and-note.png") });
+});
+
 test("tag hover paints one full row with a separate remove highlight", async ({ page }, testInfo) => {
   const card = page.locator(".library-card").first();
   for (const theme of ["light", "dark"]) {

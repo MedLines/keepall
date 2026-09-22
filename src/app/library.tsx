@@ -1412,7 +1412,7 @@ export function Library() {
         inspected={inspectId === item.id}
         layoutMode={browseLayout}
         openHref={
-          item.type === "image" || item.type === "note"
+          item.type === "image" || item.type === "note" || item.type === "link"
             ? itemPageHref(
                 item.id,
                 libraryViewHref(

@@ -216,7 +216,7 @@ export function LibraryItem({
       className={
         isList
           ? "library-list-thumbnail relative shrink-0 overflow-hidden rounded-lg bg-bg-raised"
-          : `library-card-media squircle-panel relative ${hasGridFooter && !openHref ? "mb-3" : ""}`
+          : `library-card-media squircle-panel relative ${hasGridFooter && (item.type === "link" || !openHref) ? "mb-3" : ""}`
       }
     >
       {inspected ? (
@@ -479,16 +479,7 @@ export function LibraryItem({
         </span>
       </label>
       {isList ? !inlineEditing && !pendingDelete ? (
-        openHref ? (
-          <Link
-            href={openHref}
-            prefetch={false}
-            aria-label={`Open ${title}`}
-            className="shrink-0 rounded-lg"
-          >
-            {mediaSlot}
-          </Link>
-        ) : item.type === "link" ? (
+        item.type === "link" ? (
           <a
             href={item.url}
             target="_blank"
@@ -498,11 +489,20 @@ export function LibraryItem({
           >
             {mediaSlot}
           </a>
+        ) : openHref ? (
+          <Link
+            href={openHref}
+            prefetch={false}
+            aria-label={`Open ${title}`}
+            className="shrink-0 rounded-lg"
+          >
+            {mediaSlot}
+          </Link>
         ) : (
           <button type="button" onClick={onOpenInspect} aria-label={`Preview ${title}`} className="shrink-0 rounded-lg">{mediaSlot}</button>
         )
       ) : null : hasMedia ? (
-        openHref ? (
+        openHref && item.type !== "link" ? (
           <Link
             href={openHref}
             prefetch={false}

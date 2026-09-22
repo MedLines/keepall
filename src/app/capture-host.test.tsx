@@ -206,8 +206,8 @@ describe("CaptureHost", () => {
     const link = buildLink({ url: "https://example.com/article", noteContent: "## Useful", noteFormat: "markdown" }, { id: "l1", now: 1 });
     vi.mocked(createOrReuseLink).mockResolvedValue({ link, created: true });
     const input = await openDraft("https://example.com/article");
-    fireEvent.click(screen.getByRole("button", { name: "Add a personal note" }));
-    fireEvent.change(screen.getByLabelText("My note"), { target: { value: "## Useful" } });
+    expect(screen.getByLabelText("Your note (optional)")).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Your note (optional)"), { target: { value: "## Useful" } });
     fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
     fireEvent.submit(input.closest("form")!);
     await waitFor(() => expect(createOrReuseLink).toHaveBeenCalledWith({
@@ -218,8 +218,7 @@ describe("CaptureHost", () => {
   test("does not overwrite a different personal note on an existing link", async () => {
     vi.mocked(findLinkByNormalizedUrl).mockResolvedValue(buildLink({ url: "https://example.com/article", noteContent: "My existing note" }, { id: "l1", now: 1 }));
     const input = await openDraft("https://example.com/article");
-    fireEvent.click(screen.getByRole("button", { name: "Add a personal note" }));
-    fireEvent.change(screen.getByLabelText("My note"), { target: { value: "A different note" } });
+    fireEvent.change(screen.getByLabelText("Your note (optional)"), { target: { value: "A different note" } });
     fireEvent.submit(input.closest("form")!);
     expect(await screen.findByText(/already has a personal note/)).toBeInTheDocument();
     expect(createOrReuseLink).not.toHaveBeenCalled();

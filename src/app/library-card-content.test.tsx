@@ -44,6 +44,17 @@ describe("grid card content", () => {
     expect(container.querySelector("svg")).toBeTruthy();
   });
 
+  it("keeps the link title external and opens its personal note in Keepall", () => {
+    render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "Article", url: "https://example.com/article", noteContent: "Why I saved it" }} onOpen={vi.fn()} openHref="/items/item?from=%2F" />);
+    expect(screen.getByRole("link", { name: "Article" })).toHaveAttribute("href", "https://example.com/article");
+    expect(screen.getByRole("link", { name: /Read my note/ })).toHaveAttribute("href", "/items/item?from=%2F");
+  });
+
+  it("offers a note page for a link without a note", () => {
+    render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "Article", url: "https://example.com/article" }} onOpen={vi.fn()} openHref="/items/item?from=%2F" />);
+    expect(screen.getByRole("link", { name: /Add a note/ })).toHaveAttribute("href", "/items/item?from=%2F");
+  });
+
   it("places pinned status beside the card title", () => {
     render(
       <LibraryCardContent

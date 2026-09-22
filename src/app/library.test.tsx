@@ -455,11 +455,10 @@ describe("Library", () => {
     }));
   });
 
-  test("opens a saved personal link note without replacing website description", async () => {
+  test("offers a saved personal link note without replacing website description", async () => {
     vi.mocked(listItems).mockResolvedValue([{ ...link, noteContent: "## Why I saved this", noteFormat: "markdown", previewDescription: "Website description" }]);
     render(<Library />);
-    fireEvent.click(await screen.findByRole("button", { name: /Read my note/ }));
-    expect(await screen.findByRole("heading", { name: "Why I saved this" })).toBeVisible();
+    expect(await screen.findByRole("link", { name: /Read my note/ })).toHaveAttribute("href", expect.stringContaining("/items/l1"));
     expect(screen.getByText("Website description")).toBeInTheDocument();
   });
 

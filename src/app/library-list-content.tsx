@@ -57,10 +57,10 @@ export function LibraryListContent({ item, pinned, onOpen, openHref }: {
           {content}
         </button>
       ) : null}
-      {item.type === "link" && item.noteContent?.trim() ? (
-        <button type="button" onClick={onOpen} className="shrink-0 rounded-control-sm px-2 py-1 text-xs font-medium text-text-secondary hover:text-text-primary">
-          My note
-        </button>
+      {item.type === "link" && openHref ? (
+        <Link href={openHref} prefetch={false} className="inline-flex min-h-10 shrink-0 items-center rounded-control-sm px-2 text-xs font-medium text-text-secondary hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">
+          {item.noteContent?.trim() ? "Read my note" : "Add a note"}
+        </Link>
       ) : null}
       <time className="library-list-date text-xs text-text-secondary" dateTime={new Date(item.createdAt).toISOString()} title="Saved date">
         {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}

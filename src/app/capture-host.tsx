@@ -147,7 +147,6 @@ export function CaptureHost() {
   const [captureSide, setCaptureSide] = useState<"left" | "right">("right");
   const [noteFormat, setNoteFormat] = useState<"plain" | "markdown">("plain");
   const [notePreview, setNotePreview] = useState(false);
-  const [linkNoteOpen, setLinkNoteOpen] = useState(false);
   const [linkNoteDraft, setLinkNoteDraft] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -311,7 +310,6 @@ export function CaptureHost() {
     setCollectionInput("");
     setNoteFormat("plain");
     setNotePreview(false);
-    setLinkNoteOpen(false);
     setLinkNoteDraft("");
     clearImageDrafts();
   }
@@ -688,6 +686,7 @@ export function CaptureHost() {
           </ul>
         ) : null}
         <div className="flex flex-col gap-2">
+          {kind === "link" && !savingImage ? <span className="text-sm font-medium text-text-secondary">Link URL</span> : null}
           <label className="sr-only" htmlFor="capture-input">
             {savingImage
               ? "Optional source URL or caption"
@@ -696,13 +695,13 @@ export function CaptureHost() {
           <textarea
             ref={inputRef}
             className={`ui-field w-full rounded-input px-4 py-3 text-sm disabled:opacity-60 ${
-              savingImage ? "min-h-16" : "min-h-24"
+              savingImage ? "min-h-16" : kind === "link" ? "min-h-14" : "min-h-24"
             }`}
             id="capture-input"
             placeholder={
               savingImage
                 ? "Optional source URL or caption"
-                : "Paste a link, note, or image"
+                : kind === "link" ? "https://example.com/page" : "Paste a link, note, or image"
             }
             value={state.input}
             onChange={(event) =>
@@ -743,28 +742,15 @@ export function CaptureHost() {
         ) : null}
         {kind === "link" && !savingImage ? (
           <div className="flex flex-col gap-3">
-            <button type="button" aria-expanded={linkNoteOpen} className="self-start rounded-control-sm text-sm font-medium text-text-secondary underline-offset-2 hover:text-text-primary hover:underline" disabled={composeLocked} onClick={() => {
-              if (linkNoteOpen) {
-                setLinkNoteDraft("");
-                setNoteFormat("plain");
-              }
-              setLinkNoteOpen(!linkNoteOpen);
-            }}>
-              {linkNoteOpen ? "Hide personal note" : "Add a personal note"}
-            </button>
-            {linkNoteOpen ? (
-              <div className="flex flex-col gap-3">
-                <label className="grid gap-2 text-sm font-medium text-text-primary" htmlFor="capture-link-note">
-                  My note
-                  <textarea id="capture-link-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm font-normal" value={linkNoteDraft} disabled={composeLocked} onChange={(event) => setLinkNoteDraft(event.target.value)} />
-                </label>
-                <NoteFormatControl format={noteFormat} disabled={composeLocked} onChange={setNoteFormat} />
-                {noteFormat === "markdown" && linkNoteDraft.trim() ? (
-                  <section aria-label="Personal note preview" className="rounded-input border border-border-control bg-bg-control p-4">
-                    <NoteContent content={linkNoteDraft} format="markdown" />
-                  </section>
-                ) : null}
-              </div>
+            <label className="grid gap-2 text-sm font-medium text-text-primary" htmlFor="capture-link-note">
+              Your note (optional)
+              <textarea id="capture-link-note" className="ui-field min-h-24 resize-y px-3 py-2 text-sm font-normal" placeholder="Why are you saving this link?" value={linkNoteDraft} disabled={composeLocked} onChange={(event) => setLinkNoteDraft(event.target.value)} />
+            </label>
+            <NoteFormatControl format={noteFormat} disabled={composeLocked} onChange={setNoteFormat} />
+            {noteFormat === "markdown" && linkNoteDraft.trim() ? (
+              <section aria-label="Personal note preview" className="rounded-input border border-border-control bg-bg-control p-4">
+                <NoteContent content={linkNoteDraft} format="markdown" />
+              </section>
             ) : null}
           </div>
         ) : null}

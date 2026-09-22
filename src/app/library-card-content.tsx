@@ -103,10 +103,11 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false }: {
         ) : null}
       </TitleRow> : null}
       {description ? <p className="mt-2 line-clamp-2 break-words text-sm leading-relaxed text-text-secondary">{description}</p> : null}
-      {item.type === "link" && item.noteContent?.trim() ? (
-        <button type="button" onClick={onOpen} className="mt-3 min-h-8 rounded-control-sm text-sm font-medium text-text-primary underline-offset-2 hover:underline">
-          Read my note →
-        </button>
+      {item.type === "link" && openHref ? (
+        <Link href={openHref} prefetch={false} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-control-sm text-sm font-medium text-text-primary underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">
+          <NoteIcon className="size-4" />
+          {item.noteContent?.trim() ? "Read my note" : "Add a note"} <span aria-hidden="true">→</span>
+        </Link>
       ) : null}
     </div>
   );

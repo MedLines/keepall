@@ -209,6 +209,39 @@ test("saving a link with Alt+K survives a reload", async ({ page }) => {
   ).toHaveAttribute("href", "https://example.com/path");
 });
 
+test("a link card opens the website while its note opens a Keepall page", async ({ page }, testInfo) => {
+  await page.goto("/");
+  await openCaptureFromShortcut(page);
+  const capture = page.getByRole("dialog", { name: "Save to Keepall" });
+  await capture.getByLabel("Link, note, or image").fill("https://example.com/design-reference");
+  await capture.getByLabel("Your note (optional)").fill("## Try this layout\n\nKeep the image wide.");
+  await capture.getByRole("button", { name: "Markdown" }).click();
+  await capture.getByRole("button", { name: "Save", exact: true }).click();
+
+  const card = page.locator(".library-card").first();
+  await expect(card.getByRole("link", { name: /Read my note/ })).toBeVisible();
+  await expect(card.locator(".library-card-media a")).toHaveAttribute("href", "https://example.com/design-reference");
+  await card.getByRole("link", { name: /Read my note/ }).click();
+  await expect(page).toHaveURL(/\/items\//);
+  await expect(page.getByRole("heading", { name: "Try this layout" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Open website/ })).toHaveAttribute("href", "https://example.com/design-reference");
+  await page.screenshot({ path: testInfo.outputPath("link-note-page.png"), fullPage: true });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Try this layout" })).toBeVisible();
+  await page.getByRole("link", { name: "Back to library" }).click();
+  await page.getByRole("button", { name: "List view", exact: true }).click();
+  const row = page.locator(".library-list-row").first();
+  await expect(row.getByRole("link", { name: /Open example.com/ }).first()).toHaveAttribute("href", "https://example.com/design-reference");
+  await expect(row.getByRole("link", { name: /Read my note/ })).toHaveAttribute("href", /\/items\//);
+  await row.getByRole("link", { name: /Read my note/ }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("heading", { name: "Try this layout" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("heading", { name: "My note" }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath("link-note-page-mobile.png") });
+});
+
 test("Cancel closes the capture dialog", async ({ page }) => {
   await page.goto("/");
   await openCaptureFromShortcut(page);
