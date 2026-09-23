@@ -54,7 +54,7 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
   }
 }
 
-async function pendingCapture(url, title, noteContent, collectionId, tagIds, collectionName, tagNames) {
+async function pendingCapture(url, title, noteContent, noteFormat, existingLink, collectionId, tagIds, collectionName, tagNames) {
   const all = await chrome.storage.local.get(null);
   const expired = [];
   let matching;
@@ -66,6 +66,8 @@ async function pendingCapture(url, title, noteContent, collectionId, tagIds, col
     }
     if (value.payload?.url === url && value.payload.title === title &&
         (value.payload.noteContent ?? "") === noteContent &&
+        value.payload.noteFormat === noteFormat &&
+        JSON.stringify(value.payload.existingLink) === JSON.stringify(existingLink) &&
         value.payload.collectionId === collectionId &&
         JSON.stringify(value.payload.tagIds) === JSON.stringify(tagIds) &&
         value.payload.collectionName === collectionName &&
@@ -87,11 +89,13 @@ async function saveTab(tab, options = {}) {
 
   try {
     const title = options.title ?? tab.title ?? "";
-    const payload = await pendingCapture(tab.url, title, options.noteContent ?? "", options.collectionId, options.tagIds, options.collectionName, options.tagNames) ?? {
+    const payload = await pendingCapture(tab.url, title, options.noteContent ?? "", options.noteFormat, options.existingLink, options.collectionId, options.tagIds, options.collectionName, options.tagNames) ?? {
       captureId: crypto.randomUUID(),
       url: tab.url,
       title,
-      ...(options.noteContent ? { noteContent: options.noteContent } : {}),
+      ...(options.noteContent !== undefined ? { noteContent: options.noteContent } : {}),
+      ...(options.noteFormat ? { noteFormat: options.noteFormat } : {}),
+      ...(options.existingLink ? { existingLink: options.existingLink } : {}),
       ...(options.collectionId !== undefined ? { collectionId: options.collectionId } : {}),
       ...(options.tagIds !== undefined ? { tagIds: options.tagIds } : {}),
       ...(options.collectionName !== undefined ? { collectionName: options.collectionName } : {}),
@@ -178,6 +182,8 @@ chrome.runtime.onMessage.addListener((message, sender) => {
   void saveTab(sender.tab, {
     title: typeof message.title === "string" ? message.title : sender.tab.title,
     noteContent: typeof message.noteContent === "string" ? message.noteContent : "",
+    noteFormat: message.noteFormat === "markdown" ? "markdown" : "plain",
+    existingLink: message.existingLink,
     collectionId: message.collectionId === null || typeof message.collectionId === "string" ? message.collectionId : undefined,
     tagIds: Array.isArray(message.tagIds) && message.tagIds.every((id) => typeof id === "string") ? message.tagIds : undefined,
     collectionName: typeof message.collectionName === "string" ? message.collectionName : undefined,

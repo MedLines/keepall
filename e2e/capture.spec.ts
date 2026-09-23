@@ -44,7 +44,10 @@ test("Save item and Alt+K open the capture flow from the side", async ({ page },
     const box = await capture.boundingBox();
     return box ? Math.round(box.x + box.width) : null;
   }).toBe(390);
-  expect((await capture.boundingBox())!.x).toBe(0);
+  await expect.poll(async () => {
+    const box = await capture.boundingBox();
+    return box ? Math.round(box.x) : null;
+  }).toBe(0);
 });
 
 test("large organization lists keep capture compact and actions visible", async ({ page }) => {
@@ -100,6 +103,12 @@ test("large organization lists keep capture compact and actions visible", async 
   const tags = capture.getByRole("list", { name: "Existing tags" });
   await expect(collections.getByRole("button")).toHaveCount(7);
   await expect(tags.getByRole("button")).toHaveCount(6);
+  for (const suggestions of [collections, tags]) {
+    const rows = await suggestions.locator("li").evaluateAll((chips) =>
+      new Set(chips.map((chip) => chip.getBoundingClientRect().top)).size,
+    );
+    expect(rows).toBeLessThanOrEqual(2);
+  }
   await expect(collections.getByRole("button", { name: "Collection 8" })).toBeVisible();
   await expect(capture.getByRole("button", { name: "Save" })).toBeInViewport();
   await expect(capture.getByRole("button", { name: "Cancel" })).toBeInViewport();
@@ -121,6 +130,39 @@ test("large organization lists keep capture compact and actions visible", async 
   await expect(
     collections.getByRole("button", { name: "Collection 7" }),
   ).toHaveAttribute("aria-pressed", "true");
+  await expect(collections.getByRole("button").nth(0)).toHaveText("Collection 7");
+  await expect(collections.getByRole("button").nth(1)).toHaveText("Unsorted");
+});
+
+test("checking Markdown does not move collection or tag controls", async ({ page }) => {
+  for (const { width, height, text } of [
+    { width: 1897, height: 917, text: "# Card idea" },
+    { width: 320, height: 768, text: "# Card idea" },
+    { width: 320, height: 768, text: "https://example.com/article" },
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/");
+    await openCaptureFromShortcut(page);
+    const capture = page.getByRole("dialog", { name: "Save to Keepall" });
+    await capture.getByLabel("Link, note, or image").fill(text);
+    const markdown = capture.getByRole("checkbox", { name: "Markdown" });
+    const positions = () => capture.evaluate((drawer) => {
+      const region = drawer.querySelector('[data-testid="capture-scroll-region"]')!;
+      const collection = drawer.querySelector('#capture-add-collection')!;
+      const tags = drawer.querySelector('#capture-add-tag')!;
+      const y = (element: Element) => Math.round(element.getBoundingClientRect().top - region.getBoundingClientRect().top + region.scrollTop);
+      return { collection: y(collection), tags: y(tags) };
+    });
+    const before = await positions();
+    await expect(capture.getByRole("button", { name: "Preview" })).toHaveCount(0);
+    await markdown.check();
+    await expect(capture.getByRole("button", { name: "Preview" })).toBeVisible();
+    expect(await positions()).toEqual(before);
+    await markdown.uncheck();
+    await expect(capture.getByRole("button", { name: "Preview" })).toHaveCount(0);
+    expect(await positions()).toEqual(before);
+    await capture.getByRole("button", { name: "Cancel" }).click();
+  }
 });
 
 test("saving a note with Alt+K survives a reload", async ({ page }) => {
@@ -133,13 +175,13 @@ test("saving a note with Alt+K survives a reload", async ({ page }) => {
   await expect(page.getByRole("dialog").getByText("Saved.")).toBeVisible();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(
-    page.getByLabel("Library").getByText("Soft side light, hard rim."),
+    page.getByRole("heading", { name: "Soft side light, hard rim.", exact: true }),
   ).toBeVisible();
 
   await page.reload();
 
   await expect(
-    page.getByLabel("Library").getByText("Soft side light, hard rim."),
+    page.getByRole("heading", { name: "Soft side light, hard rim.", exact: true }),
   ).toBeVisible();
 });
 
@@ -150,7 +192,7 @@ test("a Markdown note keeps its source and formatting after offline reload", asy
   const capture = page.getByRole("dialog", { name: "Save to Keepall" });
   const source = "# Card idea\n\n- [x] Check spacing\n\n```tsx\nconst gap = 8;\n```";
   await capture.getByLabel("Link, note, or image").fill(source);
-  await capture.getByRole("button", { name: "Markdown" }).click();
+  await capture.getByRole("checkbox", { name: "Markdown" }).check();
   await capture.getByRole("button", { name: "Preview" }).click();
   await expect(capture.getByRole("heading", { name: "Card idea" })).toBeVisible();
   await capture.getByRole("button", { name: "Save", exact: true }).click();
@@ -177,7 +219,7 @@ test("a long note scrolls to the end on its own page", async ({ page }) => {
   await openCaptureFromShortcut(page);
   const paragraphs = Array.from({ length: 40 }, (_, index) => `Paragraph ${index}: an observation about the interface.`);
   await page.getByLabel("Link, note, or image").fill(`# Long note\n\n${paragraphs.join("\n\n")}`);
-  await page.getByRole("button", { name: "Markdown" }).click();
+  await page.getByRole("checkbox", { name: "Markdown" }).check();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.getByRole("link", { name: /Long note.*Read note/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Long note" })).toBeVisible();
@@ -199,13 +241,13 @@ test("saving a link with Alt+K survives a reload", async ({ page }) => {
     page.getByRole("heading", { name: "example.com" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "example.com" }),
+    page.getByRole("link", { name: "example.com", exact: true }),
   ).toHaveAttribute("href", "https://example.com/path");
 
   await page.reload();
 
   await expect(
-    page.getByRole("link", { name: "example.com" }),
+    page.getByRole("link", { name: "example.com", exact: true }),
   ).toHaveAttribute("href", "https://example.com/path");
 });
 
@@ -215,7 +257,7 @@ test("a link card opens the website while its note opens a Keepall page", async 
   const capture = page.getByRole("dialog", { name: "Save to Keepall" });
   await capture.getByLabel("Link, note, or image").fill("https://example.com/design-reference");
   await capture.getByLabel("Your note (optional)").fill("## Try this layout\n\nKeep the image wide.");
-  await capture.getByRole("button", { name: "Markdown" }).click();
+  await capture.getByRole("checkbox", { name: "Markdown" }).check();
   await capture.getByRole("button", { name: "Save", exact: true }).click();
 
   const card = page.locator(".library-card").first();
@@ -242,6 +284,41 @@ test("a link card opens the website while its note opens a Keepall page", async 
   await page.screenshot({ path: testInfo.outputPath("link-note-page-mobile.png") });
 });
 
+test("Markdown preview is optional, bounded, and keeps the drawer width stable", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 560 });
+  await page.goto("/");
+  await openCaptureFromShortcut(page);
+
+  const capture = page.getByRole("dialog", { name: "Save to Keepall" });
+  await capture.getByLabel("Link, note, or image").fill("https://example.com/layout");
+  const note = capture.getByRole("textbox", { name: "Your note (optional)" });
+  await capture.getByRole("checkbox", { name: "Markdown" }).check();
+  await note.fill(Array.from({ length: 20 }, (_, index) => `## Section ${index + 1}\n\nNotes about this page.`).join("\n\n"));
+  const before = await note.boundingBox();
+  const preview = capture.getByLabel("Personal note preview");
+  const scrollRegion = capture.getByTestId("capture-scroll-region");
+  const beforeContentHeight = await scrollRegion.evaluate((element) => element.scrollHeight);
+  await expect(preview).toHaveCount(0);
+  await capture.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(preview).toBeVisible();
+  await expect(note).toHaveCount(0);
+  const after = await preview.boundingBox();
+  const scroll = await scrollRegion.evaluate((element) => ({
+    gutter: getComputedStyle(element).scrollbarGutter,
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+  }));
+  expect(scroll.gutter).toBe("stable");
+  expect(scroll.scrollHeight).toBeGreaterThan(scroll.clientHeight);
+  expect(scroll.scrollHeight).toBeLessThanOrEqual(beforeContentHeight + 1);
+  expect(after!.height).toBeLessThanOrEqual(160);
+  expect(Math.round(after!.x)).toBe(Math.round(before!.x));
+  expect(after!.width).toBeCloseTo(before!.width, 2);
+  await capture.getByRole("button", { name: "Hide preview" }).click();
+  await expect(preview).toHaveCount(0);
+  await expect(note).toBeVisible();
+});
+
 test("Cancel closes the capture dialog", async ({ page }) => {
   await page.goto("/");
   await openCaptureFromShortcut(page);
@@ -256,7 +333,7 @@ test("deleting a note after confirm survives a reload", async ({ page }) => {
   await page.getByLabel("Link, note, or image").fill("Remove this note.");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(
-    page.getByLabel("Library").getByText("Remove this note."),
+    page.getByRole("heading", { name: "Remove this note.", exact: true }),
   ).toBeVisible();
 
   const removable = page.locator(".library-card").filter({ hasText: "Remove this note." });
@@ -266,7 +343,7 @@ test("deleting a note after confirm survives a reload", async ({ page }) => {
   await page.getByRole("button", { name: "Confirm delete" }).click();
 
   await expect(
-    page.getByLabel("Library").getByText("Remove this note."),
+    page.getByRole("heading", { name: "Remove this note.", exact: true }),
   ).toBeHidden();
   await expect(page.getByText("No items yet.")).toBeVisible();
 
@@ -274,7 +351,7 @@ test("deleting a note after confirm survives a reload", async ({ page }) => {
 
   await expect(page.getByText("No items yet.")).toBeVisible();
   await expect(
-    page.getByLabel("Library").getByText("Remove this note."),
+    page.getByRole("heading", { name: "Remove this note.", exact: true }),
   ).toBeHidden();
 });
 
@@ -284,7 +361,7 @@ test("editing a note survives a reload", async ({ page }) => {
   await page.getByLabel("Link, note, or image").fill("Original note body.");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(
-    page.getByLabel("Library").getByText("Original note body."),
+    page.getByRole("heading", { name: "Original note body.", exact: true }),
   ).toBeVisible();
 
   const editableNote = page.locator(".library-card").filter({ hasText: "Original note body." });
@@ -295,16 +372,16 @@ test("editing a note survives a reload", async ({ page }) => {
   await page.getByRole("button", { name: "Save note" }).click();
 
   await expect(
-    page.getByLabel("Library").getByText("Edited note body."),
+    page.getByRole("heading", { name: "Edited note body.", exact: true }),
   ).toBeVisible();
 
   await page.reload();
 
   await expect(
-    page.getByLabel("Library").getByText("Edited note body."),
+    page.getByRole("heading", { name: "Edited note body.", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByLabel("Library").getByText("Original note body."),
+    page.getByRole("heading", { name: "Original note body.", exact: true }),
   ).toBeHidden();
 });
 
@@ -314,7 +391,7 @@ test("editing a link URL survives a reload", async ({ page }) => {
   await page.getByLabel("Link, note, or image").fill("https://example.com/old");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(
-    page.getByRole("link", { name: "example.com" }),
+    page.getByRole("link", { name: "example.com", exact: true }),
   ).toHaveAttribute("href", "https://example.com/old");
 
   const editableLink = page.locator(".library-card").filter({ hasText: "example.com" });
@@ -325,13 +402,13 @@ test("editing a link URL survives a reload", async ({ page }) => {
   await page.getByRole("button", { name: "Save link" }).click();
 
   await expect(
-    page.getByRole("link", { name: "example.com" }),
+    page.getByRole("link", { name: "example.com", exact: true }),
   ).toHaveAttribute("href", "https://example.com/new");
 
   await page.reload();
 
   await expect(
-    page.getByRole("link", { name: "example.com" }),
+    page.getByRole("link", { name: "example.com", exact: true }),
   ).toHaveAttribute("href", "https://example.com/new");
   await expect(
     page.locator('a[href="https://example.com/old"]'),
@@ -345,6 +422,6 @@ test("Ctrl+Enter saves a note from the textarea", async ({ page }) => {
   await page.getByLabel("Link, note, or image").press("Control+Enter");
 
   await expect(
-    page.getByLabel("Library").getByText("From keyboard shortcut"),
+    page.getByRole("heading", { name: "From keyboard shortcut", exact: true }),
   ).toBeVisible();
 });

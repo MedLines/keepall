@@ -13,9 +13,15 @@ and the inputs can create new collections and tags. A successful drawer save
 replaces the form with a centered checkmark and confirmation before the drawer
 closes. Feedback names a collection-only move, confirms other saved changes,
 or says “This link was already saved” when nothing changed. A failed save keeps
-the form open and shows an error toast. Without a collection choice, a new link
-goes to Unsorted. A toolbar click leaves the organization of an already
-saved link alone. If the shortcut is already claimed, assign it at
+the form open and shows an error toast.
+
+When the page is already saved, the drawer loads its title, note, Markdown
+choice, collection, and tags. You can edit the title and note there. If the
+link changes in Keepall while the drawer is open, reopen the drawer before
+saving. Notes containing local images show their text read-only; edit those
+notes in Keepall so their image assets stay intact. Without a collection choice,
+a new link goes to Unsorted. A toolbar click leaves the organization of an
+already saved link alone. If the shortcut is already claimed, assign it at
 `chrome://extensions/shortcuts`. Chrome does not allow injection on its internal
 pages, so those pages cannot be captured.
 
@@ -31,3 +37,14 @@ they are removed after Keepall confirms the write. The library itself stays in
 Keepall's IndexedDB. If Keepall cannot load, the extension reports the failure
 and another click retries. Offline capture depends on the bridge page being
 available from Keepall's PWA cache.
+
+## Store release
+
+Build and deploy the matching Keepall web app before uploading the extension.
+Test the unpacked extension against the production origin. Zip the files inside
+this directory with `manifest.json` at the root of the ZIP. The web bridge
+accepts one extension ID, so after the first Chrome Web Store draft upload,
+compare the Store item ID with the unpacked extension ID. If they differ,
+replace the manifest key with the Store item's public key and update the
+bridge's allowed origin. Deploy the app and retest before publishing. Increase
+the manifest version for each later Store update.

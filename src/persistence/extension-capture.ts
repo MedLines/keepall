@@ -2,16 +2,28 @@ import { normalizeItem, type Item } from "@/domain/item";
 import { buildLink, normalizeLinkUrl, type LinkItem } from "@/domain/link";
 import { buildCollection } from "@/domain/collection";
 import { buildTag } from "@/domain/tag";
+import { noteImageAssetIds } from "@/domain/note";
 import { captureOrgDrafts, rankCaptureOrganizations } from "@/domain/capture-org";
 import { getDb, type KeepallDB } from "./db";
 import { listItems } from "./items";
 import { getLibraryPreferences } from "./library-preferences";
+
+export type ExtensionLinkSnapshot = {
+  id: string;
+  title: string;
+  noteContent: string;
+  noteFormat: "plain" | "markdown";
+  collectionIds: string[];
+  tagIds: string[];
+};
 
 export type ExtensionLinkCapture = {
   captureId: string;
   url: string;
   title: string;
   noteContent?: string;
+  noteFormat?: "plain" | "markdown";
+  existingLink?: ExtensionLinkSnapshot;
   collectionId?: string | null;
   tagIds?: string[];
   collectionName?: string;
@@ -23,6 +35,8 @@ export type ExtensionOrganizationOptions = {
   tags: { id: string; name: string }[];
   collectionId: string | null;
   tagIds: string[];
+  existingLink?: ExtensionLinkSnapshot;
+  existingNoteHasImages?: boolean;
 };
 
 function matchingLink(items: Item[], normalizedUrl: string): LinkItem | null {
@@ -72,6 +86,63 @@ type ExtensionSaveResult = {
   movedTo?: string;
 };
 
+function hasNoteFormatChange(link: LinkItem, input: ExtensionLinkCapture, nextNote: string): boolean {
+  if (!nextNote || !link.noteContent?.trim() || input.noteFormat === undefined) return false;
+  return input.noteFormat !== (link.noteFormat === "markdown" ? "markdown" : "plain");
+}
+
+function hasNoteContentChange(link: LinkItem, input: ExtensionLinkCapture, nextNote: string): boolean {
+  return input.existingLink
+    ? nextNote !== (link.noteContent?.trim() ?? "")
+    : !!nextNote && !link.noteContent?.trim();
+}
+
+function sameIds(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
+function assertCurrentLink(link: LinkItem, input: ExtensionLinkCapture, nextNote: string): void {
+  const snapshot = input.existingLink;
+  if (snapshot) {
+    if (snapshot.id !== link.id || snapshot.title !== link.title ||
+        snapshot.noteContent !== (link.noteContent ?? "") ||
+        snapshot.noteFormat !== (link.noteFormat === "markdown" ? "markdown" : "plain") ||
+        !sameIds(snapshot.collectionIds, link.collectionIds) ||
+        !sameIds(snapshot.tagIds, link.tagIds)) {
+      throw new Error("This link changed in Keepall. Reopen capture and try again.");
+    }
+  } else if (nextNote && link.noteContent?.trim() && link.noteContent.trim() !== nextNote) {
+    throw new Error("This link already has a personal note. Edit it in Keepall.");
+  }
+}
+
+function assertNoteImagesPreserved(previousNote: string, nextNote: string): void {
+  const originalImages = noteImageAssetIds(previousNote);
+  const nextImages = noteImageAssetIds(nextNote);
+  if (originalImages.length !== nextImages.length || originalImages.some((id) => !nextImages.includes(id))) {
+    throw new Error("This note has local images. Edit its contents in Keepall.");
+  }
+}
+
+function validSnapshotIds(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length <= 100 &&
+    value.every((id) => typeof id === "string" && !!id && id.length <= 100);
+}
+
+function validateExistingLinkEdit(input: ExtensionLinkCapture): void {
+  const snapshot = input.existingLink;
+  if (snapshot === undefined) return;
+  if (!snapshot || typeof snapshot !== "object" ||
+      typeof snapshot.id !== "string" || !snapshot.id || snapshot.id.length > 100 ||
+      typeof snapshot.title !== "string" || snapshot.title.length > 500 ||
+      typeof snapshot.noteContent !== "string" || snapshot.noteContent.length > 10000 ||
+      (snapshot.noteFormat !== "plain" && snapshot.noteFormat !== "markdown") ||
+      !validSnapshotIds(snapshot.collectionIds) || !validSnapshotIds(snapshot.tagIds) ||
+      input.noteContent === undefined || input.noteFormat === undefined) {
+    throw new Error("Invalid existing link edit");
+  }
+}
+
 function changedLinkFields(
   link: LinkItem,
   input: ExtensionLinkCapture,
@@ -82,15 +153,19 @@ function changedLinkFields(
   const nextNote = input.noteContent?.trim() ?? "";
   const collectionChanged = collectionIds[0] !== link.collectionIds[0];
   const tagsChanged = tagIds.length !== link.tagIds.length || tagIds.some((id, index) => id !== link.tagIds[index]);
-  const titleChanged = !link.title && !!input.title.trim();
-  const noteAdded = !!nextNote && !link.noteContent?.trim();
+  const titleChanged = input.existingLink
+    ? input.title.trim() !== link.title
+    : !link.title && !!input.title.trim();
+  const noteChanged = hasNoteContentChange(link, input, nextNote);
+  const noteFormatChanged = hasNoteFormatChange(link, input, nextNote);
   return {
     collectionIds,
     tagIds,
     nextNote,
-    noteAdded,
-    changed: collectionChanged || tagsChanged || titleChanged || noteAdded,
-    movedOnly: collectionChanged && !tagsChanged && !titleChanged && !noteAdded,
+    noteChanged,
+    noteFormatChanged,
+    changed: collectionChanged || tagsChanged || titleChanged || noteChanged || noteFormatChanged,
+    movedOnly: collectionChanged && !tagsChanged && !titleChanged && !noteChanged && !noteFormatChanged,
   };
 }
 
@@ -101,9 +176,8 @@ async function reuseLink(
   organization: Awaited<ReturnType<typeof selectedOrganization>>,
 ): Promise<ExtensionSaveResult> {
   const nextNote = input.noteContent?.trim() ?? "";
-  if (nextNote && link.noteContent?.trim() && link.noteContent.trim() !== nextNote) {
-    throw new Error("This link already has a personal note. Edit it in Keepall.");
-  }
+  assertCurrentLink(link, input, nextNote);
+  if (input.noteContent !== undefined) assertNoteImagesPreserved(link.noteContent ?? "", nextNote);
   const changes = changedLinkFields(link, input, organization);
   if (!changes.changed) {
     return { itemId: link.id, created: false, outcome: "unchanged" };
@@ -111,8 +185,9 @@ async function reuseLink(
 
   await db.items.put({
     ...link,
-    title: link.title || input.title.trim(),
-    ...(changes.noteAdded ? { noteContent: changes.nextNote } : {}),
+    title: input.existingLink ? input.title.trim() : link.title || input.title.trim(),
+    ...(changes.noteChanged ? { noteContent: changes.nextNote || undefined } : {}),
+    ...(changes.noteChanged || changes.noteFormatChanged ? { noteFormat: changes.nextNote && input.noteFormat === "markdown" ? "markdown" as const : undefined } : {}),
     collectionIds: changes.collectionIds,
     tagIds: changes.tagIds,
     updatedAt: Date.now(),
@@ -138,6 +213,17 @@ export async function getExtensionOrganizationOptions(url: string): Promise<Exte
     tags: rankCaptureOrganizations(tags, items, "tag").map(({ id, name }) => ({ id, name })),
     collectionId: existing?.collectionIds[0] ?? null,
     tagIds: existing?.tagIds ?? [],
+    ...(existing ? {
+      existingLink: {
+        id: existing.id,
+        title: existing.title,
+        noteContent: existing.noteContent ?? "",
+        noteFormat: existing.noteFormat === "markdown" ? "markdown" as const : "plain" as const,
+        collectionIds: existing.collectionIds,
+        tagIds: existing.tagIds,
+      },
+      existingNoteHasImages: noteImageAssetIds(existing.noteContent ?? "").length > 0,
+    } : {}),
   };
 }
 
@@ -150,6 +236,10 @@ export async function saveExtensionLink(
   if (input.url.length > 8192 || input.title.length > 500 || (input.noteContent?.length ?? 0) > 10000) {
     throw new Error("Capture is too large");
   }
+  if (input.noteFormat !== undefined && input.noteFormat !== "plain" && input.noteFormat !== "markdown") {
+    throw new Error("Invalid note format");
+  }
+  validateExistingLinkEdit(input);
   if ((input.collectionId !== undefined && input.collectionId !== null &&
         (typeof input.collectionId !== "string" || !input.collectionId || input.collectionId.length > 100)) ||
       (input.tagIds !== undefined && (!Array.isArray(input.tagIds) || input.tagIds.length > 100 ||
@@ -183,11 +273,13 @@ export async function saveExtensionLink(
     const links = await db.items.where("type").equals("link").toArray();
     const existing = matchingLink(links, normalizedUrl);
     if (existing) return reuseLink(db, existing, input, organization);
+    if (input.existingLink) throw new Error("This link changed in Keepall. Reopen capture and try again.");
 
     const link = buildLink({
       url: input.url,
       title: input.title,
       noteContent: input.noteContent,
+      noteFormat: input.noteFormat,
     }, { id: input.captureId });
     await db.items.add({
       ...link,

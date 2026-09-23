@@ -6,13 +6,29 @@ import { ITEMS_CHANGED_EVENT } from "../items-events";
 
 const EXTENSION_ORIGIN = "chrome-extension://flmcadkppebdjebeiiellmeldfbckppo";
 
+function isExistingLink(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+  const link = value as Record<string, unknown>;
+  return typeof link.id === "string" && typeof link.title === "string" &&
+    typeof link.noteContent === "string" && (link.noteFormat === "plain" || link.noteFormat === "markdown") &&
+    Array.isArray(link.collectionIds) && link.collectionIds.every((id) => typeof id === "string") &&
+    Array.isArray(link.tagIds) && link.tagIds.every((id) => typeof id === "string");
+}
+
+function hasValidCaptureNote(input: Record<string, unknown>) {
+  return (input.noteContent === undefined || typeof input.noteContent === "string") &&
+    (input.noteFormat === undefined || input.noteFormat === "plain" || input.noteFormat === "markdown") &&
+    (input.existingLink === undefined || (isExistingLink(input.existingLink) &&
+      typeof input.noteContent === "string" && (input.noteFormat === "plain" || input.noteFormat === "markdown")));
+}
+
 function isCapture(value: unknown): value is ExtensionLinkCapture {
   if (!value || typeof value !== "object") return false;
   const input = value as Record<string, unknown>;
   return typeof input.captureId === "string" &&
     typeof input.url === "string" &&
     typeof input.title === "string" &&
-    (input.noteContent === undefined || typeof input.noteContent === "string") &&
+    hasValidCaptureNote(input) &&
     (input.collectionId === undefined || input.collectionId === null || typeof input.collectionId === "string") &&
     (input.tagIds === undefined || (Array.isArray(input.tagIds) && input.tagIds.every((id) => typeof id === "string"))) &&
     (input.collectionName === undefined || typeof input.collectionName === "string") &&
@@ -50,7 +66,7 @@ export function ExtensionBridge() {
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
         reply({ type: "result", captureId: capture.captureId, ...result });
       } catch (error) {
-        const message = error instanceof Error && (error.message.includes("personal note") || error.message.includes("no longer available"))
+        const message = error instanceof Error && (error.message.includes("personal note") || error.message.includes("no longer available") || error.message.includes("changed in Keepall") || error.message.includes("local images"))
           ? error.message
           : "Could not save this link to Keepall.";
         reply({ type: "result", captureId: capture.captureId, error: message });

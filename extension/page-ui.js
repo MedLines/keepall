@@ -47,7 +47,7 @@ if (!globalThis.__keepallPageUi) {
     @keyframes keepall-exit { to { transform: translateX(100%); } }
     @keyframes keepall-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
     @keyframes keepall-backdrop-out { to { opacity: 0; } }
-    .header { display: flex; align-items: flex-start; gap: 16px; padding: 24px 28px; }
+    .header { display: flex; align-items: flex-start; gap: 16px; margin: 0 24px; padding: 18px 0 20px; border-bottom: 1px solid var(--border); }
     .header, form { transition: opacity 160ms cubic-bezier(.19, 1, .22, 1), transform 160ms cubic-bezier(.19, 1, .22, 1); }
     dialog[data-state="saved"] > .header, dialog[data-state="saved"] > form { opacity: 0; transform: translateY(-8px); visibility: hidden; transition: opacity 160ms cubic-bezier(.19, 1, .22, 1), transform 160ms cubic-bezier(.19, 1, .22, 1), visibility 0s linear 160ms; }
     .save-complete { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 20px; padding: 32px; text-align: center; visibility: hidden; opacity: 0; transform: translateY(10px) scale(.96); pointer-events: none; transition: opacity 180ms cubic-bezier(.19, 1, .22, 1), transform 220ms cubic-bezier(.19, 1, .22, 1), visibility 0s linear 220ms; }
@@ -57,37 +57,51 @@ if (!globalThis.__keepallPageUi) {
     .save-complete-title { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.025em; line-height: 1.3; }
     .heading { min-width: 0; flex: 1; }
     h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.025em; line-height: 1.35; }
-    .description { margin: 4px 0 0; color: var(--secondary); line-height: 1.6; }
+    .description { margin: 12px 0 0; max-width: 380px; overflow-wrap: anywhere; color: var(--secondary); line-height: 1.5; }
     .close { display: grid; flex: none; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--border); border-radius: 999px; corner-shape: superellipse(1.5); background: var(--control); color: var(--secondary); transition: transform 150ms ease-out; }
     .close:hover, .secondary:hover { background: var(--raised); color: var(--primary); }
     .close svg { width: 18px; height: 18px; }
     form { display: flex; min-height: 0; flex: 1; flex-direction: column; }
-    .fields { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 16px; overflow-y: auto; overscroll-behavior: contain; padding: 8px 28px 20px; }
+    .fields { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 16px; overflow-y: auto; overscroll-behavior: contain; padding: 12px 24px 20px; }
     .fields, .browse-results { scrollbar-color: var(--scroll-thumb) transparent; scrollbar-width: thin; }
     .fields::-webkit-scrollbar, .browse-results::-webkit-scrollbar { width: 6px; }
     .fields::-webkit-scrollbar-track, .browse-results::-webkit-scrollbar-track { background: transparent; }
     .fields::-webkit-scrollbar-thumb, .browse-results::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--scroll-thumb); }
     .field { display: grid; gap: 8px; font-weight: 500; }
-    .url { min-height: 52px; padding: 12px 16px; overflow-wrap: anywhere; border: 1px solid var(--border); border-radius: 16px; background: var(--control); color: var(--secondary); font-weight: 400; }
+    .note-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .markdown-toggle { position: relative; display: inline-flex; min-height: 30px; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--control); color: var(--secondary); font-size: 12px; font-weight: 400; cursor: pointer; }
+    .markdown-box { position: relative; display: grid; flex: none; width: 16px; height: 16px; }
+    .markdown-box input { position: absolute; inset: 0; z-index: 1; width: 16px; height: 16px; min-height: 0; margin: 0; padding: 0; opacity: 0; cursor: pointer; }
+    .markdown-check { display: grid; flex: none; place-items: center; width: 16px; height: 16px; border: 1px solid var(--secondary); border-radius: 5px; }
+    .markdown-check svg { width: 13px; height: 13px; opacity: 0; }
+    .markdown-toggle input:checked + .markdown-check { border-color: var(--action); background: var(--action); color: var(--on-action); }
+    .markdown-toggle input:checked + .markdown-check svg { opacity: 1; }
+    .markdown-toggle input:focus-visible + .markdown-check { outline: 2px solid var(--focus); outline-offset: 2px; }
     input, textarea { width: 100%; border: 1px solid var(--border); border-radius: 16px; background: var(--control); color: var(--primary); font-size: 14px; font-weight: 400; }
-    input { min-height: 52px; padding: 12px 16px; }
-    textarea { min-height: 128px; padding: 12px; resize: vertical; }
+    input { min-height: 44px; padding: 10px 14px; }
+    textarea { min-height: 136px; padding: 12px 14px; resize: vertical; }
     textarea::placeholder { color: var(--secondary); }
-    .org-section { display: grid; gap: 6px; }
+    textarea[readonly] { background: var(--raised); }
+    .org-section { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 16px; }
     .org-section[hidden], .selected-tags[hidden], .browse-trigger[hidden], .org-status[hidden], .save-status[hidden] { display: none; }
-    .org-title { margin: 0; color: var(--secondary); font-weight: 500; }
-    .org-head { display: flex; min-height: 32px; align-items: center; justify-content: space-between; gap: 12px; }
+    .org-title { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--primary); font-weight: 600; }
+    .org-icon { display: inline-flex; width: 16px; height: 16px; flex: none; align-items: center; justify-content: center; }
+    .org-icon svg { width: 16px; height: 16px; }
+    .org-head { display: flex; min-height: 20px; align-items: center; justify-content: space-between; gap: 12px; }
     .browse-trigger { min-height: 32px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 12px; font-weight: 500; }
     .browse-trigger:hover { background: var(--raised); color: var(--primary); }
-    .org-search { min-height: 44px; padding: 8px 12px; border-radius: 13px; }
-    .choices, .selected-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-    .choice, .selected-tag { display: inline-flex; min-height: 36px; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; corner-shape: superellipse(1.5); background: var(--control); color: var(--secondary); font-size: 12px; transition: transform 150ms ease-out; }
+    .org-search-wrap { display: flex; align-items: center; gap: 8px; color: var(--secondary); }
+    .org-search { min-width: 0; min-height: 28px; padding: 0; border: 0; border-radius: 0; background: transparent; font-size: 13px; }
+    .choices, .selected-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .choice, .selected-tag { display: inline-flex; max-width: 100%; min-height: 28px; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; corner-shape: superellipse(1.5); background: var(--control); color: var(--secondary); font-size: 12px; white-space: nowrap; transition: transform 150ms ease-out; }
+    .choice[hidden] { display: none; }
+    .choice-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .choice:hover { background: var(--raised); color: var(--primary); }
     .choice[aria-pressed="true"], .selected-tag { background: var(--active); color: var(--primary); box-shadow: inset 0 1px 0 var(--active-edge); }
     .remove-tag { display: grid; place-items: center; width: 32px; height: 32px; margin: -3px -7px -3px 0; border: 0; border-radius: 999px; corner-shape: superellipse(1.5); background: transparent; color: var(--secondary); }
     .remove-tag svg { width: 16px; height: 16px; }
     .remove-tag:hover { background: var(--raised); color: var(--danger); }
-    .org-panel { display: grid; gap: 24px; padding: 16px 0; }
+    .org-panel { display: grid; gap: 16px; padding: 4px 0; }
     .browse { inset: 0; width: min(28rem, calc(100vw - 32px)); max-width: calc(100vw - 32px); height: auto; max-height: min(80dvh, 36rem); margin: auto; border: 1px solid var(--border); border-radius: 20px; background: var(--control); box-shadow: 0 16px 48px #00000030; animation: keepall-browse-in 180ms cubic-bezier(.2, 0, 0, 1) both; }
     .browse.is-closing { animation: keepall-browse-out 140ms ease-in both; }
     @keyframes keepall-browse-in { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
@@ -106,9 +120,11 @@ if (!globalThis.__keepallPageUi) {
     .browse-empty { padding: 32px 12px; color: var(--secondary); text-align: center; }
     .org-status { margin: 0; color: var(--secondary); font-size: 12px; }
     :where(button, input, textarea):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+    .note-help { margin: 0; color: var(--secondary); font-size: 12px; font-weight: 400; }
+    .note-help[hidden] { display: none; }
     .error { margin: 0; color: var(--danger); }
     .error:empty { display: none; }
-    .footer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 20px 28px max(20px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
+    .footer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 18px 24px max(20px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
     .footer button { min-height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px; corner-shape: superellipse(1.5); font-size: 14px; font-weight: 500; transition: transform 150ms ease-out; }
     .secondary { background: var(--control); color: var(--secondary); }
     .primary { border-color: transparent !important; background: var(--action); color: var(--on-action); }
@@ -126,7 +142,7 @@ if (!globalThis.__keepallPageUi) {
     .toast-close { display: grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 19px; }
     .toast-close:hover { background: var(--raised); color: var(--primary); }
     @media (prefers-reduced-motion: reduce) { dialog, dialog::backdrop, dialog.is-closing, dialog.is-closing::backdrop, .browse, .browse.is-closing { animation: none; } .toast, .toast.is-visible { transform: none; transition: opacity 140ms ease-out; } .header, form, dialog[data-state="saved"] > .header, dialog[data-state="saved"] > form { transform: none; transition: opacity 120ms ease-out, visibility 0s linear 120ms; } .save-complete, dialog[data-state="saved"] .save-complete { transform: none; transition: opacity 140ms ease-out, visibility 0s linear 140ms; } .footer button, .close, .choice { transition: none; } .footer button:active, .close:active, .choice:active { transform: none; } }
-    @media (max-width: 480px) { .header { padding: 20px; } .fields { padding: 8px 20px 20px; } .footer { padding: 20px; } .hint { display: none; } }
+    @media (max-width: 480px) { .header { margin: 0 20px; padding: 18px 0; } .fields { padding: 12px 20px 20px; } .footer { padding: 20px; } .hint { display: none; } }
   `;
   shadow.append(style);
   document.documentElement.append(host);
@@ -215,7 +231,7 @@ if (!globalThis.__keepallPageUi) {
     const description = document.createElement("p");
     description.id = "keepall-editor-description";
     description.className = "description";
-    description.textContent = "Save this page with a personal note.";
+    description.textContent = url;
     headingBlock.append(heading, description);
     const close = document.createElement("button");
     close.type = "button";
@@ -227,15 +243,6 @@ if (!globalThis.__keepallPageUi) {
     const form = document.createElement("form");
     const fields = document.createElement("div");
     fields.className = "fields";
-    const urlLabel = document.createElement("div");
-    urlLabel.className = "field";
-    const urlName = document.createElement("span");
-    urlName.textContent = "Link URL";
-    const urlLine = document.createElement("div");
-    urlLine.className = "url";
-    urlLine.textContent = url;
-    urlLine.title = url;
-    urlLabel.append(urlName, urlLine);
     const titleLabel = document.createElement("label");
     titleLabel.className = "field";
     const titleName = document.createElement("span");
@@ -244,26 +251,67 @@ if (!globalThis.__keepallPageUi) {
     titleInput.maxLength = 500;
     titleInput.value = title;
     titleLabel.append(titleName, titleInput);
-    const noteLabel = document.createElement("label");
+    const noteLabel = document.createElement("div");
     noteLabel.className = "field";
-    const noteName = document.createElement("span");
+    const noteHead = document.createElement("div");
+    noteHead.className = "note-head";
+    const noteName = document.createElement("label");
+    noteName.htmlFor = "keepall-note-input";
     noteName.textContent = "Your note (optional)";
+    const markdownToggle = document.createElement("label");
+    markdownToggle.className = "markdown-toggle";
+    const markdownInput = document.createElement("input");
+    markdownInput.type = "checkbox";
+    const markdownCheck = document.createElement("span");
+    markdownCheck.className = "markdown-check";
+    markdownCheck.setAttribute("aria-hidden", "true");
+    markdownCheck.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 14L8.5 17.5L19 6.5"/></svg>';
+    const markdownBox = document.createElement("span");
+    markdownBox.className = "markdown-box";
+    markdownBox.append(markdownInput, markdownCheck);
+    markdownToggle.append(markdownBox, document.createTextNode("Markdown"));
     const noteInput = document.createElement("textarea");
+    noteInput.id = "keepall-note-input";
     noteInput.maxLength = 10000;
     noteInput.placeholder = "Why are you saving this link?";
-    noteLabel.append(noteName, noteInput);
+    const noteHelp = document.createElement("p");
+    noteHelp.className = "note-help";
+    noteHelp.id = "keepall-note-help";
+    noteHelp.textContent = "This note includes local images. Edit its contents in Keepall.";
+    noteHelp.hidden = true;
+    noteHead.append(noteName, markdownToggle);
+    noteLabel.append(noteHead, noteInput, noteHelp);
     const picker = globalThis.__keepallCreateOrgPicker(shadow);
     currentPicker = picker;
+    let existingLink;
+    let titleDirty = false;
+    let noteDirty = false;
+    let markdownDirty = false;
+    titleInput.addEventListener("input", () => { titleDirty = true; });
+    noteInput.addEventListener("input", () => { noteDirty = true; });
+    markdownInput.addEventListener("change", () => { markdownDirty = true; });
     onOrganizationMessage = (message) => {
       if (message.editorId !== currentEditorId || !dialog?.open) return;
+      if (message.type === "organizations" && message.existingLink) {
+        existingLink = message.existingLink;
+        heading.textContent = "Edit saved link";
+        if (!titleDirty) titleInput.value = existingLink.title;
+        if (!noteDirty || message.existingNoteHasImages) noteInput.value = existingLink.noteContent;
+        if (message.existingNoteHasImages) {
+          noteInput.readOnly = true;
+          noteInput.setAttribute("aria-describedby", noteHelp.id);
+          noteHelp.hidden = false;
+        }
+        if (!markdownDirty) markdownInput.checked = existingLink.noteFormat === "markdown";
+      }
       picker.load(message);
       saveButton.disabled = false;
-      saveButton.textContent = "Save";
+      saveButton.textContent = existingLink ? "Save changes" : "Save";
     };
     errorLine = document.createElement("p");
     errorLine.className = "error";
     errorLine.setAttribute("role", "alert");
-    fields.append(urlLabel, titleLabel, noteLabel, picker.element, errorLine);
+    fields.append(titleLabel, noteLabel, picker.element, errorLine);
     const footer = document.createElement("div");
     footer.className = "footer";
     saveButton = document.createElement("button");
@@ -315,6 +363,8 @@ if (!globalThis.__keepallPageUi) {
         editorId,
         title: titleInput.value,
         noteContent: noteInput.value,
+        noteFormat: markdownInput.checked ? "markdown" : "plain",
+        ...(existingLink ? { existingLink } : {}),
         ...picker.selection(),
       });
     });
@@ -333,7 +383,7 @@ if (!globalThis.__keepallPageUi) {
       } else {
         dialog.dataset.state = "error";
         saveButton.disabled = false;
-        saveButton.textContent = "Save";
+        saveButton.textContent = existingLink ? "Save changes" : "Save";
         close.disabled = false;
         cancel.disabled = false;
         picker.setDisabled(false);

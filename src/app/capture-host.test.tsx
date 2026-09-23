@@ -127,9 +127,12 @@ describe("CaptureHost", () => {
   test("saves quick notes as plain and an opted-in note as Markdown", async () => {
     vi.mocked(createNote).mockResolvedValue(buildNote({ content: "# Card study" }, { id: "n1", now: 1 }));
     const input = await openDraft("# Card study");
-    expect(screen.getByRole("button", { name: "Plain text" })).toHaveAttribute("aria-pressed", "true");
+    const markdown = screen.getByRole("checkbox", { name: "Markdown" });
+    expect(markdown).not.toBeChecked();
+    expect(screen.queryByRole("button", { name: "Markdown" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
+    fireEvent.click(markdown);
+    expect(markdown).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
     expect(screen.getByRole("heading", { name: "Card study" })).toBeVisible();
     fireEvent.submit(input.closest("form")!);
@@ -208,11 +211,27 @@ describe("CaptureHost", () => {
     const input = await openDraft("https://example.com/article");
     expect(screen.getByLabelText("Your note (optional)")).toBeVisible();
     fireEvent.change(screen.getByLabelText("Your note (optional)"), { target: { value: "## Useful" } });
-    fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Markdown" }));
     fireEvent.submit(input.closest("form")!);
     await waitFor(() => expect(createOrReuseLink).toHaveBeenCalledWith({
       url: "https://example.com/article", noteContent: "## Useful", noteFormat: "markdown",
     }));
+  });
+
+  test("keeps a link Markdown preview hidden until requested", async () => {
+    await openDraft("https://example.com/article");
+    fireEvent.change(screen.getByLabelText("Your note (optional)"), {
+      target: { value: "## Useful" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Markdown" }));
+
+    expect(screen.queryByLabelText("Personal note preview")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    expect(screen.getByRole("heading", { name: "Useful" })).toBeVisible();
+    expect(screen.queryByLabelText("Your note (optional)")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Hide preview" }));
+    expect(screen.queryByLabelText("Personal note preview")).toBeNull();
+    expect(screen.getByLabelText("Your note (optional)")).toHaveValue("## Useful");
   });
 
   test("does not overwrite a different personal note on an existing link", async () => {
@@ -283,10 +302,10 @@ describe("CaptureHost", () => {
     expect(await screen.findByLabelText("1 image attached")).toBeInTheDocument();
 
     fireEvent.change(
-      await screen.findByPlaceholderText("Filter or new collection…"),
+      await screen.findByPlaceholderText("Find or create a collection…"),
       { target: { value: "Work" } },
     );
-    fireEvent.keyDown(screen.getByPlaceholderText("Filter or new collection…"), {
+    fireEvent.keyDown(screen.getByPlaceholderText("Find or create a collection…"), {
       key: "Enter",
       code: "Enter",
     });
@@ -331,10 +350,10 @@ describe("CaptureHost", () => {
 
     const input = await openDraft("https://example.com/article");
     fireEvent.change(
-      await screen.findByPlaceholderText("Filter or new collection…"),
+      await screen.findByPlaceholderText("Find or create a collection…"),
       { target: { value: "Work" } },
     );
-    fireEvent.keyDown(screen.getByPlaceholderText("Filter or new collection…"), {
+    fireEvent.keyDown(screen.getByPlaceholderText("Find or create a collection…"), {
       key: "Enter",
       code: "Enter",
     });
@@ -377,10 +396,10 @@ describe("CaptureHost", () => {
 
     const input = await openDraft("https://example.com/article");
     fireEvent.change(
-      await screen.findByPlaceholderText("Filter or create tag…"),
+      await screen.findByPlaceholderText("Find or create a tag…"),
       { target: { value: "new" } },
     );
-    fireEvent.keyDown(screen.getByPlaceholderText("Filter or create tag…"), {
+    fireEvent.keyDown(screen.getByPlaceholderText("Find or create a tag…"), {
       key: "Enter",
       code: "Enter",
     });
@@ -528,7 +547,15 @@ describe("CaptureHost", () => {
     const fileInput = screen.getByRole("dialog").querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(fileInput, { target: { files: [new File([new Uint8Array([1])], "study.png", { type: "image/png" })] } });
     await screen.findByLabelText("1 image attached");
-    fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
+    const markdown = screen.getByRole("checkbox", { name: "Markdown" });
+    expect(markdown).not.toBeChecked();
+    fireEvent.click(markdown);
+    expect(markdown).toBeChecked();
+    expect(screen.queryByLabelText("Image note preview")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    expect(screen.getByLabelText("Image note preview")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Hide preview" }));
+    expect(screen.queryByLabelText("Image note preview")).toBeNull();
     vi.mocked(createOrReuseImage).mockResolvedValue({
       image: buildImageFromAssetIds({ assetIds: ["a1"], caption: "## Color study", captionFormat: "markdown" }, { id: "img1", now: 1 }),
       created: true,
