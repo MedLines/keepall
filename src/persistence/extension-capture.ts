@@ -65,9 +65,33 @@ async function selectedOrganization(db: KeepallDB, input: ExtensionLinkCapture) 
   };
 }
 
-function organizationChanged(link: LinkItem, collectionIds: string[], tagIds: string[]) {
-  return collectionIds[0] !== link.collectionIds[0] ||
-    tagIds.length !== link.tagIds.length || tagIds.some((id, index) => id !== link.tagIds[index]);
+type ExtensionSaveResult = {
+  itemId: string;
+  created: boolean;
+  outcome: "created" | "updated" | "unchanged";
+  movedTo?: string;
+};
+
+function changedLinkFields(
+  link: LinkItem,
+  input: ExtensionLinkCapture,
+  organization: Awaited<ReturnType<typeof selectedOrganization>>,
+) {
+  const collectionIds = organization.collectionIds ?? link.collectionIds;
+  const tagIds = organization.tagIds ?? link.tagIds;
+  const nextNote = input.noteContent?.trim() ?? "";
+  const collectionChanged = collectionIds[0] !== link.collectionIds[0];
+  const tagsChanged = tagIds.length !== link.tagIds.length || tagIds.some((id, index) => id !== link.tagIds[index]);
+  const titleChanged = !link.title && !!input.title.trim();
+  const noteAdded = !!nextNote && !link.noteContent?.trim();
+  return {
+    collectionIds,
+    tagIds,
+    nextNote,
+    noteAdded,
+    changed: collectionChanged || tagsChanged || titleChanged || noteAdded,
+    movedOnly: collectionChanged && !tagsChanged && !titleChanged && !noteAdded,
+  };
 }
 
 async function reuseLink(
@@ -75,24 +99,28 @@ async function reuseLink(
   link: LinkItem,
   input: ExtensionLinkCapture,
   organization: Awaited<ReturnType<typeof selectedOrganization>>,
-) {
+): Promise<ExtensionSaveResult> {
   const nextNote = input.noteContent?.trim() ?? "";
   if (nextNote && link.noteContent?.trim() && link.noteContent.trim() !== nextNote) {
     throw new Error("This link already has a personal note. Edit it in Keepall.");
   }
-  const collectionIds = organization.collectionIds ?? link.collectionIds;
-  const tagIds = organization.tagIds ?? link.tagIds;
-  if ((!link.title && input.title.trim()) || (nextNote && !link.noteContent?.trim()) || organizationChanged(link, collectionIds, tagIds)) {
-    await db.items.put({
-      ...link,
-      title: link.title || input.title.trim(),
-      ...(nextNote && !link.noteContent?.trim() ? { noteContent: nextNote } : {}),
-      collectionIds,
-      tagIds,
-      updatedAt: Date.now(),
-    });
+  const changes = changedLinkFields(link, input, organization);
+  if (!changes.changed) {
+    return { itemId: link.id, created: false, outcome: "unchanged" };
   }
-  return { itemId: link.id, created: false };
+
+  await db.items.put({
+    ...link,
+    title: link.title || input.title.trim(),
+    ...(changes.noteAdded ? { noteContent: changes.nextNote } : {}),
+    collectionIds: changes.collectionIds,
+    tagIds: changes.tagIds,
+    updatedAt: Date.now(),
+  });
+  const movedTo = changes.movedOnly
+    ? changes.collectionIds[0] ? (await db.collections.get(changes.collectionIds[0]))?.name : "Unsorted"
+    : undefined;
+  return { itemId: link.id, created: false, outcome: "updated", ...(movedTo ? { movedTo } : {}) };
 }
 
 export async function getExtensionOrganizationOptions(url: string): Promise<ExtensionOrganizationOptions> {
@@ -115,7 +143,7 @@ export async function getExtensionOrganizationOptions(url: string): Promise<Exte
 
 export async function saveExtensionLink(
   input: ExtensionLinkCapture,
-): Promise<{ itemId: string; created: boolean }> {
+): Promise<ExtensionSaveResult> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.captureId)) {
     throw new Error("Invalid capture ID");
   }
@@ -147,7 +175,7 @@ export async function saveExtensionLink(
       if (item.type !== "link" || normalizeLinkUrl(item.url) !== normalizedUrl) {
         throw new Error("Capture ID already belongs to another item");
       }
-      return { itemId: item.id, created: false };
+      return { itemId: item.id, created: false, outcome: "unchanged" };
     }
 
     const organization = await selectedOrganization(db, input);
@@ -166,6 +194,6 @@ export async function saveExtensionLink(
       collectionIds: organization.collectionIds ?? link.collectionIds,
       tagIds: organization.tagIds ?? link.tagIds,
     });
-    return { itemId: link.id, created: true };
+    return { itemId: link.id, created: true, outcome: "created" };
   });
 }

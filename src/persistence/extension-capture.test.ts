@@ -24,7 +24,7 @@ describe("saveExtensionLink", () => {
 
     expect(results.filter((result) => result.created)).toHaveLength(1);
     expect(await listItems()).toHaveLength(1);
-    expect((await saveExtensionLink(input)).created).toBe(false);
+    expect(await saveExtensionLink(input)).toMatchObject({ outcome: "unchanged" });
   });
 
   test("reuses a library link and fills an empty personal note", async () => {
@@ -37,7 +37,7 @@ describe("saveExtensionLink", () => {
       noteContent: "Read for layout ideas",
     });
 
-    expect(result).toEqual({ itemId: existing.id, created: false });
+    expect(result).toEqual({ itemId: existing.id, created: false, outcome: "updated" });
     expect(await listItems()).toEqual([
       expect.objectContaining({
         id: existing.id,
@@ -108,18 +108,41 @@ describe("saveExtensionLink", () => {
       captureId: "3d4e463c-0b06-46d5-86d7-d054e6fba201",
       url, title: "Reuse", collectionId: reading.id, tagIds: [design.id],
     });
-    await saveExtensionLink({
+    expect(await saveExtensionLink({
       captureId: "3d4e463c-0b06-46d5-86d7-d054e6fba202",
       url, title: "Reuse", collectionId: later.id, tagIds: [work.id],
-    });
-    await saveExtensionLink({
+    })).toMatchObject({ outcome: "updated" });
+    expect(await saveExtensionLink({
       captureId: "3d4e463c-0b06-46d5-86d7-d054e6fba203",
       url, title: "Reuse",
-    });
+    })).toMatchObject({ outcome: "unchanged" });
 
     expect(await listItems()).toEqual([expect.objectContaining({
       collectionIds: [later.id], tagIds: [work.id],
     })]);
+  });
+
+  test("reports a collection-only move by name and then no change", async () => {
+    const reading = await createCollection({ name: "Reading" });
+    const later = await createCollection({ name: "Later" });
+    const url = "https://example.com/move";
+    await saveExtensionLink({
+      captureId: "486232f0-6c26-483c-8379-d9723193a873",
+      url, title: "Move", collectionId: reading.id,
+    });
+
+    expect(await saveExtensionLink({
+      captureId: "486232f0-6c26-483c-8379-d9723193a874",
+      url, title: "Move", collectionId: later.id,
+    })).toMatchObject({ outcome: "updated", movedTo: "Later" });
+    expect(await saveExtensionLink({
+      captureId: "486232f0-6c26-483c-8379-d9723193a875",
+      url, title: "Move", collectionId: later.id,
+    })).toMatchObject({ outcome: "unchanged" });
+    expect(await saveExtensionLink({
+      captureId: "486232f0-6c26-483c-8379-d9723193a876",
+      url, title: "Move", collectionId: null,
+    })).toMatchObject({ outcome: "updated", movedTo: "Unsorted" });
   });
 
   test("choosing Unsorted and no tags clears a reused link's organization", async () => {
@@ -130,10 +153,10 @@ describe("saveExtensionLink", () => {
       captureId: "cf56b469-633a-4468-8767-4649a99fba25",
       url, title: "Clear", collectionId: collection.id, tagIds: [tag.id],
     });
-    await saveExtensionLink({
+    expect(await saveExtensionLink({
       captureId: "cf56b469-633a-4468-8767-4649a99fba26",
       url, title: "Clear", collectionId: null, tagIds: [],
-    });
+    })).toMatchObject({ outcome: "updated" });
 
     expect(await listItems()).toEqual([expect.objectContaining({
       collectionIds: [], tagIds: [],

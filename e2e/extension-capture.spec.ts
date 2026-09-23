@@ -11,7 +11,7 @@ declare const chrome: {
   action: { getTitle(details: { tabId: number }): Promise<string> };
   commands: { getAll(): Promise<Array<{ name: string; shortcut: string }>> };
 };
-declare function saveTab(tab: ExtensionTab): Promise<void>;
+declare function saveTab(tab: ExtensionTab, options?: { collectionId?: string }): Promise<void>;
 declare function openEditor(tab: ExtensionTab): Promise<void>;
 declare function keepallOrigin(): Promise<string>;
 
@@ -100,7 +100,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       await saveTab(tab);
       return chrome.action.getTitle({ tabId: tab.id });
     });
-    expect(second).toBe("Already saved in Keepall");
+    expect(second).toBe("This link was already saved");
     await source.close();
 
     const organizationSetup = await context.newPage();
@@ -121,6 +121,20 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       database.close();
     });
     await organizationSetup.close();
+
+    const movedPage = await context.newPage();
+    await movedPage.route("http://localhost:3100/test-article", (route) => route.fulfill({
+      contentType: "text/html",
+      body: "<!doctype html><title>Example article</title><h1>Article outside Keepall</h1>",
+    }));
+    await movedPage.goto("http://localhost:3100/test-article");
+    const moved = await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await saveTab(tab, { collectionId: "collection-reading" });
+      return chrome.action.getTitle({ tabId: tab.id });
+    });
+    expect(moved).toBe("Moved to Reading");
+    await movedPage.close();
 
     const editorPage = await context.newPage();
     await editorPage.route("http://localhost:3200/note-article", (route) => route.fulfill({

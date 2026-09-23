@@ -114,7 +114,11 @@ async function saveTab(tab, options = {}) {
       throw new Error("Keepall did not confirm the save");
     }
     await chrome.storage.local.remove(key);
-    await feedback(result.created ? "Saved to Keepall" : "Already saved in Keepall", true);
+    let message = "Keepall is up to date";
+    if (result.outcome === "created" || result.created) message = "Saved to Keepall";
+    if (result.outcome === "updated") message = result.movedTo ? `Moved to ${result.movedTo}` : "Your changes were saved";
+    if (result.outcome === "unchanged") message = "This link was already saved";
+    await feedback(message, true);
   } catch (error) {
     await feedback(error instanceof Error ? error.message : "Could not save to Keepall", false);
   }

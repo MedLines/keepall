@@ -11,8 +11,10 @@ title and personal note. It also loads collections and tags from your library.
 Six quick choices appear for each; **Browse all** searches the complete list,
 and the inputs can create new collections and tags. A successful drawer save
 replaces the form with a centered checkmark and confirmation before the drawer
-closes. A failed save keeps the form open and shows an error toast. Without a
-collection choice, a new link goes to Unsorted. A toolbar click leaves the organization of an already
+closes. Feedback names a collection-only move, confirms other saved changes,
+or says “This link was already saved” when nothing changed. A failed save keeps
+the form open and shows an error toast. Without a collection choice, a new link
+goes to Unsorted. A toolbar click leaves the organization of an already
 saved link alone. If the shortcut is already claimed, assign it at
 `chrome://extensions/shortcuts`. Chrome does not allow injection on its internal
 pages, so those pages cannot be captured.
