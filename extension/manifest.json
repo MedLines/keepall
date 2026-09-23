@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Save the current page to your local Keepall library.",
   "minimum_chrome_version": "116",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA16KKQIpbUvjhofHCDutZKhkkKxAdhSuAi0mKhFkzRW4JCbzoezWvAEgV9y51DagmAxFv1torv8zNMiE3LbODVaWY6suVqv3vKxfzNCCaBaAdhloMAiWeK5GRFMaBnvPD5jNTJh4pGhxj3f5OSTk2Sl0hP2XW7NCzyLnCXyztcBKhIsl9utNjDKTjYI6zeqlVWnAZaBhzlEjznE3LLffHI+77iz1lU48VAhR6OfXzHLsy5hBCPsY6EraJd7q+6whXwmsB5RnStCzqq5x6ZAs5G58qVroLr+e8OBsmK8wHiZS8wim4iBQYgrQ9PoJyhFmn1j/C7iUWMBMlpSoRm2B0iwIDAQAB",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArF7QtYTn8Tg5BqcDfS1WQ69Gy/lW8QxKmGnzQq1yCLxitWqMJhnUVf3ZRVHGSF24i1Z14mxNNAZmtBg1fQX4mRIuanWPoPd6E9TIGLW4vQR2H8csvU67TvEQ4UcoC09m3mlC4krhNgilyaottXHeU7/at2FvLpVBC/BbX5XS+fIO2Q+GmKYJ3NwQoAEjlSPtMtqMinQSfZXyLPOiY38RQAKPger6Lm6y8DFfT5fdXe812P66OABt2CBxGULu+g3XtDXorXBhkkWfNs0O4HQuIjfcw4R1cmVEGr3KO4mf7yi6oTJys37iCO4kHwopfcxdUugY6PlC8/UY3UM+CPCWVQIDAQAB",
   "permissions": ["activeTab", "scripting", "offscreen", "storage", "alarms"],
   "host_permissions": ["https://www.keepall.app/*", "http://localhost/*"],
   "web_accessible_resources": [{

@@ -4,7 +4,10 @@ import { useEffect } from "react";
 import { getExtensionOrganizationOptions, saveExtensionLink, type ExtensionLinkCapture } from "@/persistence/extension-capture";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
 
-const EXTENSION_ORIGIN = "chrome-extension://flmcadkppebdjebeiiellmeldfbckppo";
+const EXTENSION_ORIGINS = [
+  "chrome-extension://flmcadkppebdjebeiiellmeldfbckppo",
+  "chrome-extension://ehloefgfecmfjbncknaoleakbnjhkpea",
+] as const;
 
 function isExistingLink(value: unknown) {
   if (!value || typeof value !== "object") return false;
@@ -39,21 +42,21 @@ export function ExtensionBridge() {
   useEffect(() => {
     if (window.parent === window) return;
 
-    function reply(message: Record<string, unknown>) {
-      window.parent.postMessage({ channel: "keepall-extension", ...message }, EXTENSION_ORIGIN);
+    function reply(message: Record<string, unknown>, origin: string) {
+      window.parent.postMessage({ channel: "keepall-extension", ...message }, origin);
     }
 
     async function onMessage(event: MessageEvent) {
-      if (event.source !== window.parent || event.origin !== EXTENSION_ORIGIN) return;
+      if (event.source !== window.parent || !EXTENSION_ORIGINS.some((origin) => origin === event.origin)) return;
       if (event.data?.channel !== "keepall-extension") return;
 
       if (event.data.type === "organizations") {
         if (typeof event.data.requestId !== "string" || typeof event.data.url !== "string" || event.data.url.length > 8192) return;
         try {
           const options = await getExtensionOrganizationOptions(event.data.url);
-          reply({ type: "organizations", requestId: event.data.requestId, ...options });
+          reply({ type: "organizations", requestId: event.data.requestId, ...options }, event.origin);
         } catch {
-          reply({ type: "organizations", requestId: event.data.requestId, error: "Could not load collections and tags." });
+          reply({ type: "organizations", requestId: event.data.requestId, error: "Could not load collections and tags." }, event.origin);
         }
         return;
       }
@@ -64,17 +67,17 @@ export function ExtensionBridge() {
       try {
         const result = await saveExtensionLink(capture);
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-        reply({ type: "result", captureId: capture.captureId, ...result });
+        reply({ type: "result", captureId: capture.captureId, ...result }, event.origin);
       } catch (error) {
         const message = error instanceof Error && (error.message.includes("personal note") || error.message.includes("no longer available") || error.message.includes("changed in Keepall") || error.message.includes("local images"))
           ? error.message
           : "Could not save this link to Keepall.";
-        reply({ type: "result", captureId: capture.captureId, error: message });
+        reply({ type: "result", captureId: capture.captureId, error: message }, event.origin);
       }
     }
 
     window.addEventListener("message", onMessage);
-    reply({ type: "ready" });
+    for (const origin of EXTENSION_ORIGINS) reply({ type: "ready" }, origin);
     return () => window.removeEventListener("message", onMessage);
   }, []);
 

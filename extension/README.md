@@ -41,11 +41,15 @@ available from Keepall's PWA cache.
 
 ## Store release
 
-Build and deploy the matching Keepall web app before uploading the extension.
-Test the unpacked extension against the production origin. Zip the files inside
-this directory with `manifest.json` at the root of the ZIP. The web bridge
-accepts one extension ID, so after the first Chrome Web Store draft upload,
-compare the Store item ID with the unpacked extension ID. If they differ,
-replace the manifest key with the Store item's public key and update the
-bridge's allowed origin. Deploy the app and retest before publishing. Increase
-the manifest version for each later Store update.
+Build and deploy the matching Keepall web app before submitting the extension for review.
+Test the unpacked extension against the production origin. Run
+`python3 scripts/package-extension.py` from the repository root to build a ZIP
+in `/tmp` with `manifest.json` at its root. The script removes the development
+`key` field from the ZIP manifest because the Store assigns its own item ID;
+the source manifest keeps the key for the unpacked extension.
+
+After the first unpublished Chrome Web Store draft upload, get its Item ID and
+public key from the Package tab. Replace the source manifest key with that public
+key and update the web bridge's allowed extension origin. Deploy the app and
+retest before publishing. Increase the manifest version for each later Store
+update, and always use the packaging script for Store uploads.

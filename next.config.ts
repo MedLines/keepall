@@ -49,7 +49,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "no-referrer" },
-          { key: "Content-Security-Policy", value: "frame-ancestors chrome-extension://flmcadkppebdjebeiiellmeldfbckppo" },
+          { key: "Content-Security-Policy", value: "frame-ancestors chrome-extension://flmcadkppebdjebeiiellmeldfbckppo chrome-extension://ehloefgfecmfjbncknaoleakbnjhkpea" },
         ],
       },
       {

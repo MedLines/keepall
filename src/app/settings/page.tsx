@@ -99,6 +99,9 @@ export default function SettingsPage() {
               <p className="mt-4 text-xs text-text-secondary">
                 <span className="font-medium">Planned:</span> help guides and more shortcuts.
               </p>
+              <Link href="/extension-privacy" className="mt-4 inline-block text-sm font-medium text-text-primary underline underline-offset-2">
+                Keepall Capture privacy
+              </Link>
             </section>
 
             <section

@@ -6,7 +6,7 @@ import path from "node:path";
 type ExtensionTab = { id: number; url?: string; title?: string };
 declare const chrome: {
   storage: { local: { set(values: Record<string, string>): Promise<void> } };
-  runtime: { getURL(path: string): string };
+  runtime: { id: string; getURL(path: string): string };
   tabs: {
     query(query: { active: boolean; currentWindow: boolean }): Promise<ExtensionTab[]>;
     setZoom(tabId: number, zoomFactor: number): Promise<void>;
@@ -33,6 +33,7 @@ test("extension uses the canonical production library address", async () => {
 
   try {
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
+    expect(await worker.evaluate(() => chrome.runtime.id)).toBe("ehloefgfecmfjbncknaoleakbnjhkpea");
     expect(await worker.evaluate(() => keepallOrigin())).toBe("https://www.keepall.app");
 
     await worker.evaluate(() => chrome.storage.local.set({ origin: "https://keepall.app" }));
