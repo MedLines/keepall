@@ -403,7 +403,12 @@ export function Library() {
       }
       scheduleSoftReload();
     }
+    function onVisible() {
+      if (document.visibilityState === "visible") scheduleSoftReload();
+    }
     window.addEventListener(ITEMS_CHANGED_EVENT, onItemsChanged);
+    window.addEventListener("focus", scheduleSoftReload);
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       cancelled = true;
@@ -413,6 +418,8 @@ export function Library() {
         window.clearTimeout(softReloadTimer);
       }
       window.removeEventListener(ITEMS_CHANGED_EVENT, onItemsChanged);
+      window.removeEventListener("focus", scheduleSoftReload);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 

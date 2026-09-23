@@ -3,8 +3,9 @@
 Load this directory as an unpacked extension at `chrome://extensions` with
 Developer mode enabled. Pin **Keepall Capture** to the toolbar. A click saves the
 current HTTP(S) page directly to the same local Keepall library in this Chrome
-profile. No Keepall tab needs to remain open. The badge and an animated
-top-right toast confirm the write; an error never reports success.
+profile. No Keepall tab needs to remain open. If one is open, its Library updates
+after a confirmed save. The badge and an animated top-right toast confirm the
+write; an error never reports success.
 
 Alt/Option+K opens a Keepall-style drawer over the current page for an optional
 title and personal note. It also loads collections and tags from your library.

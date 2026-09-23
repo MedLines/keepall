@@ -83,6 +83,10 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await expect(options.getByRole("link", { name: "Open library" })).toHaveAttribute("href", "http://localhost:3100/");
     await options.close();
 
+    const openLibrary = await context.newPage();
+    await openLibrary.goto("http://localhost:3100/");
+    await expect(openLibrary.getByText("No items yet.", { exact: true })).toBeVisible();
+
     const source = await context.newPage();
     await source.route("http://localhost:3100/test-article", (route) => route.fulfill({
       contentType: "text/html",
@@ -107,7 +111,9 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     });
     expect(first).toBe("Saved to Keepall");
     await expect(source.locator("#keepall-capture-ui .toast.is-visible")).toContainText("Saved to Keepall");
+    await expect(openLibrary.getByText("Example article", { exact: true })).toBeVisible();
     await expect(source.locator("#keepall-capture-ui .toast")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+    await expect(source.locator("#keepall-capture-ui .toast")).toHaveCSS("border-radius", "28px");
     const toastBounds = await source.locator("#keepall-capture-ui .toast").boundingBox();
     expect(toastBounds).not.toBeNull();
     expect(toastBounds!.x).toBeGreaterThanOrEqual(0);

@@ -54,6 +54,17 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
   }
 }
 
+async function notifyOpenKeepallTabs(origin) {
+  const tabs = await chrome.tabs.query({ url: `${origin}/*` });
+  await Promise.allSettled(tabs.filter((tab) => tab.id).map((tab) =>
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      world: "MAIN",
+      func: () => window.dispatchEvent(new Event("keepall:items-changed")),
+    }),
+  ));
+}
+
 async function pendingCapture(url, title, noteContent, noteFormat, existingLink, collectionId, tagIds, collectionName, tagNames) {
   const all = await chrome.storage.local.get(null);
   const expired = [];
@@ -104,10 +115,11 @@ async function saveTab(tab, options = {}) {
     const key = `pending:${payload.captureId}`;
     await chrome.storage.local.set({ [key]: { payload, createdAt: Date.now() } });
     await ensureOffscreen();
+    const origin = await keepallOrigin();
     const result = await chrome.runtime.sendMessage({
       target: "offscreen",
       type: "capture",
-      origin: await keepallOrigin(),
+      origin,
       payload,
     });
     if (result?.error) {
@@ -118,6 +130,9 @@ async function saveTab(tab, options = {}) {
       throw new Error("Keepall did not confirm the save");
     }
     await chrome.storage.local.remove(key);
+    if (result.outcome === "created" || result.outcome === "updated" || result.created) {
+      await notifyOpenKeepallTabs(origin).catch(() => {});
+    }
     let message = "Keepall is up to date";
     if (result.outcome === "created" || result.created) message = "Saved to Keepall";
     if (result.outcome === "updated") message = result.movedTo ? `Moved to ${result.movedTo}` : "Your changes were saved";

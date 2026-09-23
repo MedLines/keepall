@@ -227,6 +227,18 @@ describe("Library", () => {
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
   });
 
+  test("refreshes the library when its tab regains focus", async () => {
+    const captured = buildNote({ content: "Captured while away" }, { id: "n2", now: 2 });
+    vi.mocked(listItems).mockResolvedValueOnce([note]).mockResolvedValue([note, captured]);
+    render(<Library />);
+    expect(await screen.findByText("A persisted note")).toBeInTheDocument();
+
+    window.dispatchEvent(new Event("focus"));
+
+    expect(await screen.findByText("Captured while away")).toBeInTheDocument();
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+  });
+
   test("does not delete until confirm", async () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
