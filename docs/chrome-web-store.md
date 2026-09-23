@@ -20,20 +20,20 @@ Your saved library lives in this Chrome profile, in the Keepall web app's local 
 Keepall Capture works on ordinary HTTP and HTTPS pages. Chrome's internal pages cannot be captured. The extension accesses the current page only when you click it or use its shortcut.
 ```
 
-**Category:** Productivity  
+**Category:** Tools (the dashboard shows “PRODUCTIVITY” as a heading, not a selectable category)
 **Language:** English
 
-**Store icon:** `icon-128.png` (128 × 128 PNG)  
+**Store icon:** `icon-128-no-glow.png` (128 × 128 PNG, transparent background)
 **Screenshots:** `01-capture-drawer.png` and `02-one-click-save.png` (each 1280 × 800 PNG). The article in these screenshots is illustrative; the extension drawer and toast are captured from the real UI.
 
-The three files are in `Desktop/Keepall Store Assets` on the publisher's Windows machine.
+The three upload files are in `Desktop/Keepall Store Assets` on the publisher's Windows machine. Use the new no-glow icon; the older `icon-128.png` remains there only for comparison.
 
 **Global promo video:** Leave empty.  
 **Small promo tile:** Leave empty.  
 **Marquee promo tile:** Leave empty.  
 **Official URL:** None unless `keepall.app` has been verified in the publisher account.  
 **Homepage URL:** `https://www.keepall.app/`  
-**Support URL:** `https://github.com/MedLines/keepall/issues`  
+**Support URL:** `https://github.com/MedLines/keepall/issues` only after the repository is publicly reachable. It currently returns HTTP 404 to an anonymous visitor and blocks submission. Otherwise create a public support page and use that URL.
 **Mature content:** Off.
 
 ## Privacy practices
@@ -56,15 +56,23 @@ Save the current browser page to the user's local Keepall library, with optional
 | `https://www.keepall.app/*` | Load the Keepall bridge and refresh open Keepall tabs after a save. The user's library is stored under this website origin in the browser. |
 | `http://localhost/*` | Allow a user running Keepall locally to point the extension to a localhost development address in Options. The default is the production Keepall address. |
 
-**Remote code / external page explanation:**
+**Host permission justification** (paste into the single host-permission box):
 
 ```text
-The extension worker and content scripts use only files packaged with the extension. An isolated iframe in the offscreen extension page loads https://www.keepall.app/extension-bridge, a normal Keepall web page with no extension API access. Its script writes the capture to that website origin's IndexedDB in the user's browser. The extension does not fetch JavaScript to evaluate in its worker or content scripts. This iframe is needed because browser storage is separated by origin and avoids opening a visible Keepall tab.
+https://www.keepall.app/* lets the extension load the hidden Keepall bridge page, save a selected link to the user's local Keepall library, and refresh an already open Keepall tab after a save. http://localhost/* lets a user running Keepall locally select a localhost address in Options. The extension only reads the current tab after the user clicks its icon or invokes Alt+K.
 ```
 
-If the dashboard asks whether remote code is used, disclose this iframe and use the explanation above. Chrome's Manifest V3 policy expressly treats code inside an iframe isolated from extension APIs as an exception, but still requires the interaction to be understandable to reviewers.
+**Remote code:** Select **Yes**, then paste:
 
-**Data types:** Disclose the current page URL and title as web browsing activity / website content, and user-entered titles, notes, collections, and tags as user-generated content. Do not select “no user data”: local processing still counts for Chrome's disclosure. Certify the limited-use statements only after checking them against the current form. The extension does not sell data or use it for ads.
+```text
+The extension embeds https://www.keepall.app/extension-bridge in an iframe inside its offscreen document. The Keepall website's script runs only in that isolated iframe, with no access to extension APIs. It writes a user-requested capture into the Keepall website origin's local IndexedDB without opening a visible tab. The extension worker and page scripts are all packaged; they do not fetch or evaluate remote JavaScript.
+```
+
+Google's Manifest V3 policy permits remote code in an iframe isolated from extension APIs when the behavior is reviewable and follows user-data rules. Disclosing this iframe is the transparent choice for the form.
+
+**Data usage checkboxes:** Select **Web history** for the saved page URL and title, and **Website content** for the selected page title/link and user-entered capture text. If your form also has a **User-generated content** option below the visible screenshot, select it for titles, notes, collection names, and tag names. Leave unrelated categories unchecked. The extension does not automatically read Chrome history or full webpage bodies; only pages the user chooses to save. Local-only handling still needs disclosure.
+
+**Certifications:** Check all three statements shown in the dashboard. Current code uses data for the capture feature, does not sell it or use it for lending, and the privacy policy describes the preview-service exception.
 
 **Privacy policy URL:** `https://www.keepall.app/extension-privacy` — enter this after the new page is deployed and publicly reachable.
 
@@ -74,10 +82,12 @@ If the dashboard asks whether remote code is used, disclose this iframe and use 
 **Pricing:** Free.  
 **Regions:** All supported regions unless the publisher wants a narrower release.
 
-**Review test instructions** (if requested):
+**Review test instructions** (367 characters, within the dashboard's 500-character limit):
 
 ```text
-No account or test credentials are needed. Install the extension in Chrome, then open https://www.keepall.app in the same browser profile. Visit any ordinary HTTPS page and click the Keepall Capture toolbar icon. A success toast should appear; return to Keepall to see the new link without refreshing. On another page, press Alt+K (Option+K on Mac) to open the capture drawer, add a note, select a collection or tag, and save. Chrome internal pages cannot be captured. The extension's default library address is https://www.keepall.app.
+No account is needed. Install in Chrome and open https://www.keepall.app once in the same profile. On a normal HTTPS page, click the Keepall toolbar icon; a save toast appears and the link appears in Keepall without refreshing. On another page press Alt+K (Option+K on Mac), add a note and choose a collection or tag, then save. Chrome internal pages cannot be saved.
 ```
+
+The current saved reviewer instructions end mid-sentence at the 500-character limit. Replace them with the text above. In the publisher Settings page, add and verify a contact email before submitting. Google says this email is displayed publicly with the item.
 
 Do not submit for review until the Store-ID web bridge and privacy URL are deployed, the unpacked extension using this Store ID passes this flow, and the listing disclosures match the deployed behavior. After approval, install the Store version and repeat the flow before announcing it.

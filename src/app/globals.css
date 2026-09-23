@@ -388,6 +388,10 @@
 .ui-scrollbar-hidden { scrollbar-width: none; }
 .ui-scrollbar-hidden::-webkit-scrollbar { display: none; }
 
+.library-sidebar-interactive:has([data-menu-open="true"]) .library-sidebar-count {
+  opacity: 0;
+}
+
 .library-list-thumbnail { width: 88px; height: 64px; }
 .library-list-body { padding-inline-end: 156px; }
 .library-list-date { position: absolute; inset-inline-end: 64px; top: 28px; }

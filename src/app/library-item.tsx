@@ -438,7 +438,7 @@ export function LibraryItem({
         data-selected={selected || undefined}
         className={
           isList
-            ? "library-list-row group relative flex items-start gap-3 border-b border-border-edge py-4"
+            ? "library-list-row group relative flex items-start gap-3 rounded-control-lg border-b border-border-edge px-3 py-4"
             : "library-card squircle-panel group relative flex flex-col rounded-card p-card-inset"
         }
       >

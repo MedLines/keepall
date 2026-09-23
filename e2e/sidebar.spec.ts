@@ -105,6 +105,10 @@ test("collection actions remain inside the same hovered sidebar row", async ({ p
   await expect(collectionActions).toHaveCSS("transition-duration", "0s");
   await collectionActions.hover();
   await expect(collectionRow).toHaveCSS("background-color", "rgb(230, 230, 227)");
+  await collectionActions.click();
+  await page.getByRole("menuitem", { name: "Rename" }).hover();
+  await expect(collectionRow.locator(".library-sidebar-count")).toHaveCSS("opacity", "0");
+  await page.keyboard.press("Escape");
   await tag.hover();
   await expect(tag.locator("..")).toHaveCSS("background-color", "rgb(230, 230, 227)");
   await expect(tag).toHaveCSS(

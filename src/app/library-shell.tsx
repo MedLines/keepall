@@ -947,9 +947,10 @@ function SidebarRowMenu({
       <Menu.Trigger
         className={`absolute right-0 flex size-7 shrink-0 items-center justify-center rounded-[6px] text-text-secondary hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 ${
           open
-            ? "opacity-100"
+            ? "bg-bg-raised opacity-100"
             : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
         }`}
+        data-menu-open={open || undefined}
         aria-label={actionsLabel}
         disabled={mutationBusy}
       >
@@ -1047,7 +1048,7 @@ function NavCount({ value }: { value: number }) {
   return (
     <span
       aria-hidden
-      className="ml-auto shrink-0 pl-2 text-[11px] tabular-nums text-text-secondary group-hover:opacity-0 group-focus-within:opacity-0"
+      className="library-sidebar-count ml-auto shrink-0 pl-2 text-[11px] tabular-nums text-text-secondary group-hover:opacity-0 group-focus-within:opacity-0"
     >
       {value}
     </span>

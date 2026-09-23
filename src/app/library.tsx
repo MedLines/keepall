@@ -1538,7 +1538,7 @@ export function Library() {
         typeFilter={browseType}
         sidebarCounts={sidebarCounts}
         onTypeFilterChange={(type) => updateView({ type }, "push")}
-        tagFilterActive={browseTagId !== null && browseTagName !== null}
+        tagFilterName={browseTagName}
         onClearTagFilter={() => updateView({ tag: null }, "push")}
         panelOpen={panelOpen}
         onPanelOpenChange={setPanelOpen}

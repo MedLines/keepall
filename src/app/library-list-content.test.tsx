@@ -1,6 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
+import {
+  countFittingTags,
+  LibraryListContent,
+  LibraryListMetadata,
+} from "./library-list-content";
 import { buildImage } from "@/domain/image";
 
 test("untitled images omit the empty title button and keep the saved date", () => {
@@ -10,6 +14,11 @@ test("untitled images omit the empty title button and keep the saved date", () =
 });
 
 const tags = ["minimal", "typography", "motion", "reference"].map(name => ({ id: name, name }));
+
+test("list metadata uses the full tag row before reserving overflow space", () => {
+  expect(countFittingTags([48, 72, 56], 184, 32)).toBe(3);
+  expect(countFittingTags([48, 72, 56], 159, 32)).toBe(1);
+});
 
 test("list metadata shows two tags and expands the rest without navigation", () => {
   const browse = vi.fn();

@@ -40,7 +40,7 @@ type Props = {
   typeFilter: LibraryTypeFilter | null;
   sidebarCounts: LibrarySidebarCounts;
   onTypeFilterChange: (type: LibraryTypeFilter | null) => void;
-  tagFilterActive: boolean;
+  tagFilterName: string | null;
   onClearTagFilter: () => void;
   panelOpen: boolean;
   onPanelOpenChange: (open: boolean) => void;
@@ -51,7 +51,7 @@ type Props = {
 export function LibraryTopBar({
   headingRef, title, itemCount, searchQuery, onSearchChange,
   sort, onSortChange, layout, onLayoutChange, panelOpen, onPanelOpenChange,
-  typeFilter, sidebarCounts, onTypeFilterChange, tagFilterActive,
+  typeFilter, sidebarCounts, onTypeFilterChange, tagFilterName,
   onClearTagFilter, bulk, libraryLoading = false,
 }: Props) {
   const hasSelection = Boolean(bulk && bulk.count > 0);
@@ -97,7 +97,7 @@ export function LibraryTopBar({
         </div>
       </div>
 
-      <div className="grid min-h-[98px] grid-cols-1 content-start gap-3 sm:min-h-[42px] sm:grid-cols-[minmax(0,auto)_minmax(0,1fr)_auto] sm:items-center">
+      <div className={`grid min-h-[98px] grid-cols-1 content-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${hasSelection ? "" : "sm:min-h-[42px]"}`}>
         <div className={`${hasSelection ? "hidden sm:flex" : "flex"} row-start-1 min-w-0 items-center gap-3 sm:col-start-1 sm:row-start-1`}>
           <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-[34px] text-text-primary sm:text-[28px]">
             {title}
@@ -105,19 +105,20 @@ export function LibraryTopBar({
           <span className="squircle-panel flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} items`}>
             {libraryLoading ? "…" : itemCount}
           </span>
-          {tagFilterActive ? (
+          {tagFilterName ? (
             <button
               type="button"
-              className="ui-control flex size-10 shrink-0 items-center justify-center text-text-secondary hover:text-text-primary"
+              className="ui-control flex h-8 min-w-0 shrink-0 items-center gap-1.5 rounded-control px-2.5 text-xs font-medium text-text-secondary hover:text-text-primary"
               aria-label="Clear tag"
               title="Clear tag filter"
               onClick={onClearTagFilter}
             >
+              <span className="max-w-40 truncate">{tagFilterName}</span>
               <CloseIcon className="size-4" />
             </button>
           ) : null}
         </div>
-        <div className={`${hasSelection ? "block" : "hidden"} row-start-1 min-w-0 sm:col-start-2 sm:row-start-1 sm:block`}>
+        <div className={`${hasSelection ? "block sm:col-span-2 sm:col-start-1 sm:row-start-2" : "hidden"} row-start-1 min-w-0`}>
           {hasSelection && bulk ? (
             <LibraryBulkToolbar
               allVisibleSelected={bulk.allVisibleSelected}
@@ -129,7 +130,7 @@ export function LibraryTopBar({
             />
           ) : null}
         </div>
-        <div className="row-start-2 flex shrink-0 items-center justify-end gap-2 sm:col-start-3 sm:row-start-1">
+        <div className="row-start-2 flex shrink-0 items-center justify-end gap-2 sm:col-start-2 sm:row-start-1">
           <LibraryTypeFilterMenu
             value={typeFilter}
             counts={sidebarCounts}

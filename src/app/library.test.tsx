@@ -776,6 +776,9 @@ describe("Library tags", () => {
     expect(
       screen.getByRole("heading", { name: "inspiration" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Clear tag" }),
+    ).toHaveTextContent("inspiration");
 
     fireEvent.click(screen.getByRole("button", { name: "Clear tag" }));
 

@@ -572,15 +572,17 @@ for (const view of ["Grid", "List"] as const) {
 test("active tag clears from the library title row", async ({ page }, testInfo) => {
   const card = page.locator(".library-card").filter({ hasText: "Customer support" });
   await card.hover();
+  await card.getByRole("button", { name: "UI inspiration", exact: true }).click();
   await card.getByRole("button", { name: "1 tag" }).click();
   await card.getByRole("button", { name: "minimal", exact: true }).click();
 
   const header = page.getByRole("banner");
-  const heading = header.getByRole("heading", { name: "minimal" });
+  const heading = header.getByRole("heading", { name: "UI inspiration" });
   const clear = header.getByRole("button", { name: "Clear tag" });
   await expect(heading).toBeVisible();
   await expect(clear).toBeVisible();
   await expect(page.getByRole("main")).toHaveCSS("scrollbar-width", "thin");
+  await expect(clear).toContainText("minimal");
   const headingBox = (await heading.boundingBox())!;
   const clearBox = (await clear.boundingBox())!;
   expect(Math.abs(headingBox.y + headingBox.height / 2 - clearBox.y - clearBox.height / 2)).toBeLessThanOrEqual(1);
@@ -588,8 +590,8 @@ test("active tag clears from the library title row", async ({ page }, testInfo) 
   await page.screenshot({ path: testInfo.outputPath("active-tag-title.png") });
 
   await clear.click();
-  await expect(page).toHaveURL("/");
-  await expect(header.getByRole("heading", { name: "All items" })).toBeVisible();
+  await expect(page).toHaveURL(/collection=c(?:&|$)/);
+  await expect(header.getByRole("heading", { name: "UI inspiration" })).toBeVisible();
 });
 
 for (const view of ["Grid", "List"] as const) {
@@ -631,9 +633,23 @@ for (const view of ["Grid", "List"] as const) {
     const item = page.locator(view === "Grid" ? ".library-card" : ".library-list-row").filter({ hasText: "Customer support" });
     if (view === "Grid") await item.hover();
     const overflow = item.getByRole("button", { name: view === "Grid" ? "3 tags" : "Show 1 more tags" });
-    await expect(item.getByRole("button", { name: "typography", exact: true })).toHaveCount(0);
-    await overflow.click();
     const tag = item.getByRole("button", { name: "typography", exact: true });
+    if (view === "List") {
+      const listOverflow = item.getByRole("button", { name: /Show \d+ more tags/ });
+      await expect(tag).toBeVisible();
+      await expect(listOverflow).toHaveCount(0);
+      await page.setViewportSize({ width: 375, height: 700 });
+      await page.getByRole("button", { name: "Close sidebar" }).click({ position: { x: 300, y: 350 } });
+      await expect(listOverflow).toBeVisible();
+      await expect(tag).toHaveCount(0);
+      await listOverflow.click();
+      await expect(tag).toBeVisible();
+      await tag.click();
+      await expect(page).toHaveURL(/tag=t3(?:&|$)/);
+      return;
+    }
+    await expect(tag).toHaveCount(0);
+    await overflow.click();
     await tag.focus();
     await page.keyboard.press("Escape");
     await expect(overflow).toBeFocused();
@@ -954,7 +970,7 @@ test("opening one card menu closes the menu left open on another card", async ({
   await expect(second.getByRole("button", { name: "Edit", exact: true })).toBeHidden();
 });
 
-test("selecting a card keeps the library still and draws the state inside the card", async ({ page }, testInfo) => {
+test("selecting a card gives actions their own row and draws the state inside the card", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const heading = page.getByRole("heading", { name: "All items", exact: true });
   const header = page.locator("header").filter({ has: page.locator("#library-heading") });
@@ -965,20 +981,17 @@ test("selecting a card keeps the library still and draws the state inside the ca
   const fillBefore = await card.evaluate(element => getComputedStyle(element).backgroundColor);
 
   await card.hover();
-  await card.getByRole("checkbox").check();
+  await card.locator("[data-selection-indicator]").click();
 
   const bulkActions = page.getByRole("region", { name: "Bulk actions" });
   await expect(bulkActions).toBeVisible();
   const headerAfter = (await header.boundingBox())!;
   const cardAfter = (await card.boundingBox())!;
-  expect(headerAfter.height).toBe(headerBefore.height);
-  expect(cardAfter.y).toBe(cardBefore.y);
+  expect(headerAfter.height).toBeGreaterThan(headerBefore.height);
+  expect(cardAfter.y).toBeGreaterThan(cardBefore.y);
 
-  const headingBounds = (await heading.boundingBox())!;
-  const bulkBounds = (await bulkActions.boundingBox())!;
-  const layoutBounds = (await layoutControls.boundingBox())!;
-  expect(bulkBounds.x).toBeGreaterThanOrEqual(headingBounds.x + headingBounds.width);
-  expect(bulkBounds.x + bulkBounds.width).toBeLessThanOrEqual(layoutBounds.x);
+  await expect(heading).toBeVisible();
+  await expect(layoutControls).toBeVisible();
 
   await expect(bulkActions).toHaveCSS("overflow-x", "visible");
   await expect(bulkActions.getByRole("button", { name: "Tags" })).toBeVisible();
@@ -1045,6 +1058,27 @@ test("selecting a card keeps the library still and draws the state inside the ca
   await expect(layoutControls).toBeVisible();
   await expect(page.getByRole("button", { name: "Sort library" })).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("selection actions stay on one row and list selection has a rounded inset surface", async ({ page }) => {
+  await page.setViewportSize({ width: 1040, height: 800 });
+  await page.getByRole("button", { name: "List view", exact: true }).click();
+  const row = page.locator(".library-list-row").filter({ hasText: "Customer support" });
+  await row.hover();
+  await row.locator("[data-selection-indicator]").click();
+
+  const bulkActions = page.getByRole("region", { name: "Bulk actions" });
+  const actionCenters = await bulkActions.getByRole("button").evaluateAll(buttons =>
+    buttons.map(button => button.getBoundingClientRect().y + button.getBoundingClientRect().height / 2),
+  );
+  expect(Math.max(...actionCenters) - Math.min(...actionCenters)).toBeLessThanOrEqual(1);
+
+  const surface = await row.evaluate(element => {
+    const style = getComputedStyle(element);
+    return { borderRadius: style.borderRadius, paddingInlineStart: style.paddingInlineStart };
+  });
+  expect(Number.parseFloat(surface.borderRadius)).toBeGreaterThan(0);
+  expect(Number.parseFloat(surface.paddingInlineStart)).toBeGreaterThan(0);
 });
 
 test("masonry places the next card below a shorter card, not a full row", async ({ page }) => {
