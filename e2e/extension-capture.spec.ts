@@ -100,7 +100,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       await saveTab(tab);
       return chrome.action.getTitle({ tabId: tab.id });
     });
-    expect(second).toBe("Already in Keepall");
+    expect(second).toBe("Already saved in Keepall");
     await source.close();
 
     const organizationSetup = await context.newPage();

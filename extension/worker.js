@@ -114,8 +114,7 @@ async function saveTab(tab, options = {}) {
       throw new Error("Keepall did not confirm the save");
     }
     await chrome.storage.local.remove(key);
-    await feedback(result.created ? "Saved to Keepall" :
-      options.collectionId !== undefined || options.tagIds !== undefined || options.collectionName || options.tagNames?.length ? "Updated in Keepall" : "Already in Keepall", true);
+    await feedback(result.created ? "Saved to Keepall" : "Already saved in Keepall", true);
   } catch (error) {
     await feedback(error instanceof Error ? error.message : "Could not save to Keepall", false);
   }

@@ -48,6 +48,13 @@ if (!globalThis.__keepallPageUi) {
     @keyframes keepall-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
     @keyframes keepall-backdrop-out { to { opacity: 0; } }
     .header { display: flex; align-items: flex-start; gap: 16px; padding: 24px 28px; }
+    .header, form { transition: opacity 160ms cubic-bezier(.19, 1, .22, 1), transform 160ms cubic-bezier(.19, 1, .22, 1); }
+    dialog[data-state="saved"] > .header, dialog[data-state="saved"] > form { opacity: 0; transform: translateY(-8px); visibility: hidden; transition: opacity 160ms cubic-bezier(.19, 1, .22, 1), transform 160ms cubic-bezier(.19, 1, .22, 1), visibility 0s linear 160ms; }
+    .save-complete { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 20px; padding: 32px; text-align: center; visibility: hidden; opacity: 0; transform: translateY(10px) scale(.96); pointer-events: none; transition: opacity 180ms cubic-bezier(.19, 1, .22, 1), transform 220ms cubic-bezier(.19, 1, .22, 1), visibility 0s linear 220ms; }
+    dialog[data-state="saved"] .save-complete { visibility: visible; opacity: 1; transform: none; transition-delay: 40ms, 40ms, 0s; }
+    .save-complete-mark { display: grid; place-items: center; width: 96px; height: 96px; border-radius: 32px; corner-shape: squircle; background: var(--action); color: var(--on-action); }
+    .save-complete-mark svg { width: 52px; height: 52px; }
+    .save-complete-title { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.025em; line-height: 1.3; }
     .heading { min-width: 0; flex: 1; }
     h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.025em; line-height: 1.35; }
     .description { margin: 4px 0 0; color: var(--secondary); line-height: 1.6; }
@@ -106,24 +113,19 @@ if (!globalThis.__keepallPageUi) {
     .secondary { background: var(--control); color: var(--secondary); }
     .primary { border-color: transparent !important; background: var(--action); color: var(--on-action); }
     .primary:hover { opacity: .9; }
-    .primary.is-saved:disabled { opacity: 1; cursor: default; }
-    .save-check { width: 17px; height: 17px; margin-right: 7px; vertical-align: -3px; animation: keepall-check-in 180ms cubic-bezier(.16, 1, .3, 1) both; }
-    @keyframes keepall-check-in { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
     .footer button:active, .close:active, .choice:active { transform: scale(.96); }
     button:disabled { opacity: .55; cursor: wait; }
     .hint { margin-left: auto; color: var(--secondary); font-size: 12px; }
-    .toast { position: fixed; z-index: 2147483647; right: max(20px, env(safe-area-inset-right)); top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 12px; width: min(360px, calc(100vw - 40px)); min-height: 56px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--toast); color: var(--primary); box-shadow: 0 12px 36px #00000024, 0 2px 8px #00000012; font-size: 14px; font-weight: 500; line-height: 1.4; animation: keepall-toast-in 340ms cubic-bezier(.16, 1, .3, 1) both; }
-    .toast.is-leaving { animation: keepall-toast-out 180ms ease-in both; }
+    .toast { --toast-offset: max(20px, env(safe-area-inset-right)); position: fixed; z-index: 2147483647; right: var(--toast-offset); top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 10px; width: max-content; max-width: min(320px, calc(100vw - 40px)); min-height: 48px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 18px; corner-shape: squircle; background: var(--toast); color: var(--primary); box-shadow: 0 12px 36px #00000024, 0 2px 8px #00000012; font-size: 14px; font-weight: 500; line-height: 1.4; opacity: 0; transform: translateX(calc(100% + var(--toast-offset))); transition: transform 260ms cubic-bezier(.32, .72, 0, 1), opacity 180ms cubic-bezier(.32, .72, 0, 1); }
+    .toast.is-visible { opacity: 1; transform: translateX(0); }
+    dialog .toast { position: absolute; top: 88px; }
+    .toast.is-leaving { pointer-events: none; transition-duration: 180ms, 140ms; }
     .toast-mark { display: grid; flex: none; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--action); color: var(--on-action); font-size: 12px; }
     .toast[data-success="false"] .toast-mark { background: var(--danger); color: var(--canvas); }
-    .toast-label { flex: 1; }
-    .toast-close { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 19px; }
+    .toast-label { flex: 0 1 auto; overflow-wrap: anywhere; }
+    .toast-close { display: grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 19px; }
     .toast-close:hover { background: var(--raised); color: var(--primary); }
-    @keyframes keepall-toast-in { from { opacity: 0; transform: translateY(-16px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    @keyframes keepall-toast-out { to { opacity: 0; transform: translateY(-12px) scale(.98); } }
-    .save-status { margin: 0 0 0 auto; color: var(--secondary); font-size: 12px; animation: keepall-status-in 180ms ease-out both; }
-    @keyframes keepall-status-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-    @media (prefers-reduced-motion: reduce) { dialog, dialog::backdrop, dialog.is-closing, dialog.is-closing::backdrop, .browse, .browse.is-closing, .toast, .toast.is-leaving, .save-status, .save-check { animation: none; } .footer button, .close, .choice { transition: none; } .footer button:active, .close:active, .choice:active { transform: none; } }
+    @media (prefers-reduced-motion: reduce) { dialog, dialog::backdrop, dialog.is-closing, dialog.is-closing::backdrop, .browse, .browse.is-closing { animation: none; } .toast, .toast.is-visible { transform: none; transition: opacity 140ms ease-out; } .header, form, dialog[data-state="saved"] > .header, dialog[data-state="saved"] > form { transform: none; transition: opacity 120ms ease-out, visibility 0s linear 120ms; } .save-complete, dialog[data-state="saved"] .save-complete { transform: none; transition: opacity 140ms ease-out, visibility 0s linear 140ms; } .footer button, .close, .choice { transition: none; } .footer button:active, .close:active, .choice:active { transform: none; } }
     @media (max-width: 480px) { .header { padding: 20px; } .fields { padding: 8px 20px 20px; } .footer { padding: 20px; } .hint { display: none; } }
   `;
   shadow.append(style);
@@ -136,20 +138,22 @@ if (!globalThis.__keepallPageUi) {
   let onOrganizationMessage;
   let onEditorFeedback;
   let toastTimer;
+  let toastExitTimer;
   let closeTimer;
-  let footerStatus;
   let currentPicker;
 
   function dismissToast(immediate = false) {
     clearTimeout(toastTimer);
+    clearTimeout(toastExitTimer);
     const node = shadow.querySelector(".toast");
     if (!node) return;
-    if (immediate || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (immediate) {
       node.remove();
       return;
     }
     node.classList.add("is-leaving");
-    setTimeout(() => node.remove(), 180);
+    node.classList.remove("is-visible");
+    toastExitTimer = setTimeout(() => node.remove(), matchMedia("(prefers-reduced-motion: reduce)").matches ? 140 : 180);
   }
 
   function toast(message, success) {
@@ -174,7 +178,9 @@ if (!globalThis.__keepallPageUi) {
     node.addEventListener("mouseenter", () => clearTimeout(toastTimer));
     node.addEventListener("mouseleave", () => { toastTimer = setTimeout(() => dismissToast(), 4000); });
     node.append(mark, label, close);
-    shadow.append(node);
+    (dialog?.open ? dialog : shadow).append(node);
+    void node.offsetWidth;
+    node.classList.add("is-visible");
     toastTimer = setTimeout(() => dismissToast(), 4000);
   }
 
@@ -273,12 +279,21 @@ if (!globalThis.__keepallPageUi) {
     const hint = document.createElement("span");
     hint.className = "hint";
     hint.textContent = "Ctrl/⌘ Enter to save";
-    footerStatus = document.createElement("p");
-    footerStatus.className = "save-status";
-    footerStatus.setAttribute("role", "status");
-    footerStatus.hidden = true;
-    footer.append(saveButton, cancel, hint, footerStatus);
+    footer.append(saveButton, cancel, hint);
     form.append(fields, footer);
+    const complete = document.createElement("div");
+    complete.className = "save-complete";
+    complete.setAttribute("role", "status");
+    complete.setAttribute("aria-live", "polite");
+    complete.setAttribute("aria-hidden", "true");
+    complete.tabIndex = -1;
+    const completeMark = document.createElement("div");
+    completeMark.className = "save-complete-mark";
+    completeMark.setAttribute("aria-hidden", "true");
+    completeMark.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>';
+    const completeTitle = document.createElement("p");
+    completeTitle.className = "save-complete-title";
+    complete.append(completeMark, completeTitle);
     form.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
@@ -305,41 +320,33 @@ if (!globalThis.__keepallPageUi) {
     });
     onEditorFeedback = (message) => {
       if (message.editorId !== currentEditorId || !dialog?.open) return;
-      dialog.dataset.state = message.success ? "saved" : "error";
       if (message.success) {
-        const check = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        check.setAttribute("class", "save-check");
-        check.setAttribute("viewBox", "0 0 24 24");
-        check.setAttribute("fill", "none");
-        check.setAttribute("stroke", "currentColor");
-        check.setAttribute("stroke-width", "2.5");
-        check.setAttribute("stroke-linecap", "round");
-        check.setAttribute("stroke-linejoin", "round");
-        check.setAttribute("aria-hidden", "true");
-        const mark = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        mark.setAttribute("d", "m5 12 4.5 4.5L19 7");
-        check.append(mark);
-        saveButton.replaceChildren(check, document.createTextNode("Saved"));
-        saveButton.classList.add("is-saved");
-        footerStatus.textContent = message.message;
-        footerStatus.hidden = false;
-        hint.hidden = true;
-        close.disabled = false;
-        cancel.disabled = false;
-        closeTimer = setTimeout(() => dismissEditor(), 1200);
+        dismissToast(true);
+        picker.destroy();
+        form.inert = true;
+        header.inert = true;
+        completeTitle.textContent = message.message;
+        complete.setAttribute("aria-hidden", "false");
+        dialog.dataset.state = "saved";
+        complete.focus({ preventScroll: true });
+        closeTimer = setTimeout(() => dismissEditor(), 1600);
       } else {
+        dialog.dataset.state = "error";
         saveButton.disabled = false;
         saveButton.textContent = "Save";
         close.disabled = false;
         cancel.disabled = false;
         picker.setDisabled(false);
         errorLine.textContent = message.message;
+        toast("Couldn't save to Keepall", false);
       }
     };
-    dialog.append(header, form);
+    dialog.append(header, form, complete);
+    const currentDialog = dialog;
     dialog.addEventListener("close", () => {
       picker.destroy();
-      dialog.remove();
+      currentDialog.remove();
+      if (dialog === currentDialog) dialog = undefined;
     }, { once: true });
     dialog.addEventListener("cancel", (event) => {
       event.preventDefault();

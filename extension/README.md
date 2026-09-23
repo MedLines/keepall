@@ -10,8 +10,9 @@ Alt/Option+K opens a Keepall-style drawer over the current page for an optional
 title and personal note. It also loads collections and tags from your library.
 Six quick choices appear for each; **Browse all** searches the complete list,
 and the inputs can create new collections and tags. A successful drawer save
-shows a checkmark before the drawer closes. Without a collection choice, a new
-link goes to Unsorted. A toolbar click leaves the organization of an already
+replaces the form with a centered checkmark and confirmation before the drawer
+closes. A failed save keeps the form open and shows an error toast. Without a
+collection choice, a new link goes to Unsorted. A toolbar click leaves the organization of an already
 saved link alone. If the shortcut is already claimed, assign it at
 `chrome://extensions/shortcuts`. Chrome does not allow injection on its internal
 pages, so those pages cannot be captured.
