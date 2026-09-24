@@ -96,12 +96,11 @@ export default function SettingsPage() {
               <p className="mt-1 text-sm leading-6 text-text-secondary">
                 Press <kbd className="font-mono text-text-primary">Alt + K</kbd> to open capture. On a Mac, use Option + K.
               </p>
-              <p className="mt-4 text-xs text-text-secondary">
-                <span className="font-medium">Planned:</span> help guides and more shortcuts.
-              </p>
-              <Link href="/extension-privacy" className="mt-4 inline-block text-sm font-medium text-text-primary underline underline-offset-2">
-                Keepall Capture privacy
-              </Link>
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-text-primary">
+                <Link href="/help" className="underline underline-offset-2">Help guides</Link>
+                <Link href="/about" className="underline underline-offset-2">About Keepall</Link>
+                <Link href="/extension-privacy" className="underline underline-offset-2">Keepall Capture privacy</Link>
+              </div>
             </section>
 
             <section

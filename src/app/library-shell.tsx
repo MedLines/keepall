@@ -20,6 +20,7 @@ import {
   ChevronDownIcon,
   CollectionIcon,
   HashIcon,
+  HelpIcon,
   InboxIcon,
   LibraryIcon,
   LogoIcon,
@@ -320,6 +321,12 @@ export function LibraryShell({
             )}
           </div>
 
+          <ShellNavLink
+            expanded={contentExpanded}
+            label="Help"
+            href="/help"
+            icon={<HelpIcon className="size-[18px] shrink-0 text-text-secondary" />}
+          />
           <ShellNavLink
             expanded={contentExpanded}
             label="Settings"

@@ -12,7 +12,7 @@ import {
   ArrowLeft01Icon as ArrowLeft01, ArrowRight01Icon as ArrowRight01,
   FullScreenIcon as FullScreen,
   CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle,
-  Settings02Icon as Settings02,
+  Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
 } from "@hugeicons/core-free-icons";
 
 type IconProps = { className?: string; fill?: "none" | "currentColor" };
@@ -41,6 +41,7 @@ export function ImageIcon(props: IconProps) { return <ShellIcon icon={Image01} {
 export function ImagesIcon(props: IconProps) { return <ShellIcon icon={Images} {...props} />; }
 export function BackupIcon(props: IconProps) { return <ShellIcon icon={Archive01} {...props} />; }
 export function SettingsIcon(props: IconProps) { return <ShellIcon icon={Settings02} {...props} />; }
+export function HelpIcon(props: IconProps) { return <ShellIcon icon={HelpCircle} {...props} />; }
 export function CloseIcon(props: IconProps) { return <ShellIcon icon={Cancel01} {...props} />; }
 export function SearchIcon(props: IconProps) { return <ShellIcon icon={Search01} {...props} />; }
 export function PanelIcon(props: IconProps) { return <ShellIcon icon={SidebarLeft01} {...props} />; }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { getClientOriginDeploymentPolicy } from "@/pwa/origin-policy-client";
 import type { OriginDeploymentPolicy } from "@/pwa/canonical-origin";
 import { activateWaitingServiceWorker } from "@/pwa/service-worker-update";
@@ -18,6 +19,8 @@ const serwistDisabled = process.env.NODE_ENV !== "production";
  * and its default `type: "module"` registration.
  */
 export function PwaProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const publicPage = pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/");
   const [updateReady, setUpdateReady] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(
     null,
@@ -92,6 +95,8 @@ export function PwaProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [policy]);
+
+  if (publicPage) return <>{children}</>;
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
