@@ -321,20 +321,22 @@ export function LibraryShell({
             )}
           </div>
 
-          <ShellNavLink
-            expanded={contentExpanded}
-            label="Help"
-            href="/help"
-            icon={<HelpIcon className="size-[18px] shrink-0 text-text-secondary" />}
-          />
-          <ShellNavLink
-            expanded={contentExpanded}
-            label="Settings"
-            href="/settings"
-            icon={
-              <SettingsIcon className="size-[18px] shrink-0 text-text-secondary" />
-            }
-          />
+          <div className="flex flex-col gap-1">
+            <ShellNavLink
+              expanded={contentExpanded}
+              label="Help"
+              href="/help"
+              icon={<HelpIcon className="size-[18px] shrink-0 text-text-secondary" />}
+            />
+            <ShellNavLink
+              expanded={contentExpanded}
+              label="Settings"
+              href="/settings"
+              icon={
+                <SettingsIcon className="size-[18px] shrink-0 text-text-secondary" />
+              }
+            />
+          </div>
         </nav>
     </>
   );
