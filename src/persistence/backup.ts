@@ -8,14 +8,16 @@ import { isIncomingNewer, unionIds } from "@/domain/backup-merge";
 import { buildAsset, sameContentHashMultiset } from "@/domain/asset";
 import { normalizeCollection } from "@/domain/collection";
 import { normalizePinnedCollectionIds } from "@/domain/library-preferences";
-import { normalizeItem, type Item } from "@/domain/item";
+import { normalizeItem } from "@/domain/item";
+import type { VideoItem } from "@/domain/video";
 import type { ImageItem } from "@/domain/image";
 import type { LinkItem } from "@/domain/link";
 import { normalizeLinkUrl } from "@/domain/link";
 import { replaceNoteImageAssetIds, type NoteItem } from "@/domain/note";
 import { listAssets, putAsset, ensureContentHash, getAsset } from "./assets";
 import { createCollection } from "./collections";
-import { getDb } from "./db";
+import { getDb, type Thumbnail, type VideoAsset } from "./db";
+import { imageThumbnail, putThumbnail } from "./thumbnails";
 import {
   getLibraryPreferences,
   putLibraryPreferences,
@@ -33,6 +35,10 @@ export async function exportKeepallBackup(
     listAssets(),
     getLibraryPreferences(),
   ]);
+
+  if (rawItems.some((item) => item.type === "video")) {
+    throw new Error("Use ZIP export for libraries containing video");
+  }
 
   const backupAssets = assets.map((asset) => ({
     id: asset.id,
@@ -60,34 +66,50 @@ export async function exportKeepallBackup(
 
 export async function importKeepallBackupReplace(
   raw: unknown,
+  binaryAssets?: Map<string, Uint8Array>,
 ): Promise<KeepallBackup> {
-  const backup = parseKeepallBackup(raw);
+  return replaceValidatedBackup(parseKeepallBackup(raw), binaryAssets);
+}
+
+export async function replaceValidatedBackup(
+  backup: KeepallBackup,
+  binaryAssets?: Map<string, Uint8Array>,
+  videos: VideoAsset[] = [],
+  thumbnails: Thumbnail[] = [],
+): Promise<KeepallBackup> {
   const db = getDb();
 
   const restoredAssets = backup.assets.map((record) =>
     buildAsset(
       {
         mimeType: record.mimeType,
-        bytes: base64ToBytes(record.dataBase64),
+        bytes: binaryAssets?.get(record.id) ?? base64ToBytes(record.dataBase64),
         contentHash: record.contentHash,
       },
       { id: record.id, now: record.createdAt },
     ),
   );
 
+  const imageAssetIds = new Set(backup.items.filter((item) => item.type === "image").flatMap((item) => item.assetIds));
+  const existingThumbnailIds = new Set(thumbnails.map((thumbnail) => thumbnail.assetId));
+  const generatedThumbnails: Thumbnail[] = [];
+  for (const asset of restoredAssets) {
+    if (!imageAssetIds.has(asset.id) || existingThumbnailIds.has(asset.id)) continue;
+    const blob = await imageThumbnail(asset.bytes, asset.mimeType);
+    if (blob) generatedThumbnails.push({ assetId: asset.id, blob });
+  }
+
   await db.transaction(
     "rw",
-    db.items,
-    db.tags,
-    db.collections,
-    db.assets,
-    db.preferences,
+    [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.preferences],
     async () => {
       await Promise.all([
         db.items.clear(),
         db.tags.clear(),
         db.collections.clear(),
         db.assets.clear(),
+        db.thumbnails.clear(),
+        db.videoAssets.clear(),
         db.preferences.clear(),
       ]);
 
@@ -101,6 +123,13 @@ export async function importKeepallBackupReplace(
 
       if (restoredAssets.length > 0) {
         await db.assets.bulkAdd(restoredAssets);
+      }
+
+      if (videos.length > 0) {
+        await db.videoAssets.bulkAdd(videos);
+      }
+      if (thumbnails.length + generatedThumbnails.length > 0) {
+        await db.thumbnails.bulkAdd([...thumbnails, ...generatedThumbnails]);
       }
 
       if (backup.items.length > 0) {
@@ -130,6 +159,8 @@ export type KeepallMergeSummary = {
  */
 export async function importKeepallBackupMerge(
   raw: unknown,
+  binaryAssets?: Map<string, Uint8Array>,
+  media?: { items: VideoItem[]; assets: VideoAsset[]; thumbnails: Thumbnail[] },
 ): Promise<{ backup: KeepallBackup; summary: KeepallMergeSummary }> {
   const backup = parseKeepallBackup(raw);
   const db = getDb();
@@ -161,10 +192,15 @@ export async function importKeepallBackupMerge(
   for (const record of backup.assets) {
     const local = await putAsset({
       mimeType: record.mimeType,
-      bytes: base64ToBytes(record.dataBase64),
+      bytes: binaryAssets?.get(record.id) ?? base64ToBytes(record.dataBase64),
       contentHash: record.contentHash,
     });
     assetIdMap.set(record.id, local.id);
+    const storedThumbnail = media?.thumbnails.find((thumbnail) => thumbnail.assetId === record.id);
+    const blob = storedThumbnail?.blob ?? (backup.items.some((item) => item.type === "image" && item.assetIds.includes(record.id))
+      ? await imageThumbnail(binaryAssets?.get(record.id) ?? base64ToBytes(record.dataBase64), record.mimeType)
+      : null);
+    await putThumbnail(local.id, blob);
   }
 
   const remapTagIds = (ids: string[]) =>
@@ -458,6 +494,36 @@ export async function importKeepallBackupMerge(
     }
   }
 
+  if (media) {
+    const videoAssetsById = new Map(media.assets.map((asset) => [asset.id, asset]));
+    const thumbnailsById = new Map(media.thumbnails.map((thumbnail) => [thumbnail.assetId, thumbnail]));
+    for (const incoming of media.items) {
+      const source = videoAssetsById.get(incoming.assetId);
+      if (!source) throw new Error("Video asset is missing from archive");
+      const existing = await db.items.get(incoming.id);
+      if (existing?.type === "video") {
+        itemIdMap.set(incoming.id, existing.id);
+        summary.unchanged += 1;
+        continue;
+      }
+      const id = existing ? crypto.randomUUID() : incoming.id;
+      const assetId = crypto.randomUUID();
+      const next: VideoItem = {
+        ...incoming, id, assetId,
+        tagIds: remapTagIds(incoming.tagIds),
+        collectionIds: remapCollectionIds(incoming.collectionIds),
+      };
+      await db.transaction("rw", db.items, db.videoAssets, db.thumbnails, async () => {
+        await db.videoAssets.add({ ...source, id: assetId });
+        const thumbnail = thumbnailsById.get(incoming.assetId);
+        if (thumbnail) await db.thumbnails.add({ assetId, blob: thumbnail.blob });
+        await db.items.add(next);
+      });
+      itemIdMap.set(incoming.id, id);
+      summary.added += 1;
+    }
+  }
+
   for (const backupCollection of backup.collections) {
     const localId = collectionIdMap.get(backupCollection.id);
     if (!localId) {
@@ -498,12 +564,13 @@ export async function importKeepallBackupMerge(
 
 export async function libraryHasLocalData(): Promise<boolean> {
   const db = getDb();
-  const [itemCount, tagCount, collectionCount, assetCount] = await Promise.all([
+  const [itemCount, tagCount, collectionCount, assetCount, videoCount] = await Promise.all([
     db.items.count(),
     db.tags.count(),
     db.collections.count(),
     db.assets.count(),
+    db.videoAssets.count(),
   ]);
 
-  return itemCount + tagCount + collectionCount + assetCount > 0;
+  return itemCount + tagCount + collectionCount + assetCount + videoCount > 0;
 }

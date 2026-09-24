@@ -4,7 +4,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { clampImageSlideIndex, ImageValidationError, type ImageItem } from "@/domain/image";
+import { clampImageSlideIndex, assertLocalImageFile, ImageValidationError, type ImageItem } from "@/domain/image";
 import {
   itemListTitle,
   resolveItemCollections,
@@ -29,7 +29,8 @@ import { createTag, listTags } from "@/persistence/tags";
 import {
   ImageItemEditDialog,
   type ImageDetailsDraft,
-} from "./image-item-edit-dialog";
+} from "./item-edit-dialog";
+import { ItemDetailLink } from "./item-detail-link";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
@@ -155,6 +156,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
     try {
       let updated = loadState.item;
       for (const file of files) {
+        assertLocalImageFile(file);
         updated = await appendImageAssetToItem(itemId, {
           bytes: new Uint8Array(await file.arrayBuffer()),
           mimeType: file.type || "application/octet-stream",
@@ -182,6 +184,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
     setGalleryMutation("replace");
     setGalleryError(null);
     try {
+      assertLocalImageFile(file);
       const updated = await replaceImageAssetAtIndex(itemId, currentSlide, {
         bytes: new Uint8Array(await file.arrayBuffer()),
         mimeType: file.type || "application/octet-stream",
@@ -736,9 +739,9 @@ function ImageWorkspace({
             {itemCollections.length ? (
               <DetailGroup title="Collection">
                 {itemCollections.map((collection) => (
-                  <Link key={collection.id} href={`/?collection=${encodeURIComponent(collection.id)}`} className="ui-control inline-flex min-h-9 items-center px-3 text-sm">
+                  <ItemDetailLink key={collection.id} href={`/?collection=${encodeURIComponent(collection.id)}`}>
                     {collection.name}
-                  </Link>
+                  </ItemDetailLink>
                 ))}
               </DetailGroup>
             ) : null}
@@ -746,9 +749,9 @@ function ImageWorkspace({
             {itemTags.length ? (
               <DetailGroup title="Tags">
                 {itemTags.map((tag) => (
-                  <Link key={tag.id} href={`/?tag=${encodeURIComponent(tag.id)}`} className="ui-control inline-flex min-h-9 items-center px-3 text-sm">
+                  <ItemDetailLink key={tag.id} href={`/?tag=${encodeURIComponent(tag.id)}`}>
                     {tag.name}
-                  </Link>
+                  </ItemDetailLink>
                 ))}
               </DetailGroup>
             ) : null}
@@ -767,9 +770,9 @@ function ImageWorkspace({
             </dl>
 
             {item.sourceUrl ? (
-              <a className={`${CONTROL} mt-7 w-full`} href={item.sourceUrl} target="_blank" rel="noreferrer">
-                Open source
-              </a>
+              <div className="mt-7">
+                <ItemDetailLink href={item.sourceUrl} external wide>Open source</ItemDetailLink>
+              </div>
             ) : null}
             </aside>
           </div>
@@ -822,7 +825,7 @@ function GalleryControls({
           <button
             key={index}
             type="button"
-            className={`squircle-panel h-12 min-w-6 flex-1 overflow-hidden rounded-control-sm border p-1 sm:min-w-10 sm:max-w-16 ${index === currentSlide ? "border-border-selected bg-bg-selected" : "border-border-control bg-bg-control"}`}
+            className={`control-shape-none h-12 min-w-6 flex-1 overflow-hidden rounded-[24px] border p-0.5 [corner-shape:var(--corner-shape-panel)] sm:min-w-10 sm:max-w-16 ${index === currentSlide ? "border-border-selected bg-bg-selected" : "border-border-control bg-bg-control"}`}
             aria-label={`Show image ${index + 1}`}
             aria-current={index === currentSlide ? "true" : undefined}
             onClick={() => onSlideChange(index)}
@@ -832,7 +835,7 @@ function GalleryControls({
               variant="card"
               assetId={item.assetIds[index]}
               compact
-              className="rounded-[0.5rem]"
+              className="[corner-shape:var(--corner-shape-panel)]"
             />
           </button>
         ))}

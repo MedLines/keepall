@@ -402,7 +402,7 @@ describe("Library", () => {
     fireEvent.change(screen.getByLabelText("URL"), {
       target: { value: "javascript:alert(1)" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Enter an http or https URL",
@@ -427,7 +427,7 @@ describe("Library", () => {
     fireEvent.change(screen.getByLabelText("URL"), {
       target: { value: "https://example.com/new" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => {
       expect(updateLink).toHaveBeenCalledWith("l1", {
@@ -457,7 +457,7 @@ describe("Library", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
     fireEvent.change(screen.getByLabelText("My note (optional)"), { target: { value: "## Why I saved this" } });
     fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(updateLink).toHaveBeenCalledWith("l1", {
       url: link.url,
@@ -590,7 +590,8 @@ describe("Library pending mutations", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save note" }));
 
-    expect(await screen.findByRole("button", { name: "Edit" })).toBeDisabled();
+    expect(screen.getByRole("dialog", { name: "Edit note" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel edit" })).toBeDisabled();
     hold.resolve({ ...note, content: "changed", updatedAt: 2 });
   });
 
@@ -638,10 +639,10 @@ describe("Library focus management", () => {
     render(<Library />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
-    expect(screen.getByLabelText("Note content")).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText("Note content")).toHaveFocus());
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
-    expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus());
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() => {

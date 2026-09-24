@@ -61,6 +61,10 @@ describe("buildImage", () => {
 });
 
 describe("assertLocalImageBytes", () => {
+  test("accepts a 20 MiB uploaded image", () => {
+    expect(assertLocalImageBytes(new Uint8Array(20 * 1024 * 1024), "image/jpeg"))
+      .toBe("image/jpeg");
+  });
   test("rejects oversize and bad mime", () => {
     expect(() =>
       assertLocalImageBytes(new Uint8Array(1), "text/plain"),

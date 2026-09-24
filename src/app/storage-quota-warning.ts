@@ -1,3 +1,5 @@
+import { MAX_LOCAL_IMAGE_BYTES } from "@/domain/image";
+
 /**
  * Warn when a folder import would push browser storage near its limit.
  * Returns user-facing copy, or null when no warning is needed.
@@ -41,7 +43,7 @@ export async function storageQuotaWarningForImport(
 export function sumImportableFolderBytes(files: File[]): number {
   let total = 0;
   for (const file of files) {
-    if (file.size > 0 && file.size <= 3 * 1024 * 1024) {
+    if (file.size > 0 && file.size <= MAX_LOCAL_IMAGE_BYTES) {
       total += file.size;
     }
   }

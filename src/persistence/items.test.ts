@@ -270,7 +270,7 @@ describe("items persistence", () => {
       createImage({
         assets: [
           {
-            bytes: new Uint8Array(3 * 1024 * 1024 + 1),
+            bytes: new Uint8Array(20 * 1024 * 1024 + 1),
             mimeType: "image/png",
           },
         ],

@@ -55,6 +55,45 @@ describe("fetchPreviewImage", () => {
     ).rejects.toBeInstanceOf(PreviewFetchError);
   });
 
+  test("accepts exactly 5 MiB and rejects a body larger than a false Content-Length", async () => {
+    const assertUrl = vi.fn().mockResolvedValue(new URL("https://cdn.example.com/image.png"));
+    const atLimit = new Uint8Array(MAX_PREVIEW_IMAGE_BYTES);
+    const accepted = await fetchPreviewImage("https://cdn.example.com/image.png", {
+      assertUrl,
+      fetchImpl: vi.fn().mockResolvedValue(new Response(atLimit, {
+        headers: { "Content-Type": "image/png" },
+      })),
+    });
+    expect(accepted.bytes.byteLength).toBe(MAX_PREVIEW_IMAGE_BYTES);
+
+    await expect(fetchPreviewImage("https://cdn.example.com/image.png", {
+      assertUrl,
+      fetchImpl: vi.fn().mockResolvedValue(new Response(new Uint8Array(MAX_PREVIEW_IMAGE_BYTES + 1), {
+        headers: { "Content-Type": "image/png", "Content-Length": "10" },
+      })),
+    })).rejects.toThrow("Image too large");
+  });
+
+  test("stops a streamed image above the cap without Content-Length", async () => {
+    const limit = 8;
+    let canceled = false;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(5));
+        controller.enqueue(new Uint8Array(5));
+      },
+      cancel() { canceled = true; },
+    });
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(stream, {
+      headers: { "Content-Type": "image/png" },
+    }));
+    const assertUrl = vi.fn().mockResolvedValue(new URL("https://cdn.example.com/image.png"));
+    await expect(fetchPreviewImage("https://cdn.example.com/image.png", {
+      fetchImpl, assertUrl, maxBytes: limit,
+    })).rejects.toThrow("Image too large");
+    expect(canceled).toBe(true);
+  });
+
   test("surfaces blocked URLs", async () => {
     const assertUrl = vi
       .fn()

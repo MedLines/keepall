@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { BackupValidationError } from "@/domain/backup";
 import { buildNote, noteImageAssetIds } from "@/domain/note";
 import { buildTag } from "@/domain/tag";
@@ -6,6 +6,7 @@ import {
   exportKeepallBackup,
   importKeepallBackupMerge,
   importKeepallBackupReplace,
+  replaceValidatedBackup,
   libraryHasLocalData,
 } from "./backup";
 import { deleteKeepallDatabase, getDb } from "./db";
@@ -14,6 +15,7 @@ import { createTag, listTags } from "./tags";
 import { createCollection, listCollections } from "./collections";
 import { buildLink } from "@/domain/link";
 import { buildCollection } from "@/domain/collection";
+import { exportKeepallArchive, importKeepallArchiveReplace } from "./backup-archive";
 import {
   getLibraryPreferences,
   pinCollection,
@@ -22,6 +24,46 @@ import {
 describe("backup persistence", () => {
   beforeEach(async () => {
     await deleteKeepallDatabase();
+  });
+
+  test("binary archive round-trips images and rejects corruption before replacement", async () => {
+    const { putAsset, getAsset } = await import("./assets");
+    const { setLinkPreviewAssetId } = await import("./items");
+    const link = await createLink({ url: "https://example.com/archive" });
+    const asset = await putAsset({ mimeType: "image/png", bytes: new Uint8Array([1, 2, 3, 4]) });
+    await setLinkPreviewAssetId(link.id, asset.id);
+
+    const archive = await exportKeepallArchive(123);
+    expect(archive.type).toBe("application/zip");
+    await deleteKeepallDatabase();
+    await importKeepallArchiveReplace(archive);
+    expect((await getAsset(asset.id))?.bytes).toEqual(new Uint8Array([1, 2, 3, 4]));
+
+    const oldItems = await listItems();
+    const damaged = new Uint8Array(await archive.arrayBuffer());
+    const manifestValue = new TextDecoder().decode(damaged).indexOf('"keepall"');
+    expect(manifestValue).toBeGreaterThan(0);
+    damaged[manifestValue + 2] ^= 1;
+    await expect(importKeepallArchiveReplace(new Blob([damaged], { type: "application/zip" })))
+      .rejects.toThrow();
+    expect(await listItems()).toEqual(oldItems);
+    await expect(importKeepallArchiveReplace(new Blob(["bad"], { type: "application/zip" })))
+      .rejects.toThrow();
+    expect(await listItems()).toEqual(oldItems);
+  });
+
+  test("quota failure during replace rolls back the existing library", async () => {
+    const original = await createNote({ content: "keep me" });
+    const backup = await exportKeepallBackup();
+    const replacement = { ...backup, items: [buildNote({ content: "new item" })] };
+    const db = getDb();
+    const put = vi.spyOn(db.items, "bulkAdd").mockRejectedValueOnce(new DOMException("Storage full", "QuotaExceededError"));
+    try {
+      await expect(replaceValidatedBackup(replacement)).rejects.toThrow();
+    } finally {
+      put.mockRestore();
+    }
+    expect(await listItems()).toEqual([original]);
   });
 
   test("exportKeepallBackup snapshots current tables", async () => {

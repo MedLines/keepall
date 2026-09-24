@@ -125,7 +125,7 @@ export function imageFolderImportSkippedDetail(
 ): string | null {
   const bits: string[] = [];
   if (summary.skippedOversize > 0) {
-    bits.push(`${summary.skippedOversize} over 3MB`);
+    bits.push(`${summary.skippedOversize} over 20 MiB`);
   }
   if (summary.skippedInvalid > 0) {
     bits.push(`${summary.skippedInvalid} unsupported type`);

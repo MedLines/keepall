@@ -6,9 +6,10 @@ import { getItem } from "@/persistence/items";
 import { ImageItemPage } from "./image-item-page";
 import { LinkItemPage } from "./link-item-page";
 import { NoteItemPage } from "./note-item-page";
+import { VideoItemPage } from "./video-item-page";
 
 export function ItemPageContent({ itemId, returnHref }: { itemId: string; returnHref: string }) {
-  const [type, setType] = useState<"loading" | "image" | "link" | "note" | "missing" | "error">("loading");
+  const [type, setType] = useState<"loading" | "image" | "link" | "note" | "video" | "missing" | "error">("loading");
 
   useEffect(() => {
     let active = true;
@@ -16,7 +17,7 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
       .then((item) => {
         if (active) {
           setType(
-            item?.type === "image" || item?.type === "link" || item?.type === "note"
+            item?.type === "image" || item?.type === "link" || item?.type === "note" || item?.type === "video"
               ? item.type
               : "missing",
           );
@@ -33,6 +34,7 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
   if (type === "image") return <ImageItemPage itemId={itemId} returnHref={returnHref} />;
   if (type === "link") return <LinkItemPage itemId={itemId} returnHref={returnHref} />;
   if (type === "note") return <NoteItemPage itemId={itemId} returnHref={returnHref} />;
+  if (type === "video") return <VideoItemPage itemId={itemId} returnHref={returnHref} />;
   const message =
     type === "loading"
       ? "Loading item…"

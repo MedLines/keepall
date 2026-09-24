@@ -5,7 +5,7 @@ import { LibraryPreview } from "./library-preview";
 
 export const metadata: Metadata = {
   title: "About Keepall · A place for what you want to keep",
-  description: "Keep links, notes, and images in a calm personal library that lives in your browser.",
+  description: "Keep links, notes, images, and videos in a calm personal library that lives in your browser.",
 };
 
 export default function AboutPage() {
@@ -34,7 +34,7 @@ export default function AboutPage() {
         <section className="about-intro" aria-labelledby="about-intro-title">
           <p className="public-eyebrow">A home for your finds</p>
           <h2 id="about-intro-title">A little more room for the things that matter to you.</h2>
-          <p>Saving should be easy. Finding should feel natural. Keepall brings the links, notes, and images you collect into one calm space, ready whenever you want to pick up where you left off.</p>
+          <p>Saving should be easy. Finding should feel natural. Keepall brings the links, notes, images, and videos you collect into one calm space, ready whenever you want to pick up where you left off.</p>
         </section>
 
         <section className="about-features" aria-label="How Keepall works">

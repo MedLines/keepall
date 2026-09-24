@@ -64,7 +64,7 @@ export function LibraryListContent({ item, pinned, onOpen, openHref }: {
       </span> : null}
       {item.type === "link" ? <LinkContext key={item.url} item={item} /> : secondary ? (
         <span className="mt-1 block truncate text-xs text-text-secondary">{secondary}</span>
-      ) : item.type === "note" ? <span className="mt-1 block text-xs text-text-secondary">Note</span> : item.assetIds.length > 1 ? <span className="mt-1 block text-xs text-text-secondary">{item.assetIds.length} images</span> : null}
+      ) : item.type === "note" ? <span className="mt-1 block text-xs text-text-secondary">Note</span> : item.type === "image" && item.assetIds.length > 1 ? <span className="mt-1 block text-xs text-text-secondary">{item.assetIds.length} images</span> : null}
     </>
   );
   return (

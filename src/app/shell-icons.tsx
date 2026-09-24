@@ -10,7 +10,7 @@ import {
   Moon02Icon as Moon02, Sun03Icon as Sun03, Tag01Icon as Tag01,
   Edit02Icon as Edit02, Delete02Icon as Delete02, PinIcon as Pin,
   ArrowLeft01Icon as ArrowLeft01, ArrowRight01Icon as ArrowRight01,
-  FullScreenIcon as FullScreen,
+  FullScreenIcon as FullScreen, Video01Icon as Video01, PlayIcon as Play, EyeIcon as Eye,
   CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle,
   Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
 } from "@hugeicons/core-free-icons";
@@ -39,6 +39,8 @@ export function LinkIcon(props: IconProps) { return <ShellIcon icon={Link01} {..
 export function NoteIcon(props: IconProps) { return <ShellIcon icon={Note01} {...props} />; }
 export function ImageIcon(props: IconProps) { return <ShellIcon icon={Image01} {...props} />; }
 export function ImagesIcon(props: IconProps) { return <ShellIcon icon={Images} {...props} />; }
+export function VideoIcon(props: IconProps) { return <ShellIcon icon={Video01} {...props} />; }
+export function PlayIcon(props: IconProps) { return <ShellIcon icon={Play} {...props} />; }
 export function BackupIcon(props: IconProps) { return <ShellIcon icon={Archive01} {...props} />; }
 export function SettingsIcon(props: IconProps) { return <ShellIcon icon={Settings02} {...props} />; }
 export function HelpIcon(props: IconProps) { return <ShellIcon icon={HelpCircle} {...props} />; }
@@ -56,6 +58,7 @@ export function InboxIcon(props: IconProps) { return <ShellIcon icon={Inbox} {..
 export function HashIcon(props: IconProps) { return <ShellIcon icon={Tag01} {...props} />; }
 export function MoreIcon(props: IconProps) { return <ShellIcon icon={MoreVertical} {...props} />; }
 export function EditIcon(props: IconProps) { return <ShellIcon icon={Edit02} {...props} />; }
+export function EyeIcon(props: IconProps) { return <ShellIcon icon={Eye} {...props} />; }
 export function DeleteIcon(props: IconProps) { return <ShellIcon icon={Delete02} {...props} />; }
 export function PinIcon(props: IconProps) { return <ShellIcon icon={Pin} {...props} />; }
 export function ArrowLeftIcon(props: IconProps) { return <ShellIcon icon={ArrowLeft01} {...props} />; }

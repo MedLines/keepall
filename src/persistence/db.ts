@@ -7,11 +7,16 @@ import type { Tag } from "@/domain/tag";
 
 export const KEEPALL_DB_NAME = "keepall";
 
+export type Thumbnail = { assetId: string; blob: Blob };
+export type VideoAsset = { id: string; mimeType: string; byteLength: number; blob: Blob; createdAt: number };
+
 export type KeepallDB = Dexie & {
   items: EntityTable<Item, "id">;
   tags: EntityTable<Tag, "id">;
   collections: EntityTable<Collection, "id">;
   assets: EntityTable<Asset, "id">;
+  thumbnails: EntityTable<Thumbnail, "assetId">;
+  videoAssets: EntityTable<VideoAsset, "id">;
   preferences: EntityTable<LibraryPreferences, "id">;
 };
 
@@ -53,6 +58,25 @@ function createKeepallDb(): KeepallDB {
     collections: "id, name",
     assets: "id, contentHash",
     preferences: "id",
+  });
+
+  db.version(7).stores({
+    items: "id, type, createdAt",
+    tags: "id, name",
+    collections: "id, name",
+    assets: "id, contentHash",
+    preferences: "id",
+    thumbnails: "assetId",
+  });
+
+  db.version(8).stores({
+    items: "id, type, createdAt",
+    tags: "id, name",
+    collections: "id, name",
+    assets: "id, contentHash",
+    preferences: "id",
+    thumbnails: "assetId",
+    videoAssets: "id",
   });
 
   return db;

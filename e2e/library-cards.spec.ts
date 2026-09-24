@@ -209,6 +209,36 @@ test("tag hover paints one full row with a separate remove highlight", async ({ 
   }
 });
 
+test("note card preview swaps with the editor without resizing the modal", async ({ page }) => {
+  const card = page.locator(".library-card").filter({ hasText: "Design notes" });
+  await card.hover();
+  await card.locator("summary").click();
+  await card.getByRole("button", { name: "Edit", exact: true }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Edit note" });
+  const editor = dialog.getByRole("textbox", { name: "Note content" });
+  await editor.fill("# Draft heading");
+  await dialog.getByRole("button", { name: "Markdown" }).click();
+  await expect(dialog.getByRole("region", { name: "Notes preview" })).toHaveCount(0);
+
+  const modalHeight = (await dialog.boundingBox())!.height;
+  const editorHeight = (await editor.boundingBox())!.height;
+  expect(editorHeight).toBeGreaterThan(300);
+  const saveSize = (await dialog.getByRole("button", { name: "Save note" }).boundingBox())!;
+  const cancelSize = (await dialog.getByRole("button", { name: "Cancel edit" }).boundingBox())!;
+  expect(saveSize.width).toBe(cancelSize.width);
+  expect(saveSize.height).toBe(cancelSize.height);
+  await dialog.getByRole("group", { name: "Notes mode" }).getByRole("button", { name: "View" }).click();
+  const preview = dialog.getByRole("region", { name: "Notes preview" });
+  await expect(editor).toHaveCount(0);
+  await expect(preview.getByRole("heading", { name: "Draft heading" })).toBeVisible();
+  expect((await dialog.boundingBox())!.height).toBeCloseTo(modalHeight, 0);
+  expect((await preview.boundingBox())!.height).toBeCloseTo(editorHeight, 0);
+
+  await dialog.getByRole("group", { name: "Notes mode" }).getByRole("button", { name: "Edit" }).click();
+  await expect(editor).toHaveValue("# Draft heading");
+});
+
 test("image titles can be cleared and restored without losing grid or list metadata", async ({ page }, testInfo) => {
   const card = page.locator(".library-card").first();
   await expect(card.getByRole("heading", { name: "Customer support" })).toBeVisible();
@@ -344,7 +374,7 @@ test("multi-image cards show a count and align their overlay controls", async ({
   expect(cardBox.x + cardBox.width - actionsBox.x - actionsBox.width).toBeCloseTo(16, 0);
   expect(actionsBox.y - cardBox.y).toBeCloseTo(16, 0);
   expect(cardBox.x + cardBox.width - countBox.x - countBox.width).toBeCloseTo(16, 0);
-  expect(cardBox.y + cardBox.height - countBox.y - countBox.height).toBeCloseTo(16, 0);
+  expect(mediaBox.y + mediaBox.height - countBox.y - countBox.height).toBeCloseTo(16, 0);
   expect(titleBox.y - mediaBox.y - mediaBox.height).toBeGreaterThanOrEqual(12);
   await expect(select).toHaveCSS("border-radius", "999px");
   await expect(actions).toHaveCSS("border-radius", "999px");
@@ -930,14 +960,14 @@ test("card actions, tag disclosure, selection and collection context work", asyn
   await note.hover();
   await note.locator("summary").click();
   await note.getByRole("button", { name: "Edit", exact: true }).click();
-  await note.getByRole("button", { name: "Cancel edit" }).click();
+  await page.getByRole("dialog", { name: "Edit note" }).getByRole("button", { name: "Cancel edit" }).click();
   await expect(note.getByRole("button", { name: "Edit", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(note.locator("summary")).toBeFocused();
   await page.keyboard.press("Enter");
   await note.getByRole("button", { name: "Edit", exact: true }).click();
-  await note.getByLabel("Note content").fill("Updated note body");
-  await note.getByRole("button", { name: "Save note" }).click();
+  await page.getByRole("dialog", { name: "Edit note" }).getByLabel("Note content").fill("Updated note body");
+  await page.getByRole("dialog", { name: "Edit note" }).getByRole("button", { name: "Save note" }).click();
   await expect(note.getByRole("button", { name: "Read Design notes" })).toContainText("Updated note body");
   await note.hover();
   await note.getByRole("checkbox").check();
@@ -1111,22 +1141,23 @@ test("masonry places the next card below a shorter card, not a full row", async 
   }).toPass({ timeout: 5000 });
 });
 
-test("masonry remeasures expanded cards and resizing without losing drafts", async ({ page }) => {
+test("masonry stays stable while a note modal is open and resizing", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const note = page.locator(".library-card").filter({ hasText: "Design notes" });
   await note.hover();
   await note.locator("summary").click();
   await note.getByRole("button", { name: "Edit", exact: true }).click();
-  await note.getByLabel("Note content").fill("Keep this unsaved draft while resizing.");
+  const editor = page.getByRole("dialog", { name: "Edit note" });
+  await editor.getByLabel("Note content").fill("Keep this unsaved draft while resizing.");
   await expectCardsNotToOverlap(page);
   await page.getByRole("button", { name: "Collapse", exact: true }).click();
   for (const width of [1024, 640, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
-    await expect(note.getByLabel("Note content")).toHaveValue("Keep this unsaved draft while resizing.");
+    await expect(editor.getByLabel("Note content")).toHaveValue("Keep this unsaved draft while resizing.");
     await expectCardsNotToOverlap(page);
     expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   }
-  await note.getByRole("button", { name: "Cancel edit" }).click();
+  await editor.getByRole("button", { name: "Cancel edit" }).click();
   await expectCardsNotToOverlap(page);
 });
 
@@ -1181,9 +1212,10 @@ test("list menus support editing, cancel-delete, selection and collection pinnin
   await expect(note.locator("details")).toHaveCSS("opacity", "1");
   await page.keyboard.press("Enter");
   await note.getByRole("button", { name: "Edit", exact: true }).click();
-  await expect(note.getByLabel("Note content")).toBeFocused();
-  await note.getByLabel("Note content").fill("Updated from the open list.");
-  await note.getByRole("button", { name: "Save note" }).click();
+  const editor = page.getByRole("dialog", { name: "Edit note" });
+  await expect(editor.getByLabel("Note content")).toBeFocused();
+  await editor.getByLabel("Note content").fill("Updated from the open list.");
+  await editor.getByRole("button", { name: "Save note" }).click();
   await expect(note).toContainText("Updated from the open list.");
   await note.hover();
   await note.locator("summary").click();

@@ -4,8 +4,9 @@ import { cardInitial, linkFaviconUrl } from "@/domain/card-display";
 import { imageCoverAssetId } from "@/domain/image";
 import type { Item } from "@/domain/item";
 import { useAssetObjectUrl } from "./use-asset-object-url";
+import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { useState } from "react";
-import { ImageIcon, LinkIcon, NoteIcon } from "./shell-icons";
+import { ImageIcon, LinkIcon, NoteIcon, VideoIcon } from "./shell-icons";
 
 type MediaVariant = "card" | "grid" | "inspect" | "viewer";
 
@@ -31,12 +32,15 @@ export function LibraryItemMedia({
   className = "",
 }: Props) {
   const assetIdForDisplay = resolveAssetId(item, assetId);
-  const localObjectUrl = useAssetObjectUrl(assetIdForDisplay);
+  const useThumbnail = (item.type === "image" || item.type === "video") && variant !== "inspect" && variant !== "viewer";
+  const originalUrl = useAssetObjectUrl(assetIdForDisplay, { enabled: !useThumbnail });
+  const thumbnailUrl = useThumbnailObjectUrl(useThumbnail ? assetIdForDisplay : null);
+  const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl;
   const [brokenAssetId, setBrokenAssetId] = useState<string | null>(null);
   const [brokenFaviconUrl, setBrokenFaviconUrl] = useState<string | null>(null);
   const imageSrc = brokenAssetId === assetIdForDisplay ? null : localObjectUrl;
 
-  if (imageSrc && (item.type === "link" || item.type === "image")) {
+  if (imageSrc && (item.type === "link" || item.type === "image" || item.type === "video")) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- local object URLs + remote OG
       <img
@@ -87,6 +91,7 @@ function resolveAssetId(item: Item, assetId?: string | null) {
   if (assetId !== undefined) return assetId;
   if (item.type === "link") return item.previewAssetId;
   if (item.type === "image") return imageCoverAssetId(item);
+  if (item.type === "video") return item.assetId;
   return null;
 }
 
@@ -130,5 +135,6 @@ function FallbackContent({ item, compact }: { item: Item; compact: boolean }) {
   }
   if (!compact) return cardInitial(item);
   if (item.type === "note") return <NoteIcon className="size-6" />;
+  if (item.type === "video") return <VideoIcon className="size-6" />;
   return <ImageIcon className="size-6" />;
 }

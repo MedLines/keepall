@@ -147,8 +147,8 @@ export function LibraryTopBar({
             ]}
             onChange={onSortChange}
           />
-          <div className="library-layout-switch squircle-panel relative isolate flex h-11 rounded-control-lg bg-bg-control p-0.5" role="group" aria-label="Library layout" data-layout={layout}>
-            <span aria-hidden="true" className="library-layout-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[42px] rounded-control-sm" />
+          <div className="library-layout-switch icon-segmented-switch squircle-panel relative isolate flex h-11 rounded-control-lg bg-bg-raised p-0.5" role="group" aria-label="Library layout" data-layout={layout} data-selected={layout === "list" ? "end" : "start"}>
+            <span aria-hidden="true" className="library-layout-thumb icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[42px] rounded-control-sm" />
             {([
               { value: "grid", label: "Grid view", icon: <GridIcon /> },
               { value: "list", label: "List view", icon: <ListIcon /> },

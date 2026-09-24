@@ -17,6 +17,7 @@ export function countSidebarItems(items: Item[]): LibrarySidebarCounts {
     link: 0,
     note: 0,
     image: 0,
+    video: 0,
   };
   let unsorted = 0;
 

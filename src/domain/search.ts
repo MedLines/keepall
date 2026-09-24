@@ -35,6 +35,7 @@ export function matchesSearchQuery(
     );
   }
 
+  if (item.type === "video") return item.title.toLowerCase().includes(needle) || item.sourceFileName.toLowerCase().includes(needle) || item.noteContent?.toLowerCase().includes(needle);
   return (
     item.title.toLowerCase().includes(needle) ||
     item.url.toLowerCase().includes(needle)

@@ -39,6 +39,7 @@ import {
   putAsset,
 } from "./assets";
 import { getDb } from "./db";
+import { imageThumbnail, putThumbnail } from "./thumbnails";
 import { createTag } from "./tags";
 
 export async function createNote(input: CreateNoteInput): Promise<NoteItem> {
@@ -169,18 +170,21 @@ export async function createImage(input: {
     mimeType: string;
     bytes: Uint8Array;
     contentHash: string;
+    thumbnail: Blob | null;
   }[] = [];
   for (const payload of input.assets) {
     const mime = assertLocalImageBytes(payload.bytes, payload.mimeType);
     const contentHash = await hashAssetBytes(payload.bytes);
-    preparedAssets.push({ mimeType: mime, bytes: payload.bytes, contentHash });
+    preparedAssets.push({ mimeType: mime, bytes: payload.bytes, contentHash,
+      thumbnail: await imageThumbnail(payload.bytes, mime) });
   }
 
   const db = getDb();
-  return db.transaction("rw", db.assets, db.items, async () => {
+  return db.transaction("rw", db.assets, db.items, db.thumbnails, async () => {
     const assetIds: string[] = [];
     for (const payload of preparedAssets) {
       const asset = await putAsset(payload);
+      await putThumbnail(asset.id, payload.thumbnail);
       assetIds.push(asset.id);
     }
 
@@ -318,12 +322,16 @@ export async function getItem(id: string): Promise<Item | null> {
 
 export async function deleteItem(id: string): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", db.items, db.assets, async () => {
+  await db.transaction("rw", db.items, db.assets, db.thumbnails, db.videoAssets, async () => {
     const existing = await db.items.get(id);
     if (!existing) return;
     const item = normalizeItem(existing);
     const assetIds = itemAssetIds(item);
     await db.items.delete(id);
+    if (item.type === "video") {
+      await db.videoAssets.delete(item.assetId);
+      await db.thumbnails.delete(item.assetId);
+    }
     await deleteUnreferencedAssets(assetIds);
   });
 }
@@ -331,7 +339,8 @@ export async function deleteItem(id: string): Promise<void> {
 function itemAssetIds(item: Item): string[] {
   if (item.type === "image") return item.assetIds;
   if (item.type === "link") return item.previewAssetId ? [item.previewAssetId] : [];
-  return noteImageAssetIds(item.content);
+  if (item.type === "note") return noteImageAssetIds(item.content);
+  return [];
 }
 
 async function deleteUnreferencedAssets(assetIds: string[]): Promise<void> {
@@ -339,7 +348,9 @@ async function deleteUnreferencedAssets(assetIds: string[]): Promise<void> {
   const db = getDb();
   const items = await db.items.toArray();
   const used = new Set(items.flatMap((item) => itemAssetIds(normalizeItem(item))));
-  await db.assets.bulkDelete([...new Set(assetIds)].filter((assetId) => !used.has(assetId)));
+  const unused = [...new Set(assetIds)].filter((assetId) => !used.has(assetId));
+  await db.assets.bulkDelete(unused);
+  await db.thumbnails.bulkDelete(unused);
 }
 
 async function deleteUnreferencedAsset(assetId: string): Promise<void> {
@@ -366,7 +377,7 @@ export async function saveNoteWithImages(
     contentHash: await hashAssetBytes(upload.bytes),
   })));
   const db = getDb();
-  return db.transaction("rw", db.items, db.assets, async () => {
+  return db.transaction("rw", db.items, db.assets, db.thumbnails, async () => {
     const existing = await db.items.get(id);
     if (!existing || existing.type !== "note") throw new Error("Note not found");
     const previous = normalizeItem(existing);
@@ -435,7 +446,9 @@ export async function appendImageAssetToItem(
   }
 
   const mime = assertLocalImageBytes(input.bytes, input.mimeType);
+  const thumbnail = await imageThumbnail(input.bytes, mime);
   const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
+  await putThumbnail(asset.id, thumbnail);
   const current = normalizeItem(existing);
   const next = appendImageAsset(current, asset.id);
   await getDb().items.put(next);
@@ -460,7 +473,9 @@ export async function replaceImageAssetAtIndex(
   }
 
   const mime = assertLocalImageBytes(input.bytes, input.mimeType);
+  const thumbnail = await imageThumbnail(input.bytes, mime);
   const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
+  await putThumbnail(asset.id, thumbnail);
   const next = replaceImageAssetAt(current, slideIndex, asset.id);
   await getDb().items.put(next);
   await deleteUnreferencedAsset(previousAssetId);
@@ -472,7 +487,7 @@ export async function removeImageAssetAtIndex(
   slideIndex: number,
 ): Promise<ImageItem> {
   const db = getDb();
-  return db.transaction("rw", db.items, db.assets, async () => {
+  return db.transaction("rw", db.items, db.assets, db.thumbnails, async () => {
     const existing = await db.items.get(id);
     if (!existing || existing.type !== "image") {
       throw new Error("Image not found");

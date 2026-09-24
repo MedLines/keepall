@@ -2,7 +2,6 @@
 
 import {
   type DragEvent,
-  type KeyboardEvent,
   useCallback,
   useRef,
   useState,
@@ -18,22 +17,27 @@ import {
 import { LibraryItemMedia } from "./library-item-media";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
-import { DeleteIcon, EditIcon, ImagesIcon, LayersIcon, MoreIcon, PinIcon, SelectionCheckedIcon, SelectionEmptyIcon } from "./shell-icons";
+import { DeleteIcon, EditIcon, ImagesIcon, LayersIcon, MoreIcon, PinIcon, PlayIcon, SelectionCheckedIcon, SelectionEmptyIcon } from "./shell-icons";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
 import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import {
   ImageItemEditDialog,
+  LinkItemEditDialog,
+  NoteItemEditDialog,
+  VideoItemEditDialog,
   type ImageDetailsDraft,
-} from "./image-item-edit-dialog";
-import { NoteEditor } from "./note-editor";
-import { NoteFormatControl } from "./note-format-control";
+  type LinkDetailsDraft,
+  type NoteDetailsDraft,
+  type VideoDetailsDraft,
+} from "./item-edit-dialog";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
   | { op: "save-link"; id: string }
   | { op: "save-image"; id: string }
+  | { op: "save-video"; id: string }
   | { op: "append-image"; id: string }
   | { op: "replace-image-slide"; id: string }
   | { op: "delete"; id: string }
@@ -65,25 +69,11 @@ export type LibraryItemProps = {
   pendingDelete: boolean;
   mutationBusy: boolean;
   pendingMutation: PendingMutation | null;
-  editDraft: string;
-  noteFormatDraft: "plain" | "markdown";
-  linkNoteDraft: string;
-  editTitleDraft: string;
   editError: string | null;
-  setFirstEditField: (
-    node: HTMLTextAreaElement | HTMLInputElement | null,
-  ) => void;
-  onEditDraftChange: (value: string) => void;
-  onNoteFormatChange: (format: "plain" | "markdown") => void;
-  onLinkNoteChange: (value: string) => void;
-  onEditTitleChange: (value: string) => void;
-  onEditSaveShortcut: (
-    event: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
-    save: () => void,
-  ) => void;
-  onSaveNote: () => void;
-  onSaveLink: () => void;
+  onSaveNote: (draft: NoteDetailsDraft) => void;
+  onSaveLink: (draft?: LinkDetailsDraft) => void;
   onSaveImage: (draft?: ImageDetailsDraft) => void;
+  onSaveVideo: (draft: VideoDetailsDraft) => void;
   onCancelEdit: () => void;
   onAddTag: (name: string) => void;
   onAddCollection: (name: string) => void;
@@ -131,20 +121,11 @@ export function LibraryItem({
   pendingDelete,
   mutationBusy,
   pendingMutation,
-  editDraft,
-  noteFormatDraft,
-  linkNoteDraft,
-  editTitleDraft,
   editError,
-  setFirstEditField,
-  onEditDraftChange,
-  onNoteFormatChange,
-  onLinkNoteChange,
-  onEditTitleChange,
-  onEditSaveShortcut,
   onSaveNote,
   onSaveLink,
   onSaveImage,
+  onSaveVideo,
   onCancelEdit,
   onAddTag,
   onAddCollection,
@@ -183,12 +164,11 @@ export function LibraryItem({
 
   const title = itemListTitle(item);
   const isList = layoutMode === "list";
-  const inlineEditing = editing && item.type !== "image";
   const hasGridFooter = item.type !== "image" || Boolean(
     item.title.trim() || item.caption.trim() || item.sourceUrl ||
-    (pinVisible && pinned) || collections.length || tagNames.length || inlineEditing || pendingDelete
+    (pinVisible && pinned) || collections.length || tagNames.length || pendingDelete
   );
-  const hasMedia = item.type === "image" || item.type === "link";
+  const hasMedia = item.type === "image" || item.type === "link" || item.type === "video";
   const rowRef = useRef<HTMLLIElement>(null);
   const measureElement = placement?.measureElement;
   const setRowRef = useCallback((node: HTMLLIElement | null) => {
@@ -273,6 +253,13 @@ export function LibraryItem({
           rel="noreferrer"
           target="_blank"
         />
+      ) : null}
+      {item.type === "video" && !inspected ? (
+        <span data-testid="video-play-overlay" aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 grid place-items-center">
+          <span className={`grid place-items-center rounded-full border border-white/45 bg-black/30 text-white/85 shadow-md ${isList ? "size-9" : "size-16"}`}>
+            <PlayIcon className={isList ? "size-5" : "size-8"} />
+          </span>
+        </span>
       ) : null}
       {!isList && item.type === "image" && item.assetIds.length > 1 && !inspected ? (
         <span
@@ -434,6 +421,36 @@ export function LibraryItem({
           }}
         />
       ) : null}
+      {item.type === "video" && editing ? (
+        <VideoItemEditDialog
+          item={item}
+          open
+          busy={pendingMutation?.op === "save-video" && pendingMutation.id === item.id}
+          error={editError}
+          onSave={onSaveVideo}
+          onOpenChange={(open) => { if (!open) onCancelEdit(); }}
+        />
+      ) : null}
+      {item.type === "link" && editing ? (
+        <LinkItemEditDialog
+          item={item}
+          open
+          busy={pendingMutation?.op === "save-link" && pendingMutation.id === item.id}
+          error={editError}
+          onSave={onSaveLink}
+          onOpenChange={(open) => { if (!open) onCancelEdit(); }}
+        />
+      ) : null}
+      {item.type === "note" && editing ? (
+        <NoteItemEditDialog
+          item={item}
+          open
+          busy={pendingMutation?.op === "save-note" && pendingMutation.id === item.id}
+          error={editError}
+          onSave={onSaveNote}
+          onOpenChange={(open) => { if (!open) onCancelEdit(); }}
+        />
+      ) : null}
       <div
         data-selected={selected || undefined}
         className={
@@ -478,7 +495,7 @@ export function LibraryItem({
           )}
         </span>
       </label>
-      {isList ? !inlineEditing && !pendingDelete ? (
+      {isList ? !pendingDelete ? (
         item.type === "link" ? (
           <a
             href={item.url}
@@ -518,12 +535,12 @@ export function LibraryItem({
         hidden={!isList && !hasGridFooter}
         className={
           isList
-            ? `min-w-0 flex-1 ${inlineEditing || pendingDelete ? "" : "library-list-body"}`
+            ? `min-w-0 flex-1 ${pendingDelete ? "" : "library-list-body"}`
             : item.type === "image" ? "px-2 pb-1" : hasMedia ? "px-4 pb-3 pt-3" : "px-4 pb-3 pt-4"
         }
         style={{ pointerEvents: chromeVisible ? "auto" : "none" }}
       >
-        {!isList && !inlineEditing ? (
+        {!isList ? (
           <LibraryCardContent
             item={item}
             onOpen={onOpenInspect}
@@ -532,101 +549,14 @@ export function LibraryItem({
           />
         ) : (
           <div className={isList ? "min-w-0 flex-1 text-left" : undefined}>
-            {isList && !inlineEditing && !pendingDelete ? (
+            {isList && !pendingDelete ? (
               <LibraryListContent item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} openHref={openHref} />
             ) : <p className="text-sm font-medium">{title}</p>}
           </div>
         )}
-        {isList && !inlineEditing && !pendingDelete ? <LibraryListMetadata collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} /> : null}
+        {isList && !pendingDelete ? <LibraryListMetadata collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} /> : null}
 
-        {item.type === "note" && editing ? (
-          <NoteEditor
-            key={item.id}
-            itemId={item.id}
-            content={editDraft}
-            format={noteFormatDraft}
-            error={editError}
-            busy={mutationBusy}
-            saving={pendingMutation?.op === "save-note" && pendingMutation.id === item.id}
-            setFirstEditField={setFirstEditField}
-            onContentChange={onEditDraftChange}
-            onFormatChange={onNoteFormatChange}
-            onSaveShortcut={onEditSaveShortcut}
-            onSave={onSaveNote}
-            onCancel={onCancelEdit}
-          />
-        ) : item.type === "link" && editing ? (
-          <div className="mt-2 flex flex-col gap-2">
-            <label
-              className="text-sm font-medium"
-              htmlFor={`edit-link-url-${item.id}`}
-            >
-              URL
-            </label>
-            <input
-              className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
-              id={`edit-link-url-${item.id}`}
-              ref={setFirstEditField}
-              value={editDraft}
-              disabled={mutationBusy}
-              onChange={(event) => onEditDraftChange(event.target.value)}
-              onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
-            />
-            <label
-              className="text-sm font-medium"
-              htmlFor={`edit-link-title-${item.id}`}
-            >
-              Title
-            </label>
-            <input
-              className="rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
-              id={`edit-link-title-${item.id}`}
-              value={editTitleDraft}
-              disabled={mutationBusy}
-              onChange={(event) => onEditTitleChange(event.target.value)}
-              onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
-            />
-            <label className="text-sm font-medium" htmlFor={`edit-link-note-${item.id}`}>
-              My note (optional)
-            </label>
-            <textarea
-              className="ui-field min-h-32 resize-y px-3 py-2 text-sm"
-              id={`edit-link-note-${item.id}`}
-              value={linkNoteDraft}
-              disabled={mutationBusy}
-              onChange={(event) => onLinkNoteChange(event.target.value)}
-              onKeyDown={(event) => onEditSaveShortcut(event, onSaveLink)}
-            />
-            <NoteFormatControl format={noteFormatDraft} onChange={onNoteFormatChange} disabled={mutationBusy} />
-            {editError ? (
-              <p className="text-sm text-text-danger" role="alert">
-                {editError}
-              </p>
-            ) : null}
-            <div className="flex flex-wrap gap-3">
-              <button
-                className="rounded-md bg-action-primary px-3 py-1 text-sm font-medium text-text-on-action transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
-                type="button"
-                disabled={mutationBusy}
-                onClick={onSaveLink}
-              >
-                {pendingMutation?.op === "save-link" &&
-                pendingMutation.id === item.id
-                  ? "Saving…"
-                  : "Save link"}
-              </button>
-              <button
-                className="rounded-md border border-border-edge px-3 py-1 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60"
-                type="button"
-                disabled={mutationBusy}
-                onClick={onCancelEdit}
-              >
-                Cancel edit
-              </button>
-            </div>
-          </div>
-        ) : null}
-        {!isList && !inlineEditing && !pendingDelete ? (
+        {!isList && !pendingDelete ? (
           <LibraryCardMetadata
             collections={collections}
             tags={tagNames}

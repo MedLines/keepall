@@ -26,10 +26,11 @@ const emptyView = {
 };
 
 describe("parseLibraryType", () => {
-  test("accepts link note image and rejects unknown", () => {
+  test("accepts link note image video and rejects unknown", () => {
     expect(parseLibraryType("link")).toBe("link");
     expect(parseLibraryType("note")).toBe("note");
     expect(parseLibraryType("image")).toBe("image");
+    expect(parseLibraryType("video")).toBe("video");
     expect(parseLibraryType("other")).toBeNull();
     expect(parseLibraryType(null)).toBeNull();
   });
@@ -90,7 +91,7 @@ describe("parseLibraryViewState", () => {
   test("treats blank collection/tag/item as null and unknown sort/type as defaults", () => {
     expect(
       parseLibraryViewState(
-        new URLSearchParams("collection=&tag=&item=&sort=nope&type=video"),
+        new URLSearchParams("collection=&tag=&item=&sort=nope&type=unknown"),
       ),
     ).toEqual(emptyView);
   });

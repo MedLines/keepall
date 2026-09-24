@@ -32,6 +32,7 @@ import {
   type LibraryViewState,
 } from "@/domain/library-view";
 import { LinkValidationError } from "@/domain/link";
+import { assertLocalImageFile } from "@/domain/image";
 import { NoteValidationError } from "@/domain/note";
 import { matchesSearchQuery, normalizeSearchQuery } from "@/domain/search";
 import { TagValidationError, normalizeTagName, type Tag } from "@/domain/tag";
@@ -58,6 +59,7 @@ import {
   updateNote,
 } from "@/persistence/items";
 import { createTag, deleteTag, listTags } from "@/persistence/tags";
+import { updateVideoDetails } from "@/persistence/videos";
 import {
   getLibraryPreferences,
   movePinnedCollectionBefore,
@@ -108,7 +110,7 @@ import {
 import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
 import { isPreviewEnrichPaused } from "./preview-enrich-pause";
 import { itemPageHref } from "./item-page-navigation";
-import type { ImageDetailsDraft } from "./image-item-edit-dialog";
+import type { ImageDetailsDraft, LinkDetailsDraft, NoteDetailsDraft, VideoDetailsDraft } from "./item-edit-dialog";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
 
@@ -136,9 +138,8 @@ function libraryViewTitle(
   if (browseType === "note") {
     return "Notes";
   }
-  if (browseType === "image") {
-    return "Images";
-  }
+  if (browseType === "image") return "Images";
+  if (browseType === "video") return "Videos";
   return "All items";
 }
 
@@ -739,7 +740,7 @@ export function Library() {
   }
 
   function openInspect(item: Item) {
-    if (item.type === "image" || item.type === "note") {
+    if (item.type === "image" || item.type === "note" || item.type === "video") {
       const returnView = mergeLibraryViewState(viewRef.current, {
         item: null,
         slide: 0,
@@ -797,7 +798,7 @@ export function Library() {
     }
   }
 
-  async function saveNoteEdit(id: string) {
+  async function saveNoteEdit(id: string, draft?: NoteDetailsDraft) {
     if (pendingMutation) {
       return;
     }
@@ -806,7 +807,7 @@ export function Library() {
     setEditError(null);
 
     try {
-      await updateNote(id, { content: editDraft, format: noteFormatDraft });
+      await updateNote(id, draft ?? { content: editDraft, format: noteFormatDraft });
       clearEdit();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch (caught) {
@@ -820,7 +821,7 @@ export function Library() {
     }
   }
 
-  async function saveLinkEdit(id: string) {
+  async function saveLinkEdit(id: string, draft?: LinkDetailsDraft) {
     if (pendingMutation) {
       return;
     }
@@ -832,7 +833,7 @@ export function Library() {
       const previous = items.find((item) => item.id === id);
       const previousUrl =
         previous?.type === "link" ? previous.url : undefined;
-      const updated = await updateLink(id, {
+      const updated = await updateLink(id, draft ?? {
         url: editDraft,
         title: editTitleDraft,
         noteContent: linkNoteDraft,
@@ -884,6 +885,21 @@ export function Library() {
     }
   }
 
+  async function saveVideoEdit(id: string, draft: VideoDetailsDraft) {
+    if (pendingMutation) return;
+    setPendingMutation({ op: "save-video", id });
+    setEditError(null);
+    try {
+      await updateVideoDetails(id, draft);
+      clearEdit();
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setEditError("Couldn't save video details. Check the title and try again.");
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
   async function addImagesToItem(itemId: string, files: File[]) {
     if (pendingMutation || files.length === 0) {
       return;
@@ -895,6 +911,7 @@ export function Library() {
     try {
       let updated: ImageItem | null = null;
       for (const file of files) {
+        assertLocalImageFile(file);
         const bytes = new Uint8Array(await file.arrayBuffer());
         updated = await appendImageAssetToItem(itemId, {
           bytes,
@@ -929,6 +946,7 @@ export function Library() {
     setGalleryError(null);
 
     try {
+      assertLocalImageFile(file);
       const bytes = new Uint8Array(await file.arrayBuffer());
       await replaceImageAssetAtIndex(itemId, slideIndex, {
         bytes,
@@ -1419,7 +1437,7 @@ export function Library() {
         inspected={inspectId === item.id}
         layoutMode={browseLayout}
         openHref={
-          item.type === "image" || item.type === "note" || item.type === "link"
+          item.type === "image" || item.type === "note" || item.type === "link" || item.type === "video"
             ? itemPageHref(
                 item.id,
                 libraryViewHref(
@@ -1449,22 +1467,11 @@ export function Library() {
         pendingDelete={false}
         mutationBusy={mutationBusy}
         pendingMutation={pendingMutation}
-        editDraft={editDraft}
-        noteFormatDraft={noteFormatDraft}
-        linkNoteDraft={linkNoteDraft}
-        editTitleDraft={editTitleDraft}
         editError={editError}
-        setFirstEditField={(node) => {
-          firstEditFieldRef.current = node;
-        }}
-        onEditDraftChange={setEditDraft}
-        onNoteFormatChange={setNoteFormatDraft}
-        onLinkNoteChange={setLinkNoteDraft}
-        onEditTitleChange={setEditTitleDraft}
-        onEditSaveShortcut={onEditSaveShortcut}
-        onSaveNote={() => void saveNoteEdit(item.id)}
-        onSaveLink={() => void saveLinkEdit(item.id)}
+        onSaveNote={(draft) => void saveNoteEdit(item.id, draft)}
+        onSaveLink={(draft) => void saveLinkEdit(item.id, draft)}
         onSaveImage={(draft) => void saveImageEdit(item.id, draft)}
+        onSaveVideo={(draft) => void saveVideoEdit(item.id, draft)}
         onCancelEdit={() => clearEdit({ restoreFocus: true })}
         onAddTag={(name: string) => void addTagToItem(item.id, name)}
         onAddCollection={(name: string) =>
@@ -1487,7 +1494,7 @@ export function Library() {
             setEditDraft(item.caption);
             setEditImageTitleDraft(item.title);
             setEditTitleDraft(item.sourceUrl);
-          } else {
+          } else if (item.type === "link") {
             setEditDraft(item.url);
             setEditTitleDraft(item.title);
             setLinkNoteDraft(item.noteContent ?? "");
@@ -1814,7 +1821,7 @@ export function Library() {
                     setEditDraft(target.caption);
                     setEditImageTitleDraft(target.title);
                     setEditTitleDraft(target.sourceUrl);
-                  } else {
+                  } else if (target.type === "link") {
                     setEditDraft(target.url);
                     setEditTitleDraft(target.title);
                     setLinkNoteDraft(target.noteContent ?? "");

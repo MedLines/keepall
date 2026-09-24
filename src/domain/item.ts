@@ -5,9 +5,10 @@ import {
 } from "./link";
 import { coerceImageFields, imageListTitle, type ImageItem } from "./image";
 import { noteListTitle, type NoteItem } from "./note";
+import type { VideoItem } from "./video";
 import { coerceExclusiveCollectionIds } from "./collection";
 
-export type Item = NoteItem | LinkItem | ImageItem;
+export type Item = NoteItem | LinkItem | ImageItem | VideoItem;
 
 export type ItemWithOptionalOrgIds = {
   tagIds?: string[];
@@ -37,6 +38,10 @@ export function normalizeItem<T extends ItemWithOptionalOrgIds>(
     };
   }
 
+  if ("type" in withOrg && (withOrg as { type?: string }).type === "video") {
+    return { ...withOrg, noteContent: (withOrg as Partial<VideoItem>).noteContent ?? "" };
+  }
+
   return withOrg;
 }
 
@@ -44,9 +49,8 @@ export function itemListTitle(item: Item): string {
   if (item.type === "note") {
     return noteListTitle(item);
   }
-  if (item.type === "image") {
-    return imageListTitle(item);
-  }
+  if (item.type === "image") return imageListTitle(item);
+  if (item.type === "video") return item.title || "Video";
   return linkListTitle(item);
 }
 

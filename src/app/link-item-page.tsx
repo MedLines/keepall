@@ -16,6 +16,7 @@ import {
   updateLink,
 } from "@/persistence/items";
 import { createTag, listTags } from "@/persistence/tags";
+import { ItemDetailLink } from "./item-detail-link";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
@@ -163,11 +164,11 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
           <h2 className="text-base font-semibold">Details</h2>
           {itemCollections.length ? <div className="mt-6">
             <h3 className="mb-2 text-sm text-text-secondary">Collection</h3>
-            <div className="flex flex-wrap gap-2">{itemCollections.map((collection) => <Link key={collection.id} href={`/?collection=${encodeURIComponent(collection.id)}`} className="ui-control inline-flex min-h-9 items-center px-3 text-sm">{collection.name}</Link>)}</div>
+            <div className="flex flex-wrap gap-2">{itemCollections.map((collection) => <ItemDetailLink key={collection.id} href={`/?collection=${encodeURIComponent(collection.id)}`}>{collection.name}</ItemDetailLink>)}</div>
           </div> : null}
           {itemTags.length ? <div className="mt-6">
             <h3 className="mb-2 text-sm text-text-secondary">Tags</h3>
-            <div className="flex flex-wrap gap-2">{itemTags.map((tag) => <Link key={tag.id} href={`/?tag=${encodeURIComponent(tag.id)}`} className="ui-control inline-flex min-h-9 items-center px-3 text-sm">{tag.name}</Link>)}</div>
+            <div className="flex flex-wrap gap-2">{itemTags.map((tag) => <ItemDetailLink key={tag.id} href={`/?tag=${encodeURIComponent(tag.id)}`}>{tag.name}</ItemDetailLink>)}</div>
           </div> : null}
           <dl className="mt-7 grid gap-3 text-sm"><div><dt className="text-text-secondary">Saved</dt><dd className="mt-0.5">{new Date(link.createdAt).toLocaleDateString()}</dd></div></dl>
         </aside>

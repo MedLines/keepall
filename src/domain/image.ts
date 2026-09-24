@@ -1,6 +1,6 @@
 import { isHttpUrl } from "./classify";
 
-export const MAX_LOCAL_IMAGE_BYTES = 3 * 1024 * 1024;
+export const MAX_LOCAL_IMAGE_BYTES = 20 * 1024 * 1024;
 
 const ALLOWED_MIMES = new Set([
   "image/jpeg",
@@ -55,21 +55,20 @@ export function isAllowedLocalImageMime(mimeType: string): boolean {
   return ALLOWED_MIMES.has(normalizeImageMime(mimeType));
 }
 
-export function assertLocalImageBytes(
-  bytes: Uint8Array,
-  mimeType: string,
-): string {
-  const mime = normalizeImageMime(mimeType);
+export function assertLocalImageFile(file: Pick<Blob, "size" | "type">): string {
+  const mime = normalizeImageMime(file.type);
   if (!isAllowedLocalImageMime(mime)) {
     throw new ImageValidationError("Use a PNG, JPEG, GIF, WebP, or AVIF image");
   }
-  if (bytes.byteLength === 0) {
-    throw new ImageValidationError("Image file is empty");
-  }
-  if (bytes.byteLength > MAX_LOCAL_IMAGE_BYTES) {
-    throw new ImageValidationError("Image must be 3MB or smaller");
+  if (file.size === 0) throw new ImageValidationError("Image file is empty");
+  if (file.size > MAX_LOCAL_IMAGE_BYTES) {
+    throw new ImageValidationError("Image must be 20 MiB or smaller");
   }
   return mime;
+}
+
+export function assertLocalImageBytes(bytes: Uint8Array, mimeType: string): string {
+  return assertLocalImageFile({ size: bytes.byteLength, type: mimeType });
 }
 
 /**

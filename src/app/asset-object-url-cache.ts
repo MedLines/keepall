@@ -1,10 +1,11 @@
 import { assetToBlob, getAsset } from "@/persistence/assets";
+import { getThumbnail } from "@/persistence/thumbnails";
 
 const MAX_IDLE_URLS = 16;
 const IDLE_URL_TTL_MS = 30_000;
 
 type CacheEntry = {
-  id: string;
+  key: string;
   refs: number;
   url: string | null;
   promise: Promise<string | null>;
@@ -15,10 +16,10 @@ type CacheEntry = {
 const entries = new Map<string, CacheEntry>();
 
 function dispose(entry: CacheEntry): void {
-  if (entry.refs > 0 || entries.get(entry.id) !== entry) return;
+  if (entry.refs > 0 || entries.get(entry.key) !== entry) return;
   if (entry.disposeTimer) clearTimeout(entry.disposeTimer);
   if (entry.url) URL.revokeObjectURL(entry.url);
-  entries.delete(entry.id);
+  entries.delete(entry.key);
 }
 
 function trimIdleEntries(): void {
@@ -37,34 +38,34 @@ function scheduleDispose(entry: CacheEntry): void {
   trimIdleEntries();
 }
 
-function createEntry(id: string): CacheEntry {
+function createEntry(key: string, loadBlob: () => Promise<Blob | null>): CacheEntry {
   const entry: CacheEntry = {
-    id,
+    key,
     refs: 0,
     url: null,
     promise: Promise.resolve(null),
     disposeTimer: null,
     releasedAt: 0,
   };
-  entries.set(id, entry);
-  entry.promise = getAsset(id)
-    .then((asset) => {
-      if (!asset || entries.get(id) !== entry) return null;
-      entry.url = URL.createObjectURL(assetToBlob(asset));
+  entries.set(key, entry);
+  entry.promise = loadBlob()
+    .then((blob) => {
+      if (!blob || entries.get(key) !== entry) return null;
+      entry.url = URL.createObjectURL(blob);
       return entry.url;
     })
     .catch(() => {
-      if (entries.get(id) === entry) entries.delete(id);
+      if (entries.get(key) === entry) entries.delete(key);
       return null;
     });
   return entry;
 }
 
-export function acquireAssetObjectUrl(id: string): {
+function acquireObjectUrl(key: string, loadBlob: () => Promise<Blob | null>): {
   promise: Promise<string | null>;
   release: () => void;
 } {
-  const entry = entries.get(id) ?? createEntry(id);
+  const entry = entries.get(key) ?? createEntry(key, loadBlob);
   entry.refs += 1;
   if (entry.disposeTimer) {
     clearTimeout(entry.disposeTimer);
@@ -81,6 +82,17 @@ export function acquireAssetObjectUrl(id: string): {
       if (entry.refs === 0) scheduleDispose(entry);
     },
   };
+}
+
+export function acquireAssetObjectUrl(id: string) {
+  return acquireObjectUrl(`asset:${id}`, async () => {
+    const asset = await getAsset(id);
+    return asset ? assetToBlob(asset) : null;
+  });
+}
+
+export function acquireThumbnailObjectUrl(id: string) {
+  return acquireObjectUrl(`thumbnail:${id}`, () => getThumbnail(id));
 }
 
 export function clearAssetObjectUrlCache(): void {

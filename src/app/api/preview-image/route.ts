@@ -4,6 +4,8 @@ import {
   PreviewUrlBlockedError,
 } from "@/server/preview-image-fetch";
 
+import { optimizePreviewImage } from "@/server/preview-image-optimize";
+
 export const runtime = "nodejs";
 
 type PreviewImageBody = {
@@ -27,7 +29,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const image = await fetchPreviewImage(body.url);
+    const source = await fetchPreviewImage(body.url);
+    const image = await optimizePreviewImage(source.bytes);
     return new Response(Buffer.from(image.bytes), {
       status: 200,
       headers: {

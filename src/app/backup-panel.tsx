@@ -8,9 +8,9 @@ import {
   suggestImageFolderCollectionName,
 } from "@/domain/image-folder-import";
 import { BackupValidationError } from "@/domain/backup";
+import { exportKeepallArchive, importKeepallArchiveMerge, importKeepallArchiveReplace } from "@/persistence/backup-archive";
 import { normalizeItem } from "@/domain/item";
 import {
-  exportKeepallBackup,
   importKeepallBackupMerge,
   importKeepallBackupReplace,
 } from "@/persistence/backup";
@@ -130,14 +130,11 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     setLastBookmarksSummary(null);
 
     try {
-      const backup = await exportKeepallBackup();
-      const blob = new Blob([JSON.stringify(backup, null, 2)], {
-        type: "application/json",
-      });
+      const blob = await exportKeepallArchive();
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `keepall-backup-${backup.exportedAt}.keepall.json`;
+      anchor.download = `keepall-backup-${Date.now()}.keepall.zip`;
       anchor.click();
       URL.revokeObjectURL(url);
       setStatus("Backup downloaded.");
@@ -173,14 +170,18 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     setLastBookmarksSummary(null);
 
     try {
-      const text = await file.text();
-      let raw: unknown;
-      try {
-        raw = JSON.parse(text) as unknown;
-      } catch {
-        throw new BackupValidationError("Backup file is not valid JSON");
+      const signature = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+      if (signature[0] === 0x50 && signature[1] === 0x4b) {
+        setPendingRaw(file);
+      } else {
+        let raw: unknown;
+        try {
+          raw = JSON.parse(await file.text()) as unknown;
+        } catch {
+          throw new BackupValidationError("Backup file is not valid JSON or ZIP");
+        }
+        setPendingRaw(raw);
       }
-      setPendingRaw(raw);
     } catch (caught) {
       if (caught instanceof BackupValidationError) {
         setError(caught.message);
@@ -248,14 +249,18 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
     try {
       if (mode === "merge") {
-        const { summary } = await importKeepallBackupMerge(raw);
+        const { summary } = raw instanceof Blob
+          ? await importKeepallArchiveMerge(raw)
+          : await importKeepallBackupMerge(raw);
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
         dispatchPreviewWelcome(summary.addedLinkIds);
         setStatus(
           `Merged: ${summary.added} added, ${summary.updated} updated, ${summary.unchanged} unchanged.`,
         );
       } else {
-        const backup = await importKeepallBackupReplace(raw);
+        const backup = raw instanceof Blob
+          ? await importKeepallArchiveReplace(raw)
+          : await importKeepallBackupReplace(raw);
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
         dispatchPreviewWelcome(
           backup.items
@@ -412,7 +417,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       ref={fileInputRef}
       className="sr-only"
       type="file"
-      accept="application/json,.json,.keepall"
+      accept="application/json,application/zip,.json,.keepall,.zip"
       onChange={(event) => void onFileChange(event.target.files)}
     />
   );
@@ -472,7 +477,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
               <p className="mt-1 text-sm leading-relaxed text-text-secondary">
                 {pendingImageFiles.length} file
                 {pendingImageFiles.length === 1 ? "" : "s"} selected. Images under
-                3MB become separate library items.
+                20 MiB become separate library items.
               </p>
             </div>
             <button
@@ -871,17 +876,17 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     variant === "sidebar" ? (
       <p className="mt-2 text-xs leading-relaxed text-text-secondary">
         <strong className="font-medium">Keepall</strong> backup: export or import
-        a <code className="text-[11px]">.keepall</code> file.{" "}
+        a <code className="text-[11px]">.keepall.zip</code> file.{" "}
         <strong className="font-medium">Browser</strong>: HTML bookmarks.{" "}
-        <strong className="font-medium">Images</strong>: a folder of files (3MB
+        <strong className="font-medium">Images</strong>: a folder of files (20 MiB
         each max).
       </p>
     ) : (
       <p className="mt-2 text-sm text-text-secondary">
         <strong className="font-medium">Keepall</strong> backup: export or import
-        a <code>.keepall</code> file. <strong className="font-medium">Browser</strong>
+        a <code>.keepall.zip</code> file. <strong className="font-medium">Browser</strong>
         : HTML bookmarks. <strong className="font-medium">Images</strong>: pick a
-        folder (3MB per file max).
+        folder (20 MiB per file max).
       </p>
     );
 
@@ -907,7 +912,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       >
         {heading}
         <p className="mt-1 text-sm leading-6 text-text-secondary">
-          Download a <code>.keepall</code> recovery copy, or restore one into
+          Download a <code>.keepall.zip</code> recovery copy, or restore one into
           this browser.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
@@ -940,7 +945,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         </h2>
         <p className="mt-1 text-sm leading-6 text-text-secondary">
           Add browser bookmarks or an image folder to your existing library.
-          Images are limited to 3 MB per file.
+          Images are limited to 20 MiB per file.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <button

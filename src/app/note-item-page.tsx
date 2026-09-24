@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { assertLocalImageBytes, ImageValidationError } from "@/domain/image";
+import { assertLocalImageBytes, assertLocalImageFile, ImageValidationError } from "@/domain/image";
 import { CollectionValidationError, type Collection } from "@/domain/collection";
 import { resolveItemCollections, resolveItemTags } from "@/domain/item";
 import { TagValidationError, type Tag } from "@/domain/tag";
@@ -28,6 +28,7 @@ import {
   saveNoteWithImages,
 } from "@/persistence/items";
 import { createTag, listTags } from "@/persistence/tags";
+import { ItemDetailLink } from "./item-detail-link";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { NoteContent } from "./note-content";
@@ -154,6 +155,7 @@ export function NoteItemPage({
     setAddingImages(true);
     try {
       const validated = await Promise.all(files.map(async (file) => {
+        assertLocalImageFile(file);
         const bytes = new Uint8Array(await file.arrayBuffer());
         const mimeType = assertLocalImageBytes(bytes, file.type);
         return { file, bytes, mimeType };
@@ -430,13 +432,9 @@ export function NoteItemPage({
               <h3 className="mb-2 text-sm text-text-secondary">Collection</h3>
               <div className="flex flex-wrap gap-2">
                 {itemCollections.map((collection) => (
-                  <Link
-                    key={collection.id}
-                    href={`/?collection=${encodeURIComponent(collection.id)}`}
-                    className="ui-control inline-flex min-h-9 items-center px-3 text-sm"
-                  >
+                  <ItemDetailLink key={collection.id} href={`/?collection=${encodeURIComponent(collection.id)}`}>
                     {collection.name}
-                  </Link>
+                  </ItemDetailLink>
                 ))}
               </div>
             </div>
@@ -446,13 +444,9 @@ export function NoteItemPage({
               <h3 className="mb-2 text-sm text-text-secondary">Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {itemTags.map((tag) => (
-                  <Link
-                    key={tag.id}
-                    href={`/?tag=${encodeURIComponent(tag.id)}`}
-                    className="ui-control inline-flex min-h-9 items-center px-3 text-sm"
-                  >
+                  <ItemDetailLink key={tag.id} href={`/?tag=${encodeURIComponent(tag.id)}`}>
                     {tag.name}
-                  </Link>
+                  </ItemDetailLink>
                 ))}
               </div>
             </div>

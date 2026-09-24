@@ -51,7 +51,7 @@ for (const failFirstSave of [false, true]) {
       await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
       await page.keyboard.press("Alt+k");
       const dialog = page.getByRole("dialog");
-      await dialog.locator('input[type="file"]').setInputFiles([
+      await dialog.locator('input[accept^="image/"]').setInputFiles([
         "public/icons/icon-192.png",
         "public/icons/icon-512.png",
       ]);
@@ -69,8 +69,7 @@ for (const failFirstSave of [false, true]) {
       await expect(dialog).toBeHidden();
       expect(await storedRecordCounts(page)).toEqual([1, 2]);
       await page.reload();
-      await expect(page.getByLabel("Library").locator("button")
-        .filter({ hasText: /^Atomic image capture$/ }))
+      await expect(page.getByLabel("Library").getByRole("link", { name: "Open Atomic image capture" }))
         .toBeVisible();
       expect(await storedRecordCounts(page)).toEqual([1, 2]);
       await expect.poll(() => page.getByLabel("Library").locator("img").first()

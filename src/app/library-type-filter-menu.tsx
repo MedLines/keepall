@@ -8,6 +8,7 @@ import {
   LayersIcon,
   LinkIcon,
   NoteIcon,
+  VideoIcon,
 } from "./shell-icons";
 import { ShellTopMenu } from "./shell-top-menu";
 
@@ -44,6 +45,12 @@ export function LibraryTypeFilterMenu({
       label: "Images",
       icon: <ImageIcon />,
       count: count(counts.byType.image),
+    },
+    {
+      value: "video",
+      label: "Videos",
+      icon: <VideoIcon />,
+      count: count(counts.byType.video),
     },
     {
       value: "link",
