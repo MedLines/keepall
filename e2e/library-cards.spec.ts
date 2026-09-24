@@ -726,6 +726,7 @@ test("long Library content fades only the edges with hidden items", async ({ pag
 
   const library = page.getByRole("main");
   await expect(library).toHaveClass(/scroll-fade/);
+  expect(Number.parseFloat(await library.evaluate(element => getComputedStyle(element).getPropertyValue("--scroll-fade-edge-opacity")))).toBeCloseTo(0.35);
 
   const fadeVisible = async (edge: "t" | "b") =>
     library.evaluate(
@@ -1259,7 +1260,15 @@ test("image page shares the rounder card and panel curves", async ({ page }, tes
   await expect(gallery.locator("img")).toHaveCSS("outline-width", "1px");
   await expect(gallery.locator("img")).toHaveCSS("outline-offset", "-1px");
   await expect(gallery.locator("img")).toHaveCSS("border-radius", "56px");
-  await expect(gallery).not.toHaveCSS("box-shadow", "none");
+  await expect(gallery).toHaveCSS("box-shadow", "none");
+  const insetBorder = await gallery.evaluate(element => {
+    const style = getComputedStyle(element, "::after");
+    return { content: style.content, zIndex: style.zIndex, boxShadow: style.boxShadow, pointerEvents: style.pointerEvents };
+  });
+  expect(insetBorder.content).toBe('""');
+  expect(insetBorder.zIndex).toBe("20");
+  expect(insetBorder.boxShadow).toMatch(/0px 0px 0px 1px inset$/);
+  expect(insetBorder.pointerEvents).toBe("none");
   await page.screenshot({ path: testInfo.outputPath("image-page-desktop.png") });
   await expect(gallery).toHaveCSS("border-radius", "64px");
   await expect(gallery).toHaveCSS("border-width", "8px");
@@ -1297,6 +1306,85 @@ test("image page shares the rounder card and panel curves", async ({ page }, tes
   }
 });
 
+test("image counter and arrow keys stay in sync in both views", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1707, height: 825 });
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = 600;
+    canvas.height = 400;
+    const context = canvas.getContext("2d")!;
+    for (const [x, y, color] of [
+      [0, 0, "#d88474"], [300, 0, "#79b7a4"],
+      [0, 200, "#8ea6c9"], [300, 200, "#e5bd74"],
+    ] as const) {
+      context.fillStyle = color;
+      context.fillRect(x, y, 300, 200);
+    }
+    const blob = await new Promise<Blob>(resolve => canvas.toBlob(result => resolve(result!)));
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(["items", "assets"], "readwrite");
+      tx.objectStore("assets").put({ id: "asset", bytes, mimeType: "image/png", byteLength: bytes.length, contentHash: "zoom-fixture", createdAt: 1 });
+      const store = tx.objectStore("items");
+      const request = store.get("image");
+      request.onsuccess = () => store.put({ ...request.result, assetIds: Array.from({ length: 11 }, () => "asset") });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.goto("/items/image");
+  const gallery = page.getByRole("region", { name: "Image gallery" });
+  await expect(gallery.getByText("1 / 11")).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(gallery.getByText("2 / 11")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("image-counter-page.png") });
+
+  await page.getByRole("button", { name: "View image full screen" }).click();
+  const viewer = page.getByRole("dialog", { name: "Focused image viewer" });
+  await expect(viewer.getByText("2 / 11")).toBeVisible();
+  const next = viewer.getByRole("button", { name: "Next full-screen image" });
+  const previous = viewer.getByRole("button", { name: "Previous full-screen image" });
+  const nextBox = (await next.boundingBox())!;
+  expect(nextBox.width).toBeGreaterThanOrEqual(56);
+  expect(nextBox.height).toBeGreaterThanOrEqual(56);
+  await next.click();
+  await expect(viewer.getByText("3 / 11")).toBeVisible();
+  await next.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(viewer.getByText("2 / 11")).toBeVisible();
+  await previous.click();
+  await expect(viewer.getByText("1 / 11")).toBeVisible();
+
+  const zoomIn = viewer.getByRole("button", { name: "Zoom in image" });
+  await expect(zoomIn).toHaveCSS("cursor", "zoom-in");
+  const zoomBox = (await zoomIn.boundingBox())!;
+  await zoomIn.click({ position: { x: zoomBox.width * 0.25, y: zoomBox.height * 0.3 } });
+  const zoomOut = viewer.getByRole("button", { name: "Zoom out image" });
+  await expect(zoomOut).toHaveCSS("cursor", "zoom-out");
+  await expect(zoomOut).toHaveCSS("border-radius", "0px");
+  await expect(zoomOut.locator("span")).toHaveCSS("transform", /matrix\(2, 0, 0, 2,/);
+  await expect(zoomOut.locator("img")).toHaveCSS("border-radius", "0px");
+  const origin = await zoomOut.locator("span").evaluate(element => (element as HTMLElement).style.transformOrigin);
+  const [originX, originY] = origin.split(" ").map(Number.parseFloat);
+  expect(originX).toBeCloseTo(25, 0);
+  expect(originY).toBeCloseTo(30, 0);
+  await page.screenshot({ path: testInfo.outputPath("image-counter-zoomed.png") });
+  await zoomOut.click();
+  await expect(zoomIn).toBeVisible();
+  await zoomIn.click();
+  await viewer.getByRole("button", { name: "Zoom out", exact: true }).click();
+  await expect(zoomIn).toBeVisible();
+  await zoomIn.click();
+  await next.click();
+  await expect(zoomIn).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("image-counter-viewer.png") });
+});
+
 test("image page returns to a card with the same clipped media frame", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const card = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Customer support" }) });
@@ -1324,10 +1412,7 @@ test("image page returns to a card with the same clipped media frame", async ({ 
   const viewerImage = viewer.locator("img");
   await expect(viewerImage).toHaveCSS("outline-width", "1px");
   await expect(viewerImage).toHaveCSS("outline-offset", "-1px");
-  await expect(viewerImage).toHaveCSS("border-radius", "64px");
-  if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
-    await expect(viewerImage).toHaveCSS("corner-shape", /^(squircle|superellipse\(2\))$/);
-  }
+  await expect(viewerImage).toHaveCSS("border-radius", "0px");
   expect(
     await viewerImage.evaluate((image) => getComputedStyle(image).maxHeight),
   ).toBe("none");

@@ -3,7 +3,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { clampImageSlideIndex, ImageValidationError, type ImageItem } from "@/domain/image";
 import {
   itemListTitle,
@@ -120,6 +120,31 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
       window.removeEventListener(ITEMS_CHANGED_EVENT, reload);
     };
   }, [readSnapshot]);
+
+  useLayoutEffect(() => {
+    if (
+      loadState.status !== "ready" ||
+      loadState.item.assetIds.length < 2 || viewerOpen ||
+      editOpen || organizerOpen || removeImageOpen || deleteOpen
+    ) return;
+
+    const assetIds = loadState.item.assetIds;
+    function onKeyDown(event: KeyboardEvent) {
+      if (
+        (event.key !== "ArrowLeft" && event.key !== "ArrowRight") ||
+        event.altKey || event.ctrlKey || event.metaKey ||
+        (event.target instanceof Element &&
+          event.target.closest("input, textarea, select, [contenteditable='true']"))
+      ) return;
+
+      event.preventDefault();
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      setSlide((current) => clampImageSlideIndex(assetIds, current + direction));
+    }
+
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [loadState, viewerOpen, editOpen, organizerOpen, removeImageOpen, deleteOpen]);
 
   async function addImages(files: File[]) {
     if (loadState.status !== "ready" || galleryMutation || files.length === 0) {
@@ -629,6 +654,9 @@ function ImageWorkspace({
                     </button>
                   </>
                 ) : null}
+                <p className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-control bg-bg-overlay/70 px-3 py-2 text-sm tabular-nums text-text-on-media" aria-label={`Image ${currentSlide + 1} of ${item.assetIds.length}`}>
+                  {currentSlide + 1} / {item.assetIds.length}
+                </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -839,31 +867,95 @@ function FocusedImageViewer({
   onOpenChange: (open: boolean) => void;
   onSlideChange: (slide: number) => void;
 }) {
+  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
+
+  function changeSlide(next: number) {
+    setZoom(null);
+    onSlideChange(next);
+  }
+
+  function toggleZoom(event: React.MouseEvent<HTMLButtonElement>) {
+    if (zoom) {
+      setZoom(null);
+      return;
+    }
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = event.detail === 0
+      ? 50 : ((event.clientX - bounds.left) / bounds.width) * 100;
+    const y = event.detail === 0
+      ? 50 : ((event.clientY - bounds.top) / bounds.height) * 100;
+    setZoom({
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+    });
+  }
+
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setZoom(null);
+        onOpenChange(next);
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[90]" />
         <Dialog.Viewport
           className="ui-scrollbar fixed inset-0 z-[90] overflow-y-auto p-2 sm:p-5"
           data-testid="focused-image-scroll"
         >
-          <Dialog.Popup className="relative mx-auto grid min-h-full w-full max-w-[100rem] place-items-center outline-none">
+          <Dialog.Popup
+            className="relative mx-auto grid min-h-full w-full max-w-[100rem] place-items-center outline-none"
+            onKeyDownCapture={(event) => {
+              if (event.altKey || event.ctrlKey || event.metaKey || slideCount < 2) return;
+              if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+              event.preventDefault();
+              event.stopPropagation();
+              changeSlide(clampImageSlideIndex(
+                item.assetIds,
+                currentSlide + (event.key === "ArrowRight" ? 1 : -1),
+              ));
+            }}
+          >
             <Dialog.Title className="sr-only">Focused image viewer</Dialog.Title>
-            <LibraryItemMedia item={item} variant="viewer" assetId={assetId} />
-            <Dialog.Close className={`${CONTROL} fixed right-3 top-3 bg-bg-surface/95 backdrop-blur-sm`} aria-label="Close full-screen image">
+            <button
+              type="button"
+              className={`control-shape-none mx-auto block w-fit max-w-full overflow-hidden p-0 focus-visible:outline-2 focus-visible:outline-border-focus ${zoom ? "cursor-zoom-out" : "cursor-zoom-in"}`}
+              aria-label={zoom ? "Zoom out image" : "Zoom in image"}
+              aria-pressed={zoom !== null}
+              onClick={toggleZoom}
+            >
+              <span
+                className="block transition-transform duration-200 motion-reduce:transition-none"
+                style={{
+                  transform: zoom ? "scale(2)" : "scale(1)",
+                  transformOrigin: zoom ? `${zoom.x}% ${zoom.y}%` : "center",
+                }}
+              >
+                <LibraryItemMedia item={item} variant="viewer" assetId={assetId} />
+              </span>
+            </button>
+            <Dialog.Close className={`${CONTROL} fixed right-3 top-3 z-10 bg-bg-surface/95 backdrop-blur-sm`} aria-label="Close full-screen image">
               <CloseIcon />
             </Dialog.Close>
+            {zoom ? (
+              <button className={`${CONTROL} fixed left-3 top-3 z-10 bg-bg-surface/95 backdrop-blur-sm`} type="button" onClick={() => setZoom(null)}>
+                Zoom out
+              </button>
+            ) : null}
             {slideCount > 1 ? (
               <>
-                <button className={`${CONTROL} fixed left-3 top-1/2 -translate-y-1/2 bg-bg-surface/95 backdrop-blur-sm`} type="button" aria-label="Previous full-screen image" disabled={currentSlide === 0} onClick={() => onSlideChange(currentSlide - 1)}>
-                  <ArrowLeftIcon />
+                <button className="ui-control fixed left-3 top-1/2 z-10 flex size-14 -translate-y-1/2 items-center justify-center bg-bg-surface/95 backdrop-blur-sm disabled:cursor-default disabled:opacity-40" type="button" aria-label="Previous full-screen image" disabled={currentSlide === 0} onClick={() => changeSlide(currentSlide - 1)}>
+                  <ArrowLeftIcon className="size-6" />
                 </button>
-                <button className={`${CONTROL} fixed right-3 top-1/2 -translate-y-1/2 bg-bg-surface/95 backdrop-blur-sm`} type="button" aria-label="Next full-screen image" disabled={currentSlide === slideCount - 1} onClick={() => onSlideChange(currentSlide + 1)}>
-                  <ArrowRightIcon />
+                <button className="ui-control fixed right-3 top-1/2 z-10 flex size-14 -translate-y-1/2 items-center justify-center bg-bg-surface/95 backdrop-blur-sm disabled:cursor-default disabled:opacity-40" type="button" aria-label="Next full-screen image" disabled={currentSlide === slideCount - 1} onClick={() => changeSlide(currentSlide + 1)}>
+                  <ArrowRightIcon className="size-6" />
                 </button>
-                <p className="fixed bottom-3 rounded-control bg-bg-overlay/70 px-3 py-2 text-sm tabular-nums text-text-on-media">{currentSlide + 1} of {slideCount}</p>
               </>
             ) : null}
+            <p className="pointer-events-none fixed bottom-3 rounded-control bg-bg-overlay/70 px-3 py-2 text-sm tabular-nums text-text-on-media" aria-label={`Image ${currentSlide + 1} of ${slideCount}`}>
+              {currentSlide + 1} / {slideCount}
+            </p>
           </Dialog.Popup>
         </Dialog.Viewport>
       </Dialog.Portal>

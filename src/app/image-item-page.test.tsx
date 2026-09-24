@@ -148,7 +148,7 @@ describe("ImageItemPage", () => {
         { name: "Edit details" },
       ),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText("1 of 2")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Image gallery" })).getByText("1 / 2")).toBeInTheDocument();
     expect(screen.getAllByTestId("rendered-asset")[0]).toHaveTextContent("asset-1");
     expect(
       within(screen.getByRole("navigation", { name: "Image slides" }))
@@ -165,6 +165,7 @@ describe("ImageItemPage", () => {
       "data-variant",
       "viewer",
     );
+    expect(within(viewer).getByText("1 / 2")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Close full-screen image" }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "Focused image viewer" })).not.toBeInTheDocument();
@@ -176,6 +177,66 @@ describe("ImageItemPage", () => {
       "true",
     );
     expect(screen.getAllByTestId("rendered-asset")[0]).toHaveTextContent("asset-2");
+  });
+
+  test("arrow keys move through images on the page and in the focused viewer", async () => {
+    vi.mocked(getItem).mockResolvedValue(buildImageFromAssetIds(
+      { assetIds: ["asset-1", "asset-2", "asset-3"], title: "Gallery" },
+      { id: "image-1", now: 1 },
+    ));
+
+    render(<ImageItemPage itemId="image-1" returnHref="/" />);
+    const gallery = await screen.findByRole("region", { name: "Image gallery" });
+
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(within(gallery).getByText("2 / 3")).toBeInTheDocument();
+    expect(within(gallery).getAllByTestId("rendered-asset")[0]).toHaveTextContent("asset-2");
+
+    fireEvent.click(screen.getByRole("button", { name: "View image full screen" }));
+    const viewer = await screen.findByRole("dialog", { name: "Focused image viewer" });
+    expect(within(viewer).getByText("2 / 3")).toBeInTheDocument();
+    fireEvent.keyDown(viewer, { key: "ArrowRight" });
+    expect(within(viewer).getByText("3 / 3")).toBeInTheDocument();
+    fireEvent.keyDown(viewer, { key: "ArrowRight" });
+    expect(within(viewer).getByText("3 / 3")).toBeInTheDocument();
+    fireEvent.keyDown(within(viewer).getByRole("button", { name: "Next full-screen image" }), { key: "ArrowLeft" });
+    expect(within(viewer).getByText("2 / 3")).toBeInTheDocument();
+    fireEvent.click(within(viewer).getByRole("button", { name: "Next full-screen image" }));
+    expect(within(viewer).getByText("3 / 3")).toBeInTheDocument();
+
+    fireEvent.click(within(viewer).getByRole("button", { name: "Close full-screen image" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
+    const editDialog = await screen.findByRole("dialog", { name: "Edit image details" });
+    fireEvent.keyDown(within(editDialog).getByLabelText("Title (optional)"), { key: "ArrowLeft" });
+    expect(within(gallery).getByText("3 / 3")).toBeInTheDocument();
+  });
+
+  test("clicking the focused image zooms in and out, then navigation resets zoom", async () => {
+    vi.mocked(getItem).mockResolvedValue(buildImageFromAssetIds(
+      { assetIds: ["asset-1", "asset-2"], title: "Gallery" },
+      { id: "image-1", now: 1 },
+    ));
+
+    render(<ImageItemPage itemId="image-1" returnHref="/" />);
+    await screen.findByRole("region", { name: "Image gallery" });
+    fireEvent.click(screen.getByRole("button", { name: "View image full screen" }));
+    const viewer = await screen.findByRole("dialog", { name: "Focused image viewer" });
+    const zoomIn = within(viewer).getByRole("button", { name: "Zoom in image" });
+    vi.spyOn(zoomIn, "getBoundingClientRect").mockReturnValue({
+      left: 10, top: 20, width: 100, height: 100,
+    } as DOMRect);
+    fireEvent.click(zoomIn, { clientX: 35, clientY: 50, detail: 1 });
+    const zoomOut = within(viewer).getByRole("button", { name: "Zoom out image" });
+    expect(zoomOut.querySelector("span")).toHaveStyle({ transform: "scale(2)", transformOrigin: "25% 30%" });
+    fireEvent.click(zoomOut);
+    fireEvent.click(within(viewer).getByRole("button", { name: "Zoom in image" }));
+    fireEvent.click(within(viewer).getByRole("button", { name: /^Zoom out$/ }));
+    expect(within(viewer).getByRole("button", { name: "Zoom in image" })).toBeInTheDocument();
+
+    fireEvent.click(within(viewer).getByRole("button", { name: "Zoom in image" }));
+    fireEvent.click(within(viewer).getByRole("button", { name: "Next full-screen image" }));
+    expect(within(viewer).getByRole("button", { name: "Zoom in image" })).toBeInTheDocument();
+    expect(within(viewer).getByText("2 / 2")).toBeInTheDocument();
   });
 
   test("renders an opted-in Markdown image note", async () => {

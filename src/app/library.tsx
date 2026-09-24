@@ -1636,7 +1636,7 @@ export function Library() {
         {topBar}
         <main
           ref={mainScrollRef}
-          className="scroll-fade min-h-0 min-w-0 flex-1 overflow-auto px-3 pb-6 sm:px-6"
+          className="scroll-fade min-h-0 min-w-0 flex-1 overflow-auto px-3 pb-6 sm:px-6 [--scroll-fade-edge-opacity:0.35]"
           aria-labelledby="library-heading"
         >
           {loadState === "loading" ? (

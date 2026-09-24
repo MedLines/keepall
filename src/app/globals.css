@@ -227,7 +227,18 @@
 
 .item-workspace-media {
   border: var(--spacing-card-inset) solid transparent;
+}
+
+.item-workspace-media::after {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--spacing-card-inset));
+  z-index: 20;
+  border: inherit;
+  border-radius: inherit;
+  corner-shape: inherit;
   box-shadow: inset 0 0 0 1px var(--color-border-media);
+  pointer-events: none;
 }
 
 .library-card {

@@ -99,7 +99,7 @@ function imageClassName(
     return `media-outline media-squircle-inset block h-auto w-full ${className}`;
   }
   if (variant === "viewer") {
-    return `media-outline media-squircle mx-auto block h-auto w-auto max-w-full ${className}`;
+    return `media-outline mx-auto block h-auto w-auto max-w-full ${className}`;
   }
   if (variant === "inspect") {
     return `media-outline media-squircle-inset mx-auto max-h-[min(78vh,56rem)] w-full object-contain ${className}`;
