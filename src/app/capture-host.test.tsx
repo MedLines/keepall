@@ -494,6 +494,42 @@ describe("CaptureHost", () => {
     });
   });
 
+  test("rejects a video batch without saving the text draft or attaching partial images", async () => {
+    const input = await openDraft("An unrelated note draft");
+    const fileInput = screen.getByRole("dialog").querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+
+    fireEvent.change(fileInput, {
+      target: {
+        files: [
+          new File([new Uint8Array([1])], "valid.png", { type: "image/png" }),
+          new File([new Uint8Array([2])], "A very long video title.mp4", { type: "video/mp4" }),
+        ],
+      },
+    });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Videos can't be added here");
+    expect(alert).not.toHaveTextContent("A very long video title.mp4");
+    expect(screen.queryByLabelText(/images? attached/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    fireEvent.submit(input.closest("form")!);
+    expect(findImageByAssetPayloads).not.toHaveBeenCalled();
+    expect(createOrReuseImage).not.toHaveBeenCalled();
+    expect(createNote).not.toHaveBeenCalled();
+
+    fireEvent.change(fileInput, {
+      target: {
+        files: [new File([new Uint8Array([3])], "valid.png", { type: "image/png" })],
+      },
+    });
+    expect(await screen.findByLabelText("1 image attached")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+  });
+
   test("choose images saves one gallery item with multiple assets", async () => {
     render(<CaptureHost />);
     fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });

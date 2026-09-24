@@ -14,7 +14,9 @@ import {
 } from "@/domain/capture-org";
 import { classifyCapture, resolveCapture } from "@/domain/classify";
 import {
+  assertLocalImageBytes,
   ImageValidationError,
+  isAllowedLocalImageMime,
   textFieldsFromAccompanyingText,
 } from "@/domain/image";
 import { LinkValidationError } from "@/domain/link";
@@ -117,6 +119,18 @@ function revokeImageDraftPreviews(drafts: ImageDraft[]): void {
   }
 }
 
+function imageSelectionError(error: unknown, file: File | null): string {
+  if (file && !isAllowedLocalImageMime(file.type)) {
+    const formats = "Choose PNG, JPEG, GIF, WebP, or AVIF images.";
+    return file.type.startsWith("video/")
+      ? `Videos can't be added here. ${formats}`
+      : `This file type can't be added here. ${formats}`;
+  }
+  return error instanceof ImageValidationError
+    ? error.message
+    : "Couldn't read the selected image. Try again.";
+}
+
 async function applyCaptureOrg(
   itemId: string,
   org: CaptureOrgDrafts,
@@ -156,6 +170,15 @@ async function applyCaptureOrg(
 export function CaptureHost() {
   const [state, dispatch] = useReducer(captureReducer, initialCaptureState);
   const [imageDrafts, setImageDrafts] = useState<ImageDraft[]>([]);
+  const imageDraftsRef = useRef<ImageDraft[]>([]);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const imageUploadErrorRef = useRef<string | null>(null);
+  const imageUploadInFlightRef = useRef(false);
+  const [imageUpload, setImageUpload] = useState<{
+    completed: number;
+    total: number;
+  } | null>(null);
+  const imageReadGenerationRef = useRef(0);
   const [draftTagNames, setDraftTagNames] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [draftCollectionName, setDraftCollectionName] = useState<string | null>(
@@ -185,7 +208,8 @@ export function CaptureHost() {
   const composeLocked =
     state.status === "saving" ||
     state.status === "reading" ||
-    savedItemId !== null;
+    savedItemId !== null ||
+    imageUpload !== null;
   const orgLocked = state.status === "saving" || state.status === "reading";
 
   useEffect(() => {
@@ -272,10 +296,12 @@ export function CaptureHost() {
   }, [state.status]);
 
   useEffect(() => {
-    return () => {
-      revokeImageDraftPreviews(imageDrafts);
-    };
+    imageDraftsRef.current = imageDrafts;
   }, [imageDrafts]);
+
+  useEffect(() => {
+    return () => revokeImageDraftPreviews(imageDraftsRef.current);
+  }, []);
 
   useEffect(() => {
     if (!isActive) {
@@ -339,6 +365,11 @@ export function CaptureHost() {
     setTagInput("");
     setDraftCollectionName(null);
     setCollectionInput("");
+    imageReadGenerationRef.current += 1;
+    imageUploadInFlightRef.current = false;
+    imageUploadErrorRef.current = null;
+    setImageUpload(null);
+    setImageUploadError(null);
     setNoteFormat("plain");
     setPreviewKind(null);
     setLinkNoteDraft("");
@@ -363,25 +394,54 @@ export function CaptureHost() {
     accompanyingText: string,
     status: typeof state.status,
   ) {
-    if (files.length === 0) {
+    if (files.length === 0 || imageUploadInFlightRef.current) {
       return;
     }
 
+    const generation = imageReadGenerationRef.current;
+    let currentFile: File | null = null;
+    imageUploadInFlightRef.current = true;
+    imageUploadErrorRef.current = null;
+    setImageUploadError(null);
+    setImageUpload({ completed: 0, total: files.length });
     try {
+      const prepared: { file: File; bytes: Uint8Array; mimeType: string }[] = [];
+      for (const [index, file] of files.entries()) {
+        currentFile = file;
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        if (generation !== imageReadGenerationRef.current) return;
+        const mimeType = assertLocalImageBytes(bytes, file.type);
+        prepared.push({ file, bytes, mimeType });
+        setImageUpload({ completed: index + 1, total: files.length });
+      }
+
       const drafts: ImageDraft[] = [];
-      for (const file of files) {
-        const buffer = new Uint8Array(await file.arrayBuffer());
-        drafts.push({
-          bytes: buffer,
-          mimeType: file.type || "application/octet-stream",
-          previewUrl: URL.createObjectURL(file),
-        });
+      try {
+        for (const { file, bytes, mimeType } of prepared) {
+          drafts.push({ bytes, mimeType, previewUrl: URL.createObjectURL(file) });
+        }
+      } catch (caught) {
+        revokeImageDraftPreviews(drafts);
+        throw caught;
+      }
+      if (generation !== imageReadGenerationRef.current) {
+        revokeImageDraftPreviews(drafts);
+        return;
       }
       setImageDrafts((previous) => [...previous, ...drafts]);
       dispatchDraftText(accompanyingText, status);
-    } catch {
+    } catch (caught) {
+      if (generation !== imageReadGenerationRef.current) return;
+      const message = imageSelectionError(caught, currentFile);
+      imageUploadErrorRef.current = message;
+      setImageUploadError(message);
       if (status === "reading") {
         dispatch({ type: "clipboardUnavailable" });
+      }
+    } finally {
+      if (generation === imageReadGenerationRef.current) {
+        imageUploadInFlightRef.current = false;
+        setImageUpload(null);
       }
     }
   }
@@ -449,7 +509,11 @@ export function CaptureHost() {
   async function persistCapture(options?: {
     conflictChoice?: CaptureLinkConflictChoice;
   }) {
-    if (saveInFlightRef.current) {
+    if (
+      saveInFlightRef.current ||
+      imageUploadInFlightRef.current ||
+      imageUploadErrorRef.current
+    ) {
       return;
     }
 
@@ -508,41 +572,51 @@ export function CaptureHost() {
       return true;
     }
 
-    if (!savedItemIdRef.current && imageDrafts.length > 0) {
-      const existing = await findImageByAssetPayloads(
-        imageDrafts.map((draft) => ({
-          bytes: draft.bytes,
-          mimeType: draft.mimeType,
-        })),
-      );
-      if (existing) {
-        const ok = await resolveExistingOrgConflict(existing);
-        if (!ok) {
-          return;
-        }
-      }
-    } else if (!savedItemIdRef.current && imageDrafts.length === 0) {
-      const resolved = resolveCapture(state.input, state.override);
-      if (!resolved.ok) {
-        dispatch({ type: "failed", message: resolved.error });
-        return;
-      }
-
-      if (resolved.classification.type === "link") {
-        const existing = await findLinkByNormalizedUrl(
-          resolved.classification.url,
+    try {
+      if (!savedItemIdRef.current && imageDrafts.length > 0) {
+        const existing = await findImageByAssetPayloads(
+          imageDrafts.map((draft) => ({
+            bytes: draft.bytes,
+            mimeType: draft.mimeType,
+          })),
         );
         if (existing) {
-          if (linkNoteDraft.trim() && existing.noteContent?.trim() && existing.noteContent.trim() !== linkNoteDraft.trim()) {
-            dispatch({ type: "failed", message: "This link already has a personal note. Edit that note from the library." });
-            return;
-          }
           const ok = await resolveExistingOrgConflict(existing);
           if (!ok) {
             return;
           }
         }
+      } else if (!savedItemIdRef.current && imageDrafts.length === 0) {
+        const resolved = resolveCapture(state.input, state.override);
+        if (!resolved.ok) {
+          dispatch({ type: "failed", message: resolved.error });
+          return;
+        }
+
+        if (resolved.classification.type === "link") {
+          const existing = await findLinkByNormalizedUrl(
+            resolved.classification.url,
+          );
+          if (existing) {
+            if (linkNoteDraft.trim() && existing.noteContent?.trim() && existing.noteContent.trim() !== linkNoteDraft.trim()) {
+              dispatch({ type: "failed", message: "This link already has a personal note. Edit that note from the library." });
+              return;
+            }
+            const ok = await resolveExistingOrgConflict(existing);
+            if (!ok) {
+              return;
+            }
+          }
+        }
       }
+    } catch (caught) {
+      dispatch({
+        type: "failed",
+        message: caught instanceof ImageValidationError
+          ? caught.message
+          : "Couldn't check for an existing item. Try again.",
+      });
+      return;
     }
 
     if (captureReducer(state, { type: "save" }).status !== "saving") {
@@ -715,6 +789,37 @@ export function CaptureHost() {
               </li>
             ))}
           </ul>
+        ) : null}
+        {imageUploadError ? (
+          <div className="flex items-start justify-between gap-3 rounded-input border border-border-control bg-bg-raised px-3 py-2" role="alert">
+            <div>
+              <p className="text-sm font-medium text-text-danger">{imageUploadError}</p>
+              <p className="mt-1 text-xs text-text-secondary">No images from this selection were added.</p>
+            </div>
+            <button
+              className="ui-control shrink-0 px-2 py-1 text-xs"
+              type="button"
+              onClick={() => {
+                imageUploadErrorRef.current = null;
+                setImageUploadError(null);
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
+        {imageUpload ? (
+          <p
+            className="flex items-center gap-2 text-sm text-text-secondary"
+            role="status"
+            aria-live="polite"
+          >
+            <span
+              className="size-3 animate-spin rounded-full border-2 border-border-control border-t-action-primary"
+              aria-hidden="true"
+            />
+            Adding images… {imageUpload.completed} of {imageUpload.total}
+          </p>
         ) : null}
         <div className="flex flex-col gap-2">
           {kind === "link" && !savingImage ? <span className="text-sm font-medium text-text-secondary">Link URL</span> : null}
@@ -907,7 +1012,9 @@ export function CaptureHost() {
             disabled={
               state.status === "saving" ||
               state.status === "reading" ||
-              state.status === "saved"
+              state.status === "saved" ||
+              imageUpload !== null ||
+              imageUploadError !== null
             }
           >
             {state.status === "saving" ? "Saving…" : "Save"}
