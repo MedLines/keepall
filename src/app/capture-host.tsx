@@ -15,12 +15,16 @@ import {
 import { classifyCapture, resolveCapture } from "@/domain/classify";
 import {
   assertLocalImageBytes,
+  assertLocalImageFile,
   ImageValidationError,
   isAllowedLocalImageMime,
   textFieldsFromAccompanyingText,
 } from "@/domain/image";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
+import { VideoValidationError } from "@/domain/video";
+import { createVideo } from "@/persistence/videos";
+import { prepareLocalVideo } from "./prepare-local-video";
 import { applyItemOrg } from "@/persistence/apply-item-org";
 import {
   clearCollectionOnItem,
@@ -170,6 +174,8 @@ async function applyCaptureOrg(
 export function CaptureHost() {
   const [state, dispatch] = useReducer(captureReducer, initialCaptureState);
   const [imageDrafts, setImageDrafts] = useState<ImageDraft[]>([]);
+  const [videoDraft, setVideoDraft] = useState<{ file: File; poster: Blob | null } | null>(null);
+  const [videoPreparing, setVideoPreparing] = useState(false);
   const imageDraftsRef = useRef<ImageDraft[]>([]);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const imageUploadErrorRef = useRef<string | null>(null);
@@ -195,10 +201,12 @@ export function CaptureHost() {
   );
   const [captureSide, setCaptureSide] = useState<"left" | "right">("right");
   const [noteFormat, setNoteFormat] = useState<"plain" | "markdown">("plain");
-  const [previewKind, setPreviewKind] = useState<"link" | "note" | "image" | null>(null);
+  const [previewKind, setPreviewKind] = useState<"link" | "note" | "image" | "video" | null>(null);
   const [linkNoteDraft, setLinkNoteDraft] = useState("");
+  const [videoNoteDraft, setVideoNoteDraft] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const saveInFlightRef = useRef(false);
   const savedItemIdRef = useRef<string | null>(null);
   const isActive = state.status !== "idle";
@@ -209,7 +217,7 @@ export function CaptureHost() {
     state.status === "saving" ||
     state.status === "reading" ||
     savedItemId !== null ||
-    imageUpload !== null;
+    imageUpload !== null || videoPreparing;
   const orgLocked = state.status === "saving" || state.status === "reading";
 
   useEffect(() => {
@@ -373,7 +381,10 @@ export function CaptureHost() {
     setNoteFormat("plain");
     setPreviewKind(null);
     setLinkNoteDraft("");
+    setVideoNoteDraft("");
     clearImageDrafts();
+    setVideoDraft(null);
+    setVideoPreparing(false);
   }
 
   function dispatchDraftText(
@@ -394,7 +405,7 @@ export function CaptureHost() {
     accompanyingText: string,
     status: typeof state.status,
   ) {
-    if (files.length === 0 || imageUploadInFlightRef.current) {
+    if (files.length === 0 || imageUploadInFlightRef.current || videoDraft) {
       return;
     }
 
@@ -408,6 +419,7 @@ export function CaptureHost() {
       const prepared: { file: File; bytes: Uint8Array; mimeType: string }[] = [];
       for (const [index, file] of files.entries()) {
         currentFile = file;
+        assertLocalImageFile(file);
         const bytes = new Uint8Array(await file.arrayBuffer());
         if (generation !== imageReadGenerationRef.current) return;
         const mimeType = assertLocalImageBytes(bytes, file.type);
@@ -472,8 +484,22 @@ export function CaptureHost() {
     await setDraftFromFiles(Array.from(files), state.input, state.status);
   }
 
+  async function onPickVideo(file: File | undefined) {
+    if (!file || imageDrafts.length > 0 || videoDraft || imageUploadInFlightRef.current) return;
+    setVideoPreparing(true);
+    try {
+      const poster = await prepareLocalVideo(file);
+      setVideoDraft({ file, poster });
+      dispatch({ type: "input", text: "" });
+    } catch (error) {
+      dispatch({ type: "failed", message: error instanceof VideoValidationError ? error.message : "Couldn't add video." });
+    } finally {
+      setVideoPreparing(false);
+    }
+  }
+
   async function pasteImageFromClipboard() {
-    if (composeLocked) {
+    if (composeLocked || videoDraft) {
       return;
     }
     const { image, text } = await readClipboardImageAndText();
@@ -501,6 +527,7 @@ export function CaptureHost() {
         continue;
       }
       event.preventDefault();
+      if (videoDraft) return;
       await setDraftFromBlob(file, state.input, state.status);
       return;
     }
@@ -586,7 +613,7 @@ export function CaptureHost() {
             return;
           }
         }
-      } else if (!savedItemIdRef.current && imageDrafts.length === 0) {
+      } else if (!savedItemIdRef.current && imageDrafts.length === 0 && !videoDraft) {
         const resolved = resolveCapture(state.input, state.override);
         if (!resolved.ok) {
           dispatch({ type: "failed", message: resolved.error });
@@ -631,7 +658,10 @@ export function CaptureHost() {
       let itemId = savedItemIdRef.current;
 
       if (!itemId) {
-        if (imageDrafts.length > 0) {
+        if (videoDraft) {
+          const video = await createVideo(videoDraft.file, videoDraft.poster, state.input, { content: videoNoteDraft, format: noteFormat });
+          itemId = video.id;
+        } else if (imageDrafts.length > 0) {
           const fields = textFieldsFromAccompanyingText(state.input);
           const { image } = await createOrReuseImage({
             assets: imageDrafts.map((draft) => ({
@@ -693,7 +723,7 @@ export function CaptureHost() {
         return;
       }
 
-      if (caught instanceof ImageValidationError) {
+      if (caught instanceof ImageValidationError || caught instanceof VideoValidationError) {
         dispatch({ type: "failed", message: caught.message });
       } else if (
         caught instanceof NoteValidationError ||
@@ -732,7 +762,7 @@ export function CaptureHost() {
       open={isActive}
       side={captureSide}
       title="Save to Keepall"
-      description="Paste a link, write a note, or add images."
+      description="Paste a link, write a note, or add images or video."
       widthClassName="w-[min(30rem,100vw)]"
       closeDisabled={shouldBlockDialogDismiss(state.status)}
       onOpenChange={(open, eventDetails) => {
@@ -762,6 +792,9 @@ export function CaptureHost() {
           className="scroll-fade flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-6 pb-5 pt-3 [scrollbar-gutter:stable]"
           data-testid="capture-scroll-region"
         >
+        {videoDraft ? (
+          <p className="rounded-input border border-border-control bg-bg-raised px-3 py-2 text-sm text-text-primary">Video: {videoDraft.file.name}</p>
+        ) : null}
         {imageDrafts.length > 0 ? (
           <ul
             className={`flex gap-1.5 ${imageDrafts.length === 1 ? "" : "w-full"}`}
@@ -822,20 +855,20 @@ export function CaptureHost() {
           </p>
         ) : null}
         <div className="flex flex-col gap-2">
-          {kind === "link" && !savingImage ? <span className="text-sm font-medium text-text-secondary">Link URL</span> : null}
+          {kind === "link" && !savingImage && !videoDraft ? <span className="text-sm font-medium text-text-secondary">Link URL</span> : null}
           <label className="sr-only" htmlFor="capture-input">
-            {savingImage
+            {videoDraft ? "Video title" : savingImage
               ? "Optional source URL or caption"
               : "Link, note, or image"}
           </label>
           <textarea
             ref={inputRef}
             className={`ui-field w-full rounded-input px-4 py-3 text-sm disabled:opacity-60 ${
-              savingImage ? "min-h-16" : kind === "link" ? "min-h-11" : "min-h-24"
+              videoDraft ? "min-h-11" : savingImage ? "min-h-16" : kind === "link" ? "min-h-11" : "min-h-24"
             }`}
             id="capture-input"
             placeholder={
-              savingImage
+              videoDraft ? "Optional video title" : savingImage
                 ? "Optional source URL or caption"
                 : kind === "link" ? "https://example.com/page" : "Paste a link, note, or image"
             }
@@ -846,7 +879,7 @@ export function CaptureHost() {
             disabled={composeLocked}
           />
         </div>
-        {kind === "note" && !savingImage ? (
+        {kind === "note" && !savingImage && !videoDraft ? (
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CaptureMarkdownToggle checked={noteFormat === "markdown"} disabled={composeLocked} onChange={setCaptureMarkdown} />
@@ -876,7 +909,18 @@ export function CaptureHost() {
             ) : null}
           </div>
         ) : null}
-        {kind === "link" && !savingImage ? (
+        {videoDraft ? (
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-medium text-text-primary" htmlFor="capture-video-note">Notes (optional)</label>
+            <textarea id="capture-video-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm" placeholder="Add a note about this video" value={videoNoteDraft} disabled={composeLocked} onChange={(event) => setVideoNoteDraft(event.target.value)} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CaptureMarkdownToggle checked={noteFormat === "markdown"} disabled={composeLocked} onChange={setCaptureMarkdown} />
+              {noteFormat === "markdown" ? <button type="button" aria-pressed={previewKind === "video"} className="ui-control min-h-9 px-3 text-xs font-medium" disabled={!videoNoteDraft.trim()} onClick={() => setPreviewKind((current) => current === "video" ? null : "video")}>{previewKind === "video" ? "Hide preview" : "Preview"}</button> : null}
+            </div>
+            {noteFormat === "markdown" && previewKind === "video" && videoNoteDraft.trim() ? <section aria-label="Video note preview" className={CAPTURE_PREVIEW_CLASS}><NoteContent content={videoNoteDraft} format="markdown" /></section> : null}
+          </div>
+        ) : null}
+        {kind === "link" && !savingImage && !videoDraft ? (
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               {previewKind === "link" ? (
@@ -909,28 +953,39 @@ export function CaptureHost() {
             accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
             className="sr-only"
             type="file"
+            disabled={Boolean(videoDraft)}
             multiple
             onChange={(event) => {
               void onPickFiles(event.target.files ?? undefined);
               event.target.value = "";
             }}
           />
-          <button
+          {!videoDraft ? <button
             className={IMAGE_ACTION_BTN}
             type="button"
             disabled={composeLocked}
             onClick={() => fileInputRef.current?.click()}
           >
             Add image
-          </button>
-          <button
+          </button> : null}
+          <input ref={videoInputRef} type="file" accept="video/mp4,video/webm" className="sr-only" disabled={savingImage || Boolean(videoDraft)} onChange={(event) => {
+            void onPickVideo(event.target.files?.[0]);
+            event.target.value = "";
+          }} />
+          {!savingImage && !videoDraft ? <button className={IMAGE_ACTION_BTN} type="button" disabled={composeLocked} onClick={() => videoInputRef.current?.click()}>
+            Add video
+          </button> : null}
+          {!videoDraft ? <button
             className={IMAGE_ACTION_BTN}
             type="button"
             disabled={composeLocked}
             onClick={() => void pasteImageFromClipboard()}
           >
             Paste image
-          </button>
+          </button> : null}
+          {videoDraft ? (
+            <button className={IMAGE_ACTION_BTN} type="button" disabled={composeLocked} onClick={() => setVideoDraft(null)}>Remove video</button>
+          ) : null}
           {imageDrafts.length > 0 ? (
             <button
               className={IMAGE_ACTION_BTN}
@@ -941,7 +996,7 @@ export function CaptureHost() {
               Remove images
             </button>
           ) : null}
-          {!savingImage ? (
+          {!savingImage && !videoDraft ? (
             <div className="order-first mr-auto flex gap-1">
               <button
                 className={`${SHELL_TOP_BTN} h-8 px-2.5 text-xs ${
@@ -968,7 +1023,7 @@ export function CaptureHost() {
             </div>
           ) : (
             <p className="ml-auto text-xs text-text-secondary">
-              {imageDrafts.length > 1
+              {videoDraft ? "Saving as video" : imageDrafts.length > 1
                 ? "One item, several photos"
                 : "Saving as image"}
             </p>
@@ -1014,6 +1069,7 @@ export function CaptureHost() {
               state.status === "reading" ||
               state.status === "saved" ||
               imageUpload !== null ||
+              videoPreparing ||
               imageUploadError !== null
             }
           >

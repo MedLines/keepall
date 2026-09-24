@@ -759,11 +759,13 @@ describe("CaptureHost", () => {
     const buttons = within(
       await screen.findByRole("list", { name: "Collections" }),
     ).getAllByRole("button");
-    expect(buttons.map((button) => button.textContent)).toEqual([
-      "Unsorted",
-      "Pinned",
-      "Popular",
-    ]);
+    await waitFor(() => {
+      expect(within(screen.getByRole("list", { name: "Collections" })).getAllByRole("button").map((button) => button.textContent)).toEqual([
+        "Unsorted",
+        "Pinned",
+        "Popular",
+      ]);
+    });
   });
 
   test("browse all can select an organization outside the compact choices", async () => {
