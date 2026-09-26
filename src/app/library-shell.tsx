@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { Menu } from "@base-ui/react/menu";
+import { RowActionMenu } from "./row-action-menu";
 import {
   type DragEvent,
   type ReactNode,
+  type ReactElement,
   useCallback,
     useEffect,
     useLayoutEffect,
@@ -770,23 +772,27 @@ function TagNavRow({
   onDelete: () => void;
 }) {
   return (
-    <div className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${active ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary` : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`}`}>
-      <button
-        type="button"
-        className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 pl-12 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
-        aria-label={`Tag ${tag.name}`}
-        aria-current={active ? "page" : undefined}
-        onClick={onNavigate}
-      >
-        <span className="min-w-0 flex-1 truncate" title={tag.name}>{tag.name}</span>
-        {count !== undefined ? <NavCount value={count} /> : null}
-      </button>
-      <SidebarRowMenu
-        label={tag.name}
-        mutationBusy={mutationBusy}
-        onDelete={onDelete}
-      />
-    </div>
+    <SidebarRowMenu
+      label={tag.name}
+      mutationBusy={mutationBusy}
+      onDelete={onDelete}
+    >
+      {(trigger) => (
+        <div className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${active ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary` : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`}`}>
+          <button
+            type="button"
+            className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 pl-12 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+            aria-label={`Tag ${tag.name}`}
+            aria-current={active ? "page" : undefined}
+            onClick={onNavigate}
+          >
+            <span className="min-w-0 flex-1 truncate" title={tag.name}>{tag.name}</span>
+            {count !== undefined ? <NavCount value={count} /> : null}
+          </button>
+          {trigger}
+        </div>
+      )}
+    </SidebarRowMenu>
   );
 }
 
@@ -877,59 +883,64 @@ function CollectionNavRow({
   }
 
   return (
-    <div
-      className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${
-        active
-          ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary`
-          : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`
-      } ${dropHighlight ? "ring-2 ring-border-focus" : ""}`}
-      draggable={pinned && !mutationBusy}
-      onDragStart={onReorderDragStart}
-      onDragOver={(event) => {
-        if (!onReorderDragOver(event)) onDragOver(event);
-      }}
-      onDragLeave={() => {
-        onReorderDragEnd();
-        onDragLeave();
-      }}
-      onDrop={(event) => {
-        if (!onReorderDrop(event)) onDrop(event);
-      }}
-      onDragEnd={onReorderDragEnd}
+    <SidebarRowMenu
+      label={collection.name}
+      mutationBusy={mutationBusy}
+      pinned={pinned}
+      onTogglePin={onTogglePin}
+      onMoveUp={onMoveUp}
+      onMoveDown={onMoveDown}
+      onRename={onStartRename}
+      onDelete={onDelete}
     >
-      <button
-        type="button"
-        className="squircle-panel flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
-        aria-label={collection.name}
-        aria-current={active ? "page" : undefined}
-        onClick={onNavigate}
-      >
-        <span
-          aria-hidden="true"
-          className="flex h-[18px] w-10 shrink-0 translate-x-[18px] items-center justify-center text-collection-marker"
-          style={collectionMarkerStyle(collection.id)}
-          title={pinned ? "Pinned collection" : undefined}
+      {(trigger) => (
+        <div
+          className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${
+            active
+              ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary`
+              : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`
+          } ${dropHighlight ? "ring-2 ring-border-focus" : ""}`}
+          draggable={pinned && !mutationBusy}
+          onDragStart={onReorderDragStart}
+          onDragOver={(event) => {
+            if (!onReorderDragOver(event)) onDragOver(event);
+          }}
+          onDragLeave={() => {
+            onReorderDragEnd();
+            onDragLeave();
+          }}
+          onDrop={(event) => {
+            if (!onReorderDrop(event)) onDrop(event);
+          }}
+          onDragEnd={onReorderDragEnd}
         >
-          {pinned ? <PinIcon className="size-3" fill="currentColor" /> : <span className="size-2 rounded-full bg-collection-marker" />}
-        </span>
-        <span className="min-w-0 flex-1 truncate" title={collection.name}>{collection.name}</span>
-        {count !== undefined ? <NavCount value={count} /> : null}
-      </button>
-      <SidebarRowMenu
-        label={collection.name}
-        mutationBusy={mutationBusy}
-        pinned={pinned}
-        onTogglePin={onTogglePin}
-        onMoveUp={onMoveUp}
-        onMoveDown={onMoveDown}
-        onRename={onStartRename}
-        onDelete={onDelete}
-      />
-    </div>
+          <button
+            type="button"
+            className="squircle-panel flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+            aria-label={collection.name}
+            aria-current={active ? "page" : undefined}
+            onClick={onNavigate}
+          >
+            <span
+              aria-hidden="true"
+              className="flex h-[18px] w-10 shrink-0 translate-x-[18px] items-center justify-center text-collection-marker"
+              style={collectionMarkerStyle(collection.id)}
+              title={pinned ? "Pinned collection" : undefined}
+            >
+              {pinned ? <PinIcon className="size-3" fill="currentColor" /> : <span className="size-2 rounded-full bg-collection-marker" />}
+            </span>
+            <span className="min-w-0 flex-1 truncate" title={collection.name}>{collection.name}</span>
+            {count !== undefined ? <NavCount value={count} /> : null}
+          </button>
+          {trigger}
+        </div>
+      )}
+    </SidebarRowMenu>
   );
 }
 
 function SidebarRowMenu({
+  children,
   label,
   mutationBusy,
   pinned,
@@ -939,6 +950,7 @@ function SidebarRowMenu({
   onRename,
   onDelete,
 }: {
+  children: (trigger: ReactNode) => ReactElement;
   label: string;
   mutationBusy: boolean;
   pinned?: boolean;
@@ -948,53 +960,59 @@ function SidebarRowMenu({
   onRename?: () => void;
   onDelete: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const openingDialog = useRef(false);
+  function openDialog(action: () => void) {
+    openingDialog.current = true;
+    action();
+  }
   const actionsLabel = `${label} actions`;
 
+  const trigger = (
+    <button
+      type="button"
+      className="absolute right-0 flex size-7 shrink-0 items-center justify-center rounded-[6px] text-text-secondary hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[popup-open]:bg-bg-raised data-[popup-open]:opacity-100 disabled:cursor-default"
+      aria-label={actionsLabel}
+      disabled={mutationBusy}
+    >
+      <MoreIcon />
+    </button>
+  );
+
   return (
-    <Menu.Root open={open} onOpenChange={setOpen} modal={false}>
-      <Menu.Trigger
-        className={`absolute right-0 flex size-7 shrink-0 items-center justify-center rounded-[6px] text-text-secondary hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 ${
-          open
-            ? "bg-bg-raised opacity-100"
-            : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-        }`}
-        data-menu-open={open || undefined}
-        aria-label={actionsLabel}
-        disabled={mutationBusy}
-      >
-        <MoreIcon />
-      </Menu.Trigger>
-      <Menu.Portal>
-        <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
-          <Menu.Popup aria-label={actionsLabel} className="ui-popover flex max-h-[var(--available-height)] min-w-[8.5rem] flex-col gap-1 overflow-y-auto outline-none">
-            {onTogglePin ? (
-              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onTogglePin}>
-                {pinned ? "Unpin" : "Pin to top"}
-              </Menu.Item>
-            ) : null}
-            {pinned && onMoveUp ? (
-              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onMoveUp}>
-                Move up
-              </Menu.Item>
-            ) : null}
-            {pinned && onMoveDown ? (
-              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onMoveDown}>
-                Move down
-              </Menu.Item>
-            ) : null}
-            {onRename ? (
-              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onRename}>
-                Rename
-              </Menu.Item>
-            ) : null}
-            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-danger hover:bg-bg-danger data-[highlighted]:bg-bg-danger" onClick={onDelete}>
-              Delete
+    <RowActionMenu trigger={trigger} label={actionsLabel} disabled={mutationBusy} triggerRef={triggerRef}
+      onOpen={() => { openingDialog.current = false; }}
+      finalFocus={() => openingDialog.current ? false : triggerRef.current}
+      menu={
+        <>
+          {onTogglePin ? (
+            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onTogglePin}>
+              {pinned ? "Unpin" : "Pin to top"}
             </Menu.Item>
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
+          ) : null}
+          {pinned && onMoveUp ? (
+            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onMoveUp}>
+              Move up
+            </Menu.Item>
+          ) : null}
+          {pinned && onMoveDown ? (
+            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onMoveDown}>
+              Move down
+            </Menu.Item>
+          ) : null}
+          {onRename ? (
+            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => openDialog(onRename)}>
+              Rename
+            </Menu.Item>
+          ) : null}
+          <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-danger hover:bg-bg-danger data-[highlighted]:bg-bg-danger" onClick={() => openDialog(onDelete)}>
+            Delete
+          </Menu.Item>
+        </>
+      }
+    >
+      {children}
+    </RowActionMenu>
   );
 }
 

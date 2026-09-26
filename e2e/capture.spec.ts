@@ -338,8 +338,8 @@ test("deleting a note after confirm survives a reload", async ({ page }) => {
 
   const removable = page.locator(".library-card").filter({ hasText: "Remove this note." });
   await removable.hover();
-  await removable.locator("summary").click();
-  await removable.getByRole("button", { name: "Delete" }).click();
+  await removable.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
   await page.getByRole("button", { name: "Confirm delete" }).click();
 
   await expect(
@@ -366,8 +366,8 @@ test("editing a note survives a reload", async ({ page }) => {
 
   const editableNote = page.locator(".library-card").filter({ hasText: "Original note body." });
   await editableNote.hover();
-  await editableNote.locator("summary").click();
-  await editableNote.getByRole("button", { name: "Edit" }).click();
+  await editableNote.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
   await page.getByLabel("Note content").fill("Edited note body.");
   await page.getByRole("button", { name: "Save note" }).click();
 
@@ -396,8 +396,8 @@ test("editing a link URL survives a reload", async ({ page }) => {
 
   const editableLink = page.locator(".library-card").filter({ hasText: "example.com" });
   await editableLink.hover();
-  await editableLink.locator("summary").click();
-  await editableLink.getByRole("button", { name: "Edit" }).click();
+  await editableLink.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
   await page.getByLabel("URL").fill("https://example.com/new");
   await page.getByRole("button", { name: "Save link" }).click();
 

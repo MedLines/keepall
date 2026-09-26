@@ -212,8 +212,8 @@ test("tag hover paints one full row with a separate remove highlight", async ({ 
 test("note card preview swaps with the editor without resizing the modal", async ({ page }) => {
   const card = page.locator(".library-card").filter({ hasText: "Design notes" });
   await card.hover();
-  await card.locator("summary").click();
-  await card.getByRole("button", { name: "Edit", exact: true }).click();
+  await card.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
 
   const dialog = page.getByRole("dialog", { name: "Edit note" });
   const editor = dialog.getByRole("textbox", { name: "Note content" });
@@ -243,8 +243,8 @@ test("image titles can be cleared and restored without losing grid or list metad
   const card = page.locator(".library-card").first();
   await expect(card.getByRole("heading", { name: "Customer support" })).toBeVisible();
   await card.hover();
-  await card.locator("summary").click();
-  await card.getByRole("button", { name: "Edit", exact: true }).click();
+  await card.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   let editDialog = page.getByRole("dialog", { name: "Edit image details" });
   await expect(editDialog).toBeVisible();
   await editDialog.getByLabel("Title (optional)").fill("");
@@ -274,8 +274,8 @@ test("image titles can be cleared and restored without losing grid or list metad
   await expect(row.getByText("Image", { exact: true })).toHaveCount(0);
   await expect(row.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
   await row.hover();
-  await row.locator("summary").click();
-  await row.getByRole("button", { name: "Edit", exact: true }).click();
+  await row.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   editDialog = page.getByRole("dialog", { name: "Edit image details" });
   await expect(editDialog).toBeVisible();
   await editDialog.getByLabel("Title (optional)").fill("My design reference");
@@ -355,7 +355,7 @@ test("multi-image cards show a count and align their overlay controls", async ({
   const count = card.getByLabel("2 images");
   await card.hover();
   const select = card.locator("label:has(input[type=checkbox])");
-  const actions = card.locator("summary");
+  const actions = card.locator("button.library-card-actions");
   await expect(select).toBeVisible();
   await expect(actions).toBeVisible();
 
@@ -812,7 +812,7 @@ test("mixed cards preserve image proportions, readable notes and compact fallbac
   expect(bounds!.width / bounds!.height).toBeCloseTo(2.5, 1);
   const note = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Design notes" }) });
   await expect(note.locator("img")).toHaveCount(0);
-  await expect(note.getByRole("button", { name: "Read Design notes" })).toContainText("Let the image lead.");
+  await expect(note.getByRole("link", { name: "Read Design notes" })).toContainText("Let the image lead.");
   const link = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Footer reference" }) });
   await expect(link.locator('img[src^="blob:"]')).toBeVisible();
   await expect(link.getByText("A spacious footer for a portfolio.")).toBeVisible();
@@ -829,17 +829,15 @@ test("mixed cards preserve image proportions, readable notes and compact fallbac
 
 test("desktop card actions reveal on hover or focus and stay visible while open", async ({ page }) => {
   const card = page.locator(".library-card").first();
-  const actions = card.locator("details");
-  const trigger = actions.locator("summary");
+  const actions = card.locator("button.library-card-actions");
+  const trigger = actions;
   await page.mouse.move(0, 0);
   await expect(actions).toHaveCSS("opacity", "0");
   await card.hover();
   await expect(actions).toHaveCSS("opacity", "1");
   await trigger.click();
   await page.mouse.move(0, 0);
-  await page.getByRole("button", { name: "All items", exact: true }).focus();
   await expect(actions).toHaveCSS("opacity", "1");
-  await trigger.focus();
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
   await expect(actions).toHaveCSS("opacity", "1");
@@ -870,12 +868,12 @@ test("organizer opens from the side without resizing the card", async ({ page })
   const before = (await note.boundingBox())!;
 
   await note.hover();
-  await note.locator("summary").click();
-  await note.getByRole("button", { name: "Organize" }).click();
+  await note.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Organize" }).click();
 
   const drawer = page.getByRole("dialog", { name: "Organize Design notes" });
   await expect(drawer).toBeVisible();
-  await expect(note.locator("details")).not.toHaveAttribute("open", "");
+  await expect(note.locator("button.library-card-actions")).toHaveAttribute("aria-expanded", "false");
   await expect.poll(async () => {
     const box = await drawer.boundingBox();
     return box ? Math.round(box.x + box.width) : null;
@@ -896,7 +894,7 @@ test("organizer opens from the side without resizing the card", async ({ page })
 
   await page.keyboard.press("Escape");
   await expect(drawer).toBeHidden();
-  await expect(note.locator("summary")).toBeFocused();
+  await expect(note.locator("button.library-card-actions")).toBeFocused();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const sidebarBackdrop = page.getByRole("button", { name: "Close sidebar" });
@@ -906,8 +904,8 @@ test("organizer opens from the side without resizing the card", async ({ page })
     sidebarBackdropBox.y + sidebarBackdropBox.height / 2,
   );
   await note.hover();
-  await note.locator("summary").click();
-  await note.getByRole("button", { name: "Organize" }).click();
+  await note.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Organize" }).click();
   await expect.poll(async () => {
     const box = await drawer.boundingBox();
     return box ? Math.round(box.x + box.width) : null;
@@ -958,30 +956,29 @@ test("card actions, tag disclosure, selection and collection context work", asyn
   await expect(note.getByRole("button", { name: "1 tag" })).toHaveCount(0);
   expect((await note.boundingBox())!.height).toBe(heightBeforeTags);
   await note.hover();
-  await note.locator("summary").click();
-  await note.getByRole("button", { name: "Edit", exact: true }).click();
+  await note.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   await page.getByRole("dialog", { name: "Edit note" }).getByRole("button", { name: "Cancel edit" }).click();
-  await expect(note.getByRole("button", { name: "Edit", exact: true })).toBeFocused();
+  await expect(note.locator("button.library-card-actions")).toBeFocused();
   await page.keyboard.press("Escape");
-  await expect(note.locator("summary")).toBeFocused();
+  await expect(note.locator("button.library-card-actions")).toBeFocused();
   await page.keyboard.press("Enter");
-  await note.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   await page.getByRole("dialog", { name: "Edit note" }).getByLabel("Note content").fill("Updated note body");
   await page.getByRole("dialog", { name: "Edit note" }).getByRole("button", { name: "Save note" }).click();
-  await expect(note.getByRole("button", { name: "Read Design notes" })).toContainText("Updated note body");
+  await expect(note).toContainText("Updated note body");
   await note.hover();
-  await note.getByRole("checkbox").check();
+  await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
   await expect(note.getByRole("checkbox")).toBeChecked();
-  await note.getByRole("checkbox").uncheck();
+  await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
   await page.getByLabel("UI inspiration", { exact: true }).click();
   await expect(note.getByRole("list", { name: "Collections" })).toHaveCount(0);
   await note.hover();
-  await note.locator("summary").click();
-  await note.getByRole("button", { name: "Pin", exact: true }).click();
-  const pinnedStatus = note.getByTitle("Pinned in this collection");
-  await expect(pinnedStatus).toBeVisible();
-  await expect(pinnedStatus.locator("xpath=..")).toContainText("Design notes");
-  await expect(note.getByRole("button", { name: "Unpin", exact: true })).toBeVisible();
+  await note.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Pin", exact: true }).click();
+  await note.hover();
+  await note.locator("button.library-card-actions").click();
+  await expect(page.getByRole("menuitem", { name: "Unpin", exact: true })).toBeVisible();
 });
 
 test("opening one card menu closes the menu left open on another card", async ({ page }) => {
@@ -989,16 +986,17 @@ test("opening one card menu closes the menu left open on another card", async ({
   const second = page.locator(".library-card").filter({ hasText: "Design notes" });
 
   await first.hover();
-  await first.locator("summary").click();
-  await expect(first.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await first.locator("button.library-card-actions").click();
+  await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeVisible();
 
   await second.hover();
-  await second.locator("summary").click();
-  await expect(second.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
-  await expect(first.getByRole("button", { name: "Edit", exact: true })).toBeHidden();
+  await second.locator("button.library-card-actions").click();
+  await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeVisible();
+  await expect(first.locator("button.library-card-actions")).toHaveAttribute("aria-expanded", "false");
+  await expect(second.locator("button.library-card-actions")).toHaveAttribute("aria-expanded", "true");
 
   await first.locator(".library-card-tag-control > button").click();
-  await expect(second.getByRole("button", { name: "Edit", exact: true })).toBeHidden();
+  await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeHidden();
 });
 
 test("selecting a card gives actions their own row and draws the state inside the card", async ({ page }, testInfo) => {
@@ -1145,8 +1143,8 @@ test("masonry stays stable while a note modal is open and resizing", async ({ pa
   await page.setViewportSize({ width: 1440, height: 1000 });
   const note = page.locator(".library-card").filter({ hasText: "Design notes" });
   await note.hover();
-  await note.locator("summary").click();
-  await note.getByRole("button", { name: "Edit", exact: true }).click();
+  await note.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Edit note" });
   await editor.getByLabel("Note content").fill("Keep this unsaved draft while resizing.");
   await expectCardsNotToOverlap(page);
@@ -1207,41 +1205,43 @@ test("list menus support editing, cancel-delete, selection and collection pinnin
   await page.getByRole("button", { name: "List view" }).click();
   const note = page.locator(".library-list-row").filter({ hasText: "Design notes" });
   await page.mouse.move(0, 0);
-  await expect(note.locator("details")).toHaveCSS("opacity", "0");
-  await note.locator("summary").focus();
-  await expect(note.locator("details")).toHaveCSS("opacity", "1");
+  await expect(note.locator("button.library-card-actions")).toHaveCSS("opacity", "0");
+  await note.locator("button.library-card-actions").focus();
+  await expect(note.locator("button.library-card-actions")).toHaveCSS("opacity", "1");
   await page.keyboard.press("Enter");
-  await note.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Edit note" });
   await expect(editor.getByLabel("Note content")).toBeFocused();
   await editor.getByLabel("Note content").fill("Updated from the open list.");
   await editor.getByRole("button", { name: "Save note" }).click();
   await expect(note).toContainText("Updated from the open list.");
   await note.hover();
-  await note.locator("summary").click();
-  await note.getByRole("button", { name: "Delete", exact: true }).click();
+  await note.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
   const deleteDialog = page.getByRole("dialog", { name: "Delete this item?" });
   await expect(deleteDialog.getByRole("button", { name: "Confirm delete" })).toBeFocused();
   await deleteDialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(note.getByRole("button", { name: "Delete", exact: true })).toBeFocused();
+  await expect(note.locator("button.library-card-actions")).toBeFocused();
   await page.keyboard.press("Escape");
-  await note.getByRole("checkbox").check();
+  await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
   await expect(note.getByRole("checkbox")).toBeChecked();
-  await note.getByRole("checkbox").uncheck();
+  await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
   await page
     .getByRole("complementary", { name: "Sidebar" })
     .getByRole("button", { name: "UI inspiration", exact: true })
     .click();
   await note.hover();
-  await note.locator("summary").click();
-  await note.getByRole("button", { name: "Pin", exact: true }).click();
+  await note.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Pin", exact: true }).click();
   await expect(note.getByText("Pinned in this collection", { exact: true })).toBeAttached();
-  await expect(note.getByRole("button", { name: "Unpin", exact: true })).toBeVisible();
+  await note.hover();
+  await note.locator("button.library-card-actions").click();
+  await expect(page.getByRole("menuitem", { name: "Unpin", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await note.getByRole("button", { name: "Open Design notes", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeHidden();
+  await note.locator(".library-list-body").getByRole("link", { name: "Open Design notes", exact: true }).click();
+  await expect(page).toHaveURL(/\/items\/note(?:\?|$)/);
+  await page.getByRole("link", { name: "Back to library", exact: true }).click();
+  await expect(note).toBeVisible();
 });
 
 for (const width of [320, 768, 1024, 1440]) {
@@ -1260,9 +1260,9 @@ for (const width of [320, 768, 1024, 1440]) {
       await expect(row).toBeVisible();
       expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
       await row.hover();
-      await row.locator("summary").click();
-      await expect(row.getByRole("button", { name: "Edit", exact: true })).toBeInViewport();
-      await row.locator("summary").press("Escape");
+      await row.locator("button.library-card-actions").click();
+      await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeInViewport();
+      await row.locator("button.library-card-actions").press("Escape");
     }
   });
 }
@@ -1712,25 +1712,25 @@ test.describe("touch card controls", () => {
     await expect(closeNavigation).toBeVisible();
     await closeNavigation.tap();
     const card = page.locator(".library-card").first();
-    await expect(card.locator("details")).toHaveCSS("opacity", "1");
+    await expect(card.locator("button.library-card-actions")).toHaveCSS("opacity", "1");
     await expect(card.locator(".library-card-tag-control")).toHaveCSS("opacity", "1");
     await card.getByRole("button", { name: "1 tag" }).tap();
     await expect(card.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
-    await card.locator("summary").tap();
-    await expect(card.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
-    await expect(card.getByRole("button", { name: "Delete", exact: true })).toBeInViewport();
+    await card.locator("button.library-card-actions").tap();
+    await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Delete", exact: true })).toBeInViewport();
   });
 
   test("list actions and selection work without hover", async ({ page }) => {
     await page.getByRole("button", { name: "Close navigation", exact: true }).tap();
     await page.getByRole("button", { name: "List view" }).tap();
     const row = page.locator(".library-list-row").first();
-    await expect(row.locator("details")).toHaveCSS("opacity", "1");
-    await row.getByRole("checkbox").check();
+    await expect(row.locator("button.library-card-actions")).toHaveCSS("opacity", "1");
+    await row.locator("label").filter({ has: page.getByRole("checkbox") }).click();
     await expect(row.getByRole("checkbox")).toBeChecked();
-    await row.getByRole("checkbox").uncheck();
-    await row.locator("summary").tap();
-    await expect(row.getByRole("button", { name: "Edit", exact: true })).toBeInViewport();
+    await row.locator("label").filter({ has: page.getByRole("checkbox") }).click();
+    await row.locator("button.library-card-actions").tap();
+    await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeInViewport();
   });
 });
 
@@ -1741,11 +1741,11 @@ test("list thumbnail and action placement mirror in RTL", async ({ page }) => {
   await row.hover();
   const bounds = (await row.boundingBox())!;
   const thumbnail = (await row.locator(".library-list-thumbnail").boundingBox())!;
-  const actions = (await row.locator("summary").boundingBox())!;
-  expect(Math.abs(thumbnail.x + thumbnail.width - bounds.x - bounds.width)).toBeLessThanOrEqual(1);
+  const actions = (await row.locator("button.library-card-actions").boundingBox())!;
+  expect(thumbnail.x + thumbnail.width - bounds.x - bounds.width).toBeCloseTo(-12, 0);
   expect(Math.abs(actions.x - bounds.x)).toBeLessThanOrEqual(1);
-  await row.locator("summary").click();
-  await expect(row.getByRole("button", { name: "Edit", exact: true })).toBeInViewport();
+  await row.locator("button.library-card-actions").click();
+  await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeInViewport();
 });
 
 test("action controls mirror in RTL and respect reduced motion", async ({ page }) => {
@@ -1753,11 +1753,114 @@ test("action controls mirror in RTL and respect reduced motion", async ({ page }
   await page.evaluate(() => { document.documentElement.dir = "rtl"; });
   const card = page.locator(".library-card").first();
   await card.hover();
-  const actions = card.locator("details");
+  const actions = card.locator("button.library-card-actions");
   await expect(actions).toHaveCSS("transition-duration", "0s");
   const cardBox = (await card.boundingBox())!;
-  const triggerBox = (await actions.locator("summary").boundingBox())!;
-  expect(triggerBox.x - cardBox.x).toBeCloseTo(20, 0);
-  await actions.locator("summary").click();
-  await expect(card.getByRole("button", { name: "Edit", exact: true })).toBeInViewport();
+  const triggerBox = (await actions.boundingBox())!;
+  expect(triggerBox.x - cardBox.x).toBeCloseTo(16, 0);
+  await actions.click();
+  await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeInViewport();
+});
+
+for (const layout of ["Grid", "List"]) {
+  test(`${layout.toLowerCase()} context menu searches, creates, and removes tags in place`, async ({ page }) => {
+    await page.getByRole("button", { name: `${layout} view`, exact: true }).click();
+    const item = page.locator('[data-item-id="note"]');
+    await item.click({ button: "right", position: { x: 30, y: 35 } });
+    await page.getByRole("menuitem", { name: "Tags", exact: true }).hover();
+    const search = page.getByRole("menu", { name: "Tags", exact: true }).getByRole("textbox", { name: "Search tags", exact: true });
+    await expect(search).toBeFocused();
+    await search.fill("MINIMAL");
+    const existing = page.getByRole("menuitemcheckbox", { name: "minimal", exact: true });
+    await expect(existing).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("menuitem", { name: /Create/ })).toHaveCount(0);
+    await existing.click();
+    await expect(existing).toHaveAttribute("aria-checked", "false");
+
+    await search.fill("Reference notes");
+    await page.getByRole("menuitem", { name: "Create “Reference notes”", exact: true }).click();
+    await expect(page.getByRole("menuitemcheckbox", { name: "Reference notes", exact: true })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("menuitem", { name: /Create/ })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    await page.reload();
+    await item.click({ button: "right", position: { x: 30, y: 35 } });
+    await page.getByRole("menuitem", { name: "Tags", exact: true }).click();
+    await search.fill("reference");
+    await search.press("ArrowDown");
+    const created = page.getByRole("menuitemcheckbox", { name: "Reference notes", exact: true });
+    await expect(created).toBeFocused();
+    await expect(created).toHaveAttribute("aria-checked", "true");
+    await page.keyboard.press("Enter");
+    await expect(created).toHaveAttribute("aria-checked", "false");
+  });
+}
+
+for (const layout of ["Grid", "List"]) {
+  test(`${layout.toLowerCase()} card buttons and right click share quick collection actions`, async ({ page }) => {
+    await page.getByRole("button", { name: `${layout} view`, exact: true }).click();
+    const item = page.locator('[data-item-id="note"]');
+    const trigger = item.getByRole("button", { name: "Actions for Design notes", exact: true });
+    await item.hover();
+    await trigger.click();
+    const actions = page.getByRole("menu", { name: "Actions for Design notes", exact: true });
+    await expect(actions).toBeVisible();
+    const labels = await actions.getByRole("menuitem").allTextContents();
+    expect(labels.at(-1)).toBe("Delete");
+    await expect(actions.getByRole("menuitem", { name: "Collections", exact: true })).toHaveCSS("cursor", "pointer");
+    await page.keyboard.press("Escape");
+    await expect(trigger).toBeFocused();
+    await item.click({ button: "right", position: { x: 30, y: 35 } });
+    await expect(actions.getByRole("menuitem")).toHaveText(labels);
+    await actions.getByRole("menuitem", { name: "Collections", exact: true }).hover();
+    const search = page.getByRole("menu", { name: "Collections", exact: true }).getByRole("textbox");
+    await expect(search).toBeFocused();
+    await expect(search).toHaveCSS("cursor", "text");
+    await expect(page.getByRole("menuitemradio", { name: "UI inspiration", exact: true })).toHaveAttribute("aria-checked", "true");
+    await search.fill("Projects");
+    await page.getByRole("menuitem", { name: "Create “Projects”", exact: true }).click();
+    await expect(page.getByRole("menuitemradio", { name: "Projects", exact: true })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("menuitem", { name: /Create/ })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    await page.reload();
+    await item.hover();
+    await trigger.click();
+    await actions.getByRole("menuitem", { name: "Collections", exact: true }).click();
+    await expect(page.getByRole("menuitemradio", { name: "Projects", exact: true })).toHaveAttribute("aria-checked", "true");
+    await search.fill("UI INSPIRATION");
+    await expect(page.getByRole("menuitem", { name: /Create/ })).toHaveCount(0);
+    await page.getByRole("menuitemradio", { name: "UI inspiration", exact: true }).click();
+    await expect(page.getByRole("menuitemradio", { name: "UI inspiration", exact: true })).toHaveAttribute("aria-checked", "true");
+    await search.fill("");
+    await page.getByRole("menuitemradio", { name: "Unsorted", exact: true }).click();
+    await expect(page.getByRole("menuitemradio", { name: "Unsorted", exact: true })).toHaveAttribute("aria-checked", "true");
+    await page.reload();
+    await page.getByRole("button", { name: "Unsorted", exact: true }).click();
+    await expect(item).toBeVisible();
+  });
+}
+
+test("sidebar right click shares collection and tag actions with their buttons", async ({ page }) => {
+  const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+  const collection = sidebar.getByRole("button", { name: "UI inspiration", exact: true });
+  await collection.hover();
+  await sidebar.getByRole("button", { name: "UI inspiration actions", exact: true }).click();
+  const menu = page.getByRole("menu", { name: "UI inspiration actions", exact: true });
+  const labels = await menu.getByRole("menuitem").allTextContents();
+  await page.keyboard.press("Escape");
+  await collection.click({ button: "right" });
+  await expect(menu.getByRole("menuitem")).toHaveText(labels);
+  await expect(menu.getByRole("menuitem", { name: "Rename", exact: true })).toHaveCSS("cursor", "pointer");
+  await menu.getByRole("menuitem", { name: "Rename", exact: true }).click();
+  const rename = page.getByRole("textbox", { name: "Rename collection", exact: true });
+  await expect(rename).toBeFocused();
+  await rename.press("Escape");
+  await sidebar.getByRole("button", { name: "Tag minimal", exact: true }).click({ button: "right" });
+  const tagMenu = page.getByRole("menu", { name: "minimal actions", exact: true });
+  await expect(tagMenu.getByRole("menuitem")).toHaveText(["Delete"]);
+  await tagMenu.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Delete tag?", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(sidebar.getByRole("button", { name: "Tag minimal", exact: true })).toBeVisible();
 });

@@ -17,11 +17,12 @@ import {
 import { LibraryItemMedia } from "./library-item-media";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
-import { DeleteIcon, EditIcon, ImagesIcon, LayersIcon, MoreIcon, PinIcon, PlayIcon, SelectionCheckedIcon, SelectionEmptyIcon } from "./shell-icons";
+import { ImagesIcon, MoreIcon, PlayIcon, SelectionCheckedIcon, SelectionEmptyIcon } from "./shell-icons";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
 import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
+import { ItemContextMenu } from "./item-context-menu";
 import {
   ImageItemEditDialog,
   LinkItemEditDialog,
@@ -77,6 +78,7 @@ export type LibraryItemProps = {
   onCancelEdit: () => void;
   onAddTag: (name: string) => void;
   onAddCollection: (name: string) => void;
+  onClearCollection: () => void;
   onBrowseCollection: (collectionId: string) => void;
   onBrowseTag: (tagId: string) => void;
   onRemoveTag: (tagId: string) => void;
@@ -96,16 +98,6 @@ export type LibraryItemProps = {
   onTogglePin: () => void;
   layoutMode: LibraryLayout;
 };
-
-const ACTION_BTN =
-  "ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary disabled:opacity-60";
-
-function closeCardActionMenusOutside(target: EventTarget | null) {
-  if (!(target instanceof Node)) return;
-  document.querySelectorAll<HTMLDetailsElement>("details.library-card-actions[open]").forEach((menu) => {
-    if (!menu.contains(target)) menu.open = false;
-  });
-}
 
 export function LibraryItem({
   placement,
@@ -129,6 +121,7 @@ export function LibraryItem({
   onCancelEdit,
   onAddTag,
   onAddCollection,
+  onClearCollection,
   onBrowseCollection,
   onBrowseTag,
   onRemoveTag,
@@ -151,7 +144,7 @@ export function LibraryItem({
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
   const [imageRatio, setImageRatio] = useState(1.6);
-  const actionsRef = useRef<HTMLDetailsElement>(null);
+  const actionsRef = useRef<HTMLButtonElement>(null);
   const reduceMotion = useReducedMotion();
 
   const checkboxVisible = selected || selectionActive;
@@ -274,92 +267,15 @@ export function LibraryItem({
   );
 
   const cardActions = !inspected && !editing && !pendingDelete ? (
-    <details
+    <button type="button"
       ref={actionsRef}
-      name="library-card-actions"
-      className={`library-card-actions absolute z-30 ${isList ? "end-0 top-5" : "end-4 top-4"}`}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && actionsRef.current) {
-          event.preventDefault();
-          actionsRef.current.open = false;
-          actionsRef.current.querySelector("summary")?.focus();
-        }
-      }}
+      aria-label={`Actions for ${title}`}
+      data-item-actions={item.id}
+      disabled={mutationBusy}
+      className={`library-card-actions absolute z-30 flex cursor-pointer items-center justify-center text-text-secondary hover:text-text-primary disabled:cursor-default ${isList ? "end-0 top-5 size-10 rounded-control hover:bg-bg-raised" : "library-card-media-chrome end-4 top-4 size-11"}`}
     >
-      <summary
-        aria-label={`Actions for ${title}`}
-        className={`relative flex cursor-pointer list-none items-center justify-center text-text-secondary hover:text-text-primary [&::-webkit-details-marker]:hidden ${isList ? "size-10 rounded-control hover:bg-bg-raised" : "library-card-media-chrome size-11"}`}
-      >
-        <MoreIcon />
-      </summary>
-          <div
-            className="ui-popover absolute end-0 mt-2 flex w-56 max-w-[calc(100vw-5rem)] flex-col gap-2"
-          >
-            <div className="flex flex-col">
-              {pinVisible ? (
-                <button
-                  type="button"
-                  className={ACTION_BTN}
-                  aria-label={pinned ? "Unpin" : "Pin"}
-                  disabled={mutationBusy}
-                  onClick={onTogglePin}
-                >
-                  <PinIcon />
-                  {pendingMutation?.op === "pin-item" &&
-                  pendingMutation.itemId === item.id
-                    ? "…"
-                    : pendingMutation?.op === "unpin-item" &&
-                        pendingMutation.itemId === item.id
-                      ? "…"
-                      : pinned
-                        ? "Unpin"
-                        : "Pin"}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className={ACTION_BTN}
-                data-focus-return={`edit:${item.id}`}
-                disabled={mutationBusy}
-                onClick={() => {
-                  if (actionsRef.current) actionsRef.current.open = false;
-                  onStartEdit();
-                }}
-              >
-                <EditIcon /> Edit
-              </button>
-              <button
-                type="button"
-                className={ACTION_BTN}
-                aria-label="Organize"
-                disabled={mutationBusy}
-                onClick={() => {
-                  setOrganizerSide(
-                    document.documentElement.dir === "rtl" ? "left" : "right",
-                  );
-                  if (actionsRef.current) actionsRef.current.open = false;
-                  setOrganizerOpen(true);
-                }}
-              >
-                <LayersIcon /> Organize
-              </button>
-              <hr className="my-1 border-border-edge" />
-              <button
-                type="button"
-                className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60"
-                aria-label="Delete"
-                data-focus-return={`delete:${item.id}`}
-                disabled={mutationBusy}
-                onClick={() => {
-                  if (actionsRef.current) actionsRef.current.open = false;
-                  onStartDelete();
-                }}
-              >
-                <DeleteIcon /> Delete
-              </button>
-            </div>
-          </div>
-    </details>
+      <MoreIcon />
+    </button>
   ) : null;
 
   const assignedCollections = item.collectionIds
@@ -367,15 +283,38 @@ export function LibraryItem({
     .filter((entry): entry is OrgNameSuggestion => Boolean(entry));
 
   return (
-    <li
+    <ItemContextMenu
+      title={title}
+      trigger={cardActions}
+      tags={tagSuggestions}
+      assignedTagIds={item.tagIds}
+      collections={collectionSuggestions}
+      assignedCollectionIds={item.collectionIds}
+      collectionError={collectionError}
+      onMoveToCollection={onAddCollection}
+      onClearCollection={onClearCollection}
+      triggerRef={actionsRef}
+      busy={mutationBusy}
+      disabled={inspected || editing || pendingDelete}
+      tagError={tagError}
+      onAddTag={onAddTag}
+      onRemoveTag={onRemoveTag}
+      onEdit={onStartEdit}
+      onDelete={onStartDelete}
+      onTogglePin={pinVisible ? onTogglePin : undefined}
+      pinned={pinned}
+      onOrganize={() => {
+        setOrganizerSide(document.documentElement.dir === "rtl" ? "left" : "right");
+        setOrganizerOpen(true);
+      }}
+    >
+    {(trigger) => <li
       ref={setRowRef}
       style={placement?.style}
       data-index={placement?.index}
       data-item-id={item.id}
       draggable={dragEnabled}
-      className={`library-item-root min-w-0 focus-within:z-10 has-[details[open]]:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
-      onPointerDownCapture={(event) => closeCardActionMenusOutside(event.target)}
-      onFocusCapture={(event) => closeCardActionMenusOutside(event.target)}
+      className={`library-item-root min-w-0 focus-within:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
     >
@@ -385,7 +324,7 @@ export function LibraryItem({
           setOrganizerOpen(open);
           if (!open) {
             window.requestAnimationFrame(() => {
-              actionsRef.current?.querySelector("summary")?.focus();
+              actionsRef.current?.focus();
             });
           }
         }}
@@ -463,7 +402,7 @@ export function LibraryItem({
             : "library-card squircle-panel group relative flex flex-col rounded-card p-card-inset"
         }
       >
-      {cardActions}
+      {trigger}
       <label
         data-visible={checkboxVisible}
         className={
@@ -571,6 +510,7 @@ export function LibraryItem({
         ) : null}
       </motion.div>
       </div>
-    </li>
+    </li>}
+    </ItemContextMenu>
   );
 }

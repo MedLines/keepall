@@ -28,8 +28,8 @@ test("captures, plays, and backs up a local video", async ({ page }) => {
   await expect(page.getByTestId("video-play-overlay")).toBeVisible();
   const card = page.locator(".library-card").filter({ hasText: "Local test video" });
   await card.hover();
-  await card.locator("summary").click();
-  await card.getByRole("button", { name: "Edit", exact: true }).click();
+  await card.locator("button.library-card-actions").click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   const cardEditor = page.getByRole("dialog", { name: "Edit video details" });
   await expect(cardEditor).toBeVisible();
   expect(new URL(page.url()).pathname).toBe("/");

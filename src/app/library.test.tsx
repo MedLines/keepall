@@ -108,6 +108,16 @@ const link = buildLink(
   { id: "l1", now: 1 },
 );
 
+async function clickItemAction(name: string, item?: HTMLElement) {
+  if (!screen.queryByRole("menuitem", { name })) {
+    const trigger = item
+      ? within(item).getByRole("button", { name: /^Actions for / })
+      : (await screen.findAllByRole("button", { name: /^Actions for / }))[0];
+    fireEvent.click(trigger);
+  }
+  fireEvent.click(await screen.findByRole("menuitem", { name }));
+}
+
 describe("Library", () => {
   beforeEach(() => {
     vi.mocked(listItems).mockReset();
@@ -243,7 +253,7 @@ describe("Library", () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    await clickItemAction("Delete");
 
     expect(screen.getByText("Delete this item?")).toBeInTheDocument();
     expect(deleteItem).not.toHaveBeenCalled();
@@ -253,10 +263,10 @@ describe("Library", () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    await clickItemAction("Delete");
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Actions for / })).toBeInTheDocument();
     expect(screen.queryByText("Delete this item?")).not.toBeInTheDocument();
     expect(deleteItem).not.toHaveBeenCalled();
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
@@ -269,7 +279,7 @@ describe("Library", () => {
     vi.mocked(deleteItem).mockResolvedValue(undefined);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    await clickItemAction("Delete");
     fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
 
     await waitFor(() => {
@@ -283,7 +293,7 @@ describe("Library", () => {
     vi.mocked(deleteItem).mockRejectedValue(new Error("idb down"));
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    await clickItemAction("Delete");
     fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -296,7 +306,7 @@ describe("Library", () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("Note content"), {
       target: { value: "changed" },
     });
@@ -308,7 +318,7 @@ describe("Library", () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("Note content"), {
       target: { value: "changed" },
     });
@@ -326,7 +336,7 @@ describe("Library", () => {
     vi.mocked(updateNote).mockResolvedValue(updated);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("Note content"), {
       target: { value: "changed" },
     });
@@ -359,7 +369,7 @@ describe("Library", () => {
     vi.mocked(updateNote).mockResolvedValue(updated);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     const field = screen.getByLabelText("Note content");
     fireEvent.change(field, { target: { value: "from shortcut" } });
     fireEvent.keyDown(field, { key: "Enter", ctrlKey: true });
@@ -379,7 +389,7 @@ describe("Library", () => {
     );
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("Note content"), {
       target: { value: "   " },
     });
@@ -398,7 +408,7 @@ describe("Library", () => {
     );
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("URL"), {
       target: { value: "javascript:alert(1)" },
     });
@@ -423,7 +433,7 @@ describe("Library", () => {
     vi.mocked(updateLink).mockResolvedValue(updated);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("URL"), {
       target: { value: "https://example.com/new" },
     });
@@ -454,7 +464,7 @@ describe("Library", () => {
     vi.mocked(updateLink).mockResolvedValue(withNote);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("My note (optional)"), { target: { value: "## Why I saved this" } });
     fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
@@ -545,7 +555,7 @@ describe("Library pending mutations", () => {
     vi.mocked(updateNote).mockReturnValue(hold.promise);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("Note content"), {
       target: { value: "changed" },
     });
@@ -562,7 +572,7 @@ describe("Library pending mutations", () => {
     vi.mocked(updateNote).mockReturnValue(hold.promise);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("Note content"), {
       target: { value: "changed" },
     });
@@ -584,7 +594,7 @@ describe("Library pending mutations", () => {
     vi.mocked(updateNote).mockReturnValue(hold.promise);
     render(<Library />);
 
-    fireEvent.click((await screen.findAllByRole("button", { name: "Edit" }))[0]!);
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("Note content"), {
       target: { value: "changed" },
     });
@@ -601,7 +611,7 @@ describe("Library pending mutations", () => {
     vi.mocked(updateNote).mockReturnValue(hold.promise);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     fireEvent.change(screen.getByLabelText("Note content"), {
       target: { value: "changed" },
     });
@@ -638,23 +648,23 @@ describe("Library focus management", () => {
     vi.mocked(deleteItem).mockResolvedValue(undefined);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await clickItemAction("Edit");
     await waitFor(() => expect(screen.getByLabelText("Note content")).toHaveFocus());
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole("button", { name: /^Actions for / })).toHaveFocus());
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await clickItemAction("Delete");
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Confirm delete" })).toHaveFocus();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Delete" })).toHaveFocus();
+      expect(screen.getByRole("button", { name: /^Actions for / })).toHaveFocus();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await clickItemAction("Delete");
     fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
 
     await waitFor(() => {
@@ -695,7 +705,7 @@ describe("Library tags", () => {
     expect(await within(main).findByText("inspiration")).toBeInTheDocument();
     expect(within(main).queryByText("No tags yet.")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Organize" }),
+      screen.getByRole("button", { name: /^Actions for / }),
     ).toBeInTheDocument();
   });
 
@@ -707,7 +717,7 @@ describe("Library tags", () => {
     render(<Library />);
 
     await screen.findByText("A persisted note");
-    fireEvent.click(screen.getByRole("button", { name: "Organize" }));
+    await clickItemAction("Organize");
 
     expect(
       screen.getByRole("dialog", { name: "Organize A persisted note" }),
@@ -734,7 +744,7 @@ describe("Library tags", () => {
     vi.mocked(assignTagToItem).mockResolvedValue(tagged);
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Organize" }));
+    await clickItemAction("Organize");
     fireEvent.change(screen.getByLabelText("Add tag"), {
       target: { value: "inspiration" },
     });
@@ -933,9 +943,7 @@ describe("Library collections", () => {
 
     await screen.findByText("A persisted note");
     const noteCard = screen.getByText("A persisted note").closest("li")!;
-    fireEvent.click(
-      within(noteCard).getByRole("button", { name: "Organize" }),
-    );
+    await clickItemAction("Organize", noteCard);
     fireEvent.change(screen.getByLabelText("Move to collection"), {
       target: { value: "Reading" },
     });
@@ -1388,7 +1396,7 @@ describe("Library view state", () => {
     render(<Library />);
 
     await screen.findByText("pin me");
-    fireEvent.click(screen.getByRole("button", { name: "Pin" }));
+    await clickItemAction("Pin");
 
     await waitFor(() => {
       expect(pinItemInCollection).toHaveBeenCalledWith("c1", "n1");

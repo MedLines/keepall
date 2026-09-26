@@ -48,6 +48,7 @@ import {
 import {
   appendImageAssetToItem,
   assignCollectionToItem,
+  clearCollectionOnItem,
   assignTagToItem,
   deleteItem,
   getItem,
@@ -467,12 +468,9 @@ export function Library() {
       return;
     }
 
-    const button = document.querySelector<HTMLButtonElement>(
-      `button[data-focus-return="${restore.action}:${restore.id}"]`,
-    );
-    const actions = button?.closest("details");
-    if (actions) actions.open = true;
-    button?.focus();
+    document.querySelector<HTMLButtonElement>(
+      `button[data-item-actions="${restore.id}"]`,
+    )?.focus();
     restoreFocusRef.current = null;
   }, [editingId, pendingDeleteId, items]);
 
@@ -1034,6 +1032,22 @@ export function Library() {
     }
   }
 
+  async function clearItemCollection(itemId: string) {
+    if (pendingMutation) return;
+    setPendingMutation({ op: "assign-collection", id: itemId });
+    setCollectionErrorItemId(null);
+    setCollectionError(null);
+    try {
+      await clearCollectionOnItem(itemId);
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setCollectionErrorItemId(itemId);
+      setCollectionError("Couldn't move to Unsorted.");
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
   async function bulkDeleteSelected() {
     const ids = [...selectedIds];
     if (ids.length === 0 || pendingMutation) {
@@ -1527,6 +1541,7 @@ export function Library() {
         pinVisible={itemPinVisible(item)}
         pinned={itemIsPinned(item)}
         onTogglePin={() => void togglePinItem(item.id)}
+        onClearCollection={() => void clearItemCollection(item.id)}
       />
     );
   }
