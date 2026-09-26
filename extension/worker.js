@@ -77,7 +77,7 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
   }, 5000);
   if (source === "badge") return;
   try {
-    await chrome.scripting.executeScript({ target: { tabId }, files: ["page-ui.js"] });
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["toast-collections.js", "page-ui.js"] });
     await chrome.tabs.sendMessage(tabId, {
       type: source === "editor" ? "editor-feedback" : "toast-feedback",
       message, success, editorId, actions,
@@ -114,6 +114,9 @@ async function handleFeedbackAction(message, tabId) {
     }
     return { success: true };
   }
+  if (message.action === "collections" || message.action === "move") {
+    return organizeCapture(message, record);
+  }
   if (message.action !== "undo" || !record.undoToken) throw new Error("This save cannot be undone from this notification.");
   await ensureOffscreen(record.origin);
   const captureId = crypto.randomUUID();
@@ -128,6 +131,32 @@ async function handleFeedbackAction(message, tabId) {
   await requireLibraryAccess(record.origin);
   await notifyOpenKeepallTabs(record.origin).catch(() => {});
   return { success: true };
+}
+
+async function organizeCapture(message, record) {
+  const moving = message.action === "move";
+  if (moving && ((message.collectionId !== null && (typeof message.collectionId !== "string" || message.collectionId.length > 100)) ||
+      !Array.isArray(message.expectedCollectionIds) || message.expectedCollectionIds.length > 1 ||
+      !message.expectedCollectionIds.every((id) => typeof id === "string" && id.length <= 100))) {
+    throw new Error("Choose a collection and try again.");
+  }
+  await ensureOffscreen(record.origin);
+  const captureId = crypto.randomUUID();
+  const result = await chrome.runtime.sendMessage({
+    target: "offscreen", type: moving ? "move-capture" : "capture-collections", origin: record.origin,
+    payload: { captureId, itemId: record.itemId, ...(moving ? {
+      collectionId: message.collectionId, expectedCollectionIds: message.expectedCollectionIds,
+    } : {}) },
+  });
+  if (result?.error) throw new Error(result.error);
+  if (result?.captureId !== captureId || result.itemId !== record.itemId ||
+      (moving ? typeof result.collectionName !== "string" || typeof result.changed !== "boolean" :
+        !Array.isArray(result.collections) || !Array.isArray(result.collectionIds))) {
+    throw new Error("Keepall did not confirm this action. Try again.");
+  }
+  await requireLibraryAccess(record.origin);
+  if (moving && result.changed) await notifyOpenKeepallTabs(record.origin).catch(() => {});
+  return { ...result, success: true };
 }
 
 async function notifyOpenKeepallTabs(origin) {
@@ -411,7 +440,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "capture-feedback-action" && sender.tab?.id &&
-      typeof message.actionId === "string" && ["open", "undo"].includes(message.action)) {
+      typeof message.actionId === "string" && ["open", "undo", "collections", "move"].includes(message.action)) {
     void handleFeedbackAction(message, sender.tab.id)
       .then(sendResponse)
       .catch((error) => sendResponse({ success: false, error: error.message || "Could not complete this action. Try again." }));

@@ -150,6 +150,23 @@ if (!globalThis.__keepallPageUi) {
     .toast-action:hover { background: var(--raised); color: var(--primary); }
     .toast-action:active { transform: scale(.96); }
     @media (prefers-reduced-motion: reduce) { .toast-action { transition: none; } .toast-action:active { transform: none; } }
+    .toast-collections { width: 100%; min-width: 0; max-height: calc(100dvh - 144px); display: flex; flex-direction: column; margin-top: 8px; padding: 8px; background: var(--toast); border: 1px solid var(--border); border-radius: 24px; corner-shape: superellipse(1.5); box-shadow: 0 8px 24px #00000014; animation: collection-enter 160ms cubic-bezier(.2, 0, 0, 1); }
+    .toast-collections-header { display: flex; align-items: center; justify-content: space-between; padding-left: 6px; font-size: 12px; font-weight: 600; }
+    .toast-collections-search { display: block; flex: none; width: 100%; min-width: 0; min-height: 34px; margin: 4px 0 6px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--control); color: var(--primary); font-size: 12px; }
+    .toast-collections-search::placeholder { color: var(--secondary); }
+    .toast-collections-list { display: grid; gap: 2px; min-height: 0; overflow-y: auto; max-height: 180px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; scrollbar-gutter: stable; }
+    .toast-collection { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 8px; border: 0; border-radius: 10px; background: transparent; color: var(--primary); text-align: left; font-size: 12px; }
+    .toast-collection > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .toast-collection-check { flex: none; width: 14px; }
+    .toast-collection:hover { background: var(--raised); }
+    .toast-collection[aria-pressed="true"] { background: var(--selected); }
+    .toast-collections-status { margin: 6px; font-size: 12px; color: var(--secondary); }
+    .toast-collections-status[role="alert"] { color: var(--danger); }
+    .toast-collections-status[hidden] { display: none; }
+    .toast button:focus-visible, .toast input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+    .toast button:disabled { cursor: default; opacity: .5; }
+    @keyframes collection-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    @media (prefers-reduced-motion: reduce) { .toast-collections { animation: none; } }
     .toast-close { display: grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 19px; }
     .toast-close:hover { background: var(--raised); color: var(--primary); }
     @media (prefers-reduced-motion: reduce) { dialog, dialog::backdrop, dialog.is-closing, dialog.is-closing::backdrop, .browse, .browse.is-closing { animation: none; } .toast, .toast.is-visible { transform: none; transition: opacity 140ms ease-out; } .header, form, dialog[data-state="saved"] > .header, dialog[data-state="saved"] > form { transform: none; transition: opacity 120ms ease-out, visibility 0s linear 120ms; } .save-complete, dialog[data-state="saved"] .save-complete { transform: none; transition: opacity 140ms ease-out, visibility 0s linear 140ms; } .footer button, .close, .choice { transition: none; } .footer button:active, .close:active, .choice:active { transform: none; } }
@@ -166,12 +183,15 @@ if (!globalThis.__keepallPageUi) {
   let onEditorFeedback;
   let toastTimer;
   let toastExitTimer;
+  let cleanupToast;
   let closeTimer;
   let currentPicker;
   const drafts = new Map();
   let rememberDraft;
 
   function dismissToast(immediate = false) {
+    cleanupToast?.();
+    cleanupToast = undefined;
     clearTimeout(toastTimer);
     clearTimeout(toastExitTimer);
     const node = shadow.querySelector(".toast");
@@ -203,11 +223,13 @@ if (!globalThis.__keepallPageUi) {
     content.append(label);
     let actionRow;
     let busy = false;
+    let collectionPicker;
+    cleanupToast = () => collectionPicker?.destroy();
     const duration = actions ? 8000 : 4000;
     const scheduleDismiss = () => {
       if (!node.isConnected) return;
       clearTimeout(toastTimer);
-      if (!busy && !node.matches(":hover") && !node.contains(shadow.activeElement)) {
+      if (!busy && !collectionPicker && !node.matches(":hover") && !node.contains(shadow.activeElement)) {
         toastTimer = setTimeout(() => dismissToast(), duration);
       }
     };
@@ -217,19 +239,65 @@ if (!globalThis.__keepallPageUi) {
       buttons.className = "toast-actions";
       buttons.setAttribute("role", "group");
       buttons.setAttribute("aria-label", "Save actions");
-      // Hugeicons LinkSquare02 and Undo02, matching the app's icon family.
+      // Hugeicons, matching the app's icon family.
       const actionIcons = {
         open: '<path d="M11.0991 3.00012C7.45013 3.00669 5.53932 3.09629 4.31817 4.31764C3.00034 5.63568 3.00034 7.75704 3.00034 11.9997C3.00034 16.2424 3.00034 18.3638 4.31817 19.6818C5.63599 20.9999 7.75701 20.9999 11.9991 20.9999C16.241 20.9999 18.3621 20.9999 19.6799 19.6818C20.901 18.4605 20.9906 16.5493 20.9972 12.8998"/><path d="M20.556 3.49612L11.0487 13.0586M20.556 3.49612C20.062 3.00151 16.7343 3.04761 16.0308 3.05762M20.556 3.49612C21.05 3.99074 21.0039 7.32273 20.9939 8.02714"/>',
+        organize: '<path d="M8 7H16.75C18.8567 7 19.91 7 20.6667 7.50559C20.9943 7.72447 21.2755 8.00572 21.4944 8.33329C22 9.08996 22 10.1433 22 12.25C22 15.7612 22 17.5167 21.1573 18.7779C20.7926 19.3238 20.3238 19.7926 19.7779 20.1573C18.5167 21 16.7612 21 13.25 21H12C7.28595 21 4.92893 21 3.46447 19.5355C2 18.0711 2 15.714 2 11V7.94427C2 6.1278 2 5.21956 2.38032 4.53806C2.65142 4.05227 3.05227 3.65142 3.53806 3.38032C4.21956 3 5.1278 3 6.94427 3C8.10802 3 8.6899 3 9.19926 3.19101C10.3622 3.62712 10.8418 4.68358 11.3666 5.73313L12 7"/>',
         undo: '<path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C8.66873 3 5.76018 4.80989 4.20404 7.5"/><path d="M3 3V4.27816C3 6.47004 3 7.56599 3.70725 8.16512C4.4145 8.76425 5.49553 8.58408 7.6576 8.22373L9 8"/>',
       };
-      for (const [action, text] of [["open", "Open in Keepall"], ...(actions.canUndo ? [["undo", "Undo"]] : [])]) {
+      for (const [action, text] of [["open", "Open"], ["organize", "Organize"], ...(actions.canUndo ? [["undo", "Undo"]] : [])]) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "toast-action";
+        button.dataset.action = action;
+        button.setAttribute("aria-label", action === "open" ? "Open in Keepall" : text);
+        button.title = action === "open" ? "Open in Keepall" : text;
+        if (action === "organize") {
+          button.setAttribute("aria-expanded", "false");
+          button.setAttribute("aria-haspopup", "dialog");
+        }
         button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${actionIcons[action]}</svg>`;
         button.append(document.createTextNode(text));
         button.addEventListener("click", async () => {
           if (busy) return;
+          if (action === "organize") {
+            if (collectionPicker) { closeCollections(true); return; }
+            clearTimeout(toastTimer);
+            button.setAttribute("aria-expanded", "true");
+            collectionPicker = globalThis.__keepallCreateToastCollections({
+              host,
+              request: async (operation, payload = {}) => {
+                if (operation === "move") {
+                  busy = true;
+                  for (const control of buttons.children) control.disabled = true;
+                }
+                try {
+                  const result = await chrome.runtime.sendMessage({ type: "capture-feedback-action", action: operation, actionId: actions.id, ...payload });
+                  if (!result?.success) throw new Error(result?.error || "Could not organize this item. Try again.");
+                  return result;
+                } finally {
+                  if (operation === "move") {
+                    busy = false;
+                    for (const control of buttons.children) control.disabled = false;
+                    scheduleDismiss();
+                  }
+                }
+              },
+              onClose: closeCollections,
+              onMoved: (result) => {
+                label.textContent = result.changed ? `Moved to ${result.collectionName}` : `Already in ${result.collectionName}`;
+                node.dataset.success = "true";
+                node.setAttribute("role", "status");
+                mark.textContent = "✓";
+                if (result.changed) buttons.querySelector('[data-action="undo"]')?.remove();
+                closeCollections(true);
+              },
+            });
+            node.append(collectionPicker.element);
+            collectionPicker.focus();
+            return;
+          }
+          closeCollections(false);
           busy = true;
           clearTimeout(toastTimer);
           for (const control of buttons.children) control.disabled = true;
@@ -252,6 +320,15 @@ if (!globalThis.__keepallPageUi) {
           }
         });
         buttons.append(button);
+      }
+      function closeCollections(restoreFocus) {
+        if (!collectionPicker) return;
+        collectionPicker.destroy();
+        collectionPicker = undefined;
+        const trigger = buttons.querySelector('[data-action="organize"]');
+        trigger.setAttribute("aria-expanded", "false");
+        if (restoreFocus) trigger.focus();
+        scheduleDismiss();
       }
       actionRow = buttons;
     }

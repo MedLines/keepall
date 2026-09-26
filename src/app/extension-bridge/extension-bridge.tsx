@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { getExtensionOrganizationOptions, saveExtensionImage, saveExtensionLink, type ExtensionImageCapture, type ExtensionLinkCapture } from "@/persistence/extension-capture";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
+import { getCaptureCollections, moveCaptureToCollection } from "@/persistence/extension-collections";
 import { undoExtensionCapture } from "@/persistence/extension-capture-undo";
 
 const EXTENSION_ORIGINS = [
@@ -65,6 +66,29 @@ async function undoCaptureReply(value: unknown) {
   }
 }
 
+async function captureCollectionsReply(type: string, value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const input = value as Record<string, unknown>;
+  if (typeof input.captureId !== "string" || input.captureId.length > 100 ||
+      typeof input.itemId !== "string" || input.itemId.length > 100) return null;
+  const base = { type: "result", captureId: input.captureId, itemId: input.itemId };
+  try {
+    if (type === "capture-collections") return { ...base, ...await getCaptureCollections(input.itemId) };
+    if ((input.collectionId !== null && (typeof input.collectionId !== "string" || input.collectionId.length > 100)) ||
+        !Array.isArray(input.expectedCollectionIds) || input.expectedCollectionIds.length > 1 ||
+        !input.expectedCollectionIds.every((id) => typeof id === "string" && id.length <= 100)) {
+      return { ...base, error: "Choose a collection and try again." };
+    }
+    const result = await moveCaptureToCollection(input.itemId, input.collectionId as string | null, input.expectedCollectionIds);
+    if (result.changed) window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    return { ...base, ...result };
+  } catch (error) {
+    const message = error instanceof Error && (error.message.includes("no longer available") || error.message.includes("changed in Keepall"))
+      ? error.message : "Could not organize this item. Try again.";
+    return { ...base, error: message };
+  }
+}
+
 export function ExtensionBridge() {
   useEffect(() => {
     if (window.parent === window) return;
@@ -76,6 +100,12 @@ export function ExtensionBridge() {
     async function onMessage(event: MessageEvent) {
       if (event.source !== window.parent || !EXTENSION_ORIGINS.some((origin) => origin === event.origin)) return;
       if (event.data?.channel !== "keepall-extension") return;
+
+      if (event.data.type === "capture-collections" || event.data.type === "move-capture") {
+        const result = await captureCollectionsReply(event.data.type, event.data.payload);
+        if (result) reply(result, event.origin);
+        return;
+      }
 
       if (event.data.type === "undo-capture") {
         const result = await undoCaptureReply(event.data.payload);

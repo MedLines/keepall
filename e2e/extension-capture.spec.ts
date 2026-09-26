@@ -564,7 +564,7 @@ test("save notifications open the item and undo only new captures", async ({}, t
       const actions = await toast.getByRole("group", { name: "Save actions" }).boundingBox();
       expect(actions!.y).toBeGreaterThan(card!.y + card!.height);
       await expect(toast.locator(".toast-card .toast-action")).toHaveCount(0);
-      await expect(toast.locator(".toast-action svg")).toHaveCount(2);
+      await expect(toast.locator(".toast-action svg")).toHaveCount(3);
       await source.screenshot({ path: testInfo.outputPath(`save-actions-${colorScheme}.png`) });
     }
     await toast.getByRole("button", { name: "Undo", exact: true }).click();
@@ -575,6 +575,45 @@ test("save notifications open the item and undo only new captures", async ({}, t
     await save();
     await expect(toast).toContainText("This link was already saved");
     await expect(toast.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0);
+    await library.evaluate(() => new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("collections", "readwrite");
+        for (const [id, name] of [["reading", "Reading"], ["inspiration", "Inspiration"]]) {
+          tx.objectStore("collections").put({ id, name, createdAt: Date.now(), pinnedItemIds: [] });
+        }
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => reject(tx.error);
+      };
+      request.onerror = () => reject(request.error);
+    }));
+    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    const picker = toast.getByRole("dialog", { name: "Move to collection" });
+    await expect(picker.getByRole("button", { name: "Unsorted", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(picker.getByRole("searchbox")).toBeFocused();
+    await picker.getByRole("searchbox").fill("missing collection");
+    await expect(picker).toContainText("No collections found");
+    await picker.getByRole("searchbox").fill("");
+    for (const colorScheme of ["light", "dark"] as const) {
+      await source.emulateMedia({ colorScheme });
+      await source.screenshot({ path: testInfo.outputPath(`organize-${colorScheme}.png`), animations: "disabled" });
+      const bounds = await picker.boundingBox();
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+    }
+    await picker.getByRole("searchbox").press("Escape");
+    await expect(picker).toHaveCount(0);
+    await expect(toast.getByRole("button", { name: "Organize", exact: true })).toBeFocused();
+    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    await picker.getByRole("searchbox").fill("read");
+    await picker.getByRole("button", { name: "Reading", exact: true }).click();
+    await expect(picker).toHaveCount(0);
+    await expect(toast).toContainText("Moved to Reading");
+    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Reading", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await picker.getByRole("button", { name: "Unsorted", exact: true }).click();
+    await expect(toast).toContainText("Moved to Unsorted");
     const pageCount = context.pages().length;
     await toast.getByRole("button", { name: "Open in Keepall" }).click();
     await expect(library).toHaveURL(/localhost:3100\/items\/[0-9a-f-]+\?from=%2F$/);
@@ -610,6 +649,18 @@ test("save notifications open the item and undo only new captures", async ({}, t
       };
     }));
     expect(stored).toEqual({ types: ["link"], assets: 0 });
+    await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await saveContext({ menuItemId: "save-to-keepall", mediaType: "image", srcUrl: "http://localhost:3100/icons/icon-192.png" }, tab);
+    });
+    await expect(toast.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
+    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    await picker.getByRole("button", { name: "Inspiration", exact: true }).click();
+    await expect(toast).toContainText("Moved to Inspiration");
+    await expect(toast.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0);
+    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Inspiration", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await picker.getByRole("button", { name: "Close collections" }).click();
     await library.close();
     await source.bringToFront();
     await save();
