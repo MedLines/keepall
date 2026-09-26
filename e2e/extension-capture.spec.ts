@@ -138,6 +138,66 @@ test("extension uses the canonical production library address", async () => {
   }
 });
 
+test("Options shows the actual shortcut and refreshes after Chrome changes", async ({}, testInfo) => {
+  const profile = await mkdtemp(path.join(tmpdir(), "keepall-extension-shortcut-"));
+  const extensionPath = path.resolve("extension");
+  const context = await chromium.launchPersistentContext(profile, {
+    channel: "chromium", headless: true,
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+  try {
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
+    const options = await context.newPage();
+    const errors: string[] = [];
+    options.on("pageerror", (error) => errors.push(error.message));
+    await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
+    const card = options.getByRole("region", { name: "Keyboard shortcut", exact: true });
+    const value = card.locator("#shortcut-value");
+    const getShortcut = () => worker.evaluate(async () => (await chrome.commands.getAll()).find(({ name }) => name === "open-editor")?.shortcut);
+    await expect(value).toHaveText((await getShortcut())!);
+    await card.scrollIntoViewIfNeeded();
+    const initialHeight = (await card.boundingBox())!.height;
+    const [settings] = await Promise.all([
+      context.waitForEvent("page"),
+      card.getByRole("button", { name: "Change shortcut", exact: true }).click(),
+    ]);
+    await expect(settings).toHaveURL("chrome://extensions/shortcuts");
+    const shortcutInput = settings.getByRole("textbox", { name: "Shortcut Open Keepall capture on this page for Keepall Capture", exact: true });
+    await settings.getByRole("button", { name: "Edit shortcut Open Keepall capture on this page for Keepall Capture", exact: true }).click();
+    await shortcutInput.press("Control+Shift+Y");
+    await expect.poll(getShortcut).toBe("Ctrl+Shift+Y");
+    await options.bringToFront();
+    await expect(value).toHaveText("Ctrl+Shift+Y");
+    await options.emulateMedia({ colorScheme: "light" });
+    await card.screenshot({ path: testInfo.outputPath("shortcut-assigned-light.png") });
+
+    await settings.bringToFront();
+    await settings.getByRole("button", { name: "Clear", exact: true }).last().click();
+    await expect.poll(getShortcut).toBe("");
+    await options.bringToFront();
+    await expect(card.getByText("No shortcut set", { exact: true })).toBeVisible();
+    await expect(value).toBeHidden();
+    expect((await card.boundingBox())!.height).toBe(initialHeight);
+    await options.setViewportSize({ width: 375, height: 812 });
+    await options.emulateMedia({ colorScheme: "dark" });
+    await card.screenshot({ path: testInfo.outputPath("shortcut-unassigned-dark.png") });
+    expect(await options.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+
+    await options.evaluate(() => {
+      chrome.commands.getAll = async () => { throw new Error("Test API failure"); };
+      window.dispatchEvent(new Event("focus"));
+    });
+    await expect(card.getByText("Could not check your shortcut", { exact: true })).toBeVisible();
+    await expect(card.getByText("No shortcut set", { exact: true })).toBeHidden();
+    await options.reload();
+    await expect(card.getByText("No shortcut set", { exact: true })).toBeVisible();
+    expect(errors).toEqual([]);
+  } finally {
+    await context.close();
+    await rm(profile, { recursive: true, force: true });
+  }
+});
+
 test("Chrome access management preserves library recovery and saving", async () => {
   test.setTimeout(60_000);
   const profile = await mkdtemp(path.join(tmpdir(), "keepall-extension-revoke-"));

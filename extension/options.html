@@ -25,7 +25,7 @@
         <div class="page-heading">
           <p class="eyebrow">Keepall</p>
           <h1>Capture settings</h1>
-          <p class="intro">Choose your library and how you want to save images.</p>
+          <p class="intro">Choose your library, keyboard shortcut, and how you save.</p>
         </div>
 
         <section class="settings-card" aria-labelledby="address-heading">
@@ -42,6 +42,21 @@
             </div>
           </form>
           <p id="library-access-status" class="hint" role="status" aria-live="polite" hidden></p>
+        </section>
+
+        <section class="settings-card" aria-labelledby="shortcut-heading">
+          <h2 id="shortcut-heading">Keyboard shortcut</h2>
+          <p class="section-description">Open the capture drawer on the page you're viewing to add a note, collection, or tags before saving.</p>
+          <div class="shortcut-row">
+            <div class="shortcut-current" role="status" aria-live="polite" aria-atomic="true">
+              <span class="shortcut-label">In this Chrome profile</span>
+              <kbd id="shortcut-value" hidden></kbd>
+              <span id="shortcut-state">Checking shortcut…</span>
+            </div>
+            <button id="shortcut-change" type="button">Change shortcut</button>
+          </div>
+          <p class="hint">In Chrome, find <strong>Keepall Capture</strong> and edit <strong>Open Keepall capture on this page</strong>. Return here to see your updated shortcut.</p>
+          <p id="shortcut-error" class="hint" role="status" hidden></p>
         </section>
 
         <section class="settings-card" aria-labelledby="link-saving-heading">

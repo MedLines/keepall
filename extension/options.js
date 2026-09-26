@@ -14,6 +14,49 @@ const LIBRARY_HOSTS = { origins: ["https://www.keepall.app/*", "http://localhost
 const LIBRARY_RESTORE_HOSTS = { origins: ["*://www.keepall.app/*", "*://localhost/*"] };
 const ALL_IMAGE_HOSTS = { origins: ["*://*/*"] };
 const LEGACY_IMAGE_HOSTS = { origins: ["https://*/*", "http://*/*"] };
+const shortcutValue = document.querySelector("#shortcut-value");
+const shortcutState = document.querySelector("#shortcut-state");
+const shortcutChange = document.querySelector("#shortcut-change");
+const shortcutError = document.querySelector("#shortcut-error");
+let shortcutRefresh = 0;
+
+async function refreshShortcut() {
+  const refresh = ++shortcutRefresh;
+  try {
+    const commands = await chrome.commands.getAll();
+    if (refresh !== shortcutRefresh) return;
+    const shortcut = commands.find((command) => command.name === "open-editor")?.shortcut?.trim() ?? "";
+    shortcutValue.textContent = shortcut;
+    shortcutValue.hidden = !shortcut;
+    shortcutState.hidden = Boolean(shortcut);
+    shortcutState.textContent = shortcut ? "" : "No shortcut set";
+  } catch {
+    if (refresh !== shortcutRefresh) return;
+    shortcutValue.hidden = true;
+    shortcutValue.textContent = "";
+    shortcutState.hidden = false;
+    shortcutState.textContent = "Could not check your shortcut";
+  }
+}
+
+shortcutChange.addEventListener("click", async () => {
+  shortcutError.hidden = true;
+  shortcutChange.disabled = true;
+  try {
+    await chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+  } catch {
+    shortcutError.textContent = "Open chrome://extensions/shortcuts in Chrome, then find Keepall Capture.";
+    shortcutError.hidden = false;
+  } finally {
+    shortcutChange.disabled = false;
+  }
+});
+void refreshShortcut();
+window.addEventListener("focus", () => { void refreshShortcut(); });
+chrome.tabs.onActivated.addListener(() => { void refreshShortcut(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") void refreshShortcut();
+});
 
 async function hasAllWebsiteAccess() {
   const [current, legacy] = await Promise.all([
