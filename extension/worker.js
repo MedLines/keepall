@@ -13,7 +13,7 @@ chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
       id: "save-to-keepall",
       title: "Save to Keepall",
-      contexts: ["image", "link"],
+      contexts: ["image", "link", "selection"],
       documentUrlPatterns: ["http://*/*", "https://*/*"],
       targetUrlPatterns: ["http://*/*", "https://*/*"],
     });
@@ -30,6 +30,7 @@ function saveContext(info, tab) {
     if (info.srcUrl) return saveImage(tab, info.srcUrl, info);
     return;
   }
+  if (typeof info.selectionText === "string" && info.selectionText.trim()) return saveSelection(tab, info);
   if (info.linkUrl) return saveLink(tab, info.linkUrl);
 }
 
@@ -49,11 +50,13 @@ async function requireLibraryAccess(origin) {
 
 async function ensureOffscreen(origin) {
   await requireLibraryAccess(origin);
+  if (creatingOffscreen) return creatingOffscreen;
   const url = chrome.runtime.getURL("offscreen.html");
   const contexts = await chrome.runtime.getContexts({
     contextTypes: ["OFFSCREEN_DOCUMENT"],
     documentUrls: [url],
   });
+  if (creatingOffscreen) return creatingOffscreen;
   if (contexts.length > 0) return;
   creatingOffscreen ??= chrome.offscreen.createDocument({
     url: "offscreen.html",
@@ -62,6 +65,38 @@ async function ensureOffscreen(origin) {
   }).finally(() => { creatingOffscreen = undefined; });
   await creatingOffscreen;
 }
+
+async function checkLibraryConnection() {
+  const origin = await keepallOrigin();
+  try {
+    await requireLibraryAccess(origin);
+  } catch {
+    return { success: false, origin, reason: "access" };
+  }
+  try {
+    await ensureOffscreen(origin);
+    const result = await chrome.runtime.sendMessage({ target: "offscreen", type: "organizations", origin, url: origin });
+    if (result?.error || !Array.isArray(result?.collections) || !Array.isArray(result?.tags)) throw new Error("Unavailable library");
+    await requireLibraryAccess(origin);
+    return { success: true, origin };
+  } catch {
+    return { success: false, origin, reason: "unavailable" };
+  }
+}
+
+async function captureTheme() {
+  const { theme } = await chrome.storage.local.get("theme");
+  return ["light", "dark"].includes(theme) ? theme : "system";
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local" || !changes.theme) return;
+  void (async () => {
+    const theme = await captureTheme();
+    const tabs = await chrome.tabs.query({});
+    await Promise.allSettled(tabs.filter((tab) => tab.id).map((tab) => chrome.tabs.sendMessage(tab.id, { type: "theme", theme })));
+  })().catch(() => {});
+});
 
 async function showFeedback(tabId, message, success, source = "toolbar", editorId, actions) {
   try {
@@ -80,7 +115,7 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
     await chrome.scripting.executeScript({ target: { tabId }, files: ["toast-collections.js", "page-ui.js"] });
     await chrome.tabs.sendMessage(tabId, {
       type: source === "editor" ? "editor-feedback" : "toast-feedback",
-      message, success, editorId, actions,
+      message, success, editorId, actions, theme: await captureTheme(),
     });
   } catch {
     // The badge remains visible on restricted browser pages.
@@ -252,6 +287,32 @@ async function saveTab(tab, options = {}) {
   }
 }
 
+async function saveSelection(tab, info) {
+  if (!tab?.id) return;
+  try {
+    const url = info.frameUrl || info.pageUrl || tab.url;
+    if (!/^https?:\/\//i.test(url ?? "")) throw new Error("This page cannot be saved to Keepall.");
+    const text = info.selectionText.trim();
+    if (text.length > 10000) throw new Error("This selection is too long. Select less text and try again.");
+    const origin = await keepallOrigin();
+    await ensureOffscreen(origin);
+    const captureId = crypto.randomUUID();
+    const result = await chrome.runtime.sendMessage({
+      target: "offscreen", type: "capture-selection", origin,
+      payload: { captureId, url, title: info.frameUrl && info.frameUrl !== tab.url ? "" : (tab.title ?? "").slice(0, 500), text },
+    });
+    if (result?.error) throw new Error(result.error);
+    if (result?.captureId !== captureId || typeof result.itemId !== "string") throw new Error("Keepall did not confirm the text save. Try again.");
+    await requireLibraryAccess(origin);
+    if (result.outcome !== "unchanged") await notifyOpenKeepallTabs(origin).catch(() => {});
+    const actions = await captureFeedbackActions(tab.id, origin, result).catch(() => undefined);
+    const message = result.outcome === "unchanged" ? "This text was already saved" : result.outcome === "updated" ? "Text added to your saved link" : "Text saved to Keepall";
+    await showFeedback(tab.id, message, true, "toolbar", undefined, actions);
+  } catch (error) {
+    await showFeedback(tab.id, error.message || "Could not save this text to Keepall.", false);
+  }
+}
+
 async function saveLink(tab, linkUrl) {
   if (!tab?.id) return;
   let url;
@@ -415,7 +476,7 @@ async function openEditor(tab) {
   }
   await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["org-picker.js", "page-ui.js"] });
   const editorId = crypto.randomUUID();
-  await chrome.tabs.sendMessage(tab.id, { type: "editor", editorId, origin, title: tab.title ?? "", url: tab.url });
+  await chrome.tabs.sendMessage(tab.id, { type: "editor", editorId, origin, title: tab.title ?? "", url: tab.url, theme: await captureTheme() });
   try {
     await ensureOffscreen(origin);
     const result = await chrome.runtime.sendMessage({
@@ -439,6 +500,10 @@ chrome.commands.onCommand.addListener((command, tab) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "check-connection" && sender.url === chrome.runtime.getURL("options.html")) {
+    void checkLibraryConnection().then(sendResponse).catch(() => sendResponse({ success: false, reason: "unavailable" }));
+    return true;
+  }
   if (message?.type === "capture-feedback-action" && sender.tab?.id &&
       typeof message.actionId === "string" && ["open", "undo", "collections", "move"].includes(message.action)) {
     void handleFeedbackAction(message, sender.tab.id)

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { getExtensionOrganizationOptions, saveExtensionImage, saveExtensionLink, type ExtensionImageCapture, type ExtensionLinkCapture } from "@/persistence/extension-capture";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
 import { getCaptureCollections, moveCaptureToCollection } from "@/persistence/extension-collections";
+import { saveExtensionSelection } from "@/persistence/extension-selection";
 import { undoExtensionCapture } from "@/persistence/extension-capture-undo";
 
 const EXTENSION_ORIGINS = [
@@ -89,6 +90,23 @@ async function captureCollectionsReply(type: string, value: unknown) {
   }
 }
 
+async function selectionReply(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const input = value as Record<string, unknown>;
+  if (typeof input.captureId !== "string" || typeof input.url !== "string" ||
+      typeof input.title !== "string" || typeof input.text !== "string") return null;
+  const capture = { captureId: input.captureId, url: input.url, title: input.title, text: input.text };
+  try {
+    const result = await saveExtensionSelection(capture);
+    if (result.outcome !== "unchanged") window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    return { type: "result", captureId: capture.captureId, ...result };
+  } catch (error) {
+    const message = error instanceof Error && /too long|note is full|Select some text|cannot be saved/.test(error.message)
+      ? error.message : "Could not save this text to Keepall. Try again.";
+    return { type: "result", captureId: capture.captureId, error: message };
+  }
+}
+
 export function ExtensionBridge() {
   useEffect(() => {
     if (window.parent === window) return;
@@ -100,6 +118,12 @@ export function ExtensionBridge() {
     async function onMessage(event: MessageEvent) {
       if (event.source !== window.parent || !EXTENSION_ORIGINS.some((origin) => origin === event.origin)) return;
       if (event.data?.channel !== "keepall-extension") return;
+
+      if (event.data.type === "capture-selection") {
+        const result = await selectionReply(event.data.payload);
+        if (result) reply(result, event.origin);
+        return;
+      }
 
       if (event.data.type === "capture-collections" || event.data.type === "move-capture") {
         const result = await captureCollectionsReply(event.data.type, event.data.payload);

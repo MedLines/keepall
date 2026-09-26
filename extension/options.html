@@ -31,6 +31,14 @@
         <section class="settings-card" aria-labelledby="address-heading">
           <h2 id="address-heading">Library address</h2>
           <p class="section-description">Use your Keepall address, or a local development server while testing.</p>
+          <div class="library-destination">
+            <span class="shortcut-label">Saves go to</span>
+            <strong id="library-destination">Loading library…</strong>
+            <div class="connection-row">
+              <p id="connection-status" role="status" aria-live="polite">Not checked yet</p>
+              <button id="connection-check" class="secondary-button" type="button">Check connection</button>
+            </div>
+          </div>
           <form id="settings">
             <label for="origin">Keepall address</label>
             <input id="origin" type="url" required spellcheck="false" autocomplete="url" aria-describedby="origin-hint">
@@ -59,11 +67,28 @@
           <p id="shortcut-error" class="hint" role="status" hidden></p>
         </section>
 
+        <section class="settings-card" aria-labelledby="theme-heading">
+          <h2 id="theme-heading">Appearance</h2>
+          <p class="section-description">Choose how the extension's drawer, notifications, and settings look. System follows your device's appearance.</p>
+          <fieldset class="theme-choices" aria-label="Extension theme">
+            <label class="theme-choice"><input type="radio" name="theme" value="system" checked>System</label>
+            <label class="theme-choice"><input type="radio" name="theme" value="light">Light</label>
+            <label class="theme-choice"><input type="radio" name="theme" value="dark">Dark</label>
+          </fieldset>
+          <p id="theme-status" class="hint" role="status" aria-live="polite"></p>
+        </section>
+
         <section class="settings-card" aria-labelledby="link-saving-heading">
           <h2 id="link-saving-heading">Link saving</h2>
           <p class="section-description">Right-click a link on a website and choose <strong>Save to Keepall</strong>. The link goes straight to <strong>Unsorted</strong>, without opening it first. Already-saved links keep their current collection.</p>
           <p class="section-description">Saving links does not need the extra website permissions used for image downloads.</p>
           <p class="hint">The same menu action works for images: right-click an image to save the image itself, or right-click a text link to save its destination.</p>
+        </section>
+
+        <section class="settings-card" aria-labelledby="text-saving-heading">
+          <h2 id="text-saving-heading">Selected text</h2>
+          <p class="section-description">Highlight text on a page, right-click, and choose <strong>Save to Keepall</strong>. The text is saved as a note alongside the page's link, so you can return to its source.</p>
+          <p class="hint">If the page is already in your library, the text is added below its existing note. Your collection, tags, and earlier writing stay in place. Saving the same passage again won't add another copy.</p>
         </section>
 
         <section class="settings-card" aria-labelledby="image-access-heading">

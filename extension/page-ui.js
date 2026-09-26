@@ -4,6 +4,14 @@ if (!globalThis.__keepallPageUi) {
   const host = document.createElement("div");
   host.id = "keepall-capture-ui";
   const shadow = host.attachShadow({ mode: "closed" });
+  const colorScheme = matchMedia("(prefers-color-scheme: dark)");
+  let themePreference = "system";
+  function applyTheme(preference) {
+    themePreference = ["light", "dark"].includes(preference) ? preference : "system";
+    host.dataset.theme = themePreference === "system" ? (colorScheme.matches ? "dark" : "light") : themePreference;
+  }
+  colorScheme.addEventListener("change", () => applyTheme(themePreference));
+  applyTheme("system");
   const style = document.createElement("style");
   style.textContent = `
     @font-face { font-family: "Keepall Inter"; src: url("${chrome.runtime.getURL("inter-latin-wght-normal.woff2")}") format("woff2"); font-style: normal; font-weight: 100 900; font-display: swap; }
@@ -17,8 +25,7 @@ if (!globalThis.__keepallPageUi) {
       --scroll-thumb: #d8d9d5;
       font-family: "Keepall Inter", Inter, ui-sans-serif, system-ui, sans-serif;
     }
-    @media (prefers-color-scheme: dark) {
-      :host {
+    :host([data-theme="dark"]) {
         color-scheme: dark;
         --canvas: #0e0e0f; --control: #1b1c1d; --raised: #292b2e;
         --primary: #f2f2f0; --secondary: #aaaeb5; --border: #ffffff14;
@@ -26,7 +33,6 @@ if (!globalThis.__keepallPageUi) {
         --danger: #fca5a5; --scrim: #00000066; --toast: #242424;
         --selected: #323538; --active: #ffffff1f; --active-edge: #ffffff0f;
         --scroll-thumb: #36383c;
-      }
     }
     *, *::before, *::after { box-sizing: border-box; }
     button, input, textarea { font: inherit; }
@@ -626,6 +632,7 @@ if (!globalThis.__keepallPageUi) {
   }
 
   chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type === "theme" || message?.theme !== undefined) applyTheme(message.theme);
     if (message?.type === "editor") openEditor(message.url, message.title, message.editorId, message.origin);
     if (message?.type === "organizations" || message?.type === "organization-error") onOrganizationMessage?.(message);
     if (message?.type === "toast-feedback") toast(message.message, message.success, message.actions);

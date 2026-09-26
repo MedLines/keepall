@@ -19,7 +19,7 @@ declare const chrome: {
 };
 declare function saveTab(tab: ExtensionTab, options?: { collectionId?: string; noteContent?: string; noteFormat?: "plain" | "markdown" }): Promise<void>;
 declare function openEditor(tab: ExtensionTab): Promise<void>;
-declare function saveContext(info: { menuItemId: string; mediaType?: string; srcUrl?: string; linkUrl?: string; pageUrl?: string }, tab: ExtensionTab): Promise<void> | undefined;
+declare function saveContext(info: { menuItemId: string; mediaType?: string; srcUrl?: string; linkUrl?: string; pageUrl?: string; frameUrl?: string; selectionText?: string }, tab: ExtensionTab): Promise<void> | undefined;
 declare function imageSourceUrl(pageUrl: string, linkUrl?: string): string;
 declare function keepallOrigin(): Promise<string>;
 
@@ -32,7 +32,7 @@ test("extension registers one direct menu action for images and links", async ()
   let clears = 0;
   runInNewContext(await readFile(path.resolve("extension/worker.js"), "utf8"), {
     chrome: {
-      storage: { local: { setAccessLevel: () => Promise.resolve() } },
+      storage: { local: { setAccessLevel: () => Promise.resolve() }, onChanged: event("storage") },
       alarms: { create: () => Promise.resolve(), onAlarm: event("alarm") },
       runtime: { onInstalled: event("install"), onMessage: event("message") },
       contextMenus: {
@@ -51,7 +51,7 @@ test("extension registers one direct menu action for images and links", async ()
   expect(menus).toEqual([expect.objectContaining({
     id: "save-to-keepall",
     title: "Save to Keepall",
-    contexts: ["image", "link"],
+    contexts: ["image", "link", "selection"],
   })]);
 });
 
@@ -255,6 +255,8 @@ test("Chrome access management preserves library recovery and saving", async () 
     await expect(library.locator(".library-card")).toHaveCount(1);
     await options.reload();
     await expect(options.getByRole("button", { name: "Restore library access" })).toBeVisible();
+    await options.locator("#connection-check").click();
+    await expect(options.locator("#connection-status")).toContainText("Library access is missing");
     await options.getByRole("button", { name: "Restore library access" }).click();
     await expect(options.getByRole("button", { name: "Restore library access" })).toBeHidden();
     await source.bringToFront();
@@ -270,6 +272,100 @@ test("Chrome access management preserves library recovery and saving", async () 
     expect(await worker.evaluate(() => chrome.permissions.contains({ origins: ["*://*/*"] }))).toBe(false);
     await expect(options.getByRole("button", { name: "Allow access to all websites", exact: true })).toBeEnabled();
 
+  } finally {
+    await context.close();
+    await rm(profile, { recursive: true, force: true });
+  }
+});
+
+test("connection checks, selected text, and appearance work together", async ({}, testInfo) => {
+  test.setTimeout(70_000);
+  const profile = await mkdtemp(path.join(tmpdir(), "keepall-extension-settings-"));
+  const extensionPath = path.resolve("extension");
+  const context = await chromium.launchPersistentContext(profile, {
+    channel: "chromium", headless: true,
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+  try {
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
+    await worker.evaluate(() => chrome.storage.local.set({ origin: "http://localhost:3100" }));
+    const options = await context.newPage();
+    await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
+    await expect(options.locator("#library-destination")).toContainText("localhost:3100");
+    await options.locator("#connection-check").click();
+    await expect(options.locator("#connection-status")).toHaveText("Connected to your library.");
+    const library = await context.newPage();
+    await library.goto("http://localhost:3100/");
+    await expect(library.getByText("No items yet.", { exact: true })).toBeVisible();
+    const source = await context.newPage();
+    await source.goto("http://localhost:3100/help");
+    await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => {
+        const attach = Element.prototype.attachShadow;
+        Element.prototype.attachShadow = function (options) { return attach.call(this, { ...options, mode: "open" }); };
+      } });
+    });
+    const saveText = (text: string) => worker.evaluate(async (selectionText) => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await saveContext({ menuItemId: "save-to-keepall", selectionText, pageUrl: "http://localhost:3100/help" }, tab);
+    }, text);
+    const toast = source.locator("#keepall-capture-ui .toast");
+    await saveText("A useful passage");
+    await expect(toast).toContainText("Text saved to Keepall");
+    await expect(toast.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
+    await saveText("A useful passage");
+    await expect(toast).toContainText("This text was already saved");
+    await saveText("Another useful passage");
+    await expect(toast).toContainText("Text added to your saved link");
+    const items = await library.evaluate(() => new Promise<Array<{ url: string; noteContent: string }>>((resolve, reject) => {
+      const request = indexedDB.open("keepall");
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const read = db.transaction("items").objectStore("items").getAll();
+        read.onsuccess = () => { db.close(); resolve(read.result); };
+        read.onerror = () => reject(read.error);
+      };
+    }));
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ url: "http://localhost:3100/help", noteContent: "A useful passage\n\nAnother useful passage" });
+
+    const appearance = options.getByRole("region", { name: "Appearance", exact: true });
+    await options.bringToFront();
+    await appearance.getByRole("radio", { name: "Dark", exact: true }).check();
+    await expect(options.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(source.locator("#keepall-capture-ui")).toHaveAttribute("data-theme", "dark");
+    await options.emulateMedia({ colorScheme: "light" });
+    await expect(options.locator("html")).toHaveAttribute("data-theme", "dark");
+    await appearance.screenshot({ path: testInfo.outputPath("appearance-dark.png") });
+    await options.reload();
+    await expect(appearance.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
+    await appearance.getByRole("radio", { name: "Light", exact: true }).check();
+    await expect(source.locator("#keepall-capture-ui")).toHaveAttribute("data-theme", "light");
+    await appearance.getByRole("radio", { name: "System", exact: true }).check();
+    await options.emulateMedia({ colorScheme: "dark" });
+    await expect(options.locator("html")).toHaveAttribute("data-theme", "dark");
+    await source.emulateMedia({ colorScheme: "dark" });
+    await expect(source.locator("#keepall-capture-ui")).toHaveAttribute("data-theme", "dark");
+    await source.emulateMedia({ colorScheme: "light" });
+    await expect(source.locator("#keepall-capture-ui")).toHaveAttribute("data-theme", "light");
+    await options.locator("#connection-check").click();
+    await expect(options.locator("#connection-status")).toHaveText("Connected to your library.");
+    await options.setViewportSize({ width: 375, height: 812 });
+    await options.getByRole("region", { name: "Library address", exact: true }).screenshot({ path: testInfo.outputPath("connection-narrow.png") });
+    expect(await options.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+
+    await options.locator("#origin").fill("http://localhost:65534");
+    await options.getByRole("button", { name: "Save address", exact: true }).click();
+    await expect(options.locator("#connection-status")).toHaveText("Not checked yet");
+    await options.locator("#connection-check").click();
+    await expect(options.locator("#connection-status")).toContainText("Could not reach your local library", { timeout: 20_000 });
+    await expect(options.getByRole("button", { name: "Try again", exact: true })).toBeEnabled();
+    await options.locator("#origin").fill("http://localhost:3100");
+    await options.getByRole("button", { name: "Save address", exact: true }).click();
+    await options.locator("#connection-check").click();
+    await expect(options.locator("#connection-status")).toHaveText("Connected to your library.");
   } finally {
     await context.close();
     await rm(profile, { recursive: true, force: true });
@@ -460,7 +556,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     expect(drawerBounds!.x + drawerBounds!.width).toBeLessThanOrEqual(320);
     const lightBackground = await drawer.evaluate((node) => getComputedStyle(node).backgroundColor);
     await editorPage.emulateMedia({ colorScheme: "dark" });
-    expect(await drawer.evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe(lightBackground);
+    await expect(drawer).not.toHaveCSS("background-color", lightBackground);
     await editorPage.setViewportSize({ width: 640, height: 720 });
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

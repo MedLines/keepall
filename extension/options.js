@@ -10,8 +10,60 @@ const imageAccessStatus = document.querySelector("#image-access-status");
 const PRODUCTION_ORIGIN = "https://www.keepall.app";
 const libraryAccessRestore = document.querySelector("#library-access-restore");
 const libraryAccessStatus = document.querySelector("#library-access-status");
-const LIBRARY_HOSTS = { origins: ["https://www.keepall.app/*", "http://localhost/*"] };
-const LIBRARY_RESTORE_HOSTS = { origins: ["*://www.keepall.app/*", "*://localhost/*"] };
+const destination = document.querySelector("#library-destination");
+const connectionStatus = document.querySelector("#connection-status");
+const connectionCheck = document.querySelector("#connection-check");
+let savedOrigin = PRODUCTION_ORIGIN;
+let connectionRevision = 0;
+let restoringLibraryAccess = false;
+
+function normalizeOrigin(origin) {
+  return typeof origin === "string" && /^http:\/\/localhost:\d{2,5}$/.test(origin) ? origin : PRODUCTION_ORIGIN;
+}
+
+function setDestination(origin) {
+  savedOrigin = normalizeOrigin(origin);
+  destination.textContent = savedOrigin === PRODUCTION_ORIGIN ? "keepall.app" : `Local library · ${savedOrigin}`;
+  libraryLink.href = `${savedOrigin}/`;
+  connectionRevision++;
+  connectionStatus.textContent = "Not checked yet";
+  connectionStatus.dataset.state = "idle";
+  connectionCheck.disabled = false;
+  connectionCheck.textContent = "Check connection";
+}
+
+async function checkConnection() {
+  const revision = ++connectionRevision;
+  connectionCheck.disabled = true;
+  connectionStatus.textContent = "Checking your library…";
+  connectionStatus.dataset.state = "checking";
+  try {
+    const result = await chrome.runtime.sendMessage({ type: "check-connection" });
+    if (revision !== connectionRevision) return;
+    if (result?.origin && result.origin !== savedOrigin) return;
+    connectionStatus.dataset.state = result?.success ? "success" : "error";
+    connectionStatus.textContent = result?.success ? "Connected to your library." : result?.reason === "access"
+      ? "Library access is missing. Choose Restore library access below."
+      : savedOrigin === PRODUCTION_ORIGIN ? "Could not reach Keepall. Open your library, then try again."
+        : "Could not reach your local library. Check that it is running, then try again.";
+    connectionCheck.textContent = result?.success ? "Check again" : "Try again";
+    await refreshLibraryAccess();
+  } catch {
+    if (revision !== connectionRevision) return;
+    connectionStatus.textContent = "Could not check the connection. Try again.";
+    connectionStatus.dataset.state = "error";
+    connectionCheck.textContent = "Try again";
+  } finally {
+    if (revision === connectionRevision) connectionCheck.disabled = false;
+  }
+}
+connectionCheck.addEventListener("click", () => { void checkConnection(); });
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.origin) {
+    setDestination(changes.origin.newValue);
+    void refreshLibraryAccess();
+  }
+});
 const ALL_IMAGE_HOSTS = { origins: ["*://*/*"] };
 const LEGACY_IMAGE_HOSTS = { origins: ["https://*/*", "http://*/*"] };
 const shortcutValue = document.querySelector("#shortcut-value");
@@ -72,26 +124,41 @@ async function resetCaptureBridge() {
 }
 
 async function refreshLibraryAccess() {
-  const connected = await chrome.permissions.contains(LIBRARY_HOSTS);
+  const origin = savedOrigin;
+  const connected = await chrome.permissions.contains({ origins: [`${new URL(origin).protocol}//${new URL(origin).hostname}/*`] });
+  if (origin !== savedOrigin || restoringLibraryAccess) return;
   libraryAccessRestore.hidden = connected;
   libraryAccessStatus.hidden = connected;
   libraryAccessStatus.textContent = connected ? "" : "The extension has lost access to your library. Restore it before saving.";
   libraryAccessStatus.dataset.state = connected ? "success" : "error";
   libraryAccessRestore.disabled = false;
+  if (!connected) {
+    connectionRevision++;
+    connectionStatus.textContent = "Library access is missing. Choose Restore library access below.";
+    connectionStatus.dataset.state = "access";
+    connectionCheck.disabled = false;
+    connectionCheck.textContent = "Check connection";
+  } else if (connectionStatus.dataset.state === "access") {
+    setDestination(savedOrigin);
+  }
 }
 
 async function restoreLibraryAccess() {
+  restoringLibraryAccess = true;
   libraryAccessRestore.disabled = true;
   try {
-    const granted = await chrome.permissions.request(LIBRARY_RESTORE_HOSTS);
+    const granted = await chrome.permissions.request({ origins: [`*://${new URL(savedOrigin).hostname}/*`] });
     if (!granted) throw new Error("Allow library access to connect Keepall.");
     await resetCaptureBridge();
     await refreshLibraryAccess();
+    await checkConnection();
   } catch (error) {
     libraryAccessStatus.hidden = false;
     libraryAccessStatus.textContent = error instanceof Error ? error.message : "Could not restore library access.";
     libraryAccessStatus.dataset.state = "error";
   } finally {
+    restoringLibraryAccess = false;
+    await refreshLibraryAccess();
     libraryAccessRestore.disabled = false;
   }
 }
@@ -154,7 +221,8 @@ chrome.permissions.onRemoved.addListener(() => { void refreshAccessState(); });
 
 chrome.storage.local.get("origin").then(({ origin }) => {
   input.value = origin === "https://keepall.app" ? PRODUCTION_ORIGIN : origin ?? PRODUCTION_ORIGIN;
-  libraryLink.href = `${input.value}/`;
+  setDestination(input.value);
+  void refreshLibraryAccess();
 });
 
 form.addEventListener("submit", async (event) => {
@@ -171,9 +239,49 @@ form.addEventListener("submit", async (event) => {
     input.value = origin;
     status.textContent = "Address saved.";
     status.dataset.state = "success";
-    libraryLink.href = `${origin}/`;
+    setDestination(origin);
   } catch (error) {
     status.textContent = error.message;
     status.dataset.state = "error";
+  }
+});
+
+
+const themeInputs = [...document.querySelectorAll('input[name="theme"]')];
+const themeStatus = document.querySelector("#theme-status");
+const systemTheme = matchMedia("(prefers-color-scheme: dark)");
+let themePreference = "system";
+let themeRevision = 0;
+function applyTheme(preference) {
+  themePreference = ["light", "dark"].includes(preference) ? preference : "system";
+  document.documentElement.dataset.theme = themePreference === "system" ? (systemTheme.matches ? "dark" : "light") : themePreference;
+  for (const input of themeInputs) input.checked = input.value === themePreference;
+}
+systemTheme.addEventListener("change", () => applyTheme(themePreference));
+chrome.storage.local.get("theme").then(({ theme }) => {
+  if (!themeRevision) applyTheme(theme);
+}).catch(() => {
+  themeStatus.textContent = "Could not load your appearance preference. Choose it again below.";
+  themeStatus.dataset.state = "error";
+});
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.theme) applyTheme(changes.theme.newValue);
+});
+for (const input of themeInputs) input.addEventListener("change", async () => {
+  if (!input.checked) return;
+  const previous = themePreference;
+  const revision = ++themeRevision;
+  applyTheme(input.value);
+  themeStatus.textContent = "";
+  try {
+    await chrome.storage.local.set({ theme: input.value });
+    if (revision !== themeRevision) return;
+    themeStatus.textContent = "Appearance saved.";
+    themeStatus.dataset.state = "success";
+  } catch {
+    if (revision !== themeRevision) return;
+    applyTheme(previous);
+    themeStatus.textContent = "Could not save your appearance. Try again.";
+    themeStatus.dataset.state = "error";
   }
 });

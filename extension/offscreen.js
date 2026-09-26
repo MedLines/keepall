@@ -99,7 +99,7 @@ function imageCapture(origin, payload) {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.target !== "offscreen") return;
-  const operation = ["capture", "undo-capture", "capture-collections", "move-capture"].includes(message.type)
+  const operation = ["capture", "capture-selection", "undo-capture", "capture-collections", "move-capture"].includes(message.type)
     ? capture(message.origin, message.payload, message.type)
     : message.type === "organizations"
       ? organizations(message.origin, message.url)

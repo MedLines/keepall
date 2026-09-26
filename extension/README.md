@@ -55,7 +55,7 @@ its destination without opening it. New links go to Unsorted; duplicates keep
 their existing organization and report that they were already saved. This
 reuses the toolbar save path and needs no extra website permission. Keepall
 does not use the current page's title as the destination's title. There is one
-menu entry for both links and images, with no submenu. When an image is also a link, Keepall saves the image itself and retains the containing
+menu entry for links, images, and selected text, with no submenu. When an image is also a link, Keepall saves the image itself and retains the containing
 tweet link as its source when available.
 
 Right-click an image and choose **Save to Keepall** to store the image
@@ -114,3 +114,35 @@ public key from the Package tab. Replace the source manifest key with that publi
 key and update the web bridge's allowed extension origin. Deploy the app and
 retest before publishing. Increase the manifest version for each later Store
 update, and always use the packaging script for Store uploads.
+
+
+## Connection and appearance
+
+Options shows the saved destination separately from the editable address. **Check
+connection** verifies library permission and asks that library's hidden bridge
+to read its collections and tags. It creates no test item. Missing access offers
+**Restore library access**; an unavailable address offers **Try again**. Saving a
+new address resets the status. Each localhost port and keepall.app have separate
+libraries, so check the destination if an item seems missing.
+
+**Appearance** offers System, Light, and Dark. It applies to extension Options,
+the capture drawer, and its notifications, including already-open extension UI.
+System follows the device's appearance; explicit Light/Dark overrides it. The
+choice is stored in the extension and does not change the Keepall app's theme.
+
+## Selected text
+
+Highlight text on an HTTP(S) page and choose **Save to Keepall**. Keepall stores
+the selected text as a plain note on the source page's link. For a selection
+inside a frame, the frame URL is the source. A new link goes to Unsorted and can
+be opened, organized, or undone from the toast. If that source link already
+exists, Keepall appends the passage to its existing note, preserving the title,
+collection, tags, formatting, and local image markers. Markdown notes receive
+escaped literal text. Repeating the same complete passage does not append it
+again. Selections and the resulting note are limited to 10,000 characters;
+exceeding the limit reports an error without truncating or replacing the note.
+When contexts overlap, images take priority, then selected text, then links.
+Text comes from Chrome's explicit right-click selection; there is no page-wide
+text scraping or new permission. Text is passed directly to the hidden bridge
+and is not kept in pending extension storage. Retry a failed save with the same
+selection. Deploy the updated web bridge before using this with production.
