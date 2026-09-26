@@ -102,7 +102,13 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false }: {
           <button type="button" onClick={onOpen} title={title} className={`${item.type === "image" ? "truncate" : "line-clamp-2 break-words"} min-w-0 flex-1 text-left underline-offset-2 hover:underline`}>{title}</button>
         ) : null}
       </TitleRow> : null}
-      {description ? <p className="mt-2 line-clamp-2 break-words text-sm leading-relaxed text-text-secondary">{description}</p> : null}
+      {description ? <p className="mt-2 line-clamp-2 break-words text-sm leading-relaxed text-text-secondary">
+        {item.type === "image" && !item.caption && item.sourceUrl ? (
+          <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" title={item.sourceUrl} className="rounded-sm underline-offset-2 hover:text-text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">
+            {description}
+          </a>
+        ) : description}
+      </p> : null}
       {item.type === "link" && openHref ? (
         <Link href={openHref} prefetch={false} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-control-sm text-sm font-medium text-text-primary underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">
           <NoteIcon className="size-4" />
