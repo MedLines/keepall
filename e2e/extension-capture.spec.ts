@@ -98,28 +98,28 @@ test("extension uses the canonical production library address", async () => {
     const options = await context.newPage();
     await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
     await expect(options.getByLabel("Keepall address")).toHaveValue("https://www.keepall.app");
+    await options.getByRole("tab", { name: "Image access", exact: true }).click();
     await expect(options.getByRole("region", { name: "Image saving" })).toBeVisible();
     await expect(options.getByText("Your current choice. No setup needed.", { exact: true })).toBeVisible();
-    await expect(options.getByRole("button", { name: "Allow access to all websites", exact: true })).toBeEnabled();
     const imageGuide = options.getByRole("region", { name: "Image saving", exact: true });
     expect(await imageGuide.locator("h3, h4").allTextContents()).toEqual([
       "1. Right-click an image",
       "2. Allow access to that website",
       "Allow each website as you need it",
-      "Want frictionless saving on every website?",
-      "What this means for your privacy",
-      "Change or remove website access",
     ]);
     await expect(imageGuide.locator("details")).toHaveCount(0);
     const contextMenu = options.locator('img[src="image-context-menu.png"]');
     await expect(contextMenu).toBeVisible();
     expect(await contextMenu.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-    const warning = options.locator('img[src="permission-all-websites.png"]');
-    await expect(warning).toBeVisible();
-    expect(await warning.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     const singleWebsite = options.locator('img[src="permission-one-website.png"]');
     await expect(singleWebsite).toBeVisible();
     expect(await singleWebsite.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+    await options.getByRole("tab", { name: "Image access", exact: true }).click();
+    await expect(options.getByRole("button", { name: "Allow access to all websites", exact: true })).toBeEnabled();
+    const warning = options.locator('img[src="permission-all-websites.png"]');
+    await expect(warning).toBeVisible();
+    expect(await warning.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+
     const permissions = await worker.evaluate(() => chrome.permissions.getAll());
     expect(permissions.origins).not.toContain("https://*/*");
     expect(permissions.origins).not.toContain("http://*/*");
@@ -127,11 +127,79 @@ test("extension uses the canonical production library address", async () => {
     await options.setViewportSize({ width: 375, height: 812 });
     expect(await options.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
     await expect(options.getByRole("link", { name: "Open library" })).toHaveAttribute("href", "https://www.keepall.app/");
+    await options.getByRole("tab", { name: "General", exact: true }).click();
     await options.getByLabel("Keepall address").fill("https://keepall.app");
     await options.getByRole("button", { name: "Save address" }).click();
     await expect(options.locator("#status")).toHaveText("Address saved.");
     await expect(options.getByLabel("Keepall address")).toHaveValue("https://www.keepall.app");
     expect(await worker.evaluate(() => keepallOrigin())).toBe("https://www.keepall.app");
+  } finally {
+    await context.close();
+    await rm(profile, { recursive: true, force: true });
+  }
+});
+
+test("Options tabs reveal one group, preserve edits, and support keyboard navigation", async ({}, testInfo) => {
+  const profile = await mkdtemp(path.join(tmpdir(), "keepall-options-tabs-"));
+  const extensionPath = path.resolve("extension");
+  const context = await chromium.launchPersistentContext(profile, {
+    channel: "chromium", headless: true,
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+  try {
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
+    const page = await context.newPage();
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await page.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
+    await expect(page.getByRole("tabpanel")).toHaveCount(1);
+    await expect(page.getByRole("tab", { name: "General", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("button", { name: "Save address", exact: true })).toBeInViewport();
+    await page.getByLabel("Keepall address").fill("http://localhost:3001");
+    await page.getByRole("tab", { name: "General", exact: true }).focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.getByRole("tabpanel", { name: "Saving", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Saving", exact: true })).toBeFocused();
+    await page.keyboard.press("End");
+    await expect(page.getByRole("tabpanel", { name: "Image access", exact: true })).toBeVisible();
+    await page.keyboard.press("Home");
+    await expect(page.getByLabel("Keepall address")).toHaveValue("http://localhost:3001");
+    await page.keyboard.press("ArrowUp");
+    await expect(page.getByRole("tab", { name: "Image access", exact: true })).toBeFocused();
+    await page.reload();
+    await expect(page.getByRole("tabpanel", { name: "Image access", exact: true })).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 650));
+    const navigation = page.getByRole("complementary", { name: "Settings navigation" });
+    expect((await navigation.boundingBox())!.y).toBe(24);
+    await page.getByRole("tab", { name: "Saving", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Change shortcut", exact: true })).toBeInViewport();
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme });
+      await expect(page.locator("html")).toHaveAttribute("data-theme", colorScheme);
+      for (const tab of ["General", "Saving", "Image access"]) {
+        await page.getByRole("tab", { name: tab, exact: true }).click();
+        await expect(page.getByRole("tabpanel")).toHaveCount(1);
+        await page.screenshot({ path: testInfo.outputPath(`tabs-${tab.toLowerCase()}-${colorScheme}.png`) });
+      }
+    }
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    for (const tab of ["General", "Saving", "Image access"]) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      await expect(page.getByRole("tabpanel")).toHaveCount(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+      await expect(page.getByRole("tab", { name: tab, exact: true })).toHaveCSS("transition-duration", "0s");
+    }
+    await page.screenshot({ path: testInfo.outputPath("tabs-mobile.png") });
+    await page.getByRole("tab", { name: "Image access", exact: true }).click();
+    await page.evaluate(() => window.scrollTo(0, 650));
+    await expect(page.getByRole("tab", { name: "General", exact: true })).toBeInViewport();
+    await page.getByRole("tab", { name: "General", exact: true }).click();
+    await expect(page.getByLabel("Keepall address")).toBeInViewport();
+    await page.goto(page.url().replace("#general", "#permissions"));
+    await expect(page.getByRole("tab", { name: "Image access", exact: true })).toHaveAttribute("aria-selected", "true");
+    expect(errors).toEqual([]);
   } finally {
     await context.close();
     await rm(profile, { recursive: true, force: true });
@@ -151,6 +219,7 @@ test("Options shows the actual shortcut and refreshes after Chrome changes", asy
     const errors: string[] = [];
     options.on("pageerror", (error) => errors.push(error.message));
     await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
+    await options.getByRole("tab", { name: "Saving", exact: true }).click();
     const card = options.getByRole("region", { name: "Keyboard shortcut", exact: true });
     const value = card.locator("#shortcut-value");
     const getShortcut = () => worker.evaluate(async () => (await chrome.commands.getAll()).find(({ name }) => name === "open-editor")?.shortcut);
@@ -229,6 +298,7 @@ test("Chrome access management preserves library recovery and saving", async () 
     await library.goto("http://localhost:3100/");
     const options = await context.newPage();
     await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
+    await options.getByRole("tab", { name: "Image access", exact: true }).click();
     await expect(options.locator("#image-access-remove")).toHaveCount(0);
     await expect(options.getByRole("button", { name: "Access to all websites enabled" })).toBeDisabled();
     const [management] = await Promise.all([
@@ -254,6 +324,7 @@ test("Chrome access management preserves library recovery and saving", async () 
     await expect.poll(() => worker.evaluate((tabId) => chrome.action.getTitle({ tabId }), sourceTab.id)).toContain("Library access is missing");
     await expect(library.locator(".library-card")).toHaveCount(1);
     await options.reload();
+    await options.getByRole("tab", { name: "General", exact: true }).click();
     await expect(options.getByRole("button", { name: "Restore library access" })).toBeVisible();
     await options.locator("#connection-check").click();
     await expect(options.locator("#connection-status")).toContainText("Library access is missing");
@@ -270,6 +341,7 @@ test("Chrome access management preserves library recovery and saving", async () 
     expect(imageMessage).toBe("Image saved to Keepall");
     await expect(library.locator(".library-card")).toHaveCount(3);
     expect(await worker.evaluate(() => chrome.permissions.contains({ origins: ["*://*/*"] }))).toBe(false);
+    await options.getByRole("tab", { name: "Image access", exact: true }).click();
     await expect(options.getByRole("button", { name: "Allow access to all websites", exact: true })).toBeEnabled();
 
   } finally {
@@ -333,6 +405,7 @@ test("connection checks, selected text, and appearance work together", async ({}
 
     const appearance = options.getByRole("region", { name: "Appearance", exact: true });
     await options.bringToFront();
+    await options.getByRole("tab", { name: "General", exact: true }).click();
     await appearance.getByRole("radio", { name: "Dark", exact: true }).check();
     await expect(options.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(source.locator("#keepall-capture-ui")).toHaveAttribute("data-theme", "dark");
@@ -350,6 +423,7 @@ test("connection checks, selected text, and appearance work together", async ({}
     await expect(source.locator("#keepall-capture-ui")).toHaveAttribute("data-theme", "dark");
     await source.emulateMedia({ colorScheme: "light" });
     await expect(source.locator("#keepall-capture-ui")).toHaveAttribute("data-theme", "light");
+    await options.getByRole("tab", { name: "General", exact: true }).click();
     await options.locator("#connection-check").click();
     await expect(options.locator("#connection-status")).toHaveText("Connected to your library.");
     await options.setViewportSize({ width: 375, height: 812 });

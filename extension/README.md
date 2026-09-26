@@ -146,3 +146,19 @@ Text comes from Chrome's explicit right-click selection; there is no page-wide
 text scraping or new permission. Text is passed directly to the hidden bridge
 and is not kept in pending extension storage. Retry a failed save with the same
 selection. Deploy the updated web bridge before using this with production.
+
+## Options navigation
+
+Options uses a sticky sidebar with three groups:
+
+- **General** — library address, connection, and appearance.
+- **Saving** — keyboard shortcut, right-click links, and selected text.
+- **Image access** — the image saving guide, per-website access, optional broad
+  access, privacy, and Chrome's manual permission controls.
+
+Related sections share a panel with dividers. Only the selected group is shown.
+Up/Down, Home, and End move between tabs; the URL remembers the selection on
+reload. Switching groups preserves unfinished address edits and brings the new
+panel back into view. On narrow screens the sidebar becomes an icon rail with
+accessible labels. Image screenshots stay visible alongside their instructions.
+Old tab URLs still open the corresponding group.

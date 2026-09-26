@@ -500,7 +500,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === "check-connection" && sender.url === chrome.runtime.getURL("options.html")) {
+  if (message?.type === "check-connection" && sender.url?.split("#")[0] === chrome.runtime.getURL("options.html")) {
     void checkLibraryConnection().then(sendResponse).catch(() => sendResponse({ success: false, reason: "unavailable" }));
     return true;
   }

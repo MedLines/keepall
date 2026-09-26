@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Capture settings · Keepall</title>
     <link rel="stylesheet" href="options.css">
+    <script src="options-tabs.js" defer></script>
     <script src="options.js" defer></script>
   </head>
   <body>
@@ -14,156 +15,176 @@
           <img src="icon-32.png" width="32" height="32" alt="">
           <span>keepall</span>
         </div>
-      </header>
-
-      <div class="page-content">
         <a id="library-link" class="back-link" href="https://www.keepall.app/" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
           Open library
         </a>
+      </header>
 
+      <div class="page-content">
         <div class="page-heading">
-          <p class="eyebrow">Keepall</p>
           <h1>Capture settings</h1>
-          <p class="intro">Choose your library, keyboard shortcut, and how you save.</p>
+          <p class="intro">Make Keepall Capture work your way.</p>
         </div>
 
-        <section class="settings-card" aria-labelledby="address-heading">
-          <h2 id="address-heading">Library address</h2>
-          <p class="section-description">Use your Keepall address, or a local development server while testing.</p>
-          <div class="library-destination">
-            <span class="shortcut-label">Saves go to</span>
-            <strong id="library-destination">Loading library…</strong>
-            <div class="connection-row">
-              <p id="connection-status" role="status" aria-live="polite">Not checked yet</p>
-              <button id="connection-check" class="secondary-button" type="button">Check connection</button>
+        <div class="settings-layout">
+          <aside class="settings-navigation" aria-label="Settings navigation">
+            <div class="settings-tabs" role="tablist" aria-label="Capture settings" aria-orientation="vertical">
+              <button id="tab-general" class="settings-tab" type="button" role="tab" aria-controls="panel-general" aria-selected="true" tabindex="0" data-tab="general" title="General"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M15.5 12C15.5 13.933 13.933 15.5 12 15.5C10.067 15.5 8.5 13.933 8.5 12C8.5 10.067 10.067 8.5 12 8.5C13.933 8.5 15.5 10.067 15.5 12Z" stroke="currentColor" stroke-width="1.5"/><path d="M21.011 14.0965C21.5329 13.9558 21.7939 13.8854 21.8969 13.7508C22 13.6163 22 13.3998 22 12.9669V11.0332C22 10.6003 22 10.3838 21.8969 10.2493C21.7938 10.1147 21.5329 10.0443 21.011 9.90358C19.0606 9.37759 17.8399 7.33851 18.3433 5.40087C18.4817 4.86799 18.5509 4.60156 18.4848 4.44529C18.4187 4.28902 18.2291 4.18134 17.8497 3.96596L16.125 2.98673C15.7528 2.77539 15.5667 2.66972 15.3997 2.69222C15.2326 2.71472 15.0442 2.90273 14.6672 3.27873C13.208 4.73448 10.7936 4.73442 9.33434 3.27864C8.95743 2.90263 8.76898 2.71463 8.60193 2.69212C8.43489 2.66962 8.24877 2.77529 7.87653 2.98663L6.15184 3.96587C5.77253 4.18123 5.58287 4.28891 5.51678 4.44515C5.45068 4.6014 5.51987 4.86787 5.65825 5.4008C6.16137 7.3385 4.93972 9.37763 2.98902 9.9036C2.46712 10.0443 2.20617 10.1147 2.10308 10.2492C2 10.3838 2 10.6003 2 11.0332V12.9669C2 13.3998 2 13.6163 2.10308 13.7508C2.20615 13.8854 2.46711 13.9558 2.98902 14.0965C4.9394 14.6225 6.16008 16.6616 5.65672 18.5992C5.51829 19.1321 5.44907 19.3985 5.51516 19.5548C5.58126 19.7111 5.77092 19.8188 6.15025 20.0341L7.87495 21.0134C8.24721 21.2247 8.43334 21.3304 8.6004 21.3079C8.76746 21.2854 8.95588 21.0973 9.33271 20.7213C10.7927 19.2644 13.2088 19.2643 14.6689 20.7212C15.0457 21.0973 15.2341 21.2853 15.4012 21.3078C15.5682 21.3303 15.7544 21.2246 16.1266 21.0133L17.8513 20.034C18.2307 19.8187 18.4204 19.711 18.4864 19.5547C18.5525 19.3984 18.4833 19.132 18.3448 18.5991C17.8412 16.6616 19.0609 14.6226 21.011 14.0965Z" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"/></svg><span class="settings-tab-label">General</span></button>
+              <button id="tab-saving" class="settings-tab" type="button" role="tab" aria-controls="panel-saving" aria-selected="false" tabindex="-1" data-tab="saving" title="Saving"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M3 17.9808V12.7075C3 9.07416 3 7.25748 4.09835 6.12874C5.1967 5 6.96447 5 10.5 5C14.0355 5 15.8033 5 16.9017 6.12874C18 7.25748 18 9.07416 18 12.7075V17.9808C18 20.2867 18 21.4396 17.2755 21.8523C15.8724 22.6514 13.2405 19.9852 11.9906 19.1824C11.2657 18.7168 10.9033 18.484 10.5 18.484C10.0967 18.484 9.73425 18.7168 9.00938 19.1824C7.7595 19.9852 5.12763 22.6514 3.72454 21.8523C3 21.4396 3 20.2867 3 17.9808Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><path d="M9 2H11C15.714 2 18.0711 2 19.5355 3.46447C21 4.92893 21 7.28595 21 12V18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg><span class="settings-tab-label">Saving</span></button>
+              <button id="tab-images" class="settings-tab" type="button" role="tab" aria-controls="panel-images" aria-selected="false" tabindex="-1" data-tab="images" title="Image access"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><circle cx="7.5" cy="7.5" r="1.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><path d="M2.5 12C2.5 7.52166 2.5 5.28249 3.89124 3.89124C5.28249 2.5 7.52166 2.5 12 2.5C16.4783 2.5 18.7175 2.5 20.1088 3.89124C21.5 5.28249 21.5 7.52166 21.5 12C21.5 16.4783 21.5 18.7175 20.1088 20.1088C18.7175 21.5 16.4783 21.5 12 21.5C7.52166 21.5 5.28249 21.5 3.89124 20.1088C2.5 18.7175 2.5 16.4783 2.5 12Z" stroke="currentColor" stroke-width="1.5"/><path d="M5 21C9.37246 15.775 14.2741 8.88406 21.4975 13.5424" stroke="currentColor" stroke-width="1.5"/></svg><span class="settings-tab-label">Image access</span></button>
             </div>
-          </div>
-          <form id="settings">
-            <label for="origin">Keepall address</label>
-            <input id="origin" type="url" required spellcheck="false" autocomplete="url" aria-describedby="origin-hint">
-            <p id="origin-hint" class="hint">For local testing, enter the address shown by <code>pnpm dev</code>, such as <code>http://localhost:3001</code>.</p>
-            <div class="form-footer">
-              <button type="submit">Save address</button>
-              <button id="library-access-restore" type="button" hidden>Restore library access</button>
-              <p id="status" role="status" aria-live="polite"></p>
-            </div>
-          </form>
-          <p id="library-access-status" class="hint" role="status" aria-live="polite" hidden></p>
-        </section>
+          </aside>
 
-        <section class="settings-card" aria-labelledby="shortcut-heading">
-          <h2 id="shortcut-heading">Keyboard shortcut</h2>
-          <p class="section-description">Open the capture drawer on the page you're viewing to add a note, collection, or tags before saving.</p>
-          <div class="shortcut-row">
-            <div class="shortcut-current" role="status" aria-live="polite" aria-atomic="true">
-              <span class="shortcut-label">In this Chrome profile</span>
-              <kbd id="shortcut-value" hidden></kbd>
-              <span id="shortcut-state">Checking shortcut…</span>
-            </div>
-            <button id="shortcut-change" type="button">Change shortcut</button>
-          </div>
-          <p class="hint">In Chrome, find <strong>Keepall Capture</strong> and edit <strong>Open Keepall capture on this page</strong>. Return here to see your updated shortcut.</p>
-          <p id="shortcut-error" class="hint" role="status" hidden></p>
-        </section>
-
-        <section class="settings-card" aria-labelledby="theme-heading">
-          <h2 id="theme-heading">Appearance</h2>
-          <p class="section-description">Choose how the extension's drawer, notifications, and settings look. System follows your device's appearance.</p>
-          <fieldset class="theme-choices" aria-label="Extension theme">
-            <label class="theme-choice"><input type="radio" name="theme" value="system" checked>System</label>
-            <label class="theme-choice"><input type="radio" name="theme" value="light">Light</label>
-            <label class="theme-choice"><input type="radio" name="theme" value="dark">Dark</label>
-          </fieldset>
-          <p id="theme-status" class="hint" role="status" aria-live="polite"></p>
-        </section>
-
-        <section class="settings-card" aria-labelledby="link-saving-heading">
-          <h2 id="link-saving-heading">Link saving</h2>
-          <p class="section-description">Right-click a link on a website and choose <strong>Save to Keepall</strong>. The link goes straight to <strong>Unsorted</strong>, without opening it first. Already-saved links keep their current collection.</p>
-          <p class="section-description">Saving links does not need the extra website permissions used for image downloads.</p>
-          <p class="hint">The same menu action works for images: right-click an image to save the image itself, or right-click a text link to save its destination.</p>
-        </section>
-
-        <section class="settings-card" aria-labelledby="text-saving-heading">
-          <h2 id="text-saving-heading">Selected text</h2>
-          <p class="section-description">Highlight text on a page, right-click, and choose <strong>Save to Keepall</strong>. The text is saved as a note alongside the page's link, so you can return to its source.</p>
-          <p class="hint">If the page is already in your library, the text is added below its existing note. Your collection, tags, and earlier writing stay in place. Saving the same passage again won't add another copy.</p>
-        </section>
-
-        <section class="settings-card" aria-labelledby="image-access-heading">
-          <h2 id="image-access-heading">Image saving</h2>
-          <div class="image-save-steps">
-            <section class="image-save-step" aria-labelledby="save-image-step-heading">
-              <h3 id="save-image-step-heading">1. Right-click an image</h3>
-              <p>Choose <strong>Save to Keepall</strong> from the menu. New images go straight to <strong>Unsorted</strong> in your Keepall library, ready for you to organize later.</p>
-              <figure>
-                <div class="screenshot-crop screenshot-crop-menu">
-                  <img src="image-context-menu.png" width="405" height="447" alt="Chrome's image right-click menu includes Save image to Keepall.">
+          <div class="settings-content">
+            <div id="panel-general" class="settings-panel" role="tabpanel" aria-labelledby="tab-general" tabindex="0">
+              <section class="settings-card" aria-labelledby="address-heading">
+                <h2 id="address-heading">Library address</h2>
+                <p class="section-description">Use your Keepall address, or a local development server while testing.</p>
+                <div class="library-destination">
+                  <span class="shortcut-label">Saves go to</span>
+                  <strong id="library-destination">Loading library…</strong>
+                  <div class="connection-row">
+                    <p id="connection-status" role="status" aria-live="polite">Not checked yet</p>
+                    <button id="connection-check" class="secondary-button" type="button">Check connection</button>
+                  </div>
                 </div>
-                <figcaption>The menu now reads <strong>Save to Keepall</strong>. On X, Keepall uses the image's tweet link as its source when available, so you can return to the post later.</figcaption>
-              </figure>
-            </section>
-            <section class="image-save-step" aria-labelledby="permission-step-heading">
-              <h3 id="permission-step-heading">2. Allow access to that website</h3>
-              <p>The first time you save an image from a new website, Chrome asks for permission. Choose <strong>Allow</strong> to save the image. Chrome remembers your choice, so future saves from that same website won't need another permission prompt.</p>
-              <figure>
-                <div class="screenshot-crop screenshot-crop-website">
-                  <img src="permission-one-website.png" width="669" height="318" alt="Chrome asks to read and change data on pbs.twimg.com, with Allow and Deny buttons.">
-                </div>
-                <figcaption>For an image on X, you may see <code>pbs.twimg.com</code>, where X stores its images. Allow it once, then save more images from there without being asked again.</figcaption>
-              </figure>
-            </section>
-          </div>
-
-          <div class="image-access-recommendation">
-            <div class="choice-heading">
-              <h3>Allow each website as you need it</h3>
-              <span class="choice-badge">Recommended</span>
+                <form id="settings">
+                  <label for="origin">Keepall address</label>
+                  <input id="origin" type="url" required spellcheck="false" autocomplete="url" aria-describedby="origin-hint">
+                  <p id="origin-hint" class="hint">For local testing, enter the address shown by <code>pnpm dev</code>, such as <code>http://localhost:3001</code>.</p>
+                  <div class="form-footer">
+                    <button type="submit">Save address</button>
+                    <button id="library-access-restore" type="button" hidden>Restore library access</button>
+                    <p id="status" role="status" aria-live="polite"></p>
+                  </div>
+                </form>
+                <p id="library-access-status" class="hint" role="status" aria-live="polite" hidden></p>
+              </section>
+              <section class="settings-card" aria-labelledby="theme-heading">
+                <h2 id="theme-heading">Appearance</h2>
+                <p class="section-description">Choose how the extension's drawer, notifications, and settings look. System follows your device's appearance.</p>
+                <fieldset class="theme-choices" aria-label="Extension theme">
+                  <label class="theme-choice"><input type="radio" name="theme" value="system" checked>System</label>
+                  <label class="theme-choice"><input type="radio" name="theme" value="light">Light</label>
+                  <label class="theme-choice"><input type="radio" name="theme" value="dark">Dark</label>
+                </fieldset>
+                <p id="theme-status" class="hint" role="status" aria-live="polite"></p>
+              </section>
             </div>
-            <p>This keeps access limited to the websites you choose. You only approve each one once; after that, right-click saving from it is frictionless.</p>
-            <p id="image-access-default" class="choice-state">Checking your choice…</p>
-          </div>
 
-          <div class="image-access-choices">
-            <div class="image-access-choice">
-              <div class="choice-heading">
-                <h3>Want frictionless saving on every website?</h3>
-                <span id="image-access-badge" class="choice-badge">Optional</span>
-              </div>
-              <p>You can give Keepall access to all websites in one go. Accept this permission once, then right-click and save images from any website without another website permission prompt.</p>
-              <figure>
-                <div class="screenshot-crop screenshot-crop-all-websites">
-                  <img src="permission-all-websites.png" width="672" height="306" alt="Chrome asks to read and change all your data on all websites, with Allow and Deny buttons.">
+            <div id="panel-saving" class="settings-panel" role="tabpanel" aria-labelledby="tab-saving" tabindex="0" hidden>
+              <section class="settings-card" aria-labelledby="shortcut-heading">
+                <h2 id="shortcut-heading">Keyboard shortcut</h2>
+                <p class="section-description">Open the capture drawer on the page you're viewing to add a note, collection, or tags before saving.</p>
+                <div class="shortcut-row">
+                  <div class="shortcut-current" role="status" aria-live="polite" aria-atomic="true">
+                    <span class="shortcut-label">In this Chrome profile</span>
+                    <kbd id="shortcut-value" hidden></kbd>
+                    <span id="shortcut-state">Checking shortcut…</span>
+                  </div>
+                  <button id="shortcut-change" type="button">Change shortcut</button>
                 </div>
-                <figcaption>Chrome will show this broader permission request. You can choose Allow or Deny.</figcaption>
-              </figure>
-              <div class="permission-explanation">
-                <h4>What this means for your privacy</h4>
-                <p>Chrome says "read and change your data" because this permission allows broad website access, including downloading images. Keepall uses it to save the image you choose. It does not read or change your account data, collect passwords or browsing history, or upload your saved images to our servers.</p>
-                <p>Your selected image and its source link are saved locally in Keepall, on your device. New images go to <strong>Unsorted</strong>.</p>
-                <p>You can change website access in Chrome's extension settings. Your saved items stay in your library.</p>
-              </div>
-              <div class="permission-management">
-                <h4>Change or remove website access</h4>
-                <ol>
-                  <li>Open <strong>Manage access in Chrome</strong> below. Chrome opens Keepall Capture's extension details.</li>
-                  <li>Under <strong>Site access</strong>, choose <strong>On specific sites</strong> instead of <strong>On all sites</strong>.</li>
-                  <li>Keep <strong>https://www.keepall.app</strong> in the allowed sites so the extension can save to your library. For local testing, keep your localhost library address allowed too.</li>
-                  <li>Remove any other website from <strong>Allowed sites</strong> using its menu. You can add websites here when you want to allow them again.</li>
-                </ol>
-                <p>These controls change Chrome's website permissions. They do not delete saved items or disable saving links. Choosing to save an image or allowing a website again can grant access for that save; removing access does not guarantee Chrome will repeat an earlier permission prompt.</p>
-                <p><a class="privacy-link" href="https://support.google.com/chrome/answer/2664769?hl=en#zippy=%2Cadd-or-remove-access-to-a-specific-site" target="_blank" rel="noopener noreferrer">Chrome's guide to managing website access</a></p>
-              </div>
-              <div class="form-footer image-access-actions">
-                <button id="image-access-enable" type="button" disabled>Allow access to all websites</button>
-                <button id="image-access-manage" class="manage-image-access" type="button">Manage access in Chrome</button>
-              </div>
+                <p class="hint">In Chrome, find <strong>Keepall Capture</strong> and edit <strong>Open Keepall capture on this page</strong>. Return here to see your updated shortcut.</p>
+                <p id="shortcut-error" class="hint" role="status" hidden></p>
+              </section>
+              <section class="settings-card" aria-labelledby="link-saving-heading">
+                <h2 id="link-saving-heading">Link saving</h2>
+                <p class="section-description">Right-click a link on a website and choose <strong>Save to Keepall</strong>. The link goes straight to <strong>Unsorted</strong>, without opening it first. Already-saved links keep their current collection.</p>
+                <p class="section-description">Saving links does not need the extra website permissions used for image downloads.</p>
+                <p class="hint">The same menu action works for images: right-click an image to save the image itself, or right-click a text link to save its destination.</p>
+              </section>
+              <section class="settings-card" aria-labelledby="text-saving-heading">
+                <h2 id="text-saving-heading">Selected text</h2>
+                <p class="section-description">Highlight text on a page, right-click, and choose <strong>Save to Keepall</strong>. The text is saved as a note alongside the page's link, so you can return to its source.</p>
+                <p class="hint">If the page is already in your library, the text is added below its existing note. Your collection, tags, and earlier writing stay in place. Saving the same passage again won't add another copy.</p>
+              </section>
             </div>
+
+            <div id="panel-images" class="settings-panel" role="tabpanel" aria-labelledby="tab-images" tabindex="0" hidden>
+              <section class="settings-card" aria-labelledby="image-access-heading">
+                <h2 id="image-access-heading">Image saving</h2>
+                <div class="image-save-steps">
+                  <section class="image-save-step" aria-labelledby="save-image-step-heading">
+                    <h3 id="save-image-step-heading">1. Right-click an image</h3>
+                    <p>Choose <strong>Save to Keepall</strong> from the menu. New images go straight to <strong>Unsorted</strong> in your Keepall library, ready for you to organize later.</p>
+                    <figure>
+                      <div class="screenshot-crop screenshot-crop-menu">
+                        <img src="image-context-menu.png" width="405" height="447" alt="Chrome's image right-click menu includes Save image to Keepall.">
+                      </div>
+                      <figcaption>The menu now reads <strong>Save to Keepall</strong>. On X, Keepall uses the image's tweet link as its source when available, so you can return to the post later.</figcaption>
+                    </figure>
+                  </section>
+                  <section class="image-save-step" aria-labelledby="permission-step-heading">
+                    <h3 id="permission-step-heading">2. Allow access to that website</h3>
+                    <p>The first time you save an image from a new website, Chrome asks for permission. Choose <strong>Allow</strong> to save the image. Chrome remembers your choice, so future saves from that same website won't need another permission prompt.</p>
+                    <figure>
+                      <div class="screenshot-crop screenshot-crop-website">
+                        <img src="permission-one-website.png" width="669" height="318" alt="Chrome asks to read and change data on pbs.twimg.com, with Allow and Deny buttons.">
+                      </div>
+                      <figcaption>For an image on X, you may see <code>pbs.twimg.com</code>, where X stores its images. Allow it once, then save more images from there without being asked again.</figcaption>
+                    </figure>
+                  </section>
+                </div>
+
+                <div class="image-access-recommendation">
+                  <div class="choice-heading">
+                    <h3>Allow each website as you need it</h3>
+                    <span class="choice-badge">Recommended</span>
+                  </div>
+                  <p>This keeps access limited to the websites you choose. You only approve each one once; after that, right-click saving from it is frictionless.</p>
+                  <p id="image-access-default" class="choice-state">Checking your choice…</p>
+                </div>
+
+              </section>
+              <section class="settings-card" aria-labelledby="permissions-heading">
+                <h2 id="permissions-heading">Website permissions</h2>
+                <p class="section-description">Allow individual websites as you save images, or choose broader access below.</p>
+                <div class="image-access-choices">
+                  <div class="image-access-choice">
+                    <div class="choice-heading">
+                      <h3>Want frictionless saving on every website?</h3>
+                      <span id="image-access-badge" class="choice-badge">Optional</span>
+                    </div>
+                    <p>You can give Keepall access to all websites in one go. Accept this permission once, then right-click and save images from any website without another website permission prompt.</p>
+                    <figure>
+                      <div class="screenshot-crop screenshot-crop-all-websites">
+                        <img src="permission-all-websites.png" width="672" height="306" alt="Chrome asks to read and change all your data on all websites, with Allow and Deny buttons.">
+                      </div>
+                      <figcaption>Chrome will show this broader permission request. You can choose Allow or Deny.</figcaption>
+                    </figure>
+                    <div class="permission-explanation">
+                      <h4>What this means for your privacy</h4>
+                      <p>Chrome says "read and change your data" because this permission allows broad website access, including downloading images. Keepall uses it to save the image you choose. It does not read or change your account data, collect passwords or browsing history, or upload your saved images to our servers.</p>
+                      <p>Your selected image and its source link are saved locally in Keepall, on your device. New images go to <strong>Unsorted</strong>.</p>
+                      <p>You can change website access in Chrome's extension settings. Your saved items stay in your library.</p>
+                    </div>
+                    <div class="form-footer image-access-actions">
+                      <button id="image-access-enable" type="button" disabled>Allow access to all websites</button>
+                      <button id="image-access-manage" class="manage-image-access" type="button">Manage access in Chrome</button>
+                    </div>
+                    <p id="image-access-status" role="status" aria-live="polite"></p>
+                    <div class="permission-management">
+                      <h4>Change or remove website access</h4>
+                      <ol>
+                        <li>Open <strong>Manage access in Chrome</strong> above. Chrome opens Keepall Capture's extension details.</li>
+                        <li>Under <strong>Site access</strong>, choose <strong>On specific sites</strong> instead of <strong>On all sites</strong>.</li>
+                        <li>Keep <strong>https://www.keepall.app</strong> in the allowed sites so the extension can save to your library. For local testing, keep your localhost library address allowed too.</li>
+                        <li>Remove any other website from <strong>Allowed sites</strong> using its menu. You can add websites here when you want to allow them again.</li>
+                      </ol>
+                      <p>These controls change Chrome's website permissions. They do not delete saved items or disable saving links. Choosing to save an image or allowing a website again can grant access for that save; removing access does not guarantee Chrome will repeat an earlier permission prompt.</p>
+                      <p><a class="privacy-link" href="https://support.google.com/chrome/answer/2664769?hl=en#zippy=%2Cadd-or-remove-access-to-a-specific-site" target="_blank" rel="noopener noreferrer">Chrome's guide to managing website access</a></p>
+                    </div>
+
+                  </div>
+                </div>
+                <p class="hint"><a class="privacy-link" href="https://www.keepall.app/extension-privacy" target="_blank" rel="noopener noreferrer">Read Keepall Capture's privacy policy</a></p>
+              </section>
+            </div>
+
           </div>
-          <p id="image-access-status" role="status" aria-live="polite"></p>
-          <p class="hint"><a class="privacy-link" href="https://www.keepall.app/extension-privacy" target="_blank" rel="noopener noreferrer">Read Keepall Capture's privacy policy</a></p>
-        </section>
+        </div>
+
       </div>
     </main>
   </body>
