@@ -141,6 +141,8 @@ describe("ImageItemPage", () => {
     expect(within(toolbar).getByRole("button", { name: "Edit details" })).toBeInTheDocument();
     expect(within(toolbar).getByRole("button", { name: "Organize" })).toBeInTheDocument();
     expect(within(toolbar).getByRole("button", { name: "Delete item" })).toBeInTheDocument();
+    expect(within(toolbar).getByRole("link", { name: "Open source" })).toHaveAttribute("href", "https://example.com/checkout");
+    expect(within(screen.getByRole("complementary", { name: "Image details" })).queryByRole("link", { name: "Open source" })).not.toBeInTheDocument();
     expect(screen.queryByText("Saved image")).not.toBeInTheDocument();
     expect(
       within(screen.getByRole("complementary", { name: "Image details" })).queryByRole(

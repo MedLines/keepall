@@ -331,16 +331,6 @@ export function LibraryItem({
               <button
                 type="button"
                 className={ACTION_BTN}
-                aria-label="Delete"
-                data-focus-return={`delete:${item.id}`}
-                disabled={mutationBusy}
-                onClick={onStartDelete}
-              >
-                <DeleteIcon /> Delete
-              </button>
-              <button
-                type="button"
-                className={ACTION_BTN}
                 aria-label="Organize"
                 disabled={mutationBusy}
                 onClick={() => {
@@ -352,6 +342,20 @@ export function LibraryItem({
                 }}
               >
                 <LayersIcon /> Organize
+              </button>
+              <hr className="my-1 border-border-edge" />
+              <button
+                type="button"
+                className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60"
+                aria-label="Delete"
+                data-focus-return={`delete:${item.id}`}
+                disabled={mutationBusy}
+                onClick={() => {
+                  if (actionsRef.current) actionsRef.current.open = false;
+                  onStartDelete();
+                }}
+              >
+                <DeleteIcon /> Delete
               </button>
             </div>
           </div>

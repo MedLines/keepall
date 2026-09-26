@@ -153,7 +153,7 @@ test("note editor grows to fit long content without an inner scrollbar", async (
 
 test("open link with a personal note can be organized", async ({ page }) => {
   await page.goto("/items/link");
-  await expect(page.getByRole("link", { name: /Open website/ })).toHaveAttribute("href", "https://example.com/footer");
+  await expect(page.getByRole("link", { name: /Open source/ })).toHaveAttribute("href", "https://example.com/footer");
   await page.getByRole("button", { name: "Organize" }).click();
   await page.getByRole("combobox", { name: "Add tag" }).fill("reference");
   await page.getByRole("button", { name: "Add", exact: true }).click();
@@ -169,11 +169,11 @@ test("saved link preview stays visible while its personal note is added", async 
   await card.getByRole("link", { name: /Add a note/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Footer reference" })).toBeVisible();
   await expect(page.getByText("A spacious footer for a portfolio.")).toBeVisible();
-  await expect(page.getByRole("link", { name: /Open website/ })).toHaveAttribute("href", "https://example.com/footer");
+  await expect(page.getByRole("link", { name: /Open source/ })).toHaveAttribute("href", "https://example.com/footer");
   await expect(page.locator("main img[src^='blob:']")).toBeVisible();
-  await page.getByRole("button", { name: "Write a note" }).click();
-  await page.getByRole("textbox", { name: "Your note" }).fill("The spacing works well here.");
-  await page.getByRole("button", { name: "Save note" }).click();
+  await page.getByRole("button", { name: "Edit details" }).click();
+  await page.getByRole("textbox", { name: "My note (optional)" }).fill("The spacing works well here.");
+  await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("The spacing works well here.")).toBeVisible();
   await expect(page.locator("main img[src^='blob:']")).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("link-with-preview-and-note.png") });

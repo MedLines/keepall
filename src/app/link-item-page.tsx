@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useEffect, useState } from "react";
 import { linkCardHost } from "@/domain/card-display";
 import { CollectionValidationError, type Collection } from "@/domain/collection";
@@ -11,6 +13,7 @@ import { createCollection, listCollections } from "@/persistence/collections";
 import {
   assignCollectionToItem,
   assignTagToItem,
+  deleteItem,
   getItem,
   unassignTagFromItem,
   updateLink,
@@ -21,14 +24,20 @@ import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
 import { NoteContent } from "./note-content";
-import { NoteFormatControl } from "./note-format-control";
-import { ArrowLeftIcon, EditIcon, LayersIcon, LinkIcon } from "./shell-icons";
+import { LinkItemEditDialog, type LinkDetailsDraft } from "./item-edit-dialog";
+import { ArrowLeftIcon, DeleteIcon, EditIcon, LayersIcon, LinkIcon } from "./shell-icons";
 
 type LoadState =
   | { status: "loading" | "missing" | "error" }
   | { status: "ready"; link: LinkItem; tags: Tag[]; collections: Collection[] };
 
 export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHref: string }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [itemMutation, setItemMutation] = useState<"save" | "delete" | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
@@ -59,6 +68,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
     return <LinkPageUnavailable status={state.status} returnHref={returnHref} />;
   }
 
+  const busy = organizeMutation !== null || itemMutation !== null;
   const link = state.link;
   const title = link.title.trim() || link.previewTitle.trim() || link.url;
   const itemTags = resolveItemTags(link, new Map(state.tags.map((tag) => [tag.id, tag])));
@@ -77,7 +87,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
   }
 
   async function addTag(name: string) {
-    if (organizeMutation) return;
+    if (busy) return;
     setOrganizeMutation("tag");
     setTagError(null);
     try {
@@ -93,7 +103,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
   }
 
   async function removeTag(tagId: string) {
-    if (organizeMutation) return;
+    if (busy) return;
     setOrganizeMutation("tag");
     setTagError(null);
     try {
@@ -108,7 +118,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
   }
 
   async function moveToCollection(name: string) {
-    if (organizeMutation) return;
+    if (busy) return;
     setOrganizeMutation("collection");
     setCollectionError(null);
     try {
@@ -123,23 +133,61 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
     }
   }
 
+  async function saveDetails(draft: LinkDetailsDraft) {
+    if (busy) return;
+    setItemMutation("save");
+    setEditError(null);
+    try {
+      const updated = await updateLink(itemId, draft);
+      applyLinkUpdate(updated);
+      setEditing(false);
+    } catch (error) {
+      setEditError(error instanceof LinkValidationError ? error.message : "Couldn't save link details.");
+    } finally {
+      setItemMutation(null);
+    }
+  }
+
+  async function confirmDelete() {
+    if (busy) return;
+    setItemMutation("delete");
+    setDeleteError(null);
+    try {
+      await deleteItem(itemId);
+      router.push(returnHref);
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setDeleteError("Couldn't delete link.");
+    } finally {
+      setItemMutation(null);
+    }
+  }
+
   return (
     <div className="ui-scrollbar h-full overflow-y-auto bg-bg-canvas text-text-primary">
       <header className="sticky top-0 z-10 border-b border-border-control bg-bg-canvas/95 backdrop-blur-sm">
-        <div className="mx-auto flex min-h-16 w-full max-w-[90rem] items-center gap-3 px-4 sm:px-6">
+        <div className="mx-auto flex min-h-16 w-full max-w-[100rem] items-center gap-3 px-3 sm:px-5">
           <Link href={returnHref} aria-label="Back to library" className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm">
             <ArrowLeftIcon /><span className="hidden sm:inline">Library</span>
           </Link>
           <span className="min-w-0 flex-1 truncate text-sm text-text-secondary">Saved link</span>
-          <button type="button" aria-label="Organize" disabled={organizeMutation !== null} className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm disabled:opacity-60" onClick={() => {
+          <button type="button" aria-label="Edit details" disabled={busy || editing} className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm disabled:opacity-60" onClick={() => {
+            setEditError(null);
+            setEditing(true);
+          }}><EditIcon /><span className="hidden sm:inline">Edit</span></button>
+          <button type="button" aria-label="Organize" disabled={busy} className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm disabled:opacity-60" onClick={() => {
             setTagError(null);
             setCollectionError(null);
             setOrganizerSide(document.documentElement.dir === "rtl" ? "left" : "right");
             setOrganizerOpen(true);
           }}><LayersIcon /><span className="hidden sm:inline">Organize</span></button>
-          <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label="Open website" className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm">
-            <LinkIcon /><span className="hidden sm:inline">Open website</span>
+          <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label="Open source" className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm">
+            <LinkIcon /><span className="hidden sm:inline">Open source</span>
           </a>
+          <button type="button" aria-label="Delete link" disabled={busy} className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60" onClick={() => {
+            setDeleteError(null);
+            setDeleteOpen(true);
+          }}><DeleteIcon /><span className="hidden sm:inline">Delete</span></button>
         </div>
       </header>
 
@@ -155,9 +203,14 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
           </div>
         </div>
 
-        <LinkPersonalNote link={link} onSaved={(updated) => {
-          applyLinkUpdate(updated);
-        }} />
+        <section aria-labelledby="personal-note-heading" className="mt-10 border-t border-border-control pt-7">
+          <h2 id="personal-note-heading" className="text-xl font-semibold">My note</h2>
+          {link.noteContent?.trim() ? (
+            <article className="mt-6"><NoteContent content={link.noteContent} format={link.noteFormat === "markdown" ? "markdown" : "plain"} headingStart={2} /></article>
+          ) : (
+            <p className="mt-5 text-sm text-text-secondary">Use Edit to add your own thoughts to this link.</p>
+          )}
+        </section>
         </div>
 
         <aside aria-label="Link details" className="library-panel rounded-panel border border-border-control bg-bg-surface p-5 lg:sticky lg:top-24">
@@ -174,6 +227,11 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
         </aside>
       </main>
 
+      {editing ? <LinkItemEditDialog item={link} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}
+      <ConfirmDialog open={deleteOpen} title="Delete this link?" description={`Delete “${title}”? This cannot be undone.`} confirmLabel="Confirm delete" pendingLabel="Deleting…" busy={itemMutation === "delete"} error={deleteError} onConfirm={() => void confirmDelete()} onOpenChange={(open) => {
+        setDeleteOpen(open);
+        if (!open) setDeleteError(null);
+      }} />
       <ItemOrganizerDrawer
         open={organizerOpen}
         onOpenChange={setOrganizerOpen}
@@ -183,7 +241,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
         collections={itemCollections}
         tagSuggestions={state.tags.filter((tag) => !link.tagIds.includes(tag.id))}
         collectionSuggestions={state.collections.filter((collection) => !link.collectionIds.includes(collection.id))}
-        disabled={organizeMutation !== null}
+        disabled={busy}
         pendingTag={organizeMutation === "tag"}
         pendingCollection={organizeMutation === "collection"}
         tagError={tagError}
@@ -204,62 +262,4 @@ function LinkPageUnavailable({ status, returnHref }: { status: "loading" | "miss
       <Link href={returnHref} className="ui-control mt-5 inline-flex min-h-10 items-center px-4">Return to library</Link>
     </div>
   </main>;
-}
-
-function LinkPersonalNote({ link, onSaved }: { link: LinkItem; onSaved: (updated: LinkItem) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [format, setFormat] = useState<"plain" | "markdown">("plain");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const hasNote = Boolean(link.noteContent?.trim());
-
-  function startEditing() {
-    setDraft(link.noteContent ?? "");
-    setFormat(link.noteFormat === "markdown" ? "markdown" : "plain");
-    setSaveError(null);
-    setEditing(true);
-  }
-
-  async function saveNote() {
-    if (saving) return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const updated = await updateLink(link.id, { url: link.url, noteContent: draft, noteFormat: format });
-      onSaved(updated);
-      setEditing(false);
-    } catch (error) {
-      setSaveError(error instanceof LinkValidationError ? error.message : "Couldn't save your note.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return <section aria-labelledby="personal-note-heading" className="mt-10 border-t border-border-control pt-7">
-    <div className="flex items-center justify-between gap-4">
-      <h2 id="personal-note-heading" className="text-xl font-semibold">My note</h2>
-      {!editing && hasNote ? <button type="button" onClick={startEditing} className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm"><EditIcon />Edit note</button> : null}
-    </div>
-    {editing ? (
-      <div className="mt-5 flex flex-col gap-4">
-        <label htmlFor="link-page-note" className="text-sm font-medium">Your note</label>
-        <textarea id="link-page-note" className="ui-field min-h-56 w-full resize-y px-4 py-3 text-sm" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={saving} />
-        <NoteFormatControl format={format} disabled={saving} onChange={setFormat} />
-        {format === "markdown" && draft.trim() ? <div aria-label="Markdown preview" className="rounded-input border border-border-control bg-bg-control p-4"><NoteContent content={draft} format="markdown" /></div> : null}
-        {saveError ? <p role="alert" className="text-sm text-text-danger">{saveError}</p> : null}
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => void saveNote()} disabled={saving} className="ui-control ui-primary min-h-10 px-4 text-sm font-medium disabled:opacity-60">{saving ? "Saving…" : "Save note"}</button>
-          <button type="button" onClick={() => setEditing(false)} disabled={saving} className="ui-control min-h-10 px-4 text-sm">Cancel</button>
-        </div>
-      </div>
-    ) : hasNote ? (
-      <article className="mt-6"><NoteContent content={link.noteContent!} format={link.noteFormat === "markdown" ? "markdown" : "plain"} headingStart={2} /></article>
-    ) : (
-      <div className="mt-5">
-        <p className="text-sm text-text-secondary">Keep your own thoughts with this link. The website preview stays separate.</p>
-        <button type="button" onClick={startEditing} className="ui-control mt-4 min-h-10 px-4 text-sm font-medium">Write a note</button>
-      </div>
-    )}
-  </section>;
 }

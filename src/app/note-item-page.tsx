@@ -319,7 +319,7 @@ export function NoteItemPage({
   return (
     <div className="ui-scrollbar h-full overflow-y-auto bg-bg-canvas text-text-primary">
       <header className="sticky top-0 z-10 border-b border-border-control bg-bg-canvas/95 backdrop-blur-sm">
-        <div className="mx-auto flex min-h-16 w-full max-w-[90rem] items-center gap-3 px-4 sm:px-6">
+        <div className="mx-auto flex min-h-16 w-full max-w-[100rem] items-center gap-3 px-3 sm:px-5">
           <Link
             href={returnHref}
             aria-label="Back to library"
@@ -371,11 +371,12 @@ export function NoteItemPage({
           <button
             type="button"
             aria-label="Delete note"
-            className="ui-control inline-flex min-h-10 items-center px-3 text-text-danger"
+            className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60"
             disabled={saving || addingImages || deleting || organizeBusy}
             onClick={() => setDeleteOpen(true)}
           >
             <DeleteIcon />
+            <span className="hidden sm:inline">Delete</span>
           </button>
         </div>
       </header>

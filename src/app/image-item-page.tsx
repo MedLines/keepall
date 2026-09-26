@@ -43,6 +43,7 @@ import {
   EditIcon,
   FullScreenIcon,
   LayersIcon,
+  LinkIcon,
 } from "./shell-icons";
 
 type LoadState =
@@ -598,14 +599,21 @@ function ImageWorkspace({
                 <LayersIcon />
                 <span className="hidden xl:inline">Organize</span>
               </button>
+              {item.sourceUrl ? (
+                <a className={CONTROL} href={item.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label="Open source">
+                  <LinkIcon />
+                  <span className="hidden xl:inline">Open source</span>
+                </a>
+              ) : null}
               <button
-                className={`${CONTROL} text-text-danger`}
+                className={`${CONTROL} text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger`}
                 type="button"
                 aria-label="Delete item"
                 disabled={actionBusy}
                 onClick={onDelete}
               >
                 <DeleteIcon />
+                <span className="hidden xl:inline">Delete</span>
               </button>
             </div>
           </div>
@@ -769,11 +777,6 @@ function ImageWorkspace({
               ) : null}
             </dl>
 
-            {item.sourceUrl ? (
-              <div className="mt-7">
-                <ItemDetailLink href={item.sourceUrl} external wide>Open source</ItemDetailLink>
-              </div>
-            ) : null}
             </aside>
           </div>
         </main>

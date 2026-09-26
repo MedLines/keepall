@@ -2,19 +2,24 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildLink } from "@/domain/link";
 import { createCollection, listCollections } from "@/persistence/collections";
-import { assignCollectionToItem, assignTagToItem, getItem, updateLink } from "@/persistence/items";
+import { assignCollectionToItem, assignTagToItem, deleteItem, getItem, updateLink } from "@/persistence/items";
 import { createTag, listTags } from "@/persistence/tags";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LinkItemPage } from "./link-item-page";
 
-vi.mock("@/persistence/items", () => ({ getItem: vi.fn(), updateLink: vi.fn(), assignTagToItem: vi.fn(), assignCollectionToItem: vi.fn() }));
+vi.mock("@/persistence/items", () => ({ getItem: vi.fn(), deleteItem: vi.fn(), updateLink: vi.fn(), assignTagToItem: vi.fn(), assignCollectionToItem: vi.fn() }));
 vi.mock("@/persistence/tags", () => ({ createTag: vi.fn(), listTags: vi.fn() }));
 vi.mock("@/persistence/collections", () => ({ createCollection: vi.fn(), listCollections: vi.fn() }));
 vi.mock("./library-item-media", () => ({ LibraryItemMedia: () => <div data-testid="link-preview" /> }));
 
+const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: routerPush }) }));
+
 describe("LinkItemPage", () => {
   beforeEach(() => {
     vi.mocked(getItem).mockReset();
+    vi.mocked(deleteItem).mockReset();
+    routerPush.mockReset();
     vi.mocked(updateLink).mockReset();
     vi.mocked(assignTagToItem).mockReset();
     vi.mocked(assignCollectionToItem).mockReset();
@@ -65,7 +70,7 @@ describe("LinkItemPage", () => {
     expect(details).toHaveTextContent("review");
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(screen.getByText("My notes", { selector: "article p" })).toBeVisible();
-    expect(screen.getByRole("link", { name: /Open website/ })).toHaveAttribute("href", "https://example.com/article");
+    expect(screen.getByRole("link", { name: /Open source/ })).toHaveAttribute("href", "https://example.com/article");
   });
 
   test("shows the website preview separately from a Markdown personal note", async () => {
@@ -78,7 +83,7 @@ describe("LinkItemPage", () => {
     expect(screen.getByText("Website summary")).toBeVisible();
     expect(screen.queryByTestId("link-preview")).toBeNull();
     expect(screen.getByRole("heading", { name: "Why I saved this" })).toBeVisible();
-    expect(screen.getByRole("link", { name: /Open website/ })).toHaveAttribute("href", "https://example.com/article");
+    expect(screen.getByRole("link", { name: /Open source/ })).toHaveAttribute("href", "https://example.com/article");
     expect(screen.getByRole("link", { name: "Back to library" })).toHaveAttribute("href", "/?tag=design");
   });
 
@@ -105,12 +110,39 @@ describe("LinkItemPage", () => {
     vi.mocked(updateLink).mockResolvedValue({ ...link, noteContent: "My own note" });
 
     render(<LinkItemPage itemId="l2" returnHref="/" />);
-    fireEvent.click(await screen.findByRole("button", { name: "Write a note" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Your note" }), { target: { value: "My own note" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Edit details" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "My note (optional)" }), { target: { value: "My own note" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-    await waitFor(() => expect(updateLink).toHaveBeenCalledWith("l2", { url: "https://example.com/article", noteContent: "My own note", noteFormat: "plain" }));
+    await waitFor(() => expect(updateLink).toHaveBeenCalledWith("l2", { url: "https://example.com/article", title: "", noteContent: "My own note", noteFormat: "plain" }));
     expect(await screen.findByText("My own note")).toBeVisible();
     expect(screen.getByText("Website summary")).toBeVisible();
   });
+  test("deletes an open link only after confirmation and returns to the library", async () => {
+    vi.mocked(getItem).mockResolvedValue(buildLink({ url: "https://example.com/article" }, { id: "l-delete", now: 1 }));
+    vi.mocked(deleteItem).mockResolvedValue();
+    render(<LinkItemPage itemId="l-delete" returnHref="/?collection=reading" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Delete link" }));
+    expect(screen.getByRole("dialog", { name: "Delete this link?" })).toBeVisible();
+    expect(deleteItem).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(deleteItem).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Delete link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    await waitFor(() => expect(deleteItem).toHaveBeenCalledWith("l-delete"));
+    expect(routerPush).toHaveBeenCalledWith("/?collection=reading");
+  });
+
+  test("keeps the link available when deletion fails", async () => {
+    vi.mocked(getItem).mockResolvedValue(buildLink({ url: "https://example.com/article" }, { id: "l-failure", now: 1 }));
+    vi.mocked(deleteItem).mockRejectedValue(new Error("Storage unavailable"));
+    render(<LinkItemPage itemId="l-failure" returnHref="/" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Delete link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't delete link.");
+    expect(routerPush).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("link", { name: "Open source" })).toHaveAttribute("href", "https://example.com/article");
+  });
+
 });
