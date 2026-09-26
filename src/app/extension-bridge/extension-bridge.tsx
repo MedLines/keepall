@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { getExtensionOrganizationOptions, saveExtensionLink, type ExtensionLinkCapture } from "@/persistence/extension-capture";
+import { getExtensionOrganizationOptions, saveExtensionImage, saveExtensionLink, type ExtensionImageCapture, type ExtensionLinkCapture } from "@/persistence/extension-capture";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
 
 const EXTENSION_ORIGINS = [
@@ -38,6 +38,16 @@ function isCapture(value: unknown): value is ExtensionLinkCapture {
     (input.tagNames === undefined || (Array.isArray(input.tagNames) && input.tagNames.every((name) => typeof name === "string")));
 }
 
+function isImageCapture(value: unknown): value is ExtensionImageCapture {
+  if (!value || typeof value !== "object") return false;
+  const input = value as Record<string, unknown>;
+  return typeof input.captureId === "string" &&
+    typeof input.sourcePageUrl === "string" &&
+    typeof input.mimeType === "string" &&
+    input.bytes instanceof Uint8Array &&
+    input.bytes.byteLength <= 20 * 1024 * 1024;
+}
+
 export function ExtensionBridge() {
   useEffect(() => {
     if (window.parent === window) return;
@@ -57,6 +67,24 @@ export function ExtensionBridge() {
           reply({ type: "organizations", requestId: event.data.requestId, ...options }, event.origin);
         } catch {
           reply({ type: "organizations", requestId: event.data.requestId, error: "Could not load collections and tags." }, event.origin);
+        }
+        return;
+      }
+
+      if (event.data.type === "capture-image") {
+        if (!isImageCapture(event.data.payload)) return;
+        const capture = event.data.payload;
+        try {
+          const result = await saveExtensionImage(capture);
+          if (result.created) window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+          reply({ type: "result", captureId: capture.captureId, ...result }, event.origin);
+        } catch (error) {
+          const message = error instanceof Error && (
+            error.message.includes("PNG, JPEG") ||
+            error.message.includes("20 MiB") ||
+            error.message.includes("empty")
+          ) ? error.message : "Could not save this image to Keepall.";
+          reply({ type: "result", captureId: capture.captureId, error: message }, event.origin);
         }
         return;
       }

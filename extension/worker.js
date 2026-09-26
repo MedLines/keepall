@@ -8,6 +8,31 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "pending-cleanup") void pendingCapture("", "", "").catch(() => {});
 });
 
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: "save-to-keepall",
+      title: "Save to Keepall",
+      contexts: ["image", "link"],
+      documentUrlPatterns: ["http://*/*", "https://*/*"],
+      targetUrlPatterns: ["http://*/*", "https://*/*"],
+    });
+  });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  void saveContext(info, tab);
+});
+
+function saveContext(info, tab) {
+  if (info.menuItemId !== "save-to-keepall") return;
+  if (info.mediaType === "image") {
+    if (info.srcUrl) return saveImage(tab, info.srcUrl, info);
+    return;
+  }
+  if (info.linkUrl) return saveLink(tab, info.linkUrl);
+}
+
 async function keepallOrigin() {
   const { origin } = await chrome.storage.local.get("origin");
   return typeof origin === "string" && /^http:\/\/localhost:\d{2,5}$/.test(origin)
@@ -15,7 +40,15 @@ async function keepallOrigin() {
     : DEFAULT_ORIGIN;
 }
 
-async function ensureOffscreen() {
+async function requireLibraryAccess(origin) {
+  const url = new URL(origin);
+  if (!await chrome.permissions.contains({ origins: [`${url.protocol}//${url.hostname}/*`] })) {
+    throw new Error("Library access is missing. Open Keepall extension Options and restore library access.");
+  }
+}
+
+async function ensureOffscreen(origin) {
+  await requireLibraryAccess(origin);
   const url = chrome.runtime.getURL("offscreen.html");
   const contexts = await chrome.runtime.getContexts({
     contextTypes: ["OFFSCREEN_DOCUMENT"],
@@ -114,8 +147,8 @@ async function saveTab(tab, options = {}) {
     };
     const key = `pending:${payload.captureId}`;
     await chrome.storage.local.set({ [key]: { payload, createdAt: Date.now() } });
-    await ensureOffscreen();
     const origin = await keepallOrigin();
+    await ensureOffscreen(origin);
     const result = await chrome.runtime.sendMessage({
       target: "offscreen",
       type: "capture",
@@ -129,6 +162,7 @@ async function saveTab(tab, options = {}) {
     if (result?.captureId !== payload.captureId || typeof result.itemId !== "string") {
       throw new Error("Keepall did not confirm the save");
     }
+    await requireLibraryAccess(origin);
     await chrome.storage.local.remove(key);
     if (result.outcome === "created" || result.outcome === "updated" || result.created) {
       await notifyOpenKeepallTabs(origin).catch(() => {});
@@ -140,6 +174,137 @@ async function saveTab(tab, options = {}) {
     await feedback(message, true);
   } catch (error) {
     await feedback(error instanceof Error ? error.message : "Could not save to Keepall", false);
+  }
+}
+
+async function saveLink(tab, linkUrl) {
+  if (!tab?.id) return;
+  let url;
+  try {
+    url = new URL(linkUrl);
+    if (!["http:", "https:"].includes(url.protocol)) throw new Error("Unsupported link");
+  } catch {
+    await showFeedback(tab.id, "This link cannot be saved to Keepall.", false);
+    return;
+  }
+  await saveTab({ ...tab, url: url.href }, { title: "" });
+}
+
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif"]);
+
+async function imageBytes(url) {
+  const response = await fetch(url, {
+    credentials: "omit",
+    referrerPolicy: "no-referrer",
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!response.ok || !response.body) throw new Error("Could not download this image.");
+  const mimeType = (response.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+  if (!IMAGE_MIMES.has(mimeType)) throw new Error("Use a PNG, JPEG, GIF, WebP, or AVIF image.");
+  if (Number(response.headers.get("content-length")) > MAX_IMAGE_BYTES) {
+    throw new Error("Image must be 20 MiB or smaller.");
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_IMAGE_BYTES) {
+      await reader.cancel();
+      throw new Error("Image must be 20 MiB or smaller.");
+    }
+    chunks.push(value);
+  }
+  if (!size) throw new Error("Image file is empty.");
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { bytes, mimeType };
+}
+
+function base64Image(bytes) {
+  const parts = [];
+  for (let offset = 0; offset < bytes.length; offset += 24576) {
+    parts.push(btoa(String.fromCharCode(...bytes.subarray(offset, offset + 24576))));
+  }
+  return parts.join("");
+}
+
+function imageSourceUrl(pageUrl, linkUrl) {
+  const page = new URL(pageUrl);
+  const isX = (url) => ["x.com", "www.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com"].includes(url.hostname);
+  if (!isX(page)) return page.href;
+  for (const candidate of [linkUrl, page.href]) {
+    if (typeof candidate !== "string") continue;
+    try {
+      const url = new URL(candidate, page);
+      if (!["http:", "https:"].includes(url.protocol) || !isX(url)) continue;
+      if (!/^\/(?:[A-Za-z0-9_]+\/status|i\/web\/status|i\/status)\/\d+(?:\/(?:photo|video)\/\d+)?\/?$/.test(url.pathname)) continue;
+      return `https://x.com${url.pathname.replace(/\/(?:photo|video)\/\d+\/?$/, "").replace(/\/$/, "")}`;
+    } catch {
+      // An unrelated or invalid image link leaves the page as the source.
+    }
+  }
+  return page.href;
+}
+
+async function saveImage(tab, srcUrl, context = {}) {
+  if (!tab?.id) return;
+  const feedback = (message, success) => showFeedback(tab.id, message, success);
+  let sourcePage;
+  let imageUrl;
+  try {
+    sourcePage = new URL(context.pageUrl ?? tab.url ?? "");
+    imageUrl = new URL(srcUrl);
+    if (!["http:", "https:"].includes(sourcePage.protocol) ||
+        !["http:", "https:"].includes(imageUrl.protocol)) {
+      throw new Error("This image cannot be saved to Keepall.");
+    }
+  } catch {
+    await feedback("This image cannot be saved to Keepall.", false);
+    return;
+  }
+
+  // A context-menu click grants activeTab for the page origin. CDN hosts need
+  // an explicit, optional grant requested while that click is still active.
+  const access = imageUrl.origin === sourcePage.origin
+    ? Promise.resolve(true)
+    : chrome.permissions.request({ origins: [`${imageUrl.origin}/*`] });
+  try {
+    if (!await access) throw new Error("Allow access to this image host to save it.");
+    const { bytes, mimeType } = await imageBytes(imageUrl.href);
+    const origin = await keepallOrigin();
+    await ensureOffscreen(origin);
+    const captureId = crypto.randomUUID();
+    const result = await chrome.runtime.sendMessage({
+      target: "offscreen",
+      type: "capture-image",
+      origin,
+      payload: {
+        captureId,
+        sourcePageUrl: imageSourceUrl(sourcePage.href, context.linkUrl),
+        mimeType,
+        data: base64Image(bytes),
+      },
+    });
+    if (result?.error) throw new Error(result.error);
+    if (result?.captureId !== captureId || typeof result.itemId !== "string") {
+      throw new Error("Keepall did not confirm the image save.");
+    }
+    await requireLibraryAccess(origin);
+    if (result.outcome === "created") await notifyOpenKeepallTabs(origin).catch(() => {});
+    await feedback(result.outcome === "created" ? "Image saved to Keepall" : "This image was already saved", true);
+  } catch (error) {
+    const message = error instanceof Error && ["AbortError", "TimeoutError", "TypeError"].includes(error.name)
+      ? "Could not download this image."
+      : error instanceof Error ? error.message : "Could not save this image to Keepall.";
+    await feedback(message, false);
   }
 }
 
@@ -171,7 +336,7 @@ async function openEditor(tab) {
   const editorId = crypto.randomUUID();
   await chrome.tabs.sendMessage(tab.id, { type: "editor", editorId, title: tab.title ?? "", url: tab.url });
   try {
-    await ensureOffscreen();
+    await ensureOffscreen(origin);
     const result = await chrome.runtime.sendMessage({
       target: "offscreen", type: "organizations", origin, url: tab.url,
     });

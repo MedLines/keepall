@@ -5,7 +5,7 @@ import { buildTag } from "@/domain/tag";
 import { noteImageAssetIds } from "@/domain/note";
 import { captureOrgDrafts, rankCaptureOrganizations } from "@/domain/capture-org";
 import { getDb, type KeepallDB } from "./db";
-import { listItems } from "./items";
+import { createOrReuseImage, listItems } from "./items";
 import { getLibraryPreferences } from "./library-preferences";
 
 export type ExtensionLinkSnapshot = {
@@ -85,6 +85,33 @@ type ExtensionSaveResult = {
   outcome: "created" | "updated" | "unchanged";
   movedTo?: string;
 };
+
+export type ExtensionImageCapture = {
+  captureId: string;
+  sourcePageUrl: string;
+  bytes: Uint8Array;
+  mimeType: string;
+};
+
+export async function saveExtensionImage(input: ExtensionImageCapture): Promise<ExtensionSaveResult> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.captureId)) {
+    throw new Error("Invalid capture ID");
+  }
+  let sourcePage: URL;
+  try {
+    sourcePage = new URL(input.sourcePageUrl);
+  } catch {
+    throw new Error("Invalid source page URL");
+  }
+  if (input.sourcePageUrl.length > 8192 || !["http:", "https:"].includes(sourcePage.protocol)) {
+    throw new Error("Invalid source page URL");
+  }
+  const { image, created } = await createOrReuseImage({
+    assets: [{ bytes: input.bytes, mimeType: input.mimeType }],
+    sourceUrl: input.sourcePageUrl,
+  });
+  return { itemId: image.id, created, outcome: created ? "created" : "unchanged" };
+}
 
 function hasNoteFormatChange(link: LinkItem, input: ExtensionLinkCapture, nextNote: string): boolean {
   if (!nextNote || !link.noteContent?.trim() || input.noteFormat === undefined) return false;

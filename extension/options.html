@@ -25,7 +25,7 @@
         <div class="page-heading">
           <p class="eyebrow">Keepall</p>
           <h1>Capture settings</h1>
-          <p class="intro">Choose which Keepall library receives links from this extension.</p>
+          <p class="intro">Choose your library and how you want to save images.</p>
         </div>
 
         <section class="settings-card" aria-labelledby="address-heading">
@@ -37,9 +37,92 @@
             <p id="origin-hint" class="hint">For local testing, enter the address shown by <code>pnpm dev</code>, such as <code>http://localhost:3001</code>.</p>
             <div class="form-footer">
               <button type="submit">Save address</button>
+              <button id="library-access-restore" type="button" hidden>Restore library access</button>
               <p id="status" role="status" aria-live="polite"></p>
             </div>
           </form>
+          <p id="library-access-status" class="hint" role="status" aria-live="polite" hidden></p>
+        </section>
+
+        <section class="settings-card" aria-labelledby="link-saving-heading">
+          <h2 id="link-saving-heading">Link saving</h2>
+          <p class="section-description">Right-click a link on a website and choose <strong>Save to Keepall</strong>. The link goes straight to <strong>Unsorted</strong>, without opening it first. Already-saved links keep their current collection.</p>
+          <p class="section-description">Saving links does not need the extra website permissions used for image downloads.</p>
+          <p class="hint">The same menu action works for images: right-click an image to save the image itself, or right-click a text link to save its destination.</p>
+        </section>
+
+        <section class="settings-card" aria-labelledby="image-access-heading">
+          <h2 id="image-access-heading">Image saving</h2>
+          <div class="image-save-steps">
+            <section class="image-save-step" aria-labelledby="save-image-step-heading">
+              <h3 id="save-image-step-heading">1. Right-click an image</h3>
+              <p>Choose <strong>Save to Keepall</strong> from the menu. New images go straight to <strong>Unsorted</strong> in your Keepall library, ready for you to organize later.</p>
+              <figure>
+                <div class="screenshot-crop screenshot-crop-menu">
+                  <img src="image-context-menu.png" width="405" height="447" alt="Chrome's image right-click menu includes Save image to Keepall.">
+                </div>
+                <figcaption>The menu now reads <strong>Save to Keepall</strong>. On X, Keepall uses the image's tweet link as its source when available, so you can return to the post later.</figcaption>
+              </figure>
+            </section>
+            <section class="image-save-step" aria-labelledby="permission-step-heading">
+              <h3 id="permission-step-heading">2. Allow access to that website</h3>
+              <p>The first time you save an image from a new website, Chrome asks for permission. Choose <strong>Allow</strong> to save the image. Chrome remembers your choice, so future saves from that same website won't need another permission prompt.</p>
+              <figure>
+                <div class="screenshot-crop screenshot-crop-website">
+                  <img src="permission-one-website.png" width="669" height="318" alt="Chrome asks to read and change data on pbs.twimg.com, with Allow and Deny buttons.">
+                </div>
+                <figcaption>For an image on X, you may see <code>pbs.twimg.com</code>, where X stores its images. Allow it once, then save more images from there without being asked again.</figcaption>
+              </figure>
+            </section>
+          </div>
+
+          <div class="image-access-recommendation">
+            <div class="choice-heading">
+              <h3>Allow each website as you need it</h3>
+              <span class="choice-badge">Recommended</span>
+            </div>
+            <p>This keeps access limited to the websites you choose. You only approve each one once; after that, right-click saving from it is frictionless.</p>
+            <p id="image-access-default" class="choice-state">Checking your choice…</p>
+          </div>
+
+          <div class="image-access-choices">
+            <div class="image-access-choice">
+              <div class="choice-heading">
+                <h3>Want frictionless saving on every website?</h3>
+                <span id="image-access-badge" class="choice-badge">Optional</span>
+              </div>
+              <p>You can give Keepall access to all websites in one go. Accept this permission once, then right-click and save images from any website without another website permission prompt.</p>
+              <figure>
+                <div class="screenshot-crop screenshot-crop-all-websites">
+                  <img src="permission-all-websites.png" width="672" height="306" alt="Chrome asks to read and change all your data on all websites, with Allow and Deny buttons.">
+                </div>
+                <figcaption>Chrome will show this broader permission request. You can choose Allow or Deny.</figcaption>
+              </figure>
+              <div class="permission-explanation">
+                <h4>What this means for your privacy</h4>
+                <p>Chrome says "read and change your data" because this permission allows broad website access, including downloading images. Keepall uses it to save the image you choose. It does not read or change your account data, collect passwords or browsing history, or upload your saved images to our servers.</p>
+                <p>Your selected image and its source link are saved locally in Keepall, on your device. New images go to <strong>Unsorted</strong>.</p>
+                <p>You can change website access in Chrome's extension settings. Your saved items stay in your library.</p>
+              </div>
+              <div class="permission-management">
+                <h4>Change or remove website access</h4>
+                <ol>
+                  <li>Open <strong>Manage access in Chrome</strong> below. Chrome opens Keepall Capture's extension details.</li>
+                  <li>Under <strong>Site access</strong>, choose <strong>On specific sites</strong> instead of <strong>On all sites</strong>.</li>
+                  <li>Keep <strong>https://www.keepall.app</strong> in the allowed sites so the extension can save to your library. For local testing, keep your localhost library address allowed too.</li>
+                  <li>Remove any other website from <strong>Allowed sites</strong> using its menu. You can add websites here when you want to allow them again.</li>
+                </ol>
+                <p>These controls change Chrome's website permissions. They do not delete saved items or disable saving links. Choosing to save an image or allowing a website again can grant access for that save; removing access does not guarantee Chrome will repeat an earlier permission prompt.</p>
+                <p><a class="privacy-link" href="https://support.google.com/chrome/answer/2664769?hl=en#zippy=%2Cadd-or-remove-access-to-a-specific-site" target="_blank" rel="noopener noreferrer">Chrome's guide to managing website access</a></p>
+              </div>
+              <div class="form-footer image-access-actions">
+                <button id="image-access-enable" type="button" disabled>Allow access to all websites</button>
+                <button id="image-access-manage" class="manage-image-access" type="button">Manage access in Chrome</button>
+              </div>
+            </div>
+          </div>
+          <p id="image-access-status" role="status" aria-live="polite"></p>
+          <p class="hint"><a class="privacy-link" href="https://www.keepall.app/extension-privacy" target="_blank" rel="noopener noreferrer">Read Keepall Capture's privacy policy</a></p>
         </section>
       </div>
     </main>

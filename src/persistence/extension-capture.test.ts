@@ -1,12 +1,46 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { deleteKeepallDatabase } from "./db";
 import { createLink, deleteItem, listItems, updateLink } from "./items";
+import { getAsset } from "./assets";
 import { createCollection, listCollections } from "./collections";
 import { createTag, listTags } from "./tags";
-import { getExtensionOrganizationOptions, saveExtensionLink } from "./extension-capture";
+import { getExtensionOrganizationOptions, saveExtensionImage, saveExtensionLink } from "./extension-capture";
 
 beforeEach(async () => {
   await deleteKeepallDatabase();
+});
+
+describe("saveExtensionImage", () => {
+  test("stores image bytes locally with the source page and reuses a saved image", async () => {
+    const input = {
+      captureId: "89fdc22a-78de-4ef4-9726-55d2734c5845",
+      sourcePageUrl: "https://example.com/gallery",
+      bytes: new Uint8Array([137, 80, 78, 71, 1, 2, 3]),
+      mimeType: "image/png",
+    };
+
+    const first = await saveExtensionImage(input);
+    expect(first.outcome).toBe("created");
+    const items = await listItems();
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ type: "image", sourceUrl: input.sourcePageUrl });
+    if (items[0]?.type !== "image") throw new Error("Expected an image item");
+    expect((await getAsset(items[0].assetIds[0]!))?.bytes).toEqual(input.bytes);
+
+    expect(await saveExtensionImage({ ...input, captureId: "9503a69f-7d89-455d-b94c-4df556ee50b2" }))
+      .toMatchObject({ itemId: first.itemId, outcome: "unchanged" });
+    expect(await listItems()).toHaveLength(1);
+  });
+
+  test("rejects unsupported image bytes without writing an item", async () => {
+    await expect(saveExtensionImage({
+      captureId: "1d58ff56-b0c5-4df3-8f67-0d0967c898a0",
+      sourcePageUrl: "https://example.com/gallery",
+      bytes: new Uint8Array([1, 2, 3]),
+      mimeType: "image/svg+xml",
+    })).rejects.toThrow(/PNG, JPEG, GIF, WebP, or AVIF/);
+    expect(await listItems()).toHaveLength(0);
+  });
 });
 
 describe("saveExtensionLink", () => {

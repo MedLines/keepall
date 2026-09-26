@@ -26,6 +26,43 @@ already saved link alone. If the shortcut is already claimed, assign it at
 `chrome://extensions/shortcuts`. Chrome does not allow injection on its internal
 pages, so those pages cannot be captured.
 
+Right-click a normal HTTP(S) link and choose **Save to Keepall** to save
+its destination without opening it. New links go to Unsorted; duplicates keep
+their existing organization and report that they were already saved. This
+reuses the toolbar save path and needs no extra website permission. Keepall
+does not use the current page's title as the destination's title. There is one
+menu entry for both links and images, with no submenu. When an image is also a link, Keepall saves the image itself and retains the containing
+tweet link as its source when available.
+
+Right-click an image and choose **Save to Keepall** to store the image
+itself as a local image item, with the current page as its source. New images
+go to Unsorted, ready to organize later. The first
+save from an image hosted on another domain may ask for access to that image
+host. To avoid repeated prompts, open the extension's Options page, read
+the image-saving guide, then choose **Allow access to all websites**.
+Chrome will ask once for access to all websites; this
+is optional. To change or remove website access, choose **Manage access in Chrome**
+in Options. In Keepall Capture's Chrome details, select **On specific sites**
+under Site access and remove unwanted allowed sites. Keep www.keepall.app and
+the localhost library address for local tests allowed so saves reach the library.
+Saved items are unaffected. Chrome remembers some earlier approvals, and an
+explicit save can request access again; removal does not promise another prompt.
+Text links and same-page images do not need an extra host prompt. If library
+access was removed by an earlier version, Options shows **Restore library access**.
+Saves fail with a clear message until it is restored. The guide shows actual
+Chrome warning screenshots and explains the broader permission.
+Per-website access remains the recommended default. Keepall downloads
+images only when you choose the right-click action. Supported
+formats are PNG, JPEG, GIF, WebP, and AVIF, up to 20 MiB. Images that cannot
+be downloaded show an error toast. Saving the same image again reports that
+it was already saved.
+
+On X, an image linked to a tweet keeps that tweet's permalink as its source,
+including when saved from the home timeline or a profile. Photo numbers and
+tracking parameters are removed. If Chrome does not provide a tweet link,
+Keepall uses the current tweet page when available, or the original page URL.
+This uses Chrome's clicked-image context and requests no extra permissions.
+
 The extension uses `https://www.keepall.app` by default. To test against a local
 server, open the extension's **Options** page and enter its localhost address,
 such as `http://localhost:3001`. The browser profile, origin, and IndexedDB

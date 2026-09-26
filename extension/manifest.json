@@ -5,7 +5,8 @@
   "description": "Save the current page to your local Keepall library.",
   "minimum_chrome_version": "116",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArF7QtYTn8Tg5BqcDfS1WQ69Gy/lW8QxKmGnzQq1yCLxitWqMJhnUVf3ZRVHGSF24i1Z14mxNNAZmtBg1fQX4mRIuanWPoPd6E9TIGLW4vQR2H8csvU67TvEQ4UcoC09m3mlC4krhNgilyaottXHeU7/at2FvLpVBC/BbX5XS+fIO2Q+GmKYJ3NwQoAEjlSPtMtqMinQSfZXyLPOiY38RQAKPger6Lm6y8DFfT5fdXe812P66OABt2CBxGULu+g3XtDXorXBhkkWfNs0O4HQuIjfcw4R1cmVEGr3KO4mf7yi6oTJys37iCO4kHwopfcxdUugY6PlC8/UY3UM+CPCWVQIDAQAB",
-  "permissions": ["activeTab", "scripting", "offscreen", "storage", "alarms"],
+  "permissions": ["activeTab", "scripting", "offscreen", "storage", "alarms", "contextMenus"],
+  "optional_host_permissions": ["*://*/*"],
   "host_permissions": ["https://www.keepall.app/*", "http://localhost/*"],
   "web_accessible_resources": [{
     "resources": ["inter-latin-wght-normal.woff2"],

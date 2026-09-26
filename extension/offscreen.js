@@ -46,7 +46,7 @@ window.addEventListener("message", (event) => {
   }
 });
 
-async function capture(origin, payload) {
+async function capture(origin, payload, type = "capture") {
   await ensureFrame(origin);
   if (waiting.has(payload.captureId)) return waiting.get(payload.captureId).promise;
   let finish;
@@ -54,7 +54,7 @@ async function capture(origin, payload) {
     const timer = setTimeout(() => {
       waiting.delete(payload.captureId);
       reject(new Error("Keepall did not confirm the save"));
-    }, 15000);
+    }, type === "capture-image" ? 45000 : 15000);
     finish = (result) => {
       clearTimeout(timer);
       waiting.delete(payload.captureId);
@@ -62,7 +62,7 @@ async function capture(origin, payload) {
     };
   });
   waiting.set(payload.captureId, { promise, resolve: finish });
-  frame.contentWindow.postMessage({ channel: "keepall-extension", type: "capture", payload }, origin);
+  frame.contentWindow.postMessage({ channel: "keepall-extension", type, payload }, origin);
   return promise;
 }
 
@@ -86,13 +86,26 @@ async function organizations(origin, url) {
   return promise;
 }
 
+function imageCapture(origin, payload) {
+  const binary = atob(payload.data);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return capture(origin, {
+    captureId: payload.captureId,
+    sourcePageUrl: payload.sourcePageUrl,
+    mimeType: payload.mimeType,
+    bytes,
+  }, "capture-image");
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.target !== "offscreen") return;
   const operation = message.type === "capture"
     ? capture(message.origin, message.payload)
     : message.type === "organizations"
       ? organizations(message.origin, message.url)
-      : null;
+      : message.type === "capture-image"
+        ? imageCapture(message.origin, message.payload)
+        : null;
   if (!operation) return;
   operation
     .then((result) => sendResponse(result))
