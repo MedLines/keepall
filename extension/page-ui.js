@@ -135,13 +135,21 @@ if (!globalThis.__keepallPageUi) {
     .footer button:active, .close:active, .choice:active { transform: scale(.96); }
     button:disabled { opacity: .55; cursor: wait; }
     .hint { margin-left: auto; color: var(--secondary); font-size: 12px; }
-    .toast { --toast-offset: max(20px, env(safe-area-inset-right)); position: fixed; z-index: 2147483647; right: var(--toast-offset); top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 10px; width: max-content; max-width: min(320px, calc(100vw - 40px)); min-height: 48px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 28px; corner-shape: squircle; background: var(--toast); color: var(--primary); box-shadow: 0 12px 36px #00000024, 0 2px 8px #00000012; font-size: 14px; font-weight: 500; line-height: 1.4; opacity: 0; transform: translateX(calc(100% + var(--toast-offset))); transition: transform 260ms cubic-bezier(.32, .72, 0, 1), opacity 180ms cubic-bezier(.32, .72, 0, 1); }
+    .toast { --toast-offset: max(20px, env(safe-area-inset-right)); position: fixed; z-index: 2147483647; right: var(--toast-offset); top: max(20px, env(safe-area-inset-top)); display: grid; width: max-content; max-width: min(320px, calc(100vw - 40px)); border-radius: 28px; color: var(--primary); font-size: 14px; font-weight: 500; line-height: 1.4; opacity: 0; transform: translateX(calc(100% + var(--toast-offset))); transition: transform 260ms cubic-bezier(.32, .72, 0, 1), opacity 180ms cubic-bezier(.32, .72, 0, 1); }
+    .toast-card { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 48px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 32px; corner-shape: superellipse(1.5); background: var(--toast); box-shadow: 0 12px 36px #00000024, 0 2px 8px #00000012; }
     .toast.is-visible { opacity: 1; transform: translateX(0); }
     dialog .toast { position: absolute; top: 88px; }
     .toast.is-leaving { pointer-events: none; transition-duration: 180ms, 140ms; }
     .toast-mark { display: grid; flex: none; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--action); color: var(--on-action); font-size: 12px; }
     .toast[data-success="false"] .toast-mark { background: var(--danger); color: var(--canvas); }
     .toast-label { flex: 0 1 auto; overflow-wrap: anywhere; }
+    .toast-content { min-width: 0; flex: 1; }
+    .toast-actions { display: flex; flex-wrap: wrap; justify-self: center; gap: 2px; max-width: 100%; margin-top: 6px; padding: 2px; border: 1px solid var(--border); border-radius: 24px; corner-shape: superellipse(1.5); background: var(--toast); box-shadow: 0 4px 12px #00000014, 0 1px 3px #0000000d; }
+    .toast-action { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 28px; padding: 3px 8px; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 12px; font-weight: 500; transition: transform 150ms ease-out; }
+    .toast-action svg { width: 14px; height: 14px; flex: none; }
+    .toast-action:hover { background: var(--raised); color: var(--primary); }
+    .toast-action:active { transform: scale(.96); }
+    @media (prefers-reduced-motion: reduce) { .toast-action { transition: none; } .toast-action:active { transform: none; } }
     .toast-close { display: grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 19px; }
     .toast-close:hover { background: var(--raised); color: var(--primary); }
     @media (prefers-reduced-motion: reduce) { dialog, dialog::backdrop, dialog.is-closing, dialog.is-closing::backdrop, .browse, .browse.is-closing { animation: none; } .toast, .toast.is-visible { transform: none; transition: opacity 140ms ease-out; } .header, form, dialog[data-state="saved"] > .header, dialog[data-state="saved"] > form { transform: none; transition: opacity 120ms ease-out, visibility 0s linear 120ms; } .save-complete, dialog[data-state="saved"] .save-complete { transform: none; transition: opacity 140ms ease-out, visibility 0s linear 140ms; } .footer button, .close, .choice { transition: none; } .footer button:active, .close:active, .choice:active { transform: none; } }
@@ -177,7 +185,7 @@ if (!globalThis.__keepallPageUi) {
     toastExitTimer = setTimeout(() => node.remove(), matchMedia("(prefers-reduced-motion: reduce)").matches ? 140 : 180);
   }
 
-  function toast(message, success) {
+  function toast(message, success, actions) {
     dismissToast(true);
     const node = document.createElement("div");
     node.className = "toast";
@@ -190,6 +198,63 @@ if (!globalThis.__keepallPageUi) {
     const label = document.createElement("span");
     label.className = "toast-label";
     label.textContent = message;
+    const content = document.createElement("div");
+    content.className = "toast-content";
+    content.append(label);
+    let actionRow;
+    let busy = false;
+    const duration = actions ? 8000 : 4000;
+    const scheduleDismiss = () => {
+      if (!node.isConnected) return;
+      clearTimeout(toastTimer);
+      if (!busy && !node.matches(":hover") && !node.contains(shadow.activeElement)) {
+        toastTimer = setTimeout(() => dismissToast(), duration);
+      }
+    };
+    if (success && actions) {
+      node.classList.add("has-actions");
+      const buttons = document.createElement("div");
+      buttons.className = "toast-actions";
+      buttons.setAttribute("role", "group");
+      buttons.setAttribute("aria-label", "Save actions");
+      // Hugeicons LinkSquare02 and Undo02, matching the app's icon family.
+      const actionIcons = {
+        open: '<path d="M11.0991 3.00012C7.45013 3.00669 5.53932 3.09629 4.31817 4.31764C3.00034 5.63568 3.00034 7.75704 3.00034 11.9997C3.00034 16.2424 3.00034 18.3638 4.31817 19.6818C5.63599 20.9999 7.75701 20.9999 11.9991 20.9999C16.241 20.9999 18.3621 20.9999 19.6799 19.6818C20.901 18.4605 20.9906 16.5493 20.9972 12.8998"/><path d="M20.556 3.49612L11.0487 13.0586M20.556 3.49612C20.062 3.00151 16.7343 3.04761 16.0308 3.05762M20.556 3.49612C21.05 3.99074 21.0039 7.32273 20.9939 8.02714"/>',
+        undo: '<path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C8.66873 3 5.76018 4.80989 4.20404 7.5"/><path d="M3 3V4.27816C3 6.47004 3 7.56599 3.70725 8.16512C4.4145 8.76425 5.49553 8.58408 7.6576 8.22373L9 8"/>',
+      };
+      for (const [action, text] of [["open", "Open in Keepall"], ...(actions.canUndo ? [["undo", "Undo"]] : [])]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "toast-action";
+        button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${actionIcons[action]}</svg>`;
+        button.append(document.createTextNode(text));
+        button.addEventListener("click", async () => {
+          if (busy) return;
+          busy = true;
+          clearTimeout(toastTimer);
+          for (const control of buttons.children) control.disabled = true;
+          if (action === "undo") label.textContent = "Undoing save…";
+          try {
+            const result = await chrome.runtime.sendMessage({ type: "capture-feedback-action", action, actionId: actions.id });
+            if (!result?.success) throw new Error(result?.error ?? "Could not complete this action. Try again.");
+            if (!node.isConnected) return;
+            if (action === "undo") toast("Save undone", true);
+            else dismissToast();
+          } catch (error) {
+            if (!node.isConnected) return;
+            label.textContent = error.message || "Could not complete this action. Try again.";
+            node.dataset.success = "false";
+            node.setAttribute("role", "alert");
+            mark.textContent = "!";
+            busy = false;
+            for (const control of buttons.children) control.disabled = false;
+            scheduleDismiss();
+          }
+        });
+        buttons.append(button);
+      }
+      actionRow = buttons;
+    }
     const close = document.createElement("button");
     close.type = "button";
     close.className = "toast-close";
@@ -197,12 +262,18 @@ if (!globalThis.__keepallPageUi) {
     close.textContent = "×";
     close.addEventListener("click", () => dismissToast());
     node.addEventListener("mouseenter", () => clearTimeout(toastTimer));
-    node.addEventListener("mouseleave", () => { toastTimer = setTimeout(() => dismissToast(), 4000); });
-    node.append(mark, label, close);
+    node.addEventListener("mouseleave", scheduleDismiss);
+    node.addEventListener("focusin", () => clearTimeout(toastTimer));
+    node.addEventListener("focusout", () => queueMicrotask(scheduleDismiss));
+    const card = document.createElement("div");
+    card.className = "toast-card";
+    card.append(mark, content, close);
+    node.append(card);
+    if (actionRow) node.append(actionRow);
     (dialog?.open ? dialog : shadow).append(node);
     void node.offsetWidth;
     node.classList.add("is-visible");
-    toastTimer = setTimeout(() => dismissToast(), 4000);
+    scheduleDismiss();
   }
 
   function dismissEditor() {
@@ -480,7 +551,7 @@ if (!globalThis.__keepallPageUi) {
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type === "editor") openEditor(message.url, message.title, message.editorId, message.origin);
     if (message?.type === "organizations" || message?.type === "organization-error") onOrganizationMessage?.(message);
-    if (message?.type === "toast-feedback") toast(message.message, message.success);
+    if (message?.type === "toast-feedback") toast(message.message, message.success, message.actions);
     if (message?.type === "editor-feedback") onEditorFeedback?.(message);
   });
 }

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { getExtensionOrganizationOptions, saveExtensionImage, saveExtensionLink, type ExtensionImageCapture, type ExtensionLinkCapture } from "@/persistence/extension-capture";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
+import { undoExtensionCapture } from "@/persistence/extension-capture-undo";
 
 const EXTENSION_ORIGINS = [
   "chrome-extension://flmcadkppebdjebeiiellmeldfbckppo",
@@ -48,6 +49,22 @@ function isImageCapture(value: unknown): value is ExtensionImageCapture {
     input.bytes.byteLength <= 20 * 1024 * 1024;
 }
 
+async function undoCaptureReply(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const input = value as Record<string, unknown>;
+  if (typeof input.captureId !== "string" || input.captureId.length > 100 ||
+      typeof input.undoToken !== "string" || input.undoToken.length > 100) return null;
+  try {
+    const itemId = await undoExtensionCapture(input.undoToken);
+    window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    return { type: "result", captureId: input.captureId, itemId, undone: true };
+  } catch (error) {
+    const message = error instanceof Error && (error.message.includes("Undo has expired") || error.message.includes("changed after saving"))
+      ? error.message : "Could not undo this save. Try again.";
+    return { type: "result", captureId: input.captureId, error: message };
+  }
+}
+
 export function ExtensionBridge() {
   useEffect(() => {
     if (window.parent === window) return;
@@ -59,6 +76,12 @@ export function ExtensionBridge() {
     async function onMessage(event: MessageEvent) {
       if (event.source !== window.parent || !EXTENSION_ORIGINS.some((origin) => origin === event.origin)) return;
       if (event.data?.channel !== "keepall-extension") return;
+
+      if (event.data.type === "undo-capture") {
+        const result = await undoCaptureReply(event.data.payload);
+        if (result) reply(result, event.origin);
+        return;
+      }
 
       if (event.data.type === "organizations") {
         if (typeof event.data.requestId !== "string" || typeof event.data.url !== "string" || event.data.url.length > 8192) return;

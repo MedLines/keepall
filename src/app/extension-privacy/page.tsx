@@ -34,6 +34,7 @@ export default function ExtensionPrivacyPage() {
             </section>
             <section>
               <h2 className="text-lg font-semibold text-text-primary">Where your library lives</h2>
+              <p className="mt-2">Save notifications temporarily keep the library address and saved item ID in browser-session memory for Open in Keepall and Undo. Undo uses a short-lived local receipt and is available only for newly saved items. These details are not sent to a server.</p>
               <p className="mt-2">The extension passes the capture to the Keepall web app running in your browser. Keepall saves your library in that browser profile&apos;s local IndexedDB. You do not need a Keepall account, and the extension does not sync your library to a cloud account. For link saves, the extension temporarily holds a pending capture in Chrome extension storage so a failed save can be retried. Pending link captures expire after ten minutes and are removed at the next cleanup; confirmed captures are removed immediately. Image bytes are passed to the local library without being stored in extension storage. Your selected Keepall address remains in extension storage until you change it or remove the extension.</p>
             </section>
             <section>

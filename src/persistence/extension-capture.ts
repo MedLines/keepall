@@ -7,6 +7,7 @@ import { captureOrgDrafts, rankCaptureOrganizations } from "@/domain/capture-org
 import { getDb, type KeepallDB } from "./db";
 import { createOrReuseImage, listItems } from "./items";
 import { getLibraryPreferences } from "./library-preferences";
+import { createCaptureUndo } from "./extension-capture-undo";
 
 export type ExtensionLinkSnapshot = {
   id: string;
@@ -84,6 +85,7 @@ type ExtensionSaveResult = {
   created: boolean;
   outcome: "created" | "updated" | "unchanged";
   movedTo?: string;
+  undoToken?: string;
 };
 
 export type ExtensionImageCapture = {
@@ -110,7 +112,7 @@ export async function saveExtensionImage(input: ExtensionImageCapture): Promise<
     assets: [{ bytes: input.bytes, mimeType: input.mimeType }],
     sourceUrl: input.sourcePageUrl,
   });
-  return { itemId: image.id, created, outcome: created ? "created" : "unchanged" };
+  return { itemId: image.id, created, outcome: created ? "created" : "unchanged", ...(created ? { undoToken: createCaptureUndo(image) } : {}) };
 }
 
 function hasNoteFormatChange(link: LinkItem, input: ExtensionLinkCapture, nextNote: string): boolean {
@@ -308,11 +310,12 @@ export async function saveExtensionLink(
       noteContent: input.noteContent,
       noteFormat: input.noteFormat,
     }, { id: input.captureId });
-    await db.items.add({
+    const createdLink = {
       ...link,
       collectionIds: organization.collectionIds ?? link.collectionIds,
       tagIds: organization.tagIds ?? link.tagIds,
-    });
-    return { itemId: link.id, created: true, outcome: "created" };
+    };
+    await db.items.add(createdLink);
+    return { itemId: link.id, created: true, outcome: "created", undoToken: createCaptureUndo(createdLink) };
   });
 }

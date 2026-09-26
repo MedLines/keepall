@@ -7,6 +7,22 @@ profile. No Keepall tab needs to remain open. If one is open, its Library update
 after a confirmed save. The badge and an animated top-right toast confirm the
 write; an error never reports success.
 
+Quick-save confirmations show a separate icon-and-label action row below the
+message. **Open in Keepall** opens the saved item's `/items/<id>?from=%2F` detail
+page and reuses an existing library or item-detail tab when possible. **Undo** appears only for a new
+link or image, never an update or duplicate. Undo removes the new item and its
+unreferenced image assets, but refuses if the item was edited, organized, or
+pinned after saving. Automatic link previews do not prevent Undo. Actions stay
+visible for eight seconds and pause while hovered or keyboard-focused. Undo is
+available for up to one minute and requires the same live bridge; if it expires,
+the toast explains that you can remove the item in Keepall instead.
+The action's library and item IDs stay in extension session storage until the
+next quick-save notification, navigation, tab closure, or browser restart.
+The drawer keeps its existing centered save confirmation.
+New quick saves identify the type: “Link saved to Keepall” or
+“Image saved to Keepall.” An older deployed bridge can still save and open items,
+but it cannot offer Undo until the updated web app is deployed.
+
 Alt/Option+K opens a Keepall-style drawer over the current page for an optional
 title and personal note. It also loads collections and tags from your library.
 Six quick choices appear for each; **Browse all** searches the complete list,

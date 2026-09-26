@@ -63,7 +63,7 @@ async function ensureOffscreen(origin) {
   await creatingOffscreen;
 }
 
-async function showFeedback(tabId, message, success, source = "toolbar", editorId) {
+async function showFeedback(tabId, message, success, source = "toolbar", editorId, actions) {
   try {
     await chrome.action.setBadgeBackgroundColor({ tabId, color: success ? "#16803c" : "#b42318" });
     await chrome.action.setBadgeText({ tabId, text: success ? "✓" : "!" });
@@ -80,11 +80,54 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
     await chrome.scripting.executeScript({ target: { tabId }, files: ["page-ui.js"] });
     await chrome.tabs.sendMessage(tabId, {
       type: source === "editor" ? "editor-feedback" : "toast-feedback",
-      message, success, editorId,
+      message, success, editorId, actions,
     });
   } catch {
     // The badge remains visible on restricted browser pages.
   }
+}
+
+async function captureFeedbackActions(tabId, origin, result) {
+  const id = crypto.randomUUID();
+  const canUndo = result.outcome === "created" && typeof result.undoToken === "string";
+  await chrome.storage.session.set({ [`save-feedback:${tabId}`]: {
+    id, origin, itemId: result.itemId,
+    ...(canUndo ? { undoToken: result.undoToken } : {}),
+  } });
+  return { id, canUndo };
+}
+
+async function handleFeedbackAction(message, tabId) {
+  const key = `save-feedback:${tabId}`;
+  const record = (await chrome.storage.session.get(key))[key];
+  if (!record || record.id !== message.actionId) throw new Error("This notification has expired. Open Keepall to find your item.");
+  if (message.action === "open") {
+    const url = `${record.origin}/items/${encodeURIComponent(record.itemId)}?from=%2F`;
+    const tabs = await chrome.tabs.query({ url: `${record.origin}/*` });
+    const library = tabs.find((tab) => tab.id && new URL(tab.url).pathname === "/")
+      ?? tabs.find((tab) => tab.id && new URL(tab.url).pathname.startsWith("/items/"));
+    if (library) {
+      await chrome.tabs.update(library.id, { url, active: true });
+      await chrome.windows.update(library.windowId, { focused: true });
+    } else {
+      await chrome.tabs.create({ url });
+    }
+    return { success: true };
+  }
+  if (message.action !== "undo" || !record.undoToken) throw new Error("This save cannot be undone from this notification.");
+  await ensureOffscreen(record.origin);
+  const captureId = crypto.randomUUID();
+  const result = await chrome.runtime.sendMessage({
+    target: "offscreen", type: "undo-capture", origin: record.origin,
+    payload: { captureId, undoToken: record.undoToken },
+  });
+  if (result?.error) throw new Error(result.error);
+  if (result?.captureId !== captureId || result.itemId !== record.itemId || result.undone !== true) {
+    throw new Error("Keepall did not confirm Undo. Try again.");
+  }
+  await requireLibraryAccess(record.origin);
+  await notifyOpenKeepallTabs(record.origin).catch(() => {});
+  return { success: true };
 }
 
 async function notifyOpenKeepallTabs(origin) {
@@ -124,7 +167,7 @@ async function pendingCapture(url, title, noteContent, noteFormat, existingLink,
 }
 
 async function saveTab(tab, options = {}) {
-  const feedback = (message, success) => showFeedback(tab.id, message, success, options.source, options.editorId);
+  const feedback = (message, success, actions) => showFeedback(tab.id, message, success, options.source, options.editorId, actions);
   if (!tab?.id) return;
   if (!/^https?:\/\//i.test(tab.url ?? "")) {
     await feedback("This page cannot be saved to Keepall.", false);
@@ -168,10 +211,13 @@ async function saveTab(tab, options = {}) {
       await notifyOpenKeepallTabs(origin).catch(() => {});
     }
     let message = "Keepall is up to date";
-    if (result.outcome === "created" || result.created) message = "Saved to Keepall";
+    if (result.outcome === "created" || result.created) {
+      message = options.source === "editor" ? "Saved to Keepall" : "Link saved to Keepall";
+    }
     if (result.outcome === "updated") message = result.movedTo ? `Moved to ${result.movedTo}` : "Your changes were saved";
     if (result.outcome === "unchanged") message = "This link was already saved";
-    await feedback(message, true);
+    const actions = options.source === "editor" ? undefined : await captureFeedbackActions(tab.id, origin, result).catch(() => undefined);
+    await feedback(message, true, actions);
   } catch (error) {
     await feedback(error instanceof Error ? error.message : "Could not save to Keepall", false);
   }
@@ -256,7 +302,7 @@ function imageSourceUrl(pageUrl, linkUrl) {
 
 async function saveImage(tab, srcUrl, context = {}) {
   if (!tab?.id) return;
-  const feedback = (message, success) => showFeedback(tab.id, message, success);
+  const feedback = (message, success, actions) => showFeedback(tab.id, message, success, "toolbar", undefined, actions);
   let sourcePage;
   let imageUrl;
   try {
@@ -299,7 +345,8 @@ async function saveImage(tab, srcUrl, context = {}) {
     }
     await requireLibraryAccess(origin);
     if (result.outcome === "created") await notifyOpenKeepallTabs(origin).catch(() => {});
-    await feedback(result.outcome === "created" ? "Image saved to Keepall" : "This image was already saved", true);
+    const actions = await captureFeedbackActions(tab.id, origin, result).catch(() => undefined);
+    await feedback(result.outcome === "created" ? "Image saved to Keepall" : "This image was already saved", true, actions);
   } catch (error) {
     const message = error instanceof Error && ["AbortError", "TimeoutError", "TypeError"].includes(error.name)
       ? "Could not download this image."
@@ -310,9 +357,14 @@ async function saveImage(tab, srcUrl, context = {}) {
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === "loading") {
+    void chrome.storage.session.remove(`save-feedback:${tabId}`);
     void chrome.action.setBadgeText({ tabId, text: "" }).catch(() => {});
     void chrome.action.setTitle({ tabId, title: "Save page to Keepall" }).catch(() => {});
   }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  void chrome.storage.session.remove(`save-feedback:${tabId}`);
 });
 
 chrome.action.onClicked.addListener((tab) => { void saveTab(tab); });
@@ -357,7 +409,14 @@ chrome.commands.onCommand.addListener((command, tab) => {
   })().catch(() => { void chrome.action.setBadgeText({ text: "!" }); });
 });
 
-chrome.runtime.onMessage.addListener((message, sender) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "capture-feedback-action" && sender.tab?.id &&
+      typeof message.actionId === "string" && ["open", "undo"].includes(message.action)) {
+    void handleFeedbackAction(message, sender.tab.id)
+      .then(sendResponse)
+      .catch((error) => sendResponse({ success: false, error: error.message || "Could not complete this action. Try again." }));
+    return true;
+  }
   if (message?.type !== "save-from-editor" || !sender.tab) return;
   void saveTab(sender.tab, {
     title: typeof message.title === "string" ? message.title : sender.tab.title,
