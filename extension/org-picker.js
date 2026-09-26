@@ -304,8 +304,16 @@ if (!globalThis.__keepallCreateOrgPicker) {
           collectionId: state.collectionId,
           ...(state.collectionName ? { collectionName: state.collectionName } : {}),
           tagIds: [...state.tagIds],
-          tagNames: state.tagNames,
+          tagNames: [...state.tagNames],
         };
+      },
+      restore(selection) {
+        state.collectionId = state.collections.some((entry) => entry.id === selection.collectionId) ? selection.collectionId : null;
+        state.collectionName = selection.collectionName ?? null;
+        state.tagIds = new Set(selection.tagIds.filter((id) => state.tags.some((entry) => entry.id === id)));
+        state.tagNames = [...selection.tagNames];
+        renderCollections();
+        renderTags();
       },
       setDisabled(disabled) {
         state.disabled = disabled;

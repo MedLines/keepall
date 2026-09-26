@@ -122,6 +122,9 @@ if (!globalThis.__keepallPageUi) {
     :where(button, input, textarea):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
     .note-help { margin: 0; color: var(--secondary); font-size: 12px; font-weight: 400; }
     .note-help[hidden] { display: none; }
+    .draft-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--secondary); font-size: 12px; }
+    .discard-draft { min-height: 32px; padding: 4px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--danger); font-size: 12px; }
+    .discard-draft:hover { background: var(--raised); }
     .error { margin: 0; color: var(--danger); }
     .error:empty { display: none; }
     .footer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 18px 24px max(20px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
@@ -157,6 +160,8 @@ if (!globalThis.__keepallPageUi) {
   let toastExitTimer;
   let closeTimer;
   let currentPicker;
+  const drafts = new Map();
+  let rememberDraft;
 
   function dismissToast(immediate = false) {
     clearTimeout(toastTimer);
@@ -203,6 +208,7 @@ if (!globalThis.__keepallPageUi) {
   function dismissEditor() {
     const target = dialog;
     if (!target?.open || target.dataset.state === "saving" || target.classList.contains("is-closing")) return;
+    rememberDraft?.();
     clearTimeout(closeTimer);
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
       target.close();
@@ -212,7 +218,11 @@ if (!globalThis.__keepallPageUi) {
     closeTimer = setTimeout(() => target.close(), 180);
   }
 
-  function openEditor(url, title, editorId) {
+  function openEditor(url, title, editorId, origin) {
+    if (dialog?.dataset.state === "saving") return;
+    rememberDraft?.();
+    const draftKey = JSON.stringify([origin, url]);
+    const draft = drafts.get(draftKey);
     dismissToast(true);
     clearTimeout(closeTimer);
     currentPicker?.destroy();
@@ -283,28 +293,63 @@ if (!globalThis.__keepallPageUi) {
     noteLabel.append(noteHead, noteInput, noteHelp);
     const picker = globalThis.__keepallCreateOrgPicker(shadow);
     currentPicker = picker;
-    let existingLink;
-    let titleDirty = false;
-    let noteDirty = false;
-    let markdownDirty = false;
+    let existingLink = draft?.existingLink;
+    let snapshotLoaded = draft?.snapshotLoaded ?? false;
+    let titleDirty = draft?.title !== undefined;
+    let noteDirty = draft?.noteContent !== undefined;
+    let markdownDirty = draft?.markdown !== undefined;
+    let initialSelection = {};
+    let discarded = false;
+    let saved = false;
+    if (titleDirty) titleInput.value = draft.title;
+    if (noteDirty) noteInput.value = draft.noteContent;
+    if (markdownDirty) markdownInput.checked = draft.markdown;
+    rememberDraft = () => {
+      if (saved || discarded) return;
+      const selection = picker.loaded ? picker.selection() : draft?.selection;
+      const organizationDirty = selection && JSON.stringify(selection) !== JSON.stringify(initialSelection);
+      if (!titleDirty && !noteDirty && !markdownDirty && !organizationDirty) {
+        drafts.delete(draftKey);
+        return;
+      }
+      drafts.set(draftKey, {
+        ...(titleDirty ? { title: titleInput.value } : {}),
+        ...(noteDirty ? { noteContent: noteInput.value } : {}),
+        ...(markdownDirty ? { markdown: markdownInput.checked } : {}),
+        ...(organizationDirty ? { selection } : {}),
+        existingLink,
+        snapshotLoaded,
+      });
+    };
     titleInput.addEventListener("input", () => { titleDirty = true; });
     noteInput.addEventListener("input", () => { noteDirty = true; });
     markdownInput.addEventListener("change", () => { markdownDirty = true; });
     onOrganizationMessage = (message) => {
       if (message.editorId !== currentEditorId || !dialog?.open) return;
-      if (message.type === "organizations" && message.existingLink) {
+      // Retain a restored draft's original snapshot for the save conflict check.
+      if (message.type === "organizations" && !snapshotLoaded) {
         existingLink = message.existingLink;
+        snapshotLoaded = true;
+      }
+      if (message.type === "organizations" && message.existingLink) {
         heading.textContent = "Edit saved link";
-        if (!titleDirty) titleInput.value = existingLink.title;
-        if (!noteDirty || message.existingNoteHasImages) noteInput.value = existingLink.noteContent;
+        if (!titleDirty) titleInput.value = message.existingLink.title;
+        if (!noteDirty || message.existingNoteHasImages) noteInput.value = message.existingLink.noteContent;
         if (message.existingNoteHasImages) {
           noteInput.readOnly = true;
           noteInput.setAttribute("aria-describedby", noteHelp.id);
           noteHelp.hidden = false;
         }
-        if (!markdownDirty) markdownInput.checked = existingLink.noteFormat === "markdown";
+        if (!markdownDirty) markdownInput.checked = message.existingLink.noteFormat === "markdown";
       }
       picker.load(message);
+      initialSelection = picker.selection();
+      if (draft?.selection && picker.loaded) picker.restore(draft.selection);
+      if (draft?.selection && !picker.loaded) {
+        errorLine.textContent = "Could not restore your collection and tags. Close and reopen the drawer to try again.";
+        saveButton.textContent = "Save";
+        return;
+      }
       saveButton.disabled = false;
       saveButton.textContent = existingLink ? "Save changes" : "Save";
     };
@@ -312,6 +357,25 @@ if (!globalThis.__keepallPageUi) {
     errorLine.className = "error";
     errorLine.setAttribute("role", "alert");
     fields.append(titleLabel, noteLabel, picker.element, errorLine);
+    if (draft) {
+      const notice = document.createElement("div");
+      notice.className = "draft-notice";
+      const label = document.createElement("span");
+      label.setAttribute("role", "status");
+      label.textContent = "Draft restored";
+      const discard = document.createElement("button");
+      discard.type = "button";
+      discard.className = "discard-draft";
+      discard.textContent = "Discard draft";
+      discard.addEventListener("click", () => {
+        if (dialog?.dataset.state === "saving") return;
+        discarded = true;
+        drafts.delete(draftKey);
+        dismissEditor();
+      });
+      notice.append(label, discard);
+      fields.prepend(notice);
+    }
     const footer = document.createElement("div");
     footer.className = "footer";
     saveButton = document.createElement("button");
@@ -322,7 +386,7 @@ if (!globalThis.__keepallPageUi) {
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.className = "secondary";
-    cancel.textContent = "Cancel";
+    cancel.textContent = "Close";
     cancel.addEventListener("click", dismissEditor);
     const hint = document.createElement("span");
     hint.className = "hint";
@@ -371,6 +435,8 @@ if (!globalThis.__keepallPageUi) {
     onEditorFeedback = (message) => {
       if (message.editorId !== currentEditorId || !dialog?.open) return;
       if (message.success) {
+        saved = true;
+        drafts.delete(draftKey);
         dismissToast(true);
         picker.destroy();
         form.inert = true;
@@ -412,7 +478,7 @@ if (!globalThis.__keepallPageUi) {
   }
 
   chrome.runtime.onMessage.addListener((message) => {
-    if (message?.type === "editor") openEditor(message.url, message.title, message.editorId);
+    if (message?.type === "editor") openEditor(message.url, message.title, message.editorId, message.origin);
     if (message?.type === "organizations" || message?.type === "organization-error") onOrganizationMessage?.(message);
     if (message?.type === "toast-feedback") toast(message.message, message.success);
     if (message?.type === "editor-feedback") onEditorFeedback?.(message);

@@ -334,7 +334,7 @@ async function openEditor(tab) {
   }
   await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["org-picker.js", "page-ui.js"] });
   const editorId = crypto.randomUUID();
-  await chrome.tabs.sendMessage(tab.id, { type: "editor", editorId, title: tab.title ?? "", url: tab.url });
+  await chrome.tabs.sendMessage(tab.id, { type: "editor", editorId, origin, title: tab.title ?? "", url: tab.url });
   try {
     await ensureOffscreen(origin);
     const result = await chrome.runtime.sendMessage({

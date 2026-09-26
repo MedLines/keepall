@@ -361,6 +361,18 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await editor.getByRole("checkbox", { name: "Markdown" }).check();
     await editor.getByRole("button", { name: "Reading", exact: true }).click();
     await editor.getByRole("button", { name: "Design", exact: true }).click();
+    await editor.getByRole("button", { name: "Close drawer" }).click();
+    await expect(editor.locator("dialog")).toHaveCount(0);
+    await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await openEditor(tab);
+    });
+    await expect(editor.getByText("Draft restored", { exact: true })).toBeVisible();
+    await expect(editor.getByRole("textbox", { name: "Title" })).toHaveValue("Chosen title");
+    await expect(editor.getByRole("textbox", { name: "Your note (optional)" })).toHaveValue("# Read for layout ideas");
+    await expect(editor.getByRole("checkbox", { name: "Markdown" })).toBeChecked();
+    await expect(editor.getByRole("button", { name: "Reading", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(editor.getByRole("button", { name: "Remove tag Design" })).toBeVisible();
     await editor.getByRole("button", { name: "Save", exact: true }).click();
     await expect.poll(() => worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -371,6 +383,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       await openEditor(tab);
     });
     await expect(editor.getByRole("heading", { name: "Edit saved link" })).toBeVisible();
+    await expect(editor.getByText("Draft restored", { exact: true })).toHaveCount(0);
     await expect(editor.getByRole("textbox", { name: "Title" })).toHaveValue("Chosen title");
     await expect(editor.getByRole("textbox", { name: "Your note (optional)" })).toHaveValue("# Read for layout ideas");
     await expect(editor.getByRole("checkbox", { name: "Markdown" })).toBeChecked();
@@ -664,6 +677,128 @@ test("extension saves a clicked link destination without opening it", async () =
     await context.close();
     await rm(profile, { recursive: true, force: true });
   }
+});
+
+test("extension drafts stay isolated, survive failed saves, and can be discarded", async ({ page }, testInfo) => {
+  await page.route("http://localhost:3100/draft-fixture", (route) => route.fulfill({
+    contentType: "text/html", body: "<!doctype html><title>Draft fixture</title>",
+  }));
+  await page.goto("http://localhost:3100/draft-fixture");
+  const bridge = await page.evaluateHandle(() => {
+    let listener: (message: Record<string, unknown>) => void;
+    let lastSave: unknown;
+    const attach = Element.prototype.attachShadow;
+    Element.prototype.attachShadow = function (options) {
+      return attach.call(this, { ...options, mode: "open" });
+    };
+    Object.assign(globalThis, { chrome: { runtime: {
+      getURL: (file: string) => `http://localhost:3100/${file}`,
+      onMessage: { addListener: (callback: typeof listener) => { listener = callback; } },
+      sendMessage: (message: unknown) => { lastSave = message; },
+    } } });
+    return {
+      send: (message: Record<string, unknown>) => listener(message),
+      lastSave: () => lastSave,
+    };
+  });
+  for (const file of ["org-picker.js", "page-ui.js"]) {
+    await page.addScriptTag({ content: await readFile(path.resolve("extension", file), "utf8") });
+  }
+  const editor = page.locator("#keepall-capture-ui");
+  const note = editor.getByRole("textbox", { name: "Your note (optional)" });
+  const snapshot = { id: "saved-link", title: "Saved title", noteContent: "Saved note", noteFormat: "plain", collectionIds: [], tagIds: [] };
+  const organizations = { type: "organizations", collections: [], tags: [], existingLink: snapshot, collectionId: null, tagIds: [] };
+  let editorId = "";
+  const open = async (url = "https://example.com/article", origin = "http://localhost:3100", load = true) => {
+    editorId = crypto.randomUUID();
+    await bridge.evaluate((value, message) => value.send(message), { type: "editor", url, origin, title: "Page title", editorId });
+    if (load) await bridge.evaluate((value, message) => value.send(message), { ...organizations, editorId });
+  };
+  const close = async (name = "Close") => {
+    await editor.getByRole("button", { name, exact: true }).click();
+    await expect(editor.locator("dialog")).toHaveCount(0);
+  };
+
+  await open();
+  await note.fill("# Unfinished note");
+  await editor.getByRole("checkbox", { name: "Markdown" }).check();
+  await editor.getByRole("textbox", { name: "Filter or new collection" }).fill("New collection");
+  await editor.getByRole("textbox", { name: "Filter or new collection" }).press("Enter");
+  await editor.getByRole("textbox", { name: "Filter or create tag" }).fill("New tag");
+  await editor.getByRole("textbox", { name: "Filter or create tag" }).press("Enter");
+  await note.press("Escape");
+  await expect(editor.locator("dialog")).toHaveCount(0);
+  await open("https://example.com/other");
+  await expect(note).toHaveValue("Saved note");
+  await expect(editor.getByText("Draft restored", { exact: true })).toHaveCount(0);
+  await close();
+  await open(undefined, "https://www.keepall.app");
+  await expect(note).toHaveValue("Saved note");
+  await close();
+
+  await open();
+  await expect(note).toHaveValue("# Unfinished note");
+  await expect(editor.getByRole("checkbox", { name: "Markdown" })).toBeChecked();
+  await expect(editor.getByRole("button", { name: "New collection", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(editor.getByRole("button", { name: "Remove tag New tag" })).toBeVisible();
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.setViewportSize({ width: 375, height: 812 });
+    await editor.locator("dialog").evaluate(async (node) => {
+      await Promise.all(node.getAnimations().map((animation) => animation.finished));
+    });
+    await expect(editor.getByRole("button", { name: "Discard draft" })).toBeInViewport();
+    await expect(editor.getByRole("button", { name: "Save changes" })).toBeInViewport();
+    expect(await editor.locator("dialog").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`restored-draft-${colorScheme}.png`) });
+  }
+  await close("Close drawer");
+  await open(undefined, undefined, false);
+  await expect(note).toHaveValue("# Unfinished note");
+  await bridge.evaluate((value, message) => value.send(message), { type: "organization-error", editorId });
+  await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+  await close();
+
+  // A newer library note must not replace the original conflict-check snapshot.
+  organizations.existingLink = { ...snapshot, noteContent: "Newer library note" };
+  await open();
+  await editor.getByRole("button", { name: "Save changes" }).click();
+  expect(await bridge.evaluate((value) => value.lastSave())).toMatchObject({
+    noteContent: "# Unfinished note", noteFormat: "markdown", existingLink: snapshot,
+    collectionName: "New collection", tagNames: ["New tag"],
+  });
+  await bridge.evaluate((value, message) => value.send(message), {
+    type: "editor-feedback", editorId, success: false, message: "This link changed in Keepall.",
+  });
+  await close();
+  await open();
+  await expect(note).toHaveValue("# Unfinished note");
+  await close("Discard draft");
+  await open();
+  await expect(note).toHaveValue("Newer library note");
+  await expect(editor.getByText("Draft restored", { exact: true })).toHaveCount(0);
+  await close();
+  await open();
+  await expect(editor.getByText("Draft restored", { exact: true })).toHaveCount(0);
+
+  await editor.getByRole("textbox", { name: "Filter or new collection" }).fill("Temporary collection");
+  await editor.getByRole("textbox", { name: "Filter or new collection" }).press("Enter");
+  await close();
+  await open();
+  await editor.getByRole("button", { name: "Unsorted", exact: true }).click();
+  await close();
+  await open();
+  await expect(editor.getByText("Draft restored", { exact: true })).toHaveCount(0);
+
+  // Edits made before the library responds also survive closing.
+  await close();
+  await open(undefined, undefined, false);
+  await note.fill("Typed while loading");
+  await close();
+  await open();
+  await expect(note).toHaveValue("Typed while loading");
+  await editor.getByRole("button", { name: "Save changes" }).click();
+  expect(await bridge.evaluate((value) => value.lastSave())).toMatchObject({ existingLink: organizations.existingLink });
 });
 
 test("extension picker browses the full list and accepts new names", async ({ page }) => {

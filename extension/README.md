@@ -16,10 +16,18 @@ closes. Feedback names a collection-only move, confirms other saved changes,
 or says “This link was already saved” when nothing changed. A failed save keeps
 the form open and shows an error toast.
 
+Closing the drawer with Close, Escape, or the backdrop keeps unfinished edits
+for that URL and library in the current tab. Reopening restores the title, note,
+Markdown choice, collection, and tags. A restored draft includes **Discard draft**
+to clear it and close the drawer. A confirmed save clears it too; a failed save
+keeps it. Drafts live only in the extension's isolated page memory, request no
+new permissions, and disappear when the page reloads or the tab closes.
+
 When the page is already saved, the drawer loads its title, note, Markdown
 choice, collection, and tags. You can edit the title and note there. If the
-link changes in Keepall while the drawer is open, reopen the drawer before
-saving. Notes containing local images show their text read-only; edit those
+link changes in Keepall while the drawer is open, its conflict check still applies
+to restored drafts. Copy any unfinished text you want to keep, then discard the
+draft and reopen to load the latest version. Notes containing local images show their text read-only; edit those
 notes in Keepall so their image assets stay intact. Without a collection choice,
 a new link goes to Unsorted. A toolbar click leaves the organization of an
 already saved link alone. If the shortcut is already claimed, assign it at
