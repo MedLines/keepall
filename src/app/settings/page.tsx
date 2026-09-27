@@ -98,6 +98,8 @@ export default function SettingsPage() {
               </p>
               <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-text-primary">
                 <Link href="/help" className="underline underline-offset-2">Help guides</Link>
+                <Link href="/help/chrome-capture" className="underline underline-offset-2">Chrome extension</Link>
+                <Link href="/help/install-keepall" className="underline underline-offset-2">Install Keepall</Link>
                 <Link href="/about" className="underline underline-offset-2">About Keepall</Link>
                 <Link href="/extension-privacy" className="underline underline-offset-2">Keepall Capture privacy</Link>
               </div>

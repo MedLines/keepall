@@ -9,6 +9,7 @@ export type GuideSection = {
   steps?: string[];
   note?: string;
   links?: GuideLink[];
+  images?: { src: string; width: number; height: number; alt: string; caption: string }[];
 };
 
 export type Guide = {
@@ -84,6 +85,10 @@ export const guides: Guide[] = [
       {
         id: "image-access", title: "When Chrome asks for image access",
         paragraphs: ["An image can be hosted on a different website from the page you are reading. Chrome may ask for access to that image's website so Keepall can download it. Allow access if you want to save it. Per-website access is the recommended choice.", "To manage this, right-click the Keepall toolbar icon, open Options, and choose Image access. You can optionally allow all websites there. Chrome's warning describes broader website access, so read the explanation before granting it. The same section links to Chrome's controls for changing access.", "Keepall downloads images when you choose to save them. Images must be PNG, JPEG, GIF, WebP, or AVIF, up to 20 MiB. A website can still prevent an image from downloading."],
+        images: [
+          { src: "/help/permission-one-website.png", width: 669, height: 318, alt: "Chrome asks to read and change data on pbs.twimg.com, with Allow and Deny buttons.", caption: "Recommended: allow the website hosting the image. The website address will depend on the image you save." },
+          { src: "/help/permission-all-websites.png", width: 672, height: 306, alt: "Chrome asks to read and change data on all websites, with Allow and Deny buttons.", caption: "Optional: access to all websites. This broader permission is available in Options; it is not required to start using Keepall." },
+        ],
         links: [{ label: "Read extension privacy details", href: "/extension-privacy" }],
       },
       {
@@ -139,7 +144,7 @@ export const guides: Guide[] = [
     sections: [
       { id: "collections", title: "Group things in collections", paragraphs: ["A collection brings related saves together, such as Recipes or Living room ideas. Choose one when saving, move an item later, or drag library items onto a collection in the sidebar.", "Items with no collection appear in Unsorted. Leaving something there does not make it temporary."] },
       { id: "tags", title: "Connect ideas with tags", paragraphs: ["Tags describe an item across collections. For example, a lamp and a paint color in different collections could both have the tag warm tones. An item can have several tags.", "Right-click an item in the library to find, add, or remove tags. You can create a new tag there too. Select a tag in the sidebar to see matching items."] },
-      { id: "pins", title: "Keep frequent items close", paragraphs: ["Pin collections in the sidebar and change their order. Inside a collection, pin important items to keep them above the rest.", "To tidy several saves together, select them and use the selection controls to move them, change their tags, or delete them. Deleting requires confirmation and cannot be undone."] },
+      { id: "pins", title: "Keep frequent items close", paragraphs: ["Pin collections in the sidebar and change their order. Inside a collection, pin important items to keep them above the rest.", "To tidy several saves together, select them and use the selection controls to move them, change their tags, or delete them. Read the confirmation before deleting the selection."] },
       { id: "search", title: "Find something you remember", paragraphs: ["Start with a word from the title or a tag. Search also matches saved text fields, such as standalone note text, image captions, and source addresses. It does not read text inside images or listen to videos.", "Narrow the results by collection, tag, or item type. If something seems missing, clear those filters. Choose newest or oldest first, and switch between grid and list to change how you browse."] },
     ],
     action: { label: "Browse your library", href: "/" },

@@ -1,7 +1,8 @@
 # Keepall feature inventory and website copy
 
-Draft, September 27, 2026. Based on the current application source and extension
-0.2.0. This is a content inventory and copy proposal, not a record of deployment.
+Updated September 27, 2026. Based on the current application source and extension
+0.2.0. The About and eight Help guides now implement this direction locally. This remains
+a content reference, not a record of deployment.
 
 ## What the pages need to explain
 
@@ -36,7 +37,7 @@ provides a starting point for checking future copy when behavior changes.
 | Image formats | Save PNG, JPEG, GIF, WebP, and AVIF images, up to 20 MiB each. | `src/domain/image.ts` |
 | Link previews | Keepall tries to add a saved page's title, description, and preview image while online. Some websites do not provide a usable preview. | `src/app/preview-enrich-coordinator.ts`, `src/server/preview-fetch.ts` |
 | Capture shortcut | Open Save item with Alt + K, or Option + K on Mac. | `src/app/capture-host.tsx` |
-| Edit and delete | Update saved details or delete an item after confirming. Deletion is permanent. | `src/app/item-edit-dialog.tsx`, `src/app/item-context-menu.tsx` |
+| Edit and delete | Update saved details or delete an item after confirming. | `src/app/item-edit-dialog.tsx`, `src/app/item-context-menu.tsx` |
 
 ### Organize and find
 
@@ -56,14 +57,13 @@ provides a starting point for checking future copy when behavior changes.
 | Date order | Show the newest or oldest saves first. Pinned items take precedence inside a collection. | `src/domain/library-view.ts` |
 | Light and dark | Choose a light or dark appearance for the app. | `src/app/theme-control.tsx` |
 
-The committed search version reviewed at the start matches titles and tag names for all item types; link URLs;
-standalone note text; image captions and source URLs; and video filenames and
-notes. Concurrent changes appeared during this review that also search link
-notes and preview titles/descriptions, with matching excerpts and highlighted
-results. Record these as work in progress until that change is verified and
-released. Selected passages saved by the extension become link notes and would
-benefit from that update. Neither version searches full web articles, text inside
-images, or spoken video content.
+Search matches titles and tag names for all item types; link URLs and notes;
+standalone note text; image captions and source URLs; video filenames and notes;
+and link preview titles and descriptions. A concurrent search change was committed
+as 390a038 during implementation, including matching excerpts and highlights.
+Deployment was not checked here. Search does not read full web articles, text
+inside images, or spoken video content. Concurrent Trash work also appeared;
+recovery behavior should be documented once that work is verified.
 
 ### Save from other websites
 
@@ -103,7 +103,7 @@ available before presenting all of them as features of the Store download.
 | Storage information | See the browser's estimated storage usage and whether storage protection is granted. | `src/app/settings/storage-health.tsx` |
 | App update notice | Reload when Keepall reports that an app update is ready. | `src/app/pwa-update-banner.tsx` |
 
-## Proposed About copy
+## About copy reference
 
 ### Keep the things you want to come back to
 
@@ -156,7 +156,7 @@ with a real capture demonstration and the installation overview with a clear
 device choice. The full feature inventory belongs in the content reference,
 not as dozens of equal-weight cards on About.
 
-## Proposed extension guide
+## Extension guide reference
 
 Retain `/help/chrome-capture` so existing links keep working. Use jump links for
 setup, saving, image access, and troubleshooting.
@@ -235,7 +235,7 @@ the extension accesses and how link previews work.
 | An image will not save | Check image access. The image may also be unsupported, larger than 20 MiB, or blocked from downloading by its website. |
 | Saving fails on a Chrome settings page | Try an ordinary website. Chrome protects its internal pages from capture. |
 
-## Proposed installation guide
+## Installation guide reference
 
 Add `/help/install-keepall` and link it from About, Help, and Settings Help.
 
@@ -332,7 +332,66 @@ the proposed copy and feature descriptions here are specific to Keepall.
 
 Reviewed against the existing About/Help pages, capture UI, domain search and
 view rules, media limits, backup/import UI, service worker, theme control,
-extension README/manifest/options, and release documentation. This review
-checked source and browser-vendor instructions; it did not repeat runtime tests
-or verify deployment. This content task changed no application code; concurrent
-search changes were observed and recorded separately above.
+extension README/manifest/options, and release documentation. The initial inventory
+review checked source and browser-vendor instructions. Application changes and
+browser verification followed, as recorded below. Deployment remains unverified.
+
+## Implementation verification
+
+About now has dedicated extension and installation sections. Help contains eight
+guides with section links, numbered instructions, recovery guidance, and the
+existing real Chrome permission screenshots. Settings links directly to extension
+and installation help. Mobile installation instructions follow browser-vendor
+documentation; actual installation on physical Android/iPhone devices was not
+retested. The feature inventory remains separate from the shorter public copy.
+
+Type checking, focused ESLint, the Settings component test, and the production
+build passed. The sandbox initially prevented the build's TypeScript subprocess;
+the build passed with the required execution permission. All eight guides and
+37 section targets were checked, including cross-guide links and image files.
+Chromium checks covered narrow layouts, light/dark appearance, section navigation,
+and keyboard focus. Existing development-only Agentation connection errors and
+build metadataBase warnings remain outside this content change.
+
+
+### About design revision — 27 September 2026
+
+The About page now uses a graphite background, pink serif accents, the real
+library preview, and a collage of saved objects. The extension section includes
+an explicitly labeled interactive example for page, image, and text capture.
+Its state stays in the component; it does not save anything to the user's library.
+Organization, local storage, backups, and installation retain their guide links.
+About's visual theme is scoped to the route and does not change app preferences.
+
+The demo regression test, focused ESLint, type checking, production build, and
+diff checks pass. Chromium checks covered 320, 390, 768, and 1440-pixel layouts,
+loaded images, section targets, capture selection and confirmation, and keyboard
+save/replay with visible focus. Reduced-motion styles disable the new animation
+and transitions. The existing build metadataBase warning remains. This revision
+has not been deployed.
+
+
+### Typography and responsive polish — 27 September 2026
+
+About now uses shared sizes for body copy, controls, captions, and secondary
+headings. Explanations stay at 16px on small screens. Headline spacing is looser,
+descriptions use balanced final lines, and the layout stacks earlier on tablets.
+The capture example's action sits below its content so it cannot obscure the
+passage. Its article heading stays smaller than the enclosing section heading.
+The footer again names the extension privacy policy explicitly.
+
+Focused lint, type checking, the demo unit test, production build, and both
+browser regressions pass. The browser checks cover 320, 390, 600, 768, and 1440px,
+content/action separation, heading hierarchy, save/replay, and keyboard operation
+with reduced motion enabled. Native 200% browser zoom and screen-reader speech
+were not verified. The existing metadataBase build warning remains.
+
+
+### Backup, installation, and footer feedback — 27 September 2026
+
+Replaced the decorative tilted backup file with a readable panel and a direct
+link to backup instructions. Installation links now have platform icons, explicit
+setup labels, and hover, keyboard-focus, and pressed styles. The iPhone label
+names Safari's Add to Home Screen action. This matches [Apple's web app guide](https://support.apple.com/en-lamr/guide/iphone/iphea86e5236/ios);
+installation on a physical iPhone remains untested. The footer wordmark scales
+with the full viewport while its navigation keeps the page's content alignment.

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { PublicFooter, PublicHeader } from "../../public-site";
 import { getGuide, guides } from "../guides";
@@ -39,6 +40,7 @@ export default async function GuidePage({ params }: Props) {
                 {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
                 {section.steps && <ol className="help-steps">{section.steps.map((step) => <li key={step}>{step}</li>)}</ol>}
                 {section.note && <p className="help-note">{section.note}</p>}
+                {section.images && <div className="help-figures">{section.images.map((image) => <figure key={image.src}><Image src={image.src} width={image.width} height={image.height} alt={image.alt} sizes="(max-width: 640px) calc(100vw - 32px), 520px" /><figcaption>{image.caption}</figcaption></figure>)}</div>}
                 {section.links && <div className="help-section-links">{section.links.map((link) => <Link key={link.href} href={link.href}>{link.label}<span aria-hidden="true"> →</span></Link>)}</div>}
               </section>
             ))}
