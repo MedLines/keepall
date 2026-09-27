@@ -2,11 +2,13 @@ import Image from "next/image";
 import libraryImage from "../../../public/marketing/app-library.webp";
 import collectionImage from "../../../public/marketing/app-collection.webp";
 import searchImage from "../../../public/marketing/app-search.webp";
+import tagsImage from "../../../public/marketing/app-tags.webp";
 
 const previews = {
   library: { src: libraryImage, alt: "Keepall’s actual library interface with its sidebar, search, and masonry grid, populated with sample saves" },
   collection: { src: collectionImage, alt: "Design Inspiration selected in Keepall’s collection sidebar, showing its saved images in the library grid" },
   search: { src: searchImage, alt: "Keepall searching for quiet spaces, with matching sample images and a note highlighted in the real library" },
+  tags: { src: tagsImage, alt: "Keepall filtered by the favorites tag, showing a tagged save in the real library" },
 };
 
 export function LibraryPreview({ view = "library", eager = false }: { view?: keyof typeof previews; eager?: boolean }) {

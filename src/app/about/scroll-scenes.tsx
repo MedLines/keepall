@@ -1,25 +1,29 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { RecordedDemo } from "./recorded-demo";
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
 
 // Scroll storyboard (native scrolling, reversible at every point):
-// Hero leaves the viewport → landscape travels 220px; library travels 120px.
+// Hero leaves the viewport → copy lifts; library recedes; landscape travels 220px.
 // Statement crosses the viewport → each phrase brightens in reading order.
 // Feature cards reach 108px → pin; earlier cards recede as the next arrives.
-const SCENE = { landscapeTravel: 220, libraryTravel: 120, stackTop: 108, cardBottom: 736 };
+const SCENE = { landscapeTravel: 220, libraryTravel: 120, stackTop: 108, stackStep: 24, cardBottom: 786 };
 
 export function HeroScene({ children, preview }: { children: ReactNode; preview: ReactNode }) {
   const ref = useRef<HTMLElement>(null);
   const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const landscapeY = useTransform(scrollYProgress, [0, 1], [0, SCENE.landscapeTravel]);
-  const previewY = useTransform(scrollYProgress, [0, 1], [0, SCENE.libraryTravel]);
+  const copyTransform = useTransform(scrollYProgress, [0, .5], ["translateY(0px)", "translateY(-64px)"]);
+  const copyOpacity = useTransform(scrollYProgress, [0, .2, .5], [1, 1, 0]);
+  const previewTransform = useTransform(scrollYProgress, [0, 1], ["translateY(0px) scale(1)", `translateY(${SCENE.libraryTravel}px) scale(.96)`]);
+  const previewOpacity = useTransform(scrollYProgress, [0, .35, .85], [1, 1, 0]);
   return (
     <section ref={ref} className="ka-hero" aria-labelledby="ka-title">
       <motion.div className="ka-landscape" aria-hidden="true" style={{ y: reduceMotion ? 0 : landscapeY }} />
-      <div className="ka-hero-copy">{children}</div>
-      <motion.div className="ka-hero-library" style={{ y: reduceMotion ? 0 : previewY }}>{preview}</motion.div>
+      <motion.div className="ka-hero-copy" style={{ transform: reduceMotion ? "none" : copyTransform, opacity: reduceMotion ? 1 : copyOpacity }}>{children}</motion.div>
+      <motion.div className="ka-hero-preview-scroll" style={{ transform: reduceMotion ? "none" : previewTransform, opacity: reduceMotion ? 1 : previewOpacity }}><div className="ka-hero-library">{preview}</div></motion.div>
       <div className="ka-hero-fade" aria-hidden="true" />
     </section>
   );
@@ -40,28 +44,33 @@ export function ScrollStatement() {
 }
 
 const views = [
-  { name: "Your library", caption: "Everything you save, in a space of your own." },
-  { name: "Collections", caption: "Bring related finds together. Leave the rest in Unsorted." },
-  { name: "Search", caption: "Start with a word you remember. Pick up where you left off." },
+  { name: "Your library", recording: "library-demo", caption: "Browse the same library in grid or list view." },
+  { name: "Collections", recording: "collections-demo", caption: "Bring related finds together. Leave the rest in Unsorted." },
+  { name: "Tags", recording: "tags-demo", caption: "Add a tag to a save. Choose that tag to find it again." },
+  { name: "Search", recording: "search-demo", caption: "Start with a word you remember. Pick up where you left off." },
 ];
 
 export function FeatureGallery({ panels }: { panels: ReactNode[] }) {
-  const [selected, setSelected] = useState(0);
+  const [selected, selectView] = useState(0);
   const reduceMotion = useReducedMotion();
+
+  // Keep recordings mounted so a slide can reverse without remounting media.
   return <div className="ka-gallery">
-    <div className="ka-gallery-tabs" role="group" aria-label="Explore Keepall features">{views.map((view, index) => <button key={view.name} type="button" aria-pressed={selected === index} aria-controls="ka-gallery-panel" onClick={() => setSelected(index)}>{view.name}</button>)}</div>
+    <div className="ka-gallery-tabs" role="group" aria-label="Explore Keepall features">{views.map((view, index) => <button key={view.name} type="button" aria-pressed={selected === index} aria-controls="ka-gallery-panel" onClick={() => selectView(index)}>{selected === index && <motion.span className="ka-gallery-tab-marker" layoutId="gallery-tab-marker" transition={{ type: "spring", duration: reduceMotion ? 0 : .3, bounce: 0 }} />}<span>{view.name}</span></button>)}</div>
     <div className="ka-gallery-window" id="ka-gallery-panel" role="region" aria-label={views[selected].name}>
-      <motion.div className="ka-gallery-content" key={selected} initial={reduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .25, ease: [.22, 1, .36, 1] }}>{panels[selected]}</motion.div>
+      {panels.map((panel, index) => <div key={views[index].name} className="ka-gallery-content" aria-hidden={selected !== index} inert={selected !== index} style={{ "--demo-offset": `${index < selected ? -105 : 105}%` } as CSSProperties}><RecordedDemo active={selected === index} name={views[index].name} src={`/marketing/${views[index].recording}`} poster={panel} /></div>)}
     </div>
-    <div className="ka-gallery-foot"><span>0{selected + 1} / 03</span><p role="status">{views[selected].caption}</p><div><button type="button" aria-label="Previous feature" onClick={() => setSelected((selected + views.length - 1) % views.length)}>←</button><button type="button" aria-label="Next feature" onClick={() => setSelected((selected + 1) % views.length)}>→</button></div></div>
+    <div className="ka-gallery-foot"><span>0{selected + 1} / 0{views.length}</span><p role="status">{views[selected].caption}</p><div><button type="button" aria-label="Previous feature" onClick={() => selectView((selected + views.length - 1) % views.length)}>←</button><button type="button" aria-label="Next feature" onClick={() => selectView((selected + 1) % views.length)}>→</button></div></div>
   </div>;
 }
 
 function StackCard({ children, index, progress }: { children: ReactNode; index: number; progress: MotionValue<number> }) {
   const reduceMotion = useReducedMotion();
   const scale = useTransform(progress, [index / 3, 1], [1, 1 - (2 - index) * .05]);
-  const y = useTransform(progress, [index / 3, 1], [0, -(2 - index) * 12]);
-  return <div className="ka-stack-card"><motion.div className="ka-stack-surface" style={{ scale: reduceMotion ? 1 : scale, y: reduceMotion ? 0 : y }}>{children}</motion.div></div>;
+  // Match each sticky offset with its remaining stack depth so all three edges
+  // stay separated when the cards reach their container's bottom boundary.
+  const position = { "--stack-top": `${SCENE.stackTop + index * SCENE.stackStep}px`, "--stack-gap": `${(2 - index) * SCENE.stackStep}px` } as CSSProperties;
+  return <div className="ka-stack-card" style={position}><motion.div className="ka-stack-surface" style={{ scale: reduceMotion ? 1 : scale }}>{children}</motion.div></div>;
 }
 
 export function FeatureStack({ children }: { children: ReactNode[] }) {

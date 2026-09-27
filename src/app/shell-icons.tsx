@@ -10,9 +10,10 @@ import {
   Moon02Icon as Moon02, Sun03Icon as Sun03, Tag01Icon as Tag01,
   Edit02Icon as Edit02, Delete02Icon as Delete02, PinIcon as Pin,
   ArrowLeft01Icon as ArrowLeft01, ArrowRight01Icon as ArrowRight01,
-  FullScreenIcon as FullScreen, Video01Icon as Video01, PlayIcon as Play, EyeIcon as Eye,
+  FullScreenIcon as FullScreen, Video01Icon as Video01, PlayIcon as Play, PauseIcon as Pause, EyeIcon as Eye,
   CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle,
   Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
+  KeyboardIcon as Keyboard,
 } from "@hugeicons/core-free-icons";
 
 type IconProps = { className?: string; fill?: "none" | "currentColor" };
@@ -41,6 +42,8 @@ export function ImageIcon(props: IconProps) { return <ShellIcon icon={Image01} {
 export function ImagesIcon(props: IconProps) { return <ShellIcon icon={Images} {...props} />; }
 export function VideoIcon(props: IconProps) { return <ShellIcon icon={Video01} {...props} />; }
 export function PlayIcon(props: IconProps) { return <ShellIcon icon={Play} {...props} />; }
+export function PauseIcon(props: IconProps) { return <ShellIcon icon={Pause} {...props} />; }
+export function KeyboardIcon(props: IconProps) { return <ShellIcon icon={Keyboard} {...props} />; }
 export function BackupIcon(props: IconProps) { return <ShellIcon icon={Archive01} {...props} />; }
 export function SettingsIcon(props: IconProps) { return <ShellIcon icon={Settings02} {...props} />; }
 export function HelpIcon(props: IconProps) { return <ShellIcon icon={HelpCircle} {...props} />; }
