@@ -1448,6 +1448,7 @@ export function Library() {
         key={item.id}
         placement={placement}
         item={item}
+        searchQuery={searchQuery}
         inspected={inspectId === item.id}
         layoutMode={browseLayout}
         openHref={

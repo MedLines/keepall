@@ -1115,7 +1115,7 @@ describe("Library search", () => {
       target: { value: "  DESIGN  " },
     });
 
-    expect(screen.getByText("A persisted note about Design")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "A persisted note about Design" })).toBeInTheDocument();
     expect(screen.queryByText("grocery list")).not.toBeInTheDocument();
     expect(within(screen.getByRole("main")).queryByRole("link", { name: "API Docs" })).not.toBeInTheDocument();
 
@@ -1123,7 +1123,7 @@ describe("Library search", () => {
       target: { value: "inspiration" },
     });
 
-    expect(screen.getByText("A persisted note about Design")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "A persisted note about Design" })).toBeInTheDocument();
     expect(screen.queryByText("grocery list")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Search"), {

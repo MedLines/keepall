@@ -1950,3 +1950,107 @@ test("sidebar right click shares collection and tag actions with their buttons",
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(sidebar.getByRole("button", { name: "Tag minimal", exact: true })).toBeVisible();
 });
+
+for (const layout of ["Grid", "List"]) {
+  test(`${layout}: search highlights hidden notes and preview fields`, async ({ page }, testInfo) => {
+    await page.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>(resolve => {
+        const request = indexedDB.open("keepall");
+        request.onsuccess = () => resolve(request.result);
+      });
+      const tx = db.transaction("items", "readwrite");
+      const store = tx.objectStore("items");
+      for (const id of ["link", "fallback"]) {
+        const request = store.get(id);
+        request.onsuccess = () => store.put({ ...request.result,
+          noteContent: "Background context. ".repeat(30) + "Quartz layout A+B <img src=x> reference.",
+          previewTitle: "BuriedPreview title", previewDescription: "Chromakey reference",
+          ...(id === "fallback" ? { collectionIds: [], tagIds: [] } : {}),
+        });
+      }
+      await new Promise<void>(resolve => { tx.oncomplete = () => resolve(); });
+      db.close();
+    });
+    await page.goto("/?q=QUARTZ&collection=c&tag=t&type=link");
+    await page.getByRole("button", { name: `${layout} view`, exact: true }).click();
+    const search = page.getByRole("searchbox", { name: "Search", exact: true });
+    const item = page.locator('[data-item-id="link"]');
+    await expect(page.locator("[data-item-id]")).toHaveCount(1);
+    await expect(item.locator(".search-excerpt")).toContainText("My note:");
+    await expect(item.locator(".search-excerpt mark")).toHaveText("Quartz");
+    await expect(item.locator(".search-excerpt img")).toHaveCount(0);
+    await search.fill("a+b");
+    await expect(item.locator(".search-excerpt mark")).toHaveText("A+B");
+    await search.fill("BuriedPreview");
+    await expect(item.locator(".search-excerpt")).toContainText("Preview title:");
+    await expect(item.locator(".search-excerpt mark")).toHaveText("BuriedPreview");
+    await search.fill("Chromakey");
+    await expect(item.locator("mark").first()).toHaveText("Chromakey");
+    await expect(item.locator(".search-excerpt")).toBeHidden();
+    await search.fill("quartz");
+    for (const theme of ["light", "dark"]) {
+      if (await page.locator("html").getAttribute("data-theme") !== theme) {
+        await page.getByRole("button", { name: "Theme", exact: true }).click();
+      }
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await page.screenshot({ path: testInfo.outputPath(`${layout}-${theme}-search.png`) });
+    }
+    await item.getByRole("link", { name: /Read my note/ }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/items\/link/);
+    await page.goBack();
+    await expect(search).toHaveValue("quartz");
+    await search.fill("no-such-saved-phrase");
+    await expect(page.locator("[data-item-id]")).toHaveCount(0);
+    await search.fill("");
+    await expect(page.locator("mark.search-highlight, .search-excerpt")).toHaveCount(0);
+  });
+}
+
+test("search excerpts survive virtualized layout changes and clipped titles", async ({ page }, testInfo) => {
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>(resolve => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    const tx = db.transaction("items", "readwrite");
+    const store = tx.objectStore("items");
+    const request = store.get("image");
+    request.onsuccess = () => {
+      for (let index = 0; index < 790; index++) store.put({ ...request.result, id: `search-${index}`, createdAt: index + 10,
+        title: index === 789 ? "A long saved image title with plenty of detail before the important word ends with Needle" : "",
+        caption: index === 789 ? "" : "Context. ".repeat(60) + "Needle in this caption.",
+      });
+      store.put({ ...request.result, title: "", caption: "", tagIds: ["t"] });
+    };
+    await new Promise<void>(resolve => { tx.oncomplete = () => resolve(); });
+    db.close();
+  });
+  await page.goto("/?q=Needle");
+  const search = page.getByRole("searchbox", { name: "Search", exact: true });
+  for (const width of [975, 2196, 390, 975]) {
+    await page.setViewportSize({ width, height: 900 });
+    const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
+    if (await closeNavigation.isVisible()) await closeNavigation.click();
+    for (const layout of ["Grid", "List"]) {
+      await page.getByRole("button", { name: `${layout} view`, exact: true }).click();
+      const item = page.locator('[data-item-id="search-788"]');
+      await expect(item.locator(".search-excerpt mark")).toBeVisible();
+      await expect(item.locator(".search-excerpt mark")).toHaveText("Needle");
+      expect(await page.locator("[data-item-id]").count()).toBeLessThan(790);
+      await expect.poll(() => page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      if (layout === "Grid") await expectCardsNotToOverlap(page);
+      if (layout === "List" && width === 975) await expect(page.locator('[data-item-id="search-789"] .search-excerpt')).toBeVisible();
+    }
+  }
+  await search.fill("minimal");
+  await page.getByRole("button", { name: "Grid view", exact: true }).click();
+  // Return the original, untitled image to the first result without changing its content.
+  await page.goto("/?q=minimal&sort=oldest");
+  const image = page.locator('[data-item-id="image"]');
+  await expect(image.locator(".search-excerpt")).toContainText("Tag:");
+  await expect(image.locator(".search-excerpt mark")).toHaveText("minimal");
+  await page.screenshot({ path: testInfo.outputPath("search-tag-image.png") });
+  await search.fill("");
+  await expect(page.locator(".search-excerpt")).toHaveCount(0);
+});

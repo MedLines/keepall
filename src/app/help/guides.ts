@@ -1,66 +1,209 @@
+export const CHROME_EXTENSION_URL = "https://chromewebstore.google.com/detail/keepall-capture/ehloefgfecmfjbncknaoleakbnjhkpea";
+
+type GuideLink = { label: string; href: string };
+
+export type GuideSection = {
+  id: string;
+  title: string;
+  paragraphs: string[];
+  steps?: string[];
+  note?: string;
+  links?: GuideLink[];
+};
+
 export type Guide = {
   slug: string;
   category: string;
   title: string;
   summary: string;
   minutes: string;
-  sections: { title: string; paragraphs: string[]; steps?: string[] }[];
-  action?: { label: string; href: string };
+  sections: GuideSection[];
+  action?: GuideLink;
 };
 
 export const guides: Guide[] = [
   {
-    slug: "getting-started",
-    category: "The basics",
-    title: "Start your library",
-    summary: "Save your first link, note, image, or video.",
-    minutes: "3 min read",
+    slug: "getting-started", category: "The basics", title: "Start your library",
+    summary: "Save your first link, note, image, or video. No account needed.", minutes: "2 min read",
     sections: [
-      { title: "Save something", paragraphs: ["Open your library and use Save item to capture a link, write a note, or add an image or video. You can also press Alt + K to open capture; on a Mac, use Option + K.", "Give a link or image a note when you want to remember why you saved it. Notes can be plain text or Markdown."] },
-      { title: "Let it land", paragraphs: ["Every new item can go to a collection and carry tags. You can leave it in Unsorted and decide where it belongs later. The important part is keeping it while it is still on your mind."] },
-      { title: "Come back to it", paragraphs: ["Use search or browse by collection, tag, and item type. Open a saved note to read it fully; open a link to return to its source page."] },
+      {
+        id: "first-save", title: "Save your first link",
+        paragraphs: ["Start with a page you want to come back to, such as a recipe or an article."],
+        steps: ["Copy the page's address and open your Keepall library.", "Choose Save item and paste the address. You can also open this panel with Alt + K, or Option + K on Mac.", "Add a title or a note if you want to remember why you saved it, then save."],
+        note: "Your new link appears in Unsorted unless you choose a collection. Keepall tries to add a preview while you are online; the link is still saved if a preview is unavailable.",
+      },
+      {
+        id: "more-than-links", title: "Keep more than links",
+        paragraphs: ["Use Save item to write a standalone note, choose image files, paste an image, or add a video file from your device. You can attach a note to a link, image, or video too.", "Notes start as plain text. Turn on Markdown if you want to use formatting such as headings and lists."],
+        links: [{ label: "See supported images and videos", href: "/help/images-and-videos" }],
+      },
+      {
+        id: "find-it", title: "Come back to what you saved",
+        paragraphs: ["Search by title or tag, open a collection, or filter by item type. Switch between the visual grid and list to browse your saves.", "Open an item to read its details. For a saved link, choose Open source to visit the original page. Use Edit to change the details or Delete to remove an item after confirming."],
+        links: [{ label: "Learn about collections and tags", href: "/help/collections-and-tags" }],
+      },
+      {
+        id: "save-from-browser", title: "Make the next save easier",
+        paragraphs: ["Keepall Capture adds a save button to Chrome on your computer. You can also install Keepall itself to open your library from an app icon. Both are optional."],
+        links: [{ label: "Set up the Chrome extension", href: "/help/chrome-capture" }, { label: "Install Keepall on your device", href: "/help/install-keepall" }],
+      },
     ],
     action: { label: "Open your library", href: "/" },
   },
   {
-    slug: "collections-and-tags",
-    category: "Organize",
-    title: "Find a place for everything",
-    summary: "Use collections, tags, and search without having to organize every save immediately.",
-    minutes: "2 min read",
+    slug: "chrome-capture", category: "Capture", title: "Save from Chrome",
+    summary: "Add the extension, then keep pages, links, images, and useful passages without leaving the website.", minutes: "5 min read",
     sections: [
-      { title: "Collections give things a home", paragraphs: ["Choose a collection when you save, or move an item later. Items without a collection appear in Unsorted. Browse a collection from the library sidebar when you want to focus on one part of your library."] },
-      { title: "Tags make connections", paragraphs: ["Use tags for themes that cross collections, such as reading, recipes, or an ongoing project. An item can have more than one tag. Select a tag from the sidebar to see related items together."] },
-      { title: "Search when you do not remember where it went", paragraphs: ["Search matches the details you saved, including titles and note text. You do not need to keep a perfect filing system to find something again."] },
+      {
+        id: "install", title: "Add Keepall Capture to Chrome",
+        paragraphs: ["Keepall Capture is an extension for Chrome on a computer. It saves to your Keepall library without needing a Keepall tab open."],
+        steps: ["Open Keepall Capture in the Chrome Web Store using the link below. Choose Add to Chrome, review the permission message, and confirm.", "Open Chrome's Extensions menu beside the address bar and pin Keepall Capture. Its icon will stay beside the address bar.", "Open a website and click the Keepall icon. Wait for the saved confirmation, then open Keepall to find the page in Unsorted."],
+        links: [{ label: "Add Keepall Capture to Chrome", href: CHROME_EXTENSION_URL }],
+        note: "The right-click actions and save confirmation tools below require Keepall Capture 0.2.0 or later. If they are missing, check the version in Chrome's Manage extensions page and whether an update is available.",
+      },
+      {
+        id: "save-page", title: "Save the page you are reading",
+        paragraphs: ["Click the Keepall icon in Chrome's toolbar. The page is saved as a link, and a confirmation appears when it succeeds. New links go to Unsorted, ready to organize later.", "Saving an existing link again keeps its collection and tags. Chrome's settings pages and other protected browser pages cannot be captured."],
+      },
+      {
+        id: "right-click", title: "Save a link, an image, or selected text",
+        paragraphs: ["Use the same Save to Keepall menu action for each. What you right-click decides what gets saved."],
+        steps: ["For a link, right-click it and choose Save to Keepall. Keepall saves its destination without opening the linked page.", "For an image, right-click it and choose Save to Keepall. Keepall stores the image itself with a link to its source. Chrome may ask for website access.", "For text, highlight the passage first, then right-click and choose Save to Keepall. The passage becomes a note attached to its source link."],
+        note: "If the source link already exists, selected text is added to its note. Repeating the same complete passage does not add it twice. An image that is also a link is saved as an image.",
+      },
+      {
+        id: "add-details", title: "Add a note before saving",
+        paragraphs: ["Use the save panel when you want to add context or organize a page as you save it."],
+        steps: ["Press Alt + K on Windows or Linux, or Option + K on Mac, while viewing the page.", "Change the title, add a note, and choose a collection or tags. Browse all searches the full list; you can create new collections and tags here too.", "Save and wait for the confirmation. If the page was already saved, this panel lets you update its existing details."],
+        note: "Closing the panel keeps unfinished edits in that tab. Reopen it to continue, or use Discard draft to clear them. Reloading the page or closing the tab clears the draft. Notes containing local images must be edited in Keepall.",
+      },
+      {
+        id: "after-saving", title: "Open, organize, or undo a save",
+        paragraphs: ["After a quick save, choose Open in Keepall in the confirmation to see the item, or Organize to choose a collection.", "Undo appears for a newly saved item. It is available briefly and cannot remove an item you have since edited, organized, or pinned. If the confirmation has gone, open the item in Keepall and use Delete."],
+      },
+      {
+        id: "image-access", title: "When Chrome asks for image access",
+        paragraphs: ["An image can be hosted on a different website from the page you are reading. Chrome may ask for access to that image's website so Keepall can download it. Allow access if you want to save it. Per-website access is the recommended choice.", "To manage this, right-click the Keepall toolbar icon, open Options, and choose Image access. You can optionally allow all websites there. Chrome's warning describes broader website access, so read the explanation before granting it. The same section links to Chrome's controls for changing access.", "Keepall downloads images when you choose to save them. Images must be PNG, JPEG, GIF, WebP, or AVIF, up to 20 MiB. A website can still prevent an image from downloading."],
+        links: [{ label: "Read extension privacy details", href: "/extension-privacy" }],
+      },
+      {
+        id: "find-saves", title: "Where your saves go",
+        paragraphs: ["The extension normally saves to www.keepall.app in the same Chrome profile. A profile is the separate browser space you choose from Chrome's profile button, such as Personal or Work. Open Keepall in that same profile to see your saves.", "To check the destination, right-click the extension icon, open Options, then General. Check connection tells you whether the extension can reach that library. This does not sync it to another browser or device."],
+      },
+      {
+        id: "troubleshooting", title: "If saving or the shortcut does not work",
+        paragraphs: ["If the shortcut does nothing, open Options, choose Saving, then Change shortcut. Another extension may already use Alt + K. Assign an available shortcut in Chrome and return to the page.", "If a save fails, open Keepall while online. In Options, choose General, then Check connection. Use Restore library access if it appears, then retry the save.", "If an item seems missing, check the saved library address and Chrome profile, then look in Unsorted. If an image fails, check Image access and the file limits above."],
+        links: [{ label: "Get help with a problem", href: "https://github.com/MedLines/keepall/issues" }],
+      },
+    ],
+    action: { label: "Open your library", href: "/" },
+  },
+  {
+    slug: "install-keepall", category: "Installation", title: "Open Keepall like an app",
+    summary: "Add Keepall to your computer or phone and open your library from its own icon.", minutes: "2 min read",
+    sections: [
+      {
+        id: "choose", title: "The app and extension do different things",
+        paragraphs: ["Installing Keepall gives you an icon for opening your library. Keepall Capture is the separate Chrome extension for saving from other websites on a computer. You can use either, both, or just the website."],
+        links: [{ label: "Looking for the Chrome extension?", href: "/help/chrome-capture#install" }],
+      },
+      {
+        id: "computer", title: "On a computer with Chrome",
+        paragraphs: [],
+        steps: ["Open www.keepall.app in the Chrome profile you use for your library.", "Choose the install icon in the address bar. If it is absent, open Chrome's menu, choose Cast, save, and share, then Install page as app.", "Confirm installation. Open Keepall from its new icon."],
+        links: [{ label: "Chrome's computer installation guide", href: "https://support.google.com/chrome/answer/9658361?hl=en&co=GENIE.Platform%3DDesktop" }],
+      },
+      {
+        id: "android", title: "On Android with Chrome",
+        paragraphs: [],
+        steps: ["Open www.keepall.app in Chrome.", "Open Chrome's menu and choose Install and create shortcut, then Install. Depending on your version, this may be called Add to Home screen or Install app.", "Follow the prompts, then open Keepall from its new icon."],
+        links: [{ label: "Chrome's Android installation guide", href: "https://support.google.com/chrome/answer/9658361?hl=en&co=GENIE.Platform%3DAndroid" }],
+      },
+      {
+        id: "iphone", title: "On iPhone with Safari",
+        paragraphs: [],
+        steps: ["Open www.keepall.app in Safari.", "Open Share from the toolbar or page menu, then choose Add to Home Screen.", "Turn on Open as Web App if offered, then tap Add. Open Keepall from the Home Screen icon."],
+        links: [{ label: "Apple's Home Screen guide", href: "https://support.apple.com/guide/iphone/bookmark-a-website-iph42ab2f3a7/ios" }],
+      },
+      {
+        id: "existing-library", title: "Keep your existing library",
+        paragraphs: ["Installation does not sync your library. A different browser, profile, or device has its own saved data. Some mobile Home Screen apps also use separate storage from the browser tab.", "Before switching, download a backup from the library that holds your saves. If the new app opens an empty library, import that backup there. Keep the original copy until you have checked the import."],
+        links: [{ label: "Back up and move your library", href: "/help/storage-and-backups" }, { label: "See what works offline", href: "/help/offline" }],
+      },
+    ],
+    action: { label: "Open Keepall", href: "/" },
+  },
+  {
+    slug: "collections-and-tags", category: "Organize", title: "Find a place for everything",
+    summary: "Use collections, tags, pins, and search. You can always organize after saving.", minutes: "3 min read",
+    sections: [
+      { id: "collections", title: "Group things in collections", paragraphs: ["A collection brings related saves together, such as Recipes or Living room ideas. Choose one when saving, move an item later, or drag library items onto a collection in the sidebar.", "Items with no collection appear in Unsorted. Leaving something there does not make it temporary."] },
+      { id: "tags", title: "Connect ideas with tags", paragraphs: ["Tags describe an item across collections. For example, a lamp and a paint color in different collections could both have the tag warm tones. An item can have several tags.", "Right-click an item in the library to find, add, or remove tags. You can create a new tag there too. Select a tag in the sidebar to see matching items."] },
+      { id: "pins", title: "Keep frequent items close", paragraphs: ["Pin collections in the sidebar and change their order. Inside a collection, pin important items to keep them above the rest.", "To tidy several saves together, select them and use the selection controls to move them, change their tags, or delete them. Deleting requires confirmation and cannot be undone."] },
+      { id: "search", title: "Find something you remember", paragraphs: ["Start with a word from the title or a tag. Search also matches saved text fields, such as standalone note text, image captions, and source addresses. It does not read text inside images or listen to videos.", "Narrow the results by collection, tag, or item type. If something seems missing, clear those filters. Choose newest or oldest first, and switch between grid and list to change how you browse."] },
     ],
     action: { label: "Browse your library", href: "/" },
   },
   {
-    slug: "chrome-capture",
-    category: "Capture",
-    title: "Save from Chrome",
-    summary: "Keep the page you are on with one click, or add details before saving.",
-    minutes: "3 min read",
+    slug: "images-and-videos", category: "Media", title: "Keep images and videos",
+    summary: "Paste images, build a gallery, and keep video files from your device.", minutes: "2 min read",
     sections: [
-      { title: "One click to save", paragraphs: ["After installing Keepall Capture in Chrome, pin it to the toolbar. On an ordinary website, click the Keepall icon to save the current page. A small confirmation appears when the save succeeds. Keepall does not need to be open in a tab."] },
-      { title: "Add a little more", paragraphs: ["Press Alt + K on Windows or Option + K on Mac while you are on another website. The capture drawer lets you change the title, write a note, choose Markdown, and pick a collection or tags. Save when you are ready.", "If the shortcut does not open Keepall, another extension may be using it. You can change the shortcut at chrome://extensions/shortcuts."] },
-      { title: "Where it goes", paragraphs: ["The extension saves to Keepall in the same Chrome profile. If a Keepall tab is already open, your new item appears there without a refresh. Chrome internal pages cannot be captured."] },
+      { id: "images", title: "Add an image", paragraphs: ["Open Save item to choose image files or use Paste image. Add a title, a note, and a source link if you want to remember where an image came from.", "Keepall accepts PNG, JPEG, GIF, WebP, and AVIF images up to 20 MiB each. Unsupported or oversized files need to be converted or made smaller before saving."], links: [{ label: "Save images directly from websites", href: "/help/chrome-capture#right-click" }] },
+      { id: "gallery", title: "Keep related images together", paragraphs: ["One image item can hold several pictures. Open it to browse the gallery, add more images, or replace or remove the current image. The first image is the cover.", "Select the large image to view it full screen. You can zoom in and move through the gallery. Close the viewer to return to the item's details."] },
+      { id: "videos", title: "Add a video from your device", paragraphs: ["Use Save item to choose an MP4 or WebM file up to 100 MiB. Give it a title or note, then open the saved item to play it. Playback depends on whether your browser supports the file's video format.", "Saving a link to an online video keeps its web address. It does not download the video file."] },
+      { id: "media-backup", title: "Keep a copy of your media", paragraphs: ["Images and local video files are part of your browser's library. A Keepall ZIP backup includes those files. Download one before clearing site data or changing devices."], links: [{ label: "Import a folder of images", href: "/help/import#images" }, { label: "Download a library backup", href: "/help/storage-and-backups#download" }] },
     ],
-    action: { label: "Read extension privacy details", href: "/extension-privacy" },
+    action: { label: "Open your library", href: "/" },
   },
   {
-    slug: "storage-and-backups",
-    category: "Your data",
-    title: "Understand storage and backups",
-    summary: "Know where your library lives and how to keep a copy of it.",
-    minutes: "4 min read",
+    slug: "import", category: "Bring your saves", title: "Bring an existing library",
+    summary: "Import browser bookmarks, a folder of images, or a Keepall backup.", minutes: "3 min read",
     sections: [
-      { title: "Your browser holds the library", paragraphs: ["Keepall saves your links, notes, images, videos, collections, and tags in this browser profile's local storage. You do not need an account. A different browser or profile has a separate library, and the extension uses the library in its own Chrome profile."] },
-      { title: "Download a backup", paragraphs: ["Open Settings and download a .keepall.zip backup. It includes your images and videos as separate files inside the archive. Keep that file somewhere you control, especially before clearing browser data, changing browsers, or resetting a device. Browser storage can be removed when site data is cleared; a backup is your recovery copy."] },
-      { title: "Restore or bring in bookmarks", paragraphs: ["Settings can import .keepall.zip backups and older Keepall JSON backups. You can also bring in browser bookmarks from an HTML export. Read the choices in the import dialog before replacing or merging library data."] },
-      { title: "About link previews", paragraphs: ["When you are online, Keepall may request a saved page's title, description, or image through its preview service. The saved URL is sent for that request. Your personal notes, collections, and tags are not included."] },
+      {
+        id: "bookmarks", title: "Import browser bookmarks",
+        paragraphs: ["Start with an HTML bookmark export from your browser. A Keepall backup uses a different format."],
+        steps: ["Use your browser's bookmark manager to export bookmarks as an HTML file.", "Open Keepall Settings and choose Import bookmarks. Select the exported file.", "Review how bookmark folders will be used for collections, then confirm the import and read the result."],
+      },
+      {
+        id: "images", title: "Import a folder of images",
+        paragraphs: ["You can bring in a folder without adding each image separately."],
+        steps: ["In Settings, choose Import image folder and select the folder on your device.", "Choose a collection, or leave it blank to keep the images in Unsorted.", "Choose Import images and wait for the result. Keepall reports files it skipped, including unsupported images and those over 20 MiB."],
+      },
+      {
+        id: "backup", title: "Restore a Keepall backup",
+        paragraphs: ["Use a .keepall.zip file or an older Keepall JSON backup. In Settings, choose Import in the Backup section, select the file, and review the choices.", "Merge adds the backup to your current library. Replace removes the current library and restores the backup instead. Download a fresh backup before replacing anything you may want to keep.", "After importing, check a few notes and media items before deleting your original copy."],
+        links: [{ label: "Understand storage and backups", href: "/help/storage-and-backups" }],
+      },
     ],
     action: { label: "Open Settings", href: "/settings" },
+  },
+  {
+    slug: "storage-and-backups", category: "Your data", title: "Understand storage and backups",
+    summary: "Know where your library lives, keep a separate copy, and move it when you need to.", minutes: "3 min read",
+    sections: [
+      { id: "storage", title: "Your browser holds the library", paragraphs: ["Keepall saves your links, notes, images, videos, collections, and tags in this browser profile on this device. You do not need an account. Another browser, profile, or device has a separate library. There is no automatic cloud sync.", "Clearing Keepall's site data can erase the library. Browser storage can also be removed by the browser or device. A downloaded backup gives you a separate recovery copy."] },
+      {
+        id: "download", title: "Download a backup",
+        paragraphs: ["Make a backup after important additions and before clearing browser data, resetting a device, or changing browsers."],
+        steps: ["Open Settings and find the Backup section.", "Choose Export. Keepall downloads a .keepall.zip file containing library data and saved images and videos.", "Keep that file somewhere you can find it again. For protection against losing the device, keep a copy on another device or storage service you choose."],
+        links: [{ label: "Open backup settings", href: "/settings" }],
+      },
+      { id: "restore", title: "Restore or move your library", paragraphs: ["Open Keepall in the destination browser and import your backup from Settings. Choose Merge to add it to the current library, or Replace to overwrite the current library.", "Keep the original copy until you have checked the restored items. Importing a backup is a one-time transfer; it does not keep two libraries in sync."], links: [{ label: "Follow the import guide", href: "/help/import#backup" }] },
+      { id: "space", title: "Check available storage", paragraphs: ["Settings shows the browser's estimated storage usage and allowance, plus whether it has granted storage protection. These estimates can change. Protection is not a substitute for a backup.", "Large images and videos use more space. If saving fails because storage is full, download a backup before removing items you no longer need."] },
+      { id: "previews", title: "How link previews use the internet", paragraphs: ["While online, Keepall may send a saved page's URL to its preview service to request a title, description, or image. Your personal notes, collections, and tags are not included in that request."], links: [{ label: "Read extension privacy details", href: "/extension-privacy" }] },
+    ],
+    action: { label: "Open Settings", href: "/settings" },
+  },
+  {
+    slug: "offline", category: "Everyday use", title: "Use Keepall offline",
+    summary: "Understand what stays available without a connection and what still needs the web.", minutes: "2 min read",
+    sections: [
+      { id: "prepare", title: "Open your library while online first", paragraphs: ["Keepall needs to load before your browser can keep a copy of the app for offline use. Open the library while connected, then return to it in the same browser or installed app.", "If an offline page says it cannot open the library, reconnect and open Keepall again. A first visit or a page the browser has not kept may need the internet."] },
+      { id: "available", title: "Work with locally saved content", paragraphs: ["When the cached library opens, you can browse and search your saves, read notes, and view images and video files stored in Keepall. You can also make local changes to your library.", "Availability depends on the browser keeping both the app and its saved data. Download backups regularly."] },
+      { id: "internet", title: "What still needs a connection", paragraphs: ["Opening a saved web link takes you to its original website, which normally needs the internet. Keepall does not save full web articles for offline reading. New link previews and images downloaded from websites also need a connection.", "Extension saves depend on being able to reach Keepall's saved app files. If capture fails offline, reconnect and retry. Wait for a saved confirmation before assuming the item is in your library."] },
+      { id: "updates", title: "When an update is ready", paragraphs: ["Keepall shows an update notice when a new app version is ready. Finish and save any edits, then use the notice's reload action. This updates the app; it does not create a backup of your library."], links: [{ label: "Keep a backup of your library", href: "/help/storage-and-backups#download" }] },
+    ],
+    action: { label: "Open your library", href: "/" },
   },
 ];
 

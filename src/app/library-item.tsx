@@ -59,6 +59,7 @@ export type PendingMutation =
 export type LibraryItemProps = {
   placement?: MasonryPlacement;
   item: Item;
+  searchQuery?: string;
   inspected: boolean;
   openHref?: string;
   onOpenInspect: () => void;
@@ -102,6 +103,7 @@ export type LibraryItemProps = {
 export function LibraryItem({
   placement,
   item,
+  searchQuery = "",
   inspected,
   openHref,
   onOpenInspect,
@@ -158,7 +160,7 @@ export function LibraryItem({
   const title = itemListTitle(item);
   const isList = layoutMode === "list";
   const hasGridFooter = item.type !== "image" || Boolean(
-    item.title.trim() || item.caption.trim() || item.sourceUrl ||
+    searchQuery.trim() || item.title.trim() || item.caption.trim() || item.sourceUrl ||
     (pinVisible && pinned) || collections.length || tagNames.length || pendingDelete
   );
   const hasMedia = item.type === "image" || item.type === "link" || item.type === "video";
@@ -487,6 +489,8 @@ export function LibraryItem({
         {!isList ? (
           <LibraryCardContent
             item={item}
+            query={searchQuery}
+            tagNames={tagNames.map(tag => tag.name)}
             onOpen={onOpenInspect}
             openHref={openHref}
             pinned={pinVisible && pinned}
@@ -494,7 +498,7 @@ export function LibraryItem({
         ) : (
           <div className={isList ? "min-w-0 flex-1 text-left" : undefined}>
             {isList && !pendingDelete ? (
-              <LibraryListContent item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} openHref={openHref} />
+              <LibraryListContent query={searchQuery} tagNames={tagNames.map(tag => tag.name)} item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} openHref={openHref} />
             ) : <p className="text-sm font-medium">{title}</p>}
           </div>
         )}

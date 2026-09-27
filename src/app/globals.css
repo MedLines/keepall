@@ -58,6 +58,8 @@
   --color-text-warning: light-dark(#78350f, #fcd38b);
   --color-bg-warning: light-dark(#fffbeb, #332619);
   --color-border-warning: light-dark(#fde68a, #856435);
+  --color-bg-search-match: light-dark(#ffedaa, #705018);
+  --color-text-search-match: light-dark(#30230b, #fff4c9);
   --color-collection-marker: oklch(var(--collection-marker-lightness, 0.68) 0.15 var(--collection-marker-hue, 0));
   --radius-control: 0.625rem;
   --radius-control-sm: 0.75rem;
@@ -76,6 +78,12 @@
 }
 
 @layer components {
+  .search-highlight {
+    border-radius: 2px;
+    background: var(--color-bg-search-match);
+    color: var(--color-text-search-match);
+  }
+
   .ui-control, .ui-field {
     border: 1px solid var(--color-border-control);
     border-radius: var(--radius-control-md);

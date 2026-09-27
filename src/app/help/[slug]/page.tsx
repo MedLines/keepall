@@ -28,8 +28,20 @@ export default async function GuidePage({ params }: Props) {
           <p className="public-eyebrow">{guide.category} · {guide.minutes}</p>
           <h1>{guide.title}</h1>
           <p className="help-article-summary">{guide.summary}</p>
+          <nav className="help-contents" aria-label="On this page">
+            <p className="public-eyebrow">On this page</p>
+            <ol>{guide.sections.map((section) => <li key={section.id}><a href={`#${section.id}`}>{section.title}</a></li>)}</ol>
+          </nav>
           <div className="help-article-body">
-            {guide.sections.map((section) => <section key={section.title}><h2>{section.title}</h2>{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{section.steps && <ol>{section.steps.map((step) => <li key={step}>{step}</li>)}</ol>}</section>)}
+            {guide.sections.map((section) => (
+              <section key={section.id} id={section.id} aria-labelledby={`${section.id}-title`}>
+                <h2 id={`${section.id}-title`}>{section.title}</h2>
+                {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+                {section.steps && <ol className="help-steps">{section.steps.map((step) => <li key={step}>{step}</li>)}</ol>}
+                {section.note && <p className="help-note">{section.note}</p>}
+                {section.links && <div className="help-section-links">{section.links.map((link) => <Link key={link.href} href={link.href}>{link.label}<span aria-hidden="true"> →</span></Link>)}</div>}
+              </section>
+            ))}
           </div>
           {guide.action && <Link href={guide.action.href} className="public-button public-button-primary">{guide.action.label} <span aria-hidden="true">↗</span></Link>}
           <div className="help-article-end"><Link href="/help">Browse all guides <span aria-hidden="true">→</span></Link></div>

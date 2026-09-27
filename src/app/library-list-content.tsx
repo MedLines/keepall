@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SearchHighlight, SearchResult } from "./search-highlight";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { cardSecondaryLine, linkCardHost } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
@@ -36,20 +37,22 @@ export function countFittingTags(
   return count;
 }
 
-function LinkContext({ item }: { item: LinkItem }) {
+function LinkContext({ item, query }: { item: LinkItem; query: string }) {
   return (
     <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-text-secondary">
       <LinkIcon className="size-6" />
-      <span className="truncate">{linkCardHost(item)}{item.previewDescription ? ` · ${item.previewDescription}` : ""}</span>
+      <span className="truncate"><SearchHighlight text={`${linkCardHost(item)}${item.previewDescription ? ` · ${item.previewDescription}` : ""}`} query={query} /></span>
     </span>
   );
 }
 
-export function LibraryListContent({ item, pinned, onOpen, openHref }: {
+export function LibraryListContent({ item, pinned, onOpen, openHref, query = "", tagNames = [] }: {
   item: Item;
   pinned: boolean;
   onOpen: () => void;
   openHref?: string;
+  query?: string;
+  tagNames?: readonly string[];
 }) {
   const title = item.type === "link" && !item.title.trim() && !item.previewTitle.trim()
     ? item.url.replace(/^https?:\/\//, "")
@@ -60,15 +63,15 @@ export function LibraryListContent({ item, pinned, onOpen, openHref }: {
     <>
       {title || pinned ? <span className="flex min-w-0 items-center gap-2">
         {pinned ? <span title="Pinned in this collection"><PinIcon className="size-4" /><span className="sr-only">Pinned in this collection</span></span> : null}
-        {title ? <span className="truncate text-base font-medium" title={title}>{title}</span> : null}
+        {title ? <span className="truncate text-base font-medium" title={title}><SearchHighlight text={title} query={query} /></span> : null}
       </span> : null}
-      {item.type === "link" ? <LinkContext key={item.url} item={item} /> : secondary ? (
-        <span className="mt-1 block truncate text-xs text-text-secondary">{secondary}</span>
+      {item.type === "link" ? <LinkContext key={item.url} item={item} query={query} /> : secondary ? (
+        <span className="mt-1 block truncate text-xs text-text-secondary"><SearchHighlight text={secondary} query={query} /></span>
       ) : item.type === "note" ? <span className="mt-1 block text-xs text-text-secondary">Note</span> : item.type === "image" && item.assetIds.length > 1 ? <span className="mt-1 block text-xs text-text-secondary">{item.assetIds.length} images</span> : null}
     </>
   );
   return (
-    <>
+    <SearchResult item={item} query={query} tagNames={tagNames}>
       {hasContent ? item.type === "link" ? (
         <a
           href={item.url}
@@ -94,7 +97,7 @@ export function LibraryListContent({ item, pinned, onOpen, openHref }: {
       <time className="library-list-date text-xs text-text-secondary" dateTime={new Date(item.createdAt).toISOString()} title="Saved date">
         {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
       </time>
-    </>
+    </SearchResult>
   );
 }
 

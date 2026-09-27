@@ -3,6 +3,7 @@ import { buildImage } from "@/domain/image";
 import { buildLink } from "@/domain/link";
 import { buildNote } from "@/domain/note";
 import type { LibraryViewState } from "@/domain/library-view";
+import type { Collection } from "@/domain/collection";
 import {
   buildLibraryBrowseIndexes,
   filterAndSortLibraryItems,
@@ -27,6 +28,21 @@ describe("library-browse-index", () => {
     ["c2", { id: "c2", name: "Two", createdAt: 1, pinnedItemIds: [] }],
   ]);
   const indexes = buildLibraryBrowseIndexes(items);
+
+  test("personal-note search respects combined filters and collection pin order", () => {
+    const older = { ...link, noteContent: "Quartz layout", tagIds: ["t1"] };
+    const newer = { ...older, id: "newer", createdAt: 10 };
+    const outside = { ...older, id: "outside", collectionIds: [] };
+    const candidates = [older, newer, outside];
+    const collectionMap = new Map<string, Collection>(collectionsById);
+    collectionMap.set("c1", { ...collectionsById.get("c1")!, pinnedItemIds: [older.id] });
+    const view: LibraryViewState = {
+      collection: "c1", unsorted: false, type: "link", tag: "t1", q: "quartz",
+      layout: "grid", sort: "newest", item: null, slide: 0,
+    };
+    const result = filterAndSortLibraryItems(candidates, tags, view, collectionMap, buildLibraryBrowseIndexes(candidates));
+    expect(result.map(item => item.id)).toEqual([older.id, newer.id]);
+  });
 
   test("collection browse uses the indexed pool", () => {
     const view: LibraryViewState = {

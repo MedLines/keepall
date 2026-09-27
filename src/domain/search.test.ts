@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { buildLink } from "./link";
 import { buildNote } from "./note";
-import { matchesSearchQuery, normalizeSearchQuery } from "./search";
+import { buildImage } from "./image";
+import { buildVideo } from "./video";
+import { createSearchExcerpt, findSearchMatches, findTextMatches, matchesSearchQuery, normalizeSearchQuery } from "./search";
 
 describe("normalizeSearchQuery", () => {
   test("trims and lowercases", () => {
@@ -40,6 +42,13 @@ describe("matchesSearchQuery", () => {
     expect(matchesSearchQuery(link, "missing")).toBe(false);
   });
 
+  test("includes personal notes and website preview text", () => {
+    const saved = { ...link, noteContent: "Remember the spacing", previewTitle: "Layout handbook", previewDescription: "A typography reference" };
+    for (const query of [" SPACING ", "handbook", "typography"]) expect(matchesSearchQuery(saved, query)).toBe(true);
+    expect(matchesSearchQuery(link, "undefined")).toBe(false);
+    expect(findSearchMatches(saved, "the")[0].field).toBe("noteContent");
+  });
+
   test("does not match unrelated note content against a link", () => {
     expect(matchesSearchQuery(link, "persisted")).toBe(false);
   });
@@ -48,5 +57,33 @@ describe("matchesSearchQuery", () => {
     expect(matchesSearchQuery(note, "design", ["Inspiration"])).toBe(true);
     expect(matchesSearchQuery(note, "WORK", ["work", "reading"])).toBe(true);
     expect(matchesSearchQuery(note, "missing", ["Design"])).toBe(false);
+  });
+
+  test("preserves image, video, and tag coverage and excerpt priority", () => {
+    const image = buildImage({ assetId: "a", title: "Still life", caption: "Blue vase", sourceUrl: "https://example.com/gallery" });
+    for (const query of ["still", "vase", "gallery"]) expect(matchesSearchQuery(image, query)).toBe(true);
+    const video = buildVideo({ assetId: "v", fileName: "demo.mp4", title: "Motion", noteContent: "Spring reference" });
+    for (const query of ["motion", ".mp4", "spring"]) expect(matchesSearchQuery(video, query)).toBe(true);
+    expect(findSearchMatches(image, "blue", ["Blue inspiration"]).map(match => match.field)).toEqual(["caption", "tag"]);
+  });
+});
+
+describe("search ranges and excerpts", () => {
+  test("finds literal repeated matches and preserves original offsets", () => {
+    expect(findTextMatches("A+B then a+b", " a+b ")).toEqual([{ start: 0, end: 3 }, { start: 9, end: 12 }]);
+    expect(findTextMatches("anything", " ")).toEqual([]);
+    expect(findTextMatches("İstanbul DESIGN", "design")).toEqual([{ start: 9, end: 15 }]);
+  });
+
+  test("keeps complete matches at the beginning, middle and end", () => {
+    for (const text of ["needle" + "x".repeat(300), "x".repeat(300) + "needle", "x".repeat(200) + "needle" + "x".repeat(200)]) {
+      const excerpt = createSearchExcerpt(text, "needle");
+      expect(excerpt).toContain("needle");
+      expect(excerpt.length).toBeLessThanOrEqual(162);
+      expect(excerpt).toContain("…");
+    }
+    const query = "long".repeat(50);
+    expect(createSearchExcerpt("before " + query + " after", query)).toContain(query);
+    expect(createSearchExcerpt("Short text", "short")).toBe("Short text");
   });
 });
