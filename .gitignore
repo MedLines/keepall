@@ -58,6 +58,10 @@ plans/
 .cursor/rules/private-apprenticeship.mdc
 .cursor/rules/code-context-in-teaching.mdc
 
+# Local About planning and content notes
+/docs/about-design.md
+/docs/product-content.md
+
 # Isolated UI prototypes — runnable locally, never ship
 src/app/prototypes/
 .codex
