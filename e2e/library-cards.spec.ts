@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import sharp from "sharp";
 
 async function expectCardsNotToOverlap(page: Page) {
   await expect(async () => {
@@ -1760,6 +1761,60 @@ test("action controls mirror in RTL and respect reduced motion", async ({ page }
   expect(triggerBox.x - cardBox.x).toBeCloseTo(16, 0);
   await actions.click();
   await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeInViewport();
+});
+
+test("large grids stay painted when card menus open after resizing", async ({ page }) => {
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>(resolve => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+    });
+    const tx = db.transaction("items", "readwrite");
+    const store = tx.objectStore("items");
+    const templates = await new Promise<Record<string, unknown>[]>(resolve => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+    });
+    for (let index = 0; index < 790; index++) {
+      store.put({ ...templates[index % templates.length], id: `extra-${index}`, title: `Reference ${index}`, createdAt: -index });
+    }
+    await new Promise<void>(resolve => { tx.oncomplete = () => resolve(); });
+    db.close();
+  });
+  await page.reload();
+
+  for (const width of [2196, 975, 2196]) {
+    await page.setViewportSize({ width, height: 1140 });
+    const card = page.locator('[data-item-id="image"]');
+    await card.hover();
+    await expectCardsNotToOverlap(page);
+    for (const button of ["left", "right"] as const) {
+      await card.hover();
+      // DOM visibility misses Chrome paint failures: compare the rendered pixels.
+      const before = await sharp(await page.screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      if (button === "left") await card.locator("button.library-card-actions").click();
+      else await card.click({ button, position: { x: 30, y: 35 } });
+      const menu = page.getByRole("menu", { name: "Actions for Customer support", exact: true });
+      await expect(menu).toBeVisible();
+      const bounds = (await menu.boundingBox())!;
+      const after = await sharp(await page.screenshot()).removeAlpha().raw().toBuffer();
+      let changed = 0;
+      let compared = 0;
+      for (let y = 0; y < before.info.height; y++) {
+        for (let x = 0; x < before.info.width; x++) {
+          // Exclude the popup and its shadow; the library behind it must remain painted.
+          if (x >= bounds.x - 24 && x <= bounds.x + bounds.width + 24 &&
+              y >= bounds.y - 24 && y <= bounds.y + bounds.height + 24) continue;
+          const offset = (y * before.info.width + x) * 3;
+          compared++;
+          if ([0, 1, 2].some(channel => Math.abs(before.data[offset + channel] - after[offset + channel]) > 12)) changed++;
+        }
+      }
+      expect(changed / compared, `${width}px ${button}-click changed the library behind the menu`).toBeLessThan(0.01);
+      await page.keyboard.press("Escape");
+      await expect(menu).toBeHidden();
+    }
+  }
 });
 
 for (const button of ["left", "right"] as const) {

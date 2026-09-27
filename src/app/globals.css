@@ -284,8 +284,7 @@
   border-radius: 999px;
   background: rgb(9 9 11 / 72%);
   color: var(--color-text-on-media);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  /* Backdrop blur on these controls makes Chrome drop card paint tiles when menus open. */
   transition: transform 150ms ease-out;
 }
 
