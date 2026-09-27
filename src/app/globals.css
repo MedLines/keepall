@@ -133,6 +133,11 @@
   :root[data-theme="dark"] .ui-backdrop {
     background: linear-gradient(135deg, rgb(255 255 255 / 7%), rgb(255 255 255 / 4%));
   }
+  .focused-image-backdrop {
+    background: rgb(0 0 0 / 76%);
+    -webkit-backdrop-filter: blur(24px) saturate(0.5);
+    backdrop-filter: blur(24px) saturate(0.5);
+  }
   .ui-native-dialog::backdrop {
     background: linear-gradient(135deg, rgb(0 0 0 / 14%), rgb(0 0 0 / 9%));
     -webkit-backdrop-filter: blur(8px);

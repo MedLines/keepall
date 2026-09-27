@@ -286,6 +286,7 @@ export function LibraryItem({
     <ItemContextMenu
       title={title}
       trigger={cardActions}
+      openHref={item.type === "link" ? item.url : openHref}
       tags={tagSuggestions}
       assignedTagIds={item.tagIds}
       collections={collectionSuggestions}

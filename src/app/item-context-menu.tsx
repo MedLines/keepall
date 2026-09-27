@@ -7,7 +7,7 @@ import { RowActionMenu } from "./row-action-menu";
 import { normalizeCollectionName } from "@/domain/collection";
 import { normalizeTagName } from "@/domain/tag";
 import {
-  ArrowRightIcon, CollectionIcon, DeleteIcon, EditIcon, HashIcon, LayersIcon,
+  ArrowRightIcon, CollectionIcon, DeleteIcon, EditIcon, HashIcon, LayersIcon, LinkIcon,
   PinIcon, PlusIcon, SearchIcon, SelectionCheckedIcon,
 } from "./shell-icons";
 
@@ -17,6 +17,7 @@ type Props = {
   children: (trigger: ReactNode) => ReactElement;
   trigger: ReactElement | null;
   title: string;
+  openHref?: string;
   tags: NamedEntry[];
   assignedTagIds: string[];
   collections: NamedEntry[];
@@ -41,7 +42,7 @@ type Props = {
 const MENU_ITEM = "ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active data-[disabled]:opacity-50";
 
 export function ItemContextMenu({
-  children, trigger, title, tags, assignedTagIds, busy, disabled, tagError,
+  children, trigger, title, openHref, tags, assignedTagIds, busy, disabled, tagError,
   onAddTag, onRemoveTag, onEdit, onOrganize, onDelete, onTogglePin, pinned, onOpen,
   collections, assignedCollectionIds, collectionError, onMoveToCollection, onClearCollection, triggerRef,
 }: Props) {
@@ -62,6 +63,14 @@ export function ItemContextMenu({
       finalFocus={() => openingDialog.current ? false : triggerRef.current ?? true}
       menu={
         <>
+          {openHref ? (
+            <>
+              <Menu.Item className={MENU_ITEM} render={<a href={openHref} target="_blank" rel="noopener noreferrer" />}>
+                <LinkIcon />Open in new tab
+              </Menu.Item>
+              <Menu.Separator className="my-1 border-t border-border-edge" />
+            </>
+          ) : null}
           <OrganizationSubmenu kind="tags" entries={tags} assignedIds={assignedTagIds} busy={busy} error={tagError} onSelect={onAddTag} onRemove={onRemoveTag} />
           <OrganizationSubmenu kind="collections" entries={collections} assignedIds={assignedCollectionIds} busy={busy} error={collectionError} onSelect={onMoveToCollection} onClear={onClearCollection} />
           <ContextMenu.Separator className="my-1 border-t border-border-edge" />

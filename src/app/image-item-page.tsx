@@ -905,7 +905,7 @@ function FocusedImageViewer({
       }}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[90]" />
+        <Dialog.Backdrop className="focused-image-backdrop fixed inset-0 z-[90]" />
         <Dialog.Viewport
           className="ui-scrollbar fixed inset-0 z-[90] overflow-y-auto p-2 sm:p-5"
           data-testid="focused-image-scroll"
