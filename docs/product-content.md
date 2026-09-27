@@ -395,3 +395,16 @@ setup labels, and hover, keyboard-focus, and pressed styles. The iPhone label
 names Safari's Add to Home Screen action. This matches [Apple's web app guide](https://support.apple.com/en-lamr/guide/iphone/iphea86e5236/ios);
 installation on a physical iPhone remains untested. The footer wordmark scales
 with the full viewport while its navigation keeps the page's content alignment.
+
+### Reference-led visual direction — 27 September 2026
+
+The About page now uses a warmer graphite composition, saved objects around the
+headline, a framed product preview, and a four-link section index. Capture
+controls and primary buttons have more defined surfaces. Organization examples
+use open captions, and installation presents all three platforms together.
+Phone layouts show two larger preview columns and stack installation guides.
+The full-width footer and existing Help destinations remain in place.
+
+The [design direction](about-design.md) records the supplied reference sites,
+the cues taken from each, and rules for future changes. All imagery is from
+Keepall's existing assets; no reference-site assets or dependencies were added.
