@@ -82,7 +82,7 @@ type ImportBatchContext = {
 
 async function loadImageById(id: string): Promise<ImageItem | null> {
   const row = await getDb().items.get(id);
-  if (!row) {
+  if (!row || row.deletedAt !== undefined) {
     return null;
   }
   const item = normalizeItem(row);

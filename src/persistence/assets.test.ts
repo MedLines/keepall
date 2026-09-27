@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { deleteKeepallDatabase } from "./db";
 import { deleteAsset, getAsset, putAsset } from "./assets";
-import { createLink, deleteItem, setLinkPreviewAssetId } from "./items";
+import { createLink, deleteItem, permanentlyDeleteItem, setLinkPreviewAssetId } from "./items";
 
 describe("assets persistence", () => {
   beforeEach(async () => {
@@ -38,6 +38,7 @@ describe("assets persistence", () => {
     await setLinkPreviewAssetId(link.id, asset.id);
 
     await deleteItem(link.id);
+    await permanentlyDeleteItem(link.id);
 
     expect(await getAsset(asset.id)).toBeUndefined();
   });

@@ -39,6 +39,7 @@ import {
   putAsset,
 } from "./assets";
 import { getDb } from "./db";
+import { putActiveItem } from "./active-item";
 import { imageThumbnail, putThumbnail } from "./thumbnails";
 import { createTag } from "./tags";
 
@@ -71,7 +72,7 @@ export async function findLinkByNormalizedUrl(
   const items = await getDb().items.where("type").equals("link").toArray();
   for (const raw of items) {
     const link = normalizeItem(raw);
-    if (link.type !== "link") {
+    if (link.deletedAt !== undefined || link.type !== "link") {
       continue;
     }
     if (normalizeLinkUrl(link.url) === normalized) {
@@ -96,7 +97,7 @@ export async function createOrReuseLink(
 export async function clearCollectionOnItem(itemId: string): Promise<Item> {
   const existing = await getDb().items.get(itemId);
 
-  if (!existing) {
+  if (!existing || existing.deletedAt !== undefined) {
     throw new Error("Item not found");
   }
 
@@ -106,7 +107,7 @@ export async function clearCollectionOnItem(itemId: string): Promise<Item> {
     collectionIds: [] as string[],
     updatedAt: Date.now(),
   };
-  await getDb().items.put(next);
+  await putActiveItem(next);
   return next;
 }
 
@@ -116,7 +117,7 @@ export async function setItemTagIds(
 ): Promise<Item> {
   const existing = await getDb().items.get(itemId);
 
-  if (!existing) {
+  if (!existing || existing.deletedAt !== undefined) {
     throw new Error("Item not found");
   }
 
@@ -136,7 +137,7 @@ export async function setItemTagIds(
     tagIds: unique,
     updatedAt: Date.now(),
   };
-  await getDb().items.put(next);
+  await putActiveItem(next);
   return next;
 }
 
@@ -226,7 +227,7 @@ export async function findImageByAssetPayloads(
       for (const raw of rows) {
         const image = normalizeItem(raw);
         if (
-          image.type === "image" &&
+          image.deletedAt === undefined && image.type === "image" &&
           image.assetIds.length === 1 &&
           image.assetIds[0] === asset.id
         ) {
@@ -240,7 +241,7 @@ export async function findImageByAssetPayloads(
   const rows = await getDb().items.where("type").equals("image").toArray();
   for (const raw of rows) {
     const image = normalizeItem(raw);
-    if (image.type !== "image") {
+    if (image.deletedAt !== undefined || image.type !== "image") {
       continue;
     }
 
@@ -291,7 +292,7 @@ export async function buildSingleAssetImageHashIndex(): Promise<Map<string, stri
   const rows = await getDb().items.where("type").equals("image").toArray();
   for (const raw of rows) {
     const image = normalizeItem(raw);
-    if (image.type === "image" && image.assetIds.length === 1) {
+    if (image.deletedAt === undefined && image.type === "image" && image.assetIds.length === 1) {
       assetIdToImageId.set(image.assetIds[0]!, image.id);
     }
   }
@@ -312,22 +313,48 @@ export async function buildSingleAssetImageHashIndex(): Promise<Map<string, stri
 
 export async function listItems(): Promise<Item[]> {
   const items = await getDb().items.orderBy("createdAt").toArray();
-  return items.reverse().map((item) => normalizeItem(item));
+  return items.filter((item) => item.deletedAt === undefined).reverse().map((item) => normalizeItem(item));
 }
 
 export async function getItem(id: string): Promise<Item | null> {
   const row = await getDb().items.get(id);
-  return row ? normalizeItem(row) : null;
+  return row && row.deletedAt === undefined ? normalizeItem(row) : null;
 }
 
+/** Move an item to Trash without changing its content, organization or media. */
 export async function deleteItem(id: string): Promise<void> {
+  const now = Date.now();
+  await getDb().items.where("id").equals(id)
+    .filter((item) => item.deletedAt === undefined)
+    .modify({ deletedAt: now, updatedAt: now });
+}
+
+export async function listTrashedItems(): Promise<Item[]> {
+  const items = await getDb().items.filter((item) => item.deletedAt !== undefined).toArray();
+  return items.map((item) => normalizeItem(item))
+    .sort((a, b) => b.deletedAt! - a.deletedAt! || a.id.localeCompare(b.id));
+}
+
+export async function restoreItem(id: string): Promise<void> {
+  await getDb().items.where("id").equals(id)
+    .filter((item) => item.deletedAt !== undefined)
+    .modify((item) => {
+      delete item.deletedAt;
+      item.updatedAt = Date.now();
+    });
+}
+
+export async function permanentlyDeleteItem(id: string): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", db.items, db.assets, db.thumbnails, db.videoAssets, async () => {
+  await db.transaction("rw", db.items, db.assets, db.thumbnails, db.videoAssets, db.collections, async () => {
     const existing = await db.items.get(id);
     if (!existing) return;
+    if (existing.deletedAt === undefined) throw new Error("Move the item to Trash first");
     const item = normalizeItem(existing);
     const assetIds = itemAssetIds(item);
     await db.items.delete(id);
+    await db.collections.filter((collection) => collection.pinnedItemIds?.includes(id) ?? false)
+      .modify((collection) => { collection.pinnedItemIds = collection.pinnedItemIds.filter((pinnedId) => pinnedId !== id); });
     if (item.type === "video") {
       await db.videoAssets.delete(item.assetId);
       await db.thumbnails.delete(item.assetId);
@@ -379,7 +406,7 @@ export async function saveNoteWithImages(
   const db = getDb();
   return db.transaction("rw", db.items, db.assets, db.thumbnails, async () => {
     const existing = await db.items.get(id);
-    if (!existing || existing.type !== "note") throw new Error("Note not found");
+    if (!existing || existing.deletedAt !== undefined || existing.type !== "note") throw new Error("Note not found");
     const previous = normalizeItem(existing);
     const wanted = new Set(noteImageAssetIds(input.content));
     const replacements = new Map<string, string>();
@@ -393,7 +420,7 @@ export async function saveNoteWithImages(
       if (!await db.assets.get(assetId)) throw new Error("Note image is missing");
     }
     const next = applyNoteEdit(previous, { ...input, content });
-    await db.items.put(next);
+    await putActiveItem(next);
     const nextAssetIds = new Set(noteImageAssetIds(next.content));
     await deleteUnreferencedAssets(noteImageAssetIds(previous.content)
       .filter((assetId) => !nextAssetIds.has(assetId)));
@@ -407,13 +434,13 @@ export async function updateLink(
 ): Promise<LinkItem> {
   const existing = await getDb().items.get(id);
 
-  if (!existing || existing.type !== "link") {
+  if (!existing || existing.deletedAt !== undefined || existing.type !== "link") {
     throw new Error("Link not found");
   }
 
   const current = normalizeItem(existing);
   const next = applyLinkEdit(current, input);
-  await getDb().items.put(next);
+  await putActiveItem(next);
   if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
     await deleteUnreferencedAsset(current.previewAssetId);
   }
@@ -426,12 +453,12 @@ export async function updateImage(
 ): Promise<ImageItem> {
   const existing = await getDb().items.get(id);
 
-  if (!existing || existing.type !== "image") {
+  if (!existing || existing.deletedAt !== undefined || existing.type !== "image") {
     throw new Error("Image not found");
   }
 
   const next = applyImageEdit(normalizeItem(existing), input);
-  await getDb().items.put(next);
+  await putActiveItem(next);
   return next;
 }
 
@@ -441,7 +468,7 @@ export async function appendImageAssetToItem(
 ): Promise<ImageItem> {
   const existing = await getDb().items.get(id);
 
-  if (!existing || existing.type !== "image") {
+  if (!existing || existing.deletedAt !== undefined || existing.type !== "image") {
     throw new Error("Image not found");
   }
 
@@ -451,7 +478,7 @@ export async function appendImageAssetToItem(
   await putThumbnail(asset.id, thumbnail);
   const current = normalizeItem(existing);
   const next = appendImageAsset(current, asset.id);
-  await getDb().items.put(next);
+  await putActiveItem(next);
   return next;
 }
 
@@ -462,7 +489,7 @@ export async function replaceImageAssetAtIndex(
 ): Promise<ImageItem> {
   const existing = await getDb().items.get(id);
 
-  if (!existing || existing.type !== "image") {
+  if (!existing || existing.deletedAt !== undefined || existing.type !== "image") {
     throw new Error("Image not found");
   }
 
@@ -477,7 +504,7 @@ export async function replaceImageAssetAtIndex(
   const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
   await putThumbnail(asset.id, thumbnail);
   const next = replaceImageAssetAt(current, slideIndex, asset.id);
-  await getDb().items.put(next);
+  await putActiveItem(next);
   await deleteUnreferencedAsset(previousAssetId);
   return next;
 }
@@ -489,7 +516,7 @@ export async function removeImageAssetAtIndex(
   const db = getDb();
   return db.transaction("rw", db.items, db.assets, db.thumbnails, async () => {
     const existing = await db.items.get(id);
-    if (!existing || existing.type !== "image") {
+    if (!existing || existing.deletedAt !== undefined || existing.type !== "image") {
       throw new Error("Image not found");
     }
 
@@ -500,7 +527,7 @@ export async function removeImageAssetAtIndex(
     }
 
     const next = removeImageAssetAt(current, slideIndex);
-    await db.items.put(next);
+    await putActiveItem(next);
 
     await deleteUnreferencedAsset(removedAssetId);
 
@@ -511,7 +538,7 @@ export async function removeImageAssetAtIndex(
 export async function setLinkPreviewPending(id: string): Promise<LinkItem> {
   const existing = await getDb().items.get(id);
 
-  if (!existing || existing.type !== "link") {
+  if (!existing || existing.deletedAt !== undefined || existing.type !== "link") {
     throw new Error("Link not found");
   }
 
@@ -520,7 +547,7 @@ export async function setLinkPreviewPending(id: string): Promise<LinkItem> {
     ...markLinkPreviewPending(current),
     previewAssetId: null,
   };
-  await getDb().items.put(next);
+  await putActiveItem(next);
   if (current.previewAssetId) await deleteUnreferencedAsset(current.previewAssetId);
   return next;
 }
@@ -533,13 +560,13 @@ export async function saveLinkPreviewResult(
 ): Promise<LinkItem> {
   const existing = await getDb().items.get(id);
 
-  if (!existing || existing.type !== "link") {
+  if (!existing || existing.deletedAt !== undefined || existing.type !== "link") {
     throw new Error("Link not found");
   }
 
   const current = normalizeItem(existing);
   const next = applyLinkPreviewResult(current, result);
-  await getDb().items.put(next);
+  await putActiveItem(next);
   if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
     await deleteUnreferencedAsset(current.previewAssetId);
   }
@@ -552,13 +579,13 @@ export async function setLinkPreviewRetry(
 ): Promise<LinkItem> {
   const existing = await getDb().items.get(id);
 
-  if (!existing || existing.type !== "link") {
+  if (!existing || existing.deletedAt !== undefined || existing.type !== "link") {
     throw new Error("Link not found");
   }
 
   const current = normalizeItem(existing);
   const next = applyLinkPreviewRetry(current, previewRetry);
-  await getDb().items.put(next);
+  await putActiveItem(next);
   return next;
 }
 
@@ -568,13 +595,13 @@ export async function setLinkPreviewAssetId(
 ): Promise<LinkItem> {
   const existing = await getDb().items.get(id);
 
-  if (!existing || existing.type !== "link") {
+  if (!existing || existing.deletedAt !== undefined || existing.type !== "link") {
     throw new Error("Link not found");
   }
 
   const current = normalizeItem(existing);
   const next = applyLinkPreviewAssetId(current, previewAssetId);
-  await getDb().items.put(next);
+  await putActiveItem(next);
   if (current.previewAssetId && current.previewAssetId !== previewAssetId) {
     await deleteUnreferencedAsset(current.previewAssetId);
   }
@@ -593,7 +620,7 @@ export async function assignTagToItem(
 
   const existing = await getDb().items.get(itemId);
 
-  if (!existing) {
+  if (!existing || existing.deletedAt !== undefined) {
     throw new Error("Item not found");
   }
 
@@ -604,7 +631,7 @@ export async function assignTagToItem(
     updatedAt: Date.now(),
   };
 
-  await getDb().items.put(next);
+  await putActiveItem(next);
   return next;
 }
 
@@ -614,7 +641,7 @@ export async function unassignTagFromItem(
 ): Promise<Item> {
   const existing = await getDb().items.get(itemId);
 
-  if (!existing) {
+  if (!existing || existing.deletedAt !== undefined) {
     throw new Error("Item not found");
   }
 
@@ -625,7 +652,7 @@ export async function unassignTagFromItem(
     updatedAt: Date.now(),
   };
 
-  await getDb().items.put(next);
+  await putActiveItem(next);
   return next;
 }
 
@@ -641,7 +668,7 @@ export async function assignCollectionToItem(
 
   const existing = await getDb().items.get(itemId);
 
-  if (!existing) {
+  if (!existing || existing.deletedAt !== undefined) {
     throw new Error("Item not found");
   }
 
@@ -652,7 +679,7 @@ export async function assignCollectionToItem(
     updatedAt: Date.now(),
   };
 
-  await getDb().items.put(next);
+  await putActiveItem(next);
   return next;
 }
 
@@ -662,5 +689,5 @@ export async function listNotes(): Promise<NoteItem[]> {
     .equals("note")
     .sortBy("createdAt");
 
-  return notes.reverse().map((note) => normalizeItem(note as NoteItem));
+  return notes.filter((note) => note.deletedAt === undefined).reverse().map((note) => normalizeItem(note as NoteItem));
 }

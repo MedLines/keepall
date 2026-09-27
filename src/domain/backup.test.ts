@@ -22,7 +22,7 @@ describe("buildKeepallBackup", () => {
 
     expect(backup).toEqual({
       format: "keepall",
-      version: 5,
+      version: 7,
       exportedAt: 99,
       items: [note],
       tags: [],
@@ -60,14 +60,14 @@ describe("parseKeepallBackup", () => {
 
   test("accepts a valid versioned backup", () => {
     expect(parseKeepallBackup(valid)).toEqual(valid);
-    expect(parseKeepallBackup({ ...valid, version: 3 }).version).toBe(5);
+    expect(parseKeepallBackup({ ...valid, version: 3 }).version).toBe(7);
   });
 
   test("rejects wrong format or a future version", () => {
     expect(() => parseKeepallBackup({ ...valid, format: "other" })).toThrow(
       BackupValidationError,
     );
-    expect(() => parseKeepallBackup({ ...valid, version: 6 })).toThrow(
+    expect(() => parseKeepallBackup({ ...valid, version: 99 })).toThrow(
       BackupValidationError,
     );
   });

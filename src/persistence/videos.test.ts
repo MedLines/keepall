@@ -3,7 +3,7 @@ import { Blob as NodeBlob } from "node:buffer";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { createVideo, updateVideoDetails } from "./videos";
 import { exportKeepallArchive, importKeepallArchiveMerge, importKeepallArchiveReplace } from "./backup-archive";
-import { createImage, deleteItem, listItems } from "./items";
+import { createImage, deleteItem, permanentlyDeleteItem, listItems } from "./items";
 import { createTag } from "./tags";
 import { createCollection } from "./collections";
 import { MAX_LOCAL_VIDEO_BYTES, VideoValidationError } from "@/domain/video";
@@ -18,6 +18,7 @@ describe("local videos", () => {
     expect((await listItems())[0]).toEqual(item);
     expect((await getDb().videoAssets.get(item.assetId))?.byteLength).toBe(3);
     await deleteItem(item.id);
+    await permanentlyDeleteItem(item.id);
     expect(await getDb().videoAssets.get(item.assetId)).toBeUndefined();
   });
 

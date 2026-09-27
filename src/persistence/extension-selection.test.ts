@@ -2,6 +2,7 @@ import { beforeEach, expect, test } from "vitest";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { saveExtensionSelection } from "./extension-selection";
 import { saveExtensionLink } from "./extension-capture";
+import { listItems, listTrashedItems } from "./items";
 import { undoExtensionCapture } from "./extension-capture-undo";
 
 beforeEach(deleteKeepallDatabase);
@@ -14,7 +15,8 @@ test("saves literal text with its source, deduplicates repeat saves, and support
   expect((await saveExtensionSelection({ ...capture, captureId: crypto.randomUUID() })).outcome).toBe("unchanged");
   expect(await getDb().items.count()).toBe(1);
   await undoExtensionCapture(result.undoToken!);
-  expect(await getDb().items.count()).toBe(0);
+  expect(await listItems()).toEqual([]);
+  expect(await listTrashedItems()).toMatchObject([{ id: result.itemId }]);
 });
 
 test("appends atomically without replacing a personal note, title, tags, collection, or local image markers", async () => {

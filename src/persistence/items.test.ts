@@ -11,7 +11,7 @@ import {
   createOrReuseImage,
   createOrReuseLink,
   createNote,
-  deleteItem,
+  deleteItem, permanentlyDeleteItem,
   listItems,
   listNotes,
   removeImageAssetAtIndex,
@@ -104,6 +104,7 @@ describe("items persistence", () => {
     const drop = await createNote({ content: "drop me" });
 
     await deleteItem(drop.id);
+    await permanentlyDeleteItem(drop.id);
 
     expect(await listItems()).toEqual([keep]);
   });
@@ -152,6 +153,7 @@ describe("items persistence", () => {
     expect(saved.content).toBe(`Before\n\n![Image](keepall-image:${assetId})\n\nAfter`);
     expect(await getAsset(assetId)).toMatchObject({ mimeType: "image/png" });
     await deleteItem(note.id);
+    await permanentlyDeleteItem(note.id);
     expect(await getAsset(assetId)).toBeUndefined();
   });
 
@@ -172,6 +174,7 @@ describe("items persistence", () => {
     const assetId = image.assetIds[0]!;
     expect(noteImageAssetIds(saved.content)).toEqual([assetId]);
     await deleteItem(image.id);
+    await permanentlyDeleteItem(image.id);
     expect(await getAsset(assetId)).toBeDefined();
     await updateNote(note.id, { content: "No image now" });
     expect(await getAsset(assetId)).toBeUndefined();
@@ -283,6 +286,7 @@ describe("items persistence", () => {
       assets: [{ bytes: new Uint8Array([9]), mimeType: "image/jpeg" }],
     });
     await deleteItem(image.id);
+    await permanentlyDeleteItem(image.id);
     expect(await getAsset(image.assetIds[0]!)).toBeUndefined();
     expect(await listItems()).toEqual([]);
   });

@@ -1875,7 +1875,7 @@ export function Library() {
         <ConfirmDialog
           open={deleteItemTarget !== null}
           title="Delete this item?"
-          description={deleteItemTarget ? `Delete “${itemListTitle(deleteItemTarget)}”? This cannot be undone.` : ""}
+          description={deleteItemTarget ? `Delete “${itemListTitle(deleteItemTarget)}”? You can restore it from Trash.` : ""}
           confirmLabel="Confirm delete"
           pendingLabel="Deleting…"
           busy={pendingMutation?.op === "delete"}

@@ -25,6 +25,8 @@ export type ImageItem = {
   collectionIds: string[];
   createdAt: number;
   updatedAt: number;
+  /** Present while the item is in Trash. */
+  deletedAt?: number;
 };
 
 export type CreateImageInput = {

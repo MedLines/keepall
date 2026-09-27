@@ -219,8 +219,7 @@ export function LibraryBulkPanels({
         {panel === "delete" ? (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-text-primary">
-              Delete {count} item{count === 1 ? "" : "s"}? This cannot be
-              undone.
+              Delete {count} item{count === 1 ? "" : "s"}? You can restore them from Trash.
             </p>
             <div className="flex flex-wrap gap-2">
               <button

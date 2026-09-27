@@ -470,7 +470,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
       <ConfirmDialog
         open={deleteOpen}
         title="Delete this item?"
-        description={`Delete “${itemListTitle(loadState.item)}”? This cannot be undone.`}
+        description={`Delete “${itemListTitle(loadState.item)}”? You can restore it from Trash.`}
         confirmLabel="Confirm delete"
         pendingLabel="Deleting…"
         busy={actionMutation === "delete"}

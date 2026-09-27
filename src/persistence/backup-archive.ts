@@ -1,5 +1,5 @@
 import { BlobReader, BlobWriter, TextReader, TextWriter, Uint8ArrayWriter, ZipReader, ZipWriter } from "@zip.js/zip.js";
-import { BackupValidationError, parseKeepallBackup, type KeepallBackup } from "@/domain/backup";
+import { BackupValidationError, KEEPALL_BACKUP_VERSION, parseTrashFields, parseKeepallBackup, type KeepallBackup } from "@/domain/backup";
 import { assetToBlob, hashAssetBytes } from "@/domain/asset";
 import { normalizeItem } from "@/domain/item";
 import { MAX_LOCAL_IMAGE_BYTES } from "@/domain/image";
@@ -10,7 +10,7 @@ import { importKeepallBackupMerge, replaceValidatedBackup } from "./backup";
 import { getDb, type Thumbnail, type VideoAsset } from "./db";
 import { getLibraryPreferences } from "./library-preferences";
 
-const ARCHIVE_VERSION = 6;
+const ARCHIVE_VERSION = 8;
 const UUID = "[0-9a-f-]{36}";
 const assetPath = new RegExp(`^assets/(${UUID})\\.bin$`, "i");
 const videoPath = new RegExp(`^videos/(${UUID})\\.bin$`, "i");
@@ -93,7 +93,7 @@ async function readArchive(file: Blob): Promise<{
       throw new BackupValidationError("Archive manifest must be an object");
     }
     const candidate = raw as Record<string, unknown>;
-    if (candidate.format !== "keepall" || candidate.version !== ARCHIVE_VERSION ||
+    if (candidate.format !== "keepall" || ![6, ARCHIVE_VERSION].includes(candidate.version as number) ||
         !Array.isArray(candidate.assets) || !Array.isArray(candidate.videos) ||
         !Array.isArray(candidate.thumbnails) || !Array.isArray(candidate.items)) {
       throw new BackupValidationError("Unsupported archive format");
@@ -145,6 +145,7 @@ async function readArchive(file: Blob): Promise<{
     const seen = new Set<string>();
     const referencedVideoIds = new Set<string>();
     for (const item of videoItems) {
+      parseTrashFields(item.deletedAt);
       if (typeof item.id !== "string" || seen.has(item.id) || typeof item.assetId !== "string" ||
           !ids.has(item.assetId) || referencedVideoIds.has(item.assetId) ||
           typeof item.title !== "string" || !item.title.trim() ||
@@ -164,7 +165,7 @@ async function readArchive(file: Blob): Promise<{
     }
     if (seen.size !== videos.length) throw new BackupValidationError("Archive has an unreferenced video");
     const backup = parseKeepallBackup({
-      ...candidate, version: 5,
+      ...candidate, version: KEEPALL_BACKUP_VERSION,
       items: (candidate.items as Record<string, unknown>[]).filter((item) => item?.type !== "video"),
       assets: assets.map(({ id, mimeType, byteLength, contentHash, createdAt }) => ({
         id, mimeType, byteLength, contentHash, createdAt, dataBase64: "AA==",

@@ -1,5 +1,6 @@
 import { assertLocalVideo, buildVideo, type VideoItem } from "@/domain/video";
 import { getDb } from "./db";
+import { putActiveItem } from "./active-item";
 
 export async function createVideo(file: File, poster: Blob | null = null, title?: string, notes?: { content: string; format: "plain" | "markdown" }): Promise<VideoItem> {
   assertLocalVideo(file);
@@ -23,12 +24,12 @@ export async function updateVideoDetails(id: string, details: { title: string; n
   if (!trimmed) throw new Error("Video title is required");
   const db = getDb();
   const current = await db.items.get(id);
-  if (!current || current.type !== "video") throw new Error("Video not found");
+  if (!current || current.deletedAt !== undefined || current.type !== "video") throw new Error("Video not found");
   const next: VideoItem = {
     ...current, title: trimmed, noteContent: details.noteContent.trim(),
     noteFormat: details.noteFormat === "markdown" ? "markdown" : undefined,
     updatedAt: Date.now(),
   };
-  await db.items.put(next);
+  await putActiveItem(next);
   return next;
 }

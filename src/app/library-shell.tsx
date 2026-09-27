@@ -20,6 +20,7 @@ import type { Tag } from "@/domain/tag";
 import type { LibrarySidebarCounts } from "./library-sidebar-counts";
 import {
   ChevronDownIcon,
+  DeleteIcon,
   CollectionIcon,
   HashIcon,
   HelpIcon,
@@ -324,6 +325,7 @@ export function LibraryShell({
           </div>
 
           <div className="flex flex-col gap-1">
+            <ShellNavLink expanded={contentExpanded} label="Trash" href="/trash" icon={<DeleteIcon className="size-[18px] shrink-0 text-text-secondary" />} />
             <ShellNavLink
               expanded={contentExpanded}
               label="Help"

@@ -11,7 +11,7 @@ import type { Tag } from "./tag";
 import { normalizePinnedCollectionIds } from "./library-preferences";
 
 export const KEEPALL_BACKUP_FORMAT = "keepall";
-export const KEEPALL_BACKUP_VERSION = 5;
+export const KEEPALL_BACKUP_VERSION = 7;
 
 /** Asset row serialized for JSON backup (bytes as base64). */
 export type BackupAssetRecord = {
@@ -74,7 +74,7 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
     throw new BackupValidationError('Backup format must be "keepall"');
   }
 
-  if (![1, 2, 3, 4, KEEPALL_BACKUP_VERSION].includes(candidate.version as number)) {
+  if (![1, 2, 3, 4, 5, KEEPALL_BACKUP_VERSION].includes(candidate.version as number)) {
     throw new BackupValidationError(
       `Unsupported backup version (supported: 1-${KEEPALL_BACKUP_VERSION})`,
     );
@@ -385,6 +385,8 @@ function parseItem(
     );
   }
 
+  const trash = parseTrashFields(item.deletedAt);
+
   if (typeof item.title !== "string") {
     throw new BackupValidationError(
       `Item at index ${index} needs a string title`,
@@ -437,6 +439,7 @@ function parseItem(
       collectionIds: itemCollectionIds,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      ...trash,
     };
     return note;
   }
@@ -473,6 +476,7 @@ function parseItem(
       collectionIds: itemCollectionIds,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      ...trash,
     };
     return link;
   }
@@ -509,6 +513,7 @@ function parseItem(
       collectionIds: itemCollectionIds,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      ...trash,
     };
     return image;
   }
@@ -516,4 +521,13 @@ function parseItem(
   throw new BackupValidationError(
     `Item at index ${index} has an unsupported type`,
   );
+}
+
+/** Shared with binary video backups. Missing means an active item. */
+export function parseTrashFields(deletedAt: unknown): { deletedAt?: number } {
+  if (deletedAt === undefined) return {};
+  if (typeof deletedAt !== "number" || !Number.isFinite(deletedAt) || deletedAt < 0) {
+    throw new BackupValidationError("Item has an invalid deletedAt timestamp");
+  }
+  return { deletedAt };
 }

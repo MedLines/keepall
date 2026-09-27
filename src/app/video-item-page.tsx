@@ -142,7 +142,7 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
         if (next.type === "video") applyUpdate(next, { collection });
       })}
     />
-    <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete video" description={`Delete “${item.title}” from this browser?`}
+    <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete video" description={`Delete “${item.title}” to Trash? You can restore it later.`}
       confirmLabel="Delete video" busy={busy} error={error} onConfirm={() => {
         setBusy(true); setError(null);
         void deleteItem(itemId).then(() => { window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT)); router.push(returnHref); })

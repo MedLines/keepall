@@ -43,7 +43,7 @@ export type ExtensionOrganizationOptions = {
 function matchingLink(items: Item[], normalizedUrl: string): LinkItem | null {
   for (const raw of items) {
     const item = normalizeItem(raw);
-    if (item.type === "link" && normalizeLinkUrl(item.url) === normalizedUrl) {
+    if (item.deletedAt === undefined && item.type === "link" && normalizeLinkUrl(item.url) === normalizedUrl) {
       return item;
     }
   }
@@ -290,6 +290,7 @@ export async function saveExtensionLink(
   return db.transaction("rw", db.items, db.collections, db.tags, async () => {
     const prior = await db.items.get(input.captureId);
     if (prior) {
+      if (prior.deletedAt !== undefined) throw new Error("This capture is in Trash. Reopen capture to save it again.");
       const item = normalizeItem(prior);
       if (item.type !== "link" || normalizeLinkUrl(item.url) !== normalizedUrl) {
         throw new Error("Capture ID already belongs to another item");

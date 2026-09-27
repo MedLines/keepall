@@ -228,7 +228,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
       </main>
 
       {editing ? <LinkItemEditDialog item={link} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}
-      <ConfirmDialog open={deleteOpen} title="Delete this link?" description={`Delete “${title}”? This cannot be undone.`} confirmLabel="Confirm delete" pendingLabel="Deleting…" busy={itemMutation === "delete"} error={deleteError} onConfirm={() => void confirmDelete()} onOpenChange={(open) => {
+      <ConfirmDialog open={deleteOpen} title="Delete this link?" description={`Delete “${title}”? You can restore it from Trash.`} confirmLabel="Confirm delete" pendingLabel="Deleting…" busy={itemMutation === "delete"} error={deleteError} onConfirm={() => void confirmDelete()} onOpenChange={(open) => {
         setDeleteOpen(open);
         if (!open) setDeleteError(null);
       }} />

@@ -16,9 +16,10 @@ export async function saveExtensionSelection(input: ExtensionSelection) {
   const sameSource = (source: string) => normalizeLinkUrl(source) === url && new URL(source).port === new URL(input.url).port;
   return db.transaction("rw", db.items, async () => {
     const prior = await db.items.get(input.captureId);
+    if (prior?.deletedAt !== undefined) throw new Error("This capture is in Trash. Reopen capture to save it again.");
     if (prior && (prior.type !== "link" || !sameSource(prior.url))) throw new Error("Invalid capture ID");
     const rows = await db.items.where("type").equals("link").toArray();
-    const existing = rows.map(normalizeItem).find((item) => item.type === "link" && sameSource(item.url));
+    const existing = rows.map(normalizeItem).find((item) => item.deletedAt === undefined && item.type === "link" && sameSource(item.url));
     if (existing?.type === "link") {
       // Treat selected page text literally, including when the existing note is Markdown.
       const literal = existing.noteFormat === "markdown" ? text.replace(/[!-/:-@\[-`{-~]/g, "\\$&") : text;

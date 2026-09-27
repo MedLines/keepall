@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { saveExtensionImage, saveExtensionLink } from "./extension-capture";
 import { undoExtensionCapture } from "./extension-capture-undo";
-import { getItem, saveLinkPreviewResult, updateLink } from "./items";
+import { getItem, listTrashedItems, saveLinkPreviewResult, updateLink } from "./items";
 
 beforeEach(deleteKeepallDatabase);
 afterEach(() => vi.restoreAllMocks());
@@ -42,7 +42,7 @@ test("undo preserves a newly pinned item", async () => {
   expect(await getItem(saved.itemId)).not.toBeNull();
 });
 
-test("undo removes image assets and thumbnails along with the new image", async () => {
+test("undo moves the new image to Trash and retains its media", async () => {
   const saved = await saveExtensionImage({
     captureId: crypto.randomUUID(), sourcePageUrl: "https://example.com/gallery",
     mimeType: "image/png", bytes: new Uint8Array([137, 80, 78, 71, 1]),
@@ -52,7 +52,8 @@ test("undo removes image assets and thumbnails along with the new image", async 
   expect(await getDb().assets.get(image.assetIds[0])).toBeDefined();
   await undoExtensionCapture(saved.undoToken!);
   expect(await getItem(saved.itemId)).toBeNull();
-  expect(await getDb().assets.count()).toBe(0);
+  expect(await getDb().assets.get(image.assetIds[0])).toBeDefined();
+  expect(await listTrashedItems()).toMatchObject([{ id: saved.itemId }]);
   expect(await getDb().thumbnails.count()).toBe(0);
 });
 

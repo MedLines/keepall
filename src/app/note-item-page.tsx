@@ -499,7 +499,7 @@ export function NoteItemPage({
       <ConfirmDialog
         open={deleteOpen}
         title="Delete this note?"
-        description={`Delete “${title}”? This cannot be undone.`}
+        description={`Delete “${title}”? You can restore it from Trash.`}
         confirmLabel="Confirm delete"
         pendingLabel="Deleting…"
         busy={deleting}

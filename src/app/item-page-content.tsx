@@ -40,7 +40,7 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
       ? "Loading item…"
       : type === "error"
         ? "Couldn't load this item."
-        : "Item not found.";
+        : "Item not found. It may be in Trash.";
   return (
     <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5">
       <div className="text-center">
@@ -51,6 +51,7 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
         >
           Return to library
         </Link>
+        {type === "missing" ? <Link href="/trash" className="ui-control ml-2 inline-flex min-h-10 items-center px-4">Open Trash</Link> : null}
       </div>
     </main>
   );

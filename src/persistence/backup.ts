@@ -231,14 +231,16 @@ export async function importKeepallBackupMerge(
   const localItems = (await db.items.toArray()).map((row) => normalizeItem(row));
   const notesById = new Map<string, NoteItem>();
   const linksByUrl = new Map<string, LinkItem>();
+  const linksById = new Map<string, LinkItem>();
   const images: ImageItem[] = [];
 
   for (const item of localItems) {
     if (item.type === "note") {
       notesById.set(item.id, item);
     } else if (item.type === "link") {
+      linksById.set(item.id, item);
       const key = normalizeLinkUrl(item.url);
-      if (key) {
+      if (key && item.deletedAt === undefined) {
         linksByUrl.set(key, item);
       }
     } else if (item.type === "image") {
@@ -249,6 +251,9 @@ export async function importKeepallBackupMerge(
   async function findImageByRemappedAssets(
     backupImage: ImageItem,
   ): Promise<ImageItem | null> {
+    const sameId = images.find((image) => image.id === backupImage.id);
+    if (sameId) return sameId;
+    if (backupImage.deletedAt !== undefined) return null;
     const hashes: string[] = [];
     for (const backupAssetId of backupImage.assetIds) {
       const localAssetId = assetIdMap.get(backupAssetId);
@@ -267,7 +272,7 @@ export async function importKeepallBackupMerge(
     }
 
     for (const image of images) {
-      if (image.assetIds.length !== hashes.length) {
+      if (image.deletedAt !== undefined || image.assetIds.length !== hashes.length) {
         continue;
       }
       const imageHashes: string[] = [];
@@ -362,7 +367,8 @@ export async function importKeepallBackupMerge(
 
     if (incoming.type === "link") {
       const urlKey = normalizeLinkUrl(incoming.url);
-      const local = urlKey ? linksByUrl.get(urlKey) : undefined;
+      const local = linksById.get(incoming.id) ??
+        (incoming.deletedAt === undefined && urlKey ? linksByUrl.get(urlKey) : undefined);
 
       if (!local) {
         const idTaken = await db.items.get(incoming.id);
@@ -375,12 +381,13 @@ export async function importKeepallBackupMerge(
           previewAssetId: remapAssetId(incoming.previewAssetId),
         };
         await db.items.put(next);
-        if (urlKey) {
+        linksById.set(next.id, next);
+        if (urlKey && next.deletedAt === undefined) {
           linksByUrl.set(urlKey, next);
         }
         itemIdMap.set(incoming.id, next.id);
         summary.added += 1;
-        summary.addedLinkIds.push(next.id);
+        if (next.deletedAt === undefined) summary.addedLinkIds.push(next.id);
         continue;
       }
 
@@ -419,8 +426,11 @@ export async function importKeepallBackupMerge(
       }
 
       await db.items.put(next);
-      if (urlKey) {
+      linksById.set(next.id, next);
+      if (urlKey && next.deletedAt === undefined) {
         linksByUrl.set(urlKey, next);
+      } else if (urlKey && linksByUrl.get(urlKey)?.id === next.id) {
+        linksByUrl.delete(urlKey);
       }
       itemIdMap.set(incoming.id, local.id);
       summary.updated += 1;
