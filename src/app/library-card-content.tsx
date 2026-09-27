@@ -64,6 +64,7 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
   query?: string;
   tagNames?: readonly string[];
 }) {
+  const readOnly = item.deletedAt !== undefined;
   const wrap = (content: ReactNode) => <SearchResult item={item} query={query} tagNames={tagNames}>{content}</SearchResult>;
   if (item.type === "note") {
     const title = itemListTitle(item);
@@ -71,13 +72,13 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
     const body = <>
       <h2 className="text-lg font-semibold leading-snug text-text-primary"><SearchHighlight text={title} query={query} /></h2>
       {excerpt ? <p className="mt-2 break-words text-sm leading-6 text-text-secondary"><SearchHighlight text={excerpt} query={query} /></p> : null}
-      <span className="mt-4 block text-xs font-medium text-text-secondary">Read note →</span>
+      {!readOnly ? <span className="mt-4 block text-xs font-medium text-text-secondary">Read note →</span> : null}
     </>;
     return wrap(
       <div className="min-w-0">
         <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary"><NoteIcon className="size-4" />Note{pinned ? <PinIcon className="ms-auto size-4" /> : null}</div>
-        {openHref ? <Link href={openHref} prefetch={false} className="block min-w-0 rounded-control-sm text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">{body}</Link> : <button type="button" onClick={onOpen} className="block min-w-0 w-full rounded-control-sm text-start">{body}</button>}
-        <p className="mt-4 text-xs text-text-secondary">Edited <time dateTime={new Date(item.updatedAt).toISOString()}>{new Date(item.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</time></p>
+        {readOnly ? <div>{body}</div> : openHref ? <Link href={openHref} prefetch={false} className="block min-w-0 rounded-control-sm text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">{body}</Link> : <button type="button" onClick={onOpen} className="block min-w-0 w-full rounded-control-sm text-start">{body}</button>}
+        <p className="mt-4 text-xs text-text-secondary">{readOnly ? "Moved to Trash" : "Edited"} <time dateTime={new Date(item.updatedAt).toISOString()}>{new Date(item.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</time></p>
       </div>
     );
   }
@@ -102,7 +103,7 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
         ) : null}
         {item.type === "link" ? (
           <a href={item.url} target="_blank" rel="noreferrer" title={title} className="min-w-0 flex-1 line-clamp-2 break-words underline-offset-2 hover:underline"><SearchHighlight text={title} query={query} /></a>
-        ) : title ? (
+        ) : readOnly ? <span className="min-w-0 flex-1 truncate"><SearchHighlight text={title} query={query} /></span> : title ? (
           <button type="button" onClick={onOpen} title={title} className={`${item.type === "image" ? "truncate" : "line-clamp-2 break-words"} min-w-0 flex-1 text-left underline-offset-2 hover:underline`}><SearchHighlight text={title} query={query} /></button>
         ) : null}
       </TitleRow> : null}

@@ -49,6 +49,10 @@ function pickTopMenu(menuLabel: string, optionLabel: string) {
 
 vi.mock("@/persistence/items", () => ({
   listItems: vi.fn(),
+  listTrashedItems: vi.fn(async () => []),
+  restoreItem: vi.fn(),
+  permanentlyDeleteItem: vi.fn(),
+  emptyTrash: vi.fn(),
   deleteItem: vi.fn(),
   updateNote: vi.fn(),
   updateLink: vi.fn(),
@@ -253,9 +257,9 @@ describe("Library", () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
 
-    await clickItemAction("Delete");
+    await clickItemAction("Move to Trash");
 
-    expect(screen.getByText("Delete this item?")).toBeInTheDocument();
+    expect(screen.getByText("Move this item to Trash?")).toBeInTheDocument();
     expect(deleteItem).not.toHaveBeenCalled();
   });
 
@@ -263,11 +267,11 @@ describe("Library", () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
 
-    await clickItemAction("Delete");
+    await clickItemAction("Move to Trash");
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(screen.getByRole("button", { name: /^Actions for / })).toBeInTheDocument();
-    expect(screen.queryByText("Delete this item?")).not.toBeInTheDocument();
+    expect(screen.queryByText("Move this item to Trash?")).not.toBeInTheDocument();
     expect(deleteItem).not.toHaveBeenCalled();
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
   });
@@ -279,8 +283,8 @@ describe("Library", () => {
     vi.mocked(deleteItem).mockResolvedValue(undefined);
     render(<Library />);
 
-    await clickItemAction("Delete");
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    await clickItemAction("Move to Trash");
+    fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
 
     await waitFor(() => {
       expect(deleteItem).toHaveBeenCalledWith("n1");
@@ -293,11 +297,11 @@ describe("Library", () => {
     vi.mocked(deleteItem).mockRejectedValue(new Error("idb down"));
     render(<Library />);
 
-    await clickItemAction("Delete");
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    await clickItemAction("Move to Trash");
+    fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Couldn't delete item.",
+      "Couldn't move item to Trash.",
     );
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
   });
@@ -654,9 +658,9 @@ describe("Library focus management", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
     await waitFor(() => expect(screen.getByRole("button", { name: /^Actions for / })).toHaveFocus());
 
-    await clickItemAction("Delete");
+    await clickItemAction("Move to Trash");
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Confirm delete" })).toHaveFocus();
+      expect(screen.getByRole("button", { name: "Move to Trash" })).toHaveFocus();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -664,8 +668,8 @@ describe("Library focus management", () => {
       expect(screen.getByRole("button", { name: /^Actions for / })).toHaveFocus();
     });
 
-    await clickItemAction("Delete");
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    await clickItemAction("Move to Trash");
+    fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
 
     await waitFor(() => {
       expect(deleteItem).toHaveBeenCalledWith("n1");

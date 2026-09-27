@@ -603,7 +603,7 @@ export function LibraryInspect({
                       disabled={mutationBusy}
                       onClick={onStartDelete}
                     >
-                      Delete
+                      Move to Trash
                     </button>
                   </div>
                 </>

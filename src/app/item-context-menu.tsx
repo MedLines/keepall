@@ -17,6 +17,7 @@ type Props = {
   children: (trigger: ReactNode) => ReactElement;
   trigger: ReactElement | null;
   title: string;
+  trashActions?: { onRestore: () => void; onDelete: () => void };
   openHref?: string;
   tags: NamedEntry[];
   assignedTagIds: string[];
@@ -44,7 +45,7 @@ const MENU_ITEM = "ui-menu-item flex w-full items-center gap-2 text-left text-sm
 export function ItemContextMenu({
   children, trigger, title, openHref, tags, assignedTagIds, busy, disabled, tagError,
   onAddTag, onRemoveTag, onEdit, onOrganize, onDelete, onTogglePin, pinned, onOpen,
-  collections, assignedCollectionIds, collectionError, onMoveToCollection, onClearCollection, triggerRef,
+  collections, assignedCollectionIds, collectionError, onMoveToCollection, onClearCollection, triggerRef, trashActions,
 }: Props) {
   const openingDialog = useRef(false);
 
@@ -61,7 +62,11 @@ export function ItemContextMenu({
       triggerRef={triggerRef}
       onOpen={() => { openingDialog.current = false; onOpen?.(); }}
       finalFocus={() => openingDialog.current ? false : triggerRef.current ?? true}
-      menu={
+      menu={trashActions ? <>
+        <Menu.Item className={MENU_ITEM} disabled={busy} onClick={() => openDialog(trashActions.onRestore)}><ArrowRightIcon className="size-4" /><span className="leading-none">Restore</span></Menu.Item>
+        <Menu.Separator className="my-1 border-t border-border-edge" />
+        <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger data-[disabled]:opacity-50" disabled={busy} onClick={() => openDialog(trashActions.onDelete)}><DeleteIcon className="size-4" /><span className="leading-none">Delete permanently</span></Menu.Item>
+      </> :
         <>
           {openHref ? (
             <>
@@ -87,7 +92,7 @@ export function ItemContextMenu({
           </ContextMenu.Item>
           <ContextMenu.Separator className="my-1 border-t border-border-edge" />
           <ContextMenu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none hover:bg-bg-danger data-[highlighted]:bg-bg-danger data-[disabled]:opacity-50" disabled={busy} onClick={() => openDialog(onDelete)}>
-            <DeleteIcon /><span className="relative -top-px">Delete</span>
+            <DeleteIcon className="size-4" /><span className="leading-none">Move to Trash</span>
           </ContextMenu.Item>
         </>
       }

@@ -28,6 +28,7 @@ export type LibraryBulkBarProps = {
   onSelectAllVisible: () => void;
   onClearSelection: () => void;
   onConfirmDelete: () => void;
+  onDeletePermanently?: () => void;
   onTagDraftChange: (value: string) => void;
   onCollectionDraftChange: (value: string) => void;
   onBulkAddTag: (name: string) => void;
@@ -46,6 +47,7 @@ type ToolbarProps = Pick<
   | "onOpenPanel"
   | "onSelectAllVisible"
   | "onClearSelection"
+  | "onDeletePermanently"
 >;
 
 /** Compact bulk buttons for the top bar (selection must be active). */
@@ -56,6 +58,7 @@ export function LibraryBulkToolbar({
   onOpenPanel,
   onSelectAllVisible,
   onClearSelection,
+  onDeletePermanently,
 }: ToolbarProps) {
   if (count === 0) {
     return null;
@@ -88,7 +91,7 @@ export function LibraryBulkToolbar({
       >
         Deselect all
       </button>
-      <button
+      {!onDeletePermanently ? <><button
         className={BULK_BTN}
         disabled={busy}
         type="button"
@@ -103,14 +106,14 @@ export function LibraryBulkToolbar({
         onClick={() => onOpenPanel("collection")}
       >
         Collection
-      </button>
+      </button></> : null}
       <button
-        className={BULK_BTN}
+        className={onDeletePermanently ? `${SHELL_TOP_BTN} h-10 shrink-0 px-3 text-xs text-text-danger` : BULK_BTN}
         disabled={busy}
         type="button"
-        onClick={() => onOpenPanel("delete")}
+        onClick={onDeletePermanently ?? (() => onOpenPanel("delete"))}
       >
-        Delete
+        {onDeletePermanently ? "Delete permanently" : "Move to Trash"}
       </button>
     </div>
   );
@@ -149,7 +152,7 @@ function bulkPanelTitle(panel: BulkPanel, count: number): string {
     case "collection":
       return `Move ${itemLabel} to a collection`;
     case "delete":
-      return `Delete ${itemLabel}`;
+      return `Move ${itemLabel} to Trash`;
     default:
       return "Bulk action";
   }
@@ -219,7 +222,7 @@ export function LibraryBulkPanels({
         {panel === "delete" ? (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-text-primary">
-              Delete {count} item{count === 1 ? "" : "s"}? You can restore them from Trash.
+              Move {count} item{count === 1 ? "" : "s"} to Trash? You can restore them later.
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -228,7 +231,7 @@ export function LibraryBulkPanels({
                 type="button"
                 onClick={onConfirmDelete}
               >
-                {pendingDelete ? "Deleting…" : "Confirm delete"}
+                {pendingDelete ? "Moving…" : "Move to Trash"}
               </button>
               <button
                 className="min-h-10 rounded-control border border-border-edge bg-bg-surface px-3 text-sm font-medium text-text-primary disabled:opacity-60"

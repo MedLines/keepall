@@ -72,7 +72,7 @@ export function LibraryListContent({ item, pinned, onOpen, openHref, query = "",
   );
   return (
     <SearchResult item={item} query={query} tagNames={tagNames}>
-      {hasContent ? item.type === "link" ? (
+      {hasContent ? item.deletedAt !== undefined ? <div className="min-w-0">{content}</div> : item.type === "link" ? (
         <a
           href={item.url}
           target="_blank"

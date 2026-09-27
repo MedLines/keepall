@@ -165,9 +165,9 @@ describe("NoteItemPage", () => {
     render(<NoteItemPage itemId="n2" returnHref="/" />);
     await screen.findByRole("heading", { level: 1, name: "Quiet card" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete note" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move note to Trash" }));
     expect(deleteItem).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
     await waitFor(() => expect(deleteItem).toHaveBeenCalledWith("n2"));
     expect(routerPush).toHaveBeenCalledWith("/");
   });

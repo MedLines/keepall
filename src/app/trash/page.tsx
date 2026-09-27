@@ -1,8 +1,5 @@
-import type { Metadata } from "next";
-import { Trash } from "./trash";
-
-export const metadata: Metadata = { title: "Trash · Keepall" };
+import { redirect } from "next/navigation";
 
 export default function TrashPage() {
-  return <Trash />;
+  redirect("/?trash=1");
 }

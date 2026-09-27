@@ -310,7 +310,7 @@ export function NoteItemPage({
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
       router.push(returnHref);
     } catch {
-      setDeleteError("Couldn't delete note.");
+      setDeleteError("Couldn't move note to Trash.");
     } finally {
       setDeleting(false);
     }
@@ -370,13 +370,13 @@ export function NoteItemPage({
           </button>
           <button
             type="button"
-            aria-label="Delete note"
+            aria-label="Move note to Trash"
             className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60"
             disabled={saving || addingImages || deleting || organizeBusy}
             onClick={() => setDeleteOpen(true)}
           >
             <DeleteIcon />
-            <span className="hidden sm:inline">Delete</span>
+            <span className="hidden sm:inline">Move to Trash</span>
           </button>
         </div>
       </header>
@@ -498,10 +498,10 @@ export function NoteItemPage({
 
       <ConfirmDialog
         open={deleteOpen}
-        title="Delete this note?"
-        description={`Delete “${title}”? You can restore it from Trash.`}
-        confirmLabel="Confirm delete"
-        pendingLabel="Deleting…"
+        title="Move this note to Trash?"
+        description={`Move “${title}” to Trash? You can restore it later.`}
+        confirmLabel="Move to Trash"
+        pendingLabel="Moving…"
         busy={deleting}
         error={deleteError}
         onConfirm={() => void confirmDelete()}

@@ -157,7 +157,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
       router.push(returnHref);
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
-      setDeleteError("Couldn't delete link.");
+      setDeleteError("Couldn't move link to Trash.");
     } finally {
       setItemMutation(null);
     }
@@ -184,10 +184,10 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
           <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label="Open source" className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm">
             <LinkIcon /><span className="hidden sm:inline">Open source</span>
           </a>
-          <button type="button" aria-label="Delete link" disabled={busy} className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60" onClick={() => {
+          <button type="button" aria-label="Move link to Trash" disabled={busy} className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60" onClick={() => {
             setDeleteError(null);
             setDeleteOpen(true);
-          }}><DeleteIcon /><span className="hidden sm:inline">Delete</span></button>
+          }}><DeleteIcon /><span className="hidden sm:inline">Move to Trash</span></button>
         </div>
       </header>
 
@@ -228,7 +228,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
       </main>
 
       {editing ? <LinkItemEditDialog item={link} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}
-      <ConfirmDialog open={deleteOpen} title="Delete this link?" description={`Delete “${title}”? You can restore it from Trash.`} confirmLabel="Confirm delete" pendingLabel="Deleting…" busy={itemMutation === "delete"} error={deleteError} onConfirm={() => void confirmDelete()} onOpenChange={(open) => {
+      <ConfirmDialog open={deleteOpen} title="Move this link to Trash?" description={`Move “${title}” to Trash? You can restore it later.`} confirmLabel="Move to Trash" pendingLabel="Moving…" busy={itemMutation === "delete"} error={deleteError} onConfirm={() => void confirmDelete()} onOpenChange={(open) => {
         setDeleteOpen(open);
         if (!open) setDeleteError(null);
       }} />

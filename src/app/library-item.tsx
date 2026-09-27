@@ -17,7 +17,7 @@ import {
 import { LibraryItemMedia } from "./library-item-media";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
-import { ImagesIcon, MoreIcon, PlayIcon, SelectionCheckedIcon, SelectionEmptyIcon } from "./shell-icons";
+import { DeleteIcon, ImagesIcon, MoreIcon, PlayIcon, SelectionCheckedIcon, SelectionEmptyIcon } from "./shell-icons";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
 import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
@@ -60,6 +60,7 @@ export type LibraryItemProps = {
   placement?: MasonryPlacement;
   item: Item;
   searchQuery?: string;
+  trashActions?: { onRestore: () => void; onDelete: () => void };
   inspected: boolean;
   openHref?: string;
   onOpenInspect: () => void;
@@ -104,6 +105,7 @@ export function LibraryItem({
   placement,
   item,
   searchQuery = "",
+  trashActions,
   inspected,
   openHref,
   onOpenInspect,
@@ -160,7 +162,7 @@ export function LibraryItem({
   const title = itemListTitle(item);
   const isList = layoutMode === "list";
   const hasGridFooter = item.type !== "image" || Boolean(
-    searchQuery.trim() || item.title.trim() || item.caption.trim() || item.sourceUrl ||
+    trashActions || searchQuery.trim() || item.title.trim() || item.caption.trim() || item.sourceUrl ||
     (pinVisible && pinned) || collections.length || tagNames.length || pendingDelete
   );
   const hasMedia = item.type === "image" || item.type === "link" || item.type === "video";
@@ -172,7 +174,7 @@ export function LibraryItem({
   }, [measureElement]);
   usePreviewEnrichViewport(
     rowRef,
-    item.type === "link" ? item : null,
+    !trashActions && item.type === "link" ? item : null,
   );
 
   const chromeVisible = useBrowseChromeVisible(layoutMode, reduceMotion);
@@ -207,15 +209,15 @@ export function LibraryItem({
               ? "size-full"
               : item.type === "link"
                 ? "w-full"
-                : "w-full cursor-pointer"
+                : trashActions ? "w-full" : "w-full cursor-pointer"
           }
           onClick={
-            isList || item.type === "link" || openHref
+            trashActions || isList || item.type === "link" || openHref
               ? undefined
               : onOpenInspect
           }
           onKeyDown={
-            isList || item.type === "link" || openHref
+            trashActions || isList || item.type === "link" || openHref
               ? undefined
               : (e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -224,10 +226,10 @@ export function LibraryItem({
                   }
                 }
           }
-          role={isList || item.type === "link" || openHref ? undefined : "button"}
-          tabIndex={isList || item.type === "link" || openHref ? undefined : 0}
+          role={trashActions || isList || item.type === "link" || openHref ? undefined : "button"}
+          tabIndex={trashActions || isList || item.type === "link" || openHref ? undefined : 0}
           aria-label={
-            isList || item.type === "link" || openHref ? undefined : `Open ${title}`
+            trashActions || isList || item.type === "link" || openHref ? undefined : `Open ${title}`
           }
         >
           <LibraryItemMedia
@@ -286,6 +288,7 @@ export function LibraryItem({
 
   return (
     <ItemContextMenu
+      trashActions={trashActions}
       title={title}
       trigger={cardActions}
       openHref={item.type === "link" ? item.url : openHref}
@@ -441,7 +444,7 @@ export function LibraryItem({
           )}
         </span>
       </label>
-      {isList ? !pendingDelete ? (
+      {isList ? trashActions ? <div className="shrink-0 rounded-lg">{mediaSlot}</div> : !pendingDelete ? (
         item.type === "link" ? (
           <a
             href={item.url}
@@ -465,7 +468,7 @@ export function LibraryItem({
           <button type="button" onClick={onOpenInspect} aria-label={`Preview ${title}`} className="shrink-0 rounded-lg">{mediaSlot}</button>
         )
       ) : null : hasMedia ? (
-        openHref && item.type !== "link" ? (
+        !trashActions && openHref && item.type !== "link" ? (
           <Link
             href={openHref}
             prefetch={false}
@@ -492,19 +495,19 @@ export function LibraryItem({
             query={searchQuery}
             tagNames={tagNames.map(tag => tag.name)}
             onOpen={onOpenInspect}
-            openHref={openHref}
+            openHref={trashActions ? undefined : openHref}
             pinned={pinVisible && pinned}
           />
         ) : (
           <div className={isList ? "min-w-0 flex-1 text-left" : undefined}>
             {isList && !pendingDelete ? (
-              <LibraryListContent query={searchQuery} tagNames={tagNames.map(tag => tag.name)} item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} openHref={openHref} />
+              <LibraryListContent query={searchQuery} tagNames={tagNames.map(tag => tag.name)} item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} openHref={trashActions ? undefined : openHref} />
             ) : <p className="text-sm font-medium">{title}</p>}
           </div>
         )}
-        {isList && !pendingDelete ? <LibraryListMetadata collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} /> : null}
+        {isList && !pendingDelete && !trashActions ? <LibraryListMetadata collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} /> : null}
 
-        {!isList && !pendingDelete ? (
+        {!isList && !pendingDelete && !trashActions ? (
           <LibraryCardMetadata
             collections={collections}
             tags={tagNames}
@@ -513,6 +516,13 @@ export function LibraryItem({
             onRemoveTag={onRemoveTag}
           />
         ) : null}
+        {trashActions ? <>
+          {(collections.length > 0 || tagNames.length > 0) ? <p className="mt-2 truncate text-xs text-text-secondary">{[...collections, ...tagNames].map((entry) => entry.name).join(" · ")}</p> : null}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" disabled={mutationBusy} onClick={trashActions.onRestore} className="ui-control inline-flex min-h-10 items-center justify-center px-3 text-sm disabled:opacity-50">Restore</button>
+            <button type="button" disabled={mutationBusy} onClick={trashActions.onDelete} className="ui-control inline-flex min-h-10 items-center justify-center gap-2 px-3 text-sm text-text-danger disabled:opacity-50"><DeleteIcon className="size-4" /><span className="leading-none">Delete permanently</span></button>
+          </div>
+        </> : null}
       </motion.div>
       </div>
     </li>}

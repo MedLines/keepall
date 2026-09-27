@@ -157,3 +157,29 @@ test("failed media cleanup rolls permanent deletion back so the item remains rec
   await restoreItem(image.id);
   expect(await getItem(image.id)).toMatchObject({ id: image.id });
 });
+
+test("empty Trash deletes only confirmed trashed items and preserves active shared media", async () => {
+  const { emptyTrash } = await import("./items");
+  const assets = [{ bytes: new Uint8Array([6]), mimeType: "image/png" }];
+  const first = await createImage({ assets });
+  const second = await createImage({ assets });
+  const later = await createNote({ content: "Deleted after confirmation opened" });
+  await deleteItem(first.id);
+  await deleteItem(later.id);
+  await emptyTrash([first.id, second.id]);
+  expect(await getItem(second.id)).toBeDefined();
+  expect(await getDb().assets.get(second.assetIds[0])).toBeDefined();
+  expect(await listTrashedItems()).toMatchObject([{ id: later.id }]);
+});
+
+test("empty Trash rolls back the full batch when media cleanup fails", async () => {
+  const { emptyTrash } = await import("./items");
+  const note = await createNote({ content: "Keep note too" });
+  const image = await createImage({ assets: [{ bytes: new Uint8Array([7]), mimeType: "image/png" }] });
+  await deleteItem(note.id);
+  await deleteItem(image.id);
+  const cleanup = vi.spyOn(getDb().assets, "bulkDelete").mockRejectedValueOnce(new Error("Write failed"));
+  try { await expect(emptyTrash([note.id, image.id])).rejects.toThrow(); }
+  finally { cleanup.mockRestore(); }
+  expect(await listTrashedItems()).toHaveLength(2);
+});

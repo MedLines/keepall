@@ -341,7 +341,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
       router.push(returnHref);
     } catch {
-      setDeleteError("Couldn't delete item.");
+      setDeleteError("Couldn't move item to Trash.");
     } finally {
       setActionMutation(null);
     }
@@ -469,10 +469,10 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
 
       <ConfirmDialog
         open={deleteOpen}
-        title="Delete this item?"
-        description={`Delete “${itemListTitle(loadState.item)}”? You can restore it from Trash.`}
-        confirmLabel="Confirm delete"
-        pendingLabel="Deleting…"
+        title="Move this item to Trash?"
+        description={`Move “${itemListTitle(loadState.item)}” to Trash? You can restore it later.`}
+        confirmLabel="Move to Trash"
+        pendingLabel="Moving…"
         busy={actionMutation === "delete"}
         error={deleteError}
         onConfirm={() => void confirmDelete()}
@@ -608,12 +608,12 @@ function ImageWorkspace({
               <button
                 className={`${CONTROL} text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger`}
                 type="button"
-                aria-label="Delete item"
+                aria-label="Move item to Trash"
                 disabled={actionBusy}
                 onClick={onDelete}
               >
                 <DeleteIcon />
-                <span className="hidden xl:inline">Delete</span>
+                <span className="hidden xl:inline">Move to Trash</span>
               </button>
             </div>
           </div>

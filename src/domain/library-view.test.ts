@@ -238,3 +238,11 @@ describe("sortLibraryItemsWithCollectionPins", () => {
     ).toEqual(["b", "a"]);
   });
 });
+
+test("Trash round-trips as a library scope without losing layout or search", () => {
+  const view = parseLibraryViewState(new URLSearchParams("trash=1&q=keep&layout=list"));
+  expect(view.trash).toBe(true);
+  expect(libraryViewHref("/", view)).toBe("/?trash=1&q=keep&layout=list");
+  expect(mergeLibraryViewState(view, { trash: false }).trash).toBeUndefined();
+  expect(mergeLibraryViewState(view, { q: "other" }).trash).toBe(true);
+});

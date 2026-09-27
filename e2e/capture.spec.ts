@@ -339,8 +339,8 @@ test("deleting a note after confirm survives a reload", async ({ page }) => {
   const removable = page.locator(".library-card").filter({ hasText: "Remove this note." });
   await removable.hover();
   await removable.locator("button.library-card-actions").click();
-  await page.getByRole("menuitem", { name: "Delete" }).click();
-  await page.getByRole("button", { name: "Confirm delete" }).click();
+  await page.getByRole("menuitem", { name: "Move to Trash" }).click();
+  await page.getByRole("button", { name: "Move to Trash" }).click();
 
   await expect(
     page.getByRole("heading", { name: "Remove this note.", exact: true }),

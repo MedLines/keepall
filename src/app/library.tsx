@@ -53,6 +53,7 @@ import {
   deleteItem,
   getItem,
   listItems,
+  listTrashedItems,
   replaceImageAssetAtIndex,
   unassignTagFromItem,
   updateImage,
@@ -82,6 +83,7 @@ import {
 import {
   LibraryNavigationProvider,
 } from "./library-navigation";
+import { useLibraryTrashActions } from "./library-trash-actions";
 import { LibraryShell } from "./library-shell";
 import { countSidebarItems } from "./library-sidebar-counts";
 import { LibraryMainGrid } from "./library-main-grid";
@@ -213,6 +215,7 @@ export function Library() {
   }, []);
 
   const [items, setItems] = useState<Item[]>([]);
+  const [trashedItems, setTrashedItems] = useState<Item[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [pinnedCollectionIds, setPinnedCollectionIds] = useState<string[]>([]);
@@ -298,16 +301,18 @@ export function Library() {
       setError(null);
 
       try {
-        const [nextItems, nextTags, nextCollections, preferences] = await Promise.all([
+        const [nextItems, nextTags, nextCollections, preferences, nextTrash] = await Promise.all([
           listItems(),
           listTags(),
           listCollections(),
           getLibraryPreferences(),
+          listTrashedItems(),
         ]);
         if (!cancelled) {
           browseIndexesRef.current = buildLibraryBrowseIndexes(nextItems);
           setBrowseIndexEpoch((epoch) => epoch + 1);
           setItems(nextItems);
+          setTrashedItems(nextTrash);
           setTags(nextTags);
           setCollections(nextCollections);
           setPinnedCollectionIds(preferences.pinnedCollectionIds);
@@ -494,8 +499,12 @@ export function Library() {
     });
   }
 
+  const trashActions = useLibraryTrashActions(libraryHeadingRef, (ids) => {
+    const removed = new Set(ids);
+    setSelectedIds((previous) => new Set([...previous].filter((id) => !removed.has(id))));
+  });
   const mutationBusy =
-    pendingMutation !== null || pendingCollectionPreferenceId !== null;
+    pendingMutation !== null || pendingCollectionPreferenceId !== null || trashActions.busy;
   const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
   const collectionsById = useMemo(
     () => new Map(collections.map((collection) => [collection.id, collection])),
@@ -514,7 +523,9 @@ export function Library() {
   const browseUnsorted = view.unsorted;
   const browseLayout = view.layout;
   const searchQuery = view.q;
-  const browseIndexes = browseIndexesRef.current;
+  const trashIndexes = useMemo(() => buildLibraryBrowseIndexes(trashedItems), [trashedItems]);
+  const browseItems = view.trash ? trashedItems : items;
+  const browseIndexes = view.trash ? trashIndexes : browseIndexesRef.current;
   const sidebarCounts = useMemo(() => countSidebarItems(items), [items]);
   const orderedCollections = useMemo(
     () => orderCollectionsByPins(collections, pinnedCollectionIds),
@@ -523,26 +534,26 @@ export function Library() {
   const headerItemCount = useMemo(
     () =>
       filterAndSortLibraryItems(
-        items,
+        browseItems,
         tags,
         view,
         collectionsById,
         browseIndexes,
       ).length,
-    [items, tags, view, collectionsById, browseIndexEpoch],
+    [browseItems, tags, view, collectionsById, browseIndexEpoch],
   );
   const visibleItems = useMemo(
     () =>
       filterAndSortLibraryItems(
-        items,
+        browseItems,
         tags,
         view,
         collectionsById,
         browseIndexes,
       ),
-    [items, tags, view, collectionsById, browseIndexEpoch],
+    [browseItems, tags, view, collectionsById, browseIndexEpoch],
   );
-  const browseScopeKey = `${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
+  const browseScopeKey = `${Boolean(view.trash)}|${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
   const allVisibleSelected =
     visibleItems.length > 0 &&
@@ -595,6 +606,7 @@ export function Library() {
       const current = viewRef.current;
       const next = mergeLibraryViewState(current, patch);
       const scopeChanged =
+        next.trash !== current.trash ||
         next.collection !== current.collection ||
         next.unsorted !== current.unsorted ||
         next.type !== current.type ||
@@ -658,7 +670,7 @@ export function Library() {
   }, [browseScopeKey, clearSelection]);
 
   const inspectedItem =
-    inspectId === null
+    inspectId === null || view.trash
       ? null
       : (items.find((entry) => entry.id === inspectId) ?? null);
 
@@ -696,7 +708,7 @@ export function Library() {
 
   useEffect(() => {
     function onKeyDown(event: globalThis.KeyboardEvent) {
-      if (event.key !== "Escape") {
+      if (event.key !== "Escape" || trashActions.confirming) {
         return;
       }
       if (inspectId !== null) {
@@ -716,7 +728,7 @@ export function Library() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [bulkPanel, clearSelection, inspectId, panelOpen, selectedIds.size]);
+  }, [bulkPanel, clearSelection, inspectId, panelOpen, selectedIds.size, trashActions.confirming]);
 
   function clearEdit(options?: { restoreFocus?: boolean }) {
     if (options?.restoreFocus && editingId) {
@@ -790,7 +802,7 @@ export function Library() {
       libraryHeadingRef.current?.focus();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
-      setDeleteError("Couldn't delete item.");
+      setDeleteError("Couldn't move item to Trash.");
     } finally {
       setPendingMutation(null);
     }
@@ -1067,7 +1079,7 @@ export function Library() {
       clearSelection();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
-      setBulkError("Couldn't delete all items.");
+      setBulkError("Couldn't move all items to Trash.");
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } finally {
       setPendingMutation(null);
@@ -1435,7 +1447,7 @@ export function Library() {
     }
   }
 
-  const viewTitle = libraryViewTitle(
+  const viewTitle = view.trash ? "Trash" : libraryViewTitle(
     browseCollection,
     browseUnsorted,
     browseType,
@@ -1448,8 +1460,9 @@ export function Library() {
         key={item.id}
         placement={placement}
         item={item}
+        trashActions={view.trash ? { onRestore: () => trashActions.restore(item), onDelete: () => trashActions.requestDelete(item) } : undefined}
         searchQuery={searchQuery}
-        inspected={inspectId === item.id}
+        inspected={!view.trash && inspectId === item.id}
         layoutMode={browseLayout}
         openHref={
           item.type === "image" || item.type === "note" || item.type === "link" || item.type === "video"
@@ -1531,7 +1544,7 @@ export function Library() {
         tagSuggestions={tagSuggestions}
         collectionSuggestions={collectionSuggestions}
         dragEnabled={
-          !mutationBusy &&
+          !view.trash && !mutationBusy &&
           editingId !== item.id &&
           pendingDeleteId !== item.id &&
           inspectId !== item.id
@@ -1559,7 +1572,10 @@ export function Library() {
         layout={browseLayout}
         onLayoutChange={(layout) => updateView({ layout }, "replace")}
         typeFilter={browseType}
-        sidebarCounts={sidebarCounts}
+        sidebarCounts={view.trash ? countSidebarItems(trashedItems) : sidebarCounts}
+        trash={Boolean(view.trash)}
+        trashEmptyDisabled={mutationBusy || loadState !== "ready" || trashedItems.length === 0}
+        onEmptyTrash={() => trashActions.requestEmpty(trashedItems)}
         onTypeFilterChange={(type) => updateView({ type }, "push")}
         tagFilterName={browseTagName}
         onClearTagFilter={() => updateView({ tag: null }, "push")}
@@ -1595,6 +1611,7 @@ export function Library() {
           },
           onCollectionDraftChange: setBulkCollectionDraft,
           onConfirmDelete: () => void bulkDeleteSelected(),
+          onDeletePermanently: view.trash ? () => trashActions.requestDeleteSelected(trashedItems.filter((item) => selectedIds.has(item.id)).map((item) => item.id)) : undefined,
           onOpenPanel: (panel) => {
             setBulkError(null);
             setBulkPanel(panel);
@@ -1615,6 +1632,10 @@ export function Library() {
           onPanelOpenChange={setPanelOpen}
           browseCollectionId={browseCollectionId}
           browseUnsorted={browseUnsorted}
+          browseTrash={Boolean(view.trash)}
+          trashCount={trashedItems.length}
+          onGoTrash={() => updateView({ trash: true, collection: null, tag: null, type: null, unsorted: false, item: null, slide: 0, q: "" }, "push")}
+          onEmptyTrash={() => trashActions.requestEmpty(trashedItems)}
           browseType={browseType}
           browseTagId={browseTagId}
           collections={orderedCollections}
@@ -1628,15 +1649,15 @@ export function Library() {
           libraryLoading={loadState === "loading"}
           onGoAll={() =>
             updateView(
-              { collection: null, unsorted: false, type: null },
+              { trash: false, collection: null, unsorted: false, type: null },
               "push",
             )
           }
           onGoUnsorted={() =>
-            updateView({ unsorted: true, collection: null }, "push")
+            updateView({ trash: false, unsorted: true, collection: null }, "push")
           }
-          onGoCollection={(id) => updateView({ collection: id }, "push")}
-          onGoTag={(id) => updateView({ tag: id }, "push")}
+          onGoCollection={(id) => updateView({ trash: false, collection: id }, "push")}
+          onGoTag={(id) => updateView({ trash: false, tag: id }, "push")}
           onCollectionDragOver={handleCollectionDragOver}
           onCollectionDragLeave={() => setDropTargetCollectionId(null)}
           onCollectionDrop={handleCollectionDrop}
@@ -1670,6 +1691,8 @@ export function Library() {
             </p>
           ) : (
             <>
+              {trashActions.notice ? <p role="status" className="mb-3 text-sm text-text-secondary">{trashActions.notice}</p> : null}
+              {trashActions.error ? <p role="alert" className="mb-3 text-sm text-text-danger">{trashActions.error}</p> : null}
               {deleteError ? (
                 <p className="mb-3 text-sm text-text-danger" role="alert">
                   {deleteError}
@@ -1698,7 +1721,7 @@ export function Library() {
                           ? "No unsorted items."
                           : browseCollectionId !== null
                             ? "No items in this collection."
-                            : "No items yet."}
+                            : view.trash ? "Trash is empty." : "No items yet."}
                 </p>
               ) : (
                 <LibraryMainGrid
@@ -1719,7 +1742,7 @@ export function Library() {
                               ? "No unsorted items."
                               : browseCollectionId !== null
                                 ? "No items in this collection."
-                                : "No items yet."}
+                                : view.trash ? "Trash is empty." : "No items yet."}
                     </p>
                   }
                 />
@@ -1872,12 +1895,13 @@ export function Library() {
                 }}
         />
         </div>
+        {trashActions.dialog}
         <ConfirmDialog
           open={deleteItemTarget !== null}
-          title="Delete this item?"
-          description={deleteItemTarget ? `Delete “${itemListTitle(deleteItemTarget)}”? You can restore it from Trash.` : ""}
-          confirmLabel="Confirm delete"
-          pendingLabel="Deleting…"
+          title="Move this item to Trash?"
+          description={deleteItemTarget ? `Move “${itemListTitle(deleteItemTarget)}” to Trash? You can restore it later.` : ""}
+          confirmLabel="Move to Trash"
+          pendingLabel="Moving…"
           busy={pendingMutation?.op === "delete"}
           error={deleteError}
           confirmRef={confirmDeleteRef}

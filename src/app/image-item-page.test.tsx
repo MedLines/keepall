@@ -140,7 +140,7 @@ describe("ImageItemPage", () => {
     const toolbar = screen.getByRole("banner");
     expect(within(toolbar).getByRole("button", { name: "Edit details" })).toBeInTheDocument();
     expect(within(toolbar).getByRole("button", { name: "Organize" })).toBeInTheDocument();
-    expect(within(toolbar).getByRole("button", { name: "Delete item" })).toBeInTheDocument();
+    expect(within(toolbar).getByRole("button", { name: "Move item to Trash" })).toBeInTheDocument();
     expect(within(toolbar).getByRole("link", { name: "Open source" })).toHaveAttribute("href", "https://example.com/checkout");
     expect(within(screen.getByRole("complementary", { name: "Image details" })).queryByRole("link", { name: "Open source" })).not.toBeInTheDocument();
     expect(screen.queryByText("Saved image")).not.toBeInTheDocument();
@@ -407,10 +407,10 @@ describe("ImageItemPage", () => {
       />,
     );
     await screen.findByRole("heading", { name: "Checkout references" });
-    fireEvent.click(screen.getByRole("button", { name: "Delete item" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move item to Trash" }));
     fireEvent.click(
-      within(screen.getByRole("dialog", { name: "Delete this item?" }))
-        .getByRole("button", { name: "Confirm delete" }),
+      within(screen.getByRole("dialog", { name: "Move this item to Trash?" }))
+        .getByRole("button", { name: "Move to Trash" }),
     );
 
     await waitFor(() => {

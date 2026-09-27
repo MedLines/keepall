@@ -105,7 +105,7 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
         <div className="flex flex-wrap gap-2">
           <button type="button" className="ui-control inline-flex min-h-11 items-center gap-2 px-3 text-sm" onClick={() => { setEditError(null); setEditing(true); }}><EditIcon />Edit details</button>
           <button type="button" className="ui-control inline-flex min-h-11 items-center gap-2 px-3 text-sm" onClick={() => setOrganizerOpen(true)}><LayersIcon />Organize</button>
-          <button type="button" className="ui-control inline-flex min-h-11 items-center gap-2 px-3 text-sm text-text-danger" onClick={() => setDeleteOpen(true)}><DeleteIcon />Delete</button>
+          <button type="button" className="ui-control inline-flex min-h-11 items-center gap-2 px-3 text-sm text-text-danger" onClick={() => setDeleteOpen(true)}><DeleteIcon />Move to Trash</button>
         </div>
       </div>
       <h1 className="mb-5 text-2xl font-semibold">{item.title}</h1>
@@ -142,11 +142,11 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
         if (next.type === "video") applyUpdate(next, { collection });
       })}
     />
-    <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete video" description={`Delete “${item.title}” to Trash? You can restore it later.`}
-      confirmLabel="Delete video" busy={busy} error={error} onConfirm={() => {
+    <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Move video to Trash?" description={`Move “${item.title}” to Trash? You can restore it later.`}
+      confirmLabel="Move to Trash" pendingLabel="Moving…" busy={busy} error={error} onConfirm={() => {
         setBusy(true); setError(null);
         void deleteItem(itemId).then(() => { window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT)); router.push(returnHref); })
-          .catch(() => setError("Couldn't delete video."))
+          .catch(() => setError("Couldn't move video to Trash."))
           .finally(() => setBusy(false));
       }} />
   </div>;

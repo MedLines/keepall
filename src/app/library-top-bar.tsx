@@ -14,6 +14,7 @@ import {
 } from "./library-bulk-bar";
 import {
   CloseIcon,
+  DeleteIcon,
   GridIcon,
   ListIcon,
   PlusIcon,
@@ -30,6 +31,9 @@ import { ThemeControl } from "./theme-control";
 type Props = {
   headingRef: Ref<HTMLHeadingElement>;
   title: string;
+  trash?: boolean;
+  trashEmptyDisabled?: boolean;
+  onEmptyTrash?: () => void;
   itemCount: number;
   searchQuery: string;
   onSearchChange: (value: string) => void;
@@ -52,7 +56,7 @@ export function LibraryTopBar({
   headingRef, title, itemCount, searchQuery, onSearchChange,
   sort, onSortChange, layout, onLayoutChange, panelOpen, onPanelOpenChange,
   typeFilter, sidebarCounts, onTypeFilterChange, tagFilterName,
-  onClearTagFilter, bulk, libraryLoading = false,
+  onClearTagFilter, bulk, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
 }: Props) {
   const hasSelection = Boolean(bulk && bulk.count > 0);
 
@@ -78,7 +82,7 @@ export function LibraryTopBar({
               className="ui-field h-10 w-full pl-10 pr-3 text-sm"
               id="library-search"
               type="search"
-              placeholder="Search your library…"
+              placeholder={trash ? "Search Trash…" : "Search your library…"}
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
             />
@@ -86,14 +90,14 @@ export function LibraryTopBar({
         </div>
         <div className="flex w-full shrink-0 items-center justify-end gap-3 sm:w-auto">
           <ThemeControl compact />
-          <button
+          {trash ? <button type="button" disabled={trashEmptyDisabled} onClick={onEmptyTrash} className="ui-control inline-flex h-11 items-center justify-center gap-2 px-4 text-sm text-text-danger disabled:opacity-50"><DeleteIcon className="size-4" /><span className="leading-none">Empty Trash</span></button> : <button
             type="button"
             className="ui-control ui-primary inline-flex h-11 shrink-0 items-center gap-2 rounded-control-lg ps-3 pe-4 text-sm font-medium"
             onClick={() => openCaptureDialog()}
           >
             <PlusIcon />
             Save item
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -127,6 +131,7 @@ export function LibraryTopBar({
               onClearSelection={bulk.onClearSelection}
               onOpenPanel={bulk.onOpenPanel}
               onSelectAllVisible={bulk.onSelectAllVisible}
+              onDeletePermanently={bulk.onDeletePermanently}
             />
           ) : null}
         </div>

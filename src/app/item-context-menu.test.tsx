@@ -68,12 +68,12 @@ describe("ItemContextMenu", () => {
     expect(actions.onAddTag).toHaveBeenCalledWith("New tag");
   });
 
-  test("keeps Delete last and delegates to the existing confirmation flow", async () => {
+  test("keeps Move to Trash last and delegates to the existing confirmation flow", async () => {
     const { actions } = setup();
     fireEvent.contextMenu(screen.getByText("Saved item"));
-    await screen.findByRole("menuitem", { name: "Delete" });
-    expect(screen.getAllByRole("menuitem").at(-1)).toHaveTextContent("Delete");
-    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    await screen.findByRole("menuitem", { name: "Move to Trash" });
+    expect(screen.getAllByRole("menuitem").at(-1)).toHaveTextContent("Move to Trash");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Move to Trash" }));
     expect(actions.onDelete).toHaveBeenCalledOnce();
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });

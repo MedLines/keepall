@@ -86,12 +86,12 @@ test("note page shows organization and keeps changes after reload", async ({ pag
   await expect(page.getByText("Let the image lead.")).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("note-details-mobile.png"), fullPage: true });
 
-  await page.getByRole("button", { name: "Delete note" }).click();
-  await expect(page.getByRole("heading", { name: "Delete this note?" })).toBeVisible();
+  await page.getByRole("button", { name: "Move note to Trash" }).click();
+  await expect(page.getByRole("heading", { name: "Move this note to Trash?" })).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Design notes" })).toBeVisible();
-  await page.getByRole("button", { name: "Delete note" }).click();
-  await page.getByRole("button", { name: "Confirm delete" }).click();
+  await page.getByRole("button", { name: "Move note to Trash" }).click();
+  await page.getByRole("button", { name: "Move to Trash" }).click();
   await expect(page).toHaveURL(/localhost:3100\/$/);
   await expect(page.locator(".library-card").filter({ hasText: "Design notes" })).toHaveCount(0);
 });
@@ -1058,9 +1058,9 @@ test("selecting a card gives actions their own row and draws the state inside th
   await page.keyboard.press("Escape");
   await expect(collectionDialog).toBeHidden();
 
-  await bulkActions.getByRole("button", { name: "Delete" }).click();
+  await bulkActions.getByRole("button", { name: "Move to Trash" }).click();
   const deleteDialog = page.getByRole("dialog", {
-    name: "Delete 1 selected item",
+    name: "Move 1 selected item to Trash",
   });
   await expect(deleteDialog).toBeVisible();
   expect((await header.boundingBox())!.height).toBe(headerAfter.height);
@@ -1218,9 +1218,9 @@ test("list menus support editing, cancel-delete, selection and collection pinnin
   await expect(note).toContainText("Updated from the open list.");
   await note.hover();
   await note.locator("button.library-card-actions").click();
-  await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
-  const deleteDialog = page.getByRole("dialog", { name: "Delete this item?" });
-  await expect(deleteDialog.getByRole("button", { name: "Confirm delete" })).toBeFocused();
+  await page.getByRole("menuitem", { name: "Move to Trash", exact: true }).click();
+  const deleteDialog = page.getByRole("dialog", { name: "Move this item to Trash?" });
+  await expect(deleteDialog.getByRole("button", { name: "Move to Trash" })).toBeFocused();
   await deleteDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(note.locator("button.library-card-actions")).toBeFocused();
   await page.keyboard.press("Escape");
@@ -1311,7 +1311,7 @@ test("image page shares the rounder card and panel curves", async ({ page }, tes
     page.getByRole("link", { name: "Back to library" }),
     page.getByRole("button", { name: "Edit details" }),
     page.getByRole("button", { name: "Organize" }),
-    page.getByRole("button", { name: "Delete item" }),
+    page.getByRole("button", { name: "Move item to Trash" }),
     details.getByRole("link", { name: "UI inspiration", exact: true }),
     details.getByRole("link", { name: "minimal", exact: true }),
   ];
@@ -1640,10 +1640,10 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
     path: testInfo.outputPath("image-item-page-actions.png"),
   });
 
-  await page.getByRole("button", { name: "Delete item" }).click();
-  const confirmation = page.getByRole("dialog", { name: "Delete this item?" });
+  await page.getByRole("button", { name: "Move item to Trash" }).click();
+  const confirmation = page.getByRole("dialog", { name: "Move this item to Trash?" });
   await expect(confirmation).toBeInViewport();
-  const confirmDelete = confirmation.getByRole("button", { name: "Confirm delete" });
+  const confirmDelete = confirmation.getByRole("button", { name: "Move to Trash" });
   await expect(confirmDelete).toHaveCSS("border-radius", "999px");
   await confirmDelete.click();
   await expect(page).toHaveURL("/");
@@ -1719,7 +1719,7 @@ test.describe("touch card controls", () => {
     await expect(card.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
     await card.locator("button.library-card-actions").tap();
     await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Delete", exact: true })).toBeInViewport();
+    await expect(page.getByRole("menuitem", { name: "Move to Trash", exact: true })).toBeInViewport();
   });
 
   test("list actions and selection work without hover", async ({ page }) => {
@@ -1842,7 +1842,7 @@ for (const button of ["left", "right"] as const) {
     const frames = await positions;
     expect(frames.length).toBeGreaterThan(1);
     expect(new Set(frames.map(({ x, y }) => `${x},${y}`)).size).toBe(1);
-    await expect(page.getByRole("menuitem", { name: "Delete", exact: true })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Move to Trash", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("menu")).toBeHidden();
   });
@@ -1892,7 +1892,7 @@ for (const layout of ["Grid", "List"]) {
     const actions = page.getByRole("menu", { name: "Actions for Design notes", exact: true });
     await expect(actions).toBeVisible();
     const labels = await actions.getByRole("menuitem").allTextContents();
-    expect(labels.at(-1)).toBe("Delete");
+    expect(labels.at(-1)).toBe("Move to Trash");
     await expect(actions.getByRole("menuitem", { name: "Collections", exact: true })).toHaveCSS("cursor", "pointer");
     await page.keyboard.press("Escape");
     await expect(trigger).toBeFocused();

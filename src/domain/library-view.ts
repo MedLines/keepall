@@ -10,6 +10,8 @@ export type LibraryLayout = "grid" | "list";
 
 export type LibraryViewState = {
   q: string;
+  /** Trash is a library scope, independent of the active library. */
+  trash?: boolean;
   collection: string | null;
   /** Items with no collection. Ignored when `collection` is set. */
   unsorted: boolean;
@@ -70,6 +72,7 @@ export function parseLibraryViewState(
 
   return {
     q: params.get("q") ?? "",
+    ...(params.get("trash") === "1" ? { trash: true } : {}),
     collection,
     unsorted,
     tag,
@@ -86,6 +89,7 @@ export function libraryViewStateToSearchParams(
 ): URLSearchParams {
   const params = new URLSearchParams();
   const q = state.q.trim();
+  if (state.trash) params.set("trash", "1");
 
   if (q) {
     params.set("q", q);
@@ -187,6 +191,7 @@ export function mergeLibraryViewState(
 
   return {
     q: patch.q !== undefined ? patch.q : current.q,
+    ...((patch.trash ?? current.trash) ? { trash: true } : {}),
     collection,
     unsorted,
     tag: patch.tag !== undefined ? patch.tag : current.tag,

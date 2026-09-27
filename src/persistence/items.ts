@@ -363,6 +363,23 @@ export async function permanentlyDeleteItem(id: string): Promise<void> {
   });
 }
 
+/** Delete only the confirmed ids that are still in Trash, as one transaction. */
+export async function emptyTrash(ids: string[]): Promise<void> {
+  const db = getDb();
+  await db.transaction("rw", [db.items, db.assets, db.thumbnails, db.videoAssets, db.collections], async () => {
+    const rows = await db.items.bulkGet([...new Set(ids)]);
+    const items = rows.filter((item): item is Item => item !== undefined && item.deletedAt !== undefined);
+    const deletedIds = new Set(items.map((item) => item.id));
+    await db.items.bulkDelete([...deletedIds]);
+    await db.collections.filter((collection) => collection.pinnedItemIds?.some((id) => deletedIds.has(id)) ?? false)
+      .modify((collection) => { collection.pinnedItemIds = collection.pinnedItemIds.filter((id) => !deletedIds.has(id)); });
+    const videoIds = items.filter((item) => item.type === "video").map((item) => item.assetId);
+    await db.videoAssets.bulkDelete(videoIds);
+    await db.thumbnails.bulkDelete(videoIds);
+    await deleteUnreferencedAssets(items.flatMap((item) => itemAssetIds(normalizeItem(item))));
+  });
+}
+
 function itemAssetIds(item: Item): string[] {
   if (item.type === "image") return item.assetIds;
   if (item.type === "link") return item.previewAssetId ? [item.previewAssetId] : [];
