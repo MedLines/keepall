@@ -74,6 +74,37 @@ describe("ImageItemPage", () => {
     ]);
   });
 
+  test("scroll view keeps gallery order and opens the chosen image in the focused viewer", async () => {
+    const item = buildImageFromAssetIds({ assetIds: ["asset-1", "asset-2", "asset-3"] }, { id: "image-1", now: 1 });
+    vi.mocked(getItem).mockResolvedValue(item);
+    render(<ImageItemPage itemId="image-1" returnHref="/" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Scroll view" }));
+    const gallery = screen.getByRole("list", { name: "Images in scroll view" });
+    expect(within(gallery).getAllByRole("button").map(button => button.getAttribute("aria-label"))).toEqual([
+      "View image 1 full screen", "View image 2 full screen", "View image 3 full screen",
+    ]);
+    fireEvent.click(within(gallery).getByRole("button", { name: "View image 2 full screen" }));
+    const viewer = await screen.findByRole("dialog", { name: "Focused image viewer" });
+    expect(within(viewer).getByTestId("rendered-asset")).toHaveTextContent("asset-2");
+    fireEvent.click(within(viewer).getByRole("button", { name: "Close full-screen image" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Slides view" }));
+    expect(screen.getByRole("button", { name: "Show image 2" })).toHaveAttribute("aria-current", "true");
+  });
+
+  test("scroll view does not hijack horizontal arrow keys and can return to slide navigation", async () => {
+    vi.mocked(getItem).mockResolvedValue(buildImageFromAssetIds({ assetIds: ["asset-1", "asset-2"] }, { id: "image-1", now: 1 }));
+    render(<ImageItemPage itemId="image-1" returnHref="/" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Scroll view" }));
+    const event = new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Slides view" }));
+    expect(screen.getByRole("button", { name: "Show image 1" })).toHaveAttribute("aria-current", "true");
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(screen.getByRole("button", { name: "Show image 2" })).toHaveAttribute("aria-current", "true");
+  });
+
   test("adds gallery images from the item page without returning to the old overlay", async () => {
     const one = buildImageFromAssetIds(
       { assetIds: ["asset-1"] },
@@ -225,11 +256,11 @@ describe("ImageItemPage", () => {
     const viewer = await screen.findByRole("dialog", { name: "Focused image viewer" });
     const zoomIn = within(viewer).getByRole("button", { name: "Zoom in image" });
     vi.spyOn(zoomIn, "getBoundingClientRect").mockReturnValue({
-      left: 10, top: 20, width: 100, height: 100,
+      left: 10, top: 20, right: 110, bottom: 120, width: 100, height: 100,
     } as DOMRect);
     fireEvent.click(zoomIn, { clientX: 35, clientY: 50, detail: 1 });
     const zoomOut = within(viewer).getByRole("button", { name: "Zoom out image" });
-    expect(zoomOut.querySelector("span")).toHaveStyle({ transform: "scale(2)", transformOrigin: "25% 30%" });
+    expect(zoomOut).toHaveStyle({ width: "200px" });
     fireEvent.click(zoomOut);
     fireEvent.click(within(viewer).getByRole("button", { name: "Zoom in image" }));
     fireEvent.click(within(viewer).getByRole("button", { name: /^Zoom out$/ }));

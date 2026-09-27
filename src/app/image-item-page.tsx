@@ -35,6 +35,7 @@ import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
 import { NoteContent } from "./note-content";
+import { VerticalImageGallery } from "./vertical-image-gallery";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -65,11 +66,13 @@ type Props = {
 const CONTROL =
   "ui-control inline-flex min-h-11 items-center justify-center gap-2 px-3 text-sm font-medium disabled:cursor-default disabled:opacity-40";
 const MAX_VISIBLE_GALLERY_PREVIEWS = 15;
+type GalleryMode = "slides" | "scroll";
 
 export function ImageItemPage({ itemId, returnHref }: Props) {
   const router = useRouter();
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [slide, setSlide] = useState(0);
+  const [galleryMode, setGalleryMode] = useState<GalleryMode>("slides");
   const [viewerOpen, setViewerOpen] = useState(false);
   const [galleryMutation, setGalleryMutation] = useState<
     "add" | "replace" | "remove" | null
@@ -126,7 +129,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
   useLayoutEffect(() => {
     if (
       loadState.status !== "ready" ||
-      loadState.item.assetIds.length < 2 || viewerOpen ||
+      loadState.item.assetIds.length < 2 || viewerOpen || galleryMode === "scroll" ||
       editOpen || organizerOpen || removeImageOpen || deleteOpen
     ) return;
 
@@ -146,7 +149,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [loadState, viewerOpen, editOpen, organizerOpen, removeImageOpen, deleteOpen]);
+  }, [loadState, viewerOpen, galleryMode, editOpen, organizerOpen, removeImageOpen, deleteOpen]);
 
   async function addImages(files: File[]) {
     if (loadState.status !== "ready" || galleryMutation || files.length === 0) {
@@ -374,11 +377,15 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
   return (
     <>
       <ImageWorkspace
+        key={loadState.item.id}
         item={loadState.item}
         tags={loadState.tags}
         collections={loadState.collections}
         returnHref={returnHref}
         slide={slide}
+        galleryMode={galleryMode}
+        onGalleryModeChange={setGalleryMode}
+        readingPaused={viewerOpen || editOpen || organizerOpen || removeImageOpen || deleteOpen || galleryMutation !== null}
         viewerOpen={viewerOpen}
         onSlideChange={setSlide}
         onViewerOpenChange={setViewerOpen}
@@ -515,6 +522,9 @@ function ImageWorkspace({
   collections,
   returnHref,
   slide,
+  galleryMode,
+  onGalleryModeChange,
+  readingPaused,
   viewerOpen,
   onSlideChange,
   onViewerOpenChange,
@@ -533,6 +543,9 @@ function ImageWorkspace({
   collections: Collection[];
   returnHref: string;
   slide: number;
+  galleryMode: GalleryMode;
+  onGalleryModeChange: (mode: GalleryMode) => void;
+  readingPaused: boolean;
   viewerOpen: boolean;
   onSlideChange: (slide: number) => void;
   onViewerOpenChange: (open: boolean) => void;
@@ -548,6 +561,13 @@ function ImageWorkspace({
 }) {
   const addInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLElement>(null);
+  const galleryListRef = useRef<HTMLOListElement>(null);
+  const galleryToolbarRef = useRef<HTMLDivElement>(null);
+  const readingPosition = useRef<{ assetId: string; offset: number } | null>(null);
+  const viewerStartAsset = useRef<string | null>(null);
+  const gallerySignature = item.assetIds.join(",");
+  const previousView = useRef({ galleryMode, viewerOpen, gallerySignature });
   const currentSlide = clampImageSlideIndex(item.assetIds, slide);
   const currentAssetId = item.assetIds[currentSlide] ?? null;
   const title = item.title.trim();
@@ -561,6 +581,49 @@ function ImageWorkspace({
   );
   const itemTags = resolveItemTags(item, tagsById);
   const itemCollections = resolveItemCollections(item, collectionsById);
+
+  function preserveScrollAnchor() {
+    const row = galleryListRef.current?.children[currentSlide];
+    const container = scrollRef.current;
+    const top = row?.getBoundingClientRect().top ?? 0;
+    // A nearby original may be much taller than its unloaded placeholder.
+    return () => {
+      if (container && row?.isConnected) container.scrollTop += row.getBoundingClientRect().top - top;
+    };
+  }
+
+  function rememberReadingPosition() {
+    if (galleryMode !== "scroll" || readingPaused) return;
+    const container = scrollRef.current;
+    const rows = galleryListRef.current?.children;
+    if (!container || !rows?.length) return;
+    const readingLine = container.getBoundingClientRect().top + (galleryToolbarRef.current?.offsetHeight ?? 0) + 12;
+    const atBottom = container.scrollHeight - container.clientHeight - container.scrollTop <= 1;
+    const row = (atBottom ? null : Array.from(rows).find(row => row.getBoundingClientRect().bottom > readingLine)) ?? rows[rows.length - 1];
+    const index = Number(row.getAttribute("data-gallery-index"));
+    readingPosition.current = { assetId: item.assetIds[index], offset: Math.max(0, readingLine - row.getBoundingClientRect().top) };
+    if (index !== currentSlide) onSlideChange(index);
+  }
+
+  useLayoutEffect(() => {
+    const previous = previousView.current;
+    previousView.current = { galleryMode, viewerOpen, gallerySignature };
+    const switched = previous.galleryMode !== galleryMode;
+    const closedViewer = previous.viewerOpen && !viewerOpen;
+    const changedImages = previous.gallerySignature !== gallerySignature;
+    const container = scrollRef.current;
+    if (!container || (!switched && !closedViewer && !changedImages)) return;
+    if (galleryMode === "slides") {
+      if (switched) container.scrollTop = 0;
+      return;
+    }
+    const saved = readingPosition.current;
+    if (closedViewer && viewerStartAsset.current === currentAssetId) return;
+    const row = galleryListRef.current?.children[currentSlide];
+    if (!row) return;
+    const offset = saved?.assetId === currentAssetId ? saved.offset : 0;
+    container.scrollTop += row.getBoundingClientRect().top - container.getBoundingClientRect().top - (galleryToolbarRef.current?.offsetHeight ?? 0) - 12 + offset;
+  }, [galleryMode, viewerOpen, currentSlide, currentAssetId, gallerySignature]);
 
   return (
     <div className="h-full overflow-hidden bg-bg-canvas">
@@ -620,12 +683,75 @@ function ImageWorkspace({
         </header>
 
         <main
+          ref={scrollRef}
+          onScroll={rememberReadingPosition}
           className="ui-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain"
           data-testid="item-page-scroll"
         >
           <div className="mx-auto grid w-full max-w-[100rem] items-start gap-6 px-3 pb-8 pt-4 sm:px-5 sm:pb-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-0">
             <div className="min-w-0">
             <section className="flex min-w-0 flex-col gap-3" aria-label="Image gallery">
+              <div ref={galleryToolbarRef} className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-border-control bg-bg-canvas py-2">
+                <div className="flex items-center gap-1" role="group" aria-label="Gallery view">
+                  {(["slides", "scroll"] as const).map(mode => (
+                    <button key={mode} type="button" aria-label={`${mode === "slides" ? "Slides" : "Scroll"} view`}
+                      aria-pressed={galleryMode === mode}
+                      className={`${CONTROL} ${galleryMode === mode ? "bg-bg-selected text-text-primary" : "text-text-secondary"}`}
+                      onClick={() => onGalleryModeChange(mode)}>
+                      {mode === "slides" ? "Slides" : "Scroll"}
+                    </button>
+                  ))}
+                </div>
+                {galleryMode === "scroll" ? (
+                  <span className="text-xs tabular-nums text-text-secondary" aria-label="Current image">Image {currentSlide + 1} of {item.assetIds.length}</span>
+                ) : null}
+                <input
+                  ref={addInputRef}
+                  className="sr-only"
+                  type="file"
+                  multiple
+                  accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
+                  aria-label="Choose images to add"
+                  onChange={(event) => {
+                    const files = event.target.files;
+                    if (files?.length) onAddImages(Array.from(files));
+                    event.target.value = "";
+                  }}
+                />
+                <input
+                  ref={replaceInputRef}
+                  className="sr-only"
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
+                  aria-label="Choose replacement image"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) onReplaceImage(file);
+                    event.target.value = "";
+                  }}
+                />
+                <div className="flex shrink-0 gap-1">
+                  <button className={CONTROL} type="button" disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
+                    {galleryMutation === "add" ? "Adding…" : "Add images"}
+                  </button>
+                  <button className={CONTROL} type="button" disabled={galleryMutation !== null} onClick={() => replaceInputRef.current?.click()}>
+                    {galleryMutation === "replace" ? "Replacing…" : "Replace"}
+                  </button>
+                  {item.assetIds.length > 1 ? (
+                    <button
+                      className={`${CONTROL} text-text-danger`}
+                      type="button"
+                      aria-label="Remove current image"
+                      disabled={galleryMutation !== null}
+                      onClick={onRemoveImage}
+                    >
+                      <DeleteIcon />
+                      <span className="hidden xl:inline">Remove</span>
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              {galleryMode === "slides" ? (
               <div className="item-workspace-media relative flex h-[min(76dvh,54rem)] min-h-[24rem] items-center justify-center overflow-hidden rounded-card bg-bg-media">
                 <button
                   type="button"
@@ -670,64 +796,32 @@ function ImageWorkspace({
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              ) : null}
+              {galleryMode === "slides" ? (
                 <GalleryControls
                   item={item}
                   currentSlide={currentSlide}
                   onSlideChange={onSlideChange}
                 />
-                <input
-                  ref={addInputRef}
-                  className="sr-only"
-                  type="file"
-                  multiple
-                  accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
-                  aria-label="Choose images to add"
-                  onChange={(event) => {
-                    const files = event.target.files;
-                    if (files?.length) onAddImages(Array.from(files));
-                    event.target.value = "";
-                  }}
-                />
-                <input
-                  ref={replaceInputRef}
-                  className="sr-only"
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
-                  aria-label="Choose replacement image"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) onReplaceImage(file);
-                    event.target.value = "";
-                  }}
-                />
-                <div className="flex shrink-0 gap-2 sm:ms-auto">
-                  <button className={CONTROL} type="button" disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
-                    {galleryMutation === "add" ? "Adding…" : "Add images"}
-                  </button>
-                  <button className={CONTROL} type="button" disabled={galleryMutation !== null} onClick={() => replaceInputRef.current?.click()}>
-                    {galleryMutation === "replace" ? "Replacing…" : "Replace"}
-                  </button>
-                  {item.assetIds.length > 1 ? (
-                    <button
-                      className={`${CONTROL} text-text-danger`}
-                      type="button"
-                      aria-label="Remove current image"
-                      disabled={galleryMutation !== null}
-                      onClick={onRemoveImage}
-                    >
-                      <DeleteIcon />
-                      <span className="hidden xl:inline">Remove</span>
-                    </button>
-                  ) : null}
-                </div>
-              </div>
+              ) : null}
+              <VerticalImageGallery
+                item={item}
+                active={galleryMode === "scroll"}
+                listRef={galleryListRef}
+                scrollRef={scrollRef}
+                preserveScrollAnchor={preserveScrollAnchor}
+                onOpen={(index) => {
+                  viewerStartAsset.current = item.assetIds[index];
+                  onSlideChange(index);
+                  onViewerOpenChange(true);
+                }}
+              />
               {galleryError ? <p className="text-sm text-text-danger" role="alert">{galleryError}</p> : null}
             </section>
 
             {item.caption ? (
               <article
-                className="mx-auto mt-8 w-full max-w-3xl border-t border-border-control pb-20 pt-8 sm:mt-10 sm:pb-24 sm:pt-10"
+                className="mt-8 w-full border-t border-border-control pb-20 pt-8 sm:mt-10 sm:pb-24 sm:pt-10"
                 aria-labelledby="image-notes-heading"
               >
                 <h2 id="image-notes-heading" className="text-2xl font-semibold leading-tight text-text-primary">
@@ -873,26 +967,59 @@ function FocusedImageViewer({
   onOpenChange: (open: boolean) => void;
   onSlideChange: (slide: number) => void;
 }) {
-  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
+  const [zoom, setZoom] = useState<{ width: number; x: number; y: number; clientX: number; clientY: number } | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const imageButtonRef = useRef<HTMLButtonElement>(null);
+  const beforeZoom = useRef<{ left: number; top: number } | null>(null);
+  const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  const dragged = useRef(false);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    const button = imageButtonRef.current;
+    if (!viewport || !button) return;
+    if (zoom) {
+      const bounds = button.getBoundingClientRect();
+      viewport.scrollLeft += bounds.left + bounds.width * zoom.x - zoom.clientX;
+      viewport.scrollTop += bounds.top + bounds.height * zoom.y - zoom.clientY;
+    } else if (beforeZoom.current) {
+      viewport.scrollLeft = beforeZoom.current.left;
+      viewport.scrollTop = beforeZoom.current.top;
+      beforeZoom.current = null;
+    }
+  }, [zoom]);
 
   function changeSlide(next: number) {
+    beforeZoom.current = null;
     setZoom(null);
+    if (viewportRef.current) {
+      viewportRef.current.scrollLeft = 0;
+      viewportRef.current.scrollTop = 0;
+    }
     onSlideChange(next);
   }
 
   function toggleZoom(event: React.MouseEvent<HTMLButtonElement>) {
+    if (dragged.current) {
+      dragged.current = false;
+      return;
+    }
     if (zoom) {
       setZoom(null);
       return;
     }
     const bounds = event.currentTarget.getBoundingClientRect();
-    const x = event.detail === 0
-      ? 50 : ((event.clientX - bounds.left) / bounds.width) * 100;
-    const y = event.detail === 0
-      ? 50 : ((event.clientY - bounds.top) / bounds.height) * 100;
+    const viewport = viewportRef.current;
+    if (!viewport || !bounds.width) return;
+    const clientX = event.detail === 0 ? (Math.max(0, bounds.left) + Math.min(bounds.right, viewport.clientWidth)) / 2 : event.clientX;
+    const clientY = event.detail === 0 ? (Math.max(0, bounds.top) + Math.min(bounds.bottom, viewport.clientHeight)) / 2 : event.clientY;
+    beforeZoom.current = { left: viewport.scrollLeft, top: viewport.scrollTop };
     setZoom({
-      x: Math.max(0, Math.min(100, x)),
-      y: Math.max(0, Math.min(100, y)),
+      width: bounds.width * 2,
+      x: Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width)),
+      y: Math.max(0, Math.min(1, (clientY - bounds.top) / bounds.height)),
+      clientX,
+      clientY,
     });
   }
 
@@ -907,11 +1034,12 @@ function FocusedImageViewer({
       <Dialog.Portal>
         <Dialog.Backdrop className="focused-image-backdrop fixed inset-0 z-[90]" />
         <Dialog.Viewport
-          className="ui-scrollbar fixed inset-0 z-[90] overflow-y-auto p-2 sm:p-5"
+          ref={viewportRef}
+          className="ui-scrollbar fixed inset-0 z-[90] overflow-auto p-2 sm:p-5"
           data-testid="focused-image-scroll"
         >
           <Dialog.Popup
-            className="relative mx-auto grid min-h-full w-full max-w-[100rem] place-items-center outline-none"
+            className={`relative mx-auto grid min-h-full place-items-center outline-none ${zoom ? "w-max min-w-full" : "w-full max-w-[100rem]"}`}
             onKeyDownCapture={(event) => {
               if (event.altKey || event.ctrlKey || event.metaKey || slideCount < 2) return;
               if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -925,21 +1053,40 @@ function FocusedImageViewer({
           >
             <Dialog.Title className="sr-only">Focused image viewer</Dialog.Title>
             <button
+              ref={imageButtonRef}
               type="button"
-              className={`control-shape-none mx-auto block w-fit max-w-full overflow-hidden p-0 focus-visible:outline-2 focus-visible:outline-border-focus ${zoom ? "cursor-zoom-out" : "cursor-zoom-in"}`}
+              className={`control-shape-none mx-auto block p-0 focus-visible:outline-2 focus-visible:outline-border-focus ${zoom ? "cursor-grab active:cursor-grabbing" : "w-fit max-w-full cursor-zoom-in"}`}
+              style={zoom ? { width: zoom.width } : undefined}
               aria-label={zoom ? "Zoom out image" : "Zoom in image"}
               aria-pressed={zoom !== null}
               onClick={toggleZoom}
+              onDragStart={event => event.preventDefault()}
+              onPointerDown={event => {
+                dragged.current = false;
+                const viewport = viewportRef.current;
+                if (!zoom || !viewport || event.pointerType !== "mouse" || event.button !== 0) return;
+                drag.current = { x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
+                event.currentTarget.setPointerCapture(event.pointerId);
+              }}
+              onPointerMove={event => {
+                const start = drag.current;
+                const viewport = viewportRef.current;
+                if (!start || !viewport) return;
+                const dx = event.clientX - start.x;
+                const dy = event.clientY - start.y;
+                if (Math.hypot(dx, dy) > 4) dragged.current = true;
+                if (dragged.current) {
+                  viewport.scrollLeft = start.left - dx;
+                  viewport.scrollTop = start.top - dy;
+                }
+              }}
+              onPointerUp={event => {
+                drag.current = null;
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+              }}
+              onPointerCancel={() => { drag.current = null; }}
             >
-              <span
-                className="block transition-transform duration-200 motion-reduce:transition-none"
-                style={{
-                  transform: zoom ? "scale(2)" : "scale(1)",
-                  transformOrigin: zoom ? `${zoom.x}% ${zoom.y}%` : "center",
-                }}
-              >
-                <LibraryItemMedia item={item} variant="viewer" assetId={assetId} />
-              </span>
+              <LibraryItemMedia item={item} variant="viewer" assetId={assetId} className={zoom ? "!w-full" : ""} />
             </button>
             <Dialog.Close className={`${CONTROL} fixed right-3 top-3 z-10 bg-bg-surface/95 backdrop-blur-sm`} aria-label="Close full-screen image">
               <CloseIcon />
@@ -959,7 +1106,7 @@ function FocusedImageViewer({
                 </button>
               </>
             ) : null}
-            <p className="pointer-events-none fixed bottom-3 rounded-control bg-bg-overlay/70 px-3 py-2 text-sm tabular-nums text-text-on-media" aria-label={`Image ${currentSlide + 1} of ${slideCount}`}>
+            <p className="pointer-events-none fixed bottom-3 left-1/2 -translate-x-1/2 rounded-control bg-bg-overlay/70 px-3 py-2 text-sm tabular-nums text-text-on-media" aria-label={`Image ${currentSlide + 1} of ${slideCount}`}>
               {currentSlide + 1} / {slideCount}
             </p>
           </Dialog.Popup>

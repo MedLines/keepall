@@ -1312,8 +1312,8 @@ test("image page shares the rounder card and panel curves", async ({ page }, tes
     page.getByRole("button", { name: "Edit details" }),
     page.getByRole("button", { name: "Organize" }),
     page.getByRole("button", { name: "Move item to Trash" }),
-    details.getByRole("link", { name: "UI inspiration", exact: true }),
-    details.getByRole("link", { name: "minimal", exact: true }),
+    details.getByRole("link", { name: "UI inspiration", exact: true }).locator("span"),
+    details.getByRole("link", { name: "minimal", exact: true }).locator("span"),
   ];
   for (const control of itemControls) {
     await expect(control).toHaveCSS("border-radius", "999px");
@@ -1398,14 +1398,10 @@ test("image counter and arrow keys stay in sync in both views", async ({ page },
   const zoomBox = (await zoomIn.boundingBox())!;
   await zoomIn.click({ position: { x: zoomBox.width * 0.25, y: zoomBox.height * 0.3 } });
   const zoomOut = viewer.getByRole("button", { name: "Zoom out image" });
-  await expect(zoomOut).toHaveCSS("cursor", "zoom-out");
+  await expect(zoomOut).toHaveCSS("cursor", "grab");
   await expect(zoomOut).toHaveCSS("border-radius", "0px");
-  await expect(zoomOut.locator("span")).toHaveCSS("transform", /matrix\(2, 0, 0, 2,/);
+  expect((await zoomOut.boundingBox())!.width).toBeCloseTo(zoomBox.width * 2, 0);
   await expect(zoomOut.locator("img")).toHaveCSS("border-radius", "0px");
-  const origin = await zoomOut.locator("span").evaluate(element => (element as HTMLElement).style.transformOrigin);
-  const [originX, originY] = origin.split(" ").map(Number.parseFloat);
-  expect(originX).toBeCloseTo(25, 0);
-  expect(originY).toBeCloseTo(30, 0);
   await page.screenshot({ path: testInfo.outputPath("image-counter-zoomed.png") });
   await zoomOut.click();
   await expect(zoomIn).toBeVisible();
@@ -1497,7 +1493,7 @@ test("image page fits a narrow viewport with visual gallery controls", async ({ 
     db.close();
   });
   await page.reload();
-  await page.getByRole("button", { name: "Close navigation", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Expand", exact: true })).toBeVisible();
   const card = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Customer support" }) });
   await card.getByRole("link", { name: "Open Customer support", exact: true }).click();
 
@@ -1597,7 +1593,7 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
     await expect(control).toHaveCSS("border-radius", "999px");
   }
   await editDialog.getByLabel("Title (optional)").fill("Checkout flow");
-  await editDialog.getByLabel("Notes").fill("Compare the empty and populated states.");
+  await editDialog.getByRole("textbox", { name: "Notes", exact: true }).fill("Compare the empty and populated states.");
   await editDialog.getByLabel("Source URL (optional)").fill("https://example.com/checkout");
   await editDialog.getByRole("button", { name: "Save changes" }).click();
   await expect(editDialog).toBeHidden();

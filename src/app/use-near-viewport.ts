@@ -11,6 +11,7 @@ export const NEAR_VIEWPORT_ROOT_MARGIN = "240px 0px";
  */
 export function useNearViewport(
   rootMargin: string = NEAR_VIEWPORT_ROOT_MARGIN,
+  rootRef?: RefObject<HTMLElement | null>,
 ): { ref: RefObject<HTMLDivElement | null>; near: boolean } {
   const ref = useRef<HTMLDivElement | null>(null);
   const [near, setNear] = useState(false);
@@ -22,20 +23,20 @@ export function useNearViewport(
     }
 
     if (typeof IntersectionObserver === "undefined") {
-      setNear(true);
-      return;
+      const frame = requestAnimationFrame(() => setNear(true));
+      return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         setNear(entry.isIntersecting);
       },
-      { rootMargin },
+      { rootMargin, root: rootRef?.current },
     );
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, [rootMargin]);
+  }, [rootMargin, rootRef]);
 
   return { ref, near };
 }

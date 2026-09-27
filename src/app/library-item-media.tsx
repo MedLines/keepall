@@ -14,7 +14,7 @@ type Props = {
   item: Item;
   /** Grid preserves proportions, cards crop, inspect fits, and viewer keeps natural height. */
   variant?: MediaVariant;
-  onImageLoad?: (ratio: number) => void;
+  onImageLoad?: (ratio: number, dimensions: { width: number; height: number }) => void;
   /** Inspect gallery: show this asset instead of the cover. */
   assetId?: string | null;
   /** Smaller favicon for list-row thumbs. */
@@ -47,7 +47,10 @@ export function LibraryItemMedia({
         alt=""
         className={imageClassName(variant, compact, className)}
         src={imageSrc}
-        onLoad={(event) => onImageLoad?.(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)}
+        onLoad={(event) => {
+          const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+          onImageLoad?.(width / height, { width, height });
+        }}
         onError={() => {
           setBrokenAssetId(assetIdForDisplay);
         }}
