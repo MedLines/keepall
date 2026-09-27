@@ -87,7 +87,7 @@ export function ItemContextMenu({
           </ContextMenu.Item>
           <ContextMenu.Separator className="my-1 border-t border-border-edge" />
           <ContextMenu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none hover:bg-bg-danger data-[highlighted]:bg-bg-danger data-[disabled]:opacity-50" disabled={busy} onClick={() => openDialog(onDelete)}>
-            <DeleteIcon />Delete
+            <DeleteIcon /><span className="relative -top-px">Delete</span>
           </ContextMenu.Item>
         </>
       }

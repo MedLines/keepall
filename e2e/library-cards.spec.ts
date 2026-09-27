@@ -1762,6 +1762,37 @@ test("action controls mirror in RTL and respect reduced motion", async ({ page }
   await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeInViewport();
 });
 
+for (const button of ["left", "right"] as const) {
+  test(`card menu stays in place through a held ${button} click`, async ({ page }) => {
+    const card = page.locator('[data-item-id="note"]');
+    const target = button === "left" ? card.locator("button.library-card-actions") : card;
+    await card.hover();
+    await target.hover();
+    const bounds = (await target.boundingBox())!;
+    const positions = page.evaluate(() => new Promise<{ x: number; y: number }[]>(resolve => {
+      const frames: { x: number; y: number }[] = [];
+      const start = performance.now();
+      function sample(now: number) {
+        const menu = document.querySelector('[role="menu"]');
+        if (menu?.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) {
+          const { x, y } = menu.getBoundingClientRect();
+          frames.push({ x, y });
+        }
+        if (now - start < 800) requestAnimationFrame(sample);
+        else resolve(frames);
+      }
+      requestAnimationFrame(sample);
+    }));
+    await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + 20, { button, delay: 250 });
+    const frames = await positions;
+    expect(frames.length).toBeGreaterThan(1);
+    expect(new Set(frames.map(({ x, y }) => `${x},${y}`)).size).toBe(1);
+    await expect(page.getByRole("menuitem", { name: "Delete", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toBeHidden();
+  });
+}
+
 for (const layout of ["Grid", "List"]) {
   test(`${layout.toLowerCase()} context menu searches, creates, and removes tags in place`, async ({ page }) => {
     await page.getByRole("button", { name: `${layout} view`, exact: true }).click();

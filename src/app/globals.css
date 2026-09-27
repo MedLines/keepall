@@ -325,6 +325,11 @@
   transition: none;
 }
 
+/* Keep the menu anchor's bounds steady while pressing and releasing it. */
+.library-card-actions:active {
+  transform: none;
+}
+
 .library-item-root:has(.library-card-tag-control .ui-popover) {
   z-index: 40;
 }
