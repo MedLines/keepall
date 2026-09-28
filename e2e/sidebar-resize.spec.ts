@@ -92,3 +92,52 @@ test("logo context menu exposes three links and supports keyboard opening", asyn
   await page.getByRole("menuitem", { name: "Help", exact: true }).click();
   await expect(page).toHaveURL(/\/help$/);
 });
+
+for (const preference of ["open", "closed"] as const) {
+  test(`refresh paints the saved ${preference} sidebar before hydration without animating`, async ({ page }) => {
+    await page.addInitScript((state) => {
+      localStorage.setItem("keepall-shell-panel-open", state);
+      localStorage.setItem("keepall-shell-sidebar-width", "350");
+    }, preference);
+    let releaseScripts!: () => void;
+    const scriptsReady = new Promise<void>(resolve => { releaseScripts = resolve; });
+    await page.route("**/*", async route => {
+      if (route.request().resourceType() === "script" && route.request().url().includes("/_next/")) {
+        await scriptsReady;
+      }
+      await route.continue();
+    });
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    await page.goto("/", { waitUntil: "commit" });
+    const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+    const expectedWidth = preference === "open" ? 350 : 56;
+    try {
+      await expect(sidebar).toBeVisible();
+      // The server HTML is painted while the hydration bundles remain blocked.
+      await expect(sidebar).toHaveCSS("width", `${expectedWidth}px`);
+      await expect(sidebar.locator("[data-sidebar-panel]")).toHaveCSS("transition-duration", "0s");
+      await sidebar.evaluate(element => {
+        const samples: { widths: number[]; clips: string[] } = { widths: [], clips: [] };
+        (window as unknown as { sidebarStartup: typeof samples }).sidebarStartup = samples;
+        const until = performance.now() + 2500;
+        function sample() {
+          samples.widths.push(element.getBoundingClientRect().width);
+          samples.clips.push(getComputedStyle(element.querySelector("[data-sidebar-panel]")!).clipPath);
+          if (performance.now() < until) requestAnimationFrame(sample);
+        }
+        requestAnimationFrame(sample);
+      });
+    } finally {
+      releaseScripts();
+    }
+    await page.waitForLoadState("load");
+    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    await page.waitForTimeout(400);
+    const samples = await page.evaluate(() => (window as unknown as { sidebarStartup: { widths: number[]; clips: string[] } }).sidebarStartup);
+    expect(samples.widths.length).toBeGreaterThan(2);
+    expect([...new Set(samples.widths)]).toEqual([expectedWidth]);
+    expect(new Set(samples.clips).size).toBe(1);
+    expect(errors).toEqual([]);
+  });
+}

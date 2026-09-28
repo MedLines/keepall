@@ -282,7 +282,7 @@ export function Library() {
   const confirmDeleteRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef<RestoreFocus | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPanelOpen(readShellPanelOpen());
   }, []);
 
@@ -1630,6 +1630,7 @@ export function Library() {
       <div className="relative flex h-full min-h-0 overflow-hidden bg-bg-shell py-2.5 pr-2.5">
         <LibraryShell
           panelOpen={panelOpen}
+          panelReady={panelPreference !== null}
           onPanelOpenChange={setPanelOpen}
           browseCollectionId={browseCollectionId}
           browseUnsorted={browseUnsorted}

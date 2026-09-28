@@ -63,6 +63,7 @@ type SidebarRailAction = {
 
 type Props = {
   panelOpen: boolean;
+  panelReady: boolean;
   onPanelOpenChange: (open: boolean) => void;
   browseCollectionId: string | null;
   browseUnsorted: boolean;
@@ -97,6 +98,7 @@ type Props = {
 
 export function LibraryShell({
   panelOpen: expanded,
+  panelReady,
   onPanelOpenChange,
   browseCollectionId,
   browseUnsorted,
@@ -396,6 +398,7 @@ export function LibraryShell({
           id="library-sidebar"
           aria-label="Sidebar"
           data-state={expanded ? "open" : "closed"}
+          data-ready={panelReady}
           className="library-sidebar-desktop relative z-50 h-full max-h-full min-h-0 shrink-0 overflow-visible"
         >
           <div

@@ -1,11 +1,12 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
-
-const WIDTH_KEY = "keepall-shell-sidebar-width";
-const DEFAULT_WIDTH = 256;
-const MIN_WIDTH = 224;
-const MAX_WIDTH = 400;
+import {
+  SIDEBAR_WIDTH_KEY as WIDTH_KEY,
+  SIDEBAR_DEFAULT_WIDTH as DEFAULT_WIDTH,
+  SIDEBAR_MIN_WIDTH as MIN_WIDTH,
+  SIDEBAR_MAX_WIDTH as MAX_WIDTH,
+} from "./shell-styles";
 const RAIL_WIDTH = 56;
 const COLLAPSE_THRESHOLD = (MIN_WIDTH + RAIL_WIDTH) / 2;
 

@@ -4,6 +4,7 @@ import { CaptureHost } from "./capture-host";
 import { DevToolsEntry } from "./dev-tools-entry";
 import { PwaProvider } from "./pwa-provider";
 import { THEME_INIT_SCRIPT } from "./theme-preference";
+import { SHELL_INIT_SCRIPT } from "./shell-styles";
 import "@fontsource-variable/inter";
 import "./globals.css";
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: SHELL_INIT_SCRIPT }} />
       </head>
       <body className="bg-bg-canvas text-text-primary antialiased">
         <PwaProvider>

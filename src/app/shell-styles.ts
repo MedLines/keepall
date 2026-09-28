@@ -1,4 +1,11 @@
 const SHELL_PANEL_KEY = "keepall-shell-panel-open";
+export const SIDEBAR_WIDTH_KEY = "keepall-shell-sidebar-width";
+export const SIDEBAR_DEFAULT_WIDTH = 256;
+export const SIDEBAR_MIN_WIDTH = 224;
+export const SIDEBAR_MAX_WIDTH = 400;
+
+// Static source, like the theme bootstrap: restore appearance before hydration.
+export const SHELL_INIT_SCRIPT = `(()=>{try{const r=document.documentElement,w=Number(localStorage.getItem("${SIDEBAR_WIDTH_KEY}"));if(Number.isFinite(w)&&w>=${SIDEBAR_MIN_WIDTH}&&w<=${SIDEBAR_MAX_WIDTH})r.style.setProperty("--initial-sidebar-width",w+"px");r.dataset.shellPanel=localStorage.getItem("${SHELL_PANEL_KEY}")==="closed"?"closed":"open"}catch{}})()`;
 
 export function readShellPanelOpen(): boolean {
   if (typeof window === "undefined") {
