@@ -6,7 +6,7 @@ import "./help.css";
 export default function HelpLayout({ children }: { children: ReactNode }) {
   return <div className="ka-page kh-page">
     <a href="#help-content" className="ka-skip">Skip to content</a>
-    <MarketingHeader help />
+    <MarketingHeader help floating />
     <main id="help-content" className="ka-wrap kh-main">{children}</main>
     <MarketingFooter />
   </div>;

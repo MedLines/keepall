@@ -22,9 +22,8 @@ export default async function GuidePage({ params }: Props) {
   if (!guide) notFound();
   const next = guides[(guides.indexOf(guide) + 1) % guides.length];
   return <>
-    <Link href="/help" className="kh-back"><ArrowLeftIcon />All guides</Link>
     <div className="kh-guide-layout">
-      <aside className="kh-sidebar"><nav aria-label="On this page"><p className="kh-eyebrow">In this guide</p><ol>{guide.sections.map((section, index) => <li key={section.id}><a href={`#${section.id}`}><span>{String(index + 1).padStart(2, "0")}</span>{section.title}</a></li>)}</ol></nav><Link href="/help" className="kh-all-guides">Browse all guides <ArrowRightIcon /></Link></aside>
+      <aside className="kh-sidebar"><Link href="/help" className="kh-back"><ArrowLeftIcon />All guides</Link><nav aria-label="On this page"><p className="kh-eyebrow">In this guide</p><ol>{guide.sections.map((section, index) => <li key={section.id}><a href={`#${section.id}`}><span>{String(index + 1).padStart(2, "0")}</span>{section.title}</a></li>)}</ol></nav><Link href="/help" className="kh-all-guides">Browse all guides <ArrowRightIcon /></Link></aside>
       <article className="kh-article">
         <header className="kh-article-heading"><span className="ka-pill">{guide.category}</span><span className="kh-read-time">{guide.minutes}</span><h1>{guide.title}</h1><p>{guide.summary}</p></header>
         <div className="kh-article-body">{guide.sections.map((section, index) => <section key={section.id} id={section.id} aria-labelledby={`${section.id}-title`}>

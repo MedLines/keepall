@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { ArrowLeftIcon, ArrowRightIcon } from "../shell-icons";
 import { RecordedDemo } from "./recorded-demo";
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
 
@@ -60,7 +61,7 @@ export function FeatureGallery({ panels }: { panels: ReactNode[] }) {
     <div className="ka-gallery-window" id="ka-gallery-panel" role="region" aria-label={views[selected].name}>
       {panels.map((panel, index) => <div key={views[index].name} className="ka-gallery-content" aria-hidden={selected !== index} inert={selected !== index} style={{ "--demo-offset": `${index < selected ? -105 : 105}%` } as CSSProperties}><RecordedDemo active={selected === index} name={views[index].name} src={`/marketing/${views[index].recording}`} poster={panel} /></div>)}
     </div>
-    <div className="ka-gallery-foot"><span>0{selected + 1} / 0{views.length}</span><p role="status">{views[selected].caption}</p><div><button type="button" aria-label="Previous feature" onClick={() => selectView((selected + views.length - 1) % views.length)}>←</button><button type="button" aria-label="Next feature" onClick={() => selectView((selected + 1) % views.length)}>→</button></div></div>
+    <div className="ka-gallery-foot"><span>0{selected + 1} / 0{views.length}</span><p role="status">{views[selected].caption}</p><div><button type="button" aria-label="Previous feature" onClick={() => selectView((selected + views.length - 1) % views.length)}><ArrowLeftIcon className="size-5" /></button><button type="button" aria-label="Next feature" onClick={() => selectView((selected + 1) % views.length)}><ArrowRightIcon className="size-5" /></button></div></div>
   </div>;
 }
 

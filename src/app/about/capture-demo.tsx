@@ -20,8 +20,8 @@ export function CaptureDemo() {
   return <div className="ka-demo">
     <div className="ka-demo-intro"><span>See it in action</span><p>Choose a walkthrough</p></div>
     <div className="ka-demo-topline">
-      <div className="ka-demo-choices icon-segmented-switch squircle-panel" role="group" aria-label="Choose a capture video">
-        {examples.map((item, index) => <button key={item.id} type="button" className={selected === index ? "squircle-panel ui-selected" : "squircle-panel"} aria-pressed={selected === index} onClick={() => setSelected(index)}><item.icon />{item.label}</button>)}
+      <div className="ka-demo-choices" role="group" aria-label="Choose a capture video">
+        {examples.map((item, index) => <button key={item.id} type="button" className="control-shape-none" aria-pressed={selected === index} onClick={() => setSelected(index)}><item.icon />{item.label}</button>)}
       </div>
     </div>
     <div className="ka-capture-videos" role="region" aria-label={`${example.label} capture video`}>

@@ -39,7 +39,7 @@ function NoteEditorImageRow({ assetId, index, pendingImageUrls, busy, onRemove }
     <li className="flex items-center gap-3 border-t border-border-control py-2 first:border-t-0">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element -- local IndexedDB object URL
-        <img src={url} alt="" className="size-12 shrink-0 rounded-control border border-border-control object-cover" />
+        <img src={url} alt="" className="media-outline size-12 shrink-0 rounded-control object-cover" />
       ) : (
         <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-control border border-border-control bg-bg-control text-xs text-text-secondary">Image</span>
       )}

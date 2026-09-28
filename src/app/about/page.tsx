@@ -31,26 +31,26 @@ function ChromeMark() {
 
 export default function AboutPage() {
   return (
-    <main className="ka-page">
+    <main className="ka-page ka-about">
       <a className="ka-skip" href="#main-content">Skip to content</a>
-      <MarketingHeader />
+      <MarketingHeader floating />
       <div id="main-content">
         <HeroScene preview={<LibraryPreview eager />}>
           <p className="ka-pill">Your personal library</p>
-          <h1 id="ka-title">Save links, notes, images,<br /><span>and videos in one place.</span></h1>
+          <h1 id="ka-title">Save links, notes, images,<br /><span>and videos in <span className="ka-brand-highlight">one place.</span></span></h1>
           <p className="ka-lede">Save from the web with the Chrome extension.<br className="ka-desktop-break" /> Organize with collections and tags. Find anything with search.</p>
           <div className="ka-hero-actions"><Link href="/" className="ka-button">Start your library <ArrowRightIcon /></Link></div>
           <p className="ka-fine-print">Free to use. No account needed.</p>
         </HeroScene>
         <ScrollStatement />
         <section id="collection" className="ka-features ka-wrap" aria-labelledby="collection-title">
-          <div className="ka-section-heading"><div><p className="ka-pill">Inside Keepall</p><h2 id="collection-title">A home for your<br />many interests.</h2></div><p>Save first. Organize when you feel like it.<br />Find your way back when it matters.</p></div>
+          <div className="ka-section-heading"><div><p className="ka-pill">Inside Keepall</p><h2 id="collection-title">A home for your<br /><span className="ka-brand-highlight">many interests.</span></h2></div><p>Save first. Organize when you feel like it.<br />Find your way back when it matters.</p></div>
           <FeatureGallery panels={[<LibraryPreview key="library" />, <LibraryPreview key="collections" view="collection" />, <LibraryPreview key="tags" view="tags" />, <LibraryPreview key="search" view="search" />]} />
         </section>
         <div className="ka-benefits ka-wrap">
           <div className="ka-section-heading"><div><p className="ka-pill">From finding to keeping</p><h2>Good finds deserve<br />more than an open tab.</h2></div><p>A quicker way to save, a calmer place to browse,<br />and a library you can take with you.</p></div>
           <FeatureStack>
-            <section id="extension" className="ka-feature-card ka-extension" aria-labelledby="capture-title"><div className="ka-card-copy"><div className="ka-extension-brand"><ChromeMark /><p className="ka-eyebrow">Keepall Capture<br />For Google Chrome</p></div><h2 id="capture-title">Found it?<br />Keep it.</h2><p>Save pages, images, and selected text with their source. Press Alt+K on most websites to add a note in plain text or Markdown before saving.</p><a href={CHROME_EXTENSION_URL} className="ka-button ka-button-small"><ChromeMark />Add to Chrome <ArrowRightIcon /></a><p className="ka-card-caption">On a computer. Keepall can stay closed.</p><Link href="/help/chrome-capture" className="ka-card-foot">Setup, shortcuts &amp; permissions <ArrowRightIcon /></Link></div><div className="ka-card-scene ka-capture-scene"><CaptureDemo /></div></section>
+            <section id="extension" className="ka-feature-card ka-extension" aria-labelledby="capture-title"><div className="ka-card-copy"><div className="ka-extension-brand"><ChromeMark /><p className="ka-eyebrow">Keepall Capture<br />For Google Chrome</p></div><h2 id="capture-title">Found it?<br /><span className="ka-brand-highlight">Keep it.</span></h2><p>Save pages, images, and selected text with their source. Press Alt+K on most websites to add a note in plain text or Markdown before saving.</p><a href={CHROME_EXTENSION_URL} className="ka-button ka-button-small"><ChromeMark />Add to Chrome <ArrowRightIcon /></a><p className="ka-card-caption">On a computer. Keepall can stay closed.</p><Link href="/help/chrome-capture" className="ka-card-foot">Setup, shortcuts &amp; permissions <ArrowRightIcon /></Link></div><div className="ka-card-scene ka-capture-scene"><CaptureDemo /></div></section>
             <section className="ka-feature-card ka-organize" aria-labelledby="organize-title"><div className="ka-card-copy"><p className="ka-eyebrow">A little order, on your terms</p><h2 id="organize-title">Less digging.<br />More discovering.</h2><p>Bring related things into collections, connect them with tags, and pin your favorites. Search a word you remember to find your way back.</p><div className="ka-feature-tags"><span>Collections</span><span>Tags</span><span>Grid &amp; list</span></div><Link href="/help/collections-and-tags" className="ka-card-foot">Find your kind of organized <ArrowRightIcon /></Link></div><div className="ka-card-scene ka-organize-scene"><Image className="ka-app-detail ka-search-detail" src={searchDetailImage} alt="Actual Keepall search results for quiet spaces, showing saved images and highlighted text" width={734} height={760} sizes="(max-width: 800px) 85vw, 480px" /></div></section>
             <section id="your-library" className="ka-feature-card ka-local" aria-labelledby="local-title"><div className="ka-card-copy"><p className="ka-eyebrow">Personal means yours</p><h2 id="local-title">Your interests.<br />Your device.<br />Your library.</h2><p>Your saves live in this browser, on this device. No account, no automatic cloud sync. Download a backup to keep safe or move to another device.</p><Link href="/help/storage-and-backups" className="ka-card-foot">How storage &amp; backups work <ArrowRightIcon /></Link></div><div className="ka-card-scene ka-local-scene"><div className="ka-backup-preview"><span className="ka-preview-caption">Settings / Backup</span><Image className="ka-app-detail" src={backupImage} alt="Keepall’s Backup settings with Export backup and Import backup controls" width={540} height={159} sizes="(max-width: 800px) 85vw, 480px" /><Link href="/help/storage-and-backups#download" className="ka-text-link">Back up your library <ArrowRightIcon /></Link></div></div></section>
           </FeatureStack>

@@ -383,7 +383,7 @@ export function NoteItemPage({
 
       <main className="mx-auto grid w-full max-w-[100rem] items-start gap-8 px-5 pb-24 pt-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
         <div className="min-w-0 lg:mx-auto lg:w-full lg:max-w-4xl lg:pt-6">
-          <h1 className="text-pretty text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+          <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
             {title}
           </h1>
           {editing ? (
