@@ -4,6 +4,7 @@ import { BackupPanel } from "../backup-panel";
 import { ArrowLeftIcon, LogoIcon } from "../shell-icons";
 import { ThemeControl } from "../theme-control";
 import { StorageHealth } from "./storage-health";
+import { LogoContextMenu } from "../logo-context-menu";
 
 export const metadata: Metadata = {
   title: "Settings · Keepall",
@@ -14,13 +15,21 @@ export default function SettingsPage() {
     <main className="ui-scrollbar h-dvh overflow-y-auto bg-bg-shell p-2.5">
       <div className="library-panel min-h-full bg-bg-canvas px-5 py-5 sm:px-8 sm:py-7">
         <header className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
+          <LogoContextMenu>
+            <Link
+              href="/"
+              aria-label="Keepall home"
+              className="keepall-logo-link flex min-h-11 items-center gap-0 rounded-control-lg px-2 text-text-primary"
+            >
+              <LogoIcon className="size-8" />
+              <span className="text-lg font-medium">keepall</span>
+            </Link>
+          </LogoContextMenu>
           <Link
-            href="/"
-            aria-label="Keepall home"
-            className="keepall-logo-link flex min-h-11 items-center gap-0 rounded-control-lg px-2 text-text-primary"
+            href="/about"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-control-lg px-3 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-raised hover:text-text-primary"
           >
-            <LogoIcon className="size-8" />
-            <span className="text-lg font-medium">keepall</span>
+            About
           </Link>
         </header>
 
@@ -100,7 +109,6 @@ export default function SettingsPage() {
                 <Link href="/help" className="underline underline-offset-2">Help guides</Link>
                 <Link href="/help/chrome-capture" className="underline underline-offset-2">Chrome extension</Link>
                 <Link href="/help/install-keepall" className="underline underline-offset-2">Install Keepall</Link>
-                <Link href="/about" className="underline underline-offset-2">About Keepall</Link>
                 <Link href="/extension-privacy" className="underline underline-offset-2">Keepall Capture privacy</Link>
               </div>
             </section>

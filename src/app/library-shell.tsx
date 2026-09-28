@@ -50,6 +50,8 @@ import {
 import { useShellMobile } from "./use-shell-mobile";
 import { ShellPanelIcon } from "./shell-panel-icon";
 import { collectionMarkerStyle } from "./collection-marker";
+import { LogoContextMenu } from "./logo-context-menu";
+import { SidebarResizeHandle } from "./sidebar-resize-handle";
 
 const COLLECTION_REORDER_MIME = "application/x-keepall-pinned-collection";
 
@@ -393,15 +395,17 @@ export function LibraryShell({
         <aside
           id="library-sidebar"
           aria-label="Sidebar"
-          className={`relative z-50 h-full max-h-full min-h-0 shrink-0 overflow-visible ${expanded ? SHELL_SIDEBAR_EXPANDED : SHELL_SIDEBAR_COLLAPSED}`}
+          data-state={expanded ? "open" : "closed"}
+          className="library-sidebar-desktop relative z-50 h-full max-h-full min-h-0 shrink-0 overflow-visible"
         >
           <div
-            className={`${SHELL_ASIDE} library-sidebar-panel absolute inset-y-0 left-0 z-10 w-64 shadow-menu`}
+            className={`${SHELL_ASIDE} library-sidebar-panel absolute inset-y-0 left-0 z-10 shadow-menu`}
             data-sidebar-panel
             data-state={expanded ? "open" : "closed"}
           >
             {sidebarBody}
           </div>
+          <SidebarResizeHandle expanded={expanded} onExpandedChange={onPanelOpenChange} />
         </aside>
       )}
     </>
@@ -415,15 +419,17 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onClose }: {
 }) {
   return (
     <div data-sidebar-brand className={`mb-5 mt-[18px] flex h-10 shrink-0 items-center ${expanded ? "mx-4" : "mx-2"}`}>
-      <Link
-        href="/"
-        aria-label="Keepall home"
-        data-sidebar-anchor="logo"
-        className={`keepall-logo-link flex h-10 min-w-0 items-center gap-0 rounded-control text-text-primary ${expanded ? "w-fit px-3" : "w-10 justify-center"}`}
-      >
-        <span data-sidebar-icon className="flex shrink-0 items-center justify-center"><LogoIcon className="size-9" /></span>
-        {expanded ? <span data-sidebar-copy className="shrink-0 text-xl font-medium leading-7">keepall</span> : null}
-      </Link>
+      <LogoContextMenu>
+        <Link
+          href="/"
+          aria-label="Keepall home"
+          data-sidebar-anchor="logo"
+          className={`keepall-logo-link flex h-10 min-w-0 items-center gap-0 rounded-control text-text-primary ${expanded ? "w-fit px-3" : "w-10 justify-center"}`}
+        >
+          <span data-sidebar-icon className="flex shrink-0 items-center justify-center"><LogoIcon className="size-9" /></span>
+          {expanded ? <span data-sidebar-copy className="shrink-0 text-xl font-medium leading-7">keepall</span> : null}
+        </Link>
+      </LogoContextMenu>
       {mobileSidebarOpen ? (
         <button type="button" aria-label="Close navigation" title="Close sidebar" className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-control hover:bg-bg-raised" onClick={onClose}>
           <ShellPanelIcon open />

@@ -263,7 +263,8 @@ export function Library() {
   >(null);
   const [dragError, setDragError] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelPreference, setPanelOpen] = useState<boolean | null>(null);
+  const panelOpen = panelPreference ?? true;
   const [previewEnrichProgress, setPreviewEnrichProgress] =
     useState<PreviewEnrichProgress>(null);
 
@@ -286,8 +287,8 @@ export function Library() {
   }, []);
 
   useEffect(() => {
-    writeShellPanelOpen(panelOpen);
-  }, [panelOpen]);
+    if (panelPreference !== null) writeShellPanelOpen(panelPreference);
+  }, [panelPreference]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1676,7 +1677,7 @@ export function Library() {
           }}
         />
 
-        <div className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel">
+        <div data-library-panel className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel">
         {topBar}
         <main
           ref={mainScrollRef}

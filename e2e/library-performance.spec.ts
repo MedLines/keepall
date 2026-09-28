@@ -235,7 +235,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
       }
       for (const action of ["Collapse", "Expand"]) {
         const samples = sidebar.evaluate(async (element) => {
-          const icons = Array.from(element.querySelectorAll<HTMLElement>("[data-sidebar-anchor] [data-sidebar-icon] :is(svg, img)"));
+          const icons = Array.from(element.querySelectorAll<HTMLElement>("[data-sidebar-anchor] [data-sidebar-icon] > :is(svg, span)"));
           const bounds = icons.map((icon) => icon.getBoundingClientRect());
           const sidebarX = element.getBoundingClientRect().x;
           let maxShift = 0;
@@ -265,7 +265,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
         });
         await page.getByRole("button", { name: action, exact: true }).click();
         const result = await samples;
-        expect(result.count).toBe(6);
+        expect(result.count).toBe(8);
         expect(result.retained).toBe(true);
         expect(result.visible).toBe(true);
         expect(result.maxShift).toBeLessThanOrEqual(1);
@@ -420,3 +420,78 @@ test("cards load only a favicon when local preview bytes are missing", async ({ 
   );
   await expect(page.locator('.library-card img[src^="https://cdn.example.com"]')).toHaveCount(0);
 });
+
+test("sidebar dragging keeps a populated library virtualized and its cards within the grid", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await seedMeasuredLibrary(page);
+  await expect(page.locator(".library-item-root").first()).toBeVisible();
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  const handle = page.getByRole("separator", { name: "Resize sidebar" });
+  for (const width of [400, 224, 360, 56, 300]) {
+    const box = (await handle.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, 400);
+    await page.mouse.down();
+    await page.mouse.move(width, 400, { steps: 20 });
+    await page.mouse.up();
+    await expect(page.getByRole("complementary", { name: "Sidebar" })).toHaveCSS("width", `${width}px`);
+  }
+  await expect.poll(() => page.getByRole("list", { name: "Library items" }).evaluate(grid => {
+    const bounds = grid.getBoundingClientRect();
+    const cards = [...grid.querySelectorAll(".library-item-root")];
+    return cards.length > 0 && cards.length < 180 && cards.every(card => {
+      const rect = card.getBoundingClientRect();
+      return rect.width > 0 && rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
+    });
+  })).toBe(true);
+  await page.getByRole("button", { name: "List view", exact: true }).click();
+  await expect(page.locator(".library-item-root").first()).toBeVisible();
+  await handle.focus();
+  await page.keyboard.press("End");
+  await expect(handle).toHaveAttribute("aria-valuenow", "400");
+  expect(errors).toEqual([]);
+});
+
+for (const layout of ["Grid", "List"] as const) {
+  test(`${layout} cards keep their layout throughout a sidebar drag and reflow on release`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    await seedMeasuredLibrary(page);
+    await page.getByRole("button", { name: `${layout} view`, exact: true }).click();
+    const cards = page.locator(".library-item-root");
+    await expect(cards.first()).toBeVisible();
+    const main = page.getByRole("main", { name: "All items" });
+    const initialWidth = (await main.boundingBox())!.width;
+    const geometry = () => cards.evaluateAll(elements => {
+      const origin = elements[0].closest("main")!.getBoundingClientRect();
+      return elements.slice(0, 8).map(element => {
+        const rect = element.getBoundingClientRect();
+        return { id: element.getAttribute("data-item-id"), x: rect.x - origin.x, y: rect.y - origin.y, width: rect.width, height: rect.height };
+      });
+    });
+    // Wait for loaded images and the virtualizer's initial measurements to settle.
+    await expect.poll(async () => {
+      const before = await geometry();
+      await page.waitForTimeout(100);
+      return JSON.stringify(await geometry()) === JSON.stringify(before);
+    }).toBe(true);
+    const before = await geometry();
+    const handle = page.getByRole("separator", { name: "Resize sidebar" });
+    const box = (await handle.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, 400);
+    await page.mouse.down();
+    for (const width of [400, 224, 360]) {
+      await page.mouse.move(width, 400, { steps: 10 });
+      await page.waitForTimeout(200);
+      expect((await main.boundingBox())!.width).toBe(initialWidth);
+      expect(await geometry()).toEqual(before);
+    }
+    await page.mouse.up();
+    await expect.poll(async () => (await main.boundingBox())!.width).toBe(initialWidth - 104);
+    await expect.poll(async () => (await geometry())[0].width).not.toBe(before[0].width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
