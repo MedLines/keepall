@@ -86,7 +86,14 @@ test("extension examples are recorded videos with responsive controls", async ({
   for (const width of [320, 390, 2134]) {
     await page.setViewportSize({ width, height: 1032 });
     const rows = await capture.locator(".ka-demo-choices button").evaluateAll(buttons => buttons.map(button => Math.round(button.getBoundingClientRect().top)));
-    expect(new Set(rows).size).toBe(1);
+    expect(new Set(rows).size).toBe(width <= 520 ? 2 : 1);
+    expect(await capture.locator(".ka-demo-choices").evaluate(element => {
+      const bounds = element.getBoundingClientRect();
+      return element.scrollWidth <= element.clientWidth && [...element.querySelectorAll("button")].every(button => {
+        const rect = button.getBoundingClientRect();
+        return rect.left >= bounds.left && rect.right <= bounds.right;
+      });
+    })).toBe(true);
     for (const name of ["Page", "Image", "Text", "Organize", "Alt+K"]) {
       await capture.getByRole("button", { name, exact: true }).click();
       const recording = capture.locator('.ka-capture-video[aria-hidden="false"]');

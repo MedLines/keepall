@@ -1,32 +1,53 @@
 "use client";
 
-import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { ArrowLeftIcon, ArrowRightIcon } from "../shell-icons";
 import { RecordedDemo } from "./recorded-demo";
+import { HeroFlightLayer, SCROLL_RELEASE_FRACTION, useHeroFlight, type HeroFlightMode } from "./hero-flight";
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
 
-// Scroll storyboard (native scrolling, reversible at every point):
-// Hero leaves the viewport → copy lifts; library recedes; landscape travels 220px.
+// Scroll storyboard (native scrolling; hero offers timed and scroll comparisons):
+// Scroll variant: the whole hero pins for an extended scroll while icons land.
 // Statement crosses the viewport → each phrase brightens in reading order.
 // Feature cards reach 108px → pin; earlier cards recede as the next arrives.
-const SCENE = { landscapeTravel: 220, libraryTravel: 120, stackTop: 108, stackStep: 24, cardBottom: 786 };
+const SCENE = { landscapeTravel: 220, stackTop: 108, stackStep: 24, cardBottom: 786 };
+
+function subscribeHeroPreview(onChange: () => void) {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+}
+
+function heroPreviewMode(): HeroFlightMode {
+  return window.location.hash === "#auto-drop-preview" ? "timed" : "scroll";
+}
 
 export function HeroScene({ children, preview }: { children: ReactNode; preview: ReactNode }) {
   const ref = useRef<HTMLElement>(null);
+  const flightMode = useSyncExternalStore<HeroFlightMode>(subscribeHeroPreview, heroPreviewMode, () => "scroll");
   const reduceMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const { scrollY, scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const landscapeY = useTransform(scrollYProgress, [0, 1], [0, SCENE.landscapeTravel]);
-  const copyTransform = useTransform(scrollYProgress, [0, .5], ["translateY(0px)", "translateY(-64px)"]);
-  const copyOpacity = useTransform(scrollYProgress, [0, .2, .5], [1, 1, 0]);
-  const previewTransform = useTransform(scrollYProgress, [0, 1], ["translateY(0px) scale(1)", `translateY(${SCENE.libraryTravel}px) scale(.96)`]);
-  const previewOpacity = useTransform(scrollYProgress, [0, .35, .85], [1, 1, 0]);
+  const { layout, distance, headerFadeOpacity, previewScale } = useHeroFlight(ref, scrollY, reduceMotion, flightMode);
   return (
-    <section ref={ref} className="ka-hero" aria-labelledby="ka-title">
+    <>
+    <motion.div className="ka-header-scroll-fade" aria-hidden="true" style={{ opacity: headerFadeOpacity }} />
+    <div className="ka-hero-track" data-flight-mode={flightMode} style={{ "--ka-hero-release-fraction": SCROLL_RELEASE_FRACTION } as CSSProperties}>
+    <section ref={ref} className="ka-hero" data-flight-mode={flightMode} aria-labelledby="ka-title">
       <motion.div className="ka-landscape" aria-hidden="true" style={{ y: reduceMotion ? 0 : landscapeY }} />
-      <motion.div className="ka-hero-copy" style={{ transform: reduceMotion ? "none" : copyTransform, opacity: reduceMotion ? 1 : copyOpacity }}>{children}</motion.div>
-      <motion.div className="ka-hero-preview-scroll" style={{ transform: reduceMotion ? "none" : previewTransform, opacity: reduceMotion ? 1 : previewOpacity }}><div className="ka-hero-library">{preview}</div></motion.div>
+      <div className="ka-hero-intro">
+      <motion.div className="ka-hero-copy" onFocusCapture={(event) => {
+        // Finish once so changing focus cannot restart a phrase's entrance.
+        for (const animation of event.currentTarget.getAnimations({ subtree: true })) {
+          if (animation instanceof CSSAnimation && ["ka-hero-crossfade", "ka-hero-phrase-arrive", "ka-hero-block-arrive"].includes(animation.animationName)) animation.finish();
+        }
+      }}>{children}</motion.div>
+      </div>
+      <motion.div className="ka-hero-preview-scroll" style={{ scale: previewScale }}><div className="ka-hero-library">{preview}</div></motion.div>
+      {!reduceMotion && <HeroFlightLayer layout={layout} distance={distance} previewScale={previewScale} mode={flightMode} />}
       <div className="ka-hero-fade" aria-hidden="true" />
     </section>
+    </div>
+    </>
   );
 }
 
