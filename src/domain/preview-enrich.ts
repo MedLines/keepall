@@ -1,10 +1,10 @@
 import type { LinkItem } from "./link";
 
 /** Max idle links to auto-enrich once after an import. */
-export const PREVIEW_ENRICH_WELCOME_BATCH_SIZE = 100;
+export const PREVIEW_ENRICH_WELCOME_BATCH_SIZE = 300;
 
 /** Max viewport auto-enrich calls per local calendar day. Welcome batch is separate. */
-export const PREVIEW_DAILY_VIEWPORT_CAP = 100;
+export const PREVIEW_DAILY_VIEWPORT_CAP = 200;
 
 /** Parallel `/api/preview` calls from the library coordinator. */
 export const PREVIEW_ENRICH_CONCURRENCY = 2;

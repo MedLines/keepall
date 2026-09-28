@@ -311,7 +311,7 @@ function beginWelcomeBatch(links: LinkItem[], progress: StoredWelcomeBatch) {
   }
 }
 
-/** After import: enrich up to 100 idle links from the given ids, queued 1–2 at a time. */
+/** After import: enrich up to the welcome batch of idle links, queued 1–2 at a time. */
 export async function startPreviewWelcomeBatch(
   linkIds: string[],
 ): Promise<void> {

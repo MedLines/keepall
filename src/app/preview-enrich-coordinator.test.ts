@@ -11,12 +11,18 @@ import {
   startPreviewWelcomeBatch,
   subscribePreviewEnrichProgress,
 } from "./preview-enrich-coordinator";
-import { writeStoredWelcomeBatch } from "./preview-welcome-storage";
+import {
+  readStoredWelcomeBatch,
+  writeStoredWelcomeBatch,
+} from "./preview-welcome-storage";
 import {
   clearPreviewBudgetForTests,
   trySpendViewportAutoBudget,
 } from "./preview-budget-storage";
-import { PREVIEW_DAILY_VIEWPORT_CAP } from "@/domain/preview-enrich";
+import {
+  PREVIEW_DAILY_VIEWPORT_CAP,
+  PREVIEW_ENRICH_WELCOME_BATCH_SIZE,
+} from "@/domain/preview-enrich";
 
 vi.mock("./enrich-link-preview", () => ({
   enrichLinkPreview: vi.fn(),
@@ -37,14 +43,20 @@ describe("preview-enrich-coordinator", () => {
     );
   });
 
-  test("welcome batch enqueues only idle links up to 100", async () => {
-    const links = Array.from({ length: 105 }, (_, index) =>
-      buildLink({ url: `https://example-${index}.com` }, { id: `l${index}`, now: 1 }),
+  test("welcome batch enqueues only idle links up to the import cap", async () => {
+    const links = Array.from(
+      { length: PREVIEW_ENRICH_WELCOME_BATCH_SIZE + 5 },
+      (_, index) =>
+        buildLink(
+          { url: `https://example-${index}.com` },
+          { id: `l${index}`, now: 1 },
+        ),
     );
     vi.mocked(listItems).mockResolvedValue(links);
 
     await startPreviewWelcomeBatch(links.map((link) => link.id));
 
+    expect(readStoredWelcomeBatch()?.total).toBe(PREVIEW_ENRICH_WELCOME_BATCH_SIZE);
     expect(enrichLinkPreview).toHaveBeenCalledTimes(2);
     expect(enrichLinkPreview).toHaveBeenCalledWith(
       "l0",
