@@ -461,6 +461,7 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
 }
 
 .library-sidebar-primary-nav,
+.library-sidebar-footer-nav,
 .library-sidebar-section-scroll {
   scrollbar-gutter: stable;
   scrollbar-width: thin;

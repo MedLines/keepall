@@ -333,10 +333,10 @@ export function LibraryShell({
             )}
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className={`flex flex-col gap-1 ${contentExpanded ? "library-sidebar-footer-nav overflow-hidden" : ""}`}>
             <SidebarRowMenu label="Trash" mutationBusy={mutationBusy || libraryLoading} deleteLabel="Empty Trash" deleteDisabled={trashCount === 0} onDelete={() => onEmptyTrash?.()}>
               {(trigger) => contentExpanded ? (
-                <div className={`group ${SHELL_NAV_SURFACE} min-h-10 w-full pr-7 text-sm ${browseTrash ? SHELL_NAV_ITEM_ACTIVE : `${SHELL_NAV_ITEM_IDLE} focus-within:bg-bg-raised`}`}>
+                <div className={`group ${SHELL_NAV_SURFACE} min-h-10 w-full text-sm ${browseTrash ? SHELL_NAV_ITEM_ACTIVE : `${SHELL_NAV_ITEM_IDLE} focus-within:bg-bg-raised`}`}>
                   <button type="button" aria-label="Trash" aria-current={browseTrash ? "page" : undefined} data-sidebar-anchor="Trash"
                     className="flex min-h-10 min-w-0 flex-1 self-stretch items-center gap-2.5 rounded-control-md px-3 py-2 text-left transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
                     onClick={() => { onGoTrash?.(); closeOnMobile(); }}>
