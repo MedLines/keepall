@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FullScreenIcon, PauseIcon, PlayIcon } from "../shell-icons";
 
-export function RecordedDemo({ active, name, src, poster }: { active: boolean; name: string; src: string; poster: ReactNode }) {
+export function RecordedDemo({ active, name, src, poster, onComplete }: { active: boolean; name: string; src: string; poster: ReactNode; onComplete?: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const container = useRef<HTMLDivElement>(null);
+  const visible = useRef(false);
+  const manuallyPaused = useRef(false);
   const [state, setState] = useState<"idle" | "loading" | "playing" | "paused" | "ended">("idle");
   const [error, setError] = useState(false);
   const [hasFrame, setHasFrame] = useState(false);
@@ -17,14 +19,14 @@ export function RecordedDemo({ active, name, src, poster }: { active: boolean; n
     const frame = container.current;
     if (!element || !frame) return;
     const preference = matchMedia("(prefers-reduced-motion: reduce)");
-    let visible = false;
+    manuallyPaused.current = false;
+    if (active) element.currentTime = 0;
     const syncPlayback = () => {
-      if (!active || !visible || document.hidden) {
+      if (!active || !visible.current || document.hidden) {
         element.pause();
         return;
       }
-      if (preference.matches) return;
-      element.currentTime = 0;
+      if (preference.matches || manuallyPaused.current) return;
       void element.play().catch(() => {
         // Autoplay can be blocked by browser settings; the play control stays available.
       });
@@ -34,16 +36,18 @@ export function RecordedDemo({ active, name, src, poster }: { active: boolean; n
       else syncPlayback();
     };
     const observer = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting && entry.intersectionRatio >= .35;
+      visible.current = entry.isIntersecting && entry.intersectionRatio >= .35;
       void syncPlayback();
     }, { threshold: .35 });
     observer.observe(frame);
     document.addEventListener("visibilitychange", syncPlayback);
-    preference.addEventListener("change", onMotionPreferenceChange);
+    if (preference.addEventListener) preference.addEventListener("change", onMotionPreferenceChange);
+    else preference.addListener(onMotionPreferenceChange);
     return () => {
       observer.disconnect();
       document.removeEventListener("visibilitychange", syncPlayback);
-      preference.removeEventListener("change", onMotionPreferenceChange);
+      if (preference.removeEventListener) preference.removeEventListener("change", onMotionPreferenceChange);
+      else preference.removeListener(onMotionPreferenceChange);
       element.pause();
     };
   }, [active]);
@@ -52,9 +56,11 @@ export function RecordedDemo({ active, name, src, poster }: { active: boolean; n
     const element = video.current;
     if (!element || state === "loading") return;
     if (playing) {
+      manuallyPaused.current = true;
       element.pause();
       return;
     }
+    manuallyPaused.current = false;
     setError(false);
     setState("loading");
     if (element.ended) element.currentTime = 0;
@@ -71,7 +77,11 @@ export function RecordedDemo({ active, name, src, poster }: { active: boolean; n
   const action = playing ? "Pause" : state === "ended" ? "Replay" : state === "paused" ? "Resume" : "Play";
   return <div ref={container} className="ka-recording" data-playing={playing}>
     {poster}
-    <video ref={video} className="ka-recording-video" style={{ opacity: hasFrame ? 1 : 0 }} width={1440} height={860} preload="none" muted playsInline loop aria-label={`${name} demonstration recorded in Keepall`} onLoadedData={() => setHasFrame(true)} onPlaying={() => setState("playing")} onPause={() => { if (!video.current?.ended) setState("paused"); }} onEnded={() => setState("ended")} onTimeUpdate={() => {
+    <video ref={video} className="ka-recording-video" style={{ opacity: hasFrame ? 1 : 0 }} width={1440} height={860} preload="none" muted playsInline aria-label={`${name} demonstration recorded in Keepall`} onLoadedData={() => setHasFrame(true)} onPlaying={() => setState("playing")} onPause={() => { if (!video.current?.ended) setState("paused"); }} onEnded={() => {
+      setState("ended");
+      if (active && visible.current && !document.hidden && !manuallyPaused.current &&
+        !matchMedia("(prefers-reduced-motion: reduce)").matches && !container.current?.querySelector(":focus-visible")) onComplete?.();
+    }} onTimeUpdate={() => {
       const element = video.current;
       if (element?.duration) {
         const value = element.currentTime / element.duration;
@@ -87,7 +97,7 @@ export function RecordedDemo({ active, name, src, poster }: { active: boolean; n
         {state === "loading" ? "Loading…" : `${action} demo`}
       </button>
       <span className="ka-recording-caption">{error ? "Couldn’t load. Try again." : "Recorded in Keepall"}</span>
-      <a className="ka-recording-expand ui-control squircle-panel" href={`${src}.mp4`} target="_blank" rel="noreferrer" aria-label={`Open ${name} demo full size`} onClick={() => video.current?.pause()}><FullScreenIcon /></a>
+      <a className="ka-recording-expand ui-control squircle-panel" href={`${src}.mp4`} target="_blank" rel="noreferrer" aria-label={`Open ${name} demo full size`} onClick={() => { manuallyPaused.current = true; video.current?.pause(); }}><FullScreenIcon /></a>
     </div>
     <div className="ka-recording-progress" aria-hidden="true"><span style={{ transform: `scaleX(${progress.value})`, transitionDuration: progress.reset ? "0ms" : undefined }} /></div>
   </div>;

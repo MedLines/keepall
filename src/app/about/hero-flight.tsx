@@ -6,8 +6,6 @@ import { animate, motion, useMotionValue, useTransform, type MotionValue } from 
 
 export const HERO_ICON_ANGLES = { links: -9, notes: 8, images: -7, videos: 9 };
 export type HeroKind = keyof typeof HERO_ICON_ANGLES;
-export type HeroFlightMode = "timed" | "scroll";
-export const SCROLL_RELEASE_FRACTION = .78;
 const KINDS = Object.keys(HERO_ICON_ANGLES) as HeroKind[];
 const STAGGER = 12;
 const TARGETS = [.12, .37, .63, .87];
@@ -15,16 +13,8 @@ const BOWS = [-90, 62, -58, 86];
 const TURNS = [-24, 22, -18, 28];
 
 type Point = { x: number; y: number; size: number };
-type FlightLayout = { start: number; travel: number; pinDistance: number; width: number; viewportHeight: number; previewCenter: { x: number; y: number }; sources: Point[]; targets: Point[] };
+type FlightLayout = { start: number; travel: number; width: number; sources: Point[]; targets: Point[] };
 const clamp = (value: number) => value >= 1 - 1e-9 ? 1 : Math.max(0, value);
-
-function scaledTarget(scene: FlightLayout, index: number, scale: number) {
-  const target = scene.targets[index];
-  return {
-    x: scene.previewCenter.x + (target.x - scene.previewCenter.x) * scale,
-    y: scene.previewCenter.y + (target.y - scene.previewCenter.y) * scale,
-  };
-}
 
 // Layout coordinates deliberately exclude entrance, hover, and scroll transforms.
 function positionIn(element: HTMLElement, root: HTMLElement) {
@@ -37,42 +27,30 @@ function positionIn(element: HTMLElement, root: HTMLElement) {
   return { x, y };
 }
 
-export function useHeroFlight(ref: RefObject<HTMLElement | null>, scrollY: MotionValue<number>, reducedMotion: boolean | null, mode: HeroFlightMode) {
+export function useHeroFlight(ref: RefObject<HTMLElement | null>, scrollY: MotionValue<number>, reducedMotion: boolean) {
   const layout = useMotionValue<FlightLayout | null>(null);
   const elapsed = useMotionValue(0);
   const distance = useTransform(() => {
-    const scroll = scrollY.get();
     const scene = layout.get();
     const timed = elapsed.get();
-    if (!scene) return 0;
-    return mode === "timed" ? timed * (scene.travel + (KINDS.length - 1) * STAGGER) : Math.max(0, scroll - scene.start);
+    return scene ? timed * (scene.travel + (KINDS.length - 1) * STAGGER) : 0;
   });
-  const headerFadeOpacity = useTransform(() => {
-    const scroll = scrollY.get();
-    const scene = layout.get();
-    const start = mode === "scroll" && !reducedMotion ? scene?.pinDistance ?? 0 : 0;
-    return clamp((scroll - start) / 120);
-  });
-  const previewScale = useTransform(() => {
-    const scroll = scrollY.get();
-    const scene = layout.get();
-    if (mode !== "scroll" || reducedMotion) return 1;
-    if (!scene) return .88;
-    const center = scene.previewCenter.y - Math.max(0, scroll - scene.pinDistance);
-    const progress = clamp((scene.viewportHeight - center) / (scene.viewportHeight * .5));
-    return .88 + .12 * progress * progress * (3 - 2 * progress);
-  });
+  const headerFadeOpacity = useTransform(scrollY, [0, 120], [0, 1]);
 
   useEffect(() => {
     const root = ref.current;
     elapsed.set(0);
-    if (mode !== "timed" || reducedMotion) return;
+    if (reducedMotion) return;
     let destination = 0;
-    let turningPoint = scrollY.get();
+    let turningPoint = 0;
     let playback: ReturnType<typeof animate> | undefined;
+    const library = root?.querySelector<HTMLElement>(".ka-hero-library");
+    let entering = library?.getAnimations().some(animation =>
+      (animation as CSSAnimation).animationName === "ka-hero-preview-arrive",
+    ) ?? false;
     function update() {
       const scene = layout.get();
-      if (!scene) return;
+      if (!scene || entering) return;
       const scroll = scrollY.get();
       const trigger = Math.min(scene.start, 48);
       turningPoint = destination === 1 ? Math.max(turningPoint, scroll) : Math.min(turningPoint, scroll);
@@ -90,16 +68,25 @@ export function useHeroFlight(ref: RefObject<HTMLElement | null>, scrollY: Motio
         velocity, restDelta: .001, restSpeed: .01,
       });
     }
+    function finishEntrance(event: AnimationEvent) {
+      if (event.target !== library || event.animationName !== "ka-hero-preview-arrive") return;
+      entering = false;
+      update();
+    }
+    library?.addEventListener("animationend", finishEntrance);
+    library?.addEventListener("animationcancel", finishEntrance);
     update();
     const stopScroll = scrollY.on("change", update);
     const stopLayout = layout.on("change", update);
     return () => {
       playback?.stop();
+      library?.removeEventListener("animationend", finishEntrance);
+      library?.removeEventListener("animationcancel", finishEntrance);
       stopScroll();
       stopLayout();
       root?.removeAttribute("data-hero-compact");
     };
-  }, [elapsed, layout, mode, reducedMotion, ref, scrollY]);
+  }, [elapsed, layout, reducedMotion, ref, scrollY]);
 
   useEffect(() => {
     const root = ref.current;
@@ -112,7 +99,6 @@ export function useHeroFlight(ref: RefObject<HTMLElement | null>, scrollY: Motio
 
     function updateSources() {
       const scene = layout.get();
-      if (root && mode === "scroll") root.dataset.heroCompact = String(!reducedMotion && distance.get() > STAGGER * (KINDS.length - 1));
       sources.forEach((source, index) => {
         const flying = scene && !reducedMotion && distance.get() > index * STAGGER;
         const visibility = flying ? "hidden" : "";
@@ -126,8 +112,12 @@ export function useHeroFlight(ref: RefObject<HTMLElement | null>, scrollY: Motio
       const compact = root.dataset.heroCompact;
       root.setAttribute("data-hero-measuring", "");
       root.removeAttribute("data-hero-compact");
-      heading.style.minHeight = "";
-      heading.style.minHeight = `${heading.offsetHeight}px`;
+      heading.style.height = "";
+      const expandedHeadingHeight = heading.offsetHeight;
+      root.dataset.heroCompact = "true";
+      root.style.setProperty("--ka-hero-compact-heading-height", `${heading.offsetHeight}px`);
+      root.removeAttribute("data-hero-compact");
+      heading.style.height = `${expandedHeadingHeight}px`;
       const copy = root.querySelector<HTMLElement>(".ka-hero-copy");
       if (copy) root.style.setProperty("--ka-hero-copy-height", `${copy.offsetHeight}px`);
       const origins = sources.map(source => {
@@ -140,15 +130,10 @@ export function useHeroFlight(ref: RefObject<HTMLElement | null>, scrollY: Motio
       const right = Math.min(root.clientWidth - 24, libraryLeft + library.offsetWidth - 32);
       const navBottom = document.querySelector(".ka-header")?.getBoundingClientRect().bottom ?? 92;
       const documentTop = root.getBoundingClientRect().top + window.scrollY;
-      const pinDistance = mode === "scroll" && root.parentElement
-        ? Number.parseFloat(getComputedStyle(root.parentElement, "::after").height) || 0 : 0;
       layout.set({
-        start: mode === "scroll" ? 24 : Math.max(0, documentTop + Math.min(...origins.map(origin => origin.y - origin.size / 2)) - navBottom - 72),
-        travel: mode === "scroll" ? Math.max(840, pinDistance / SCROLL_RELEASE_FRACTION - 120) : Math.max(340, Math.min(520, window.innerHeight * .48)),
-        pinDistance,
+        start: Math.max(0, documentTop + Math.min(...origins.map(origin => origin.y - origin.size / 2)) - navBottom - 72),
+        travel: Math.max(340, Math.min(520, window.innerHeight * .48)),
         width: root.clientWidth,
-        viewportHeight: window.innerHeight,
-        previewCenter: { x: root.clientWidth / 2, y: libraryTop + library.offsetHeight / 2 },
         sources: origins,
         targets: TARGETS.map((fraction, index) => ({ x: left + (right - left) * fraction, y: libraryTop + library.offsetHeight * (.25 + index % 2 * .05), size: 0 })),
       });
@@ -157,28 +142,31 @@ export function useHeroFlight(ref: RefObject<HTMLElement | null>, scrollY: Motio
       updateSources();
     }
 
+    let active = true;
     measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(root);
-    observer.observe(library);
+    void document.fonts.ready.then(() => { if (active) measure(); });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(root);
+    observer?.observe(library);
     window.addEventListener("resize", measure);
     const unsubscribe = distance.on("change", updateSources);
     return () => {
-      observer.disconnect();
+      active = false;
+      observer?.disconnect();
       window.removeEventListener("resize", measure);
       unsubscribe();
       sources.forEach(source => { source.style.visibility = ""; });
-      heading.style.minHeight = "";
+      heading.style.height = "";
       root.removeAttribute("data-hero-compact");
     };
-  }, [ref, layout, distance, reducedMotion, mode]);
+  }, [ref, layout, distance, reducedMotion]);
 
-  return { layout, distance, headerFadeOpacity, previewScale };
+  return { layout, distance, headerFadeOpacity };
 }
 
-type FlightProps = { layout: MotionValue<FlightLayout | null>; distance: MotionValue<number>; previewScale: MotionValue<number>; mode: HeroFlightMode };
+type FlightProps = { layout: MotionValue<FlightLayout | null>; distance: MotionValue<number> };
 
-function FlyingIcon({ kind, index, layout, distance, previewScale, mode }: FlightProps & { kind: HeroKind; index: number }) {
+function FlyingIcon({ kind, index, layout, distance }: FlightProps & { kind: HeroKind; index: number }) {
   const progress = useTransform(() => {
     const traveled = distance.get();
     const scene = layout.get();
@@ -187,15 +175,14 @@ function FlyingIcon({ kind, index, layout, distance, previewScale, mode }: Fligh
   const transform = useTransform(() => {
     const t = progress.get();
     const scene = layout.get();
-    const libraryScale = previewScale.get();
     if (!scene) return "none";
     const from = scene.sources[index];
-    const to = scaledTarget(scene, index, libraryScale);
+    const to = scene.targets[index];
     const remaining = 1 - t;
     const bow = BOWS[index] * Math.min(1, from.size / 65);
     const keepInViewport = (x: number) => Math.max(from.size * .8, Math.min(scene.width - from.size * .8, x));
     const x = remaining ** 3 * from.x + 3 * remaining ** 2 * t * keepInViewport(from.x + bow) + 3 * remaining * t ** 2 * keepInViewport(to.x + bow * .35) + t ** 3 * to.x;
-    const y = from.y + (to.y - from.y) * t ** 2 - (mode === "timed" ? 70 : 72) * Math.sin(Math.PI * t);
+    const y = from.y + (to.y - from.y) * t ** 2 - 70 * Math.sin(Math.PI * t);
     const scale = 1 + .22 * Math.sin(Math.PI * t) - .78 * t ** 3;
     const angle = HERO_ICON_ANGLES[kind] * remaining + TURNS[index] * Math.sin(Math.PI * t);
     return `translate3d(${x - from.size / 2}px, ${y - from.size / 2}px, 0) rotate(${angle}deg) scale(${scale})`;
@@ -208,9 +195,8 @@ function FlyingIcon({ kind, index, layout, distance, previewScale, mode }: Fligh
   const landingOpacity = useTransform(progress, [0, .93, .97, 1], [0, 0, .35, 0]);
   const landingTransform = useTransform(() => {
     const scene = layout.get();
-    const libraryScale = previewScale.get();
-    const target = scene ? scaledTarget(scene, index, libraryScale) : null;
-    const scale = (.5 + clamp((progress.get() - .93) / .07)) * libraryScale;
+    const target = scene?.targets[index];
+    const scale = .5 + clamp((progress.get() - .93) / .07);
     return target ? `translate3d(${target.x - 24}px, ${target.y - 24}px, 0) scale(${scale})` : "none";
   });
 

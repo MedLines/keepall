@@ -50,7 +50,7 @@ test("scrolling stacks feature cards reversibly and reduced motion restores ordi
 });
 
 
-test("gallery videos autoplay, restart on selection, loop, and pause outside the viewport", async ({ page }) => {
+test("gallery videos autoplay, restart on selection, advance, and respect manual pause", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/about");
   const gallery = page.locator(".ka-gallery");
@@ -69,12 +69,17 @@ test("gallery videos autoplay, restart on selection, loop, and pause outside the
   await gallery.getByRole("button", { name: "Your library", exact: true }).click();
   await expect.poll(() => videos.first().evaluate(video => (video as HTMLVideoElement).currentTime)).toBeLessThan(2);
   await videos.first().evaluate(element => { const video = element as HTMLVideoElement; video.currentTime = video.duration - .1; });
-  await expect.poll(() => videos.first().evaluate(video => (video as HTMLVideoElement).currentTime)).toBeLessThan(2);
-  await gallery.getByRole("button", { name: "Pause Your library demo" }).click();
-  expect(await videos.first().evaluate(video => (video as HTMLVideoElement).paused)).toBe(true);
-  await gallery.getByRole("button", { name: "Resume Your library demo" }).click();
+  await expect(gallery.getByRole("button", { name: "Collections", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const selectedVideo = gallery.locator('.ka-gallery-content[aria-hidden="false"] video');
+  await gallery.getByRole("button", { name: "Pause Collections demo" }).click();
+  expect(await selectedVideo.evaluate(video => (video as HTMLVideoElement).paused)).toBe(true);
   await page.evaluate(() => window.scrollTo(0, 0));
-  await expect.poll(() => videos.first().evaluate(video => (video as HTMLVideoElement).paused)).toBe(true);
+  await gallery.scrollIntoViewIfNeeded();
+  await expect(gallery.getByRole("button", { name: "Resume Collections demo" })).toBeVisible();
+  expect(await selectedVideo.evaluate(video => (video as HTMLVideoElement).paused)).toBe(true);
+  await gallery.getByRole("button", { name: "Resume Collections demo" }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect.poll(() => selectedVideo.evaluate(video => (video as HTMLVideoElement).paused)).toBe(true);
 });
 
 test("extension examples are recorded videos with responsive controls", async ({ page }) => {

@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-test("hero phrases visibly fade and enter from the left independently", async ({ page }) => {
+test("hero phrases fade upward in reading order", async ({ page }) => {
+  await page.addInitScript(() => document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".ka-hero-phrase").forEach(element => element.getAnimations().forEach(animation => animation.pause()));
+  }, { once: true }));
   await page.goto("/about");
   const phrases = page.locator(".ka-hero-phrase");
   await expect(phrases).toHaveCount(5);
-  await expect(page.locator(".ka-hero")).toHaveAttribute("data-flight-mode", "scroll");
   await expect(page.getByRole("group", { name: "Compare hero animations" })).toHaveCount(0);
   const frames = await phrases.evaluateAll(elements => elements.map(element => {
     const animation = element.getAnimations()[0];
@@ -12,19 +14,19 @@ test("hero phrases visibly fade and enter from the left independently", async ({
     animation.pause();
     const delay = Number(animation.effect!.getTiming().delay);
     animation.currentTime = delay;
-    const start = element.getBoundingClientRect().left;
+    const start = element.getBoundingClientRect().top;
     animation.currentTime = delay + 80;
     const opacity = Number(getComputedStyle(element).opacity);
-    const middle = element.getBoundingClientRect().left;
+    const middle = element.getBoundingClientRect().top;
     animation.finish();
-    const end = element.getBoundingClientRect().left;
+    const end = element.getBoundingClientRect().top;
     return { start, middle, end, opacity, delay };
   }));
-  expect(frames.map(frame => Math.round(frame.delay))).toEqual([90, 165, 240, 315, 390]);
+  expect(frames.map(frame => Math.round(frame.delay))).toEqual([80, 165, 250, 335, 420]);
   for (const frame of frames) {
-    expect(frame.end - frame.start).toBeGreaterThanOrEqual(13);
-    expect(frame.middle).toBeLessThan(frame.end);
-    expect(frame.middle).toBeGreaterThan(frame.start);
+    expect(frame.start - frame.end).toBeGreaterThanOrEqual(13);
+    expect(frame.middle).toBeLessThan(frame.start);
+    expect(frame.middle).toBeGreaterThan(frame.end);
     expect(frame.opacity).toBeGreaterThan(0);
     expect(frame.opacity).toBeLessThan(1);
   }
@@ -57,6 +59,11 @@ test("switching between hero icons never replays the previous phrase entrance", 
 for (const width of [1440, 390, 320]) {
   test(`hero entrance keeps content in blocks at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(() => document.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll(".ka-hero-phrase, .ka-hero-description, .ka-hero-actions").forEach(element =>
+        element.getAnimations().forEach(animation => animation.pause()),
+      );
+    }, { once: true }));
     await page.goto("/about");
     const description = page.locator(".ka-hero-description");
     const actions = page.locator(".ka-hero-actions");
@@ -100,4 +107,24 @@ test("reduced motion shows all entrance blocks immediately", async ({ page }) =>
   expect(await blocks.evaluateAll(elements => elements.every(element =>
     element.getAnimations().length === 0 && getComputedStyle(element).opacity === "1" && getComputedStyle(element).transform === "none",
   ))).toBe(true);
+});
+
+test("mobile entrance does not reflow when its font arrives late", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.route("**/*.woff2*", async route => {
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    await route.continue();
+  });
+  await page.goto("/about", { waitUntil: "domcontentloaded" });
+  const start = await page.locator(".ka-hero-copy").evaluate(element => ({
+    top: element.getBoundingClientRect().top,
+    headingHeight: element.querySelector("h1")!.getBoundingClientRect().height,
+  }));
+  await page.evaluate(() => document.fonts.ready);
+  const end = await page.locator(".ka-hero-copy").evaluate(element => ({
+    top: element.getBoundingClientRect().top,
+    headingHeight: element.querySelector("h1")!.getBoundingClientRect().height,
+  }));
+  expect(Math.abs(end.top - start.top)).toBeLessThan(2);
+  expect(Math.abs(end.headingHeight - start.headingHeight)).toBeLessThan(2);
 });

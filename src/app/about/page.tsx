@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import Link from "next/link";
 import Image from "next/image";
 import searchDetailImage from "../../../public/marketing/app-search-detail.webp";
@@ -15,6 +16,12 @@ import { HeroHeading } from "./hero-heading";
 import { HeroSupportingCopy } from "./hero-supporting-copy";
 import { FeatureGallery, FeatureStack, HeroScene, ScrollStatement } from "./scroll-scenes";
 import "./landing.css";
+
+const inter = localFont({
+  src: "../../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+  weight: "100 900",
+  display: "optional",
+});
 
 export const metadata: Metadata = {
   title: "Keepall · Save links, notes, images, and videos",
@@ -33,7 +40,7 @@ function ChromeMark() {
 
 export default function AboutPage() {
   return (
-    <main className="ka-page ka-about">
+    <main className={`ka-page ka-about ${inter.className}`}>
       <a className="ka-skip" href="#main-content">Skip to content</a>
       <MarketingHeader floating />
       <div id="main-content">

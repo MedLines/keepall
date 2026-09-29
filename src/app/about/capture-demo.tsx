@@ -26,7 +26,7 @@ export function CaptureDemo() {
     </div>
     <div className="ka-capture-videos" role="region" aria-label={`${example.label} capture video`}>
       {examples.map((item, index) => <div key={item.id} className="ka-capture-video" inert={selected !== index} aria-hidden={selected !== index} style={{ "--demo-offset": `${index < selected ? -105 : 105}%` } as CSSProperties}>
-        <RecordedDemo active={selected === index} name={`${item.label} capture`} src={`/marketing/capture-${item.id}-demo`} poster={<Image className="ka-capture-poster" src={`/marketing/capture-${item.id}-poster.webp`} alt={`${item.label} capture in the Keepall browser extension`} width={1000} height={800} sizes="(max-width: 800px) 90vw, 480px" />} />
+        <RecordedDemo active={selected === index} name={`${item.label} capture`} src={`/marketing/capture-${item.id}-demo`} onComplete={() => setSelected(current => current === index ? (index + 1) % examples.length : current)} poster={<Image className="ka-capture-poster" src={`/marketing/capture-${item.id}-poster.webp`} alt={`${item.label} capture in the Keepall browser extension`} width={1000} height={800} sizes="(max-width: 800px) 90vw, 480px" />} />
       </div>)}
     </div>
     <div className="ka-demo-bottom"><div role="status"><strong>{example.instruction}</strong><span>{example.detail}</span></div></div>
