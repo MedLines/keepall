@@ -90,7 +90,7 @@
 .ka-hero { position: relative; isolation: isolate; overflow: clip; min-height: 1160px; padding: 0 32px 90px; }
 /* Keep the image crop independent of the hero's measured content height.
    The 220px above the viewport covers the full parallax travel. */
-.ka-landscape { position: absolute; z-index: -2; inset: -220px 0 auto; height: calc(140svh + 220px); background: linear-gradient(#03050980, #06070b70 70%, #050506 100%), url('/marketing/keepall-landscape.webp') center / cover; }
+.ka-landscape { position: absolute; z-index: -2; inset: -220px 0 auto; height: calc(140svh + 220px); background: linear-gradient(#050506d1, #050506d9 70%, #050506 100%), url('/marketing/keepall-landscape-rose.webp') center / cover; }
 .ka-hero-intro { min-height: max(100svh, calc(var(--ka-hero-copy-height, 0px) + 232px)); display: grid; align-items: center; padding-block: 116px; }
 .ka-hero-preview-scroll { margin-top: -80px; }
 .ka-hero-copy { position: relative; z-index: 2; min-height: var(--ka-hero-copy-height, auto); text-align: center; }

@@ -9,6 +9,7 @@ export type HeroKind = keyof typeof HERO_ICON_ANGLES;
 const KINDS = Object.keys(HERO_ICON_ANGLES) as HeroKind[];
 const STAGGER = 12;
 const TARGETS = [.12, .37, .63, .87];
+const TARGET_DEPTHS = [.48, .58, .86, .72];
 const BOWS = [-90, 62, -58, 86];
 const TURNS = [-24, 22, -18, 28];
 
@@ -135,7 +136,7 @@ export function useHeroFlight(ref: RefObject<HTMLElement | null>, scrollY: Motio
         travel: Math.max(340, Math.min(520, window.innerHeight * .48)),
         width: root.clientWidth,
         sources: origins,
-        targets: TARGETS.map((fraction, index) => ({ x: left + (right - left) * fraction, y: libraryTop + library.offsetHeight * (.25 + index % 2 * .05), size: 0 })),
+        targets: TARGETS.map((fraction, index) => ({ x: left + (right - left) * fraction, y: libraryTop + library.offsetHeight * TARGET_DEPTHS[index], size: 0 })),
       });
       if (compact !== undefined) root.dataset.heroCompact = compact;
       root.removeAttribute("data-hero-measuring");

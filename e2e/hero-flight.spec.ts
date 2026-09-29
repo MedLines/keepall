@@ -72,9 +72,11 @@ for (const width of [2134, 1440, 390, 320]) {
     const landed = await icons.evaluateAll(elements => elements.map(element => {
       const box = element.getBoundingClientRect();
       const preview = document.querySelector(".ka-hero-library")!.getBoundingClientRect();
-      return box.top >= preview.top && box.bottom <= innerHeight && box.bottom <= preview.bottom;
+      return { inside: box.top >= preview.top && box.bottom <= preview.bottom, depth: (box.y + box.height / 2 - preview.y) / preview.height };
     }));
-    expect(landed.every(Boolean)).toBe(true);
+    expect(landed.every(point => point.inside)).toBe(true);
+    expect(landed.filter(point => point.depth >= .4 && point.depth <= .65)).toHaveLength(2);
+    expect(landed.filter(point => point.depth > .8)).toHaveLength(1);
     await page.setViewportSize({ width, height: height + 40 });
     await expect.poll(() => icons.evaluateAll(elements => elements.every(element => getComputedStyle(element).opacity === "0"))).toBe(true);
     await page.setViewportSize({ width, height });
@@ -87,6 +89,33 @@ for (const width of [2134, 1440, 390, 320]) {
     await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
     await expect(page.locator(".ka-hero-copy")).toHaveCSS("opacity", "1");
     await expect.poll(() => icons.evaluateAll(elements => elements.every(element => getComputedStyle(element).opacity === "0"))).toBe(true);
+  });
+}
+
+for (const width of [2134, 390]) {
+  test(`fast scrolling keeps the flight visible near the library bottom at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/about");
+    await expect.poll(() => page.locator(".ka-hero-library").evaluate(element => element.getAnimations().length)).toBe(0);
+    const visibleLanding = await page.evaluate(async () => {
+      const library = document.querySelector(".ka-hero-library")!.getBoundingClientRect();
+      scrollTo({ top: scrollY + library.bottom - innerHeight * .8, behavior: "instant" });
+      const started = performance.now();
+      while (performance.now() - started < 1600) {
+        await new Promise(requestAnimationFrame);
+        const preview = document.querySelector(".ka-hero-library")!.getBoundingClientRect();
+        const visible = [...document.querySelectorAll("[data-flight-icon]")].some(element => {
+          const box = element.getBoundingClientRect();
+          return Number(getComputedStyle(element).opacity) > .2 && box.top >= preview.top + preview.height * .7 && box.bottom < innerHeight && box.top > 100;
+        });
+        if (visible) return true;
+      }
+      return false;
+    });
+    expect(visibleLanding).toBe(true);
+    await expect.poll(() => page.locator("[data-flight-icon]").evaluateAll(elements => elements.every(element => getComputedStyle(element).opacity === "0"))).toBe(true);
+    await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+    await expect.poll(() => page.locator("[data-hero-icon]").evaluateAll(elements => elements.every(element => getComputedStyle(element).visibility === "visible" && element.getBoundingClientRect().width > 30))).toBe(true);
   });
 }
 
