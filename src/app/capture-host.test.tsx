@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildImageFromAssetIds } from "@/domain/image";
 import { buildLink } from "@/domain/link";
@@ -11,6 +11,7 @@ import { getLibraryPreferences } from "@/persistence/library-preferences";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
+import { prepareLocalVideo } from "./prepare-local-video";
 
 vi.mock("@/persistence/items", () => ({
   createNote: vi.fn(),
@@ -51,6 +52,27 @@ vi.mock("./enrich-link-preview", () => ({
 vi.mock("./read-clipboard-capture", () => ({
   readClipboardImageAndText: vi.fn(),
 }));
+
+vi.mock("./prepare-local-video", () => ({
+  prepareLocalVideo: vi.fn(),
+}));
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function pickVideo(file: File) {
+  const input = screen.getByRole("dialog").querySelector(
+    'input[accept="video/mp4,video/webm"]',
+  ) as HTMLInputElement;
+  fireEvent.change(input, { target: { files: [file] } });
+}
 
 async function openDraft(text: string) {
   render(<CaptureHost />);
@@ -112,6 +134,7 @@ describe("CaptureHost", () => {
       image: null,
       text: "",
     });
+    vi.mocked(prepareLocalVideo).mockReset();
   });
 
   test("opens on Alt+K and ignores Ctrl+K", async () => {
@@ -164,6 +187,101 @@ describe("CaptureHost", () => {
 
     fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
     expect(screen.getByRole("dialog", { name: "Save to Keepall" })).toBeVisible();
+  });
+
+  test("a canceled video cannot replace a note in the next capture session", async () => {
+    const preparation = deferred<Blob>();
+    vi.mocked(prepareLocalVideo).mockReturnValue(preparation.promise);
+    await openDraft("old draft");
+    pickVideo(new File(["video A"], "A.mp4", { type: "video/mp4" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
+    const input = await screen.findByLabelText("Link, note, or image");
+    fireEvent.change(input, { target: { value: "note B" } });
+    await act(async () => {
+      preparation.resolve(new Blob(["poster"]));
+      await preparation.promise;
+    });
+
+    expect(screen.queryByPlaceholderText("Optional video title")).toBeNull();
+    expect(screen.getByLabelText("Link, note, or image")).toHaveValue("note B");
+    expect(screen.queryByText("Video: A.mp4")).toBeNull();
+  });
+
+  test("a current video preparation attaches its selected file", async () => {
+    vi.mocked(prepareLocalVideo).mockResolvedValue(new Blob(["poster"]));
+    await openDraft("video title");
+    pickVideo(new File(["video"], "current.mp4", { type: "video/mp4" }));
+
+    expect(await screen.findByText("Video: current.mp4")).toBeVisible();
+    expect(screen.getByPlaceholderText("Optional video title")).toHaveValue("");
+  });
+
+  test("a canceled video rejection cannot show an error in the next session", async () => {
+    const preparation = deferred<Blob>();
+    vi.mocked(prepareLocalVideo).mockReturnValue(preparation.promise);
+    await openDraft("old draft");
+    pickVideo(new File(["video A"], "A.mp4", { type: "video/mp4" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
+    const input = await screen.findByLabelText("Link, note, or image");
+    fireEvent.change(input, { target: { value: "note B" } });
+    await act(async () => {
+      preparation.reject(new Error("stale preparation failed"));
+      await preparation.promise.catch(() => undefined);
+    });
+
+    expect(screen.getByLabelText("Link, note, or image")).toHaveValue("note B");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  test("an old video cleanup cannot clear a newer video's preparing state", async () => {
+    const first = deferred<Blob>();
+    const second = deferred<Blob>();
+    vi.mocked(prepareLocalVideo)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    await openDraft("old draft");
+    pickVideo(new File(["video A"], "A.mp4", { type: "video/mp4" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
+    await screen.findByLabelText("Link, note, or image");
+    pickVideo(new File(["video C"], "C.mp4", { type: "video/mp4" }));
+    await act(async () => {
+      first.resolve(new Blob(["poster A"]));
+      await first.promise;
+    });
+
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.queryByText("Video: A.mp4")).toBeNull();
+    await act(async () => {
+      second.resolve(new Blob(["poster C"]));
+      await second.promise;
+    });
+    expect(await screen.findByText("Video: C.mp4")).toBeVisible();
+  });
+
+  test("settling a video preparation after unmount does not affect a fresh capture", async () => {
+    const preparation = deferred<Blob>();
+    vi.mocked(prepareLocalVideo).mockReturnValue(preparation.promise);
+    const { unmount } = render(<CaptureHost />);
+    fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
+    await screen.findByLabelText("Link, note, or image");
+    pickVideo(new File(["video A"], "A.mp4", { type: "video/mp4" }));
+    unmount();
+
+    const input = await openDraft("note B");
+    await act(async () => {
+      preparation.resolve(new Blob(["poster A"]));
+      await preparation.promise;
+    });
+
+    expect(input).toHaveValue("note B");
+    expect(screen.queryByText("Video: A.mp4")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   test("ignores a second submit while a write is in flight", async () => {

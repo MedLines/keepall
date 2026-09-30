@@ -160,6 +160,7 @@ export function CaptureHost() {
     total: number;
   } | null>(null);
   const imageReadGenerationRef = useRef(0);
+  const videoPreparationGenerationRef = useRef(0);
   const [draftTagNames, setDraftTagNames] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [draftCollectionName, setDraftCollectionName] = useState<string | null>(
@@ -283,7 +284,10 @@ export function CaptureHost() {
   }, [imageDrafts]);
 
   useEffect(() => {
-    return () => revokeImageDraftPreviews(imageDraftsRef.current);
+    return () => {
+      revokeImageDraftPreviews(imageDraftsRef.current);
+      videoPreparationGenerationRef.current += 1;
+    };
   }, []);
 
   useEffect(() => {
@@ -344,6 +348,7 @@ export function CaptureHost() {
     setDraftCollectionName(null);
     setCollectionInput("");
     imageReadGenerationRef.current += 1;
+    videoPreparationGenerationRef.current += 1;
     imageUploadInFlightRef.current = false;
     imageUploadErrorRef.current = null;
     setImageUpload(null);
@@ -456,15 +461,20 @@ export function CaptureHost() {
 
   async function onPickVideo(file: File | undefined) {
     if (!file || imageDrafts.length > 0 || videoDraft || imageUploadInFlightRef.current) return;
+    const generation = ++videoPreparationGenerationRef.current;
     setVideoPreparing(true);
     try {
       const poster = await prepareLocalVideo(file);
+      if (generation !== videoPreparationGenerationRef.current) return;
       setVideoDraft({ file, poster });
       dispatch({ type: "input", text: "" });
     } catch (error) {
+      if (generation !== videoPreparationGenerationRef.current) return;
       dispatch({ type: "failed", message: error instanceof VideoValidationError ? error.message : "Couldn't add video." });
     } finally {
-      setVideoPreparing(false);
+      if (generation === videoPreparationGenerationRef.current) {
+        setVideoPreparing(false);
+      }
     }
   }
 
