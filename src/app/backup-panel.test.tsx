@@ -41,8 +41,11 @@ test("reads before review, keeps file selected when replacement is canceled, and
   resolve({ name: "review.keepall.json", size: 123, exportedAt: 1000, counts: incoming, replace, merge });
   const review = await screen.findByRole("dialog", { name: "Import backup" });
   expect(review).toHaveTextContent("review.keepall.json");
-  expect(review).toHaveTextContent("Incoming: 1 items (1 active, 0 in Trash)");
-  expect(review).toHaveTextContent("Current library: 2 items (1 active, 1 in Trash)");
+  const totals = within(review).getByRole("group", { name: "Library totals" });
+  expect(totals).toHaveTextContent("Current library2items total1 active · 1 in Trash");
+  expect(totals).toHaveTextContent("Incoming backup1item total1 active · 0 in Trash");
+  const contents = within(review).getByRole("table", { name: "Backup contents comparison" });
+  expect(within(contents).getByRole("rowheader", { name: "Notes" }).closest("tr")).toHaveTextContent("Notes21");
   fireEvent.click(within(review).getByRole("button", { name: "Replace library" }));
   const confirm = await screen.findByRole("dialog", { name: "Replace library?" });
   expect(confirm).toHaveTextContent("2 items (1 active, 1 in Trash)");

@@ -24,7 +24,7 @@ import {
   storageQuotaWarningForImport,
   sumImportableFolderBytes,
 } from "./storage-quota-warning";
-import { BackupIcon, CloseIcon } from "./shell-icons";
+import { BackupIcon, CloseIcon, CollectionIcon, HashIcon, ImageIcon, ImagesIcon, LinkIcon, NoteIcon, VideoIcon } from "./shell-icons";
 
 type ImportMode = "merge" | "replace";
 type Operation = "export" | "read-backup" | "restore" | "read-bookmarks" | "import-bookmarks" | "read-images" | "import-images";
@@ -36,6 +36,24 @@ const operationLabels: Record<Operation, string> = {
 function countText(counts: BackupCounts) {
   return `${counts.total} items (${counts.active} active, ${counts.trash} in Trash)`;
 }
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} bytes`;
+  const unit = bytes < 1024 * 1024 ? "KB" : "MB";
+  const value = bytes / (unit === "KB" ? 1024 : 1024 * 1024);
+  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: value < 10 ? 1 : 0 }).format(value)} ${unit}`;
+}
+
+const comparisonRows = [
+  { label: "Links", key: "links", Icon: LinkIcon },
+  { label: "Notes", key: "notes", Icon: NoteIcon },
+  { label: "Images", key: "images", Icon: ImageIcon },
+  { label: "Videos", key: "videos", Icon: VideoIcon },
+  { label: "Tags", key: "tags", Icon: HashIcon },
+  { label: "Collections", key: "collections", Icon: CollectionIcon },
+  { label: "Image files", key: "imageAssets", Icon: ImagesIcon },
+  { label: "Video files", key: "videoAssets", Icon: VideoIcon },
+] as const;
 
 type Props = {
   variant?: "page" | "sidebar";
@@ -483,16 +501,39 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             onClick={() => void runImport("merge")}>Merge</button>
         </>}
       >
-        {prepared ? <div className="space-y-3 text-sm text-text-primary" aria-busy={busy}>
-          <p className="[overflow-wrap:anywhere] font-medium">{prepared.backup.name}</p>
-          <p className="text-text-secondary">{new Intl.NumberFormat().format(prepared.backup.size)} bytes · Exported {new Date(prepared.backup.exportedAt).toLocaleString()}</p>
-          <div className="ui-control space-y-1 p-3">
-            <p className="font-medium">Incoming: {countText(prepared.backup.counts)}</p>
-            <p>Links {prepared.backup.counts.links} · Notes {prepared.backup.counts.notes} · Images {prepared.backup.counts.images} · Videos {prepared.backup.counts.videos}</p>
-            <p>Tags {prepared.backup.counts.tags} · Collections {prepared.backup.counts.collections} · Image files {prepared.backup.counts.imageAssets} · Video files {prepared.backup.counts.videoAssets}</p>
+        {prepared ? <div className="space-y-4 text-sm text-text-primary" aria-busy={busy}>
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">Selected backup</p>
+            <p className="mt-1 [overflow-wrap:anywhere] text-base font-semibold">{prepared.backup.name}</p>
+            <p className="mt-1 text-xs text-text-secondary">{formatFileSize(prepared.backup.size)} · Exported {new Date(prepared.backup.exportedAt).toLocaleString()}</p>
           </div>
-          <p>Current library: {countText(prepared.current)}</p>
-          <p className="text-text-secondary">Merge adds missing items. Matching items may take newer saved details; tags combine. Collections follow the newer item.</p>
+          <div className="grid grid-cols-2 divide-x divide-border-control border-y border-border-control" role="group" aria-label="Library totals">
+            {([{ label: "Current library", counts: prepared.current }, { label: "Incoming backup", counts: prepared.backup.counts }] as const).map(({ label, counts }) => (
+              <div key={label} className="min-w-0 px-3 py-3 first:pl-0 last:pr-0">
+                <p className="text-xs font-medium text-text-secondary">{label}</p>
+                <p className="mt-1 text-3xl font-semibold leading-none tabular-nums">{counts.total}<span className="ml-1 text-xs font-normal text-text-secondary">{counts.total === 1 ? "item" : "items"} total</span></p>
+                <p className="mt-2 text-xs tabular-nums text-text-secondary">{counts.active} active · {counts.trash} in Trash</p>
+              </div>
+            ))}
+          </div>
+          <table className="w-full table-fixed text-sm tabular-nums" aria-label="Backup contents comparison">
+            <colgroup><col className="w-[48%]" /><col className="w-[26%]" /><col className="w-[26%]" /></colgroup>
+            <thead><tr className="text-xs text-text-secondary">
+              <th scope="col" className="pb-2 text-left font-medium">Contents</th>
+              <th scope="col" className="pb-2 text-right font-medium">Current</th>
+              <th scope="col" className="pb-2 text-right font-medium">Incoming</th>
+            </tr></thead>
+            <tbody>
+              {comparisonRows.map(({ label, key, Icon }, index) => (
+                <tr key={key} className={index === 4 ? "border-t border-border-control" : undefined}>
+                  <th scope="row" className="py-1.5 text-left font-normal"><span className="flex items-center gap-2"><Icon className="size-4 text-text-secondary" />{label}</span></th>
+                  <td className="py-1.5 text-right">{prepared.current[key]}</td>
+                  <td className="py-1.5 text-right font-medium">{prepared.backup.counts[key]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs leading-relaxed text-text-secondary">Merge adds missing items. Matching items may take newer saved details; tags combine. Collections follow the newer item.</p>
           <p role="status" aria-live="polite">{operation === "restore" ? "Restoring library…" : ""}</p>
           {error ? <p role="alert" className="text-text-danger">{error}</p> : null}
         </div> : null}

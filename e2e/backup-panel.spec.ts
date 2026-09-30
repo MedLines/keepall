@@ -119,8 +119,11 @@ test("validated review merges newer details and replacement requires confirmatio
   const select = () => input.setInputFiles({ name: "review.keepall.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(incoming)) });
   await select();
   const review = page.getByRole("dialog", { name: "Import backup" });
-  await expect(review).toContainText("Current library: 3 items (2 active, 1 in Trash)");
-  await expect(review).toContainText("Incoming: 2 items (2 active, 0 in Trash)");
+  const totals = review.getByRole("group", { name: "Library totals" });
+  await expect(totals).toContainText("Current library3items total2 active · 1 in Trash");
+  await expect(totals).toContainText("Incoming backup2items total2 active · 0 in Trash");
+  const contents = review.getByRole("table", { name: "Backup contents comparison" });
+  await expect(contents.getByRole("rowheader", { name: "Notes" }).locator("..")).toContainText("Notes32");
   await review.getByRole("button", { name: "Merge" }).click();
   await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Merged:");
   expect((await readItems()).find((item) => item.id === "same")?.content).toBe("Newer detail");
