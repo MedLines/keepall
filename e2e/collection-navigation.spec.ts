@@ -47,7 +47,7 @@ test("collection heading uses free space before truncating", async ({ page }) =>
   await expect(heading.locator("..")).toHaveCSS("max-width", "none");
   expect(await heading.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await page.setViewportSize({ width: 768, height: 825 });
-  await expect(page.getByRole("button", { name: "Sort library" })).toBeInViewport();
+  await expect(page.getByRole("combobox", { name: /^Sort library:/ })).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

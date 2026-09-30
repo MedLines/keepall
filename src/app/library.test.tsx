@@ -39,12 +39,14 @@ vi.mock("./library-masonry", () => ({
 }));
 
 function pickTopMenu(menuLabel: string, optionLabel: string) {
-  fireEvent.click(screen.getByRole("button", { name: menuLabel }));
   fireEvent.click(
-    screen.getByRole("option", {
-      name: new RegExp(`^${optionLabel}`),
-    }),
+    screen.getByRole("combobox", { name: new RegExp(`^${menuLabel}:`) }),
   );
+  const option = screen.getByRole("option", {
+    name: new RegExp(`^${optionLabel}`),
+  });
+  fireEvent.pointerDown(option, { pointerType: "mouse", button: 0 });
+  fireEvent.click(option, { detail: 1 });
 }
 
 vi.mock("@/persistence/items", () => ({

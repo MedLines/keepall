@@ -8,11 +8,12 @@ test("toolbar dropdowns separate hovered and selected options", async ({ page },
   for (const theme of ["light", "dark"]) {
     if (await page.locator("html").getAttribute("data-theme") !== theme) await page.getByRole("button", { name: "Theme", exact: true }).click();
     for (const name of ["Sort library", "Filter by type"]) {
-      await page.getByRole("button", { name, exact: true }).click();
+      const trigger = page.getByRole("combobox", { name: new RegExp(`^${name}:`) });
+      await trigger.click();
       const menu = page.getByRole("listbox", { name });
       const options = menu.getByRole("option");
       await options.nth(1).click();
-      await page.getByRole("button", { name, exact: true }).click();
+      await trigger.click();
       await options.first().hover();
       await expect(options.nth(1)).toHaveAttribute("aria-selected", "true");
       const first = (await options.first().boundingBox())!;
@@ -70,7 +71,9 @@ test("shared controls use flat surfaces in both themes", async ({ page }) => {
     if ((await toggle.getAttribute("aria-pressed")) !== String(theme === "dark")) await toggle.click();
     await expect(page.locator(".library-panel")).toHaveCSS("background-color", theme === "light" ? "rgb(245, 245, 243)" : "rgb(14, 14, 15)");
     for (const name of ["Theme", "Save item", "Collapse", "Filter by type", "Sort library"]) {
-      const button = page.getByRole("button", { name, exact: true });
+      const button = name === "Filter by type" || name === "Sort library"
+        ? page.getByRole("combobox", { name: new RegExp(`^${name}:`) })
+        : page.getByRole("button", { name, exact: true });
       await expect(button).toHaveCSS("box-shadow", "none");
       await expect(button).toHaveCSS("border-radius", "999px");
       if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
@@ -142,11 +145,11 @@ for (const width of [320, 768, 1024, 1440]) {
     if ((await theme.getAttribute("aria-pressed")) === "false") await theme.click();
     await theme.focus();
     await expect(theme).toBeFocused();
-    const typeFilter = page.getByRole("button", { name: "Filter by type" });
+    const typeFilter = page.getByRole("combobox", { name: /^Filter by type:/ });
     await typeFilter.click();
     await page.getByRole("option", { name: /Images/ }).click();
     await expect(typeFilter).toHaveAttribute("title", "Filter by type: Images");
-    await page.getByRole("button", { name: "Sort library" }).click();
+    await page.getByRole("combobox", { name: /^Sort library:/ }).click();
     await expect(page.getByRole("option", { name: "Oldest" })).toBeVisible();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "List view" }).click();
@@ -189,10 +192,10 @@ test("desktop shell keeps search and view controls inside the inset panel", asyn
   expect(await page.getByRole("searchbox", { name: "Search", exact: true }).boundingBox()).toMatchObject({ x: 332, y: shellTop + 36, width: 250, height: 40 });
   expect(await page.getByRole("button", { name: "Collapse", exact: true }).boundingBox()).toMatchObject({ x: 280, y: shellTop + 36, width: 40, height: 40 });
   expect(await page.getByRole("group", { name: "Library layout" }).boundingBox()).toMatchObject({ x: 1318, y: shellTop + 102, width: 88, height: 44 });
-  expect(await page.getByRole("button", { name: "Sort library" }).boundingBox()).toMatchObject({ x: 1266, y: shellTop + 102, width: 44, height: 44 });
+  expect(await page.getByRole("combobox", { name: /^Sort library:/ }).boundingBox()).toMatchObject({ x: 1266, y: shellTop + 102, width: 44, height: 44 });
   await page.getByRole("button", { name: "Collapse", exact: true }).click();
   await expect.poll(async () => (await panel.boundingBox())?.x).toBe(56);
-  await expect(page.getByRole("button", { name: "Filter by type" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /^Filter by type:/ })).toBeVisible();
   await page.getByRole("button", { name: "Expand", exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect.poll(async () => (await panel.boundingBox())?.x).toBe(256);

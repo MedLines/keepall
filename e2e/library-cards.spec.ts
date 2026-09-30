@@ -532,9 +532,9 @@ test("item types live in the toolbar while library destinations stay in the side
     await expect(sidebar.getByRole("button", { name: label, exact: true })).toHaveCount(0);
   }
 
-  const typeMenu = page.getByRole("button", { name: "Filter by type" });
+  const typeMenu = page.getByRole("combobox", { name: /^Filter by type:/ });
   const layoutControls = page.getByRole("group", { name: "Library layout" });
-  const sortMenu = page.getByRole("button", { name: "Sort library" });
+  const sortMenu = page.getByRole("combobox", { name: /^Sort library:/ });
   const scopeBounds = (await typeMenu.boundingBox())!;
   const layoutBounds = (await layoutControls.boundingBox())!;
   const sortBounds = (await sortMenu.boundingBox())!;
@@ -1082,9 +1082,9 @@ test("selecting a card gives actions their own row and draws the state inside th
   if (await closeNavigation.isVisible()) await closeNavigation.click();
   await expect(bulkActions).toBeVisible();
   await expect(bulkActions.getByRole("button", { name: "Deselect all" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Filter by type" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /^Filter by type:/ })).toBeVisible();
   await expect(layoutControls).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sort library" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /^Sort library:/ })).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -1161,7 +1161,7 @@ test("masonry stays stable while a note modal is open and resizing", async ({ pa
 test("masonry preserves ordering through search, sorting and view switching", async ({ page }) => {
   const headings = page.locator(".library-card").getByRole("heading");
   await expect(headings).toHaveText(["Customer support", "Design notes", "Footer reference", "example.com/fallback"]);
-  await page.getByRole("button", { name: "Sort library" }).click();
+  await page.getByRole("combobox", { name: /^Sort library:/ }).click();
   await page.getByRole("option", { name: "Oldest", exact: true }).click();
   await expect(headings).toHaveText(["example.com/fallback", "Footer reference", "Design notes", "Customer support"]);
   await expectCardsNotToOverlap(page);
