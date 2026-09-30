@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Dialog } from "@base-ui/react/dialog";
 import { Menu } from "@base-ui/react/menu";
 import { RowActionMenu } from "./row-action-menu";
 import {
@@ -8,8 +9,8 @@ import {
   type ReactNode,
   type ReactElement,
   useCallback,
-    useEffect,
-    useLayoutEffect,
+  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -36,7 +37,6 @@ import {
   readShellCollectionsOpen,
   readShellTagsOpen,
   SHELL_ASIDE,
-  SHELL_BACKDROP,
   SHELL_NAV_GUTTER,
   SHELL_NAV_ITEM,
   SHELL_NAV_ITEM_ACTIVE,
@@ -138,6 +138,19 @@ export function LibraryShell({
   const [tagsOpen, setTagsOpen] = useState(true);
   const isMobile = useShellMobile();
   const mobileSidebarOpen = isMobile && expanded;
+  const mobileOpener = useRef<HTMLElement | null>(null);
+  const mobileOpenerAnchor = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (!mobileSidebarOpen) {
+      return;
+    }
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && focused.matches('button[aria-controls="library-sidebar"]')) {
+      mobileOpener.current = focused;
+      mobileOpenerAnchor.current = null;
+    }
+  }, [mobileSidebarOpen]);
 
   useLayoutEffect(() => {
     // Match the server during hydration, then restore browser-only preferences
@@ -170,19 +183,6 @@ export function LibraryShell({
       onPanelOpenChange(false);
     }
   }, [isMobile, onPanelOpenChange]);
-
-  useEffect(() => {
-    if (!expanded || !isMobile) {
-      return;
-    }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !event.defaultPrevented) {
-        onPanelOpenChange(false);
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [expanded, isMobile, onPanelOpenChange]);
 
   const allItemsActive =
     browseCollectionId === null &&
@@ -225,8 +225,7 @@ export function LibraryShell({
     </>
   );
 
-  const contentExpanded = isMobile ? expanded : true;
-  const sidebarBody = (
+  const sidebarBody = (contentExpanded: boolean, mobileSidebarOpen: boolean) => (
     <>
       <SidebarBrand
         expanded={contentExpanded}
@@ -381,28 +380,50 @@ export function LibraryShell({
 
   return (
     <>
-      {mobileSidebarOpen ? (
-        <>
-        <div className="w-14 shrink-0" aria-hidden="true" />
-        <button
-          type="button"
-          className={SHELL_BACKDROP}
-          aria-label="Close sidebar"
-          onClick={() => onPanelOpenChange(false)}
-        />
-        </>
-      ) : null}
-
       {isMobile ? (
-        <aside
-          id="library-sidebar"
-          aria-label="Sidebar"
-          className={`${SHELL_ASIDE} ${
-            expanded ? SHELL_SIDEBAR_EXPANDED : SHELL_SIDEBAR_COLLAPSED
-          } ${mobileSidebarOpen ? "absolute inset-y-0 left-0 z-50 shadow-menu" : "relative z-30"}`}
-        >
-          {sidebarBody}
-        </aside>
+        <>
+          {mobileSidebarOpen ? <div className="w-14 shrink-0" aria-hidden="true" /> : (
+            <aside
+              id="library-sidebar"
+              aria-label="Sidebar"
+              className={`${SHELL_ASIDE} ${SHELL_SIDEBAR_COLLAPSED} relative z-30`}
+              onClickCapture={(event) => {
+                const opener = (event.target as HTMLElement).closest<HTMLElement>("button[data-sidebar-anchor]");
+                if (opener) {
+                  mobileOpener.current = opener;
+                  mobileOpenerAnchor.current = opener.dataset.sidebarAnchor ?? null;
+                }
+              }}
+            >
+              {sidebarBody(false, false)}
+            </aside>
+          )}
+          <Dialog.Root open={mobileSidebarOpen} onOpenChange={onPanelOpenChange}>
+            <Dialog.Portal>
+              <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-50 transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
+              <Dialog.Viewport className="fixed inset-0 z-50 flex overflow-hidden">
+                <Dialog.Popup
+                  className={`${SHELL_ASIDE} ${SHELL_SIDEBAR_EXPANDED} border-r border-border-control shadow-menu outline-none transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full motion-reduce:transition-none`}
+                  initialFocus={() => document.querySelector<HTMLElement>('#library-sidebar [data-sidebar-anchor="All items"]')}
+                  finalFocus={() => {
+                    if (mobileOpener.current?.isConnected) return mobileOpener.current;
+                    const anchor = mobileOpenerAnchor.current;
+                    if (anchor) {
+                      const returnedRailControl = document.querySelector<HTMLElement>(`#library-sidebar [data-sidebar-anchor="${CSS.escape(anchor)}"]`);
+                      if (returnedRailControl) return returnedRailControl;
+                    }
+                    return document.querySelector<HTMLElement>('button[aria-controls="library-sidebar"]');
+                  }}
+                >
+                  <Dialog.Title className="sr-only">Sidebar navigation</Dialog.Title>
+                  <aside id={mobileSidebarOpen ? "library-sidebar" : undefined} aria-label="Sidebar" className="flex min-h-0 flex-1 flex-col">
+                    {sidebarBody(true, true)}
+                  </aside>
+                </Dialog.Popup>
+              </Dialog.Viewport>
+            </Dialog.Portal>
+          </Dialog.Root>
+        </>
       ) : (
         <aside
           id="library-sidebar"
@@ -416,7 +437,7 @@ export function LibraryShell({
             data-sidebar-panel
             data-state={expanded ? "open" : "closed"}
           >
-            {sidebarBody}
+            {sidebarBody(true, false)}
           </div>
           <SidebarResizeHandle expanded={expanded} onExpandedChange={onPanelOpenChange} />
         </aside>

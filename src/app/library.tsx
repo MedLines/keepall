@@ -841,12 +841,12 @@ export function Library() {
       if (bulkPanel) {
         return;
       }
+      if (panelOpen && isShellMobileViewport()) {
+        return;
+      }
       if (selectedIds.size > 0) {
         clearSelection();
         return;
-      }
-      if (panelOpen && isShellMobileViewport()) {
-        setPanelOpen(false);
       }
     }
     window.addEventListener("keydown", onKeyDown);
