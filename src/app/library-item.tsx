@@ -8,6 +8,7 @@ import {
 } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
+import { itemActionLabel } from "@/domain/item-label";
 import { itemListTitle, type Item } from "@/domain/item";
 import type { LibraryLayout } from "@/domain/library-view";
 import {
@@ -160,6 +161,7 @@ export function LibraryItem({
   );
 
   const title = itemListTitle(item);
+  const actionLabel = itemActionLabel(item);
   const isList = layoutMode === "list";
   const hasGridFooter = item.type !== "image" || Boolean(
     trashActions || searchQuery.trim() || item.title.trim() || item.caption.trim() || item.sourceUrl ||
@@ -273,7 +275,7 @@ export function LibraryItem({
   const cardActions = !inspected && !editing && !pendingDelete ? (
     <button type="button"
       ref={actionsRef}
-      aria-label={`Actions for ${title}`}
+      aria-label={`Actions for ${actionLabel}`}
       data-item-actions={item.id}
       disabled={mutationBusy}
       className={`library-card-actions absolute z-30 flex cursor-pointer items-center justify-center text-text-secondary hover:text-text-primary disabled:cursor-default ${isList ? "end-0 top-5 size-10 rounded-control hover:bg-bg-raised" : "library-card-media-chrome end-4 top-4 size-11"}`}
@@ -289,7 +291,7 @@ export function LibraryItem({
   return (
     <ItemContextMenu
       trashActions={trashActions}
-      title={title}
+      title={actionLabel}
       trigger={cardActions}
       openHref={item.type === "link" ? item.url : openHref}
       tags={tagSuggestions}
@@ -335,7 +337,7 @@ export function LibraryItem({
           }
         }}
         side={organizerSide}
-        itemTitle={title}
+        itemTitle={actionLabel}
         tags={tagNames}
         collections={assignedCollections}
         tagSuggestions={availableTagSuggestions}

@@ -31,6 +31,20 @@ describe("NoteItemPage", () => {
     routerPush.mockReset();
   });
 
+  test("uses a short item label in Trash and organize when a saved title contains an article", async () => {
+    const article = "Component Playground\n\n" + "A long article about components. ".repeat(100);
+    vi.mocked(getItem).mockResolvedValue(buildNote({ title: article, content: article }, { id: "long-note" }));
+    render(<NoteItemPage itemId="long-note" returnHref="/" />);
+    await screen.findByRole("button", { name: "Organize" });
+    fireEvent.click(screen.getByRole("button", { name: "Move note to Trash" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Move “Component Playground” to Trash?");
+    expect(screen.getByRole("dialog")).not.toHaveTextContent("A long article");
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Organize" }));
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Organize Component Playground");
+    expect(screen.getByRole("dialog")).not.toHaveTextContent("A long article");
+  });
+
   test("shows a note's collection and tags and organizes it", async () => {
     const note = {
       ...buildNote({ content: "Card ideas" }, { id: "n3", now: 1 }),

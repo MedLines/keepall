@@ -56,11 +56,11 @@ export function SideDrawer({
             <Drawer.Content className="flex min-h-0 flex-1 flex-col">
               <header className="flex shrink-0 items-start gap-4 px-7 py-6">
                 <div className="min-w-0 flex-1">
-                  <Drawer.Title className="text-[22px] font-semibold tracking-tight">
+                  <Drawer.Title className="[overflow-wrap:anywhere] text-[22px] font-semibold tracking-tight">
                     {title}
                   </Drawer.Title>
                   {description ? (
-                    <Drawer.Description className="mt-1 text-sm leading-relaxed text-text-secondary">
+                    <Drawer.Description className="mt-1 [overflow-wrap:anywhere] text-sm leading-relaxed text-text-secondary">
                       {description}
                     </Drawer.Description>
                   ) : null}

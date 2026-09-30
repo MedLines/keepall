@@ -18,7 +18,6 @@ import {
 } from "@/domain/collection";
 import {
   itemInCollection,
-  itemListTitle,
   resolveItemCollectionNames,
   resolveItemCollections,
   resolveItemTags,
@@ -31,6 +30,7 @@ import {
   type LibraryTypeFilter,
   type LibraryViewState,
 } from "@/domain/library-view";
+import { itemActionLabel } from "@/domain/item-label";
 import { LinkValidationError } from "@/domain/link";
 import { assertLocalImageFile } from "@/domain/image";
 import { NoteValidationError } from "@/domain/note";
@@ -1901,7 +1901,7 @@ export function Library() {
         <ConfirmDialog
           open={deleteItemTarget !== null}
           title="Move this item to Trash?"
-          description={deleteItemTarget ? `Move “${itemListTitle(deleteItemTarget)}” to Trash? You can restore it later.` : ""}
+          description={deleteItemTarget ? `Move “${itemActionLabel(deleteItemTarget)}” to Trash? You can restore it later.` : ""}
           confirmLabel="Move to Trash"
           pendingLabel="Moving…"
           busy={pendingMutation?.op === "delete"}

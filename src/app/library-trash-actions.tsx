@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, type RefObject } from "react";
-import { itemListTitle, type Item } from "@/domain/item";
+import { itemActionLabel } from "@/domain/item-label";
+import type { Item } from "@/domain/item";
 import { emptyTrash, permanentlyDeleteItem, restoreItem } from "@/persistence/items";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
@@ -46,7 +47,7 @@ export function useLibraryTrashActions(heading: RefObject<HTMLHeadingElement | n
     confirming: confirmation !== null,
     error: confirmation ? null : error,
     notice,
-    restore: (item: Item) => void run(() => restoreItem(item.id), `${itemListTitle(item)} restored to your library.`, [item.id]),
+    restore: (item: Item) => void run(() => restoreItem(item.id), `${itemActionLabel(item)} restored to your library.`, [item.id]),
     requestDelete: (item: Item) => request({ kind: "item", item }),
     requestEmpty: (items: Item[]) => request({ kind: "all", ids: items.map((item) => item.id) }),
     requestDeleteSelected: (ids: string[]) => { if (ids.length) request({ kind: "selected", ids: [...new Set(ids)] }); },
@@ -56,7 +57,7 @@ export function useLibraryTrashActions(heading: RefObject<HTMLHeadingElement | n
       description={confirmation?.kind === "all"
         ? `Permanently delete all ${confirmation.ids.length} items in Trash, including items hidden by search or filters? This cannot be undone.`
         : confirmation?.kind === "selected" ? `Permanently delete ${confirmation.ids.length} selected item${confirmation.ids.length === 1 ? "" : "s"}? Other items in Trash will remain. This cannot be undone.`
-        : confirmation?.kind === "item" ? `Delete “${itemListTitle(confirmation.item)}” and its unshared media? This cannot be undone.` : ""}
+        : confirmation?.kind === "item" ? `Delete “${itemActionLabel(confirmation.item)}” and its unshared media? This cannot be undone.` : ""}
       confirmLabel={all ? "Empty Trash" : "Delete permanently"}
       pendingLabel="Deleting…" busy={busy} error={error}
       onConfirm={() => {

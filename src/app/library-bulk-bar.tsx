@@ -1,6 +1,7 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CloseIcon } from "./shell-icons";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
@@ -182,6 +183,20 @@ export function LibraryBulkPanels({
   onBulkRemoveAllTags,
   onBulkAddCollection,
 }: PanelsProps) {
+  if (panel === "delete") {
+    return <ConfirmDialog
+      open
+      title={bulkPanelTitle(panel, count)}
+      description={`Move ${count} item${count === 1 ? "" : "s"} to Trash? You can restore ${count === 1 ? "it" : "them"} later.`}
+      confirmLabel="Move to Trash"
+      pendingLabel={pendingDelete ? "Moving…" : "Working…"}
+      busy={busy}
+      error={error}
+      onConfirm={onConfirmDelete}
+      onOpenChange={(open) => { if (!open) onClosePanel(); }}
+    />;
+  }
+
   if (panel === null && !error) {
     return null;
   }
@@ -219,32 +234,6 @@ export function LibraryBulkPanels({
               </Dialog.Close>
             </header>
             <div className="scroll-fade min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        {panel === "delete" ? (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm text-text-primary">
-              Move {count} item{count === 1 ? "" : "s"} to Trash? You can restore them later.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                className="min-h-10 rounded-control border border-border-danger bg-bg-surface px-3 text-sm font-medium text-text-danger disabled:opacity-60"
-                disabled={busy}
-                type="button"
-                onClick={onConfirmDelete}
-              >
-                {pendingDelete ? "Moving…" : "Move to Trash"}
-              </button>
-              <button
-                className="min-h-10 rounded-control border border-border-edge bg-bg-surface px-3 text-sm font-medium text-text-primary disabled:opacity-60"
-                disabled={busy}
-                type="button"
-                onClick={onClosePanel}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : null}
-
         {panel === "tags" ? (
           <div className="flex flex-col gap-6">
             <OrgNameSuggest

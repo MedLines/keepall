@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { itemActionLabel } from "@/domain/item-label";
 import { assertLocalImageBytes, assertLocalImageFile, ImageValidationError } from "@/domain/image";
 import { CollectionValidationError, type Collection } from "@/domain/collection";
 import { resolveItemCollections, resolveItemTags } from "@/domain/item";
@@ -479,7 +480,7 @@ export function NoteItemPage({
         open={organizerOpen}
         onOpenChange={setOrganizerOpen}
         side={organizerSide}
-        itemTitle={title}
+        itemTitle={itemActionLabel(note)}
         tags={itemTags}
         collections={itemCollections}
         tagSuggestions={state.tags.filter((tag) => !note.tagIds.includes(tag.id))}
@@ -499,7 +500,7 @@ export function NoteItemPage({
       <ConfirmDialog
         open={deleteOpen}
         title="Move this note to Trash?"
-        description={`Move “${title}” to Trash? You can restore it later.`}
+        description={`Move “${itemActionLabel(note)}” to Trash? You can restore it later.`}
         confirmLabel="Move to Trash"
         pendingLabel="Moving…"
         busy={deleting}

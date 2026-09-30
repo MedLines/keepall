@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { itemActionLabel } from "@/domain/item-label";
 import type { VideoItem } from "@/domain/video";
 import type { Tag } from "@/domain/tag";
 import type { Collection } from "@/domain/collection";
@@ -123,7 +124,7 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
     </div>
     </main>
     {editing ? <VideoItemEditDialog item={item} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}
-    <ItemOrganizerDrawer open={organizerOpen} onOpenChange={setOrganizerOpen} side="right" itemTitle={item.title}
+    <ItemOrganizerDrawer open={organizerOpen} onOpenChange={setOrganizerOpen} side="right" itemTitle={itemActionLabel(item)}
       tags={tags} collections={collections} tagSuggestions={state.tags.map((tag) => ({ id: tag.id, name: tag.name }))}
       collectionSuggestions={state.collections.map((collection) => ({ id: collection.id, name: collection.name }))}
       disabled={busy} pendingTag={busy} pendingCollection={busy} tagError={error} collectionError={error}
@@ -142,7 +143,7 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
         if (next.type === "video") applyUpdate(next, { collection });
       })}
     />
-    <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Move video to Trash?" description={`Move “${item.title}” to Trash? You can restore it later.`}
+    <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Move video to Trash?" description={`Move “${itemActionLabel(item)}” to Trash? You can restore it later.`}
       confirmLabel="Move to Trash" pendingLabel="Moving…" busy={busy} error={error} onConfirm={() => {
         setBusy(true); setError(null);
         void deleteItem(itemId).then(() => { window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT)); router.push(returnHref); })

@@ -4,9 +4,9 @@ import { Dialog } from "@base-ui/react/dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { itemActionLabel } from "@/domain/item-label";
 import { clampImageSlideIndex, assertLocalImageFile, ImageValidationError, type ImageItem } from "@/domain/image";
 import {
-  itemListTitle,
   resolveItemCollections,
   resolveItemTags,
 } from "@/domain/item";
@@ -431,7 +431,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
         open={organizerOpen}
         onOpenChange={setOrganizerOpen}
         side={organizerSide}
-        itemTitle={itemListTitle(loadState.item)}
+        itemTitle={itemActionLabel(loadState.item)}
         tags={resolveItemTags(
           loadState.item,
           new Map(loadState.tags.map((tag) => [tag.id, tag])),
@@ -462,7 +462,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
       <ConfirmDialog
         open={removeImageOpen}
         title="Remove this image?"
-        description={`Remove image ${clampImageSlideIndex(loadState.item.assetIds, slide) + 1} from “${itemListTitle(loadState.item)}”? The other images will remain.`}
+        description={`Remove image ${clampImageSlideIndex(loadState.item.assetIds, slide) + 1} from “${itemActionLabel(loadState.item)}”? The other images will remain.`}
         confirmLabel="Remove image"
         pendingLabel="Removing…"
         busy={galleryMutation === "remove"}
@@ -477,7 +477,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
       <ConfirmDialog
         open={deleteOpen}
         title="Move this item to Trash?"
-        description={`Move “${itemListTitle(loadState.item)}” to Trash? You can restore it later.`}
+        description={`Move “${itemActionLabel(loadState.item)}” to Trash? You can restore it later.`}
         confirmLabel="Move to Trash"
         pendingLabel="Moving…"
         busy={actionMutation === "delete"}

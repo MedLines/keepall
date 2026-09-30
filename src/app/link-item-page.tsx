@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useEffect, useState } from "react";
+import { itemActionLabel } from "@/domain/item-label";
 import { linkCardHost } from "@/domain/card-display";
 import { CollectionValidationError, type Collection } from "@/domain/collection";
 import { resolveItemCollections, resolveItemTags } from "@/domain/item";
@@ -228,7 +229,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
       </main>
 
       {editing ? <LinkItemEditDialog item={link} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}
-      <ConfirmDialog open={deleteOpen} title="Move this link to Trash?" description={`Move “${title}” to Trash? You can restore it later.`} confirmLabel="Move to Trash" pendingLabel="Moving…" busy={itemMutation === "delete"} error={deleteError} onConfirm={() => void confirmDelete()} onOpenChange={(open) => {
+      <ConfirmDialog open={deleteOpen} title="Move this link to Trash?" description={`Move “${itemActionLabel(link)}” to Trash? You can restore it later.`} confirmLabel="Move to Trash" pendingLabel="Moving…" busy={itemMutation === "delete"} error={deleteError} onConfirm={() => void confirmDelete()} onOpenChange={(open) => {
         setDeleteOpen(open);
         if (!open) setDeleteError(null);
       }} />
@@ -236,7 +237,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
         open={organizerOpen}
         onOpenChange={setOrganizerOpen}
         side={organizerSide}
-        itemTitle={title}
+        itemTitle={itemActionLabel(link)}
         tags={itemTags}
         collections={itemCollections}
         tagSuggestions={state.tags.filter((tag) => !link.tagIds.includes(tag.id))}
