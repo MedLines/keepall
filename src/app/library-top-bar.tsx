@@ -57,6 +57,36 @@ type Props = {
   libraryLoading?: boolean;
 };
 
+function LibraryBulkActions({ bulk }: { bulk: LibraryBulkBarProps | undefined }) {
+  if (!bulk) return null;
+  if (bulk.count > 0) {
+    return (
+      <LibraryBulkToolbar
+        allVisibleSelected={bulk.allVisibleSelected}
+        busy={bulk.busy}
+        count={bulk.count}
+        onClearSelection={bulk.onClearSelection}
+        onOpenPanel={bulk.onOpenPanel}
+        onSelectAllVisible={bulk.onSelectAllVisible}
+        onDeletePermanently={bulk.onDeletePermanently}
+      />
+    );
+  }
+  if (bulk.visibleCount > 0) {
+    return (
+      <button
+        className="ui-control inline-flex h-10 shrink-0 items-center justify-center px-3 text-xs font-medium text-text-primary"
+        disabled={bulk.busy}
+        type="button"
+        onClick={bulk.onSelectAllVisible}
+      >
+        Select all
+      </button>
+    );
+  }
+  return null;
+}
+
 export function LibraryTopBar({
   headingRef, title, itemCount, searchQuery, onSearchChange,
   sort, onSortChange, layout, onLayoutChange, panelOpen, onPanelOpenChange,
@@ -75,7 +105,7 @@ export function LibraryTopBar({
   return (
     <header className="library-top-bar relative z-40 flex shrink-0 flex-col gap-3 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3 sm:flex-nowrap">
-        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
           <button
             type="button"
             className="ui-control flex size-10 shrink-0 items-center justify-center text-text-primary"
@@ -87,7 +117,7 @@ export function LibraryTopBar({
           >
             <ShellPanelIcon open={panelOpen} />
           </button>
-          <label className="relative block min-w-0 flex-1 sm:max-w-[250px]" htmlFor="library-search">
+          <label className="relative block min-w-[140px] flex-1 sm:max-w-[250px]" htmlFor="library-search">
             <span className="sr-only">Search</span>
             <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-secondary" />
             <input
@@ -99,17 +129,43 @@ export function LibraryTopBar({
               onChange={(event) => onSearchChange(event.target.value)}
             />
           </label>
-          {bulk ? (
-            <LibraryBulkToolbar
-              allVisibleSelected={bulk.allVisibleSelected}
-              busy={bulk.busy}
-              count={bulk.count}
-              onClearSelection={bulk.onClearSelection}
-              onOpenPanel={bulk.onOpenPanel}
-              onSelectAllVisible={bulk.onSelectAllVisible}
-              onDeletePermanently={bulk.onDeletePermanently}
+          <div className="flex shrink-0 items-center gap-2">
+            <LibraryTypeFilterMenu
+              value={typeFilter}
+              counts={typeCounts}
+              loading={libraryLoading}
+              onChange={onTypeFilterChange}
             />
-          ) : null}
+            <ShellTopMenu
+              ariaLabel="Sort library"
+              iconOnly
+              value={sort}
+              options={[
+                { value: "newest", label: "Newest", icon: <SortDescIcon /> },
+                { value: "oldest", label: "Oldest", icon: <SortAscIcon /> },
+              ]}
+              onChange={onSortChange}
+            />
+            <div className="library-layout-switch icon-segmented-switch squircle-panel relative isolate flex h-11 rounded-control-lg bg-bg-raised p-0.5" role="group" aria-label="Library layout" data-layout={layout} data-selected={layout === "list" ? "end" : "start"}>
+              <span aria-hidden="true" className="library-layout-thumb icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[42px] rounded-control-sm" />
+              {([
+                { value: "grid", label: "Grid view", icon: <GridIcon /> },
+                { value: "list", label: "List view", icon: <ListIcon /> },
+              ] as const).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-label={option.label}
+                  title={option.label}
+                  aria-pressed={layout === option.value}
+                  className={`squircle-panel relative flex size-10 w-[42px] items-center justify-center rounded-control-sm ${layout === option.value ? "text-text-primary" : "text-text-secondary hover:text-text-primary"}`}
+                  onClick={() => onLayoutChange(option.value)}
+                >
+                  {option.icon}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="flex w-full shrink-0 items-center justify-end gap-3 sm:w-auto">
           <ThemeControl compact />
@@ -124,56 +180,19 @@ export function LibraryTopBar({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 content-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        <div className="row-start-1 flex min-w-0 items-center gap-3 sm:col-start-1 sm:row-start-1">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:flex-1">
+          <div className="flex min-w-0 items-center gap-3">
           <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-[34px] text-text-primary sm:text-[28px]">
             {title}
           </h1>
           <span className="squircle-panel flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} items`}>
             {libraryLoading ? "…" : itemCount}
           </span>
-        </div>
-        <div className="row-start-2 flex shrink-0 items-center justify-end gap-2 sm:col-start-2 sm:row-start-1">
-          <LibraryTypeFilterMenu
-            value={typeFilter}
-            counts={typeCounts}
-            loading={libraryLoading}
-            onChange={onTypeFilterChange}
-          />
-          <ShellTopMenu
-            ariaLabel="Sort library"
-            iconOnly
-            value={sort}
-            options={[
-              { value: "newest", label: "Newest", icon: <SortDescIcon /> },
-              { value: "oldest", label: "Oldest", icon: <SortAscIcon /> },
-            ]}
-            onChange={onSortChange}
-          />
-          <div className="library-layout-switch icon-segmented-switch squircle-panel relative isolate flex h-11 rounded-control-lg bg-bg-raised p-0.5" role="group" aria-label="Library layout" data-layout={layout} data-selected={layout === "list" ? "end" : "start"}>
-            <span aria-hidden="true" className="library-layout-thumb icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[42px] rounded-control-sm" />
-            {([
-              { value: "grid", label: "Grid view", icon: <GridIcon /> },
-              { value: "list", label: "List view", icon: <ListIcon /> },
-            ] as const).map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-label={option.label}
-                title={option.label}
-                aria-pressed={layout === option.value}
-                className={`squircle-panel relative flex size-10 w-[42px] items-center justify-center rounded-control-sm ${layout === option.value ? "text-text-primary" : "text-text-secondary hover:text-text-primary"}`}
-                onClick={() => onLayoutChange(option.value)}
-              >
-                {option.icon}
-              </button>
-            ))}
           </div>
-        </div>
-      </div>
 
-      {hasFilters ? (
-        <div className="flex min-w-0 flex-wrap items-center gap-2" role="group" aria-label="Active filters">
+          {hasFilters ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-2" role="group" aria-label="Active filters">
           <span className="shrink-0 text-xs text-text-secondary">Filtered by</span>
           {hasSearchFilter ? (
             <button type="button" className="ui-control inline-flex h-8 min-w-0 max-w-full items-center gap-1.5 px-2.5 text-xs text-text-secondary sm:max-w-[320px]" aria-label={`Remove search filter: ${searchQuery}`} title={`Remove search filter: ${searchQuery}`} onClick={() => clearWithSearchFocus(onClearSearchFilter)}>
@@ -191,8 +210,14 @@ export function LibraryTopBar({
             </button>
           ) : null}
           <button type="button" className="rounded-control px-2.5 py-1.5 text-xs font-medium text-text-primary underline-offset-4 hover:underline" onClick={() => clearWithSearchFocus(onClearFilters)}>Clear filters</button>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+
+        <div className="flex justify-end sm:shrink-0">
+          <LibraryBulkActions bulk={bulk} />
+        </div>
+      </div>
 
       {bulk && (bulk.panel !== null || bulk.error) ? <LibraryBulkPanels {...bulk} /> : null}
     </header>

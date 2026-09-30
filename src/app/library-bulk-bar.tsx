@@ -139,6 +139,14 @@ export function LibraryBulkToolbar({
         </Menu.Portal>
       </Menu.Root>
       <div className="hidden items-center gap-1.5 xl:flex">
+        {!allVisibleSelected ? (
+          <button className={BULK_BTN} disabled={busy} type="button" onClick={onSelectAllVisible}>
+            Select all
+          </button>
+        ) : null}
+        <button className={BULK_BTN} disabled={busy} type="button" onClick={onClearSelection}>
+          Deselect all
+        </button>
         {!onDeletePermanently ? (
           <button className={BULK_BTN} disabled={busy} type="button" onClick={() => onOpenPanel("organize")}>
             Organize

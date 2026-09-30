@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("selection actions stay beside Search without shifting library content", async ({ page }, testInfo) => {
+test("browse controls follow Search while filters and selection actions share the lower row", async ({ page }, testInfo) => {
   await page.goto("/");
   await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
   await page.evaluate(async () => {
@@ -37,17 +37,47 @@ test("selection actions stay beside Search without shifting library content", as
   await expect(page.locator(".library-card")).toHaveCount(2);
   const activeFilters = page.getByRole("group", { name: "Active filters" });
   await expect(activeFilters.getByRole("button", { name: /Remove search filter: needle/ })).toBeVisible();
+  const quickSelectAll = page.getByRole("button", { name: "Select all", exact: true });
+  await expect(quickSelectAll).toBeVisible();
+  await expect(page.getByRole("region", { name: "Bulk actions" })).toHaveCount(0);
+  await quickSelectAll.click();
+  await expect(page.getByRole("button", { name: "Selection actions: 2 selected" })).toBeVisible();
+  await page.getByRole("button", { name: "Selection actions: 2 selected" }).click();
+  await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Bulk actions" })).toHaveCount(0);
+  await expect(search).toBeFocused();
 
   const header = page.locator("header").filter({ has: page.locator("#library-heading") });
   const firstCard = page.locator(".library-card").first();
   const heading = page.getByRole("heading", { name: "All items" });
   const menuTrigger = page.getByRole("button", { name: "Selection actions: 1 selected" });
+  const typeFilter = page.getByRole("combobox", { name: /^Filter by type:/ });
+  const sortMenu = page.getByRole("combobox", { name: /^Sort library:/ });
+  const layoutControls = page.getByRole("group", { name: "Library layout" });
 
   for (const width of [320, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await expect(heading).toBeVisible();
     await expect(search).toBeVisible();
+    await expect(typeFilter).toBeVisible();
+    await expect(sortMenu).toBeVisible();
+    await expect(layoutControls).toBeVisible();
     await expect(activeFilters.getByRole("button", { name: /Remove search filter: needle/ })).toBeVisible();
+    const searchBox = (await search.boundingBox())!;
+    const typeBox = (await typeFilter.boundingBox())!;
+    const sortBox = (await sortMenu.boundingBox())!;
+    const layoutBox = (await layoutControls.boundingBox())!;
+    const searchCenterY = searchBox.y + searchBox.height / 2;
+    const typeCenterY = typeBox.y + typeBox.height / 2;
+    if (Math.abs(typeCenterY - searchCenterY) <= 2) {
+      expect(typeBox.x).toBeGreaterThanOrEqual(searchBox.x + searchBox.width - 1);
+    } else {
+      expect(typeCenterY).toBeGreaterThan(searchCenterY);
+    }
+    expect(sortBox.y).toBeCloseTo(typeBox.y, 0);
+    expect(sortBox.x).toBeGreaterThan(typeBox.x);
+    expect(layoutBox.y).toBeCloseTo(sortBox.y, 0);
+    expect(layoutBox.x).toBeGreaterThan(sortBox.x);
     const headerBefore = (await header.boundingBox())!;
     const cardBefore = (await firstCard.boundingBox())!;
 
@@ -58,19 +88,23 @@ test("selection actions stay beside Search without shifting library content", as
     await expect(menuTrigger).toBeVisible();
     const headerAfter = (await header.boundingBox())!;
     const cardAfter = (await firstCard.boundingBox())!;
-    const searchBox = (await search.boundingBox())!;
-    const toolbarBox = (await menuTrigger.boundingBox())!;
+    const activeBox = (await activeFilters.boundingBox())!;
+    const bulk = page.getByRole("region", { name: "Bulk actions" });
+    const toolbarBox = (await bulk.boundingBox())!;
     expect(Math.abs(headerAfter.height - headerBefore.height)).toBeLessThanOrEqual(1);
     expect(Math.abs(cardAfter.y - cardBefore.y)).toBeLessThanOrEqual(1);
-    expect(Math.abs(searchBox.y - toolbarBox.y)).toBeLessThanOrEqual(1);
-    expect(searchBox.x + searchBox.width).toBeLessThanOrEqual(toolbarBox.x + 1);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const bulk = page.getByRole("region", { name: "Bulk actions" });
+    if (width >= 1280) {
+      expect(activeBox.x + activeBox.width).toBeLessThanOrEqual(toolbarBox.x + 1);
+      await expect(bulk.getByRole("button", { name: "Select all", exact: true })).toBeVisible();
+      await expect(bulk.getByRole("button", { name: "Deselect all", exact: true })).toBeVisible();
+    }
     const directOrganize = bulk.locator("button").filter({ hasText: "Organize" });
     const directDestructive = bulk.locator("button").filter({ hasText: "Move to Trash" });
     if (width < 1280) {
       await expect(directOrganize).toBeHidden();
       await expect(directDestructive).toBeHidden();
+      await expect(bulk.locator("button").filter({ hasText: "Deselect all" })).toBeHidden();
     } else {
       await expect(directOrganize).toBeVisible();
       await expect(directDestructive).toBeVisible();
