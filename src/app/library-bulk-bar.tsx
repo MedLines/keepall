@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu } from "@base-ui/react/menu";
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { OrganizerDrawer, OrganizerTagChip } from "./organizer-drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
@@ -84,37 +84,24 @@ export function LibraryBulkToolbar({
   const [compact, setCompact] = useState(true);
   const [preferredWidth, setPreferredWidth] = useState<number>();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     const actions = actionsRef.current;
     if (!container || !actions || typeof ResizeObserver === "undefined") return;
-    const row = container.closest<HTMLElement>("[data-library-toolbar-row]");
-    const left = row?.querySelector<HTMLElement>("[data-library-toolbar-left]");
+    const slot = container.parentElement;
     const measure = () => {
       const width = actions.scrollWidth;
-      const rowWidth = row?.clientWidth ?? container.clientWidth;
-      const leftChildren = left ? Array.from(left.children) as HTMLElement[] : [];
-      const leftGap = left ? Number.parseFloat(getComputedStyle(left).columnGap) || 0 : 0;
-      const rowGap = row ? Number.parseFloat(getComputedStyle(row).columnGap) || 0 : 0;
-      const leftWidth = leftChildren.reduce((sum, child) => sum + child.scrollWidth, 0)
-        + Math.max(0, leftChildren.length - 1) * leftGap;
-      const available = row && getComputedStyle(row).flexDirection === "row"
-        ? rowWidth - leftWidth - rowGap
-        : row ? rowWidth : container.clientWidth;
+      const available = slot?.clientWidth ?? container.clientWidth;
       setPreferredWidth(width);
       setCompact(available < width);
     };
     const observer = new ResizeObserver(measure);
     observer.observe(container);
     observer.observe(actions);
-    if (row) observer.observe(row);
-    if (left instanceof HTMLElement) observer.observe(left);
+    if (slot) observer.observe(slot);
     measure();
     return () => observer.disconnect();
   }, [count, hiddenCount, allVisibleSelected, onOpenPanel, onDelete, onDeletePermanently, deleteLabel]);
-  if (count === 0) {
-    return null;
-  }
 
   const destructiveAction = onDelete ?? onDeletePermanently ?? (() => onOpenPanel?.("delete"));
   const destructiveLabel = deleteLabel ?? (onDeletePermanently ? "Delete permanently" : "Move to Trash");
@@ -125,10 +112,10 @@ export function LibraryBulkToolbar({
   }
 
   return (
-    <div ref={containerRef} className="relative flex min-w-0 max-w-full items-center justify-end gap-1.5" style={{ width: compact ? undefined : preferredWidth }} role="region" aria-label="Bulk actions">
+    <div ref={containerRef} className={`relative flex h-10 min-w-0 max-w-full items-center justify-end gap-1.5 ${count === 0 ? "invisible" : ""}`} style={{ width: compact ? undefined : preferredWidth }} inert={count === 0} aria-hidden={count === 0} role="region" aria-label="Bulk actions">
       {compact ? <Menu.Root
         modal={false}
-        disabled={busy}
+        disabled={busy || count === 0}
         onOpenChange={(open, details) => {
           if (open) {
             restoreTriggerFocus.current = true;
@@ -143,7 +130,7 @@ export function LibraryBulkToolbar({
           type="button"
           className="ui-control inline-flex h-10 min-w-0 shrink-0 items-center gap-1.5 rounded-control px-2.5 text-xs font-medium tabular-nums text-text-primary sm:px-3"
           aria-label={`Selection actions: ${count} selected`}
-          disabled={busy}
+          disabled={busy || count === 0}
         >
           <span className="inline-flex items-center gap-1 sm:hidden">
             {count}

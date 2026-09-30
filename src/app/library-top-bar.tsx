@@ -61,23 +61,9 @@ type Props = {
   libraryLoading?: boolean;
 };
 
-function LibraryBulkActions({ bulk, selection, itemCount }: { bulk: LibraryBulkBarProps | undefined; selection?: LibraryBulkToolbarProps; itemCount: number }) {
+function LibraryBulkActions({ bulk, selection }: { bulk: LibraryBulkBarProps | undefined; selection?: LibraryBulkToolbarProps }) {
   const toolbar = selection ?? bulk;
-  if (!toolbar) return null;
-  if (toolbar.count > 0) return <LibraryBulkToolbar {...toolbar} />;
-  if (itemCount > 0) {
-    return (
-      <button
-        className="ui-control inline-flex h-10 shrink-0 items-center justify-center px-3 text-xs font-medium text-text-primary"
-        disabled={toolbar.busy}
-        type="button"
-        onClick={toolbar.onSelectAllVisible}
-      >
-        Select all
-      </button>
-    );
-  }
-  return null;
+  return toolbar ? <LibraryBulkToolbar {...toolbar} /> : null;
 }
 
 export function LibraryTopBar({
@@ -174,7 +160,7 @@ export function LibraryTopBar({
       </div>
 
       <div data-library-toolbar-row className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div data-library-toolbar-left className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:min-w-[220px] sm:flex-1">
+        <div data-library-toolbar-left className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:flex-1">
           <div className="flex min-w-0 items-center gap-3">
           <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-[34px] text-text-primary sm:text-[28px]">
             {title}
@@ -207,8 +193,8 @@ export function LibraryTopBar({
           ) : null}
         </div>
 
-        <div className="flex min-w-0 max-w-full justify-end sm:shrink">
-          <LibraryBulkActions bulk={bulk} selection={selection} itemCount={itemCount} />
+        <div className="flex h-10 w-full min-w-0 shrink-0 justify-end sm:w-[min(50%,28rem)]">
+          <LibraryBulkActions bulk={bulk} selection={selection} />
         </div>
       </div>
 

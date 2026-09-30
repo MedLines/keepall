@@ -45,3 +45,16 @@ test("searches collection names while keeping full counts and previews", () => {
     .toMatchObject([{ organization: { id: "reading" }, count: 2 }]);
   expect(buildOrganizationPreviews(collections, items, "missing", "collections")).toEqual([]);
 });
+
+
+test("folder previews follow addition time, keep only three, and ignore later edits", () => {
+  const items = [1, 2, 3, 4].map(now => ({
+    ...buildNote({ content: `Note ${now}` }, { id: `n${now}`, now }),
+    collectionIds: ["folder"], collectionAddedAt: now,
+  }));
+  items[0].collectionAddedAt = 10;
+  items[1].updatedAt = 20;
+  const folders = buildOrganizationPreviews([{ id: "folder", name: "Folder" }], items, "", "collections");
+  expect(folders[0].previews.map(item => item.id)).toEqual(["n1", "n4", "n3"]);
+  expect(buildOrganizationPreviews([{ id: "folder", name: "Folder" }], [items[0]], "", "collections")[0].previews).toEqual([items[0]]);
+});

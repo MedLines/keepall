@@ -58,6 +58,12 @@ describe("parseKeepallBackup", () => {
     exportedAt: 10,
   });
 
+  test("preserves folder addition time in backups and rejects invalid values", () => {
+    const backup = { ...valid, items: [{ ...note, collectionAddedAt: 9 }] };
+    expect(parseKeepallBackup(JSON.parse(JSON.stringify(backup))).items[0].collectionAddedAt).toBe(9);
+    expect(() => parseKeepallBackup({ ...backup, items: [{ ...note, collectionAddedAt: "bad" }] })).toThrow(/collectionAddedAt/);
+  });
+
   test("accepts a valid versioned backup", () => {
     expect(parseKeepallBackup(valid)).toEqual(valid);
     expect(parseKeepallBackup({ ...valid, version: 3 }).version).toBe(7);

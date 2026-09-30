@@ -1288,6 +1288,7 @@ describe("Library search", () => {
 
 describe("Library view state", () => {
   beforeEach(() => {
+    vi.mocked(getLibraryPreferences).mockResolvedValue({ id: "library", pinnedCollectionIds: [] });
     vi.mocked(listItems).mockReset();
     vi.mocked(deleteItem).mockReset();
     vi.mocked(updateNote).mockReset();
@@ -1403,6 +1404,33 @@ describe("Library view state", () => {
     expect(screen.getByRole("dialog", { name: "Organize 2 selected items" })).toBeInTheDocument();
   });
 
+  test.each(["collections", "tags"] as const)("%s actions appear only after selecting an entry", async (view) => {
+    vi.mocked(listItems).mockResolvedValue([]);
+    vi.mocked(listCollections).mockResolvedValue([
+      { id: "c1", name: "First folder", createdAt: 1, pinnedItemIds: [] },
+      { id: "c2", name: "Second folder", createdAt: 2, pinnedItemIds: [] },
+    ]);
+    vi.mocked(listTags).mockResolvedValue([
+      { id: "t1", name: "First tag", createdAt: 1 },
+      { id: "t2", name: "Second tag", createdAt: 2 },
+    ]);
+    mockNavigation.replace(`/?${view}=1`);
+    render(<Library />);
+
+    const first = await screen.findByRole("checkbox", { name: view === "collections" ? "Select First folder" : "Select First tag" });
+    expect(screen.queryByRole("button", { name: "Select all" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Bulk actions" })).not.toBeInTheDocument();
+    fireEvent.click(first);
+    const bulk = screen.getByRole("region", { name: "Bulk actions" });
+    fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 1 selected" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Select all" }));
+    expect(bulk).toHaveTextContent("2 selected");
+    fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 2 selected" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Deselect all" }));
+    expect(screen.queryByRole("region", { name: "Bulk actions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Select all" })).not.toBeInTheDocument();
+  });
+
   test("select all and deselect all visible items", async () => {
     const one = buildNote({ content: "one" }, { id: "n1", now: 1 });
     const two = buildNote({ content: "two" }, { id: "n2", now: 2 });
@@ -1411,6 +1439,7 @@ describe("Library view state", () => {
     render(<Library />);
 
     await screen.findByText("one");
+    expect(screen.queryByRole("button", { name: "Select all" })).not.toBeInTheDocument();
     const [first] = screen.getAllByRole("checkbox");
     fireEvent.click(first);
     const bulk = screen.getByRole("region", { name: "Bulk actions" });

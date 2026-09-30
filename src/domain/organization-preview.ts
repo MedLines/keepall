@@ -13,6 +13,7 @@ export function buildOrganizationPreviews<T extends { id: string; name: string }
   const byId = new Map<string, OrganizationPreview<T>>(
     organizations.map(organization => [organization.id, { organization, count: 0, previews: [] }]),
   );
+  const previewTime = (item: Item) => kind === "collections" ? item.collectionAddedAt ?? item.createdAt : item.createdAt;
   for (const item of items) {
     if (item.deletedAt !== undefined) continue;
     for (const id of kind === "collections" ? item.collectionIds : item.tagIds) {
@@ -20,7 +21,7 @@ export function buildOrganizationPreviews<T extends { id: string; name: string }
       if (!entry) continue;
       entry.count += 1;
       entry.previews.push(item);
-      entry.previews.sort((a, b) => b.createdAt - a.createdAt);
+      entry.previews.sort((a, b) => previewTime(b) - previewTime(a) || b.createdAt - a.createdAt);
       entry.previews = entry.previews.slice(0, 3);
     }
   }

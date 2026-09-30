@@ -690,10 +690,12 @@ export async function assignCollectionToItem(
   }
 
   const current = normalizeItem(existing);
+  const now = Date.now();
   const next = {
     ...current,
+    collectionAddedAt: current.collectionIds.includes(collectionId) ? current.collectionAddedAt ?? current.createdAt : now,
     collectionIds: assignCollectionId(current.collectionIds, collectionId),
-    updatedAt: Date.now(),
+    updatedAt: now,
   };
 
   await putActiveItem(next);

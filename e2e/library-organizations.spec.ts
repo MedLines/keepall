@@ -214,7 +214,7 @@ test("organization selection matches library cards and uses their top-bar action
   for (const kind of ['collections', 'tags'] as const) {
     await page.getByRole('button', { name: `All ${kind}`, exact: true }).click();
     await expect(toolbar).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Select all', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Select all', exact: true })).toHaveCount(0);
     const list = page.getByRole('list', { name: `Library ${kind}`, exact: true });
     const first = list.locator('.organization-card').first();
     await first.getByRole('checkbox').focus();

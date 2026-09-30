@@ -12,8 +12,8 @@ export function LibraryFolderArtwork({ previews }: { previews: Item[] }) {
     <span className="collection-folder-stage" aria-hidden="true">
       <span className="collection-folder-back" />
       <span className="collection-folder-previews">
-        {previews.map(item => (
-          <span key={item.id} className="collection-folder-preview" data-type={item.type}>
+        {previews.slice(0, 3).map((item, index) => (
+          <span key={item.id} className="collection-folder-preview" data-type={item.type} data-position={["center", "left", "right"][index]}>
             <LibraryOrganizationPreview item={item} />
           </span>
         ))}

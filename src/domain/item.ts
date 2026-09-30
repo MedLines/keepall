@@ -8,7 +8,9 @@ import { noteListTitle, type NoteItem } from "./note";
 import type { VideoItem } from "./video";
 import { coerceExclusiveCollectionIds } from "./collection";
 
-export type Item = NoteItem | LinkItem | ImageItem | VideoItem;
+export type Item = (NoteItem | LinkItem | ImageItem | VideoItem) & {
+  collectionAddedAt?: number;
+};
 
 export type ItemWithOptionalOrgIds = {
   tagIds?: string[];

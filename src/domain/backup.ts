@@ -385,6 +385,10 @@ function parseItem(
     );
   }
 
+  if (item.collectionAddedAt !== undefined && (typeof item.collectionAddedAt !== "number" || !Number.isFinite(item.collectionAddedAt))) {
+    throw new BackupValidationError(`Item at index ${index} needs a numeric collectionAddedAt`);
+  }
+  const membership = item.collectionAddedAt === undefined ? {} : { collectionAddedAt: item.collectionAddedAt as number };
   const trash = parseTrashFields(item.deletedAt);
 
   if (typeof item.title !== "string") {
@@ -437,6 +441,7 @@ function parseItem(
       ...(item.format === "markdown" ? { format: "markdown" } : {}),
       tagIds: itemTagIds,
       collectionIds: itemCollectionIds,
+      ...membership,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       ...trash,
@@ -474,6 +479,7 @@ function parseItem(
       previewAssetId,
       tagIds: itemTagIds,
       collectionIds: itemCollectionIds,
+      ...membership,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       ...trash,
@@ -511,6 +517,7 @@ function parseItem(
       ...(fields.captionFormat === "markdown" ? { captionFormat: "markdown" as const } : {}),
       tagIds: itemTagIds,
       collectionIds: itemCollectionIds,
+      ...membership,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       ...trash,

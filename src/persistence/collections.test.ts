@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { CollectionValidationError } from "@/domain/collection";
 import { deleteKeepallDatabase, getDb } from "./db";
-import { assignCollectionToItem, createNote, listItems } from "./items";
+import { assignCollectionToItem, createNote, listItems, updateNote } from "./items";
 import {
   createCollection,
   deleteCollection,
@@ -49,6 +49,25 @@ describe("collections persistence", () => {
 
     expect(updated.collectionIds).toEqual([later.id]);
     expect(await listItems()).toEqual([updated]);
+  });
+
+  test("collection addition time changes on moves but stays stable on edits and reassignment", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(10);
+    try {
+      const note = await createNote({ content: "old note" });
+      const reading = await createCollection({ name: "Reading" });
+      const later = await createCollection({ name: "Later" });
+      clock.mockReturnValue(20);
+      expect((await assignCollectionToItem(note.id, reading.id)).collectionAddedAt).toBe(20);
+      clock.mockReturnValue(30);
+      await updateNote(note.id, { content: "edited" });
+      expect((await listItems())[0].collectionAddedAt).toBe(20);
+      expect((await assignCollectionToItem(note.id, reading.id)).collectionAddedAt).toBe(20);
+      clock.mockReturnValue(40);
+      expect((await assignCollectionToItem(note.id, later.id)).collectionAddedAt).toBe(40);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   test("listItems coerces multi collectionIds to the first id", async () => {

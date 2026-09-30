@@ -14,12 +14,18 @@ test("selection toolbar exposes actions in a menu and preserves selection on Esc
       onSelectAllVisible={onSelectAllVisible} />
   </>);
 
+  const reservedToolbar = document.querySelector('[aria-label="Bulk actions"]');
+  expect(reservedToolbar).not.toBeNull();
+  expect(screen.queryByRole("region", { name: "Bulk actions" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Select all" })).not.toBeInTheDocument();
+
   rerender(<>
     <input id="library-search" aria-label="Search" type="search" />
     <LibraryBulkToolbar count={2} allVisibleSelected={false} busy={false}
       onClearSelection={onClearSelection} onOpenPanel={onOpenPanel}
       onSelectAllVisible={onSelectAllVisible} />
   </>);
+  expect(screen.getByRole("region", { name: "Bulk actions" })).toBe(reservedToolbar);
   const trigger = screen.getByRole("button", { name: "Selection actions: 2 selected" });
   trigger.focus();
   fireEvent.click(trigger);
