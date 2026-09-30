@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildNote } from "@/domain/note";
 import { createCollection, listCollections } from "@/persistence/collections";
@@ -104,6 +104,11 @@ describe("NoteItemPage", () => {
     expect(screen.getByRole("link", { name: "Back to library" })).toHaveAttribute("href", "/?tag=design");
 
     fireEvent.click(screen.getByRole("button", { name: "Edit note" }));
+    const editorDialog = screen.getByRole("dialog", { name: "Edit note" });
+    expect(within(editorDialog).getByRole("button", { name: "Edit" })).toBeVisible();
+    const buttons = within(editorDialog).getAllByRole("button");
+    expect(buttons.indexOf(within(editorDialog).getByRole("button", { name: "Cancel edit" })))
+      .toBeLessThan(buttons.indexOf(within(editorDialog).getByRole("button", { name: "Save note" })));
     fireEvent.change(screen.getByRole("textbox", { name: "Note content" }), { target: { value: "# Revised card\n\nBetter spacing." } });
     fireEvent.click(screen.getByRole("button", { name: "Save note" }));
 

@@ -139,16 +139,17 @@ test("open note saves an image between paragraphs and keeps it after reload", as
   await expect(page.locator("article img")).toHaveCount(0);
 });
 
-test("note editor grows to fit long content without an inner scrollbar", async ({ page }, testInfo) => {
+test("note editor bounds long content and keeps its footer visible", async ({ page }, testInfo) => {
   await page.goto("/items/note");
   await page.getByRole("button", { name: "Edit note" }).click();
   const editor = page.getByRole("textbox", { name: "Note content" });
   const initialHeight = await editor.evaluate((node) => node.clientHeight);
   await editor.fill(Array.from({ length: 40 }, (_, index) => `Paragraph ${index + 1}: design notes`).join("\n\n"));
-  await expect.poll(() => editor.evaluate((node) => node.clientHeight)).toBeGreaterThan(initialHeight);
+  await expect.poll(() => editor.evaluate((node) => node.clientHeight)).toBe(initialHeight);
   const size = await editor.evaluate((node) => ({ height: node.clientHeight, content: node.scrollHeight }));
-  expect(size.height).toBeGreaterThan(initialHeight);
-  expect(size.content).toBeLessThanOrEqual(size.height + 2);
+  expect(size.height).toBe(initialHeight);
+  expect(size.content).toBeGreaterThan(size.height);
+  await expect(page.getByRole("dialog", { name: "Edit note" }).getByRole("button", { name: "Save note" })).toBeInViewport();
   await page.screenshot({ path: testInfo.outputPath("long-note-editor.png") });
 });
 
@@ -220,23 +221,22 @@ test("note card preview swaps with the editor without resizing the modal", async
   const editor = dialog.getByRole("textbox", { name: "Note content" });
   await editor.fill("# Draft heading");
   await dialog.getByRole("button", { name: "Markdown" }).click();
-  await expect(dialog.getByRole("region", { name: "Notes preview" })).toHaveCount(0);
+  await expect(dialog.getByRole("region", { name: "Note preview" })).toHaveCount(0);
 
   const modalHeight = (await dialog.boundingBox())!.height;
   const editorHeight = (await editor.boundingBox())!.height;
-  expect(editorHeight).toBeGreaterThan(300);
+  expect(editorHeight).toBeGreaterThanOrEqual(160);
   const saveSize = (await dialog.getByRole("button", { name: "Save note" }).boundingBox())!;
   const cancelSize = (await dialog.getByRole("button", { name: "Cancel edit" }).boundingBox())!;
-  expect(saveSize.width).toBe(cancelSize.width);
   expect(saveSize.height).toBe(cancelSize.height);
-  await dialog.getByRole("group", { name: "Notes mode" }).getByRole("button", { name: "View" }).click();
-  const preview = dialog.getByRole("region", { name: "Notes preview" });
+  await dialog.getByRole("group", { name: "Note editor view" }).getByRole("button", { name: "Preview" }).click();
+  const preview = dialog.getByRole("region", { name: "Note preview" });
   await expect(editor).toHaveCount(0);
   await expect(preview.getByRole("heading", { name: "Draft heading" })).toBeVisible();
   expect((await dialog.boundingBox())!.height).toBeCloseTo(modalHeight, 0);
   expect((await preview.boundingBox())!.height).toBeCloseTo(editorHeight, 0);
 
-  await dialog.getByRole("group", { name: "Notes mode" }).getByRole("button", { name: "Edit" }).click();
+  await dialog.getByRole("group", { name: "Note editor view" }).getByRole("button", { name: "Edit" }).click();
   await expect(editor).toHaveValue("# Draft heading");
 });
 
@@ -951,9 +951,6 @@ test("card actions, tag disclosure, selection and collection context work", asyn
   await expect(removeTag).toBeVisible();
   await expect(removeTag.locator("svg")).toHaveCount(1);
   await removeTag.click();
-  const confirmRemove = note.getByRole("button", { name: "Confirm remove tag minimal" });
-  await expect(confirmRemove).toBeVisible();
-  await confirmRemove.click();
   await expect(note.getByRole("button", { name: "1 tag" })).toHaveCount(0);
   expect((await note.boundingBox())!.height).toBe(heightBeforeTags);
   await note.hover();
@@ -970,7 +967,7 @@ test("card actions, tag disclosure, selection and collection context work", asyn
   await expect(note).toContainText("Updated note body");
   await note.hover();
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
-  await expect(note.getByRole("checkbox")).toBeChecked();
+  await expect(note.getByRole("checkbox")).toHaveAttribute("aria-pressed", "true");
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
   await page.getByLabel("UI inspiration", { exact: true }).click();
   await expect(note.getByRole("list", { name: "Collections" })).toHaveCount(0);
@@ -1024,15 +1021,16 @@ test("selecting a card gives actions their own row and draws the state inside th
   await expect(layoutControls).toBeVisible();
 
   await expect(bulkActions).toHaveCSS("overflow-x", "visible");
-  await expect(bulkActions.getByRole("button", { name: "Tags" })).toBeVisible();
-  await bulkActions.getByRole("button", { name: "Tags" }).click();
+  await expect(bulkActions.getByRole("button", { name: "Organize" })).toBeVisible();
+  await bulkActions.getByRole("button", { name: "Organize" }).click();
   const tagDialog = page.getByRole("dialog", {
-    name: "Tags for 1 selected item",
+    name: "Organize 1 selected item",
   });
   await expect(tagDialog).toBeVisible();
   const dialogBox = (await tagDialog.boundingBox())!;
-  expect(Math.abs(dialogBox.x + dialogBox.width / 2 - 720)).toBeLessThanOrEqual(2);
-  expect(Math.abs(dialogBox.y + dialogBox.height / 2 - 500)).toBeLessThanOrEqual(2);
+  expect(dialogBox.x + dialogBox.width).toBe(1440);
+  expect(dialogBox.height).toBe(1000);
+  await expect(tagDialog.getByRole("button", { name: "Done", exact: true })).toBeInViewport();
   await page.screenshot({ path: testInfo.outputPath("bulk-tags-dialog.png") });
   await tagDialog.getByRole("button", { name: "Remove all tags" }).click();
   await expect(tagDialog.getByText("The selected items have no tags.")).toBeVisible();
@@ -1041,9 +1039,9 @@ test("selecting a card gives actions their own row and draws the state inside th
   await page.keyboard.press("Escape");
   await expect(tagDialog).toBeHidden();
 
-  await bulkActions.getByRole("button", { name: "Collection" }).click();
+  await bulkActions.getByRole("button", { name: "Organize" }).click();
   const collectionDialog = page.getByRole("dialog", {
-    name: "Move 1 selected item to a collection",
+    name: "Organize 1 selected item",
   });
   await collectionDialog.getByLabel("Move selection to collection").fill("UI");
   const collectionOptions = page.getByRole("listbox");
@@ -1071,7 +1069,7 @@ test("selecting a card gives actions their own row and draws the state inside th
   await expect(card).toHaveCSS("outline-style", "none");
   const lightSelection = await card.evaluate(element => getComputedStyle(element).backgroundColor);
   expect(lightSelection).not.toBe(fillBefore);
-  await expect(card.getByRole("checkbox")).toBeChecked();
+  await expect(card.getByRole("checkbox")).toHaveAttribute("aria-pressed", "true");
   await card.screenshot({ path: testInfo.outputPath("selected-light.png") });
 
   await page.getByRole("button", { name: "Theme", exact: true }).click();
@@ -1225,7 +1223,7 @@ test("list menus support editing, cancel-delete, selection and collection pinnin
   await expect(note.locator("button.library-card-actions")).toBeFocused();
   await page.keyboard.press("Escape");
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
-  await expect(note.getByRole("checkbox")).toBeChecked();
+  await expect(note.getByRole("checkbox")).toHaveAttribute("aria-pressed", "true");
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
   await page
     .getByRole("complementary", { name: "Sidebar" })
@@ -1724,7 +1722,7 @@ test.describe("touch card controls", () => {
     const row = page.locator(".library-list-row").first();
     await expect(row.locator("button.library-card-actions")).toHaveCSS("opacity", "1");
     await row.locator("label").filter({ has: page.getByRole("checkbox") }).click();
-    await expect(row.getByRole("checkbox")).toBeChecked();
+    await expect(row.getByRole("checkbox")).toHaveAttribute("aria-pressed", "true");
     await row.locator("label").filter({ has: page.getByRole("checkbox") }).click();
     await row.locator("button.library-card-actions").tap();
     await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeInViewport();

@@ -1,16 +1,17 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
-import { Tooltip } from "@base-ui/react/tooltip";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ModalDialog } from "@/components/ui/modal-dialog";
+import { assertLocalImageBytes, assertLocalImageFile, ImageValidationError } from "@/domain/image";
+import { NoteEditor } from "./note-editor";
 import type { ImageItem } from "@/domain/image";
 import type { LinkItem } from "@/domain/link";
 import type { NoteItem } from "@/domain/note";
-import { noteImageMarkers, removeNoteImageMarkerAt } from "@/domain/note";
+import { insertNoteImageMarker, noteImageAssetIds, noteImageMarkers, removeNoteImageMarkerAt } from "@/domain/note";
 import type { VideoItem } from "@/domain/video";
-import { CloseIcon, EditIcon, EyeIcon } from "./shell-icons";
 import { NoteContent } from "./note-content";
-import { NoteFormatControl } from "./note-format-control";
+import { NoteEditorControls } from "./note-editor-controls";
 
 export type ImageDetailsDraft = {
   title: string;
@@ -32,7 +33,11 @@ export type LinkDetailsDraft = {
   noteFormat: "plain" | "markdown";
 };
 
+type NoteImageUpload = { id: string; bytes: Uint8Array; mimeType: string };
+type PendingNoteImage = NoteImageUpload & { url: string };
+
 export type NoteDetailsDraft = {
+  images?: NoteImageUpload[];
   content: string;
   format: "plain" | "markdown";
 };
@@ -63,7 +68,7 @@ function MediaItemEditDialog({
   onSave,
   onOpenChange,
 }: CommonProps & {
-  media: "image" | "video" | "link" | "note";
+  media: "image" | "video" | "link";
   initialTitle: string;
   initialNotes: string;
   initialFormat: "plain" | "markdown";
@@ -75,184 +80,84 @@ function MediaItemEditDialog({
   const [format, setFormat] = useState(initialFormat);
   const [sourceUrl, setSourceUrl] = useState(initialSourceUrl);
   const [preview, setPreview] = useState(false);
-  const noteImages = media === "note" ? noteImageMarkers(notes) : [];
 
   return (
-    <Dialog.Root
-      open={open}
-      disablePointerDismissal={busy}
-      onOpenChange={(nextOpen, eventDetails) => {
-        if (!nextOpen && busy) {
-          eventDetails.cancel();
-          return;
-        }
-        onOpenChange(nextOpen);
-      }}
+    <ModalDialog
+      open={open} busy={busy} onOpenChange={onOpenChange} size="editor"
+      title={`Edit ${media} details`}
+      description={media === "image"
+        ? "Change the title, notes, or source. Gallery images stay unchanged."
+        : media === "video"
+          ? "Change the title or notes. The video file stays unchanged."
+          : "Change the URL, title, or your note."}
+      onSubmit={() => onSave({ title, notes, format, sourceUrl })}
+      footer={<>
+        <Dialog.Close
+          className="ui-control flex min-h-10 items-center justify-center px-4 text-sm font-medium"
+          disabled={busy}
+        >
+          Cancel
+        </Dialog.Close>
+        <button
+          className="ui-primary flex min-h-10 items-center justify-center px-4 rounded-control-md text-sm font-medium disabled:opacity-60"
+          type="submit"
+          disabled={busy}
+        >
+          {busy ? "Saving…" : "Save changes"}
+        </button>
+      </>}
     >
-      <Dialog.Portal>
-        <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[80]" />
-        <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
-          <Dialog.Popup className="ui-popover flex h-[min(44rem,calc(100dvh-2rem))] w-full max-w-[42rem] flex-col overflow-hidden p-0 outline-none">
-            <header className="flex shrink-0 items-start gap-4 border-b border-border-control px-5 py-5 sm:px-6">
-              <div className="min-w-0 flex-1">
-                <Dialog.Title className="text-xl font-semibold text-text-primary">
-                  {media === "note" ? "Edit note" : `Edit ${media} details`}
-                </Dialog.Title>
-                <Dialog.Description className="mt-1 text-sm leading-relaxed text-text-secondary">
-                  {media === "image"
-                    ? "Change the title, notes, or source. Gallery images stay unchanged."
-                    : media === "video"
-                      ? "Change the title or notes. The video file stays unchanged."
-                      : media === "link"
-                        ? "Change the URL, title, or your note."
-                        : "Change the note and its format."}
-                </Dialog.Description>
-              </div>
-              <Dialog.Close
-                className="ui-control flex size-10 shrink-0 items-center justify-center"
-                aria-label="Close"
-                disabled={busy}
-              >
-                <CloseIcon />
-              </Dialog.Close>
-            </header>
-
-            <form
-              className="flex min-h-0 flex-1 flex-col"
-              onKeyDown={(event) => {
-                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                  event.preventDefault();
-                  event.currentTarget.requestSubmit();
-                }
-              }}
-              onSubmit={(event) => {
-                event.preventDefault();
-                onSave({ title, notes, format, sourceUrl });
-              }}
-            >
-              <div className="scroll-fade flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 sm:px-6">
-                {media !== "note" ? (
-                  <label className="grid gap-2 text-sm font-medium text-text-primary">
-                    {media === "image" ? "Title (optional)" : "Title"}
-                    <input
-                      className="ui-field min-h-11 px-3 text-sm font-normal"
-                      value={title}
-                      onChange={(event) => setTitle(event.target.value)}
-                    />
-                  </label>
-                ) : null}
-                <div className="flex min-h-[19rem] flex-1 flex-col gap-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    {preview ? (
-                      <span className="text-sm font-medium text-text-primary">
-                        {media === "note" ? "Note content" : media === "link" ? "My note (optional)" : "Notes"}
-                      </span>
-                    ) : (
-                      <label htmlFor="item-edit-notes" className="text-sm font-medium text-text-primary">
-                        {media === "note" ? "Note content" : media === "link" ? "My note (optional)" : "Notes"}
-                      </label>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <NoteFormatControl format={format} onChange={setFormat} disabled={busy} />
-                      <Tooltip.Provider delay={350}>
-                        <div role="group" aria-label="Notes mode" data-selected={preview ? "end" : "start"} className="icon-segmented-switch squircle-panel relative isolate flex h-11 rounded-control-lg bg-bg-raised p-0.5">
-                          <span aria-hidden="true" className="icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[42px] rounded-control-sm" />
-                          {([
-                            { value: "edit", label: "Edit", hint: "Edit notes", icon: <EditIcon /> },
-                            { value: "view", label: "View", hint: "View formatted notes", icon: <EyeIcon /> },
-                          ] as const).map((option) => {
-                            const selected = preview === (option.value === "view");
-                            return (
-                              <Tooltip.Root key={option.value}>
-                                <Tooltip.Trigger
-                                  type="button"
-                                  aria-label={option.label}
-                                  aria-pressed={selected}
-                                  disabled={busy}
-                                  className={`squircle-panel relative flex size-10 w-[42px] items-center justify-center rounded-control-sm disabled:opacity-60 ${selected ? "text-text-primary" : "text-text-secondary hover:text-text-primary"}`}
-                                  onClick={() => setPreview(option.value === "view")}
-                                >
-                                  {option.icon}
-                                </Tooltip.Trigger>
-                                <Tooltip.Portal>
-                                  <Tooltip.Positioner side="top" sideOffset={8} className="z-[100]">
-                                    <Tooltip.Popup className="rounded-control-sm border border-border-control bg-bg-surface px-2.5 py-1.5 text-xs font-medium text-text-primary shadow-menu transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0">
-                                      {option.hint}
-                                    </Tooltip.Popup>
-                                  </Tooltip.Positioner>
-                                </Tooltip.Portal>
-                              </Tooltip.Root>
-                            );
-                          })}
-                        </div>
-                      </Tooltip.Provider>
-                    </div>
-                  </div>
-                  {preview ? (
-                    <section aria-label="Notes preview" className="ui-field ui-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-3 text-text-primary [scrollbar-gutter:stable]">
-                      <NoteContent content={notes} format={format} />
-                    </section>
-                  ) : (
-                    <textarea
-                      id="item-edit-notes"
-                      autoFocus={media === "note"}
-                      className="ui-field ui-scrollbar min-h-0 w-full flex-1 resize-none overflow-y-auto px-3 py-3 text-base font-normal leading-7 [scrollbar-gutter:stable]"
-                      value={notes}
-                      onChange={(event) => setNotes(event.target.value)}
-                    />
-                  )}
-                </div>
-                {media === "note" && noteImages.length > 0 ? (
-                  <section aria-label="Images in this note" className="border-t border-border-control pt-3">
-                    <p className="mb-2 text-sm font-medium">{noteImages.length} {noteImages.length === 1 ? "image" : "images"} in this note</p>
-                    <ul className="grid gap-2">
-                      {noteImages.map((marker, index) => (
-                        <li key={`${marker.assetId}-${index}`} className="flex items-center justify-between gap-3 text-sm">
-                          <span>Image {index + 1}</span>
-                          <button type="button" className="ui-control min-h-9 px-3" disabled={busy} aria-label={`Remove image ${index + 1}`} onClick={() => setNotes(removeNoteImageMarkerAt(notes, index))}>Remove</button>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ) : null}
-                {media === "image" || media === "link" ? (
-                  <label className="grid gap-2 text-sm font-medium text-text-primary">
-                    {media === "link" ? "URL" : "Source URL (optional)"}
-                    <input
-                      className="ui-field min-h-11 px-3 text-sm font-normal"
-                      inputMode="url"
-                      value={sourceUrl}
-                      onChange={(event) => setSourceUrl(event.target.value)}
-                    />
-                  </label>
-                ) : null}
-                {error ? (
-                  <p className="text-sm text-text-danger" role="alert">
-                    {error}
-                  </p>
-                ) : null}
-              </div>
-
-              <footer className="flex shrink-0 justify-end gap-2 border-t border-border-control px-5 py-4 sm:px-6">
-                <Dialog.Close
-                  className="ui-control flex h-10 w-32 items-center justify-center text-sm font-medium"
-                  disabled={busy}
-                >
-                  {media === "note" ? "Cancel edit" : "Cancel"}
-                </Dialog.Close>
-                <button
-                  className="ui-primary flex h-10 w-32 items-center justify-center rounded-control-md text-sm font-medium disabled:opacity-60"
-                  type="submit"
-                  disabled={busy}
-                >
-                  {busy ? "Saving…" : media === "note" ? "Save note" : "Save changes"}
-                </button>
-              </footer>
-            </form>
-          </Dialog.Popup>
-        </Dialog.Viewport>
-      </Dialog.Portal>
-    </Dialog.Root>
+      <label className="grid gap-2 text-sm font-medium text-text-primary">
+        {media === "image" ? "Title (optional)" : "Title"}
+        <input
+          className="ui-field min-h-11 px-3 text-sm font-normal"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+        />
+      </label>
+      <div className="flex min-h-[19rem] flex-1 flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {preview ? (
+            <span className="text-sm font-medium text-text-primary">
+              {media === "link" ? "My note (optional)" : "Notes"}
+            </span>
+          ) : (
+            <label htmlFor="item-edit-notes" className="text-sm font-medium text-text-primary">
+              {media === "link" ? "My note (optional)" : "Notes"}
+            </label>
+          )}
+          <NoteEditorControls format={format} preview={preview} disabled={busy} onFormatChange={setFormat} onPreviewChange={setPreview} />
+        </div>
+        {preview ? (
+          <section aria-label="Notes preview" className="ui-field ui-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-3 text-text-primary [scrollbar-gutter:stable]">
+            <NoteContent content={notes} format={format} />
+          </section>
+        ) : (
+          <textarea
+            id="item-edit-notes"
+            className="ui-field ui-scrollbar min-h-0 w-full flex-1 resize-none overflow-y-auto px-3 py-3 text-base font-normal leading-7 [scrollbar-gutter:stable]"
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+          />
+        )}
+      </div>
+      {media === "image" || media === "link" ? (
+        <label className="grid gap-2 text-sm font-medium text-text-primary">
+          {media === "link" ? "URL" : "Source URL (optional)"}
+          <input
+            className="ui-field min-h-11 px-3 text-sm font-normal"
+            inputMode="url"
+            value={sourceUrl}
+            onChange={(event) => setSourceUrl(event.target.value)}
+          />
+        </label>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </ModalDialog>
   );
 }
 
@@ -307,17 +212,101 @@ export function LinkItemEditDialog({ item, onSave, ...props }: CommonProps & {
   />;
 }
 
-export function NoteItemEditDialog({ item, onSave, ...props }: CommonProps & {
+export function NoteItemEditDialog({ item, onSave, open, busy, error, onOpenChange }: CommonProps & {
   item: NoteItem;
   onSave: (draft: NoteDetailsDraft) => void;
 }) {
-  return <MediaItemEditDialog
-    {...props}
-    media="note"
-    initialTitle=""
-    initialNotes={item.content}
-    initialFormat={item.format === "markdown" ? "markdown" : "plain"}
-    initialSourceUrl=""
-    onSave={({ notes, format }) => onSave({ content: notes, format })}
-  />;
+  const [content, setContent] = useState(item.content);
+  const [format, setFormat] = useState<"plain" | "markdown">(item.format === "markdown" ? "markdown" : "plain");
+  const [images, setImages] = useState<PendingNoteImage[]>([]);
+  const imagesRef = useRef<PendingNoteImage[]>([]);
+  const generationRef = useRef(0);
+  const [preparing, setPreparing] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const disabled = busy || preparing;
+
+  useEffect(() => () => {
+    generationRef.current += 1;
+    for (const image of imagesRef.current) URL.revokeObjectURL(image.url);
+  }, []);
+
+  async function addImages(files: File[], start: number, end: number) {
+    const generation = generationRef.current;
+    setPreparing(true);
+    try {
+      const validated = await Promise.all(files.map(async (file) => {
+        assertLocalImageFile(file);
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const mimeType = assertLocalImageBytes(bytes, file.type);
+        return { file, bytes, mimeType };
+      }));
+      if (generation !== generationRef.current) return;
+      const prepared = validated.map(({ file, bytes, mimeType }) => ({
+        id: crypto.randomUUID(), bytes, mimeType, url: URL.createObjectURL(file),
+      }));
+      imagesRef.current = [...imagesRef.current, ...prepared];
+      setImages(imagesRef.current);
+      setContent((current) => {
+        let next = current;
+        let at = start;
+        let through = end;
+        for (const image of prepared) {
+          next = insertNoteImageMarker(next, at, through, image.id);
+          at = next.indexOf(`keepall-image:${image.id}`, at) + `keepall-image:${image.id}`.length + 1;
+          through = at;
+        }
+        return next;
+      });
+      setImageError(null);
+    } catch (caught) {
+      if (generation === generationRef.current) {
+        setImageError(caught instanceof ImageValidationError ? caught.message : "Couldn't add image.");
+      }
+    } finally {
+      if (generation === generationRef.current) setPreparing(false);
+    }
+  }
+
+  function removeImage(index: number) {
+    const marker = noteImageMarkers(content)[index];
+    if (!marker) return;
+    const next = removeNoteImageMarkerAt(content, index);
+    setContent(next);
+    if (noteImageAssetIds(next).includes(marker.assetId)) return;
+    const removed = imagesRef.current.find((image) => image.id === marker.assetId);
+    if (!removed) return;
+    URL.revokeObjectURL(removed.url);
+    imagesRef.current = imagesRef.current.filter((image) => image.id !== marker.assetId);
+    setImages(imagesRef.current);
+  }
+
+  function save() {
+    if (disabled) return;
+    const referenced = new Set(noteImageAssetIds(content));
+    onSave({ content, format, images: images.filter((image) => referenced.has(image.id)).map(({ id, bytes, mimeType }) => ({ id, bytes, mimeType })) });
+  }
+
+  return (
+    <ModalDialog
+      open={open} busy={disabled} onOpenChange={onOpenChange}
+      title="Edit note" description="Change the note, its format, or images." size="editor"
+      onSubmit={save}
+      footer={<>
+        <button type="button" className="ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60" disabled={disabled} onClick={() => onOpenChange(false)}>Cancel edit</button>
+        <button type="submit" className="ui-primary min-h-10 rounded-control-md px-4 text-sm font-medium disabled:opacity-60" disabled={disabled}>{busy ? "Saving…" : "Save note"}</button>
+      </>}
+    >
+      <NoteEditor
+        itemId={item.id} content={content} format={format} error={imageError ?? error}
+        busy={disabled} saving={busy} showActions={false}
+        setFirstEditField={() => {}} onContentChange={setContent} onFormatChange={setFormat}
+        onSaveShortcut={(event, action) => {
+          if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); action(); }
+        }}
+        onSave={save} onCancel={() => onOpenChange(false)}
+        onAddImages={(files, start, end) => void addImages(files, start, end)}
+        onRemoveImage={removeImage} pendingImageUrls={new Map(images.map((image) => [image.id, image.url]))}
+      />
+    </ModalDialog>
+  );
 }

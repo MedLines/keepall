@@ -59,6 +59,7 @@ import {
   updateImage,
   updateLink,
   updateNote,
+  saveNoteWithImages,
 } from "@/persistence/items";
 import { createTag, deleteTag, listTags } from "@/persistence/tags";
 import { updateVideoDetails } from "@/persistence/videos";
@@ -709,14 +710,13 @@ export function Library() {
 
   useEffect(() => {
     function onKeyDown(event: globalThis.KeyboardEvent) {
-      if (event.key !== "Escape" || trashActions.confirming) {
+      if (event.key !== "Escape" || event.defaultPrevented || trashActions.confirming || pendingMutation) {
         return;
       }
       if (inspectId !== null) {
         return;
       }
       if (bulkPanel) {
-        setBulkPanel(null);
         return;
       }
       if (selectedIds.size > 0) {
@@ -729,7 +729,7 @@ export function Library() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [bulkPanel, clearSelection, inspectId, panelOpen, selectedIds.size, trashActions.confirming]);
+  }, [bulkPanel, clearSelection, inspectId, panelOpen, pendingMutation, selectedIds.size, trashActions.confirming]);
 
   function clearEdit(options?: { restoreFocus?: boolean }) {
     if (options?.restoreFocus && editingId) {
@@ -818,7 +818,11 @@ export function Library() {
     setEditError(null);
 
     try {
-      await updateNote(id, draft ?? { content: editDraft, format: noteFormatDraft });
+      if (draft?.images?.length) {
+        await saveNoteWithImages(id, { content: draft.content, format: draft.format }, draft.images);
+      } else {
+        await updateNote(id, { content: draft?.content ?? editDraft, format: draft?.format ?? noteFormatDraft });
+      }
       clearEdit();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch (caught) {
@@ -1185,8 +1189,6 @@ export function Library() {
         await assignCollectionToItem(itemId, collection.id);
       }
       setBulkCollectionDraft("");
-      setBulkPanel(null);
-      clearSelection();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch (caught) {
       if (caught instanceof CollectionValidationError) {

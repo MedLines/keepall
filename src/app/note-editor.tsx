@@ -1,13 +1,14 @@
 "use client";
 
-import { type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useRef, useState } from "react";
 import { noteImageMarkers, removeNoteImageMarkerAt } from "@/domain/note";
 import { NoteContent } from "./note-content";
-import { NoteFormatControl } from "./note-format-control";
+import { NoteEditorControls } from "./note-editor-controls";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 
 type Props = {
   itemId: string;
+  showActions?: boolean;
   content: string;
   format: "plain" | "markdown";
   error: string | null;
@@ -59,6 +60,7 @@ function NoteEditorImageRow({ assetId, index, pendingImageUrls, busy, onRemove }
 
 export function NoteEditor({
   itemId,
+  showActions = true,
   content,
   format,
   error,
@@ -81,31 +83,21 @@ export function NoteEditor({
   const showPreview = preview;
   const imageMarkers = noteImageMarkers(content);
 
-  useLayoutEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "auto";
-    textarea.style.height = `${textarea.scrollHeight}px`;
-  }, [content, showPreview]);
-
   return (
     <div className="mt-3 flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="text-sm font-medium" htmlFor={`edit-note-${itemId}`}>Note content</label>
-        <NoteFormatControl format={format} disabled={busy} onChange={onFormatChange} />
-      </div>
-      <div role="group" aria-label="Note editor view" className="flex gap-1">
-        <button type="button" aria-pressed={!showPreview} className={`ui-control min-h-9 px-3 text-sm ${!showPreview ? "ui-selected text-text-primary" : ""}`} onClick={() => setPreview(false)}>Write</button>
-        <button type="button" aria-pressed={showPreview} className={`ui-control min-h-9 px-3 text-sm ${showPreview ? "ui-selected text-text-primary" : ""}`} onClick={() => setPreview(true)}>Preview</button>
+        <NoteEditorControls format={format} preview={preview} disabled={busy} onFormatChange={onFormatChange} onPreviewChange={setPreview} />
       </div>
       {onAddImages ? (
         <div>
-          <p className="mb-2 text-sm text-text-secondary">In Write, place the cursor between paragraphs. Then add an image.</p>
+          <p className="mb-2 text-sm text-text-secondary">Place the cursor between paragraphs, then add an image.</p>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
             multiple
+            disabled={busy}
             className="sr-only"
             aria-label="Choose note images"
             onChange={(event) => {
@@ -150,9 +142,9 @@ export function NoteEditor({
         </section>
       ) : null}
       {showPreview ? (
-        <div aria-label="Note preview" className="min-h-32 rounded-input border border-border-control bg-bg-control p-4">
+        <section aria-label="Note preview" className="ui-scrollbar h-64 min-h-40 overflow-y-auto rounded-input border border-border-control bg-bg-control p-4">
           <NoteContent content={content} format={format} pendingImageUrls={pendingImageUrls} />
-        </div>
+        </section>
       ) : (
         <textarea
           id={`edit-note-${itemId}`}
@@ -160,7 +152,8 @@ export function NoteEditor({
             textareaRef.current = node;
             setFirstEditField(node);
           }}
-          className="ui-field min-h-40 w-full resize-none overflow-hidden rounded-input px-4 py-3 text-sm disabled:opacity-60"
+          autoFocus
+          className="ui-field ui-scrollbar h-64 min-h-40 w-full resize-none overflow-y-auto rounded-input px-4 py-3 text-sm disabled:opacity-60"
           value={content}
           disabled={busy}
           onChange={(event) => onContentChange(event.target.value)}
@@ -168,10 +161,10 @@ export function NoteEditor({
         />
       )}
       {error ? <p className="text-sm text-text-danger" role="alert">{error}</p> : null}
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className="ui-primary min-h-10 rounded-control px-4 text-sm font-medium disabled:opacity-60" disabled={busy} onClick={onSave}>{saving ? "Saving…" : "Save note"}</button>
+      {showActions ? <div className="flex flex-wrap justify-end gap-2">
         <button type="button" className="ui-control min-h-10 rounded-control px-4 text-sm font-medium disabled:opacity-60" disabled={busy} onClick={onCancel}>Cancel edit</button>
-      </div>
+        <button type="button" className="ui-primary min-h-10 rounded-control px-4 text-sm font-medium disabled:opacity-60" disabled={busy} onClick={onSave}>{saving ? "Saving…" : "Save note"}</button>
+      </div> : null}
     </div>
   );
 }

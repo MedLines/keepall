@@ -2,20 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { itemActionLabel } from "@/domain/item-label";
-import { assertLocalImageBytes, assertLocalImageFile, ImageValidationError } from "@/domain/image";
+import { ImageValidationError } from "@/domain/image";
 import { CollectionValidationError, type Collection } from "@/domain/collection";
 import { resolveItemCollections, resolveItemTags } from "@/domain/item";
 import { TagValidationError, type Tag } from "@/domain/tag";
 import {
   NoteValidationError,
-  insertNoteImageMarker,
-  noteImageAssetIds,
-  noteImageMarkers,
   noteListTitle,
   noteReadingBody,
-  removeNoteImageMarkerAt,
   type NoteItem,
 } from "@/domain/note";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -33,10 +29,8 @@ import { ItemDetailLink } from "./item-detail-link";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { NoteContent } from "./note-content";
-import { NoteEditor } from "./note-editor";
+import { NoteItemEditDialog, type NoteDetailsDraft } from "./item-edit-dialog";
 import { ArrowLeftIcon, DeleteIcon, EditIcon, LayersIcon } from "./shell-icons";
-
-type PendingImage = { id: string; bytes: Uint8Array; mimeType: string; url: string };
 
 type LoadState =
   | { status: "loading" | "missing" | "error" }
@@ -52,12 +46,6 @@ export function NoteItemPage({
   const router = useRouter();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [format, setFormat] = useState<"plain" | "markdown">("plain");
-  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
-  const pendingImagesRef = useRef<PendingImage[]>([]);
-  const imageReadGenerationRef = useRef(0);
-  const [addingImages, setAddingImages] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -91,10 +79,6 @@ export function NoteItemPage({
     };
   }, [itemId]);
 
-  useEffect(() => () => {
-    imageReadGenerationRef.current += 1;
-    for (const image of pendingImagesRef.current) URL.revokeObjectURL(image.url);
-  }, []);
 
   if (state.status !== "ready") {
     const message =
@@ -136,81 +120,18 @@ export function NoteItemPage({
     window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
   }
 
-  function clearPendingImages() {
-    imageReadGenerationRef.current += 1;
-    for (const image of pendingImagesRef.current) URL.revokeObjectURL(image.url);
-    pendingImagesRef.current = [];
-    setPendingImages([]);
-  }
-
   function beginEdit() {
-    clearPendingImages();
-    setDraft(note.content);
-    setFormat(note.format === "markdown" ? "markdown" : "plain");
     setEditError(null);
     setEditing(true);
   }
 
-  async function addImages(files: File[], start: number, end: number) {
-    const generation = imageReadGenerationRef.current;
-    setAddingImages(true);
-    try {
-      const validated = await Promise.all(files.map(async (file) => {
-        assertLocalImageFile(file);
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const mimeType = assertLocalImageBytes(bytes, file.type);
-        return { file, bytes, mimeType };
-      }));
-      if (generation !== imageReadGenerationRef.current) return;
-      const prepared = validated.map(({ file, bytes, mimeType }) => ({
-        id: crypto.randomUUID(), bytes, mimeType, url: URL.createObjectURL(file),
-      }));
-      pendingImagesRef.current = [...pendingImagesRef.current, ...prepared];
-      setPendingImages(pendingImagesRef.current);
-      setDraft((current) => {
-        let next = current;
-        let at = start;
-        let through = end;
-        for (const image of prepared) {
-          next = insertNoteImageMarker(next, at, through, image.id);
-          at = next.indexOf(`keepall-image:${image.id}`, at) + `keepall-image:${image.id}`.length + 1;
-          through = at;
-        }
-        return next;
-      });
-      setEditError(null);
-    } catch (error) {
-      if (generation === imageReadGenerationRef.current) {
-        setEditError(error instanceof ImageValidationError ? error.message : "Couldn't add image.");
-      }
-    } finally {
-      if (generation === imageReadGenerationRef.current) setAddingImages(false);
-    }
-  }
-
-  function removeImage(index: number) {
-    const marker = noteImageMarkers(draft)[index];
-    if (!marker) return;
-    const next = removeNoteImageMarkerAt(draft, index);
-    setDraft(next);
-    if (noteImageAssetIds(next).includes(marker.assetId)) return;
-    const removed = pendingImagesRef.current.find((image) => image.id === marker.assetId);
-    if (!removed) return;
-    URL.revokeObjectURL(removed.url);
-    pendingImagesRef.current = pendingImagesRef.current.filter((image) => image.id !== marker.assetId);
-    setPendingImages(pendingImagesRef.current);
-  }
-
-  async function save() {
-    if (saving || addingImages || state.status !== "ready") return;
+  async function save(draft: NoteDetailsDraft) {
+    if (saving || state.status !== "ready") return;
     setSaving(true);
     setEditError(null);
     try {
-      const referenced = new Set(noteImageAssetIds(draft));
-      const updated = await saveNoteWithImages(itemId, { content: draft, format },
-        pendingImages.filter((image) => referenced.has(image.id)));
+      const updated = await saveNoteWithImages(itemId, { content: draft.content, format: draft.format }, draft.images ?? []);
       applyNoteUpdate(updated);
-      clearPendingImages();
       setEditing(false);
     } catch (error) {
       setEditError(
@@ -336,7 +257,7 @@ export function NoteItemPage({
             type="button"
             aria-label="Edit note"
             className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm"
-            disabled={editing || saving || addingImages || deleting || organizeBusy}
+            disabled={editing || saving || deleting || organizeBusy}
             onClick={beginEdit}
           >
             <EditIcon />
@@ -346,7 +267,7 @@ export function NoteItemPage({
             <button
               type="button"
               className="ui-control inline-flex min-h-10 items-center px-3 text-sm"
-              disabled={saving || addingImages || deleting || organizeBusy}
+              disabled={saving || deleting || organizeBusy}
               onClick={beginEdit}
             >
               Add image
@@ -356,7 +277,7 @@ export function NoteItemPage({
             type="button"
             aria-label="Organize"
             className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm"
-            disabled={saving || addingImages || deleting || organizeBusy}
+            disabled={saving || deleting || organizeBusy}
             onClick={() => {
               setTagError(null);
               setCollectionError(null);
@@ -373,7 +294,7 @@ export function NoteItemPage({
             type="button"
             aria-label="Move note to Trash"
             className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60"
-            disabled={saving || addingImages || deleting || organizeBusy}
+            disabled={saving || deleting || organizeBusy}
             onClick={() => setDeleteOpen(true)}
           >
             <DeleteIcon />
@@ -387,41 +308,9 @@ export function NoteItemPage({
           <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
             {title}
           </h1>
-          {editing ? (
-            <div className="mt-9">
-              <NoteEditor
-                key={itemId}
-                itemId={itemId}
-                content={draft}
-                format={format}
-                error={editError}
-                busy={saving || addingImages}
-                saving={saving}
-                setFirstEditField={() => {}}
-                onContentChange={setDraft}
-                onFormatChange={setFormat}
-                onSaveShortcut={(event, action) => {
-                  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-                    event.preventDefault();
-                    action();
-                  }
-                }}
-                onSave={() => void save()}
-                onCancel={() => { clearPendingImages(); setEditing(false); }}
-                onAddImages={(files, start, end) => void addImages(files, start, end)}
-                onRemoveImage={removeImage}
-                pendingImageUrls={new Map(pendingImages.map((image) => [image.id, image.url]))}
-              />
-            </div>
-          ) : (
-            <article className="mt-9 border-t border-border-control pt-8">
-              <NoteContent
-                content={noteReadingBody(note)}
-                format={note.format === "markdown" ? "markdown" : "plain"}
-                headingStart={2}
-              />
-            </article>
-          )}
+          <article className="mt-9 border-t border-border-control pt-8">
+            <NoteContent content={noteReadingBody(note)} format={note.format === "markdown" ? "markdown" : "plain"} headingStart={2} />
+          </article>
         </div>
 
         <aside
@@ -475,6 +364,12 @@ export function NoteItemPage({
           </dl>
         </aside>
       </main>
+
+      {editing ? <NoteItemEditDialog
+        key={itemId} item={note} open busy={saving} error={editError}
+        onSave={(draft) => void save(draft)}
+        onOpenChange={(open) => { if (!open) setEditing(false); }}
+      /> : null}
 
       <ItemOrganizerDrawer
         open={organizerOpen}

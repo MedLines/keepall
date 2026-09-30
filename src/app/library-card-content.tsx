@@ -17,13 +17,11 @@ function LinkSource({ host, query }: { host: string; query: string }) {
   );
 }
 
-function TagPopover({ id, tags, pendingRemoveId, onBrowseTag, onRemoveTag, onPendingRemoveChange }: {
+function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
   id: string;
   tags: { id: string; name: string }[];
-  pendingRemoveId: string | null;
   onBrowseTag: (id: string) => void;
   onRemoveTag: (id: string) => void;
-  onPendingRemoveChange: (id: string | null) => void;
 }) {
   const isPresent = useIsPresent();
   const reduceMotion = useReducedMotion();
@@ -42,13 +40,9 @@ function TagPopover({ id, tags, pendingRemoveId, onBrowseTag, onRemoveTag, onPen
     >
       <ul aria-label="Tags" className="flex min-w-0 flex-col gap-1">
         {tags.map(tag => {
-          const confirming = pendingRemoveId === tag.id;
           return <li key={tag.id} className="squircle-panel flex min-w-0 items-center rounded-control-sm hover:bg-bg-active focus-within:bg-bg-active">
             <button type="button" title={tag.name} className="ui-menu-item min-w-0 flex-1 truncate text-start text-sm text-text-primary hover:bg-transparent" onClick={() => onBrowseTag(tag.id)}>{tag.name}</button>
-            {confirming ? <button type="button" aria-label={`Confirm remove tag ${tag.name}`} className="min-h-8 shrink-0 rounded-md bg-bg-danger px-2 text-xs font-medium text-text-danger transition-transform duration-150 ease-out active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100" onClick={() => {
-              onRemoveTag(tag.id);
-              onPendingRemoveChange(null);
-            }}>Remove</button> : <button type="button" title={`Remove ${tag.name}`} aria-label={`Remove tag ${tag.name}`} className="squircle-panel flex size-10 shrink-0 items-center justify-center rounded-control-sm text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => onPendingRemoveChange(tag.id)}><CloseIcon /></button>}
+            <button type="button" title={`Remove ${tag.name}`} aria-label={`Remove tag ${tag.name}`} className="squircle-panel flex size-10 shrink-0 items-center justify-center rounded-control-sm text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => onRemoveTag(tag.id)}><CloseIcon /></button>
           </li>;
         })}
       </ul>
@@ -132,7 +126,6 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
   onRemoveTag: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const id = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -141,13 +134,11 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
     function onPointerDown(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setExpanded(false);
-        setPendingRemoveId(null);
       }
     }
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setExpanded(false);
-        setPendingRemoveId(null);
         triggerRef.current?.focus();
       }
     }
@@ -174,21 +165,17 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
         {tags.length ? <div ref={rootRef} className="library-card-tag-control relative shrink-0">
           <button ref={triggerRef} type="button" aria-expanded={expanded} aria-controls={id} className="squircle-panel flex min-h-8 items-center gap-1.5 rounded-control bg-bg-raised px-2 text-text-secondary hover:text-text-primary active:scale-[0.96] motion-reduce:active:scale-100" onClick={() => {
             setExpanded(!expanded);
-            setPendingRemoveId(null);
           }}><HashIcon className="size-3.5" />{tags.length} {tags.length === 1 ? "tag" : "tags"}</button>
           <AnimatePresence>
             {expanded ? <TagPopover
               key="tags"
               id={id}
               tags={tags}
-              pendingRemoveId={pendingRemoveId}
               onBrowseTag={(tagId) => {
                 setExpanded(false);
-                setPendingRemoveId(null);
                 onBrowseTag(tagId);
               }}
               onRemoveTag={onRemoveTag}
-              onPendingRemoveChange={setPendingRemoveId}
             /> : null}
           </AnimatePresence>
         </div> : null}

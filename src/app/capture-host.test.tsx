@@ -126,16 +126,20 @@ describe("CaptureHost", () => {
 
   test("saves quick notes as plain and an opted-in note as Markdown", async () => {
     vi.mocked(createNote).mockResolvedValue(buildNote({ content: "# Card study" }, { id: "n1", now: 1 }));
-    const input = await openDraft("# Card study");
-    const markdown = screen.getByRole("checkbox", { name: "Markdown" });
-    expect(markdown).not.toBeChecked();
-    expect(screen.queryByRole("button", { name: "Markdown" })).toBeNull();
+    await openDraft("# Card study");
+    const markdown = screen.getByRole("button", { name: "Markdown" });
+    expect(markdown).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Plain text" })).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(markdown);
-    expect(markdown).toBeChecked();
+    expect(markdown).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
     expect(screen.getByRole("heading", { name: "Card study" })).toBeVisible();
-    fireEvent.submit(input.closest("form")!);
+    fireEvent.click(screen.getByRole("button", { name: "Plain text" }));
+    expect(screen.getByLabelText("Note preview")).toHaveTextContent("# Card study");
+    expect(screen.getByRole("button", { name: "Preview" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(markdown);
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(createNote).toHaveBeenCalledWith({
       content: "# Card study",
@@ -211,7 +215,7 @@ describe("CaptureHost", () => {
     const input = await openDraft("https://example.com/article");
     expect(screen.getByLabelText("Your note (optional)")).toBeVisible();
     fireEvent.change(screen.getByLabelText("Your note (optional)"), { target: { value: "## Useful" } });
-    fireEvent.click(screen.getByRole("checkbox", { name: "Markdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
     fireEvent.submit(input.closest("form")!);
     await waitFor(() => expect(createOrReuseLink).toHaveBeenCalledWith({
       url: "https://example.com/article", noteContent: "## Useful", noteFormat: "markdown",
@@ -223,13 +227,13 @@ describe("CaptureHost", () => {
     fireEvent.change(screen.getByLabelText("Your note (optional)"), {
       target: { value: "## Useful" },
     });
-    fireEvent.click(screen.getByRole("checkbox", { name: "Markdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Markdown" }));
 
     expect(screen.queryByLabelText("Personal note preview")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
     expect(screen.getByRole("heading", { name: "Useful" })).toBeVisible();
     expect(screen.queryByLabelText("Your note (optional)")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Hide preview" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     expect(screen.queryByLabelText("Personal note preview")).toBeNull();
     expect(screen.getByLabelText("Your note (optional)")).toHaveValue("## Useful");
   });
@@ -583,14 +587,14 @@ describe("CaptureHost", () => {
     const fileInput = screen.getByRole("dialog").querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(fileInput, { target: { files: [new File([new Uint8Array([1])], "study.png", { type: "image/png" })] } });
     await screen.findByLabelText("1 image attached");
-    const markdown = screen.getByRole("checkbox", { name: "Markdown" });
-    expect(markdown).not.toBeChecked();
+    const markdown = screen.getByRole("button", { name: "Markdown" });
+    expect(markdown).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(markdown);
-    expect(markdown).toBeChecked();
+    expect(markdown).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByLabelText("Image note preview")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
     expect(screen.getByLabelText("Image note preview")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Hide preview" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     expect(screen.queryByLabelText("Image note preview")).toBeNull();
     vi.mocked(createOrReuseImage).mockResolvedValue({
       image: buildImageFromAssetIds({ assetIds: ["a1"], caption: "## Color study", captionFormat: "markdown" }, { id: "img1", now: 1 }),

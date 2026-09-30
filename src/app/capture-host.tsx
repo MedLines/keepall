@@ -1,8 +1,6 @@
 "use client";
 
 import { type ClipboardEvent, type FormEvent, useEffect, useReducer, useRef, useState } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Tick02Icon } from "@hugeicons/core-free-icons";
 import {
   captureReducer,
   initialCaptureState,
@@ -59,34 +57,11 @@ import {
 import type { CaptureOrgDrafts } from "@/domain/capture-org";
 import { SideDrawer } from "@/components/ui/side-drawer";
 import { NoteContent } from "./note-content";
+import { NoteEditorControls } from "./note-editor-controls";
 
 
 const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} order-last h-8 px-3 text-xs disabled:opacity-60`;
 const CAPTURE_PREVIEW_CLASS = "ui-scrollbar max-h-36 overflow-y-auto overscroll-contain rounded-input border border-border-control bg-bg-control p-4";
-
-function CaptureMarkdownToggle({ checked, disabled, onChange }: {
-  checked: boolean;
-  disabled: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label className="ui-control flex min-h-8 items-center gap-1.5 px-2 text-xs text-text-secondary">
-      <span className="relative size-4 shrink-0">
-        <input
-          type="checkbox"
-          className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
-          checked={checked}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.checked)}
-        />
-        <span className={`pointer-events-none absolute inset-0 grid place-items-center rounded-[5px] border peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-border-focus ${checked ? "border-action-primary bg-action-primary text-text-on-action" : "border-text-secondary"}`} aria-hidden="true">
-          {checked ? <HugeiconsIcon icon={Tick02Icon} size={13} strokeWidth={1.5} /> : null}
-        </span>
-      </span>
-      Markdown
-    </label>
-  );
-}
 
 function imageDraftPreviewMaxHeightClass(count: number): string {
   if (count <= 2) {
@@ -358,11 +333,6 @@ export function CaptureHost() {
   function rememberSavedItem(itemId: string) {
     savedItemIdRef.current = itemId;
     setSavedItemId(itemId);
-  }
-
-  function setCaptureMarkdown(checked: boolean) {
-    setNoteFormat(checked ? "markdown" : "plain");
-    if (!checked) setPreviewKind(null);
   }
 
   function resetSession() {
@@ -854,70 +824,55 @@ export function CaptureHost() {
             Adding images… {imageUpload.completed} of {imageUpload.total}
           </p>
         ) : null}
-        <div className="flex flex-col gap-2">
-          {kind === "link" && !savingImage && !videoDraft ? <span className="text-sm font-medium text-text-secondary">Link URL</span> : null}
-          <label className="sr-only" htmlFor="capture-input">
-            {videoDraft ? "Video title" : savingImage
-              ? "Optional source URL or caption"
-              : "Link, note, or image"}
-          </label>
-          <textarea
-            ref={inputRef}
-            className={`ui-field w-full rounded-input px-4 py-3 text-sm disabled:opacity-60 ${
-              videoDraft ? "min-h-11" : savingImage ? "min-h-16" : kind === "link" ? "min-h-11" : "min-h-24"
-            }`}
-            id="capture-input"
-            placeholder={
-              videoDraft ? "Optional video title" : savingImage
-                ? "Optional source URL or caption"
-                : kind === "link" ? "https://example.com/page" : "Paste a link, note, or image"
-            }
-            value={state.input}
-            onChange={(event) =>
-              dispatch({ type: "input", text: event.target.value })
-            }
-            disabled={composeLocked}
-          />
-        </div>
         {kind === "note" && !savingImage && !videoDraft ? (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CaptureMarkdownToggle checked={noteFormat === "markdown"} disabled={composeLocked} onChange={setCaptureMarkdown} />
-              <button type="button" aria-pressed={previewKind === "note"} aria-hidden={noteFormat !== "markdown"} className={`ui-control min-h-9 px-3 text-xs font-medium ${noteFormat === "markdown" ? "" : "invisible"}`} disabled={noteFormat !== "markdown"} onClick={() => setPreviewKind((current) => current === "note" ? null : "note")}>
-                {previewKind === "note" ? "Hide preview" : "Preview"}
-              </button>
-            </div>
-            {noteFormat === "markdown" && previewKind === "note" ? (
-              <div aria-label="Markdown preview" className={CAPTURE_PREVIEW_CLASS}>
-                <NoteContent content={state.input} format="markdown" />
-              </div>
-            ) : null}
-          </div>
+          <NoteEditorControls format={noteFormat} preview={previewKind === "note"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "note" : null)} />
         ) : null}
         {savingImage && textFieldsFromAccompanyingText(state.input).caption ? (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CaptureMarkdownToggle checked={noteFormat === "markdown"} disabled={composeLocked} onChange={setCaptureMarkdown} />
-              <button type="button" aria-pressed={previewKind === "image"} aria-hidden={noteFormat !== "markdown"} className={`ui-control min-h-9 px-3 text-xs font-medium ${noteFormat === "markdown" ? "" : "invisible"}`} disabled={noteFormat !== "markdown"} onClick={() => setPreviewKind((current) => current === "image" ? null : "image")}>
-                {previewKind === "image" ? "Hide preview" : "Preview"}
-              </button>
-            </div>
-            {noteFormat === "markdown" && previewKind === "image" ? (
-              <section aria-label="Image note preview" className={CAPTURE_PREVIEW_CLASS}>
-                <NoteContent content={state.input} format="markdown" />
-              </section>
-            ) : null}
+          <NoteEditorControls format={noteFormat} preview={previewKind === "image"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "image" : null)} />
+        ) : null}
+        {previewKind !== "note" && previewKind !== "image" ? (
+          <div className="flex flex-col gap-2">
+            {kind === "link" && !savingImage && !videoDraft ? <span className="text-sm font-medium text-text-secondary">Link URL</span> : null}
+            <label className="sr-only" htmlFor="capture-input">
+              {videoDraft ? "Video title" : savingImage
+                ? "Optional source URL or caption"
+                : "Link, note, or image"}
+            </label>
+            <textarea
+              ref={inputRef}
+              className={`ui-field w-full rounded-input px-4 py-3 text-sm disabled:opacity-60 ${
+                videoDraft ? "min-h-11" : savingImage ? "min-h-16" : kind === "link" ? "min-h-11" : "min-h-24"
+              }`}
+              id="capture-input"
+              placeholder={
+                videoDraft ? "Optional video title" : savingImage
+                  ? "Optional source URL or caption"
+                  : kind === "link" ? "https://example.com/page" : "Paste a link, note, or image"
+              }
+              value={state.input}
+              onChange={(event) =>
+                dispatch({ type: "input", text: event.target.value })
+              }
+              disabled={composeLocked}
+            />
           </div>
+        ) : null}
+        {kind === "note" && !savingImage && !videoDraft && previewKind === "note" ? (
+          <section aria-label="Note preview" className={CAPTURE_PREVIEW_CLASS}>
+            <NoteContent content={state.input} format={noteFormat} />
+          </section>
+        ) : null}
+        {savingImage && previewKind === "image" ? (
+          <section aria-label="Image note preview" className={CAPTURE_PREVIEW_CLASS}>
+            <NoteContent content={state.input} format={noteFormat} />
+          </section>
         ) : null}
         {videoDraft ? (
           <div className="flex flex-col gap-3">
-            <label className="text-sm font-medium text-text-primary" htmlFor="capture-video-note">Notes (optional)</label>
-            <textarea id="capture-video-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm" placeholder="Add a note about this video" value={videoNoteDraft} disabled={composeLocked} onChange={(event) => setVideoNoteDraft(event.target.value)} />
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CaptureMarkdownToggle checked={noteFormat === "markdown"} disabled={composeLocked} onChange={setCaptureMarkdown} />
-              {noteFormat === "markdown" ? <button type="button" aria-pressed={previewKind === "video"} className="ui-control min-h-9 px-3 text-xs font-medium" disabled={!videoNoteDraft.trim()} onClick={() => setPreviewKind((current) => current === "video" ? null : "video")}>{previewKind === "video" ? "Hide preview" : "Preview"}</button> : null}
-            </div>
-            {noteFormat === "markdown" && previewKind === "video" && videoNoteDraft.trim() ? <section aria-label="Video note preview" className={CAPTURE_PREVIEW_CLASS}><NoteContent content={videoNoteDraft} format="markdown" /></section> : null}
+            {previewKind === "video" ? <span className="text-sm font-medium text-text-primary">Notes (optional)</span> : <label className="text-sm font-medium text-text-primary" htmlFor="capture-video-note">Notes (optional)</label>}
+            <NoteEditorControls format={noteFormat} preview={previewKind === "video"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "video" : null)} />
+            {previewKind !== "video" ? <textarea id="capture-video-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm" placeholder="Add a note about this video" value={videoNoteDraft} disabled={composeLocked} onChange={(event) => setVideoNoteDraft(event.target.value)} /> : null}
+            {previewKind === "video" ? <section aria-label="Video note preview" className={CAPTURE_PREVIEW_CLASS}><NoteContent content={videoNoteDraft} format={noteFormat} /></section> : null}
           </div>
         ) : null}
         {kind === "link" && !savingImage && !videoDraft ? (
@@ -928,16 +883,11 @@ export function CaptureHost() {
               ) : (
                 <label className="text-sm font-medium text-text-primary" htmlFor="capture-link-note">Your note (optional)</label>
               )}
-              <div className="ml-auto flex items-center gap-2">
-                <CaptureMarkdownToggle checked={noteFormat === "markdown"} disabled={composeLocked} onChange={setCaptureMarkdown} />
-                <button type="button" aria-pressed={previewKind === "link"} aria-hidden={noteFormat !== "markdown"} className={`ui-control min-h-8 px-2 text-xs font-medium disabled:opacity-50 ${noteFormat === "markdown" ? "" : "invisible"}`} disabled={noteFormat !== "markdown" || !linkNoteDraft.trim()} onClick={() => setPreviewKind((current) => current === "link" ? null : "link")}>
-                  {previewKind === "link" ? "Hide preview" : "Preview"}
-                </button>
-              </div>
+              <NoteEditorControls format={noteFormat} preview={previewKind === "link"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "link" : null)} />
             </div>
-            {noteFormat === "markdown" && linkNoteDraft.trim() && previewKind === "link" ? (
+            {previewKind === "link" ? (
               <section aria-label="Personal note preview" className={`${CAPTURE_PREVIEW_CLASS} h-28`}>
-                <NoteContent content={linkNoteDraft} format="markdown" />
+                <NoteContent content={linkNoteDraft} format={noteFormat} />
               </section>
             ) : (
               <textarea id="capture-link-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm" placeholder="Why are you saving this link?" value={linkNoteDraft} disabled={composeLocked} onChange={(event) => {
@@ -1058,9 +1008,20 @@ export function CaptureHost() {
         ) : null}
         </div>
         <div
-          className="flex shrink-0 items-center gap-3 border-t border-border-control bg-bg-canvas px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5"
+          className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border-control bg-bg-canvas px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5"
           data-testid="capture-footer"
         >
+          <button
+            className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-4 disabled:opacity-60`}
+            type="button"
+            disabled={shouldBlockDialogDismiss(state.status)}
+            onClick={() => {
+              resetSession();
+              dispatch({ type: "dismiss" });
+            }}
+          >
+            Cancel
+          </button>
           <button
             className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} px-4 disabled:opacity-60`}
             type="submit"
@@ -1075,21 +1036,10 @@ export function CaptureHost() {
           >
             {state.status === "saving" ? "Saving…" : "Save"}
           </button>
-          <button
-            className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-4 disabled:opacity-60`}
-            type="button"
-            disabled={shouldBlockDialogDismiss(state.status)}
-            onClick={() => {
-              resetSession();
-              dispatch({ type: "dismiss" });
-            }}
-          >
-            Cancel
-          </button>
           {state.status === "saved" ? (
             <p className="text-xs text-text-secondary">Saved.</p>
           ) : (
-            <p className="ml-auto text-xs text-text-secondary">Ctrl/⌘ Enter to save</p>
+            <p className="mr-auto order-first basis-full text-xs text-text-secondary sm:basis-auto">Ctrl/⌘ Enter to save</p>
           )}
         </div>
       </form>

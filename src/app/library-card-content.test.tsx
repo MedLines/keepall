@@ -90,8 +90,8 @@ describe("grid card content", () => {
     const removeButton = screen.getByRole("button", { name: "Remove tag minimal" });
     expect(removeButton.querySelector("svg")).toBeTruthy();
     fireEvent.click(removeButton);
-    fireEvent.click(screen.getByRole("button", { name: "Confirm remove tag minimal" }));
     expect(remove).toHaveBeenCalledWith("t");
+    expect(screen.queryByRole("button", { name: "Confirm remove tag minimal" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "minimal" }));
     expect(browse).toHaveBeenCalledWith("t");
   });

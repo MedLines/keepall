@@ -819,9 +819,6 @@ describe("Library tags", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Remove tag inspiration" }),
     );
-    fireEvent.click(
-      screen.getByRole("button", { name: "Confirm remove tag inspiration" }),
-    );
 
     await waitFor(() => {
       expect(unassignTagFromItem).toHaveBeenCalledWith("n1", "t1");
@@ -1235,8 +1232,8 @@ describe("Library view state", () => {
     fireEvent.click(first);
     fireEvent.click(second);
     const bulk = screen.getByRole("region", { name: "Bulk actions" });
-    fireEvent.click(within(bulk).getByRole("button", { name: "Tags" }));
-    expect(screen.getByRole("dialog", { name: "Tags for 2 selected items" })).toBeInTheDocument();
+    fireEvent.click(within(bulk).getByRole("button", { name: "Organize" }));
+    expect(screen.getByRole("dialog", { name: "Organize 2 selected items" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Add tag to selection"), {
       target: { value: "work" },
     });
@@ -1244,8 +1241,7 @@ describe("Library view state", () => {
     const tagOption = screen.getByRole("option", { name: "work" });
     expect(tagInput).toHaveAttribute("aria-controls", tagOption.closest("ul")?.id);
     expect(tagOption).toHaveAttribute("aria-selected", "true");
-    const tagForm = screen.getByLabelText("Add tag to selection").closest("form");
-    fireEvent.click(within(tagForm!).getByRole("button", { name: "Add" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Add" }));
 
     await waitFor(() => {
       expect(createTag).toHaveBeenCalledWith({ name: "work" });
@@ -1258,7 +1254,7 @@ describe("Library view state", () => {
     await waitFor(() => {
       expect(unassignTagFromItem).toHaveBeenCalledWith("n1", "t1");
     });
-    expect(screen.getByRole("dialog", { name: "Tags for 2 selected items" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Organize 2 selected items" })).toBeInTheDocument();
   });
 
   test("select all and deselect all visible items", async () => {

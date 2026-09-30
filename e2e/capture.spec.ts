@@ -134,7 +134,7 @@ test("large organization lists keep capture compact and actions visible", async 
   await expect(collections.getByRole("button").nth(1)).toHaveText("Unsorted");
 });
 
-test("checking Markdown does not move collection or tag controls", async ({ page }) => {
+test("switching note format does not move collection or tag controls", async ({ page }) => {
   for (const { width, height, text } of [
     { width: 1897, height: 917, text: "# Card idea" },
     { width: 320, height: 768, text: "# Card idea" },
@@ -145,7 +145,7 @@ test("checking Markdown does not move collection or tag controls", async ({ page
     await openCaptureFromShortcut(page);
     const capture = page.getByRole("dialog", { name: "Save to Keepall" });
     await capture.getByLabel("Link, note, or image").fill(text);
-    const markdown = capture.getByRole("checkbox", { name: "Markdown" });
+    const markdown = capture.getByRole("button", { name: "Markdown" });
     const positions = () => capture.evaluate((drawer) => {
       const region = drawer.querySelector('[data-testid="capture-scroll-region"]')!;
       const collection = drawer.querySelector('#capture-add-collection')!;
@@ -154,12 +154,12 @@ test("checking Markdown does not move collection or tag controls", async ({ page
       return { collection: y(collection), tags: y(tags) };
     });
     const before = await positions();
-    await expect(capture.getByRole("button", { name: "Preview" })).toHaveCount(0);
-    await markdown.check();
+    await expect(capture.getByRole("button", { name: "Preview" })).toHaveAttribute("aria-pressed", "false");
+    await markdown.click();
     await expect(capture.getByRole("button", { name: "Preview" })).toBeVisible();
     expect(await positions()).toEqual(before);
-    await markdown.uncheck();
-    await expect(capture.getByRole("button", { name: "Preview" })).toHaveCount(0);
+    await capture.getByRole("button", { name: "Plain text" }).click();
+    await expect(capture.getByRole("button", { name: "Preview" })).toHaveAttribute("aria-pressed", "false");
     expect(await positions()).toEqual(before);
     await capture.getByRole("button", { name: "Cancel" }).click();
   }
@@ -192,7 +192,7 @@ test("a Markdown note keeps its source and formatting after offline reload", asy
   const capture = page.getByRole("dialog", { name: "Save to Keepall" });
   const source = "# Card idea\n\n- [x] Check spacing\n\n```tsx\nconst gap = 8;\n```";
   await capture.getByLabel("Link, note, or image").fill(source);
-  await capture.getByRole("checkbox", { name: "Markdown" }).check();
+  await capture.getByRole("button", { name: "Markdown" }).click();
   await capture.getByRole("button", { name: "Preview" }).click();
   await expect(capture.getByRole("heading", { name: "Card idea" })).toBeVisible();
   await capture.getByRole("button", { name: "Save", exact: true }).click();
@@ -219,7 +219,7 @@ test("a long note scrolls to the end on its own page", async ({ page }) => {
   await openCaptureFromShortcut(page);
   const paragraphs = Array.from({ length: 40 }, (_, index) => `Paragraph ${index}: an observation about the interface.`);
   await page.getByLabel("Link, note, or image").fill(`# Long note\n\n${paragraphs.join("\n\n")}`);
-  await page.getByRole("checkbox", { name: "Markdown" }).check();
+  await page.getByRole("button", { name: "Markdown" }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.getByRole("link", { name: /Long note.*Read note/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Long note" })).toBeVisible();
@@ -257,7 +257,7 @@ test("a link card opens the website while its note opens a Keepall page", async 
   const capture = page.getByRole("dialog", { name: "Save to Keepall" });
   await capture.getByLabel("Link, note, or image").fill("https://example.com/design-reference");
   await capture.getByLabel("Your note (optional)").fill("## Try this layout\n\nKeep the image wide.");
-  await capture.getByRole("checkbox", { name: "Markdown" }).check();
+  await capture.getByRole("button", { name: "Markdown" }).click();
   await capture.getByRole("button", { name: "Save", exact: true }).click();
 
   const card = page.locator(".library-card").first();
@@ -292,7 +292,7 @@ test("Markdown preview is optional, bounded, and keeps the drawer width stable",
   const capture = page.getByRole("dialog", { name: "Save to Keepall" });
   await capture.getByLabel("Link, note, or image").fill("https://example.com/layout");
   const note = capture.getByRole("textbox", { name: "Your note (optional)" });
-  await capture.getByRole("checkbox", { name: "Markdown" }).check();
+  await capture.getByRole("button", { name: "Markdown" }).click();
   await note.fill(Array.from({ length: 20 }, (_, index) => `## Section ${index + 1}\n\nNotes about this page.`).join("\n\n"));
   const before = await note.boundingBox();
   const preview = capture.getByLabel("Personal note preview");
@@ -314,7 +314,7 @@ test("Markdown preview is optional, bounded, and keeps the drawer width stable",
   expect(after!.height).toBeLessThanOrEqual(160);
   expect(Math.round(after!.x)).toBe(Math.round(before!.x));
   expect(after!.width).toBeCloseTo(before!.width, 2);
-  await capture.getByRole("button", { name: "Hide preview" }).click();
+  await capture.getByRole("button", { name: "Edit" }).click();
   await expect(preview).toHaveCount(0);
   await expect(note).toBeVisible();
 });
@@ -398,8 +398,15 @@ test("editing a link URL survives a reload", async ({ page }) => {
   await editableLink.hover();
   await editableLink.locator("button.library-card-actions").click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
-  await page.getByLabel("URL").fill("https://example.com/new");
-  await page.getByRole("button", { name: "Save link" }).click();
+  const editor = page.getByRole("dialog", { name: "Edit link details" });
+  await editor.getByLabel("My note (optional)").fill("# Link note");
+  await editor.getByRole("button", { name: "Preview", exact: true }).click();
+  await editor.getByRole("button", { name: "Markdown", exact: true }).click();
+  await expect(editor.getByRole("heading", { name: "Link note" })).toBeVisible();
+  await editor.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(editor.getByLabel("My note (optional)")).toHaveValue("# Link note");
+  await editor.getByLabel("URL").fill("https://example.com/new");
+  await editor.getByRole("button", { name: "Save changes" }).click();
 
   await expect(
     page.getByRole("link", { name: "example.com", exact: true }),

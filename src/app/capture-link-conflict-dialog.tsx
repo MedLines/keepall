@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useState } from "react";
+import { ModalDialog } from "@/components/ui/modal-dialog";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_ACTIVE, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 
 export type CaptureLinkConflict = {
@@ -32,14 +33,12 @@ function formatList(names: string[]): string {
   return names.map((name) => `“${name}”`).join(", ");
 }
 
-export function CaptureLinkConflictDialog({
+function LinkConflictChoices({
   conflict,
   busy,
   onConfirm,
   onCancel,
-}: Props) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
+}: Props & { conflict: CaptureLinkConflict }) {
   const [collectionChoice, setCollectionChoice] = useState<"keep" | "move">(
     "keep",
   );
@@ -47,45 +46,21 @@ export function CaptureLinkConflictDialog({
     "merge",
   );
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) {
-      return;
-    }
-    if (conflict && !dialog.open) {
-      setCollectionChoice("keep");
-      setTagChoice("merge");
-      dialog.showModal();
-    }
-    if (!conflict && dialog.open) {
-      dialog.close();
-    }
-  }, [conflict]);
-
   return (
-    <dialog
-      ref={dialogRef}
-      className="ui-native-dialog ui-popover fixed inset-0 z-50 m-auto h-fit max-h-[min(90dvh,32rem)] w-[min(100%-2rem,28rem)] overflow-hidden p-0 text-text-primary"
-      aria-labelledby={titleId}
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!busy) {
-          onCancel();
-        }
-      }}
+    <ModalDialog
+      open busy={busy} title="Already saved"
+      description="This item is already in your library. Choose how to update tags and collection."
+      onOpenChange={(open) => { if (!open) onCancel(); }}
+      footer={<>
+        <button className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-4 disabled:opacity-60`} type="button" disabled={busy} onClick={onCancel}>Cancel</button>
+        <button className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} px-4 disabled:opacity-60`} type="button" disabled={busy}
+          onClick={() => onConfirm({
+            collectionChoice: conflict.askCollection ? collectionChoice : "keep",
+            tagChoice: conflict.askTags ? tagChoice : "merge",
+          })}
+        >{busy ? "Saving…" : "Confirm"}</button>
+      </>}
     >
-      {conflict ? (
-        <div className="scroll-fade flex max-h-[min(90dvh,32rem)] flex-col gap-4 overflow-y-auto p-5">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight" id={titleId}>
-              Already saved
-            </h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              This item is already in your library. Choose how to update tags
-              and collection.
-            </p>
-          </div>
-
           {conflict.askCollection ? (
             <fieldset className="flex flex-col gap-2">
               <legend className="text-xs font-medium text-text-primary">
@@ -168,33 +143,10 @@ export function CaptureLinkConflictDialog({
             </fieldset>
           ) : null}
 
-          <div className="flex items-center gap-2">
-            <button
-              className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} px-4 disabled:opacity-60`}
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                onConfirm({
-                  collectionChoice: conflict.askCollection
-                    ? collectionChoice
-                    : "keep",
-                  tagChoice: conflict.askTags ? tagChoice : "merge",
-                })
-              }
-            >
-              {busy ? "Saving…" : "Confirm"}
-            </button>
-            <button
-              className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-4 disabled:opacity-60`}
-              type="button"
-              disabled={busy}
-              onClick={onCancel}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </dialog>
+    </ModalDialog>
   );
+}
+
+export function CaptureLinkConflictDialog(props: Props) {
+  return props.conflict ? <LinkConflictChoices {...props} conflict={props.conflict} /> : null;
 }

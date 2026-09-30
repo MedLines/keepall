@@ -13,7 +13,7 @@ import {
   FullScreenIcon as FullScreen, Video01Icon as Video01, PlayIcon as Play, PauseIcon as Pause, EyeIcon as Eye,
   CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle,
   Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
-  KeyboardIcon as Keyboard,
+  KeyboardIcon as Keyboard, TextFontIcon as TextFont, SourceCodeIcon as SourceCode,
 } from "@hugeicons/core-free-icons";
 
 type IconProps = { className?: string; fill?: "none" | "currentColor" };
@@ -75,3 +75,6 @@ export function DarkThemeIcon(props: IconProps) { return <ShellIcon icon={Moon02
 export function SidebarChevronIcon({ expanded, className = "" }: IconProps & { expanded: boolean }) {
   return <ShellIcon icon={ArrowDown01} className={`${className} ${expanded ? "rotate-90" : "-rotate-90"}`} />;
 }
+
+export function PlainTextIcon(props: IconProps) { return <ShellIcon icon={TextFont} {...props} />; }
+export function MarkdownIcon(props: IconProps) { return <ShellIcon icon={SourceCode} {...props} />; }

@@ -19,7 +19,7 @@ test("captures, plays, and backs up a local video", async ({ page }) => {
   await expect(capture.getByRole("button", { name: "Add video" })).toHaveCount(0);
   await capture.getByRole("textbox", { name: "Video title" }).fill("Local test video");
   await capture.getByRole("textbox", { name: "Notes (optional)" }).fill("# Watch later");
-  await capture.getByRole("checkbox", { name: "Markdown" }).check();
+  await capture.getByRole("button", { name: "Markdown" }).click();
   await capture.getByRole("button", { name: "Preview" }).click();
   await expect(capture.getByRole("region", { name: "Video note preview" })).toContainText("Watch later");
   await capture.getByRole("button", { name: "Save", exact: true }).click();

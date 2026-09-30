@@ -37,8 +37,8 @@ test("settings owns backup and import recovery", async ({ page }, testInfo) => {
     const dialog = page.getByRole("dialog", { name: "Import backup" });
     await expect(dialog).toBeVisible();
     await expect(dialog).toHaveClass(/ui-popover/);
-    const backdrop = await dialog.evaluate((element) => {
-      const style = getComputedStyle(element, "::backdrop");
+    const backdrop = await page.locator(".ui-backdrop").last().evaluate((element) => {
+      const style = getComputedStyle(element);
       return {
         backgroundImage: style.backgroundImage,
         backdropFilter: style.backdropFilter,

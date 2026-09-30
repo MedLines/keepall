@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { ModalDialog } from "@/components/ui/modal-dialog";
 import type { BookmarksHtmlCollectionPolicy } from "@/domain/bookmarks-html";
 import {
   formatImageFolderImportStatus,
@@ -49,12 +50,6 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bookmarksFileInputRef = useRef<HTMLInputElement>(null);
   const imageFolderInputRef = useRef<HTMLInputElement>(null);
-  const choiceDialogRef = useRef<HTMLDialogElement>(null);
-  const bookmarksDialogRef = useRef<HTMLDialogElement>(null);
-  const imageFolderDialogRef = useRef<HTMLDialogElement>(null);
-  const choiceTitleId = useId();
-  const bookmarksTitleId = useId();
-  const imageFolderTitleId = useId();
   const [pendingRaw, setPendingRaw] = useState<unknown | null>(null);
   const [pendingBookmarksHtml, setPendingBookmarksHtml] = useState<string | null>(
     null,
@@ -82,45 +77,6 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const [feedbackSection, setFeedbackSection] =
     useState<"backup" | "import">("backup");
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    const dialog = choiceDialogRef.current;
-    if (!dialog) {
-      return;
-    }
-    if (pendingRaw !== null && !dialog.open) {
-      dialog.showModal();
-    }
-    if (pendingRaw === null && dialog.open) {
-      dialog.close();
-    }
-  }, [pendingRaw]);
-
-  useEffect(() => {
-    const dialog = bookmarksDialogRef.current;
-    if (!dialog) {
-      return;
-    }
-    if (pendingBookmarksHtml !== null && !dialog.open) {
-      dialog.showModal();
-    }
-    if (pendingBookmarksHtml === null && dialog.open) {
-      dialog.close();
-    }
-  }, [pendingBookmarksHtml]);
-
-  useEffect(() => {
-    const dialog = imageFolderDialogRef.current;
-    if (!dialog) {
-      return;
-    }
-    if (pendingImageFiles !== null && !dialog.open) {
-      dialog.showModal();
-    }
-    if (pendingImageFiles === null && dialog.open) {
-      dialog.close();
-    }
-  }, [pendingImageFiles]);
 
   async function onExport() {
     setFeedbackSection("backup");
@@ -444,275 +400,182 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     />
   );
 
-  const dialogClass =
-    "ui-native-dialog ui-popover fixed inset-0 z-50 m-auto h-fit w-[min(100%-2rem,30rem)] overflow-hidden p-0 text-text-primary";
-  const dialogHeaderClass =
-    "flex shrink-0 items-start gap-4 border-b border-border-control px-6 py-5";
-  const dialogBodyClass =
-    "scroll-fade min-h-0 flex-1 overflow-y-auto px-6 py-5";
-  const dialogFooterClass =
-    "flex shrink-0 flex-wrap justify-end gap-2 border-t border-border-control px-6 py-4";
-  const dialogCloseClass =
-    "ui-control flex size-10 shrink-0 items-center justify-center disabled:opacity-60";
   const dialogButtonClass =
     "ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60";
 
   const imageFolderDialog = (
-    <dialog
-      ref={imageFolderDialogRef}
-      className={`${dialogClass} max-h-[min(90dvh,32rem)]`}
-      aria-labelledby={imageFolderTitleId}
-      onCancel={(event) => {
-        event.preventDefault();
-        cancelImageFolderImport();
-      }}
+    <ModalDialog
+      open={pendingImageFiles !== null} busy={busy} title="Import image folder"
+      description={`${pendingImageFiles?.length ?? 0} file${pendingImageFiles?.length === 1 ? "" : "s"} selected. Images under 20 MiB become separate library items.`}
+      onOpenChange={(open) => { if (!open) cancelImageFolderImport(); }}
+      footer={<>
+        <button
+          className={dialogButtonClass}
+          type="button"
+          disabled={busy}
+          onClick={cancelImageFolderImport}
+        >
+    Cancel
+        </button>
+        <button
+    className={`${dialogButtonClass} ui-primary`}
+    type="button"
+    disabled={busy}
+    onClick={() => void runImageFolderImport()}
+        >
+    {busy && imageImportProgress
+      ? `Importing… ${imageImportProgress.done} / ${imageImportProgress.total}`
+      : "Import images"}
+        </button>
+      </>}
     >
-      {pendingImageFiles !== null ? (
-        <div className="flex max-h-[min(90dvh,32rem)] flex-col">
-          <header className={dialogHeaderClass}>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-semibold" id={imageFolderTitleId}>
-                Import image folder
-              </h2>
-              <p className="mt-1 text-sm leading-relaxed text-text-secondary">
-                {pendingImageFiles.length} file
-                {pendingImageFiles.length === 1 ? "" : "s"} selected. Images under
-                20 MiB become separate library items.
-              </p>
-            </div>
-            <button
-              className={dialogCloseClass}
-              type="button"
-              aria-label="Close image import"
-              disabled={busy}
-              onClick={cancelImageFolderImport}
-            >
-              <CloseIcon />
-            </button>
-          </header>
-          <div className={dialogBodyClass}>
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="font-medium text-text-primary">
-                Collection (optional)
-              </span>
-              <input
-                className="ui-field min-h-11 px-3 py-2 disabled:opacity-60"
-                type="text"
-                value={imageCollectionDraft}
-                placeholder="e.g. Vacation 2024"
-                disabled={busy}
-                onChange={(event) => setImageCollectionDraft(event.target.value)}
-              />
-              <span className="text-xs leading-relaxed text-text-secondary">
-                Leave blank to keep the images unsorted. Unsupported or larger
-                files are skipped. Subfolders are not converted into collections.
-              </span>
-            </label>
-            {imageQuotaWarning ? (
-              <p className="mt-4 text-sm text-text-warning" role="status">
-                {imageQuotaWarning}
-              </p>
-            ) : null}
-          </div>
-          <footer className={dialogFooterClass}>
-            <button
-              className={dialogButtonClass}
-              type="button"
-              disabled={busy}
-              onClick={cancelImageFolderImport}
-            >
-              Cancel
-            </button>
-            <button
-              className={`${dialogButtonClass} ui-primary`}
-              type="button"
-              disabled={busy}
-              onClick={() => void runImageFolderImport()}
-            >
-              {busy && imageImportProgress
-                ? `Importing… ${imageImportProgress.done} / ${imageImportProgress.total}`
-                : "Import images"}
-            </button>
-          </footer>
-        </div>
+
+      <label className="flex flex-col gap-2 text-sm">
+        <span className="font-medium text-text-primary">
+          Collection (optional)
+        </span>
+        <input
+          className="ui-field min-h-11 px-3 py-2 disabled:opacity-60"
+          type="text"
+          value={imageCollectionDraft}
+          placeholder="e.g. Vacation 2024"
+          disabled={busy}
+          onChange={(event) => setImageCollectionDraft(event.target.value)}
+        />
+        <span className="text-xs leading-relaxed text-text-secondary">
+          Leave blank to keep the images unsorted. Unsupported or larger
+          files are skipped. Subfolders are not converted into collections.
+        </span>
+      </label>
+      {imageQuotaWarning ? (
+        <p className="mt-4 text-sm text-text-warning" role="status">
+          {imageQuotaWarning}
+        </p>
       ) : null}
-    </dialog>
+    </ModalDialog>
   );
 
   const choiceDialog = (
-    <dialog
-      ref={choiceDialogRef}
-      className={`${dialogClass} max-h-[min(90dvh,26rem)]`}
-      aria-labelledby={choiceTitleId}
-      onCancel={(event) => {
-        event.preventDefault();
-        cancelImportChoice();
-      }}
+    <ModalDialog
+      open={pendingRaw !== null} busy={busy} title="Import backup"
+      description="Merge combines this file with your library. Replace removes the current library first."
+      onOpenChange={(open) => { if (!open) cancelImportChoice(); }}
+      footer={<>
+        <button
+          className={dialogButtonClass}
+          type="button"
+          disabled={busy}
+          onClick={cancelImportChoice}
+        >
+    Cancel
+        </button>
+        <button
+    className={`${dialogButtonClass} border-border-danger bg-bg-danger text-text-danger`}
+    type="button"
+    disabled={busy}
+    onClick={() => void runImport("replace")}
+        >
+    Replace
+        </button>
+        <button
+    className={`${dialogButtonClass} ui-primary`}
+    type="button"
+    disabled={busy}
+    onClick={() => void runImport("merge")}
+        >
+    Merge
+        </button>
+      </>}
     >
-      {pendingRaw !== null ? (
-        <div className="flex max-h-[min(90dvh,26rem)] flex-col">
-          <header className={dialogHeaderClass}>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-semibold" id={choiceTitleId}>
-                Import backup
-              </h2>
-              <p className="mt-1 text-sm leading-relaxed text-text-secondary">
-                Merge combines this file with your library. Replace removes the
-                current library first.
-              </p>
-            </div>
-            <button
-              className={dialogCloseClass}
-              type="button"
-              aria-label="Close backup import"
-              disabled={busy}
-              onClick={cancelImportChoice}
-            >
-              <CloseIcon />
-            </button>
-          </header>
-          <footer className={dialogFooterClass}>
-            <button
-              className={dialogButtonClass}
-              type="button"
-              disabled={busy}
-              onClick={cancelImportChoice}
-            >
-              Cancel
-            </button>
-            <button
-              className={`${dialogButtonClass} border-border-danger bg-bg-danger text-text-danger`}
-              type="button"
-              disabled={busy}
-              onClick={() => void runImport("replace")}
-            >
-              Replace
-            </button>
-            <button
-              className={`${dialogButtonClass} ui-primary`}
-              type="button"
-              disabled={busy}
-              onClick={() => void runImport("merge")}
-            >
-              Merge
-            </button>
-          </footer>
-        </div>
-      ) : null}
-    </dialog>
+    </ModalDialog>
   );
 
   const bookmarksDialog = (
-    <dialog
-      ref={bookmarksDialogRef}
-      className={`${dialogClass} max-h-[min(90dvh,38rem)]`}
-      aria-labelledby={bookmarksTitleId}
-      onCancel={(event) => {
-        event.preventDefault();
-        cancelBookmarksImport();
-      }}
+    <ModalDialog
+      open={pendingBookmarksHtml !== null} busy={busy} title="Import browser bookmarks"
+      description="Choose how browser folders update collections when links already exist."
+      onOpenChange={(open) => { if (!open) cancelBookmarksImport(); }}
+      footer={<>
+        <button
+          className={dialogButtonClass}
+          type="button"
+          disabled={busy}
+          onClick={cancelBookmarksImport}
+        >
+    Cancel
+        </button>
+        <button
+    className={`${dialogButtonClass} ui-primary`}
+    type="button"
+    disabled={busy}
+    onClick={() => void runBookmarksImport()}
+        >
+    Import bookmarks
+        </button>
+      </>}
     >
-      {pendingBookmarksHtml !== null ? (
-        <div className="flex max-h-[min(90dvh,38rem)] flex-col">
-          <header className={dialogHeaderClass}>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-semibold" id={bookmarksTitleId}>
-                Import browser bookmarks
-              </h2>
-              <p className="mt-1 text-sm leading-relaxed text-text-secondary">
-                Existing links are merged by URL. Nothing in Keepall is deleted.
-              </p>
-            </div>
-            <button
-              className={dialogCloseClass}
-              type="button"
-              aria-label="Close bookmarks import"
-              disabled={busy}
-              onClick={cancelBookmarksImport}
-            >
-              <CloseIcon />
-            </button>
-          </header>
-          <div className={dialogBodyClass}>
-          <fieldset className="flex flex-col gap-2 border-0 p-0">
-            <legend className="text-sm font-medium text-text-primary">
-              When a link already exists, which collection wins?
-            </legend>
-            <p className="text-xs leading-relaxed text-text-secondary">
-              Browser tags are always added. This choice only controls browser
-              folders and Keepall collections.
-            </p>
-            <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
-              <input
-                type="radio"
-                name="collection-policy"
-                className="mt-0.5"
-                checked={collectionPolicy === "unsorted-only"}
-                onChange={() => setCollectionPolicy("unsorted-only")}
-              />
-              <span>
-                <span className="font-medium">Browser folder → Unsorted only</span>
-                <span className="mt-0.5 block text-xs text-text-secondary">
-                  Already in a Keepall collection → leave it. In Keepall Unsorted
-                  → file using the browser folder name.
-                </span>
-              </span>
-            </label>
-            <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
-              <input
-                type="radio"
-                name="collection-policy"
-                className="mt-0.5"
-                checked={collectionPolicy === "keep"}
-                onChange={() => setCollectionPolicy("keep")}
-              />
-              <span>
-                <span className="font-medium">Keep Keepall collections</span>
-                <span className="mt-0.5 block text-xs text-text-secondary">
-                  Browser folders apply only to links not in Keepall yet. Existing
-                  Keepall links keep their collection.
-                </span>
-              </span>
-            </label>
-            <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
-              <input
-                type="radio"
-                name="collection-policy"
-                className="mt-0.5"
-                checked={collectionPolicy === "apply"}
-                onChange={() => setCollectionPolicy("apply")}
-              />
-              <span>
-                <span className="font-medium">Browser folders win</span>
-                <span className="mt-0.5 block text-xs text-text-secondary">
-                  If the browser file has a folder, move the Keepall link into
-                  that collection — even when already filed.
-                </span>
-              </span>
-            </label>
-          </fieldset>
-          </div>
-          <footer className={dialogFooterClass}>
-            <button
-              className={dialogButtonClass}
-              type="button"
-              disabled={busy}
-              onClick={cancelBookmarksImport}
-            >
-              Cancel
-            </button>
-            <button
-              className={`${dialogButtonClass} ui-primary`}
-              type="button"
-              disabled={busy}
-              onClick={() => void runBookmarksImport()}
-            >
-              Import bookmarks
-            </button>
-          </footer>
-        </div>
-      ) : null}
-    </dialog>
+
+    <fieldset className="flex flex-col gap-2 border-0 p-0">
+      <legend className="text-sm font-medium text-text-primary">
+        When a link already exists, which collection wins?
+      </legend>
+      <p className="text-xs leading-relaxed text-text-secondary">
+        Browser tags are always added. This choice only controls browser
+        folders and Keepall collections.
+      </p>
+      <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
+        <input
+          type="radio"
+          name="collection-policy"
+          disabled={busy}
+          className="mt-0.5"
+          checked={collectionPolicy === "unsorted-only"}
+          onChange={() => setCollectionPolicy("unsorted-only")}
+        />
+        <span>
+          <span className="font-medium">Browser folder → Unsorted only</span>
+          <span className="mt-0.5 block text-xs text-text-secondary">
+            Already in a Keepall collection → leave it. In Keepall Unsorted
+            → file using the browser folder name.
+          </span>
+        </span>
+      </label>
+      <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
+        <input
+          type="radio"
+          name="collection-policy"
+          disabled={busy}
+          className="mt-0.5"
+          checked={collectionPolicy === "keep"}
+          onChange={() => setCollectionPolicy("keep")}
+        />
+        <span>
+          <span className="font-medium">Keep Keepall collections</span>
+          <span className="mt-0.5 block text-xs text-text-secondary">
+            Browser folders apply only to links not in Keepall yet. Existing
+            Keepall links keep their collection.
+          </span>
+        </span>
+      </label>
+      <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
+        <input
+          type="radio"
+          name="collection-policy"
+          disabled={busy}
+          className="mt-0.5"
+          checked={collectionPolicy === "apply"}
+          onChange={() => setCollectionPolicy("apply")}
+        />
+        <span>
+          <span className="font-medium">Browser folders win</span>
+          <span className="mt-0.5 block text-xs text-text-secondary">
+            If the browser file has a folder, move the Keepall link into
+            that collection — even when already filed.
+          </span>
+        </span>
+      </label>
+    </fieldset>
+    </ModalDialog>
   );
 
   const heading = (

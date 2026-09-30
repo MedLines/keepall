@@ -20,3 +20,20 @@ test("bulk trash confirmation puts Cancel before the destructive action", () => 
   expect(onClosePanel).toHaveBeenCalledOnce();
   expect(onConfirmDelete).not.toHaveBeenCalled();
 });
+
+test("bulk organization exposes tags and collections together with Done", () => {
+  const onClosePanel = vi.fn();
+  render(<LibraryBulkPanels
+    count={2} panel="organize" busy={false} error={null}
+    tagDraft="" collectionDraft="" tagSuggestions={[]} removeTagSuggestions={[]} collectionSuggestions={[]}
+    pendingAddTag={false} pendingRemoveTag={false} pendingAddCollection={false} pendingDelete={false}
+    onClosePanel={onClosePanel} onConfirmDelete={vi.fn()}
+    onTagDraftChange={vi.fn()} onCollectionDraftChange={vi.fn()}
+    onBulkAddTag={vi.fn()} onBulkRemoveTag={vi.fn()} onBulkRemoveAllTags={vi.fn()} onBulkAddCollection={vi.fn()}
+  />);
+  const dialog = screen.getByRole("dialog", { name: "Organize 2 selected items" });
+  expect(within(dialog).getByRole("combobox", { name: "Add tag to selection" })).toBeVisible();
+  expect(within(dialog).getByRole("combobox", { name: "Move selection to collection" })).toBeVisible();
+  fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
+  expect(onClosePanel).toHaveBeenCalledOnce();
+});
