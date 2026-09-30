@@ -336,12 +336,24 @@ export async function listTrashedItems(): Promise<Item[]> {
 }
 
 export async function restoreItem(id: string): Promise<void> {
-  await getDb().items.where("id").equals(id)
-    .filter((item) => item.deletedAt !== undefined)
-    .modify((item) => {
+  await restoreItems([id]);
+}
+
+export async function restoreItems(ids: string[]): Promise<string[]> {
+  if (!ids.length) return [];
+  const requestedIds = [...new Set(ids)];
+  const db = getDb();
+  return db.transaction("rw", db.items, async () => {
+    const rows = await db.items.bulkGet(requestedIds);
+    const items = rows.filter((item): item is Item => item !== undefined && item.deletedAt !== undefined);
+    const now = Date.now();
+    for (const item of items) {
       delete item.deletedAt;
-      item.updatedAt = Date.now();
-    });
+      item.updatedAt = now;
+    }
+    await db.items.bulkPut(items);
+    return items.map((item) => item.id);
+  });
 }
 
 export async function permanentlyDeleteItem(id: string): Promise<void> {

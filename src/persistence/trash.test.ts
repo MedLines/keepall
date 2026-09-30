@@ -3,7 +3,7 @@ import { deleteKeepallDatabase, getDb } from "./db";
 import { createCollection, pinItemInCollection } from "./collections";
 import { createTag } from "./tags";
 import { createVideo } from "./videos";
-import { createImage, createLink, createNote, deleteItem, getItem, listItems, listNotes, listTrashedItems, restoreItem, permanentlyDeleteItem, findLinkByNormalizedUrl, findImageByAssetPayloads, buildSingleAssetImageHashIndex } from "./items";
+import { createImage, createLink, createNote, deleteItem, getItem, listItems, listNotes, listTrashedItems, restoreItem, restoreItems, permanentlyDeleteItem, findLinkByNormalizedUrl, findImageByAssetPayloads, buildSingleAssetImageHashIndex } from "./items";
 import { exportKeepallBackup, importKeepallBackupReplace } from "./backup";
 
 beforeEach(deleteKeepallDatabase);
@@ -182,4 +182,49 @@ test("empty Trash rolls back the full batch when media cleanup fails", async () 
   try { await expect(emptyTrash([note.id, image.id])).rejects.toThrow(); }
   finally { cleanup.mockRestore(); }
   expect(await listTrashedItems()).toHaveLength(2);
+});
+
+
+test("batch restore preserves every item field and media with one timestamp, ignoring duplicate, missing and active IDs", async () => {
+  const note = await createNote({ content: "Keep all fields", title: "Note" });
+  const link = await createLink({ url: "https://example.com/batch", noteContent: "Link note" });
+  const image = await createImage({ assets: [{ bytes: new Uint8Array([8]), mimeType: "image/png" }], caption: "Caption" });
+  const video = await createVideo(new File(["video"], "batch.mp4", { type: "video/mp4" }), new Blob(["poster"], { type: "image/png" }));
+  const active = await createNote({ content: "Already active" });
+  const collection = await createCollection({ name: "Pinned" });
+  for (const item of [note, link, image, video]) {
+    await getDb().items.update(item.id, { tagIds: ["tag"], collectionIds: [collection.id], collectionAddedAt: 123 });
+    await pinItemInCollection(collection.id, item.id);
+    await deleteItem(item.id);
+  }
+  const before = await getDb().items.bulkGet([note.id, link.id, image.id, video.id]);
+  const media = await Promise.all([getDb().assets.toArray(), getDb().videoAssets.toArray(), getDb().thumbnails.toArray(), getDb().collections.toArray()]);
+  const clock = vi.spyOn(Date, "now").mockReturnValue(999);
+  try {
+    expect(await restoreItems([note.id, link.id, image.id, video.id, note.id, "missing", active.id])).toEqual([note.id, link.id, image.id, video.id]);
+  } finally { clock.mockRestore(); }
+  for (const row of before) {
+    const expected = { ...row!, updatedAt: 999 };
+    delete expected.deletedAt;
+    expect(await getDb().items.get(row!.id)).toEqual(expected);
+  }
+  expect(await getDb().items.get(active.id)).toEqual(active);
+  expect(await Promise.all([getDb().assets.toArray(), getDb().videoAssets.toArray(), getDb().thumbnails.toArray(), getDb().collections.toArray()])).toEqual(media);
+  expect(await restoreItems([])).toEqual([]);
+  expect(await restoreItems([active.id, "missing", note.id])).toEqual([]);
+});
+
+test("batch restore rolls back a real partial write failure", async () => {
+  const first = await createNote({ content: "First" });
+  const second = await createNote({ content: "Second" });
+  await deleteItem(first.id);
+  await deleteItem(second.id);
+  const before = await getDb().items.toArray();
+  let writes = 0;
+  const failSecond = () => { if (++writes === 2) throw new Error("Second write failed"); };
+  getDb().items.hook("updating", failSecond);
+  try { await expect(restoreItems([first.id, second.id])).rejects.toThrow("Second write failed"); }
+  finally { getDb().items.hook("updating").unsubscribe(failSecond); }
+  expect(writes).toBe(2);
+  expect(await getDb().items.toArray()).toEqual(before);
 });

@@ -3,7 +3,7 @@
 import { useRef, useState, type RefObject } from "react";
 import { itemActionLabel } from "@/domain/item-label";
 import type { Item } from "@/domain/item";
-import { emptyTrash, permanentlyDeleteItem, restoreItem } from "@/persistence/items";
+import { emptyTrash, permanentlyDeleteItem, restoreItem, restoreItems } from "@/persistence/items";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 
@@ -16,16 +16,16 @@ export function useLibraryTrashActions(heading: RefObject<HTMLHeadingElement | n
   const [notice, setNotice] = useState("");
   const pending = useRef(false);
 
-  async function run(action: () => Promise<void>, message: string, ids: string[]) {
+  async function run(action: () => Promise<void | string[]>, message: string | ((ids: string[]) => string), ids: string[]) {
     if (pending.current) return;
     pending.current = true;
     setBusy(true);
     setError(null);
     try {
-      await action();
-      onItemsRemoved?.(ids);
+      const changedIds = await action() ?? ids;
+      onItemsRemoved?.(changedIds);
       setConfirmation(null);
-      setNotice(message);
+      setNotice(typeof message === "function" ? message(changedIds) : message);
       heading.current?.focus();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
@@ -48,6 +48,13 @@ export function useLibraryTrashActions(heading: RefObject<HTMLHeadingElement | n
     error: confirmation ? null : error,
     notice,
     restore: (item: Item) => void run(() => restoreItem(item.id), `${itemActionLabel(item)} restored to your library.`, [item.id]),
+    restoreSelected: (ids: string[]) => {
+      const requestedIds = [...new Set(ids)];
+      if (!requestedIds.length) return;
+      void run(() => restoreItems(requestedIds), (restoredIds) => restoredIds.length
+        ? `${restoredIds.length} item${restoredIds.length === 1 ? "" : "s"} restored to your library.`
+        : "No items restored. The selected items are no longer in Trash.", requestedIds);
+    },
     requestDelete: (item: Item) => request({ kind: "item", item }),
     requestEmpty: (items: Item[]) => request({ kind: "all", ids: items.map((item) => item.id), hiddenCount: 0 }),
     requestDeleteSelected: (ids: string[], hiddenCount = 0) => { if (ids.length) request({ kind: "selected", ids: [...new Set(ids)], hiddenCount }); },

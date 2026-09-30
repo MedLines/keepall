@@ -272,3 +272,82 @@ test("Trash uses the library shell and both sidebar menus can empty all matching
   await expect(page.locator("[data-item-id]")).toHaveCount(2);
   expect(errors).toEqual([]);
 });
+
+
+for (const clearHidden of [false, true]) {
+  test(`selected restore preserves hidden selection and stored fields, clear hidden=${clearHidden}`, async ({ page }, testInfo) => {
+    await page.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((resolve) => { const req = indexedDB.open("keepall"); req.onsuccess = () => resolve(req.result); });
+      const canvas = document.createElement("canvas"); canvas.width = 80; canvas.height = 60;
+      canvas.getContext("2d")!.fillRect(0, 0, 80, 60);
+      const blob = await new Promise<Blob>((resolve) => canvas.toBlob((value) => resolve(value!)));
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(["items", "assets", "thumbnails", "collections"], "readwrite");
+        tx.objectStore("assets").put({ id: "restore-asset", bytes, mimeType: "image/png", byteLength: bytes.length, createdAt: 1 });
+        tx.objectStore("thumbnails").put({ assetId: "restore-asset", blob });
+        tx.objectStore("collections").put({ id: "reading", name: "Reading", createdAt: 1, pinnedItemIds: ["link", "restore-image"] });
+        const base = { createdAt: 1, updatedAt: 2, deletedAt: 2, tagIds: ["tag"], collectionIds: ["reading"], collectionAddedAt: 123 };
+        tx.objectStore("items").put({ ...base, id: "restore-image", type: "image", title: "Restore image", assetIds: ["restore-asset"], caption: "Keep caption", sourceUrl: "https://example.com/photo" });
+        tx.objectStore("items").put({ ...base, id: "restore-note", type: "note", title: "Restore note", content: "Keep selected hidden note" });
+        tx.objectStore("items").put({ ...base, id: "unselected", type: "note", title: "Unselected trash", content: "Leave in Trash" });
+        tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error);
+      }); db.close();
+    });
+    await page.goto("/?trash=1");
+    await page.setViewportSize({ width: clearHidden ? 390 : 2196, height: 900 });
+    if (clearHidden) await page.getByRole("button", { name: "Close navigation" }).click();
+    for (const title of ["Restore image", "Restore note"]) {
+      await page.getByRole("checkbox", { name: `Select ${title}`, exact: true }).focus();
+      await page.keyboard.press("Space");
+    }
+    const search = page.getByRole("searchbox", { name: "Search", exact: true });
+    await search.fill("Restore image");
+    const bulk = page.getByRole("region", { name: "Bulk actions" });
+    await expect(bulk).toContainText("2 selected");
+    await expect(bulk).toContainText("1 hidden");
+    if (clearHidden) {
+      const trigger = bulk.getByRole("button", { name: /Selection actions:/ });
+      await trigger.click();
+      await page.getByRole("menuitem", { name: "Clear hidden selection", exact: true }).click();
+      await expect(bulk).toContainText("1 selected");
+      await expect(bulk).not.toContainText("hidden");
+    }
+    await page.screenshot({ path: testInfo.outputPath(`restore-selected-${clearHidden ? "mobile" : "wide"}.png`) });
+    const trigger = bulk.getByRole("button", { name: /Selection actions:/ });
+    if (await trigger.isVisible()) {
+      await trigger.click();
+      await page.getByRole("menuitem", { name: "Restore selected", exact: true }).focus();
+    } else await bulk.getByRole("button", { name: "Restore selected", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("status").filter({ hasText: "restored to your library" })).toHaveText(`${clearHidden ? 1 : 2} item${clearHidden ? "" : "s"} restored to your library.`);
+    await expect(page.getByRole("heading", { name: "Trash", exact: true })).toBeFocused();
+    await expect(bulk).toHaveCount(0);
+    await search.fill("");
+    await expect(page.locator("[data-item-id]")).toHaveCount(clearHidden ? 2 : 1);
+    await expect(page.locator('[data-item-id="unselected"]')).toBeVisible();
+    await page.goto("/?collection=reading&tag=tag");
+    await page.reload();
+    await expect(page.locator('[data-item-id="restore-image"] img').first()).toBeVisible();
+    await expect(page.locator('[data-item-id="restore-note"]')).toHaveCount(clearHidden ? 0 : 1);
+    const stored = await page.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((resolve) => { const req = indexedDB.open("keepall"); req.onsuccess = () => resolve(req.result); });
+      const read = (store: string, id: string) => new Promise<Record<string, unknown>>((resolve) => { const req = db.transaction(store).objectStore(store).get(id); req.onsuccess = () => resolve(req.result); });
+      const image = await read("items", "restore-image");
+      const note = await read("items", "restore-note");
+      const collection = await read("collections", "reading");
+      const asset = await read("assets", "restore-asset");
+      const thumbnail = await read("thumbnails", "restore-asset");
+      db.close();
+      return { image, note, collection, assetBytes: (asset.bytes as Uint8Array).length, thumbnailSize: (thumbnail.blob as Blob).size };
+    });
+    expect(stored.image).toMatchObject({ caption: "Keep caption", sourceUrl: "https://example.com/photo", assetIds: ["restore-asset"], tagIds: ["tag"], collectionIds: ["reading"], collectionAddedAt: 123, createdAt: 1 });
+    expect(stored.image.deletedAt).toBeUndefined();
+    expect(stored.note.content).toBe("Keep selected hidden note");
+    expect(stored.note.deletedAt).toBe(clearHidden ? 2 : undefined);
+    if (!clearHidden) expect(stored.image.updatedAt).toBe(stored.note.updatedAt);
+    expect(stored.collection.pinnedItemIds).toEqual(["link", "restore-image"]);
+    expect(stored.assetBytes).toBeGreaterThan(0);
+    expect(stored.thumbnailSize).toBeGreaterThan(0);
+  });
+}

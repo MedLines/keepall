@@ -9,6 +9,8 @@ import {
   appendImageAssetsToItem,
   deleteItem,
   listItems,
+  listTrashedItems,
+  restoreItems,
   unassignTagFromItem,
   updateLink,
   updateNote,
@@ -54,6 +56,7 @@ vi.mock("@/persistence/items", () => ({
   listItems: vi.fn(),
   listTrashedItems: vi.fn(async () => []),
   restoreItem: vi.fn(),
+  restoreItems: vi.fn(),
   permanentlyDeleteItem: vi.fn(),
   emptyTrash: vi.fn(),
   deleteItem: vi.fn(),
@@ -1485,6 +1488,36 @@ describe("Library view state", () => {
     fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 2 selected" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Deselect all" }));
     expect(screen.queryByText("2 selected")).not.toBeInTheDocument();
+  });
+
+  test.each([false, true])("Trash restores the live selection after narrowing search, clear hidden=%s", async (clearHidden) => {
+    const one = { ...buildNote({ content: "one" }, { id: "trash-one", now: 1 }), deletedAt: 2 };
+    const two = { ...buildNote({ content: "two" }, { id: "trash-two", now: 1 }), deletedAt: 2 };
+    vi.mocked(listItems).mockResolvedValue([]);
+    vi.mocked(listTrashedItems).mockResolvedValue([one, two]);
+    vi.mocked(restoreItems).mockImplementation(async (ids) => {
+      vi.mocked(listTrashedItems).mockResolvedValue([one, two].filter((item) => !ids.includes(item.id)));
+      return ids;
+    });
+    mockNavigation.replace("/?trash=1");
+    render(<Library />);
+    await screen.findByText("one");
+    for (const checkbox of screen.getAllByRole("checkbox")) fireEvent.click(checkbox);
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "one" } });
+    const bulk = screen.getByRole("region", { name: "Bulk actions" });
+    expect(bulk).toHaveTextContent("2 selected");
+    expect(bulk).toHaveTextContent("1 hidden");
+    fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 2 selected" }));
+    if (clearHidden) {
+      fireEvent.click(screen.getByRole("menuitem", { name: "Clear hidden selection" }));
+      expect(bulk).toHaveTextContent("1 selected");
+      fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 1 selected" }));
+    }
+    fireEvent.click(screen.getByRole("menuitem", { name: "Restore selected" }));
+    await screen.findByText(`${clearHidden ? 1 : 2} item${clearHidden ? "" : "s"} restored to your library.`);
+    expect(restoreItems).toHaveBeenLastCalledWith(clearHidden ? [one.id] : [one.id, two.id]);
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Bulk actions" })).not.toBeInTheDocument());
+    vi.mocked(listTrashedItems).mockResolvedValue([]);
   });
 
   test("search keeps hidden selections until Clear hidden removes only those IDs", async () => {

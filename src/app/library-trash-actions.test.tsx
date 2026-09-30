@@ -2,16 +2,17 @@ import { useRef } from "react";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { buildNote } from "@/domain/note";
-import { emptyTrash, permanentlyDeleteItem, restoreItem } from "@/persistence/items";
+import { emptyTrash, permanentlyDeleteItem, restoreItem, restoreItems } from "@/persistence/items";
 import { useLibraryTrashActions } from "./library-trash-actions";
 
-vi.mock("@/persistence/items", () => ({ emptyTrash: vi.fn(), permanentlyDeleteItem: vi.fn(), restoreItem: vi.fn() }));
+vi.mock("@/persistence/items", () => ({ emptyTrash: vi.fn(), permanentlyDeleteItem: vi.fn(), restoreItem: vi.fn(), restoreItems: vi.fn() }));
 const note = { ...buildNote({ content: "Keep me" }, { id: "note", now: 1 }), deletedAt: 2 };
 function Harness({ onItemsRemoved, selectedIds = ["note", "other"], hiddenCount = 1 }: { onItemsRemoved?: (ids: string[]) => void; selectedIds?: string[]; hiddenCount?: number }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const actions = useLibraryTrashActions(heading, onItemsRemoved);
   return <><h1 ref={heading} tabIndex={-1}>Trash</h1>
     <button disabled={actions.busy} onClick={() => actions.restore(note)}>Restore</button>
+    <button onClick={() => actions.restoreSelected(selectedIds)}>Restore selected</button>
     <button disabled={actions.busy} onClick={() => actions.requestEmpty([note])}>Empty</button>
     <button disabled={actions.busy} onClick={() => actions.requestDelete(note)}>Delete</button>
     <button disabled={actions.busy} onClick={() => actions.requestDeleteSelected(selectedIds, hiddenCount)}>Delete selection</button>
@@ -90,4 +91,48 @@ test("permanent deletion uses the IDs and hidden count captured when the dialog 
   fireEvent.click(within(dialog).getByRole("button", { name: "Delete permanently" }));
   await screen.findByText("Selected items permanently deleted.");
   expect(emptyTrash).toHaveBeenCalledExactlyOnceWith(["note", "other"]);
+});
+
+
+test("selected restore captures IDs, guards pending work and reports only actual restored IDs", async () => {
+  const onItemsRemoved = vi.fn();
+  const event = vi.fn();
+  window.addEventListener("keepall:items-changed", event);
+  let finish!: (ids: string[]) => void;
+  vi.mocked(restoreItems).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  const ids = ["note", "other", "note"];
+  const { rerender } = render(<Harness onItemsRemoved={onItemsRemoved} selectedIds={ids} />);
+  fireEvent.click(screen.getByRole("button", { name: "Restore selected" }));
+  ids.push("late");
+  rerender(<Harness onItemsRemoved={onItemsRemoved} selectedIds={["new"]} />);
+  fireEvent.click(screen.getByRole("button", { name: "Restore selected" }));
+  expect(restoreItems).toHaveBeenCalledExactlyOnceWith(["note", "other"]);
+  expect(screen.getByRole("button", { name: "Delete selection" })).toBeDisabled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await act(async () => { finish(["note"]); });
+  expect(screen.getByRole("status")).toHaveTextContent("1 item restored to your library.");
+  expect(onItemsRemoved).toHaveBeenCalledExactlyOnceWith(["note"]);
+  expect(screen.getByRole("heading")).toHaveFocus();
+  expect(event).toHaveBeenCalledOnce();
+  window.removeEventListener("keepall:items-changed", event);
+});
+
+test("selected restore retains selection on failure, allows retry and reloads a stale zero result", async () => {
+  const onItemsRemoved = vi.fn();
+  const event = vi.fn();
+  window.addEventListener("keepall:items-changed", event);
+  vi.mocked(restoreItems).mockRejectedValueOnce(new Error("Write failed")).mockResolvedValueOnce([]);
+  const { rerender } = render(<Harness onItemsRemoved={onItemsRemoved} />);
+  fireEvent.click(screen.getByRole("button", { name: "Restore selected" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Try again");
+  expect(onItemsRemoved).not.toHaveBeenCalled();
+  expect(event).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Restore selected" }));
+  await screen.findByText("No items restored. The selected items are no longer in Trash.");
+  expect(onItemsRemoved).toHaveBeenCalledExactlyOnceWith([]);
+  expect(event).toHaveBeenCalledOnce();
+  rerender(<Harness selectedIds={[]} />);
+  fireEvent.click(screen.getByRole("button", { name: "Restore selected" }));
+  expect(restoreItems).toHaveBeenCalledTimes(2);
+  window.removeEventListener("keepall:items-changed", event);
 });

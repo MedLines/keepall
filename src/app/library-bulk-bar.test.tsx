@@ -39,22 +39,25 @@ test("selection toolbar exposes actions in a menu and preserves selection on Esc
   await waitFor(() => expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus());
 });
 
-test("selection menu offers only permanent deletion in Trash and disables actions while busy", () => {
+test("selection menu offers restore before permanent deletion in Trash and disables actions while busy", () => {
   const onDeletePermanently = vi.fn();
+  const onRestoreSelected = vi.fn();
   const { rerender } = render(<LibraryBulkToolbar count={1} allVisibleSelected busy
     onClearSelection={vi.fn()} onOpenPanel={vi.fn()}
-    onSelectAllVisible={vi.fn()} onDeletePermanently={onDeletePermanently} />);
+    onSelectAllVisible={vi.fn()} onDeletePermanently={onDeletePermanently} onRestoreSelected={onRestoreSelected} />);
   const trigger = screen.getByRole("button", { name: "Selection actions: 1 selected" });
   expect(trigger).toBeDisabled();
   fireEvent.click(trigger);
   expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   rerender(<LibraryBulkToolbar count={1} allVisibleSelected busy={false}
     onClearSelection={vi.fn()} onOpenPanel={vi.fn()}
-    onSelectAllVisible={vi.fn()} onDeletePermanently={onDeletePermanently} />);
+    onSelectAllVisible={vi.fn()} onDeletePermanently={onDeletePermanently} onRestoreSelected={onRestoreSelected} />);
   fireEvent.click(trigger);
   expect(screen.queryByRole("menuitem", { name: "Organize" })).not.toBeInTheDocument();
   expect(screen.queryByRole("menuitem", { name: "Move to Trash" })).not.toBeInTheDocument();
-  expect(screen.getByRole("menuitem", { name: "Delete permanently" })).toBeInTheDocument();
+  expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Deselect all", "Restore selected", "Delete permanently"]);
+  fireEvent.click(screen.getByRole("menuitem", { name: "Restore selected" }));
+  expect(onRestoreSelected).toHaveBeenCalledOnce();
 });
 
 test("hidden selection is visible without opening the menu and can be cleared", () => {
@@ -119,4 +122,22 @@ test("bulk organization exposes tags and collections together with Done", () => 
   expect(within(dialog).getByRole("combobox", { name: "Move selection to collection" })).toBeVisible();
   fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
   expect(onClosePanel).toHaveBeenCalledOnce();
+});
+
+
+test("inline restore is disabled while busy and absent without Trash callback or selection", () => {
+  const onRestoreSelected = vi.fn();
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  const props = { count: 2, allVisibleSelected: true, busy: false, onClearSelection: vi.fn(), onSelectAllVisible: vi.fn(), onDeletePermanently: vi.fn(), onRestoreSelected };
+  const { rerender } = render(<LibraryBulkToolbar {...props} />);
+  const restore = screen.getByRole("button", { name: "Restore selected" });
+  fireEvent.click(restore);
+  expect(onRestoreSelected).toHaveBeenCalledOnce();
+  rerender(<LibraryBulkToolbar {...props} busy />);
+  expect(restore).toBeDisabled();
+  rerender(<LibraryBulkToolbar {...props} onRestoreSelected={undefined} />);
+  expect(screen.queryByRole("button", { name: "Restore selected" })).not.toBeInTheDocument();
+  rerender(<LibraryBulkToolbar {...props} count={0} />);
+  expect(screen.queryByText("Restore selected")).not.toBeInTheDocument();
+  vi.unstubAllGlobals();
 });

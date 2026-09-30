@@ -36,6 +36,7 @@ export type LibraryBulkBarProps = {
   onClearHidden?: () => void;
   onConfirmDelete: () => void;
   onDeletePermanently?: () => void;
+  onRestoreSelected?: () => void;
   onTagDraftChange: (value: string) => void;
   onCollectionDraftChange: (value: string) => void;
   onBulkAddTag: (name: string) => void;
@@ -56,6 +57,7 @@ export type LibraryBulkToolbarProps = Pick<
   | "onClearSelection"
   | "onClearHidden"
   | "onDeletePermanently"
+  | "onRestoreSelected"
 > & {
   onOpenPanel?: LibraryBulkBarProps["onOpenPanel"];
   onDelete?: () => void;
@@ -73,6 +75,7 @@ export function LibraryBulkToolbar({
   onClearSelection,
   onClearHidden,
   onDeletePermanently,
+  onRestoreSelected,
   onDelete,
   deleteLabel,
 }: LibraryBulkToolbarProps) {
@@ -101,7 +104,7 @@ export function LibraryBulkToolbar({
     if (slot) observer.observe(slot);
     measure();
     return () => observer.disconnect();
-  }, [count, hiddenCount, allVisibleSelected, onOpenPanel, onDelete, onDeletePermanently, deleteLabel]);
+  }, [count, hiddenCount, allVisibleSelected, onOpenPanel, onDelete, onDeletePermanently, onRestoreSelected, deleteLabel]);
 
   const destructiveAction = onDelete ?? onDeletePermanently ?? (() => onOpenPanel?.("delete"));
   const destructiveLabel = deleteLabel ?? (onDeletePermanently ? "Delete permanently" : "Move to Trash");
@@ -170,6 +173,9 @@ export function LibraryBulkToolbar({
                   Organize
                 </Menu.Item>
               ) : null}
+              {onRestoreSelected && count > 0 ? <Menu.Item disabled={busy} className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(onRestoreSelected)}>
+                Restore selected
+              </Menu.Item> : null}
               <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-danger data-[highlighted]:bg-bg-danger" onClick={() => runWithoutTriggerRestore(destructiveAction)}>
                 {destructiveLabel}
               </Menu.Item>
@@ -196,6 +202,9 @@ export function LibraryBulkToolbar({
             Organize
           </button>
         ) : null}
+        {onRestoreSelected && count > 0 ? <button className={BULK_BTN} disabled={busy} type="button" onClick={onRestoreSelected}>
+          Restore selected
+        </button> : null}
         <button
           className={`${onDeletePermanently || onDelete ? `${SHELL_TOP_BTN} text-text-danger` : BULK_BTN} h-10 shrink-0 px-3 text-xs`}
           disabled={busy}

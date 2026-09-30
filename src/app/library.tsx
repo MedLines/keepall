@@ -1775,6 +1775,7 @@ export function Library() {
           },
           onCollectionDraftChange: setBulkCollectionDraft,
           onConfirmDelete: () => void bulkDeleteSelected(),
+          onRestoreSelected: view.trash ? () => trashActions.restoreSelected([...selectedIds]) : undefined,
           onDeletePermanently: view.trash ? () => {
             const ids = trashedItems.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
             trashActions.requestDeleteSelected(ids, ids.filter((id) => !visibleSelectionIds.has(id)).length);
