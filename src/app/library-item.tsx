@@ -17,8 +17,9 @@ import {
 } from "./item-media-layout";
 import { LibraryItemMedia } from "./library-item-media";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
+import { LibrarySelectionControl } from "./library-selection-control";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
-import { DeleteIcon, ImagesIcon, MoreIcon, PlayIcon, SelectionCheckedIcon, SelectionEmptyIcon } from "./shell-icons";
+import { DeleteIcon, ImagesIcon, MoreIcon, PlayIcon } from "./shell-icons";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
 import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
@@ -411,8 +412,12 @@ export function LibraryItem({
         }
       >
       {trigger}
-      <label
-        data-visible={checkboxVisible}
+      <LibrarySelectionControl
+        label={`Select ${title}`}
+        visible={checkboxVisible}
+        selected={selected}
+        disabled={mutationBusy}
+        onToggle={onToggleSelect}
         className={
           isList
             ? `library-list-select absolute start-1 top-5 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-edge ${editing || pendingDelete ? "hidden" : ""}`
@@ -424,28 +429,7 @@ export function LibraryItem({
                     : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
               }`
         }
-      >
-        <span className="sr-only">Select {title}</span>
-        <input
-          checked={selected}
-          className="peer sr-only"
-          disabled={mutationBusy}
-          type="checkbox"
-          onChange={onToggleSelect}
-          onClick={(event) => event.stopPropagation()}
-        />
-        <span
-          aria-hidden="true"
-          className="flex size-5 items-center justify-center rounded-full peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-border-focus"
-          data-selection-indicator={selected ? "checked" : "empty"}
-        >
-          {selected ? (
-            <SelectionCheckedIcon className="size-5" />
-          ) : (
-            <SelectionEmptyIcon className="size-5" />
-          )}
-        </span>
-      </label>
+      />
       {isList ? trashActions ? <div className="shrink-0 rounded-lg">{mediaSlot}</div> : !pendingDelete ? (
         item.type === "link" ? (
           <a

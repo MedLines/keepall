@@ -11,6 +11,7 @@ import {
   LibraryBulkPanels,
   LibraryBulkToolbar,
   type LibraryBulkBarProps,
+  type LibraryBulkToolbarProps,
 } from "./library-bulk-bar";
 import {
   CloseIcon,
@@ -49,16 +50,22 @@ type Props = {
   panelOpen: boolean;
   onPanelOpenChange: (open: boolean) => void;
   bulk?: LibraryBulkBarProps;
+  selection?: LibraryBulkToolbarProps;
   libraryLoading?: boolean;
+  collectionsView?: boolean;
+  tagsView?: boolean;
 };
 
 export function LibraryTopBar({
   headingRef, title, itemCount, searchQuery, onSearchChange,
   sort, onSortChange, layout, onLayoutChange, panelOpen, onPanelOpenChange,
   typeFilter, sidebarCounts, onTypeFilterChange, tagFilterName,
-  onClearTagFilter, bulk, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
+  onClearTagFilter, bulk, selection, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
+  collectionsView = false,
+  tagsView = false,
 }: Props) {
-  const hasSelection = Boolean(bulk && bulk.count > 0);
+  const toolbar = selection ?? bulk;
+  const hasSelection = Boolean(toolbar && toolbar.count > 0);
 
   return (
     <header className="library-top-bar relative z-40 flex shrink-0 flex-col gap-6 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
@@ -82,7 +89,7 @@ export function LibraryTopBar({
               className="ui-field h-10 w-full pl-10 pr-3 text-sm"
               id="library-search"
               type="search"
-              placeholder={trash ? "Search Trash…" : "Search your library…"}
+              placeholder={trash ? "Search Trash…" : collectionsView ? "Search collections…" : tagsView ? "Search tags…" : "Search your library…"}
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
             />
@@ -106,7 +113,7 @@ export function LibraryTopBar({
           <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-[34px] text-text-primary sm:text-[28px]">
             {title}
           </h1>
-          <span className="squircle-panel flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} items`}>
+          <span className="squircle-panel flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} ${collectionsView ? "collections" : tagsView ? "tags" : "items"}`}>
             {libraryLoading ? "…" : itemCount}
           </span>
           {tagFilterName ? (
@@ -123,25 +130,17 @@ export function LibraryTopBar({
           ) : null}
         </div>
         <div className={`${hasSelection ? "block sm:col-span-2 sm:col-start-1 sm:row-start-2" : "hidden"} row-start-1 min-w-0`}>
-          {hasSelection && bulk ? (
-            <LibraryBulkToolbar
-              allVisibleSelected={bulk.allVisibleSelected}
-              busy={bulk.busy}
-              count={bulk.count}
-              onClearSelection={bulk.onClearSelection}
-              onOpenPanel={bulk.onOpenPanel}
-              onSelectAllVisible={bulk.onSelectAllVisible}
-              onDeletePermanently={bulk.onDeletePermanently}
-            />
+          {hasSelection && toolbar ? (
+            <LibraryBulkToolbar {...toolbar} />
           ) : null}
         </div>
-        <div className="row-start-2 flex shrink-0 items-center justify-end gap-2 sm:col-start-2 sm:row-start-1">
-          <LibraryTypeFilterMenu
+        <div className="row-start-2 flex shrink-0 flex-wrap items-center justify-end gap-2 sm:col-start-2 sm:row-start-1 sm:flex-nowrap">
+          {!collectionsView && !tagsView ? <LibraryTypeFilterMenu
             value={typeFilter}
             counts={sidebarCounts}
             loading={libraryLoading}
             onChange={onTypeFilterChange}
-          />
+          /> : null}
           <ShellTopMenu
             ariaLabel="Sort library"
             iconOnly

@@ -35,7 +35,7 @@
   --color-bg-card: light-dark(var(--white), var(--neutral-850));
   --color-bg-control: light-dark(var(--neutral-25), var(--neutral-875));
   --color-bg-raised: light-dark(var(--neutral-150), var(--neutral-750));
-  --color-bg-selected: light-dark(#e7e9e8, #323538);
+  --color-bg-selected: light-dark(#f0f1f0, #1e2021);
   --color-bg-active: light-dark(#0000000d, #ffffff1f);
   --color-border-active: light-dark(#ffffffcc, #ffffff0f);
   --color-bg-scrim: light-dark(#00000026, #00000066);

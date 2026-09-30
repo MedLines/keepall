@@ -39,16 +39,19 @@ export type LibraryBulkBarProps = {
 
 const BULK_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-10 shrink-0 px-3 text-xs`;
 
-type ToolbarProps = Pick<
+export type LibraryBulkToolbarProps = Pick<
   LibraryBulkBarProps,
   | "count"
   | "allVisibleSelected"
   | "busy"
-  | "onOpenPanel"
   | "onSelectAllVisible"
   | "onClearSelection"
   | "onDeletePermanently"
->;
+> & {
+  onOpenPanel?: LibraryBulkBarProps["onOpenPanel"];
+  onDelete?: () => void;
+  deleteLabel?: string;
+};
 
 /** Compact bulk buttons for the top bar (selection must be active). */
 export function LibraryBulkToolbar({
@@ -59,7 +62,9 @@ export function LibraryBulkToolbar({
   onSelectAllVisible,
   onClearSelection,
   onDeletePermanently,
-}: ToolbarProps) {
+  onDelete,
+  deleteLabel,
+}: LibraryBulkToolbarProps) {
   if (count === 0) {
     return null;
   }
@@ -91,17 +96,17 @@ export function LibraryBulkToolbar({
       >
         Deselect all
       </button>
-      {!onDeletePermanently ? <button
+      {onOpenPanel && !onDeletePermanently && !onDelete ? <button
         className={BULK_BTN} disabled={busy} type="button"
         onClick={() => onOpenPanel("organize")}
       >Organize</button> : null}
       <button
-        className={onDeletePermanently ? `${SHELL_TOP_BTN} h-10 shrink-0 px-3 text-xs text-text-danger` : BULK_BTN}
+        className={onDeletePermanently || onDelete ? `${SHELL_TOP_BTN} h-10 shrink-0 px-3 text-xs text-text-danger` : BULK_BTN}
         disabled={busy}
         type="button"
-        onClick={onDeletePermanently ?? (() => onOpenPanel("delete"))}
+        onClick={onDelete ?? onDeletePermanently ?? (() => onOpenPanel?.("delete"))}
       >
-        {onDeletePermanently ? "Delete permanently" : "Move to Trash"}
+        {deleteLabel ?? (onDeletePermanently ? "Delete permanently" : "Move to Trash")}
       </button>
     </div>
   );

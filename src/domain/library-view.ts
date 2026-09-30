@@ -10,6 +10,10 @@ export type LibraryLayout = "grid" | "list";
 
 export type LibraryViewState = {
   q: string;
+  /** Show all collections as folders instead of library items. */
+  collections?: boolean;
+  /** Browse tags as label cards instead of library items. */
+  tags?: boolean;
   /** Trash is a library scope, independent of the active library. */
   trash?: boolean;
   collection: string | null;
@@ -30,6 +34,12 @@ export type LibraryViewState = {
 
 export const DEFAULT_LIBRARY_SORT: LibrarySort = "newest";
 export const DEFAULT_LIBRARY_LAYOUT: LibraryLayout = "grid";
+
+function isCollectionOverviewScope(
+  view: Pick<LibraryViewState, "collection" | "unsorted" | "tag" | "type" | "trash">,
+): boolean {
+  return !view.collection && !view.unsorted && !view.tag && !view.type && !view.trash;
+}
 
 export function parseLibrarySort(value: string | null): LibrarySort {
   return value === "oldest" ? "oldest" : "newest";
@@ -69,14 +79,20 @@ export function parseLibraryViewState(
   const unsorted = collection
     ? false
     : params.get("unsorted") === "1";
+  const type = parseLibraryType(params.get("type"));
+  const trash = params.get("trash") === "1";
 
   return {
     q: params.get("q") ?? "",
-    ...(params.get("trash") === "1" ? { trash: true } : {}),
+    ...(params.get("collections") === "1" && isCollectionOverviewScope({ collection, unsorted, tag, type, trash })
+      ? { collections: true } : {}),
+    ...(params.get("tags") === "1" && params.get("collections") !== "1" && isCollectionOverviewScope({ collection, unsorted, tag, type, trash })
+      ? { tags: true } : {}),
+    ...(trash ? { trash: true } : {}),
     collection,
     unsorted,
     tag,
-    type: parseLibraryType(params.get("type")),
+    type,
     layout: parseLibraryLayout(params.get("layout")),
     sort: parseLibrarySort(params.get("sort")),
     item,
@@ -89,6 +105,8 @@ export function libraryViewStateToSearchParams(
 ): URLSearchParams {
   const params = new URLSearchParams();
   const q = state.q.trim();
+  if (state.collections) params.set("collections", "1");
+  if (state.tags) params.set("tags", "1");
   if (state.trash) params.set("trash", "1");
 
   if (q) {
@@ -179,6 +197,9 @@ export function mergeLibraryViewState(
     patch.collection !== undefined ? patch.collection : current.collection;
   let unsorted =
     patch.unsorted !== undefined ? patch.unsorted : current.unsorted;
+  const type = patch.type !== undefined ? patch.type : current.type;
+  const tag = patch.tag !== undefined ? patch.tag : current.tag;
+  const trash = patch.trash ?? current.trash;
 
   if (patch.collection) {
     unsorted = false;
@@ -191,11 +212,15 @@ export function mergeLibraryViewState(
 
   return {
     q: patch.q !== undefined ? patch.q : current.q,
-    ...((patch.trash ?? current.trash) ? { trash: true } : {}),
+    ...((patch.collections ?? current.collections) && patch.tags !== true && isCollectionOverviewScope({ collection, unsorted, tag, type, trash })
+      ? { collections: true } : {}),
+    ...((patch.tags ?? current.tags) && patch.collections !== true && isCollectionOverviewScope({ collection, unsorted, tag, type, trash })
+      ? { tags: true } : {}),
+    ...(trash ? { trash: true } : {}),
     collection,
     unsorted,
-    tag: patch.tag !== undefined ? patch.tag : current.tag,
-    type: patch.type !== undefined ? patch.type : current.type,
+    tag,
+    type,
     layout: patch.layout !== undefined ? patch.layout : current.layout,
     sort: patch.sort !== undefined ? patch.sort : current.sort,
     item: patch.item !== undefined ? patch.item : current.item,

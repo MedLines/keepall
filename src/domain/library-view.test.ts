@@ -25,6 +25,29 @@ const emptyView = {
   slide: 0,
 };
 
+test("collections view round-trips and exits when navigating to an item scope", () => {
+  const folders = parseLibraryViewState(new URLSearchParams("collections=1&q=read"));
+  expect(folders.collections).toBe(true);
+  expect(libraryViewHref("/", folders)).toBe("/?collections=1&q=read");
+  expect(mergeLibraryViewState(folders, { collection: "reading" }).collections).toBeUndefined();
+  expect(mergeLibraryViewState(folders, { unsorted: true }).collections).toBeUndefined();
+  expect(mergeLibraryViewState(folders, { trash: true }).collections).toBeUndefined();
+  expect(parseLibraryViewState(new URLSearchParams("collections=1&collection=reading")).collections).toBeUndefined();
+});
+
+test("tags overview is exclusive with collections and opens tagged items", () => {
+  const tags = parseLibraryViewState(new URLSearchParams("tags=1&q=design"));
+  expect(tags.tags).toBe(true);
+  expect(libraryViewHref("/", tags)).toBe("/?tags=1&q=design");
+  const collections = mergeLibraryViewState(tags, { collections: true });
+  expect(collections.collections).toBe(true);
+  expect(collections.tags).toBeUndefined();
+  const again = mergeLibraryViewState(collections, { tags: true });
+  expect(again.tags).toBe(true);
+  expect(again.collections).toBeUndefined();
+  expect(mergeLibraryViewState(again, { tag: "design" }).tags).toBeUndefined();
+});
+
 describe("parseLibraryType", () => {
   test("accepts link note image video and rejects unknown", () => {
     expect(parseLibraryType("link")).toBe("link");

@@ -11,6 +11,7 @@ import { getLibraryPreferences } from "@/persistence/library-preferences";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
+import { openCaptureDialog, setCaptureCollectionName } from "./capture-events";
 
 vi.mock("@/persistence/items", () => ({
   createNote: vi.fn(),
@@ -83,6 +84,7 @@ describe("isCaptureOpenShortcut", () => {
 
 describe("CaptureHost", () => {
   beforeEach(() => {
+    setCaptureCollectionName(null);
     vi.mocked(createNote).mockReset();
     vi.mocked(createOrReuseLink).mockReset();
     vi.mocked(createOrReuseImage).mockReset();
@@ -113,6 +115,28 @@ describe("CaptureHost", () => {
       text: "",
     });
   });
+
+  for (const opener of ["shortcut", "button"] as const) {
+    test(`defaults ${opener} capture to the active folder and allows overriding it`, async () => {
+      vi.mocked(listCollections).mockResolvedValue([
+        { id: "reading", name: "Reading", createdAt: 1, pinnedItemIds: [] },
+      ]);
+      vi.mocked(createNote).mockResolvedValue(buildNote({ content: "In this folder" }, { id: "new", now: 1 }));
+      setCaptureCollectionName("Reading");
+      render(<CaptureHost />);
+      if (opener === "shortcut") fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
+      else openCaptureDialog();
+      const input = await screen.findByLabelText("Link, note, or image");
+      await waitFor(() => expect(input).not.toBeDisabled());
+      await waitFor(() => expect(screen.getByRole("button", { name: "Reading" })).toHaveAttribute("aria-pressed", "true"));
+      fireEvent.click(screen.getByRole("button", { name: "Unsorted" }));
+      expect(screen.getByRole("button", { name: "Unsorted" })).toHaveAttribute("aria-pressed", "true");
+      fireEvent.click(screen.getByRole("button", { name: "Reading" }));
+      fireEvent.change(input, { target: { value: "In this folder" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(applyItemOrg).toHaveBeenCalledWith("new", { tagNames: [], collectionName: "Reading" }));
+    });
+  }
 
   test("opens on Alt+K and ignores Ctrl+K", async () => {
     render(<CaptureHost />);
@@ -722,7 +746,7 @@ describe("CaptureHost", () => {
     const collections = await screen.findByRole("list", {
       name: "Collections",
     });
-    expect(within(collections).getAllByRole("button")).toHaveLength(7);
+    await waitFor(() => expect(within(collections).getAllByRole("button")).toHaveLength(7));
     expect(within(collections).getByRole("button", { name: "Collection 8" })).toBeVisible();
     expect(within(collections).queryByRole("button", { name: "Collection 6" })).toBeNull();
 

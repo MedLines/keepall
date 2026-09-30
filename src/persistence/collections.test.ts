@@ -5,6 +5,7 @@ import { assignCollectionToItem, createNote, listItems } from "./items";
 import {
   createCollection,
   deleteCollection,
+  deleteCollections,
   listCollections,
   pinItemInCollection,
   renameCollection,
@@ -132,5 +133,31 @@ describe("collections persistence", () => {
     const [item] = await listItems();
     expect(item?.id).toBe(note.id);
     expect(item?.collectionIds).toEqual([]);
+  });
+
+  test("bulk deletion preserves active and trashed items and clears folder pins", async () => {
+    const a = await createCollection({ name: "A" });
+    const b = await createCollection({ name: "B" });
+    const keep = await createCollection({ name: "Keep" });
+    const first = await createNote({ content: "First" });
+    const second = await createNote({ content: "Second" });
+    await assignCollectionToItem(first.id, a.id);
+    await assignCollectionToItem(second.id, b.id);
+    await getDb().items.update(second.id, { deletedAt: 10 });
+    await getDb().preferences.put({ id: "library", pinnedCollectionIds: [a.id, keep.id, b.id] });
+    await deleteCollections([a.id, b.id, a.id]);
+    expect(await listCollections()).toEqual([keep]);
+    expect((await getDb().items.get(first.id))?.collectionIds).toEqual([]);
+    expect(await getDb().items.get(second.id)).toMatchObject({ collectionIds: [], deletedAt: 10 });
+    expect((await getDb().preferences.get("library"))?.pinnedCollectionIds).toEqual([keep.id]);
+  });
+
+  test("a missing folder cancels bulk deletion without changing any items", async () => {
+    const collection = await createCollection({ name: "Reading" });
+    const note = await createNote({ content: "Keep" });
+    await assignCollectionToItem(note.id, collection.id);
+    await expect(deleteCollections([collection.id, "missing"])).rejects.toThrow("Collection not found");
+    expect(await listCollections()).toEqual([collection]);
+    expect((await getDb().items.get(note.id))?.collectionIds).toEqual([collection.id]);
   });
 });
