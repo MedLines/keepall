@@ -30,7 +30,7 @@ import {
   ImageItemEditDialog,
   type ImageDetailsDraft,
 } from "./item-edit-dialog";
-import { ItemDetailLink } from "./item-detail-link";
+import { ItemLibraryDetails } from "./item-library-details";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
@@ -45,6 +45,8 @@ import {
   FullScreenIcon,
   LayersIcon,
   LinkIcon,
+  PlusIcon,
+  ImageIcon,
 } from "./shell-icons";
 
 type LoadState =
@@ -597,7 +599,7 @@ function ImageWorkspace({
     const container = scrollRef.current;
     const rows = galleryListRef.current?.children;
     if (!container || !rows?.length) return;
-    const readingLine = container.getBoundingClientRect().top + (galleryToolbarRef.current?.offsetHeight ?? 0) + 12;
+    const readingLine = (galleryToolbarRef.current?.getBoundingClientRect().bottom ?? container.getBoundingClientRect().top) + 12;
     const atBottom = container.scrollHeight - container.clientHeight - container.scrollTop <= 1;
     const row = (atBottom ? null : Array.from(rows).find(row => row.getBoundingClientRect().bottom > readingLine)) ?? rows[rows.length - 1];
     const index = Number(row.getAttribute("data-gallery-index"));
@@ -622,7 +624,7 @@ function ImageWorkspace({
     const row = galleryListRef.current?.children[currentSlide];
     if (!row) return;
     const offset = saved?.assetId === currentAssetId ? saved.offset : 0;
-    container.scrollTop += row.getBoundingClientRect().top - container.getBoundingClientRect().top - (galleryToolbarRef.current?.offsetHeight ?? 0) - 12 + offset;
+    container.scrollTop += row.getBoundingClientRect().top - (galleryToolbarRef.current?.getBoundingClientRect().bottom ?? container.getBoundingClientRect().top) - 12 + offset;
   }, [galleryMode, viewerOpen, currentSlide, currentAssetId, gallerySignature]);
 
   return (
@@ -685,26 +687,12 @@ function ImageWorkspace({
         <main
           ref={scrollRef}
           onScroll={rememberReadingPosition}
-          className="ui-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          className="ui-scrollbar scroll-fade scroll-fade-6 min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]"
           data-testid="item-page-scroll"
         >
-          <div className="mx-auto grid w-full max-w-[100rem] items-start gap-6 px-3 pb-8 pt-4 sm:px-5 sm:pb-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-0">
-            <div className="min-w-0">
-            <section className="flex min-w-0 flex-col gap-3" aria-label="Image gallery">
-              <div ref={galleryToolbarRef} className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-border-control bg-bg-canvas py-2">
-                <div className="flex items-center gap-1" role="group" aria-label="Gallery view">
-                  {(["slides", "scroll"] as const).map(mode => (
-                    <button key={mode} type="button" aria-label={`${mode === "slides" ? "Slides" : "Scroll"} view`}
-                      aria-pressed={galleryMode === mode}
-                      className={`${CONTROL} ${galleryMode === mode ? "bg-bg-selected text-text-primary" : "text-text-secondary"}`}
-                      onClick={() => onGalleryModeChange(mode)}>
-                      {mode === "slides" ? "Slides" : "Scroll"}
-                    </button>
-                  ))}
-                </div>
-                {galleryMode === "scroll" ? (
-                  <span className="text-xs tabular-nums text-text-secondary" aria-label="Current image">Image {currentSlide + 1} of {item.assetIds.length}</span>
-                ) : null}
+          <div className="mx-auto grid w-full max-w-[100rem] items-start gap-x-6 gap-y-3 px-3 pb-8 sm:px-5 sm:pb-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-0">
+              <div ref={galleryToolbarRef} className="sticky top-0 z-20 col-span-full grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 border-b border-border-control bg-bg-canvas py-4 md:grid-cols-[auto_minmax(0,1fr)_auto]">
+                <span aria-hidden="true" className="scroll-fade-overlay absolute start-0 end-0 top-full h-6 lg:end-80" />
                 <input
                   ref={addInputRef}
                   className="sr-only"
@@ -730,29 +718,45 @@ function ImageWorkspace({
                     event.target.value = "";
                   }}
                 />
-                <div className="flex shrink-0 gap-1">
-                  <button className={CONTROL} type="button" disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
-                    {galleryMutation === "add" ? "Adding…" : "Add images"}
+                <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-1.5" role="group" aria-label="Image actions">
+                  <button className="ui-control inline-flex h-10 shrink-0 items-center justify-center gap-1.5 px-2.5 text-xs font-medium disabled:opacity-60" type="button" aria-label={galleryMutation === "add" ? "Adding images" : "Add images"} title="Add images" disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
+                    <PlusIcon className="size-4" />
+                    <span className="hidden sm:inline">{galleryMutation === "add" ? "Adding…" : "Add images"}</span>
                   </button>
-                  <button className={CONTROL} type="button" disabled={galleryMutation !== null} onClick={() => replaceInputRef.current?.click()}>
-                    {galleryMutation === "replace" ? "Replacing…" : "Replace"}
+                  <button className="ui-control inline-flex h-10 shrink-0 items-center justify-center gap-1.5 px-2.5 text-xs font-medium disabled:opacity-60" type="button" aria-label={galleryMutation === "replace" ? "Replacing image" : "Replace"} title="Replace current image" disabled={galleryMutation !== null} onClick={() => replaceInputRef.current?.click()}>
+                    <ImageIcon className="size-4" />
+                    <span className="hidden sm:inline">{galleryMutation === "replace" ? "Replacing…" : "Replace"}</span>
                   </button>
                   {item.assetIds.length > 1 ? (
                     <button
-                      className={`${CONTROL} text-text-danger`}
+                      className="ui-control inline-flex size-10 shrink-0 items-center justify-center text-text-danger hover:bg-bg-danger disabled:opacity-60"
                       type="button"
                       aria-label="Remove current image"
+                      title="Remove current image"
                       disabled={galleryMutation !== null}
                       onClick={onRemoveImage}
                     >
-                      <DeleteIcon />
-                      <span className="hidden xl:inline">Remove</span>
+                      <DeleteIcon className="size-4" />
                     </button>
                   ) : null}
                 </div>
+                <span className="col-span-2 row-start-2 text-xs tabular-nums text-text-secondary md:col-span-1 md:col-start-2 md:row-start-1 md:text-center" aria-label="Current image">Image {currentSlide + 1} of {item.assetIds.length}</span>
+                <div className="icon-segmented-switch squircle-panel relative isolate col-start-2 row-start-1 flex h-11 w-36 shrink-0 rounded-control-lg bg-bg-raised p-0.5 md:col-start-3" role="group" aria-label="Gallery view" data-selected={galleryMode === "scroll" ? "end" : "start"}>
+                  <span aria-hidden="true" className="icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[calc(50%_-_2px)] rounded-control-sm" />
+                  {(["slides", "scroll"] as const).map(mode => (
+                    <button key={mode} type="button" aria-label={`${mode === "slides" ? "Slides" : "Scroll"} view`}
+                      aria-pressed={galleryMode === mode}
+                      className={`squircle-panel relative flex h-10 min-w-0 flex-1 items-center justify-center rounded-control-sm px-2 text-xs font-medium ${galleryMode === mode ? "text-text-primary" : "text-text-secondary hover:text-text-primary"}`}
+                      onClick={() => onGalleryModeChange(mode)}>
+                      {mode === "slides" ? "Slides" : "Scroll"}
+                    </button>
+                  ))}
+                </div>
               </div>
+            <div className="min-w-0">
+            <section className="flex min-w-0 flex-col gap-3" aria-label="Image gallery">
               {galleryMode === "slides" ? (
-              <div className="item-workspace-media relative flex h-[min(76dvh,54rem)] min-h-[24rem] items-center justify-center overflow-hidden rounded-card bg-bg-media">
+              <div className="item-workspace-media relative isolate flex h-[min(76dvh,54rem)] min-h-[24rem] items-center justify-center overflow-hidden rounded-card bg-bg-media">
                 <button
                   type="button"
                   className="control-shape-none group relative flex size-full min-h-0 items-center justify-center overflow-hidden"
@@ -791,9 +795,6 @@ function ImageWorkspace({
                     </button>
                   </>
                 ) : null}
-                <p className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-control bg-bg-overlay/70 px-3 py-2 text-sm tabular-nums text-text-on-media" aria-label={`Image ${currentSlide + 1} of ${item.assetIds.length}`}>
-                  {currentSlide + 1} / {item.assetIds.length}
-                </p>
               </div>
 
               ) : null}
@@ -832,46 +833,16 @@ function ImageWorkspace({
             ) : null}
             </div>
 
-            <aside className="library-panel rounded-panel border border-border-control bg-bg-surface p-5 lg:sticky lg:top-5 lg:ms-6" aria-label="Image details">
-            <h2 className="text-base font-semibold text-text-primary">Details</h2>
-            <p className="mt-2 text-xs font-medium uppercase tracking-[0.12em] text-text-secondary">
-              {item.assetIds.length > 1 ? `${item.assetIds.length} images` : "Image"}
-            </p>
-
-            {itemCollections.length ? (
-              <DetailGroup title="Collection">
-                {itemCollections.map((collection) => (
-                  <ItemDetailLink key={collection.id} href={`/?collection=${encodeURIComponent(collection.id)}`}>
-                    {collection.name}
-                  </ItemDetailLink>
-                ))}
-              </DetailGroup>
-            ) : null}
-
-            {itemTags.length ? (
-              <DetailGroup title="Tags">
-                {itemTags.map((tag) => (
-                  <ItemDetailLink key={tag.id} href={`/?tag=${encodeURIComponent(tag.id)}`}>
-                    {tag.name}
-                  </ItemDetailLink>
-                ))}
-              </DetailGroup>
-            ) : null}
-
-            <dl className="mt-7 grid w-full gap-3 text-sm">
-              <div>
-                <dt className="text-text-secondary">Saved</dt>
-                <dd className="mt-0.5 text-text-primary">{new Date(item.createdAt).toLocaleDateString()}</dd>
-              </div>
-              {item.sourceFileName ? (
-                <div>
-                  <dt className="text-text-secondary">Original file</dt>
-                  <dd className="mt-0.5 break-all text-text-primary">{item.sourceFileName}</dd>
-                </div>
-              ) : null}
-            </dl>
-
-            </aside>
+            <ItemLibraryDetails
+              label="Image details"
+              summary={{ label: "Contents", value: `${item.assetIds.length} ${item.assetIds.length === 1 ? "image" : "images"} · ${item.caption?.trim() ? "Notes added" : "No notes"}` }}
+              collections={itemCollections}
+              tags={itemTags}
+              createdAt={item.createdAt}
+              updatedAt={item.updatedAt}
+              sourceFileName={item.sourceFileName}
+              className="mt-3 lg:sticky lg:top-[calc(var(--spacing)*22+1px)] lg:ms-6 lg:mt-0"
+            />
           </div>
         </main>
       </div>
@@ -938,15 +909,6 @@ function GalleryControls({
         ))}
       </div>
     </nav>
-  );
-}
-
-function DetailGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-7">
-      <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">{title}</h3>
-      <div className="mt-2 flex flex-wrap gap-2">{children}</div>
-    </section>
   );
 }
 

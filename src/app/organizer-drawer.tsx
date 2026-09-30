@@ -44,6 +44,13 @@ export function OrganizerDrawer({
     >
       <div className="ui-scrollbar scroll-fade min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5">
         <div className="flex flex-col gap-8">
+          <section aria-labelledby={`${id}-collection`}>
+            <div className="mb-3 flex items-center gap-2">
+              <CollectionIcon className="size-5" />
+              <h3 id={`${id}-collection`} className="font-medium">Collection</h3>
+            </div>
+            {collection}
+          </section>
           <section aria-labelledby={`${id}-tags`}>
             <div className="mb-3 flex items-center gap-2">
               <HashIcon className="size-5" />
@@ -52,13 +59,6 @@ export function OrganizerDrawer({
             {tags}
           </section>
           {error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : null}
-          <section aria-labelledby={`${id}-collection`}>
-            <div className="mb-3 flex items-center gap-2">
-              <CollectionIcon className="size-5" />
-              <h3 id={`${id}-collection`} className="font-medium">Collection</h3>
-            </div>
-            {collection}
-          </section>
         </div>
       </div>
       <footer className="shrink-0 border-t border-border-control px-5 py-4">

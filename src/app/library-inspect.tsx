@@ -407,18 +407,9 @@ export function LibraryInspect({
 
               {!editing && !pendingDelete ? (
                 <>
-                  {tagNames.length > 0 ? (
-                    <ItemTagChips
-                      className="mt-3 flex flex-wrap gap-1.5"
-                      tags={tagNames}
-                      mutationBusy={mutationBusy}
-                      onBrowseTag={onBrowseTag}
-                      onRemoveTag={onRemoveTag}
-                    />
-                  ) : null}
                   {collectionNames.length > 0 ? (
                     <ul
-                      className="mt-2 flex flex-wrap gap-1.5"
+                      className="mt-3 flex flex-wrap gap-1.5"
                       aria-label="Collections"
                     >
                       {collectionNames.map((name) => (
@@ -432,6 +423,15 @@ export function LibraryInspect({
                     </ul>
                   ) : null}
 
+                  {tagNames.length > 0 ? (
+                    <ItemTagChips
+                      className="mt-2 flex flex-wrap gap-1.5"
+                      tags={tagNames}
+                      mutationBusy={mutationBusy}
+                      onBrowseTag={onBrowseTag}
+                      onRemoveTag={onRemoveTag}
+                    />
+                  ) : null}
                   {item.type === "link" && linkCanManualPreviewFetch(item) ? (
                     <div className="mt-3">
                       <button
@@ -478,32 +478,6 @@ export function LibraryInspect({
 
                   <div className="mt-4 max-w-md">
                     <OrgNameSuggest
-                      inputId={`inspect-add-tag-${item.id}`}
-                      label="Add tag"
-                      value={tagDraft}
-                      suggestions={availableTagSuggestions}
-                      disabled={mutationBusy}
-                      pending={
-                        pendingMutation?.op === "assign-tag" &&
-                        pendingMutation.id === item.id
-                      }
-                      submitLabel={
-                        pendingMutation?.op === "assign-tag" &&
-                        pendingMutation.id === item.id
-                          ? "Adding…"
-                          : "Add tag"
-                      }
-                      error={tagError}
-                      onChange={setTagDraft}
-                      onSubmit={(name) => {
-                        onAddTag(name);
-                        setTagDraft("");
-                      }}
-                    />
-                  </div>
-
-                  <div className="mt-3 max-w-md">
-                    <OrgNameSuggest
                       inputId={`inspect-add-collection-${item.id}`}
                       label="Add to collection"
                       value={collectionDraft}
@@ -524,6 +498,32 @@ export function LibraryInspect({
                       onSubmit={(name) => {
                         onAddCollection(name);
                         setCollectionDraft("");
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-3 max-w-md">
+                    <OrgNameSuggest
+                      inputId={`inspect-add-tag-${item.id}`}
+                      label="Add tag"
+                      value={tagDraft}
+                      suggestions={availableTagSuggestions}
+                      disabled={mutationBusy}
+                      pending={
+                        pendingMutation?.op === "assign-tag" &&
+                        pendingMutation.id === item.id
+                      }
+                      submitLabel={
+                        pendingMutation?.op === "assign-tag" &&
+                        pendingMutation.id === item.id
+                          ? "Adding…"
+                          : "Add tag"
+                      }
+                      error={tagError}
+                      onChange={setTagDraft}
+                      onSubmit={(name) => {
+                        onAddTag(name);
+                        setTagDraft("");
                       }}
                     />
                   </div>

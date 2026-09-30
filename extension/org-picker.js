@@ -1,5 +1,6 @@
 if (!globalThis.__keepallCreateOrgPicker) {
   globalThis.__keepallCreateOrgPicker = function createOrgPicker(shadow) {
+    const document = shadow.ownerDocument;
     const LIMIT = 6;
     const state = {
       loaded: false,
@@ -69,11 +70,11 @@ if (!globalThis.__keepallCreateOrgPicker) {
       choices.setAttribute("aria-label", label === "Collection" ? "Collections" : "Existing tags");
       const noMatches = element("p", "org-status");
       noMatches.hidden = true;
-      const createHint = element("p", "org-status");
-      createHint.hidden = true;
-      root.append(head, searchWrap, selected, choices, noMatches, createHint);
+      const createButton = button("", "org-create", () => submitEntry(label === "Collection" ? "collection" : "tag"));
+      createButton.hidden = true;
+      root.append(head, searchWrap, selected, choices, noMatches, createButton);
       root.hidden = true;
-      return { root, browse, selected, choices, noMatches, createHint, input };
+      return { root, browse, selected, choices, noMatches, createButton, input };
     }
 
     const collection = section("Collection", "Browse all collections", "Filter or new collection");
@@ -151,9 +152,9 @@ if (!globalThis.__keepallCreateOrgPicker) {
       limitToTwoRows(collection.choices);
       const exact = state.collections.some((entry) => entry.name.toLowerCase() === query.toLowerCase());
       collection.noMatches.hidden = !query || state.collections.length === 0 || visible.length > 0;
-      collection.noMatches.textContent = "No matching collections — Enter creates one.";
-      collection.createHint.hidden = !query || exact;
-      collection.createHint.textContent = `Enter to create “${query}”`;
+      collection.noMatches.textContent = "No matching collections.";
+      collection.createButton.hidden = !query || exact;
+      collection.createButton.textContent = `Create collection “${query}”`;
     }
 
     function selectedTagName(id) {
@@ -196,20 +197,26 @@ if (!globalThis.__keepallCreateOrgPicker) {
       limitToTwoRows(tags.choices);
       const exact = state.tags.some((entry) => entry.name.toLowerCase() === query.toLowerCase());
       tags.noMatches.hidden = !query || state.tags.length === 0 || visible.length > 0;
-      tags.noMatches.textContent = "No matching tags — Enter creates one.";
-      tags.createHint.hidden = !query || exact;
-      tags.createHint.textContent = `Enter to create “${query}”`;
+      tags.noMatches.textContent = "No matching tags.";
+      tags.createButton.hidden = !query || exact || state.tagNames.some((name) => name.toLowerCase() === query.toLowerCase());
+      tags.createButton.textContent = `Create tag “${query}”`;
     }
 
-    function onEntry(event, kind) {
-      if (event.key !== "Enter" || event.metaKey || event.ctrlKey) return;
-      event.preventDefault();
-      const query = event.currentTarget.value.trim().replace(/\s+/g, " ");
+    function submitEntry(kind) {
+      const input = kind === "collection" ? collection.input : tags.input;
+      const query = input.value.trim().replace(/\s+/g, " ");
       if (!query || state.disabled) return;
       const entries = kind === "collection" ? state.collections : state.tags;
       const existing = entries.find((entry) => entry.name.toLowerCase() === query.toLowerCase());
       if (kind === "collection") chooseCollection(existing ?? { name: query });
       else addTag(existing ?? { name: query });
+      input.focus();
+    }
+
+    function onEntry(event, kind) {
+      if (event.key !== "Enter" || event.metaKey || event.ctrlKey || event.isComposing) return;
+      event.preventDefault();
+      submitEntry(kind);
     }
 
     collection.input.addEventListener("input", renderCollections);
@@ -278,6 +285,12 @@ if (!globalThis.__keepallCreateOrgPicker) {
         }));
       }
       search.addEventListener("input", renderResults);
+      search.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        dismissBrowser();
+      });
       browser.append(header, searchWrap, results);
       browser.addEventListener("close", () => {
         clearTimeout(browserCloseTimer);

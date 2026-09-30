@@ -190,7 +190,7 @@ export function LibraryBulkPanels({
     <OrganizerDrawer
       open={panel !== null || Boolean(error)}
       title={bulkPanelTitle(panel, count)}
-      description="Add tags or move the selected items to a collection. Changes apply immediately."
+      description="Move the selected items to a collection or add tags. Changes apply immediately."
       disabled={busy}
       error={error}
       onOpenChange={(open) => { if (!open) onClosePanel(); }}

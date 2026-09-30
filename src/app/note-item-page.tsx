@@ -25,7 +25,7 @@ import {
   saveNoteWithImages,
 } from "@/persistence/items";
 import { createTag, listTags } from "@/persistence/tags";
-import { ItemDetailLink } from "./item-detail-link";
+import { ItemLibraryDetails } from "./item-library-details";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { NoteContent } from "./note-content";
@@ -313,56 +313,15 @@ export function NoteItemPage({
           </article>
         </div>
 
-        <aside
-          aria-label="Note details"
-          className="library-panel rounded-panel border border-border-control bg-bg-surface p-5 lg:sticky lg:top-24"
-        >
-          <h2 className="text-base font-semibold">Details</h2>
-          {itemCollections.length ? (
-            <div className="mt-6">
-              <h3 className="mb-2 text-sm text-text-secondary">Collection</h3>
-              <div className="flex flex-wrap gap-2">
-                {itemCollections.map((collection) => (
-                  <ItemDetailLink key={collection.id} href={`/?collection=${encodeURIComponent(collection.id)}`}>
-                    {collection.name}
-                  </ItemDetailLink>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {itemTags.length ? (
-            <div className="mt-6">
-              <h3 className="mb-2 text-sm text-text-secondary">Tags</h3>
-              <div className="flex flex-wrap gap-2">
-                {itemTags.map((tag) => (
-                  <ItemDetailLink key={tag.id} href={`/?tag=${encodeURIComponent(tag.id)}`}>
-                    {tag.name}
-                  </ItemDetailLink>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          <dl className="mt-7 grid gap-3 text-sm">
-            <div>
-              <dt className="text-text-secondary">Saved</dt>
-              <dd className="mt-0.5">
-                <time dateTime={new Date(note.createdAt).toISOString()}>
-                  {new Date(note.createdAt).toLocaleDateString()}
-                </time>
-              </dd>
-            </div>
-            {note.updatedAt !== note.createdAt ? (
-              <div>
-                <dt className="text-text-secondary">Edited</dt>
-                <dd className="mt-0.5">
-                  <time dateTime={new Date(note.updatedAt).toISOString()}>
-                    {new Date(note.updatedAt).toLocaleDateString()}
-                  </time>
-                </dd>
-              </div>
-            ) : null}
-          </dl>
-        </aside>
+        <ItemLibraryDetails
+          label="Note details"
+          summary={{ label: "Format", value: note.format === "markdown" ? "Markdown" : "Plain text" }}
+          collections={itemCollections}
+          tags={itemTags}
+          createdAt={note.createdAt}
+          updatedAt={note.updatedAt}
+          className="lg:sticky lg:top-24"
+        />
       </main>
 
       {editing ? <NoteItemEditDialog

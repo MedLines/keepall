@@ -4,11 +4,13 @@ if (!globalThis.__keepallPageUi) {
   const host = document.createElement("div");
   host.id = "keepall-capture-ui";
   const shadow = host.attachShadow({ mode: "closed" });
+  let editorSurface;
   const colorScheme = matchMedia("(prefers-color-scheme: dark)");
   let themePreference = "system";
   function applyTheme(preference) {
     themePreference = ["light", "dark"].includes(preference) ? preference : "system";
     host.dataset.theme = themePreference === "system" ? (colorScheme.matches ? "dark" : "light") : themePreference;
+    if (editorSurface) editorSurface.host.dataset.theme = host.dataset.theme;
   }
   colorScheme.addEventListener("change", () => applyTheme(themePreference));
   applyTheme("system");
@@ -46,6 +48,9 @@ if (!globalThis.__keepallPageUi) {
       animation: keepall-enter 300ms cubic-bezier(.2, 0, 0, 1) both;
     }
     dialog[open] { display: flex; flex-direction: column; }
+    .editor-surface[open] { inset: 0; width: 100vw; max-width: none; height: 100dvh; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; animation: none; }
+    .editor-surface::backdrop { background: transparent; backdrop-filter: none; animation: none; }
+    .editor-frame { display: block; width: 100%; height: 100%; border: 0; background: transparent; }
     dialog::backdrop { background: var(--scrim); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: keepall-backdrop-in 200ms ease-out both; }
     dialog.is-closing { animation: keepall-exit 180ms cubic-bezier(.4, 0, 1, 1) both; }
     dialog.is-closing::backdrop { animation: keepall-backdrop-out 180ms ease-in both; }
@@ -89,7 +94,7 @@ if (!globalThis.__keepallPageUi) {
     textarea::placeholder { color: var(--secondary); }
     textarea[readonly] { background: var(--raised); }
     .org-section { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 16px; }
-    .org-section[hidden], .selected-tags[hidden], .browse-trigger[hidden], .org-status[hidden], .save-status[hidden] { display: none; }
+    .org-section[hidden], .selected-tags[hidden], .browse-trigger[hidden], .org-status[hidden], .org-create[hidden], .save-status[hidden] { display: none; }
     .org-title { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--primary); font-weight: 600; }
     .org-icon { display: inline-flex; width: 16px; height: 16px; flex: none; align-items: center; justify-content: center; }
     .org-icon svg { width: 16px; height: 16px; }
@@ -125,6 +130,8 @@ if (!globalThis.__keepallPageUi) {
     .browse-selected { color: var(--secondary); font-size: 12px; }
     .browse-empty { padding: 32px 12px; color: var(--secondary); text-align: center; }
     .org-status { margin: 0; color: var(--secondary); font-size: 12px; }
+    .org-create { justify-self: start; max-width: 100%; min-height: 36px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--control); color: var(--primary); text-align: left; overflow-wrap: anywhere; font-size: 12px; font-weight: 500; }
+    .org-create:hover { background: var(--raised); }
     :where(button, input, textarea):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
     .note-help { margin: 0; color: var(--secondary); font-size: 12px; font-weight: 400; }
     .note-help[hidden] { display: none; }
@@ -195,6 +202,46 @@ if (!globalThis.__keepallPageUi) {
   const drafts = new Map();
   let rememberDraft;
 
+  function createEditorSurface() {
+    // A separate document keeps site capture listeners out of the editor's key events.
+    const modal = document.createElement("dialog");
+    modal.className = "editor-surface";
+    modal.setAttribute("aria-label", "Keepall capture");
+    const frame = document.createElement("iframe");
+    frame.className = "editor-frame";
+    frame.title = "Keepall capture editor";
+    modal.append(frame);
+    shadow.append(modal);
+    const scrollStyles = [document.documentElement, document.body].filter(Boolean).map((node) => ({
+      node,
+      value: node.style.getPropertyValue("overflow"),
+      priority: node.style.getPropertyPriority("overflow"),
+    }));
+    for (const { node } of scrollStyles) node.style.setProperty("overflow", "hidden", "important");
+    modal.showModal();
+    const frameDocument = frame.contentDocument;
+    frameDocument.documentElement.style.cssText = "background: transparent; color-scheme: normal;";
+    frameDocument.body.style.cssText = "margin: 0; background: transparent;";
+    const frameHost = frameDocument.createElement("div");
+    frameHost.dataset.theme = host.dataset.theme;
+    const frameShadow = Element.prototype.attachShadow.call(frameHost, { mode: "closed" });
+    frameShadow.append(style.cloneNode(true));
+    frameDocument.body.append(frameHost);
+    return {
+      document: frameDocument,
+      shadow: frameShadow,
+      host: frameHost,
+      destroy() {
+        modal.close();
+        modal.remove();
+        for (const { node, value, priority } of scrollStyles) {
+          if (value) node.style.setProperty("overflow", value, priority);
+          else node.style.removeProperty("overflow");
+        }
+      },
+    };
+  }
+
   function dismissToast(immediate = false) {
     cleanupToast?.();
     cleanupToast = undefined;
@@ -235,7 +282,7 @@ if (!globalThis.__keepallPageUi) {
     const scheduleDismiss = () => {
       if (!node.isConnected) return;
       clearTimeout(toastTimer);
-      if (!busy && !collectionPicker && !node.matches(":hover") && !node.contains(shadow.activeElement)) {
+      if (!busy && !collectionPicker && !node.matches(":hover") && !node.contains(node.getRootNode().activeElement)) {
         toastTimer = setTimeout(() => dismissToast(), duration);
       }
     };
@@ -381,6 +428,11 @@ if (!globalThis.__keepallPageUi) {
     clearTimeout(closeTimer);
     currentPicker?.destroy();
     dialog?.remove();
+    editorSurface?.destroy();
+    const surface = createEditorSurface();
+    editorSurface = surface;
+    const document = surface.document;
+    const shadow = surface.shadow;
     currentEditorId = editorId;
     dialog = document.createElement("dialog");
     dialog.setAttribute("aria-labelledby", "keepall-editor-title");
@@ -616,7 +668,11 @@ if (!globalThis.__keepallPageUi) {
     dialog.addEventListener("close", () => {
       picker.destroy();
       currentDialog.remove();
-      if (dialog === currentDialog) dialog = undefined;
+      surface.destroy();
+      if (dialog === currentDialog) {
+        dialog = undefined;
+        editorSurface = undefined;
+      }
     }, { once: true });
     dialog.addEventListener("cancel", (event) => {
       event.preventDefault();

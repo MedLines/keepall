@@ -181,7 +181,7 @@ describe("ImageItemPage", () => {
         { name: "Edit details" },
       ),
     ).not.toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Image gallery" })).getByText("1 / 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Current image")).toHaveTextContent("Image 1 of 2");
     expect(screen.getAllByTestId("rendered-asset")[0]).toHaveTextContent("asset-1");
     expect(
       within(screen.getByRole("navigation", { name: "Image slides" }))
@@ -222,7 +222,7 @@ describe("ImageItemPage", () => {
     const gallery = await screen.findByRole("region", { name: "Image gallery" });
 
     fireEvent.keyDown(document, { key: "ArrowRight" });
-    expect(within(gallery).getByText("2 / 3")).toBeInTheDocument();
+    expect(screen.getByLabelText("Current image")).toHaveTextContent("Image 2 of 3");
     expect(within(gallery).getAllByTestId("rendered-asset")[0]).toHaveTextContent("asset-2");
 
     fireEvent.click(screen.getByRole("button", { name: "View image full screen" }));
@@ -241,7 +241,7 @@ describe("ImageItemPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
     const editDialog = await screen.findByRole("dialog", { name: "Edit image details" });
     fireEvent.keyDown(within(editDialog).getByLabelText("Title (optional)"), { key: "ArrowLeft" });
-    expect(within(gallery).getByText("3 / 3")).toBeInTheDocument();
+    expect(screen.getByLabelText("Current image")).toHaveTextContent("Image 3 of 3");
   });
 
   test("clicking the focused image zooms in and out, then navigation resets zoom", async () => {
