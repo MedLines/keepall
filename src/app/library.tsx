@@ -102,6 +102,7 @@ import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
 import { type BulkPanel } from "./library-bulk-bar";
 import { LibraryTopBar } from "./library-top-bar";
+import { LibraryEmptyState, type LibraryEmptyStateKind } from "./library-empty-state";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
 import { isShellMobileViewport } from "./use-shell-mobile";
 import type { OrgNameSuggestion } from "./org-name-suggest";
@@ -117,6 +118,31 @@ import { itemPageHref } from "./item-page-navigation";
 import type { ImageDetailsDraft, LinkDetailsDraft, NoteDetailsDraft, VideoDetailsDraft } from "./item-edit-dialog";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
+
+function getEmptyStateKind(
+  view: LibraryViewState,
+  hasActiveSearch: boolean,
+): LibraryEmptyStateKind {
+  if (hasActiveSearch || view.type !== null || view.tag !== null) return "filtered";
+  if (view.trash) return "trash";
+  if (view.unsorted) return "unsorted";
+  if (view.collection !== null) return "collection";
+  return "library";
+}
+
+function getEmptyStateMessage(
+  view: LibraryViewState,
+  hasActiveSearch: boolean,
+  collectionId: string | null,
+): string {
+  if (hasActiveSearch) return "No matching items.";
+  if (view.type !== null) return "No items of this type.";
+  if (view.tag !== null) return "No items with this tag.";
+  if (view.unsorted) return "No unsorted items.";
+  if (collectionId !== null) return "No items in this collection.";
+  if (view.trash) return "Trash is empty.";
+  return "No items yet.";
+}
 
 /** Resume enrich + flush deferred enrich reloads after folder clicks stop. */
 const BROWSE_IDLE_MS = 2500;
@@ -528,7 +554,21 @@ export function Library() {
   const trashIndexes = useMemo(() => buildLibraryBrowseIndexes(trashedItems), [trashedItems]);
   const browseItems = view.trash ? trashedItems : items;
   const browseIndexes = view.trash ? trashIndexes : browseIndexesRef.current;
+  const typeCountIndexes = useMemo(
+    () => buildLibraryBrowseIndexes(browseItems),
+    [browseItems],
+  );
   const sidebarCounts = useMemo(() => countSidebarItems(items), [items]);
+  const typeFilterCounts = useMemo(
+    () => countSidebarItems(filterAndSortLibraryItems(
+      browseItems,
+      tags,
+      { ...view, type: null },
+      collectionsById,
+      typeCountIndexes,
+    )),
+    [browseItems, tags, view, collectionsById, typeCountIndexes],
+  );
   const orderedCollections = useMemo(
     () => orderCollectionsByPins(collections, pinnedCollectionIds),
     [collections, pinnedCollectionIds],
@@ -557,6 +597,8 @@ export function Library() {
   );
   const browseScopeKey = `${Boolean(view.trash)}|${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
+  const emptyStateKind = getEmptyStateKind(view, hasActiveSearch);
+  const emptyStateMessage = getEmptyStateMessage(view, hasActiveSearch, browseCollectionId);
   const allVisibleSelected =
     visibleItems.length > 0 &&
     visibleItems.every((item) => selectedIds.has(item.id));
@@ -653,6 +695,11 @@ export function Library() {
     [pathname, router, scheduleBrowseIdle],
   );
 
+  const clearFilters = useCallback(() => {
+    document.getElementById("library-search")?.focus();
+    updateView({ q: "", type: null, tag: null, item: null, slide: 0 }, "push");
+  }, [updateView]);
+
   useLayoutEffect(() => {
     if (pendingNavScopeLabelRef.current !== null) {
       measureLibraryNavScopeCommit(pendingNavScopeLabelRef.current);
@@ -686,6 +733,13 @@ export function Library() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- clear stale collection once after load
   }, [browseCollectionId, browseCollection, loadState]);
+
+  useEffect(() => {
+    if (view.tag !== null && loadState === "ready" && !tagsById.has(view.tag)) {
+      updateView({ tag: null }, "replace");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- clear stale tag once after load
+  }, [view.tag, tagsById, loadState]);
 
   useEffect(() => {
     if (inspectId !== null && loadState === "ready" && inspectedItem === null) {
@@ -1570,18 +1624,23 @@ export function Library() {
         itemCount={headerItemCount}
         searchQuery={searchQuery}
         onSearchChange={(value) => updateView({ q: value })}
+        searchPlaceholder={view.trash ? "Search Trash…" : browseCollection ? `Search in ${browseCollection.name}…` : browseUnsorted ? "Search Unsorted…" : "Search your library…"}
         sort={view.sort}
         onSortChange={(sort) => updateView({ sort }, "push")}
         layout={browseLayout}
         onLayoutChange={(layout) => updateView({ layout }, "replace")}
         typeFilter={browseType}
-        sidebarCounts={view.trash ? countSidebarItems(trashedItems) : sidebarCounts}
+        typeCounts={typeFilterCounts}
         trash={Boolean(view.trash)}
         trashEmptyDisabled={mutationBusy || loadState !== "ready" || trashedItems.length === 0}
         onEmptyTrash={() => trashActions.requestEmpty(trashedItems)}
         onTypeFilterChange={(type) => updateView({ type }, "push")}
         tagFilterName={browseTagName}
+        typeFilterName={browseType === "link" ? "Links" : browseType === "note" ? "Notes" : browseType === "image" ? "Images" : browseType === "video" ? "Videos" : null}
+        onClearSearchFilter={() => updateView({ q: "" }, "push")}
+        onClearTypeFilter={() => updateView({ type: null }, "push")}
         onClearTagFilter={() => updateView({ tag: null }, "push")}
+        onClearFilters={clearFilters}
         panelOpen={panelOpen}
         onPanelOpenChange={setPanelOpen}
         libraryLoading={loadState === "loading"}
@@ -1714,19 +1773,11 @@ export function Library() {
                 </p>
               ) : null}
               {visibleItems.length === 0 ? (
-                <p className="text-sm text-text-secondary">
-                  {normalizeSearchQuery(view.q).length > 0
-                    ? "No matching items."
-                    : view.type !== null
-                      ? "No items of this type."
-                      : view.tag !== null
-                        ? "No items with this tag."
-                        : view.unsorted
-                          ? "No unsorted items."
-                          : browseCollectionId !== null
-                            ? "No items in this collection."
-                            : view.trash ? "Trash is empty." : "No items yet."}
-                </p>
+                <LibraryEmptyState
+                  kind={emptyStateKind}
+                  message={emptyStateMessage}
+                  onClearFilters={clearFilters}
+                />
               ) : (
                 <LibraryMainGrid
                   visibleItems={visibleItems}
@@ -1735,19 +1786,11 @@ export function Library() {
                   scrollRef={mainScrollRef}
                   renderItem={renderLibraryItem}
                   empty={
-                    <p className="text-sm text-text-secondary">
-                      {normalizeSearchQuery(view.q).length > 0
-                        ? "No matching items."
-                        : view.type !== null
-                          ? "No items of this type."
-                          : view.tag !== null
-                            ? "No items with this tag."
-                            : view.unsorted
-                              ? "No unsorted items."
-                              : browseCollectionId !== null
-                                ? "No items in this collection."
-                                : view.trash ? "Trash is empty." : "No items yet."}
-                    </p>
+                    <LibraryEmptyState
+                      kind={emptyStateKind}
+                      message={emptyStateMessage}
+                      onClearFilters={clearFilters}
+                    />
                   }
                 />
               )}

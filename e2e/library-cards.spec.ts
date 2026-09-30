@@ -600,7 +600,7 @@ for (const view of ["Grid", "List"] as const) {
   });
 }
 
-test("active tag clears from the library title row", async ({ page }, testInfo) => {
+test("active tag clears from the visible filter summary", async ({ page }, testInfo) => {
   const card = page.locator(".library-card").filter({ hasText: "Customer support" });
   await card.hover();
   await card.getByRole("button", { name: "UI inspiration", exact: true }).click();
@@ -609,16 +609,18 @@ test("active tag clears from the library title row", async ({ page }, testInfo) 
 
   const header = page.getByRole("banner");
   const heading = header.getByRole("heading", { name: "UI inspiration" });
-  const clear = header.getByRole("button", { name: "Clear tag" });
+  const summary = header.getByRole("group", { name: "Active filters" });
+  const clear = summary.getByRole("button", { name: "Remove tag filter: minimal" });
   await expect(heading).toBeVisible();
   await expect(clear).toBeVisible();
   await expect(page.getByRole("main")).toHaveCSS("scrollbar-width", "thin");
   await expect(clear).toContainText("minimal");
-  const headingBox = (await heading.boundingBox())!;
+  const summaryBox = (await summary.boundingBox())!;
   const clearBox = (await clear.boundingBox())!;
-  expect(Math.abs(headingBox.y + headingBox.height / 2 - clearBox.y - clearBox.height / 2)).toBeLessThanOrEqual(1);
+  expect(clearBox.x).toBeGreaterThanOrEqual(summaryBox.x);
+  expect(clearBox.x + clearBox.width).toBeLessThanOrEqual(summaryBox.x + summaryBox.width);
   await expect(page.getByRole("main").getByText(/Tag:/)).toHaveCount(0);
-  await page.screenshot({ path: testInfo.outputPath("active-tag-title.png") });
+  await page.screenshot({ path: testInfo.outputPath("active-tag-summary.png") });
 
   await clear.click();
   await expect(page).toHaveURL(/collection=c(?:&|$)/);

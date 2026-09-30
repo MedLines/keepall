@@ -81,6 +81,70 @@ test("collection actions do not navigate and keyboard navigation still works", a
   await expectCollection(page, "Reading", "Design Inspiration");
 });
 
+test("stale tag deep links clear after the library finishes loading", async ({ page }) => {
+  await page.goto("/?tag=missing");
+  await expect(page.getByRole("heading", { name: "All items" })).toBeVisible();
+  await expect(page).not.toHaveURL(/tag=missing/);
+  await expect(page.getByRole("group", { name: "Active filters" })).toHaveCount(0);
+});
+
+test("compound filters stay visible, clear with keyboard focus, and return with Back at 320px", async ({ page }) => {
+  const longQuery = "Reading references for narrow screens and filter recovery";
+  const longTag = "Research references for long narrow screen browsing";
+  await page.evaluate(async ({ longTag }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(["items", "tags"], "readwrite");
+        tx.objectStore("tags").put({ id: "research", name: longTag, createdAt: 2 });
+        const items = tx.objectStore("items");
+        const note = items.get("reading-note");
+        note.onsuccess = () => items.put({ ...note.result, content: "Reading test content", tagIds: ["research"] });
+        items.put({
+          id: "reading-link", type: "link", title: "Reading source", url: "https://example.com/reading",
+          noteContent: "", previewStatus: "idle", previewTitle: "", previewDescription: "",
+          previewImageUrl: "", previewAssetId: null, previewRetry: null, previewAttemptedAt: null,
+          collectionIds: ["reading"], tagIds: ["research"], createdAt: 2, updatedAt: 2,
+        });
+        tx.oncomplete = () => resolve();
+        tx.onabort = () => reject(tx.error);
+        tx.onerror = () => reject(tx.error);
+      });
+    } finally {
+      db.close();
+    }
+  }, { longTag });
+  await page.setViewportSize({ width: 320, height: 760 });
+  await page.goto("/?collection=reading&tag=research&type=note");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Expand" })).toBeVisible();
+  await expect(page.getByRole("main").getByText("Reading test content", { exact: true })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search" }).fill(longQuery);
+  await expect(page).toHaveURL(/q=Reading/);
+
+  const summary = page.getByRole("group", { name: "Active filters" });
+  await expect(summary.getByRole("button", { name: `Remove search filter: ${longQuery}` })).toBeVisible();
+  await expect(summary.getByRole("button", { name: "Remove type filter: Notes" })).toBeVisible();
+  await expect(summary.getByRole("button", { name: `Remove tag filter: ${longTag}` })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("button", { name: "Clear filters" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  await page.getByRole("main").getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.getByRole("searchbox", { name: "Search" })).toBeFocused();
+  await expect.poll(() => page.evaluate(() => location.search)).toBe("?collection=reading");
+  await page.goBack();
+  await expect.poll(() => page.evaluate(() => Object.fromEntries(new URLSearchParams(location.search)))).toMatchObject({ collection: "reading", tag: "research", type: "note", q: longQuery });
+  await expect(summary.getByRole("button", { name: `Remove search filter: ${longQuery}` })).toBeVisible();
+
+  await summary.getByRole("button", { name: "Remove type filter: Notes" }).click();
+  await expect(page.getByRole("searchbox", { name: "Search" })).toBeFocused();
+  await expect.poll(() => page.evaluate(() => Object.fromEntries(new URLSearchParams(location.search)))).toMatchObject({ collection: "reading", tag: "research", q: longQuery });
+});
+
 test("rapid row-edge switches leave the last collection selected", async ({ page }) => {
   for (let i = 0; i < 12; i++) {
     const name = i % 2 === 0 ? "Design Inspiration" : "Reading";

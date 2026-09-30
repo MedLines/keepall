@@ -243,6 +243,149 @@ describe("Library", () => {
     expect(screen.getByText("A persisted note")).toBeInTheDocument();
   });
 
+  test("clears an unknown URL tag only after tags finish loading", async () => {
+    let resolveTags!: (tags: { id: string; name: string; createdAt: number }[]) => void;
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(listTags).mockImplementationOnce(() => new Promise((resolve) => { resolveTags = resolve; }));
+    mockNavigation.replace("/?tag=missing");
+    mockNavigation.replace.mockClear();
+    render(<Library />);
+
+    expect((await screen.findAllByText("Loading…")).length).toBeGreaterThan(0);
+    expect(mockNavigation.replace).not.toHaveBeenCalled();
+    await waitFor(() => expect(resolveTags).toBeTypeOf("function"));
+    resolveTags([]);
+
+    await waitFor(() => {
+      expect(mockNavigation.replace).toHaveBeenCalledWith("/", { scroll: false });
+    });
+  });
+
+  test("clears a selected tag after an ITEMS_CHANGED refresh removes it", async () => {
+    vi.mocked(listItems).mockResolvedValue([{ ...note, tagIds: ["t1"] }]);
+    vi.mocked(listTags)
+      .mockResolvedValueOnce([{ id: "t1", name: "Reading", createdAt: 1 }])
+      .mockResolvedValue([]);
+    mockNavigation.replace("/?tag=t1");
+    mockNavigation.replace.mockClear();
+    render(<Library />);
+    await screen.findByText("A persisted note");
+    expect(mockNavigation.replace).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+
+    await waitFor(() => {
+      expect(listTags).toHaveBeenCalledTimes(2);
+      expect(mockNavigation.replace).toHaveBeenCalledWith("/", { scroll: false });
+    });
+  });
+
+  test("shows active filters and clears them while preserving collection, sort, and layout", async () => {
+    const collection = { id: "c1", name: "Reading", createdAt: 1, pinnedItemIds: [] };
+    const taggedNote = { ...note, collectionIds: ["c1"], tagIds: ["t1"] };
+    vi.mocked(listItems).mockResolvedValue([taggedNote]);
+    vi.mocked(listTags).mockResolvedValue([{ id: "t1", name: "Research", createdAt: 1 }]);
+    vi.mocked(listCollections).mockResolvedValue([collection]);
+    mockNavigation.replace("/?collection=c1&q=no-match&tag=t1&type=note&item=n1&sort=oldest&layout=list");
+    mockNavigation.replace.mockClear();
+    render(<Library />);
+
+    await screen.findByText("No matching items.");
+    const banner = screen.getByRole("banner");
+    expect(within(banner).getByRole("button", { name: "Remove search filter: no-match" })).toBeInTheDocument();
+    expect(within(banner).getByRole("button", { name: "Remove type filter: Notes" })).toBeInTheDocument();
+    expect(within(banner).getByRole("button", { name: "Remove tag filter: Research" })).toBeInTheDocument();
+
+    fireEvent.click(within(banner).getByRole("button", { name: "Remove type filter: Notes" }));
+    expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: "Search" }));
+    const afterTypeRemoval = new URLSearchParams(mockNavigation.push.mock.lastCall?.[0].split("?")[1]);
+    expect(afterTypeRemoval.get("collection")).toBe("c1");
+    expect(afterTypeRemoval.get("q")).toBe("no-match");
+    expect(afterTypeRemoval.get("tag")).toBe("t1");
+    expect(afterTypeRemoval.has("type")).toBe(false);
+    expect(afterTypeRemoval.get("item")).toBe("n1");
+    expect(within(banner).getByRole("button", { name: "Remove search filter: no-match" })).toBeInTheDocument();
+    expect(within(banner).getByRole("button", { name: "Remove tag filter: Research" })).toBeInTheDocument();
+    expect(within(banner).queryByRole("button", { name: "Remove type filter: Notes" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(banner).getByRole("button", { name: "Clear filters" }));
+    expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: "Search" }));
+    await waitFor(() => {
+      const href = vi.mocked(mockNavigation.push).mock.lastCall?.[0];
+      expect(href).toBeDefined();
+      const params = new URLSearchParams(href?.split("?")[1]);
+      expect(params.get("collection")).toBe("c1");
+      expect(params.get("sort")).toBe("oldest");
+      expect(params.get("layout")).toBe("list");
+      expect(params.has("q")).toBe(false);
+      expect(params.has("tag")).toBe(false);
+      expect(params.has("type")).toBe(false);
+      expect(params.has("item")).toBe(false);
+    });
+  });
+
+  test.each([
+    ["Unsorted", "/?unsorted=1&q=missing&type=note", "/?unsorted=1"],
+    ["Trash", "/?trash=1&q=missing&type=note", "/?trash=1"],
+  ])("Clear filters preserves the %s destination", async (_destination, initialUrl, expectedUrl) => {
+    vi.mocked(listItems).mockResolvedValue([]);
+    mockNavigation.replace(initialUrl);
+    mockNavigation.replace.mockClear();
+    render(<Library />);
+
+    const banner = screen.getByRole("banner");
+    await within(banner).findByRole("button", { name: "Clear filters" });
+    fireEvent.click(within(banner).getByRole("button", { name: "Clear filters" }));
+
+    expect(mockNavigation.push).toHaveBeenLastCalledWith(expectedUrl, { scroll: false });
+    expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();
+  });
+
+  test("type menu counts use collection, tag, and search scope while sidebar counts stay global", async () => {
+    const inScopeNote = { ...buildNote({ content: "needle note" }, { id: "scope-note", now: 1 }), collectionIds: ["c1"], tagIds: ["t1"] };
+    const inScopeLink = { ...buildLink({ title: "needle link", url: "https://example.com/needle" }, { id: "scope-link", now: 2 }), collectionIds: ["c1"], tagIds: ["t1"] };
+    const outsideNote = { ...buildNote({ content: "needle outside" }, { id: "outside-note", now: 3 }), collectionIds: ["c2"], tagIds: ["t1"] };
+    const untaggedNote = { ...buildNote({ content: "needle untagged" }, { id: "untagged-note", now: 4 }), collectionIds: ["c1"], tagIds: [] };
+    vi.mocked(listItems).mockResolvedValue([inScopeNote, inScopeLink, outsideNote, untaggedNote]);
+    vi.mocked(listTags).mockResolvedValue([{ id: "t1", name: "Research", createdAt: 1 }]);
+    vi.mocked(listCollections).mockResolvedValue([
+      { id: "c1", name: "Reading", createdAt: 1, pinnedItemIds: [] },
+      { id: "c2", name: "Other", createdAt: 2, pinnedItemIds: [] },
+    ]);
+    mockNavigation.replace("/?collection=c1&tag=t1&q=needle&type=note");
+    mockNavigation.replace.mockClear();
+    render(<Library />);
+
+    await waitFor(() => expect(screen.getByRole("main")).toHaveTextContent("needle note"));
+    fireEvent.click(screen.getByRole("combobox", { name: "Filter by type: Notes" }));
+    const options = screen.getByRole("listbox", { name: "Filter by type" });
+    expect(within(within(options).getByRole("option", { name: /All types/ })).getByText("2")).toBeInTheDocument();
+    expect(within(within(options).getByRole("option", { name: /Links/ })).getByText("1")).toBeInTheDocument();
+    expect(within(within(options).getByRole("option", { name: /Notes/ })).getByText("1")).toBeInTheDocument();
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+
+    const allItems = screen.getByRole("button", { name: "All items" });
+    expect(within(allItems).getByText("4")).toBeInTheDocument();
+  });
+
+  test("All items navigation retains and summarizes search and tag filters", async () => {
+    const tagged = { ...note, tagIds: ["t1"], collectionIds: ["c1"] };
+    vi.mocked(listItems).mockResolvedValue([tagged]);
+    vi.mocked(listTags).mockResolvedValue([{ id: "t1", name: "Research", createdAt: 1 }]);
+    vi.mocked(listCollections).mockResolvedValue([{ id: "c1", name: "Reading", createdAt: 1, pinnedItemIds: [] }]);
+    mockNavigation.replace("/?collection=c1&q=persisted&tag=t1");
+    mockNavigation.replace.mockClear();
+    render(<Library />);
+
+    await waitFor(() => expect(screen.getByRole("main")).toHaveTextContent("A persisted note"));
+    fireEvent.click(screen.getByRole("button", { name: "All items" }));
+
+    expect(mockNavigation.push).toHaveBeenLastCalledWith("/?q=persisted&tag=t1", { scroll: false });
+    const summary = screen.getByRole("group", { name: "Active filters" });
+    expect(within(summary).getByRole("button", { name: "Remove search filter: persisted" })).toBeVisible();
+    expect(within(summary).getByRole("button", { name: "Remove tag filter: Research" })).toBeVisible();
+  });
+
   test("refreshes the library when its tab regains focus", async () => {
     const captured = buildNote({ content: "Captured while away" }, { id: "n2", now: 2 });
     vi.mocked(listItems).mockResolvedValueOnce([note]).mockResolvedValue([note, captured]);
@@ -794,10 +937,10 @@ describe("Library tags", () => {
       screen.getByRole("heading", { name: "inspiration" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Clear tag" }),
+      screen.getByRole("button", { name: "Remove tag filter: inspiration" }),
     ).toHaveTextContent("inspiration");
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear tag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove tag filter: inspiration" }));
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/", {
       scroll: false,

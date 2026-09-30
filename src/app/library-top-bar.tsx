@@ -42,10 +42,15 @@ type Props = {
   layout: LibraryLayout;
   onLayoutChange: (layout: LibraryLayout) => void;
   typeFilter: LibraryTypeFilter | null;
-  sidebarCounts: LibrarySidebarCounts;
+  typeCounts: LibrarySidebarCounts;
   onTypeFilterChange: (type: LibraryTypeFilter | null) => void;
   tagFilterName: string | null;
+  searchPlaceholder?: string;
+  typeFilterName: string | null;
+  onClearSearchFilter: () => void;
+  onClearTypeFilter: () => void;
   onClearTagFilter: () => void;
+  onClearFilters: () => void;
   panelOpen: boolean;
   onPanelOpenChange: (open: boolean) => void;
   bulk?: LibraryBulkBarProps;
@@ -55,10 +60,18 @@ type Props = {
 export function LibraryTopBar({
   headingRef, title, itemCount, searchQuery, onSearchChange,
   sort, onSortChange, layout, onLayoutChange, panelOpen, onPanelOpenChange,
-  typeFilter, sidebarCounts, onTypeFilterChange, tagFilterName,
-  onClearTagFilter, bulk, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
+  typeFilter, typeCounts, onTypeFilterChange, tagFilterName,
+  searchPlaceholder, typeFilterName, onClearSearchFilter, onClearTypeFilter,
+  onClearTagFilter, onClearFilters, bulk, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
 }: Props) {
   const hasSelection = Boolean(bulk && bulk.count > 0);
+  const hasSearchFilter = searchQuery.trim().length > 0;
+  const hasFilters = hasSearchFilter || typeFilterName !== null || tagFilterName !== null;
+
+  function clearWithSearchFocus(action: () => void) {
+    document.getElementById("library-search")?.focus();
+    action();
+  }
 
   return (
     <header className="library-top-bar relative z-40 flex shrink-0 flex-col gap-6 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
@@ -82,7 +95,7 @@ export function LibraryTopBar({
               className="ui-field h-10 w-full pl-10 pr-3 text-sm"
               id="library-search"
               type="search"
-              placeholder={trash ? "Search Trash…" : "Search your library…"}
+              placeholder={searchPlaceholder ?? (trash ? "Search Trash…" : "Search your library…")}
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
             />
@@ -109,18 +122,6 @@ export function LibraryTopBar({
           <span className="squircle-panel flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} items`}>
             {libraryLoading ? "…" : itemCount}
           </span>
-          {tagFilterName ? (
-            <button
-              type="button"
-              className="ui-control flex h-8 min-w-0 shrink-0 items-center gap-1.5 rounded-control px-2.5 text-xs font-medium text-text-secondary hover:text-text-primary"
-              aria-label="Clear tag"
-              title="Clear tag filter"
-              onClick={onClearTagFilter}
-            >
-              <span className="max-w-40 truncate">{tagFilterName}</span>
-              <CloseIcon className="size-4" />
-            </button>
-          ) : null}
         </div>
         <div className={`${hasSelection ? "block sm:col-span-2 sm:col-start-1 sm:row-start-2" : "hidden"} row-start-1 min-w-0`}>
           {hasSelection && bulk ? (
@@ -138,7 +139,7 @@ export function LibraryTopBar({
         <div className="row-start-2 flex shrink-0 items-center justify-end gap-2 sm:col-start-2 sm:row-start-1">
           <LibraryTypeFilterMenu
             value={typeFilter}
-            counts={sidebarCounts}
+            counts={typeCounts}
             loading={libraryLoading}
             onChange={onTypeFilterChange}
           />
@@ -173,6 +174,28 @@ export function LibraryTopBar({
           </div>
         </div>
       </div>
+
+      {hasFilters ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-2" role="group" aria-label="Active filters">
+          <span className="shrink-0 text-xs text-text-secondary">Filtered by</span>
+          {hasSearchFilter ? (
+            <button type="button" className="ui-control inline-flex h-8 min-w-0 max-w-full items-center gap-1.5 px-2.5 text-xs text-text-secondary sm:max-w-[320px]" aria-label={`Remove search filter: ${searchQuery}`} title={`Remove search filter: ${searchQuery}`} onClick={() => clearWithSearchFocus(onClearSearchFilter)}>
+              <span className="shrink-0">Search</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{searchQuery}</span><CloseIcon className="size-4 shrink-0" />
+            </button>
+          ) : null}
+          {typeFilterName ? (
+            <button type="button" className="ui-control inline-flex h-8 min-w-0 max-w-full items-center gap-1.5 px-2.5 text-xs text-text-secondary sm:max-w-[320px]" aria-label={`Remove type filter: ${typeFilterName}`} title={`Remove type filter: ${typeFilterName}`} onClick={() => clearWithSearchFocus(onClearTypeFilter)}>
+              <span className="shrink-0">Type</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{typeFilterName}</span><CloseIcon className="size-4 shrink-0" />
+            </button>
+          ) : null}
+          {tagFilterName ? (
+            <button type="button" className="ui-control inline-flex h-8 min-w-0 max-w-full items-center gap-1.5 px-2.5 text-xs text-text-secondary sm:max-w-[320px]" aria-label={`Remove tag filter: ${tagFilterName}`} title={`Remove tag filter: ${tagFilterName}`} onClick={() => clearWithSearchFocus(onClearTagFilter)}>
+              <span className="shrink-0">Tag</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{tagFilterName}</span><CloseIcon className="size-4 shrink-0" />
+            </button>
+          ) : null}
+          <button type="button" className="rounded-control px-2.5 py-1.5 text-xs font-medium text-text-primary underline-offset-4 hover:underline" onClick={() => clearWithSearchFocus(onClearFilters)}>Clear filters</button>
+        </div>
+      ) : null}
 
       {bulk && (bulk.panel !== null || bulk.error) ? <LibraryBulkPanels {...bulk} /> : null}
     </header>
