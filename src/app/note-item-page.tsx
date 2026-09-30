@@ -18,6 +18,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { createCollection, listCollections } from "@/persistence/collections";
 import {
   assignCollectionToItem,
+  clearCollectionOnItem,
   assignTagToItem,
   deleteItem,
   getItem,
@@ -190,6 +191,21 @@ export function NoteItemPage({
     }
   }
 
+  async function moveToUnsorted() {
+    if (organizeBusy) return;
+    setOrganizeMutation("collection");
+    setCollectionError(null);
+    try {
+      const updated = await clearCollectionOnItem(itemId);
+      if (updated.type !== "note") throw new Error("Item not found");
+      applyNoteUpdate(updated);
+    } catch {
+      setCollectionError("Couldn't move to Unsorted.");
+    } finally {
+      setOrganizeMutation(null);
+    }
+  }
+
   async function moveToCollection(name: string) {
     if (organizeBusy) return;
     setOrganizeMutation("collection");
@@ -349,6 +365,7 @@ export function NoteItemPage({
         onAddTag={(name) => void addTag(name)}
         onRemoveTag={(tagId) => void removeTag(tagId)}
         onMoveToCollection={(name) => void moveToCollection(name)}
+        onMoveToUnsorted={() => void moveToUnsorted()}
       />
 
       <ConfirmDialog

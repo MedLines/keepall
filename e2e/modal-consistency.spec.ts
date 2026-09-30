@@ -6,22 +6,24 @@ test.use({ serviceWorkers: "block" });
 const title = "UI comparison test";
 const content = `${title}\n\n${Array.from({ length: 70 }, (_, i) => `Paragraph ${i + 1}. Testing a long note.`).join("\n\n")}`;
 
-async function openCapture(page: Page, text: string) {
-  await page.getByRole("button", { name: "Save item", exact: true }).click();
+async function openCapture(page: Page, text: string, keyboard = false) {
+  const saveItem = page.getByRole("button", { name: "Save item", exact: true });
+  if (keyboard) await saveItem.press("Enter");
+  else await saveItem.click();
   const drawer = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
   await drawer.getByRole("textbox", { name: "Link, note, or image", exact: true }).fill(text);
   return drawer;
 }
 
-async function createNote(page: Page) {
+async function createNote(page: Page, keyboard = false) {
   await page.goto("/");
   await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
-  const closeSidebar = page.getByRole("button", { name: "Close sidebar", exact: true });
+  const closeSidebar = page.getByRole("button", { name: "Close navigation", exact: true });
   if (await closeSidebar.isVisible()) {
     await page.keyboard.press("Escape");
     await expect(closeSidebar).toBeHidden();
   }
-  const drawer = await openCapture(page, content);
+  const drawer = await openCapture(page, content, keyboard);
   await drawer.getByRole("textbox", { name: "Tags", exact: true }).fill("ui-test");
   await drawer.getByRole("textbox", { name: "Tags", exact: true }).press("Enter");
   await assertOrder(page, drawer, "Cancel", "Save");
@@ -34,6 +36,15 @@ async function cardAction(page: Page, card: Locator, name: string) {
   await card.hover();
   await card.getByRole("button", { name: `Actions for ${title}`, exact: true }).click();
   await page.getByRole("menuitem", { name, exact: true }).click();
+}
+
+async function chooseSelectionAction(page: Page, bulk: Locator, count: number, action: string) {
+  const inline = bulk.getByRole("button", { name: action, exact: true });
+  if (await inline.isVisible()) await inline.click();
+  else {
+    await bulk.getByRole("button", { name: `Selection actions: ${count} selected`, exact: true }).click();
+    await page.getByRole("menuitem", { name: action, exact: true }).click();
+  }
 }
 
 async function assertOrder(page: Page, dialog: Locator, cancelName: string, actionName: string) {
@@ -95,7 +106,7 @@ for (const width of [320, 768, 1024, 1440]) {
 
   test(`single and selected items share the organization drawer at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
-    const card = await createNote(page);
+    const card = await createNote(page, true);
     await cardAction(page, card, "Organize");
     let drawer = page.getByRole("dialog", { name: `Organize ${title}`, exact: true });
     await expect(drawer.getByRole("heading", { name: "Tags", exact: true })).toBeVisible();
@@ -107,8 +118,7 @@ for (const width of [320, 768, 1024, 1440]) {
     await card.hover();
     await card.locator("[data-selection-indicator]").click();
     const bulk = page.getByRole("region", { name: "Bulk actions", exact: true });
-    await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
-    await page.getByRole("menuitem", { name: "Organize", exact: true }).click();
+    await chooseSelectionAction(page, bulk, 1, "Organize");
     drawer = page.getByRole("dialog", { name: "Organize 1 selected item", exact: true });
     await expect(drawer.getByRole("combobox", { name: "Add tag to selection", exact: true })).toBeVisible();
     await expect(drawer.getByRole("combobox", { name: "Move selection to collection", exact: true })).toBeVisible();
@@ -125,8 +135,7 @@ for (const width of [320, 768, 1024, 1440]) {
     await drawer.getByRole("button", { name: "Done", exact: true }).click();
     await expect(drawer).toBeHidden();
     await expect(card.getByRole("button", { name: "UI tests", exact: true })).toBeVisible();
-    await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
-    await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
+    await chooseSelectionAction(page, bulk, 1, "Deselect all");
     await card.getByRole("button", { name: "1 tag", exact: true }).click();
     await card.getByRole("button", { name: "Remove tag ui-test", exact: true }).click();
     await expect(card.getByRole("button", { name: "1 tag", exact: true })).toHaveCount(0);
@@ -190,3 +199,127 @@ test("duplicate links and every import dialog share close, footer and backdrop b
     await expect(dialog).toBeHidden();
   }
 });
+
+
+async function seedUnsortedOrganization(page: Page) {
+  await page.goto("/");
+  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(["items", "tags", "collections"], "readwrite");
+      const shared = { createdAt: 1, updatedAt: 1, collectionAddedAt: 7, tagIds: ["reference"], collectionIds: ["reading"] };
+      const items = tx.objectStore("items");
+      items.put({ ...shared, id: "note", type: "note", title: "Visible note", content: "Keep note body" });
+      items.put({ ...shared, id: "link", type: "link", title: "Hidden link", url: "https://example.com", noteContent: "Keep link note", previewStatus: "ready", previewRetry: "none", previewAttemptedAt: null, previewTitle: "", previewDescription: "", previewImageUrl: "", previewAssetId: null });
+      items.put({ ...shared, id: "image", type: "image", title: "Hidden image", assetIds: ["image-file"], caption: "Keep caption", sourceUrl: "" });
+      items.put({ ...shared, id: "video", type: "video", title: "Hidden video", assetId: "video-file", sourceFileName: "clip.mp4", noteContent: "Keep video note" });
+      tx.objectStore("tags").put({ id: "reference", name: "Reference", createdAt: 1 });
+      tx.objectStore("collections").put({ id: "reading", name: "Reading", createdAt: 1, pinnedItemIds: ["note"] });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  await expect(page.locator("[data-item-id]")).toHaveCount(4);
+  const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
+  if (await closeNavigation.isVisible()) await closeNavigation.click();
+}
+
+async function readUnsortedOrganization(page: Page) {
+  return page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const rows = await Promise.all(["items", "tags", "collections"].map(store => new Promise<Record<string, unknown>[]>((resolve, reject) => {
+      const request = db.transaction(store).objectStore(store).getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    })));
+    db.close();
+    return { items: rows[0], tags: rows[1], collections: rows[2] };
+  });
+}
+
+for (const width of [320, 1280]) {
+  test(`Unsorted single and detail drawers preserve tags after reload at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await seedUnsortedOrganization(page);
+    const before = await readUnsortedOrganization(page);
+    const card = page.locator('[data-item-id="note"]');
+    await card.hover();
+    await card.getByRole("button", { name: "Actions for Visible note", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Organize", exact: true }).click();
+    let drawer = page.getByRole("dialog", { name: "Organize Visible note", exact: true });
+    const clear = drawer.getByRole("button", { name: "Move to Unsorted", exact: true });
+    await clear.scrollIntoViewIfNeeded();
+    await expect(clear).toBeInViewport();
+    await clear.click();
+    await expect(drawer.getByText("Currently unsorted.", { exact: true })).toBeVisible();
+    await expect(drawer.getByRole("button", { name: "Remove tag Reference", exact: true })).toBeVisible();
+    await drawer.getByRole("combobox", { name: "Move to collection", exact: true }).fill("Reading");
+    await drawer.getByRole("button", { name: "Move", exact: true }).click();
+    await expect(drawer.getByText("Currently in Reading.", { exact: true })).toBeVisible();
+    await drawer.getByRole("button", { name: "Done", exact: true }).click();
+    await page.goto("/items/note?from=%2F");
+    await page.getByRole("button", { name: "Organize", exact: true }).click();
+    drawer = page.getByRole("dialog", { name: "Organize Visible note", exact: true });
+    await drawer.getByRole("button", { name: "Move to Unsorted", exact: true }).click();
+    await expect(drawer.getByText("Currently unsorted.", { exact: true })).toBeVisible();
+    await drawer.getByRole("button", { name: "Done", exact: true }).click();
+    await page.reload();
+    await page.getByRole("button", { name: "Organize", exact: true }).click();
+    await expect(page.getByText("Currently unsorted.", { exact: true })).toBeVisible();
+    const after = await readUnsortedOrganization(page);
+    expect(after.tags).toEqual(before.tags);
+    expect(after.collections).toEqual(before.collections);
+    expect(after.items.find(item => item.id === "note")).toMatchObject({ collectionIds: [], tagIds: ["reference"], content: "Keep note body", collectionAddedAt: expect.any(Number) });
+  });
+}
+
+for (const clearHidden of [false, true]) {
+  test(`Unsorted mixed bulk includes hidden items unless cleared, clear hidden=${clearHidden}`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    await seedUnsortedOrganization(page);
+    const before = await readUnsortedOrganization(page);
+    for (const card of await page.locator("[data-item-id]").all()) {
+      await card.hover();
+      await card.locator("[data-selection-indicator]").click();
+    }
+    await page.getByRole("searchbox", { name: "Search", exact: true }).fill("Visible");
+    const bulk = page.getByRole("region", { name: "Bulk actions", exact: true });
+    await expect(bulk).toContainText("3 hidden");
+    await bulk.getByRole("button", { name: "Selection actions: 4 selected", exact: true }).click();
+    if (clearHidden) {
+      await page.getByRole("menuitem", { name: "Clear hidden selection", exact: true }).click();
+      await bulk.getByRole("button", { name: "Selection actions: 1 selected", exact: true }).click();
+    }
+    await page.getByRole("menuitem", { name: "Organize", exact: true }).click();
+    const drawer = page.getByRole("dialog");
+    const clear = drawer.getByRole("button", { name: "Move selection to Unsorted", exact: true });
+    await clear.scrollIntoViewIfNeeded();
+    await expect(clear).toBeInViewport();
+    await clear.click();
+    await expect(clear).toBeEnabled();
+    await drawer.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(bulk).toContainText(clearHidden ? "1 selected" : "4 selected");
+    await page.reload();
+    const after = await readUnsortedOrganization(page);
+    expect(after.tags).toEqual(before.tags);
+    expect(after.collections).toEqual(before.collections);
+    for (const original of before.items) {
+      const actual = after.items.find(item => item.id === original.id);
+      if (!clearHidden || original.id === "note") {
+        expect(actual).toEqual({ ...original, collectionIds: [], updatedAt: expect.any(Number) });
+      } else expect(actual).toEqual(original);
+    }
+  });
+}

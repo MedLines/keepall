@@ -1,6 +1,8 @@
+import Dexie from "dexie";
+import { buildVideo } from "@/domain/video";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { ImageValidationError } from "@/domain/image";
-import { LinkValidationError } from "@/domain/link";
+import { buildImage, ImageValidationError } from "@/domain/image";
+import { buildLink, LinkValidationError } from "@/domain/link";
 import { buildNote, noteImageAssetIds, NoteValidationError } from "@/domain/note";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { getAsset } from "./assets";
@@ -13,6 +15,7 @@ import {
   createOrReuseImage,
   createOrReuseLink,
   createNote,
+  clearCollectionsOnItems,
   deleteItem, permanentlyDeleteItem,
   listItems,
   listNotes,
@@ -475,5 +478,68 @@ describe("items persistence", () => {
 
     expect(updated.assetIds).toHaveLength(1);
     expect(await getAsset(updated.assetIds[0]!)).toBeDefined();
+  });
+});
+
+
+describe("clearCollectionsOnItems", () => {
+  beforeEach(async () => { await deleteKeepallDatabase(); });
+
+  test("clears only active memberships once and preserves all other rows and fields", async () => {
+    const db = getDb();
+    const rows = [
+      buildNote({ content: "Note body" }, { id: "note", now: 1 }),
+      buildLink({ url: "https://example.com", noteContent: "Personal note" }, { id: "link", now: 1 }),
+      buildImage({ assetId: "image-asset", caption: "Caption" }, { id: "image", now: 1 }),
+      buildVideo({ assetId: "video-asset", fileName: "clip.mp4" }, { id: "video", now: 1 }),
+    ].map(row => ({ ...row, tagIds: ["tag"], collectionIds: ["collection"], collectionAddedAt: 42 }));
+    const unsorted = buildNote({ content: "Already unsorted" }, { id: "unsorted", now: 2 });
+    const trashed = { ...rows[0], id: "trash", deletedAt: 3 };
+    await db.items.bulkAdd([...rows, unsorted, trashed]);
+    await db.collections.add({ id: "collection", name: "Reading", createdAt: 1, pinnedItemIds: ["note"] });
+    await db.tags.add({ id: "tag", name: "Reference", createdAt: 1 });
+    await db.assets.add({ id: "image-asset", mimeType: "image/png", byteLength: 3, bytes: new Uint8Array([1, 2, 3]), contentHash: "image-hash", createdAt: 1 });
+    await db.videoAssets.add({ id: "video-asset", mimeType: "video/mp4", byteLength: 3, blob: new Blob(["vid"], { type: "video/mp4" }), createdAt: 1 });
+    await db.thumbnails.add({ assetId: "image-asset", blob: new Blob(["thumb"], { type: "image/webp" }) });
+    const before = await Promise.all([db.collections.toArray(), db.tags.toArray(), db.assets.toArray(), db.videoAssets.toArray(), db.thumbnails.toArray()]);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(99);
+    try {
+      const ids = rows.map(row => row.id);
+      expect(await clearCollectionsOnItems([...ids, "note", "missing", "trash", "unsorted"])).toEqual(ids);
+      for (const row of rows) expect(await db.items.get(row.id)).toEqual({ ...row, collectionIds: [], updatedAt: 99 });
+      expect(await db.items.get("trash")).toEqual(trashed);
+      expect(await db.items.get("unsorted")).toEqual(unsorted);
+      expect(await clearCollectionsOnItems(ids)).toEqual([]);
+      expect(await Promise.all([db.collections.toArray(), db.tags.toArray(), db.assets.toArray(), db.videoAssets.toArray(), db.thumbnails.toArray()])).toEqual(before);
+    } finally { clock.mockRestore(); }
+  });
+
+  test("snapshots caller IDs and clears the latest stored row", async () => {
+    const db = getDb();
+    const latest = { ...buildNote({ content: "Latest edit" }, { id: "latest", now: 2 }), collectionIds: ["new-collection"], tagIds: ["latest-tag"] };
+    const other = { ...latest, id: "other" };
+    await db.items.bulkAdd([latest, other]);
+    const ids = ["latest"];
+    const clearing = clearCollectionsOnItems(ids);
+    ids.push("other");
+    expect(await clearing).toEqual(["latest"]);
+    expect(await db.items.get("latest")).toMatchObject({ content: "Latest edit", tagIds: ["latest-tag"], collectionIds: [] });
+    expect(await db.items.get("other")).toEqual(other);
+  });
+
+  test("rolls back an earlier successful write when a later write fails", async () => {
+    const db = getDb();
+    const rows = ["first", "second"].map(id => ({ ...buildNote({ content: id }, { id, now: 1 }), collectionIds: ["collection"] }));
+    await db.items.bulkAdd(rows);
+    const put = db.items.put.bind(db.items);
+    const spy = vi.spyOn(db.items, "put").mockImplementation((...args) => {
+      if (args[0].id === "second") return Dexie.Promise.reject(new Error("write failed"));
+      return put(...args);
+    });
+    try {
+      await expect(clearCollectionsOnItems(["first", "second"])).rejects.toThrow("write failed");
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(await db.items.toArray()).toEqual(rows);
+    } finally { spy.mockRestore(); }
   });
 });

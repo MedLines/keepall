@@ -55,6 +55,7 @@ export type PendingMutation =
   | { op: "bulk-assign-tag" }
   | { op: "bulk-unassign-tag" }
   | { op: "bulk-assign-collection" }
+  | { op: "bulk-clear-collection" }
   | { op: "pin-item"; collectionId: string; itemId: string }
   | { op: "unpin-item"; collectionId: string; itemId: string };
 
@@ -357,6 +358,7 @@ export function LibraryItem({
         onAddTag={onAddTag}
         onRemoveTag={onRemoveTag}
         onMoveToCollection={onAddCollection}
+        onMoveToUnsorted={onClearCollection}
       />
       {item.type === "image" && editing ? (
         <ImageItemEditDialog

@@ -11,7 +11,7 @@ import { resolveItemCollections, resolveItemTags } from "@/domain/item";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { createTag, listTags } from "@/persistence/tags";
 import { createCollection, listCollections } from "@/persistence/collections";
-import { assignCollectionToItem, assignTagToItem, deleteItem, getItem, unassignTagFromItem } from "@/persistence/items";
+import { assignCollectionToItem, clearCollectionOnItem, assignTagToItem, deleteItem, getItem, unassignTagFromItem } from "@/persistence/items";
 import { getVideoBlob, updateVideoDetails } from "@/persistence/videos";
 import { NoteContent } from "./note-content";
 import { VideoItemEditDialog, type VideoDetailsDraft } from "./item-edit-dialog";
@@ -156,6 +156,10 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
       })}
       onRemoveTag={(id) => void runOrg(async () => {
         const next = await unassignTagFromItem(itemId, id);
+        if (next.type === "video") applyUpdate(next);
+      })}
+      onMoveToUnsorted={() => void runOrg(async () => {
+        const next = await clearCollectionOnItem(itemId);
         if (next.type === "video") applyUpdate(next);
       })}
       onMoveToCollection={(name) => void runOrg(async () => {

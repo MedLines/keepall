@@ -23,6 +23,7 @@ type ItemOrganizerDrawerProps = {
   onAddTag: (name: string) => void;
   onRemoveTag: (id: string) => void;
   onMoveToCollection: (name: string) => void;
+  onMoveToUnsorted: () => void;
 };
 
 export function ItemOrganizerDrawer({
@@ -42,6 +43,7 @@ export function ItemOrganizerDrawer({
   onAddTag,
   onRemoveTag,
   onMoveToCollection,
+  onMoveToUnsorted,
 }: ItemOrganizerDrawerProps) {
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
@@ -105,6 +107,12 @@ export function ItemOrganizerDrawer({
             setCollectionDraft("");
           }}
         />
+        {collections.length > 0 ? (
+          <button type="button" className="ui-control mt-4 inline-flex min-h-10 items-center px-3 text-sm disabled:opacity-60"
+            disabled={disabled || pendingCollection} onClick={onMoveToUnsorted}>
+            {pendingCollection ? "Moving…" : "Move to Unsorted"}
+          </button>
+        ) : null}
       </>}
     />
   );

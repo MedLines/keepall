@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildImageFromAssetIds } from "@/domain/image";
 import {
   appendImageAssetsToItem,
-  assignCollectionToItem,
+  clearCollectionOnItem, assignCollectionToItem,
   assignTagToItem,
   deleteItem,
   getItem,
@@ -24,7 +24,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/persistence/items", () => ({
-  getItem: vi.fn(),
+  clearCollectionOnItem: vi.fn(), getItem: vi.fn(),
   appendImageAssetsToItem: vi.fn(),
   replaceImageAssetAtIndex: vi.fn(),
   removeImageAssetAtIndex: vi.fn(),
@@ -476,4 +476,36 @@ describe("ImageItemPage", () => {
       expect(routerPush).toHaveBeenCalledWith("/?collection=design&layout=list");
     });
   });
+});
+
+
+test("moves image to Unsorted with busy protection, error retry, immediate state and retained tags", async () => {
+  const original = { ...buildImageFromAssetIds({ assetIds: ["a", "b"], caption: "Keep" }, { id: "unsorted-test", now: 1 }), tagIds: ["t"], collectionIds: ["c"] };
+  let stored = original;
+  vi.mocked(getItem).mockImplementation(async () => stored);
+  vi.mocked(listTags).mockResolvedValue([{ id: "t", name: "Reference", createdAt: 1 }]);
+  vi.mocked(listCollections).mockResolvedValue([{ id: "c", name: "Reading", createdAt: 1, pinnedItemIds: [] }]);
+  let reject!: (reason: Error) => void;
+  vi.mocked(clearCollectionOnItem).mockReset().mockImplementationOnce(() => new Promise((_resolve, no) => { reject = no; })).mockImplementationOnce(async () => {
+    stored = { ...original, collectionIds: [], updatedAt: 2 };
+    return stored;
+  });
+  const changed = vi.fn();
+  window.addEventListener("keepall:items-changed", changed);
+  render(<ImageItemPage itemId="unsorted-test" returnHref="/" />);
+  fireEvent.click(await screen.findByRole("button", { name: "Organize" }));
+  fireEvent.click(screen.getByRole("button", { name: "Move to Unsorted" }));
+  expect(screen.getByRole("button", { name: "Moving…" })).toBeDisabled();
+  reject(new Error("failed"));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Move to Unsorted" })).toBeEnabled());
+  expect(screen.getByRole("dialog")).toHaveTextContent("Couldn't");
+  fireEvent.click(screen.getByRole("button", { name: "Move to Unsorted" }));
+  expect(await screen.findByText("Currently unsorted.")).toBeVisible();
+  expect(screen.getByRole("dialog")).toHaveTextContent("Reference");
+  expect(screen.queryByRole("button", { name: "Move to Unsorted" })).not.toBeInTheDocument();
+  expect(clearCollectionOnItem).toHaveBeenCalledTimes(2);
+  expect(createCollection).not.toHaveBeenCalled();
+  expect(stored).toEqual({ ...original, collectionIds: [], updatedAt: 2 });
+  expect(changed).toHaveBeenCalledOnce();
+  window.removeEventListener("keepall:items-changed", changed);
 });

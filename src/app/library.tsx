@@ -52,6 +52,7 @@ import {
   appendImageAssetsToItem,
   assignCollectionToItem,
   clearCollectionOnItem,
+  clearCollectionsOnItems,
   assignTagToItem,
   deleteItem,
   getItem,
@@ -1312,6 +1313,21 @@ export function Library() {
     }
   }
 
+  async function bulkClearCollection() {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || pendingMutation) return;
+    setPendingMutation({ op: "bulk-clear-collection" });
+    setBulkError(null);
+    try {
+      await clearCollectionsOnItems(ids);
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setBulkError("Couldn't move the selection to Unsorted.");
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
   async function bulkAddCollection(name: string) {
     const ids = [...selectedIds];
     if (ids.length === 0 || pendingMutation) {
@@ -1754,6 +1770,7 @@ export function Library() {
           panel: bulkPanel,
           pendingAddCollection:
             pendingMutation?.op === "bulk-assign-collection",
+          pendingClearCollection: pendingMutation?.op === "bulk-clear-collection",
           pendingAddTag: pendingMutation?.op === "bulk-assign-tag",
           pendingDelete: pendingMutation?.op === "bulk-delete",
           pendingRemoveTag: pendingMutation?.op === "bulk-unassign-tag",
@@ -1761,6 +1778,7 @@ export function Library() {
           tagDraft: bulkTagDraft,
           tagSuggestions,
           visibleCount: headerItemCount,
+          onBulkClearCollection: () => void bulkClearCollection(),
           onBulkAddCollection: (name) => void bulkAddCollection(name),
           onBulkAddTag: (name) => void bulkAddTag(name),
           onBulkRemoveTag: (name) => void bulkRemoveTag(name),

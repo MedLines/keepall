@@ -4,6 +4,8 @@ import { buildLink, LinkValidationError } from "@/domain/link";
 import { buildImage } from "@/domain/image";
 import { buildNote, NoteValidationError } from "@/domain/note";
 import {
+  clearCollectionsOnItems,
+  clearCollectionOnItem,
   assignCollectionToItem,
   assignTagToItem,
   appendImageAssetsToItem,
@@ -53,6 +55,8 @@ function pickTopMenu(menuLabel: string, optionLabel: string) {
 }
 
 vi.mock("@/persistence/items", () => ({
+  clearCollectionsOnItems: vi.fn(),
+  clearCollectionOnItem: vi.fn(),
   listItems: vi.fn(),
   listTrashedItems: vi.fn(async () => []),
   restoreItem: vi.fn(),
@@ -1488,6 +1492,58 @@ describe("Library view state", () => {
     fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 2 selected" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Deselect all" }));
     expect(screen.queryByText("2 selected")).not.toBeInTheDocument();
+  });
+
+  test("card organizer clears membership and stays open with retained tags", async () => {
+    const note = { ...buildNote({ content: "A persisted note" }, { id: "n1", now: 1 }), collectionIds: ["c1"], tagIds: ["t1"] };
+    const cleared = { ...note, collectionIds: [], updatedAt: 2 };
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(listTags).mockResolvedValue([{ id: "t1", name: "Reference", createdAt: 1 }]);
+    vi.mocked(listCollections).mockResolvedValue([{ id: "c1", name: "Reading", createdAt: 1, pinnedItemIds: [] }]);
+    vi.mocked(clearCollectionOnItem).mockReset().mockImplementation(async () => {
+      vi.mocked(listItems).mockResolvedValue([cleared]);
+      return cleared;
+    });
+    render(<Library />);
+    await screen.findByText("A persisted note");
+    await clickItemAction("Organize");
+    fireEvent.click(screen.getByRole("button", { name: "Move to Unsorted" }));
+    expect(await screen.findByText("Currently unsorted.")).toBeVisible();
+    expect(screen.getByRole("dialog")).toHaveTextContent("Reference");
+    expect(clearCollectionOnItem).toHaveBeenCalledExactlyOnceWith("n1");
+    expect(createCollection).not.toHaveBeenCalled();
+  });
+
+  test.each([false, true])("bulk Unsorted includes hidden selection unless cleared first, clear hidden=%s", async (clearHidden) => {
+    const one = { ...buildNote({ content: "one" }, { id: "n1", now: 1 }), collectionIds: ["c"], tagIds: ["t"] };
+    const two = { ...buildLink({ url: "https://example.com", title: "two" }, { id: "l2", now: 1 }), collectionIds: ["c"], tagIds: ["t"] };
+    vi.mocked(listItems).mockResolvedValue([one, two]);
+    vi.mocked(listCollections).mockResolvedValue([{ id: "c", name: "Reading", createdAt: 1, pinnedItemIds: [] }]);
+    vi.mocked(clearCollectionsOnItems).mockReset().mockRejectedValueOnce(new Error("failed")).mockImplementationOnce(async ids => {
+      vi.mocked(listItems).mockResolvedValue([one, two].map(item => ids.includes(item.id) ? { ...item, collectionIds: [] } : item));
+      return ids;
+    });
+    render(<Library />);
+    await screen.findByText("one");
+    for (const checkbox of screen.getAllByRole("checkbox")) fireEvent.click(checkbox);
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "one" } });
+    const bulk = screen.getByRole("region", { name: "Bulk actions" });
+    expect(bulk).toHaveTextContent("1 hidden");
+    fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 2 selected" }));
+    if (clearHidden) {
+      fireEvent.click(screen.getByRole("menuitem", { name: "Clear hidden selection" }));
+      fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 1 selected" }));
+    }
+    fireEvent.click(screen.getByRole("menuitem", { name: "Organize" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move selection to Unsorted" }));
+    expect(screen.getByRole("button", { name: "Moving…" })).toBeDisabled();
+    expect(await screen.findByText("Couldn't move the selection to Unsorted.")).toBeVisible();
+    const before = vi.mocked(listItems).mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Move selection to Unsorted" }));
+    await waitFor(() => expect(listItems).toHaveBeenCalledTimes(before + 1));
+    expect(clearCollectionsOnItems).toHaveBeenLastCalledWith(clearHidden ? ["n1"] : ["n1", "l2"]);
+    expect(screen.getByRole("dialog")).toHaveAccessibleName(`Organize ${clearHidden ? "1 selected item" : "2 selected items"}`);
+    expect(clearCollectionOnItem).not.toHaveBeenCalled();
   });
 
   test.each([false, true])("Trash restores the live selection after narrowing search, clear hidden=%s", async (clearHidden) => {

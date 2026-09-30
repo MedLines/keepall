@@ -28,6 +28,7 @@ export type LibraryBulkBarProps = {
   pendingAddTag: boolean;
   pendingRemoveTag: boolean;
   pendingAddCollection: boolean;
+  pendingClearCollection: boolean;
   pendingDelete: boolean;
   onOpenPanel: (panel: Exclude<BulkPanel, null>) => void;
   onClosePanel: () => void;
@@ -43,6 +44,7 @@ export type LibraryBulkBarProps = {
   onBulkRemoveTag: (name: string) => void;
   onBulkRemoveAllTags: () => void;
   onBulkAddCollection: (name: string) => void;
+  onBulkClearCollection: () => void;
 };
 
 const BULK_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-10 shrink-0 px-3 text-xs`;
@@ -242,6 +244,8 @@ type PanelsProps = Pick<
   | "onBulkRemoveTag"
   | "onBulkRemoveAllTags"
   | "onBulkAddCollection"
+  | "onBulkClearCollection"
+  | "pendingClearCollection"
 >;
 
 function bulkPanelTitle(panel: BulkPanel, count: number): string {
@@ -271,6 +275,7 @@ export function LibraryBulkPanels({
   pendingAddTag,
   pendingRemoveTag,
   pendingAddCollection,
+  pendingClearCollection,
   pendingDelete,
   onClosePanel,
   onConfirmDelete,
@@ -280,6 +285,7 @@ export function LibraryBulkPanels({
   onBulkRemoveTag,
   onBulkRemoveAllTags,
   onBulkAddCollection,
+  onBulkClearCollection,
 }: PanelsProps) {
   if (panel === "delete") {
     return <ConfirmDialog
@@ -360,6 +366,10 @@ export function LibraryBulkPanels({
             onChange={onCollectionDraftChange}
             onSubmit={onBulkAddCollection}
           />
+          <button type="button" className="ui-control mt-4 inline-flex min-h-10 items-center px-3 text-sm disabled:opacity-60"
+            disabled={busy || count === 0} onClick={onBulkClearCollection}>
+            {pendingClearCollection ? "Moving…" : "Move selection to Unsorted"}
+          </button>
         </div>
       }
     />

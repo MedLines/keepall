@@ -17,6 +17,7 @@ import { createCollection, listCollections } from "@/persistence/collections";
 import {
   appendImageAssetsToItem,
   assignCollectionToItem,
+  clearCollectionOnItem,
   assignTagToItem,
   deleteItem,
   getItem,
@@ -305,6 +306,21 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
     }
   }
 
+  async function moveToUnsorted() {
+    if (actionMutation) return;
+    setActionMutation("collection");
+    setCollectionError(null);
+    try {
+      const updated = await clearCollectionOnItem(itemId);
+      if (updated.type !== "image") throw new Error("Item not found");
+      applyItemUpdate(updated);
+    } catch {
+      setCollectionError("Couldn't move to Unsorted.");
+    } finally {
+      setActionMutation(null);
+    }
+  }
+
   async function moveToCollection(name: string) {
     if (actionMutation) return;
     setActionMutation("collection");
@@ -460,6 +476,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
         onAddTag={(name) => void addTag(name)}
         onRemoveTag={(tagId) => void removeTag(tagId)}
         onMoveToCollection={(name) => void moveToCollection(name)}
+        onMoveToUnsorted={() => void moveToUnsorted()}
       />
 
       <ConfirmDialog

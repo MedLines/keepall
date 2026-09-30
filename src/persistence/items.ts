@@ -111,6 +111,24 @@ export async function clearCollectionOnItem(itemId: string): Promise<Item> {
   return next;
 }
 
+export async function clearCollectionsOnItems(itemIds: string[]): Promise<string[]> {
+  const ids = [...new Set(itemIds)];
+  const db = getDb();
+  return db.transaction("rw", db.items, async () => {
+    const changedIds: string[] = [];
+    const updatedAt = Date.now();
+    for (const id of ids) {
+      const row = await db.items.get(id);
+      if (!row || row.deletedAt !== undefined) continue;
+      const current = normalizeItem(row);
+      if (current.collectionIds.length === 0) continue;
+      await db.items.put({ ...current, collectionIds: [], updatedAt });
+      changedIds.push(id);
+    }
+    return changedIds;
+  });
+}
+
 export async function setItemTagIds(
   itemId: string,
   tagIds: string[],

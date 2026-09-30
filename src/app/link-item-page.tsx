@@ -13,6 +13,7 @@ import { TagValidationError, type Tag } from "@/domain/tag";
 import { createCollection, listCollections } from "@/persistence/collections";
 import {
   assignCollectionToItem,
+  clearCollectionOnItem,
   assignTagToItem,
   deleteItem,
   getItem,
@@ -113,6 +114,21 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
       applyLinkUpdate(updated);
     } catch {
       setTagError("Couldn't remove tag.");
+    } finally {
+      setOrganizeMutation(null);
+    }
+  }
+
+  async function moveToUnsorted() {
+    if (busy) return;
+    setOrganizeMutation("collection");
+    setCollectionError(null);
+    try {
+      const updated = await clearCollectionOnItem(itemId);
+      if (updated.type !== "link") throw new Error("Item not found");
+      applyLinkUpdate(updated);
+    } catch {
+      setCollectionError("Couldn't move to Unsorted.");
     } finally {
       setOrganizeMutation(null);
     }
@@ -247,6 +263,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
         onAddTag={(name) => void addTag(name)}
         onRemoveTag={(tagId) => void removeTag(tagId)}
         onMoveToCollection={(name) => void moveToCollection(name)}
+        onMoveToUnsorted={() => void moveToUnsorted()}
       />
     </div>
   );

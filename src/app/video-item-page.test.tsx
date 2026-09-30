@@ -2,13 +2,13 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildVideo } from "@/domain/video";
 import { createCollection, listCollections } from "@/persistence/collections";
-import { assignCollectionToItem, getItem } from "@/persistence/items";
+import { clearCollectionOnItem, assignCollectionToItem, getItem } from "@/persistence/items";
 import { listTags } from "@/persistence/tags";
 import { getVideoBlob } from "@/persistence/videos";
 import { VideoItemPage } from "./video-item-page";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
-vi.mock("@/persistence/items", () => ({ getItem: vi.fn(), deleteItem: vi.fn(), assignTagToItem: vi.fn(), unassignTagFromItem: vi.fn(), assignCollectionToItem: vi.fn() }));
+vi.mock("@/persistence/items", () => ({ clearCollectionOnItem: vi.fn(), getItem: vi.fn(), deleteItem: vi.fn(), assignTagToItem: vi.fn(), unassignTagFromItem: vi.fn(), assignCollectionToItem: vi.fn() }));
 vi.mock("@/persistence/tags", () => ({ createTag: vi.fn(), listTags: vi.fn() }));
 vi.mock("@/persistence/collections", () => ({ createCollection: vi.fn(), listCollections: vi.fn() }));
 vi.mock("@/persistence/videos", () => ({ getVideoBlob: vi.fn(), updateVideoDetails: vi.fn() }));
@@ -118,4 +118,36 @@ describe("VideoItemPage", () => {
     await waitFor(() => expect(document.querySelector("video[controls]")).toHaveAttribute("src", "blob:video-1"));
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
   });
+});
+
+
+test("moves video to Unsorted with busy protection, error retry, immediate state and retained tags", async () => {
+  const original = { ...buildVideo({ assetId: "a", fileName: "clip.mp4", noteContent: "Keep" }, { id: "unsorted-test", now: 1 }), tagIds: ["t"], collectionIds: ["c"] };
+  let stored = original;
+  vi.mocked(getItem).mockImplementation(async () => stored);
+  vi.mocked(listTags).mockResolvedValue([{ id: "t", name: "Reference", createdAt: 1 }]);
+  vi.mocked(listCollections).mockResolvedValue([{ id: "c", name: "Reading", createdAt: 1, pinnedItemIds: [] }]);
+  let reject!: (reason: Error) => void;
+  vi.mocked(clearCollectionOnItem).mockReset().mockImplementationOnce(() => new Promise((_resolve, no) => { reject = no; })).mockImplementationOnce(async () => {
+    stored = { ...original, collectionIds: [], updatedAt: 2 };
+    return stored;
+  });
+  const changed = vi.fn();
+  window.addEventListener("keepall:items-changed", changed);
+  render(<VideoItemPage itemId="unsorted-test" returnHref="/" />);
+  fireEvent.click(await screen.findByRole("button", { name: "Organize" }));
+  fireEvent.click(screen.getByRole("button", { name: "Move to Unsorted" }));
+  expect(screen.getByRole("button", { name: "Moving…" })).toBeDisabled();
+  reject(new Error("failed"));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Move to Unsorted" })).toBeEnabled());
+  expect(screen.getByRole("dialog")).toHaveTextContent("Couldn't");
+  fireEvent.click(screen.getByRole("button", { name: "Move to Unsorted" }));
+  expect(await screen.findByText("Currently unsorted.")).toBeVisible();
+  expect(screen.getByRole("dialog")).toHaveTextContent("Reference");
+  expect(screen.queryByRole("button", { name: "Move to Unsorted" })).not.toBeInTheDocument();
+  expect(clearCollectionOnItem).toHaveBeenCalledTimes(2);
+  expect(createCollection).not.toHaveBeenCalled();
+  expect(stored).toEqual({ ...original, collectionIds: [], updatedAt: 2 });
+  expect(changed).toHaveBeenCalledOnce();
+  window.removeEventListener("keepall:items-changed", changed);
 });

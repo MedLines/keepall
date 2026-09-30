@@ -94,10 +94,10 @@ test("bulk trash confirmation puts Cancel before the destructive action", () => 
   render(<LibraryBulkPanels
     count={4} panel="delete" busy={false} error={null}
     tagDraft="" collectionDraft="" tagSuggestions={[]} removeTagSuggestions={[]} collectionSuggestions={[]}
-    pendingAddTag={false} pendingRemoveTag={false} pendingAddCollection={false} pendingDelete={false}
+    pendingAddTag={false} pendingRemoveTag={false} pendingAddCollection={false} pendingClearCollection={false} pendingDelete={false}
     onClosePanel={onClosePanel} onConfirmDelete={onConfirmDelete}
     onTagDraftChange={vi.fn()} onCollectionDraftChange={vi.fn()}
-    onBulkAddTag={vi.fn()} onBulkRemoveTag={vi.fn()} onBulkRemoveAllTags={vi.fn()} onBulkAddCollection={vi.fn()}
+    onBulkAddTag={vi.fn()} onBulkRemoveTag={vi.fn()} onBulkRemoveAllTags={vi.fn()} onBulkAddCollection={vi.fn()} onBulkClearCollection={vi.fn()}
   />);
   const dialog = screen.getByRole("dialog");
   expect(within(dialog).getAllByRole("button").map((button) => button.textContent?.trim()))
@@ -112,10 +112,10 @@ test("bulk organization exposes tags and collections together with Done", () => 
   render(<LibraryBulkPanels
     count={2} panel="organize" busy={false} error={null}
     tagDraft="" collectionDraft="" tagSuggestions={[]} removeTagSuggestions={[]} collectionSuggestions={[]}
-    pendingAddTag={false} pendingRemoveTag={false} pendingAddCollection={false} pendingDelete={false}
+    pendingAddTag={false} pendingRemoveTag={false} pendingAddCollection={false} pendingClearCollection={false} pendingDelete={false}
     onClosePanel={onClosePanel} onConfirmDelete={vi.fn()}
     onTagDraftChange={vi.fn()} onCollectionDraftChange={vi.fn()}
-    onBulkAddTag={vi.fn()} onBulkRemoveTag={vi.fn()} onBulkRemoveAllTags={vi.fn()} onBulkAddCollection={vi.fn()}
+    onBulkAddTag={vi.fn()} onBulkRemoveTag={vi.fn()} onBulkRemoveAllTags={vi.fn()} onBulkAddCollection={vi.fn()} onBulkClearCollection={vi.fn()}
   />);
   const dialog = screen.getByRole("dialog", { name: "Organize 2 selected items" });
   expect(within(dialog).getByRole("combobox", { name: "Add tag to selection" })).toBeVisible();
@@ -140,4 +140,17 @@ test("inline restore is disabled while busy and absent without Trash callback or
   rerender(<LibraryBulkToolbar {...props} count={0} />);
   expect(screen.queryByText("Restore selected")).not.toBeInTheDocument();
   vi.unstubAllGlobals();
+});
+
+
+test("bulk Unsorted action works independently of name input and shows disabled progress", () => {
+  const onBulkClearCollection = vi.fn();
+  const props = { count: 2, hiddenCount: 1, panel: "organize" as const, busy: false, error: null, tagDraft: "", collectionDraft: "", tagSuggestions: [], removeTagSuggestions: [], collectionSuggestions: [], pendingAddTag: false, pendingRemoveTag: false, pendingAddCollection: false, pendingClearCollection: false, pendingDelete: false, onClosePanel: vi.fn(), onConfirmDelete: vi.fn(), onTagDraftChange: vi.fn(), onCollectionDraftChange: vi.fn(), onBulkAddTag: vi.fn(), onBulkRemoveTag: vi.fn(), onBulkRemoveAllTags: vi.fn(), onBulkAddCollection: vi.fn(), onBulkClearCollection };
+  const { rerender } = render(<LibraryBulkPanels {...props} />);
+  expect(screen.getByRole("dialog")).toHaveTextContent("including 1 hidden");
+  fireEvent.click(screen.getByRole("button", { name: "Move selection to Unsorted" }));
+  expect(onBulkClearCollection).toHaveBeenCalledOnce();
+  expect(props.onBulkAddCollection).not.toHaveBeenCalled();
+  rerender(<LibraryBulkPanels {...props} busy pendingClearCollection />);
+  expect(screen.getByRole("button", { name: "Moving…" })).toBeDisabled();
 });
