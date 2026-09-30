@@ -6,7 +6,7 @@ import { OrganizerDrawer, OrganizerTagChip } from "./organizer-drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
-import { ChevronDownIcon } from "./shell-icons";
+import { ChevronDownIcon, SelectionCheckedIcon } from "./shell-icons";
 
 export type BulkPanel = null | "delete" | "organize";
 
@@ -99,7 +99,11 @@ export function LibraryBulkToolbar({
           aria-label={`Selection actions: ${count} selected`}
           disabled={busy}
         >
-          <span>{count} selected</span>
+          <span className="inline-flex items-center gap-1 sm:hidden">
+            {count}
+            <SelectionCheckedIcon className="size-4" />
+          </span>
+          <span className="hidden sm:inline">{count} selected</span>
           <ChevronDownIcon className="size-4" />
         </Menu.Trigger>
         <Menu.Portal>
@@ -134,19 +138,21 @@ export function LibraryBulkToolbar({
           </Menu.Positioner>
         </Menu.Portal>
       </Menu.Root>
-      {!onDeletePermanently ? (
-        <button className={`${BULK_BTN} hidden xl:inline-flex`} disabled={busy} type="button" onClick={() => onOpenPanel("organize")}>
-          Organize
+      <div className="hidden items-center gap-1.5 xl:flex">
+        {!onDeletePermanently ? (
+          <button className={BULK_BTN} disabled={busy} type="button" onClick={() => onOpenPanel("organize")}>
+            Organize
+          </button>
+        ) : null}
+        <button
+          className={`${onDeletePermanently ? `${SHELL_TOP_BTN} text-text-danger` : BULK_BTN} h-10 shrink-0 px-3 text-xs`}
+          disabled={busy}
+          type="button"
+          onClick={destructiveAction}
+        >
+          {onDeletePermanently ? "Delete permanently" : "Move to Trash"}
         </button>
-      ) : null}
-      <button
-        className={`${onDeletePermanently ? `${SHELL_TOP_BTN} text-text-danger` : BULK_BTN} hidden h-10 shrink-0 px-3 text-xs xl:inline-flex`}
-        disabled={busy}
-        type="button"
-        onClick={destructiveAction}
-      >
-        {onDeletePermanently ? "Delete permanently" : "Move to Trash"}
-      </button>
+      </div>
     </div>
   );
 }

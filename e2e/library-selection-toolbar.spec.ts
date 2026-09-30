@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("selection actions stay beside Search without shifting library content", async ({ page }) => {
+test("selection actions stay beside Search without shifting library content", async ({ page }, testInfo) => {
   await page.goto("/");
   await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
   await page.evaluate(async () => {
@@ -63,7 +63,21 @@ test("selection actions stay beside Search without shifting library content", as
     expect(Math.abs(headerAfter.height - headerBefore.height)).toBeLessThanOrEqual(1);
     expect(Math.abs(cardAfter.y - cardBefore.y)).toBeLessThanOrEqual(1);
     expect(Math.abs(searchBox.y - toolbarBox.y)).toBeLessThanOrEqual(1);
+    expect(searchBox.x + searchBox.width).toBeLessThanOrEqual(toolbarBox.x + 1);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const bulk = page.getByRole("region", { name: "Bulk actions" });
+    const directOrganize = bulk.locator("button").filter({ hasText: "Organize" });
+    const directDestructive = bulk.locator("button").filter({ hasText: "Move to Trash" });
+    if (width < 1280) {
+      await expect(directOrganize).toBeHidden();
+      await expect(directDestructive).toBeHidden();
+    } else {
+      await expect(directOrganize).toBeVisible();
+      await expect(directDestructive).toBeVisible();
+    }
+    if (width === 320 || width === 1440) {
+      await page.screenshot({ path: testInfo.outputPath(`selection-toolbar-${width}.png`) });
+    }
 
     if (width !== 1440) {
       await menuTrigger.click();
