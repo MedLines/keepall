@@ -1,5 +1,6 @@
 import { BlobReader, BlobWriter, TextReader, TextWriter, Uint8ArrayWriter, ZipReader, ZipWriter } from "@zip.js/zip.js";
-import { BackupValidationError, KEEPALL_BACKUP_VERSION, parseTrashFields, parseKeepallBackup, type KeepallBackup } from "@/domain/backup";
+import { BackupValidationError, KEEPALL_BACKUP_VERSION, parseTrashFields, parseKeepallBackup, summarizeBackupContents, type BackupCounts, type KeepallBackup } from "@/domain/backup";
+import { base64ToBytes } from "@/domain/backup-encoding";
 import { assetToBlob, hashAssetBytes } from "@/domain/asset";
 import { normalizeItem } from "@/domain/item";
 import { MAX_LOCAL_IMAGE_BYTES } from "@/domain/image";
@@ -7,6 +8,7 @@ import { normalizePinnedCollectionIds } from "@/domain/library-preferences";
 import { MAX_LOCAL_VIDEO_BYTES, type VideoItem } from "@/domain/video";
 import { listAssets } from "./assets";
 import { importKeepallBackupMerge, replaceValidatedBackup } from "./backup";
+import type { KeepallMergeSummary } from "./backup";
 import { getDb, type Thumbnail, type VideoAsset } from "./db";
 import { getLibraryPreferences } from "./library-preferences";
 
@@ -237,4 +239,63 @@ export async function importKeepallArchiveMerge(file: Blob) {
     binaryAssets,
     { items: videoItems, assets: videoAssets, thumbnails },
   );
+}
+
+export type PreparedBackup = Readonly<{
+  name: string;
+  size: number;
+  exportedAt: number;
+  counts: BackupCounts;
+  replace: () => Promise<string[]>;
+  merge: () => Promise<KeepallMergeSummary>;
+}>;
+
+/** Validate and retain one owned decode for the exact file the user reviews. */
+export async function prepareBackupFile(file: File): Promise<PreparedBackup> {
+  const signature = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+  let payload: Awaited<ReturnType<typeof readArchive>>;
+  if (signature[0] === 0x50 && signature[1] === 0x4b) {
+    payload = await readArchive(file);
+  } else {
+    let raw: unknown;
+    try { raw = JSON.parse(await file.text()) as unknown; }
+    catch { throw new BackupValidationError("Backup file is not valid JSON or ZIP"); }
+    const backup = parseKeepallBackup(raw);
+    const binaryAssets = new Map<string, Uint8Array>();
+    for (const record of backup.assets) {
+      let bytes: Uint8Array;
+      try {
+        bytes = base64ToBytes(record.dataBase64);
+      } catch {
+        throw new BackupValidationError(`Backup asset is invalid: ${record.id}`);
+      }
+      if (bytes.byteLength !== record.byteLength || bytes.byteLength > MAX_LOCAL_IMAGE_BYTES ||
+          (record.contentHash && await hashAssetBytes(bytes) !== record.contentHash)) {
+        throw new BackupValidationError(`Backup asset is damaged: ${record.id}`);
+      }
+      binaryAssets.set(record.id, bytes);
+    }
+    payload = { backup, binaryAssets, videoAssets: [], thumbnails: [] };
+  }
+  const { backup, binaryAssets, videoAssets, thumbnails } = payload;
+  const counts = summarizeBackupContents(backup.items, backup.tags.length,
+    backup.collections.length, backup.assets.length, videoAssets.length);
+  return Object.freeze({
+    name: file.name,
+    size: file.size,
+    exportedAt: backup.exportedAt,
+    counts,
+    replace: async () => {
+      await replaceValidatedBackup(backup, binaryAssets, videoAssets, thumbnails);
+      return backup.items.filter((item) => item.type === "link").map((item) => item.id);
+    },
+    merge: async () => {
+      const videoItems = backup.items.filter((item): item is VideoItem => item.type === "video");
+      const { summary } = await importKeepallBackupMerge(
+        { ...backup, items: backup.items.filter((item) => item.type !== "video") },
+        binaryAssets, { items: videoItems, assets: videoAssets, thumbnails },
+      );
+      return summary;
+    },
+  });
 }

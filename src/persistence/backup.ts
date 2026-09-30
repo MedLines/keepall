@@ -2,6 +2,8 @@ import {
   buildKeepallBackup,
   parseKeepallBackup,
   type KeepallBackup,
+  summarizeBackupContents,
+  type BackupCounts,
 } from "@/domain/backup";
 import { base64ToBytes, bytesToBase64 } from "@/domain/backup-encoding";
 import { isIncomingNewer, unionIds } from "@/domain/backup-merge";
@@ -23,6 +25,17 @@ import {
   putLibraryPreferences,
 } from "./library-preferences";
 import { createTag } from "./tags";
+
+export async function countCurrentLibrary(): Promise<BackupCounts> {
+  const db = getDb();
+  return db.transaction("r", [db.items, db.tags, db.collections, db.assets, db.videoAssets], async () => {
+    const [items, tags, collections, assets, videos] = await Promise.all([
+      db.items.toArray(), db.tags.count(), db.collections.count(),
+      db.assets.count(), db.videoAssets.count(),
+    ]);
+    return summarizeBackupContents(items, tags, collections, assets, videos);
+  });
+}
 
 export async function exportKeepallBackup(
   exportedAt?: number,

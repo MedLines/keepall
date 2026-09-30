@@ -6,7 +6,7 @@ test.use({ serviceWorkers: "block" });
 test("settings owns backup and import recovery", async ({ page }, testInfo) => {
   await page.goto("/");
   await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible();
   await expect(page.getByRole("link", { name: "Back to library" })).toHaveAttribute(
@@ -32,7 +32,7 @@ test("settings owns backup and import recovery", async ({ page }, testInfo) => {
     await backupInput.setInputFiles({
       name: "library.keepall.json",
       mimeType: "application/json",
-      buffer: Buffer.from("{}"),
+      buffer: Buffer.from(JSON.stringify({ format: "keepall", version: 7, exportedAt: 123, items: [], tags: [], collections: [], assets: [], preferences: { pinnedCollectionIds: [] } })),
     });
     const dialog = page.getByRole("dialog", { name: "Import backup" });
     await expect(dialog).toBeVisible();
@@ -75,4 +75,68 @@ test("settings owns backup and import recovery", async ({ page }, testInfo) => {
   await page.screenshot({ path: testInfo.outputPath("settings-mobile.png"), fullPage: true });
   await storage.scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath("storage-mobile.png") });
+});
+
+test("validated review merges newer details and replacement requires confirmation", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  const note = (id: string, content: string, updatedAt: number, deletedAt?: number) => ({
+    id, type: "note", title: "", content, tagIds: [], collectionIds: [],
+    createdAt: 1, updatedAt, ...(deletedAt === undefined ? {} : { deletedAt }),
+  });
+  const readItems = () => page.evaluate(async () => {
+    const request = indexedDB.open("keepall");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    return new Promise<{ id: string; content: string; deletedAt?: number }[]>((resolve, reject) => {
+      const tx = db.transaction("items", "readonly");
+      const get = tx.objectStore("items").getAll();
+      get.onsuccess = () => resolve(get.result);
+      get.onerror = () => reject(get.error);
+      tx.oncomplete = () => db.close();
+    });
+  });
+  await page.evaluate(async (items) => {
+    const request = indexedDB.open("keepall");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("items", "readwrite");
+      for (const item of items) tx.objectStore("items").put(item);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    });
+  }, [note("same", "Old detail", 1), note("old", "Remove later", 1), note("trash", "In Trash", 1, 3)]);
+  await page.goto("/settings");
+  const input = page.getByRole("region", { name: "Backup" }).locator('input[accept*="application/json"]');
+  const incoming = { format: "keepall", version: 7, exportedAt: 50,
+    items: [note("same", "Newer detail", 10), note("new", "Fresh note", 2)],
+    tags: [], collections: [], assets: [], preferences: { pinnedCollectionIds: [] } };
+  const select = () => input.setInputFiles({ name: "review.keepall.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(incoming)) });
+  await select();
+  const review = page.getByRole("dialog", { name: "Import backup" });
+  await expect(review).toContainText("Current library: 3 items (2 active, 1 in Trash)");
+  await expect(review).toContainText("Incoming: 2 items (2 active, 0 in Trash)");
+  await review.getByRole("button", { name: "Merge" }).click();
+  await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Merged:");
+  expect((await readItems()).find((item) => item.id === "same")?.content).toBe("Newer detail");
+  expect((await readItems()).some((item) => item.id === "new")).toBe(true);
+  await select();
+  await review.getByRole("button", { name: "Replace library" }).click();
+  const confirm = page.getByRole("dialog", { name: "Replace library?" });
+  await expect(confirm).toContainText("4 items (3 active, 1 in Trash)");
+  await confirm.getByRole("button", { name: "Cancel" }).click();
+  expect((await readItems()).length).toBe(4);
+  await review.getByRole("button", { name: "Replace library" }).click();
+  await confirm.getByRole("button", { name: "Confirm replacement" }).click();
+  await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Library replaced from backup");
+  await page.reload();
+  expect((await readItems()).map((item) => item.id).sort()).toEqual(["new", "same"]);
+  await input.setInputFiles({ name: "broken.json", mimeType: "application/json", buffer: Buffer.from("{}") });
+  await expect(page.getByRole("region", { name: "Backup" }).getByRole("alert")).toContainText("Backup format");
+  expect((await readItems()).length).toBe(2);
 });

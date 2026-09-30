@@ -36,6 +36,41 @@ export type KeepallBackup = {
   };
 };
 
+export type BackupCounts = Readonly<{
+  total: number;
+  active: number;
+  trash: number;
+  links: number;
+  notes: number;
+  images: number;
+  videos: number;
+  tags: number;
+  collections: number;
+  imageAssets: number;
+  videoAssets: number;
+}>;
+
+/** Item types include active items and Trash; total is active plus Trash. */
+export function summarizeBackupContents(
+  items: readonly Pick<Item, "type" | "deletedAt">[],
+  tags: number,
+  collections: number,
+  imageAssets: number,
+  videoAssets: number,
+): BackupCounts {
+  const counts = { total: items.length, active: 0, trash: 0, links: 0, notes: 0,
+    images: 0, videos: 0, tags, collections, imageAssets, videoAssets };
+  for (const item of items) {
+    if (item.deletedAt === undefined) counts.active += 1;
+    else counts.trash += 1;
+    if (item.type === "link") counts.links += 1;
+    else if (item.type === "note") counts.notes += 1;
+    else if (item.type === "image") counts.images += 1;
+    else counts.videos += 1;
+  }
+  return Object.freeze(counts);
+}
+
 export class BackupValidationError extends Error {
   constructor(message: string) {
     super(message);

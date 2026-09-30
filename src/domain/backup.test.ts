@@ -3,12 +3,23 @@ import {
   BackupValidationError,
   buildKeepallBackup,
   parseKeepallBackup,
+  summarizeBackupContents,
 } from "./backup";
 import { buildCollection } from "./collection";
 import { buildLink } from "./link";
 import { buildNote } from "./note";
 import { buildTag } from "./tag";
 import { buildImage } from "./image";
+
+test("backup counts include Trash in totals and type counts", () => {
+  const items = [buildNote({ content: "active" }, { id: "a" }),
+    { ...buildLink({ url: "https://example.com" }, { id: "b" }), deletedAt: 12 },
+    buildImage({ assetId: "asset", sourceFileName: "photo.png" })];
+  expect(summarizeBackupContents(items, 2, 1, 1, 0)).toMatchObject({
+    total: 3, active: 2, trash: 1, links: 1, notes: 1, images: 1,
+    videos: 0, tags: 2, collections: 1, imageAssets: 1, videoAssets: 0,
+  });
+});
 
 describe("buildKeepallBackup", () => {
   test("wraps records with format and version", () => {

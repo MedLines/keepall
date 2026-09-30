@@ -1,20 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ModalDialog } from "@/components/ui/modal-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { BookmarksHtmlCollectionPolicy } from "@/domain/bookmarks-html";
 import {
   formatImageFolderImportStatus,
   imageFolderImportSkippedDetail,
   suggestImageFolderCollectionName,
 } from "@/domain/image-folder-import";
-import { BackupValidationError } from "@/domain/backup";
-import { exportKeepallArchive, importKeepallArchiveMerge, importKeepallArchiveReplace } from "@/persistence/backup-archive";
-import { normalizeItem } from "@/domain/item";
-import {
-  importKeepallBackupMerge,
-  importKeepallBackupReplace,
-} from "@/persistence/backup";
+import { BackupValidationError, type BackupCounts } from "@/domain/backup";
+import { exportKeepallArchive, prepareBackupFile, type PreparedBackup } from "@/persistence/backup-archive";
+import { countCurrentLibrary } from "@/persistence/backup";
 import {
   BookmarksHtmlParseError,
   formatSkippedBookmarksLog,
@@ -30,6 +27,15 @@ import {
 import { BackupIcon, CloseIcon } from "./shell-icons";
 
 type ImportMode = "merge" | "replace";
+type Operation = "export" | "read-backup" | "restore" | "read-bookmarks" | "import-bookmarks" | "read-images" | "import-images";
+const operationLabels: Record<Operation, string> = {
+  export: "Preparing backup…", "read-backup": "Reading backup…", restore: "Restoring library…",
+  "read-bookmarks": "Reading bookmarks…", "import-bookmarks": "Importing bookmarks…",
+  "read-images": "Reading image folder…", "import-images": "Importing images…",
+};
+function countText(counts: BackupCounts) {
+  return `${counts.total} items (${counts.active} active, ${counts.trash} in Trash)`;
+}
 
 type Props = {
   variant?: "page" | "sidebar";
@@ -50,7 +56,15 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bookmarksFileInputRef = useRef<HTMLInputElement>(null);
   const imageFolderInputRef = useRef<HTMLInputElement>(null);
-  const [pendingRaw, setPendingRaw] = useState<unknown | null>(null);
+  const [prepared, setPrepared] = useState<{ backup: PreparedBackup; current: BackupCounts } | null>(null);
+  const [confirmReplace, setConfirmReplace] = useState(false);
+  const operationRef = useRef<Operation | null>(null);
+  const readVersion = useRef(0);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; readVersion.current += 1; };
+  }, []);
   const [pendingBookmarksHtml, setPendingBookmarksHtml] = useState<string | null>(
     null,
   );
@@ -76,11 +90,22 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [feedbackSection, setFeedbackSection] =
     useState<"backup" | "import">("backup");
-  const [busy, setBusy] = useState(false);
+  const [operation, setOperation] = useState<Operation | null>(null);
+  const busy = operation !== null;
+  function start(next: Operation): boolean {
+    if (operationRef.current) return false;
+    operationRef.current = next;
+    setOperation(next);
+    return true;
+  }
+  function finish() {
+    operationRef.current = null;
+    if (mounted.current) setOperation(null);
+  }
 
   async function onExport() {
     setFeedbackSection("backup");
-    setBusy(true);
+    if (!start("export")) return;
     setError(null);
     setStatus(null);
     setLastBookmarksSummary(null);
@@ -97,7 +122,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     } catch {
       setError("Couldn't export backup.");
     } finally {
-      setBusy(false);
+      finish();
     }
   }
 
@@ -115,40 +140,26 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   async function onFileChange(fileList: FileList | null) {
     const file = fileList?.[0];
-    if (!file) {
-      return;
-    }
+    if (!file || !start("read-backup")) return;
+    const version = ++readVersion.current;
     setFeedbackSection("backup");
-
-    setBusy(true);
+    setPrepared(null);
+    setConfirmReplace(false);
     setError(null);
     setStatus(null);
     setLastBookmarksSummary(null);
-
     try {
-      const signature = new Uint8Array(await file.slice(0, 4).arrayBuffer());
-      if (signature[0] === 0x50 && signature[1] === 0x4b) {
-        setPendingRaw(file);
-      } else {
-        let raw: unknown;
-        try {
-          raw = JSON.parse(await file.text()) as unknown;
-        } catch {
-          throw new BackupValidationError("Backup file is not valid JSON or ZIP");
-        }
-        setPendingRaw(raw);
-      }
+      const backup = await prepareBackupFile(file);
+      if (!mounted.current || version !== readVersion.current) return;
+      const current = await countCurrentLibrary();
+      if (mounted.current && version === readVersion.current) setPrepared({ backup, current });
     } catch (caught) {
-      if (caught instanceof BackupValidationError) {
-        setError(caught.message);
-      } else {
-        setError("Couldn't read backup file.");
+      if (mounted.current && version === readVersion.current) {
+        setError(caught instanceof BackupValidationError ? caught.message : "Couldn't read backup file.");
       }
     } finally {
-      setBusy(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      finish();
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -159,7 +170,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     }
     setFeedbackSection("import");
 
-    setBusy(true);
+    if (!start("read-bookmarks")) return;
     setError(null);
     setStatus(null);
     setLastBookmarksSummary(null);
@@ -170,7 +181,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     } catch {
       setError("Couldn't read bookmarks file.");
     } finally {
-      setBusy(false);
+      finish();
       if (bookmarksFileInputRef.current) {
         bookmarksFileInputRef.current.value = "";
       }
@@ -181,8 +192,25 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     if (busy) {
       return;
     }
-    setPendingRaw(null);
+    readVersion.current += 1;
+    setPrepared(null);
+    setConfirmReplace(false);
     setStatus("Import canceled.");
+  }
+
+  async function reviewReplacement() {
+    if (!prepared || !start("read-backup")) return;
+    try {
+      const current = await countCurrentLibrary();
+      if (mounted.current) {
+        setPrepared({ backup: prepared.backup, current });
+        setConfirmReplace(true);
+      }
+    } catch {
+      if (mounted.current) setError("Couldn't count the current library.");
+    } finally {
+      finish();
+    }
   }
 
   function cancelBookmarksImport() {
@@ -194,50 +222,30 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   }
 
   async function runImport(mode: ImportMode) {
-    if (pendingRaw === null) {
-      return;
-    }
-
-    const raw = pendingRaw;
-    setBusy(true);
+    if (!prepared || !start("restore")) return;
+    const selected = prepared.backup;
     setError(null);
     setStatus(null);
-
     try {
       if (mode === "merge") {
-        const { summary } = raw instanceof Blob
-          ? await importKeepallArchiveMerge(raw)
-          : await importKeepallBackupMerge(raw);
+        const summary = await selected.merge();
+        if (!mounted.current) return;
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
         dispatchPreviewWelcome(summary.addedLinkIds);
-        setStatus(
-          `Merged: ${summary.added} added, ${summary.updated} updated, ${summary.unchanged} unchanged.`,
-        );
+        setStatus(`Merged: ${summary.added} added, ${summary.updated} updated, ${summary.unchanged} unchanged.`);
       } else {
-        const backup = raw instanceof Blob
-          ? await importKeepallArchiveReplace(raw)
-          : await importKeepallBackupReplace(raw);
+        const linkIds = await selected.replace();
+        if (!mounted.current) return;
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-        dispatchPreviewWelcome(
-          backup.items
-            .map((item) => normalizeItem(item))
-            .filter((item) => item.type === "link")
-            .map((item) => item.id),
-        );
+        dispatchPreviewWelcome(linkIds);
         setStatus("Library replaced from backup.");
       }
-      setPendingRaw(null);
     } catch (caught) {
-      if (caught instanceof BackupValidationError) {
-        setError(caught.message);
-      } else {
-        setError(
-          mode === "merge" ? "Couldn't merge backup." : "Couldn't replace library.",
-        );
-      }
-      setPendingRaw(null);
+      if (mounted.current) setError(caught instanceof BackupValidationError ? caught.message :
+        mode === "merge" ? "Couldn't merge backup." : "Couldn't replace library.");
     } finally {
-      setBusy(false);
+      if (mounted.current) { setPrepared(null); setConfirmReplace(false); }
+      finish();
     }
   }
 
@@ -247,7 +255,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     }
 
     const html = pendingBookmarksHtml;
-    setBusy(true);
+    if (!start("import-bookmarks")) return;
     setError(null);
     setStatus(null);
 
@@ -268,7 +276,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       }
       setPendingBookmarksHtml(null);
     } finally {
-      setBusy(false);
+      finish();
     }
   }
 
@@ -278,7 +286,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     }
     setFeedbackSection("import");
 
-    setBusy(true);
+    if (!start("read-images")) return;
     setError(null);
     setStatus(null);
     setLastBookmarksSummary(null);
@@ -294,7 +302,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     } catch {
       setError("Couldn't read folder.");
     } finally {
-      setBusy(false);
+      finish();
       if (imageFolderInputRef.current) {
         imageFolderInputRef.current.value = "";
       }
@@ -315,6 +323,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     if (pendingImageFiles === null) {
       return;
     }
+    if (!start("import-images")) return;
 
     const files = pendingImageFiles;
     const collectionName = imageCollectionDraft.trim() || undefined;
@@ -323,7 +332,6 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     setPendingImageFiles(null);
     setImageQuotaWarning(null);
     setImageImportProgress({ done: 0, total, currentName: "", added: 0, reused: 0 });
-    setBusy(true);
     setError(null);
     setStatus(null);
 
@@ -354,7 +362,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       setError("Couldn't import images.");
     } finally {
       setImageImportProgress(null);
-      setBusy(false);
+      finish();
     }
   }
 
@@ -371,7 +379,9 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const fileInput = (
     <input
       ref={fileInputRef}
-      className="sr-only"
+      hidden
+      aria-hidden="true"
+      tabIndex={-1}
       type="file"
       accept="application/json,application/zip,.json,.keepall,.zip"
       onChange={(event) => void onFileChange(event.target.files)}
@@ -381,7 +391,9 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const bookmarksFileInput = (
     <input
       ref={bookmarksFileInputRef}
-      className="sr-only"
+      hidden
+      aria-hidden="true"
+      tabIndex={-1}
       type="file"
       accept=".html,text/html,.htm"
       onChange={(event) => void onBookmarksFileChange(event.target.files)}
@@ -391,7 +403,9 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const imageFolderInput = (
     <input
       ref={imageFolderInputRef}
-      className="sr-only"
+      hidden
+      aria-hidden="true"
+      tabIndex={-1}
       type="file"
       accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
       multiple
@@ -456,38 +470,41 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   );
 
   const choiceDialog = (
-    <ModalDialog
-      open={pendingRaw !== null} busy={busy} title="Import backup"
-      description="Merge combines this file with your library. Replace removes the current library first."
-      onOpenChange={(open) => { if (!open) cancelImportChoice(); }}
-      footer={<>
-        <button
-          className={dialogButtonClass}
-          type="button"
-          disabled={busy}
-          onClick={cancelImportChoice}
-        >
-    Cancel
-        </button>
-        <button
-    className={`${dialogButtonClass} border-border-danger bg-bg-danger text-text-danger`}
-    type="button"
-    disabled={busy}
-    onClick={() => void runImport("replace")}
-        >
-    Replace
-        </button>
-        <button
-    className={`${dialogButtonClass} ui-primary`}
-    type="button"
-    disabled={busy}
-    onClick={() => void runImport("merge")}
-        >
-    Merge
-        </button>
-      </>}
-    >
-    </ModalDialog>
+    <>
+      <ModalDialog
+        open={prepared !== null && !confirmReplace} busy={busy} title="Import backup"
+        description="Review this validated file before choosing how to restore it."
+        onOpenChange={(open) => { if (!open) cancelImportChoice(); }}
+        footer={<>
+          <button className={dialogButtonClass} type="button" disabled={busy} onClick={cancelImportChoice}>Cancel</button>
+          <button className={`${dialogButtonClass} border-border-danger bg-bg-danger text-text-danger`}
+            type="button" disabled={busy} onClick={() => void reviewReplacement()}>Replace library</button>
+          <button className={`${dialogButtonClass} ui-primary`} type="button" disabled={busy}
+            onClick={() => void runImport("merge")}>Merge</button>
+        </>}
+      >
+        {prepared ? <div className="space-y-3 text-sm text-text-primary" aria-busy={busy}>
+          <p className="[overflow-wrap:anywhere] font-medium">{prepared.backup.name}</p>
+          <p className="text-text-secondary">{new Intl.NumberFormat().format(prepared.backup.size)} bytes · Exported {new Date(prepared.backup.exportedAt).toLocaleString()}</p>
+          <div className="ui-control space-y-1 p-3">
+            <p className="font-medium">Incoming: {countText(prepared.backup.counts)}</p>
+            <p>Links {prepared.backup.counts.links} · Notes {prepared.backup.counts.notes} · Images {prepared.backup.counts.images} · Videos {prepared.backup.counts.videos}</p>
+            <p>Tags {prepared.backup.counts.tags} · Collections {prepared.backup.counts.collections} · Image files {prepared.backup.counts.imageAssets} · Video files {prepared.backup.counts.videoAssets}</p>
+          </div>
+          <p>Current library: {countText(prepared.current)}</p>
+          <p className="text-text-secondary">Merge adds missing items. Matching items may take newer saved details; tags combine. Collections follow the newer item.</p>
+          <p role="status" aria-live="polite">{operation === "restore" ? "Restoring library…" : ""}</p>
+          {error ? <p role="alert" className="text-text-danger">{error}</p> : null}
+        </div> : null}
+      </ModalDialog>
+      <ConfirmDialog
+        open={prepared !== null && confirmReplace} title="Replace library?"
+        description={prepared ? `Replace the current ${countText(prepared.current)} with ${countText(prepared.backup.counts)} from ${prepared.backup.name}? This removes the current library and cannot be undone.` : ""}
+        confirmLabel="Confirm replacement" pendingLabel="Restoring library…" busy={busy}
+        onConfirm={() => void runImport("replace")}
+        onOpenChange={(open) => { if (!open) setConfirmReplace(false); }}
+      />
+    </>
   );
 
   const bookmarksDialog = (
@@ -510,10 +527,12 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     disabled={busy}
     onClick={() => void runBookmarksImport()}
         >
-    Import bookmarks
+    {operation === "import-bookmarks" ? "Importing bookmarks…" : "Import bookmarks"}
         </button>
       </>}
     >
+
+    <p role="status" aria-live="polite">{operation === "import-bookmarks" ? "Importing bookmarks…" : ""}</p>
 
     <fieldset className="flex flex-col gap-2 border-0 p-0">
       <legend className="text-sm font-medium text-text-primary">
@@ -662,8 +681,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
           className={
             variant === "sidebar" ? "mt-2 space-y-1" : "mt-3 space-y-2"
           }
-          role="status"
-          aria-live="polite"
+
         >
           <p
             className={
@@ -696,17 +714,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
           </p>
         </div>
       ) : null}
-      {status && !imageImportProgress ? (
-        <p
-          className={
-            variant === "sidebar"
-              ? "mt-2 text-xs text-text-primary"
-              : "mt-2 text-sm text-text-primary"
-          }
-        >
-          {status}
-        </p>
-      ) : null}
+      {(operation || status) ? <p className="mt-2 text-sm text-text-primary">{operation ? operationLabels[operation] : status}</p> : null}
+      {operation && operation !== "import-images" ? <progress aria-label={operationLabels[operation]} className="mt-2 h-2 w-full accent-action-primary" /> : null}
       {lastBookmarksSummary && lastBookmarksSummary.skippedRows.length > 0 ? (
         <button
           className={
@@ -735,6 +744,12 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     </>
   );
 
+  const liveStatus = <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+    {operation === "import-images" && imageImportProgress
+      ? `Importing images… ${Math.min(imageImportProgress.total, Math.floor(imageImportProgress.done / 8) * 8)} of ${imageImportProgress.total}`
+      : operation ? operationLabels[operation] : status}
+  </div>;
+
   const description =
     variant === "sidebar" ? (
       <p className="mt-2 text-xs leading-relaxed text-text-secondary">
@@ -755,7 +770,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   if (variant === "sidebar") {
     return (
-      <section aria-labelledby="backup-heading">
+      <section aria-labelledby="backup-heading" aria-busy={busy}>
+        {liveStatus}
         {heading}
         {description}
         {actions}
@@ -769,9 +785,11 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   return (
     <>
+      {liveStatus}
       <section
         className="library-panel border border-border-control bg-bg-surface p-5 sm:p-7"
         aria-labelledby="backup-heading"
+        aria-busy={operation === "export" || operation === "read-backup" || operation === "restore"}
       >
         {heading}
         <p className="mt-1 text-sm leading-6 text-text-secondary">
@@ -802,6 +820,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       <section
         className="library-panel border border-border-control bg-bg-surface p-5 sm:p-7"
         aria-labelledby="import-heading"
+        aria-busy={operation === "read-bookmarks" || operation === "import-bookmarks" || operation === "read-images" || operation === "import-images"}
       >
         <h2 id="import-heading" className="text-lg font-semibold text-text-primary">
           Import

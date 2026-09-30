@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { BackupValidationError } from "@/domain/backup";
+import { Blob as NodeBlob } from "node:buffer";
+import { BackupValidationError, buildKeepallBackup } from "@/domain/backup";
 import { buildNote, noteImageAssetIds } from "@/domain/note";
 import { buildTag } from "@/domain/tag";
 import {
@@ -8,6 +9,7 @@ import {
   importKeepallBackupReplace,
   replaceValidatedBackup,
   libraryHasLocalData,
+  countCurrentLibrary,
 } from "./backup";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { createLink, createNote, listItems, saveNoteWithImages } from "./items";
@@ -15,7 +17,8 @@ import { createTag, listTags } from "./tags";
 import { createCollection, listCollections } from "./collections";
 import { buildLink } from "@/domain/link";
 import { buildCollection } from "@/domain/collection";
-import { exportKeepallArchive, importKeepallArchiveReplace } from "./backup-archive";
+import { buildVideo } from "@/domain/video";
+import { exportKeepallArchive, importKeepallArchiveReplace, prepareBackupFile } from "./backup-archive";
 import {
   getLibraryPreferences,
   pinCollection,
@@ -24,6 +27,53 @@ import {
 describe("backup persistence", () => {
   beforeEach(async () => {
     await deleteKeepallDatabase();
+  });
+
+  test("inspection validates the exact JSON file without changing any table", async () => {
+    await createNote({ content: "keep" });
+    await createTag({ name: "old" });
+    const db = getDb();
+    const tables = [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.preferences];
+    const before = await Promise.all(tables.map((table) => table.toArray()));
+    const incoming = buildKeepallBackup({ items: [buildNote({ content: "incoming" }, { id: "incoming", now: 2 })], tags: [], collections: [], exportedAt: 42 });
+    const file = new File([JSON.stringify(incoming)], "review.keepall.json", { type: "application/json" });
+    const prepared = await prepareBackupFile(file);
+    expect(prepared).toMatchObject({ name: "review.keepall.json", exportedAt: 42, counts: { total: 1, trash: 0 } });
+    expect(await Promise.all(tables.map((table) => table.toArray()))).toEqual(before);
+    await prepared.replace();
+    expect((await listItems()).map((item) => item.id)).toEqual(["incoming"]);
+    expect((await countCurrentLibrary()).total).toBe(1);
+  });
+
+  test("inspection rejects damaged JSON assets before offering a commit", async () => {
+    const incoming = buildKeepallBackup({ items: [], tags: [], collections: [], assets: [
+      { id: "a", mimeType: "image/png", byteLength: 2, dataBase64: "AQ==", createdAt: 1 },
+    ] });
+    await expect(prepareBackupFile(new File([JSON.stringify(incoming)], "bad.json")))
+      .rejects.toThrow(/damaged/);
+    expect((await getDb().assets.count())).toBe(0);
+  });
+
+  test("prepared archive commits its decoded payload after the source file is no longer readable", async () => {
+    await createNote({ content: "source" });
+    const videoId = "22222222-2222-4222-8222-222222222222";
+    const item = buildVideo({ assetId: videoId, fileName: "clip.mp4" }, { id: "video-item", now: 1 });
+    await getDb().items.put(item);
+    await getDb().videoAssets.put({ id: videoId, mimeType: "video/mp4", byteLength: 3,
+      blob: new NodeBlob([new Uint8Array([1, 2, 3])], { type: "video/mp4" }) as unknown as Blob, createdAt: 1 });
+    const archive = await exportKeepallArchive(30);
+    const file = new File([archive], "source.keepall.zip", { type: "application/zip" });
+    const prepared = await prepareBackupFile(file);
+    vi.spyOn(file, "arrayBuffer").mockRejectedValue(new Error("re-read"));
+    vi.spyOn(file, "slice").mockImplementation(() => { throw new Error("re-read"); });
+    await deleteKeepallDatabase();
+    const writeVideo = vi.spyOn(getDb().videoAssets, "bulkAdd");
+    await prepared.replace();
+    expect((await listItems()).length).toBe(2);
+    expect(writeVideo.mock.calls[0]?.[0][0]?.blob.size).toBe(3);
+    expect((await getDb().videoAssets.get(videoId))?.byteLength).toBe(3);
+    expect(prepared.counts.total).toBe(2);
+    expect(prepared.counts.videoAssets).toBe(1);
   });
 
   test("binary archive round-trips images and rejects corruption before replacement", async () => {
