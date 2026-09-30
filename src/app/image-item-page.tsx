@@ -15,7 +15,7 @@ import { TagValidationError, type Tag } from "@/domain/tag";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { createCollection, listCollections } from "@/persistence/collections";
 import {
-  appendImageAssetToItem,
+  appendImageAssetsToItem,
   assignCollectionToItem,
   assignTagToItem,
   deleteItem,
@@ -160,22 +160,23 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
     setGalleryMutation("add");
     setGalleryError(null);
     try {
-      let updated = loadState.item;
+      const uploads = [];
       for (const file of files) {
         assertLocalImageFile(file);
-        updated = await appendImageAssetToItem(itemId, {
+        uploads.push({
           bytes: new Uint8Array(await file.arrayBuffer()),
           mimeType: file.type || "application/octet-stream",
         });
       }
+      const updated = await appendImageAssetsToItem(itemId, uploads);
       setLoadState({ ...loadState, item: updated });
       setSlide(updated.assetIds.length - 1);
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch (caught) {
       setGalleryError(
         caught instanceof ImageValidationError
-          ? caught.message
-          : "Couldn't add images.",
+          ? `${caught.message} No images were added.`
+          : "Couldn't add images. No images were added.",
       );
     } finally {
       setGalleryMutation(null);

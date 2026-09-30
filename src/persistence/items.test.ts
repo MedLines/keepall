@@ -1,11 +1,13 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ImageValidationError } from "@/domain/image";
 import { LinkValidationError } from "@/domain/link";
 import { buildNote, noteImageAssetIds, NoteValidationError } from "@/domain/note";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { getAsset } from "./assets";
+import * as thumbnails from "./thumbnails";
 import {
   appendImageAssetToItem,
+  appendImageAssetsToItem,
   createImage,
   createLink,
   createOrReuseImage,
@@ -325,6 +327,97 @@ describe("items persistence", () => {
     expect(await getAsset(updated.assetIds[1]!)).toMatchObject({
       mimeType: "image/jpeg",
     });
+  });
+
+  test("batch append keeps the original gallery and stored records when a later upload is invalid", async () => {
+    const image = await createImage({
+      assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }],
+      title: "Original",
+    });
+    const db = getDb();
+    const before = await Promise.all([db.items.toArray(), db.assets.toArray(), db.thumbnails.toArray()]);
+
+    await expect(appendImageAssetsToItem(image.id, [
+      { bytes: new Uint8Array([2]), mimeType: "image/png" },
+      { bytes: new Uint8Array([3]), mimeType: "text/plain" },
+    ])).rejects.toBeInstanceOf(ImageValidationError);
+
+    expect(await Promise.all([db.items.toArray(), db.assets.toArray(), db.thumbnails.toArray()])).toEqual(before);
+  });
+
+  test("batch append rolls back earlier assets when the item write fails", async () => {
+    const image = await createImage({ assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }] });
+    const db = getDb();
+    await db.thumbnails.put({ assetId: image.assetIds[0]!, blob: new Blob(["original"]) });
+    const before = await Promise.all([db.items.toArray(), db.assets.toArray(), db.thumbnails.toArray()]);
+    const thumbnail = vi.spyOn(thumbnails, "imageThumbnail").mockResolvedValue(new Blob(["new"]));
+    const put = vi.spyOn(db.items, "put").mockRejectedValueOnce(new Error("Storage failed"));
+    try {
+      await expect(appendImageAssetsToItem(image.id, [
+        { bytes: new Uint8Array([2]), mimeType: "image/png" },
+        { bytes: new Uint8Array([3]), mimeType: "image/png" },
+      ])).rejects.toThrow("Storage failed");
+    } finally {
+      put.mockRestore();
+      thumbnail.mockRestore();
+    }
+    expect(await Promise.all([db.items.toArray(), db.assets.toArray(), db.thumbnails.toArray()])).toEqual(before);
+  });
+
+  test("batch append preserves metadata, file order, and explicit duplicate slides", async () => {
+    const image = await createImage({ assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }] });
+    const edited = await updateImage(image.id, { title: "Edited", caption: "Kept" });
+    const updated = await appendImageAssetsToItem(image.id, [
+      { bytes: new Uint8Array([2]), mimeType: "image/png" },
+      { bytes: new Uint8Array([3]), mimeType: "image/png" },
+      { bytes: new Uint8Array([2]), mimeType: "image/png" },
+    ]);
+    expect(updated).toMatchObject({ id: edited.id, title: "Edited", caption: "Kept" });
+    expect(updated.assetIds).toHaveLength(4);
+    expect(updated.assetIds[1]).toBe(updated.assetIds[3]);
+    expect(Array.from((await getAsset(updated.assetIds[2]!))!.bytes)).toEqual([3]);
+    expect((await getDb().assets.toArray())).toHaveLength(3);
+    const beforeEmpty = await Promise.all([getDb().items.toArray(), getDb().assets.toArray(), getDb().thumbnails.toArray()]);
+    expect(await appendImageAssetsToItem(image.id, [])).toEqual(updated);
+    expect(await Promise.all([getDb().items.toArray(), getDb().assets.toArray(), getDb().thumbnails.toArray()])).toEqual(beforeEmpty);
+  });
+
+  test("batch append reads the current item after asynchronous preparation", async () => {
+    const image = await createImage({ assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }] });
+    let release!: () => void;
+    let entered!: () => void;
+    const paused = new Promise<void>((resolve) => { release = resolve; });
+    const preparing = new Promise<void>((resolve) => { entered = resolve; });
+    const thumbnail = vi.spyOn(thumbnails, "imageThumbnail").mockImplementation(async () => {
+      entered();
+      await paused;
+      return null;
+    });
+    try {
+      const pending = appendImageAssetsToItem(image.id, [{ bytes: new Uint8Array([2]), mimeType: "image/png" }]);
+      await preparing;
+      await updateImage(image.id, { title: "Edited during upload", caption: "Keep this" });
+      release();
+      const updated = await pending;
+      expect(updated).toMatchObject({ title: "Edited during upload", caption: "Keep this" });
+      expect(updated.assetIds).toHaveLength(2);
+    } finally {
+      release();
+      thumbnail.mockRestore();
+    }
+  });
+
+  test("batch append rejects missing, deleted, and non-image targets without writing assets", async () => {
+    const image = await createImage({ assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }] });
+    const note = await createNote({ content: "A note" });
+    const db = getDb();
+    const beforeAssets = await db.assets.toArray();
+    const upload = [{ bytes: new Uint8Array([2]), mimeType: "image/png" }];
+    await expect(appendImageAssetsToItem("missing", upload)).rejects.toThrow("Image not found");
+    await expect(appendImageAssetsToItem(note.id, upload)).rejects.toThrow("Image not found");
+    await deleteItem(image.id);
+    await expect(appendImageAssetsToItem(image.id, upload)).rejects.toThrow("Image not found");
+    expect(await db.assets.toArray()).toEqual(beforeAssets);
   });
 
   test("replaceImageAssetAtIndex swaps one slide and deletes the old asset", async () => {
