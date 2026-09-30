@@ -287,8 +287,35 @@
 .ka-footer nav { display: flex; flex-wrap: wrap; gap: 30px; font-size: 12px; color: var(--ka-muted); }
 .ka-footer-elastic { position: relative; isolation: isolate; overflow: clip; }
 .ka-footer-wordmark-clip { position: absolute; inset: auto 0 0; height: 29vw; overflow: hidden; pointer-events: none; }
-.ka-footer-wordmark-cover { position: relative; z-index: 1; padding-bottom: 28px; background: var(--ka-bg); }
-.ka-footer-wordmark { position: absolute; bottom: 0; width: 100%; color: #888087; font-size: 35.5vw; white-space: nowrap; font-weight: 580; letter-spacing: -.09em; line-height: .82; text-align: center; user-select: none; }
+.ka-footer-wordmark-cover { position: relative; z-index: 1; padding-bottom: 28px; background: var(--ka-bg); transform: translate3d(0, calc(-1 * var(--footer-pull, 0px)), 0); transition: transform 240ms cubic-bezier(.22, 1, .36, 1); }
+.ka-footer-elastic[data-footer-pulled] .ka-footer-wordmark-cover { transition: transform 80ms cubic-bezier(.2, 0, 0, 1); }
+.ka-footer-wordmark { position: absolute; bottom: 0; width: 100%; color: #fff; opacity: .3; font-size: 35.5vw; white-space: nowrap; font-weight: 580; letter-spacing: -.09em; line-height: .82; text-align: center; user-select: none; }
+.ka-footer-icon-layer { position: absolute; z-index: 2; inset: auto 0 0; height: 29vw; pointer-events: none; opacity: 0; transition: opacity 100ms ease; }
+.ka-footer-elastic[data-footer-revealed] .ka-footer-icon-layer { opacity: 1; }
+.ka-footer-icon { position: absolute; bottom: -4px; width: clamp(24px, 3vw, 42px); transform: translate3d(var(--footer-icon-origin-x, -50%), var(--footer-icon-origin-y, 0px), 0) rotate(var(--footer-icon-angle)); transition: transform 80ms cubic-bezier(.2, 0, 0, 1); }
+.ka-footer-elastic[data-footer-pulled] .ka-footer-icon { transform: translate3d(-50%, calc(-1 * var(--footer-pull, 0px)), 0) rotate(0deg); }
+.ka-footer-elastic[data-footer-launched] .ka-footer-icon { transition: none; animation: ka-footer-icon-projectile var(--footer-flight-duration, 280ms) linear calc(var(--footer-icon-index) * 18ms) both; }
+.ka-footer-icon img { width: 100%; height: auto; outline: none; transform-origin: 50% 100%; transition: transform 120ms ease-out, opacity 120ms ease-out; }
+.ka-footer-elastic[data-footer-pulled] .ka-footer-icon img { transform: scale(.68); opacity: .45; }
+.ka-footer-elastic[data-footer-launched] .ka-footer-icon img { animation: ka-footer-icon-launch-size var(--footer-flight-duration, 280ms) linear calc(var(--footer-icon-index) * 18ms) both; }
+.ka-footer-icon-links { left: 18%; --footer-icon-angle: -8deg; --footer-icon-drift: -16px; }
+.ka-footer-icon-notes { left: 40%; --footer-icon-angle: 5deg; --footer-icon-drift: 12px; }
+.ka-footer-icon-images { left: 62%; --footer-icon-angle: -4deg; --footer-icon-drift: -12px; }
+.ka-footer-icon-videos { left: 84%; --footer-icon-angle: 8deg; --footer-icon-drift: 16px; }
+@keyframes ka-footer-icon-launch-size {
+  0% { transform: scale(.68); opacity: .45; }
+  30% { transform: scale(1.06); opacity: 1; }
+  50%, 100% { transform: scale(1); opacity: 1; }
+}
+@keyframes ka-footer-icon-projectile {
+  0% { transform: translate3d(var(--footer-flight-x-0), var(--footer-flight-y-0), 0) rotate(0deg); }
+  15% { transform: translate3d(var(--footer-flight-x-15), var(--footer-flight-y-15), 0) rotate(calc(var(--footer-icon-angle) * .15)); }
+  30% { transform: translate3d(var(--footer-flight-x-30), var(--footer-flight-y-30), 0) rotate(calc(var(--footer-icon-angle) * .3)); }
+  50% { transform: translate3d(var(--footer-flight-x-50), var(--footer-flight-y-50), 0) rotate(calc(var(--footer-icon-angle) * .5)); }
+  70% { transform: translate3d(var(--footer-flight-x-70), var(--footer-flight-y-70), 0) rotate(calc(var(--footer-icon-angle) * .7)); }
+  85% { transform: translate3d(var(--footer-flight-x-85), var(--footer-flight-y-85), 0) rotate(calc(var(--footer-icon-angle) * .85)); }
+  100% { transform: translate3d(var(--footer-flight-x-100), var(--footer-flight-y-100), 0) rotate(var(--footer-icon-angle)); }
+}
 @media (hover: hover) and (pointer: fine) {
   .ka-header nav a:hover, .ka-text-link:hover, .ka-footer a:hover { color: #fff; }
   .ka-header-open:hover, .ka-gallery-foot button:hover { background: #ffffff16; }
@@ -529,6 +556,7 @@
   .ka-hero-toy img, .ka-hero-toy-turn { transform: none !important; }
   .ka-capture-video { transform: none !important; }
   .ka-gallery-content, .ka-footer-wordmark-cover { transform: none !important; }
+  .ka-footer-icon { display: none; }
 }
 
 @media (max-width: 520px) {

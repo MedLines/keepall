@@ -42,11 +42,26 @@ test("scrolling stacks feature cards reversibly and reduced motion restores ordi
     return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.top + 8));
   }))).toBe(true);
   await expect(page.getByRole("heading", { name: "Your interests. Your device. Your library." })).toBeVisible();
+  for (const distance of [20, 120]) {
+    await page.evaluate(y => window.scrollTo({ top: y, behavior: "instant" }), end + distance);
+    await expect.poll(async () => Math.abs((await last.evaluate(element => element.getBoundingClientRect().top)) - (edges[2] - distance))).toBeLessThan(1);
+    const released = await surfaces.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
+    released.forEach((top, index) => expect(Math.abs(top - (edges[index] - distance))).toBeLessThan(1));
+  }
   await page.evaluate((y) => window.scrollTo(0, y), start);
   await expect.poll(() => surfaces.first().evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(1060);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect.poll(() => page.locator(".ka-stack-card").first().evaluate((element) => getComputedStyle(element).position)).toBe("relative");
   await expect.poll(() => surfaces.first().evaluate((element) => getComputedStyle(element).transform)).toBe("none");
+});
+
+test("ordinary feature flow has no stack hold on phones or short screens", async ({ page }) => {
+  await page.goto("/about");
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 700 }, { width: 1000, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    await expect(page.locator(".ka-stack-card").last()).toHaveCSS("position", "relative");
+    expect(await page.locator(".ka-stack").evaluate(element => Math.abs(element.getBoundingClientRect().bottom - element.lastElementChild!.getBoundingClientRect().bottom))).toBeLessThan(1);
+  }
 });
 
 
@@ -178,7 +193,7 @@ test(`${demo.name} slides follow the selected tab's direction while crossfading`
 });
 }
 
-test("footer reveals on extra scrolling and springs back without changing document height", async ({ page }) => {
+test("footer needs extra scrolling and drops icons to the floor with CSS motion", async ({ page }) => {
   await page.goto("/about");
   const content = page.locator(".ka-footer-wordmark-cover");
   const offset = () => content.evaluate(element => new DOMMatrixReadOnly(getComputedStyle(element).transform).m42);
@@ -187,9 +202,28 @@ test("footer reveals on extra scrolling and springs back without changing docume
   await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }));
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
   const wordmark = page.locator(".ka-footer-wordmark");
+  await expect(wordmark).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(wordmark).toHaveCSS("opacity", "0.3");
   const wordmarkBefore = await wordmark.boundingBox();
-  await page.mouse.wheel(0, 240);
-  await expect.poll(offset).toBeLessThan(-20);
+  await page.waitForTimeout(300);
+  expect(await offset()).toBe(0);
+  await expect(wordmark).toHaveCSS("transform", "none");
+  await page.mouse.wheel(0, 80);
+  await expect.poll(offset, { intervals: [16] }).toBeLessThan(-50);
+  await expect(wordmark).toHaveCSS("transform", "none");
+  for (let pulse = 0; pulse < 20; pulse += 1) {
+    await page.mouse.wheel(0, 40);
+  }
+  const icons = page.locator(".ka-footer-icon");
+  await expect(page.locator(".ka-footer-elastic")).toHaveAttribute("data-footer-launched", "");
+  expect(await page.locator(".ka-footer-elastic").evaluate(element => element.getAnimations({ subtree: true }).every(animation => animation instanceof CSSAnimation || animation instanceof CSSTransition))).toBe(true);
+  const delays = await icons.evaluateAll(elements => elements.map(element => Number.parseFloat(getComputedStyle(element).animationDelay)));
+  expect(delays[3] - delays[0]).toBeGreaterThanOrEqual(.05);
+  await expect(page.locator(".ka-footer-elastic")).not.toHaveAttribute("data-footer-launched", "");
+  const floors = await icons.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().bottom));
+  expect(Math.max(...floors) - Math.min(...floors)).toBeLessThan(8);
+  const viewportHeight = page.viewportSize()!.height;
+  expect(floors.every(bottom => bottom <= viewportHeight + 8 && bottom >= viewportHeight - 4)).toBe(true);
   expect(await wordmark.boundingBox()).toEqual(wordmarkBefore);
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
   await expect.poll(offset).toBe(0);
@@ -199,6 +233,56 @@ test("footer reveals on extra scrolling and springs back without changing docume
   await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }));
   await page.mouse.wheel(0, 240);
   expect(await offset()).toBe(0);
+});
+
+test("CSS footer return can be interrupted and triggered again", async ({ page }) => {
+  await page.goto("/about");
+  await expect.poll(() => page.locator(".ka-hero-library").evaluate(element => element.getAnimations().length)).toBe(0);
+  await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }));
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - scrollY - innerHeight)).toBeLessThan(3);
+  const frame = page.locator(".ka-footer-elastic");
+  const offset = () => page.locator(".ka-footer-wordmark-cover").evaluate(element => new DOMMatrixReadOnly(getComputedStyle(element).transform).m42);
+  await page.mouse.wheel(0, 80);
+  await expect.poll(offset, { intervals: [16] }).toBeLessThan(-50);
+  await expect(frame).not.toHaveAttribute("data-footer-pulled", "");
+  await page.waitForTimeout(40);
+  const continuity = page.evaluate(() => new Promise<number>(resolve => {
+    const cover = document.querySelector(".ka-footer-wordmark-cover")!;
+    const read = () => new DOMMatrixReadOnly(getComputedStyle(cover).transform).m42;
+    let before = 0;
+    window.addEventListener("wheel", () => { before = read(); }, { once: true, capture: true });
+    window.addEventListener("wheel", () => resolve(Math.abs(read() - before)), { once: true });
+  }));
+  await page.mouse.wheel(0, 40);
+  expect(await continuity).toBeLessThan(3);
+  await expect(frame).toHaveAttribute("data-footer-pulled", "");
+  await expect.poll(offset).toBe(0);
+  await expect(frame).not.toHaveAttribute("data-footer-revealed", "");
+  await page.mouse.wheel(0, 80);
+  await expect(frame).toHaveAttribute("data-footer-revealed", "");
+  await expect.poll(() => page.locator(".ka-footer-icon").first().evaluate(element => Number(getComputedStyle(element).opacity)), { intervals: [16] }).toBeGreaterThan(.8);
+});
+
+test("footer returns promptly after a large extra scroll", async ({ page }) => {
+  await page.goto("/about");
+  await expect.poll(() => page.locator(".ka-hero-library").evaluate(element => element.getAnimations().length)).toBe(0);
+  await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }));
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - scrollY - innerHeight)).toBeLessThan(3);
+  const returnTime = page.evaluate(async () => {
+    const cover = document.querySelector(".ka-footer-wordmark-cover")!;
+    const started = performance.now();
+    let revealed = false;
+    while (performance.now() - started < 1500) {
+      await new Promise(requestAnimationFrame);
+      const y = new DOMMatrixReadOnly(getComputedStyle(cover).transform).m42;
+      revealed ||= y < -20;
+      if (revealed && Math.abs(y) < .5) return performance.now() - started;
+    }
+    return Infinity;
+  });
+  await page.mouse.wheel(0, 1200);
+  expect(await returnTime).toBeLessThan(750);
+  await expect(page.locator(".ka-footer-elastic")).not.toHaveAttribute("data-footer-revealed", "");
 });
 
 test("reduced motion keeps both galleries still until playback is requested", async ({ page }) => {
