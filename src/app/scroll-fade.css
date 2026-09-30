@@ -43,6 +43,29 @@
   to { --scroll-fade-e: 0px; }
 }
 
+@keyframes scroll-fade-overlay-reveal {
+  from { opacity: 0; }
+  to { opacity: 0.65; }
+}
+
+@utility scroll-fade-overlay {
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    var(--color-bg-canvas),
+    color-mix(in srgb, var(--color-bg-canvas) 60%, transparent) 25%,
+    color-mix(in srgb, var(--color-bg-canvas) 20%, transparent) 60%,
+    transparent
+  );
+  opacity: 0;
+
+  @supports (animation-timeline: scroll()) {
+    animation: scroll-fade-overlay-reveal 1ms ease-in-out both;
+    animation-timeline: scroll(nearest y);
+    animation-range: 0 var(--scroll-fade-reveal, calc(var(--spacing) * 24));
+  }
+}
+
 @utility scroll-fade {
   --_scroll-fade-size-t: var(
     --scroll-fade-t-size,

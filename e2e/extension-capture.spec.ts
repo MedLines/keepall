@@ -584,15 +584,16 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       } });
       await openEditor(tab);
     });
-    const editor = editorPage.locator("#keepall-capture-ui");
-    await expect(editor).toBeAttached();
+    const editorHost = editorPage.locator("#keepall-capture-ui");
+    const editor = editorHost.frameLocator("iframe");
+    await expect(editorHost).toBeAttached();
     await editor.getByRole("textbox", { name: "Title" }).fill("Chosen title");
     await editor.getByRole("textbox", { name: "Your note (optional)" }).fill("# Read for layout ideas");
     await editor.getByRole("checkbox", { name: "Markdown" }).check();
     await editor.getByRole("button", { name: "Reading", exact: true }).click();
     await editor.getByRole("button", { name: "Design", exact: true }).click();
     await editor.getByRole("button", { name: "Close drawer" }).click();
-    await expect(editor.locator("dialog")).toHaveCount(0);
+    await expect(editorHost.locator("dialog")).toHaveCount(0);
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await openEditor(tab);
@@ -618,7 +619,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await expect(editor.getByRole("textbox", { name: "Your note (optional)" })).toHaveValue("# Read for layout ideas");
     await expect(editor.getByRole("checkbox", { name: "Markdown" })).toBeChecked();
     await editorPage.setViewportSize({ width: 320, height: 640 });
-    await editorPage.locator("#keepall-capture-ui dialog").evaluate(async (dialog) => {
+    await editor.locator("dialog").evaluate(async (dialog) => {
       await Promise.all(dialog.getAnimations().map((animation) => animation.finished));
     });
     await editorPage.emulateMedia({ colorScheme: "light" });
@@ -681,12 +682,12 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       } });
       await openEditor(tab);
     });
-    const newNamesEditor = newNamesPage.locator("#keepall-capture-ui");
+    const newNamesEditor = newNamesPage.locator("#keepall-capture-ui").frameLocator("iframe");
     await newNamesEditor.getByRole("textbox", { name: "Title" }).fill("New names article");
     await newNamesEditor.getByRole("textbox", { name: "Filter or new collection" }).fill("New collection");
-    await newNamesEditor.getByRole("textbox", { name: "Filter or new collection" }).press("Enter");
+    await newNamesEditor.getByRole("button", { name: "Create collection “New collection”", exact: true }).click();
     await newNamesEditor.getByRole("textbox", { name: "Filter or create tag" }).fill("New tag");
-    await newNamesEditor.getByRole("textbox", { name: "Filter or create tag" }).press("Enter");
+    await newNamesEditor.getByRole("button", { name: "Create tag “New tag”", exact: true }).click();
     await newNamesEditor.getByRole("button", { name: "Save", exact: true }).click();
     await expect.poll(() => worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -1091,7 +1092,8 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
   for (const file of ["org-picker.js", "page-ui.js"]) {
     await page.addScriptTag({ content: await readFile(path.resolve("extension", file), "utf8") });
   }
-  const editor = page.locator("#keepall-capture-ui");
+  const editorHost = page.locator("#keepall-capture-ui");
+  const editor = editorHost.frameLocator("iframe");
   const note = editor.getByRole("textbox", { name: "Your note (optional)" });
   const snapshot = { id: "saved-link", title: "Saved title", noteContent: "Saved note", noteFormat: "plain", collectionIds: [], tagIds: [] };
   const organizations = { type: "organizations", collections: [], tags: [], existingLink: snapshot, collectionId: null, tagIds: [] };
@@ -1103,7 +1105,7 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
   };
   const close = async (name = "Close") => {
     await editor.getByRole("button", { name, exact: true }).click();
-    await expect(editor.locator("dialog")).toHaveCount(0);
+    await expect(editorHost.locator("dialog")).toHaveCount(0);
   };
 
   await open();
@@ -1114,7 +1116,7 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
   await editor.getByRole("textbox", { name: "Filter or create tag" }).fill("New tag");
   await editor.getByRole("textbox", { name: "Filter or create tag" }).press("Enter");
   await note.press("Escape");
-  await expect(editor.locator("dialog")).toHaveCount(0);
+  await expect(editorHost.locator("dialog")).toHaveCount(0);
   await open("https://example.com/other");
   await expect(note).toHaveValue("Saved note");
   await expect(editor.getByText("Draft restored", { exact: true })).toHaveCount(0);

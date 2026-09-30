@@ -51,7 +51,7 @@ export function ItemOrganizerDrawer({
     <OrganizerDrawer
       open={open} onOpenChange={onOpenChange} side={side}
       title={`Organize ${itemTitle}`}
-      description="Add tags or move this item to a collection. Changes apply immediately."
+      description="Move this item to a collection or add tags. Changes apply immediately."
       disabled={disabled}
       tags={<>
         {tags.length > 0 ? (

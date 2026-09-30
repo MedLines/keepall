@@ -64,6 +64,30 @@ async function readImage(page: Page, index: number, offset = 100) {
   await expect.poll(() => row.locator("img").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
 }
 
+test("gallery toolbar keeps actions on the left and the view toggle fixed when switching modes", async ({ page }, testInfo) => {
+  await seedGallery(page);
+  const controls = ["Add images", "Replace", "Remove current image", "Slides view", "Scroll view"];
+  for (const width of [1440, 768, 390, 320, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.getByRole("button", { name: "Slides view", exact: true }).click();
+    await page.getByTestId("item-page-scroll").evaluate(node => { node.scrollTop = 0; });
+    const before = await Promise.all(controls.map(name => page.getByRole("button", { name, exact: true }).boundingBox()));
+    expect(before.every(Boolean)).toBe(true);
+    expect(before[0]!.x).toBeLessThan(before[3]!.x);
+    await page.getByRole("button", { name: "Scroll view", exact: true }).click();
+    await expect(page.getByRole("list", { name: "Images in scroll view" })).toBeVisible();
+    const after = await Promise.all(controls.map(name => page.getByRole("button", { name, exact: true }).boundingBox()));
+    for (let index = 0; index < controls.length; index++) {
+      for (const dimension of ["x", "y", "width", "height"] as const) {
+        expect(after[index]![dimension], `${controls[index]} ${dimension} at ${width}px`).toBeCloseTo(before[index]![dimension], 0);
+      }
+      await expect(page.getByRole("button", { name: controls[index], exact: true })).toBeInViewport();
+    }
+    expect(await page.locator("body").evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`gallery-toolbar-${width}.png`) });
+  }
+});
+
 test("scroll gallery loads nearby images, preserves reading position, and works offline", async ({ page, context }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const errors: string[] = [];

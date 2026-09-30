@@ -192,18 +192,32 @@ function NoMatches({
   return <p className="text-xs text-text-secondary">{children}</p>;
 }
 
-function CreateHint({
+function CreateButton({
   query,
   matchesExisting,
+  kind,
+  disabled,
+  onCreate,
 }: {
   query: string;
   matchesExisting: boolean;
+  kind: "collection" | "tag";
+  disabled: boolean;
+  onCreate: () => void;
 }) {
   if (!query || matchesExisting) {
     return null;
   }
   return (
-    <p className="text-xs text-text-secondary">Enter to create “{query}”</p>
+    <button
+      type="button"
+      className="ui-control inline-flex min-h-9 max-w-full items-center gap-2 self-start px-3 py-1.5 text-left text-xs font-medium disabled:opacity-60"
+      disabled={disabled}
+      onClick={onCreate}
+    >
+      <PlusIcon className="size-4 shrink-0" />
+      <span className="break-words">Create {kind} “{query}”</span>
+    </button>
   );
 }
 
@@ -328,9 +342,12 @@ function CollectionSection({
         totalCount={collectionSuggestions.length}
         visibleCount={visible.length}
       >
-        No matching collections — Enter creates one.
+        No matching collections.
       </NoMatches>
-      <CreateHint query={query} matchesExisting={matchesExisting} />
+      <CreateButton query={query} matchesExisting={matchesExisting} kind="collection" disabled={disabled} onCreate={() => {
+        onSetCollection(query);
+        onCollectionInputChange("");
+      }} />
     </section>
   );
 }
@@ -449,9 +466,12 @@ function TagSection({
         totalCount={tagSuggestions.length}
         visibleCount={visible.length}
       >
-        No matching tags — Enter creates one.
+        No matching tags.
       </NoMatches>
-      <CreateHint query={query} matchesExisting={matchesExisting} />
+      <CreateButton query={query} matchesExisting={matchesExisting || tagNames.some((name) => name.toLowerCase() === query.toLowerCase())} kind="tag" disabled={disabled} onCreate={() => {
+        onAddTag(query);
+        onTagInputChange("");
+      }} />
     </section>
   );
 }

@@ -333,10 +333,7 @@ describe("CaptureHost", () => {
       await screen.findByPlaceholderText("Find or create a collection…"),
       { target: { value: "Work" } },
     );
-    fireEvent.keyDown(screen.getByPlaceholderText("Find or create a collection…"), {
-      key: "Enter",
-      code: "Enter",
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Create collection “Work”" }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(
@@ -427,10 +424,7 @@ describe("CaptureHost", () => {
       await screen.findByPlaceholderText("Find or create a tag…"),
       { target: { value: "new" } },
     );
-    fireEvent.keyDown(screen.getByPlaceholderText("Find or create a tag…"), {
-      key: "Enter",
-      code: "Enter",
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Create tag “new”" }));
     fireEvent.submit(input.closest("form")!);
 
     expect(
