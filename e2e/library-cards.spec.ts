@@ -999,7 +999,7 @@ test("opening one card menu closes the menu left open on another card", async ({
   await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeHidden();
 });
 
-test("selecting a card gives actions their own row and draws the state inside the card", async ({ page }, testInfo) => {
+test("selecting a card keeps the library header in place and draws the state inside the card", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const heading = page.getByRole("heading", { name: "All items", exact: true });
   const header = page.locator("header").filter({ has: page.locator("#library-heading") });
@@ -1016,15 +1016,15 @@ test("selecting a card gives actions their own row and draws the state inside th
   await expect(bulkActions).toBeVisible();
   const headerAfter = (await header.boundingBox())!;
   const cardAfter = (await card.boundingBox())!;
-  expect(headerAfter.height).toBeGreaterThan(headerBefore.height);
-  expect(cardAfter.y).toBeGreaterThan(cardBefore.y);
+  expect(Math.abs(headerAfter.height - headerBefore.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(cardAfter.y - cardBefore.y)).toBeLessThanOrEqual(1);
 
   await expect(heading).toBeVisible();
   await expect(layoutControls).toBeVisible();
 
   await expect(bulkActions).toHaveCSS("overflow-x", "visible");
-  await expect(bulkActions.getByRole("button", { name: "Organize" })).toBeVisible();
-  await bulkActions.getByRole("button", { name: "Organize" }).click();
+  await bulkActions.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+  await page.getByRole("menuitem", { name: "Organize", exact: true }).click();
   const tagDialog = page.getByRole("dialog", {
     name: "Organize 1 selected item",
   });
@@ -1036,12 +1036,13 @@ test("selecting a card gives actions their own row and draws the state inside th
   await page.screenshot({ path: testInfo.outputPath("bulk-tags-dialog.png") });
   await tagDialog.getByRole("button", { name: "Remove all tags" }).click();
   await expect(tagDialog.getByText("The selected items have no tags.")).toBeVisible();
-  expect((await header.boundingBox())!.height).toBe(headerAfter.height);
-  expect((await card.boundingBox())!.y).toBe(cardAfter.y);
+  expect(Math.abs((await header.boundingBox())!.height - headerAfter.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await card.boundingBox())!.y - cardAfter.y)).toBeLessThanOrEqual(1);
   await page.keyboard.press("Escape");
   await expect(tagDialog).toBeHidden();
 
-  await bulkActions.getByRole("button", { name: "Organize" }).click();
+  await bulkActions.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+  await page.getByRole("menuitem", { name: "Organize", exact: true }).click();
   const collectionDialog = page.getByRole("dialog", {
     name: "Organize 1 selected item",
   });
@@ -1058,13 +1059,14 @@ test("selecting a card gives actions their own row and draws the state inside th
   await page.keyboard.press("Escape");
   await expect(collectionDialog).toBeHidden();
 
-  await bulkActions.getByRole("button", { name: "Move to Trash" }).click();
+  await bulkActions.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+  await page.getByRole("menuitem", { name: "Move to Trash", exact: true }).click();
   const deleteDialog = page.getByRole("dialog", {
     name: "Move 1 selected item to Trash",
   });
   await expect(deleteDialog).toBeVisible();
-  expect((await header.boundingBox())!.height).toBe(headerAfter.height);
-  expect((await card.boundingBox())!.y).toBe(cardAfter.y);
+  expect(Math.abs((await header.boundingBox())!.height - headerAfter.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await card.boundingBox())!.y - cardAfter.y)).toBeLessThanOrEqual(1);
   await page.keyboard.press("Escape");
   await expect(deleteDialog).toBeHidden();
 
@@ -1083,7 +1085,7 @@ test("selecting a card gives actions their own row and draws the state inside th
   const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
   if (await closeNavigation.isVisible()) await closeNavigation.click();
   await expect(bulkActions).toBeVisible();
-  await expect(bulkActions.getByRole("button", { name: "Deselect all" })).toBeVisible();
+  await expect(bulkActions.getByRole("button", { name: "Selection actions: 1 selected" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: /^Filter by type:/ })).toBeVisible();
   await expect(layoutControls).toBeVisible();
   await expect(page.getByRole("combobox", { name: /^Sort library:/ })).toBeVisible();

@@ -1377,7 +1377,8 @@ describe("Library view state", () => {
     fireEvent.click(first);
     fireEvent.click(second);
     const bulk = screen.getByRole("region", { name: "Bulk actions" });
-    fireEvent.click(within(bulk).getByRole("button", { name: "Organize" }));
+    fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 2 selected" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Organize" }));
     expect(screen.getByRole("dialog", { name: "Organize 2 selected items" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Add tag to selection"), {
       target: { value: "work" },
@@ -1413,13 +1414,14 @@ describe("Library view state", () => {
     const [first] = screen.getAllByRole("checkbox");
     fireEvent.click(first);
     const bulk = screen.getByRole("region", { name: "Bulk actions" });
-    expect(within(bulk).getByRole("button", { name: "Deselect all" })).toBeInTheDocument();
-    expect(within(bulk).getByRole("button", { name: "Select all" })).toBeInTheDocument();
+    expect(within(bulk).getByRole("button", { name: "Selection actions: 1 selected" })).toBeInTheDocument();
 
-    fireEvent.click(within(bulk).getByRole("button", { name: "Select all" }));
+    fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 1 selected" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Select all" }));
     expect(screen.getByText("2 selected")).toBeInTheDocument();
 
-    fireEvent.click(within(bulk).getByRole("button", { name: "Deselect all" }));
+    fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 2 selected" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Deselect all" }));
     expect(screen.queryByText("2 selected")).not.toBeInTheDocument();
   });
 

@@ -1,9 +1,12 @@
 "use client";
 
+import { Menu } from "@base-ui/react/menu";
+import { useRef } from "react";
 import { OrganizerDrawer, OrganizerTagChip } from "./organizer-drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
+import { ChevronDownIcon } from "./shell-icons";
 
 export type BulkPanel = null | "delete" | "organize";
 
@@ -60,46 +63,87 @@ export function LibraryBulkToolbar({
   onClearSelection,
   onDeletePermanently,
 }: ToolbarProps) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const restoreTriggerFocus = useRef(true);
+  const focusSearchAfterClose = useRef(false);
+
   if (count === 0) {
     return null;
   }
 
+  const destructiveAction = onDeletePermanently ?? (() => onOpenPanel("delete"));
+
+  function runWithoutTriggerRestore(action: () => void) {
+    restoreTriggerFocus.current = false;
+    action();
+  }
+
   return (
-    <div
-      className="flex min-h-10 w-full min-w-0 flex-wrap items-center gap-1.5"
-      role="region"
-      aria-label="Bulk actions"
-    >
-      <span className="shrink-0 pr-1 text-xs font-medium tabular-nums text-text-primary">
-        {count} selected
-      </span>
-      {!allVisibleSelected ? (
-        <button
-          className={BULK_BTN}
-          disabled={busy}
+    <div className="flex min-w-0 items-center gap-1.5" role="region" aria-label="Bulk actions">
+      <Menu.Root
+        modal={false}
+        disabled={busy}
+        onOpenChange={(open, details) => {
+          if (open) {
+            restoreTriggerFocus.current = true;
+            focusSearchAfterClose.current = false;
+          } else if (["outside-press", "focus-out", "sibling-open"].includes(details.reason)) {
+            restoreTriggerFocus.current = false;
+          }
+        }}
+      >
+        <Menu.Trigger
+          ref={triggerRef}
           type="button"
-          onClick={onSelectAllVisible}
+          className="ui-control inline-flex h-10 min-w-0 shrink-0 items-center gap-1.5 rounded-control px-2.5 text-xs font-medium tabular-nums text-text-primary sm:px-3"
+          aria-label={`Selection actions: ${count} selected`}
+          disabled={busy}
         >
-          Select all
+          <span>{count} selected</span>
+          <ChevronDownIcon className="size-4" />
+        </Menu.Trigger>
+        <Menu.Portal>
+          <Menu.Positioner align="start" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
+            <Menu.Popup
+              aria-label="Selection actions"
+              className="ui-popover max-h-[var(--available-height)] min-w-48 max-w-[calc(100vw-1rem)] overflow-y-auto outline-none"
+              finalFocus={() => focusSearchAfterClose.current
+                ? document.getElementById("library-search")
+                : restoreTriggerFocus.current ? triggerRef.current : false}
+            >
+              {!allVisibleSelected ? (
+                <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onSelectAllVisible}>
+                  Select all
+                </Menu.Item>
+              ) : null}
+              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(() => {
+                focusSearchAfterClose.current = true;
+                onClearSelection();
+              })}>
+                Deselect all
+              </Menu.Item>
+              {!onDeletePermanently ? (
+                <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(() => onOpenPanel("organize"))}>
+                  Organize
+                </Menu.Item>
+              ) : null}
+              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-danger data-[highlighted]:bg-bg-danger" onClick={() => runWithoutTriggerRestore(destructiveAction)}>
+                {onDeletePermanently ? "Delete permanently" : "Move to Trash"}
+              </Menu.Item>
+            </Menu.Popup>
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
+      {!onDeletePermanently ? (
+        <button className={`${BULK_BTN} hidden xl:inline-flex`} disabled={busy} type="button" onClick={() => onOpenPanel("organize")}>
+          Organize
         </button>
       ) : null}
       <button
-        className={BULK_BTN}
+        className={`${onDeletePermanently ? `${SHELL_TOP_BTN} text-text-danger` : BULK_BTN} hidden h-10 shrink-0 px-3 text-xs xl:inline-flex`}
         disabled={busy}
         type="button"
-        onClick={onClearSelection}
-      >
-        Deselect all
-      </button>
-      {!onDeletePermanently ? <button
-        className={BULK_BTN} disabled={busy} type="button"
-        onClick={() => onOpenPanel("organize")}
-      >Organize</button> : null}
-      <button
-        className={onDeletePermanently ? `${SHELL_TOP_BTN} h-10 shrink-0 px-3 text-xs text-text-danger` : BULK_BTN}
-        disabled={busy}
-        type="button"
-        onClick={onDeletePermanently ?? (() => onOpenPanel("delete"))}
+        onClick={destructiveAction}
       >
         {onDeletePermanently ? "Delete permanently" : "Move to Trash"}
       </button>

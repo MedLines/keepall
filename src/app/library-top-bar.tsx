@@ -64,7 +64,6 @@ export function LibraryTopBar({
   searchPlaceholder, typeFilterName, onClearSearchFilter, onClearTypeFilter,
   onClearTagFilter, onClearFilters, bulk, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
 }: Props) {
-  const hasSelection = Boolean(bulk && bulk.count > 0);
   const hasSearchFilter = searchQuery.trim().length > 0;
   const hasFilters = hasSearchFilter || typeFilterName !== null || tagFilterName !== null;
 
@@ -74,9 +73,9 @@ export function LibraryTopBar({
   }
 
   return (
-    <header className="library-top-bar relative z-40 flex shrink-0 flex-col gap-6 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
+    <header className="library-top-bar relative z-40 flex shrink-0 flex-col gap-3 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3 sm:flex-nowrap">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           <button
             type="button"
             className="ui-control flex size-10 shrink-0 items-center justify-center text-text-primary"
@@ -100,6 +99,17 @@ export function LibraryTopBar({
               onChange={(event) => onSearchChange(event.target.value)}
             />
           </label>
+          {bulk ? (
+            <LibraryBulkToolbar
+              allVisibleSelected={bulk.allVisibleSelected}
+              busy={bulk.busy}
+              count={bulk.count}
+              onClearSelection={bulk.onClearSelection}
+              onOpenPanel={bulk.onOpenPanel}
+              onSelectAllVisible={bulk.onSelectAllVisible}
+              onDeletePermanently={bulk.onDeletePermanently}
+            />
+          ) : null}
         </div>
         <div className="flex w-full shrink-0 items-center justify-end gap-3 sm:w-auto">
           <ThemeControl compact />
@@ -114,27 +124,14 @@ export function LibraryTopBar({
         </div>
       </div>
 
-      <div className={`grid min-h-[98px] grid-cols-1 content-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${hasSelection ? "" : "sm:min-h-[42px]"}`}>
-        <div className={`${hasSelection ? "hidden sm:flex" : "flex"} row-start-1 min-w-0 items-center gap-3 sm:col-start-1 sm:row-start-1`}>
+      <div className="grid grid-cols-1 content-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+        <div className="row-start-1 flex min-w-0 items-center gap-3 sm:col-start-1 sm:row-start-1">
           <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-[34px] text-text-primary sm:text-[28px]">
             {title}
           </h1>
           <span className="squircle-panel flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} items`}>
             {libraryLoading ? "…" : itemCount}
           </span>
-        </div>
-        <div className={`${hasSelection ? "block sm:col-span-2 sm:col-start-1 sm:row-start-2" : "hidden"} row-start-1 min-w-0`}>
-          {hasSelection && bulk ? (
-            <LibraryBulkToolbar
-              allVisibleSelected={bulk.allVisibleSelected}
-              busy={bulk.busy}
-              count={bulk.count}
-              onClearSelection={bulk.onClearSelection}
-              onOpenPanel={bulk.onOpenPanel}
-              onSelectAllVisible={bulk.onSelectAllVisible}
-              onDeletePermanently={bulk.onDeletePermanently}
-            />
-          ) : null}
         </div>
         <div className="row-start-2 flex shrink-0 items-center justify-end gap-2 sm:col-start-2 sm:row-start-1">
           <LibraryTypeFilterMenu

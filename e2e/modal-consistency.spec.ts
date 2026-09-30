@@ -107,7 +107,8 @@ for (const width of [320, 768, 1024, 1440]) {
     await card.hover();
     await card.locator("[data-selection-indicator]").click();
     const bulk = page.getByRole("region", { name: "Bulk actions", exact: true });
-    await bulk.getByRole("button", { name: "Organize", exact: true }).click();
+    await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+    await page.getByRole("menuitem", { name: "Organize", exact: true }).click();
     drawer = page.getByRole("dialog", { name: "Organize 1 selected item", exact: true });
     await expect(drawer.getByRole("combobox", { name: "Add tag to selection", exact: true })).toBeVisible();
     await expect(drawer.getByRole("combobox", { name: "Move selection to collection", exact: true })).toBeVisible();
@@ -124,7 +125,8 @@ for (const width of [320, 768, 1024, 1440]) {
     await drawer.getByRole("button", { name: "Done", exact: true }).click();
     await expect(drawer).toBeHidden();
     await expect(card.getByRole("button", { name: "UI tests", exact: true })).toBeVisible();
-    await bulk.getByRole("button", { name: "Deselect all", exact: true }).click();
+    await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+    await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
     await card.getByRole("button", { name: "1 tag", exact: true }).click();
     await card.getByRole("button", { name: "Remove tag ui-test", exact: true }).click();
     await expect(card.getByRole("button", { name: "1 tag", exact: true })).toHaveCount(0);

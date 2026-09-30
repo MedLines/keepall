@@ -1,6 +1,54 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import { LibraryBulkPanels } from "./library-bulk-bar";
+import { LibraryBulkPanels, LibraryBulkToolbar } from "./library-bulk-bar";
+
+test("selection toolbar exposes actions in a menu and preserves selection on Escape", async () => {
+  const onClearSelection = vi.fn();
+  const onSelectAllVisible = vi.fn();
+  const onOpenPanel = vi.fn();
+  const { rerender } = render(<>
+    <input id="library-search" aria-label="Search" type="search" />
+    <LibraryBulkToolbar count={0} allVisibleSelected={false} busy={false}
+      onClearSelection={onClearSelection} onOpenPanel={onOpenPanel}
+      onSelectAllVisible={onSelectAllVisible} />
+  </>);
+
+  rerender(<>
+    <input id="library-search" aria-label="Search" type="search" />
+    <LibraryBulkToolbar count={2} allVisibleSelected={false} busy={false}
+      onClearSelection={onClearSelection} onOpenPanel={onOpenPanel}
+      onSelectAllVisible={onSelectAllVisible} />
+  </>);
+  const trigger = screen.getByRole("button", { name: "Selection actions: 2 selected" });
+  trigger.focus();
+  fireEvent.click(trigger);
+  expect(screen.getByRole("menuitem", { name: "Select all" })).toBeInTheDocument();
+  fireEvent.keyDown(document, { key: "Escape" });
+  await waitFor(() => expect(trigger).toHaveFocus());
+  expect(onClearSelection).not.toHaveBeenCalled();
+  fireEvent.click(trigger);
+  fireEvent.click(screen.getByRole("menuitem", { name: "Deselect all" }));
+  expect(onClearSelection).toHaveBeenCalledOnce();
+  await waitFor(() => expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus());
+});
+
+test("selection menu offers only permanent deletion in Trash and disables actions while busy", () => {
+  const onDeletePermanently = vi.fn();
+  const { rerender } = render(<LibraryBulkToolbar count={1} allVisibleSelected busy
+    onClearSelection={vi.fn()} onOpenPanel={vi.fn()}
+    onSelectAllVisible={vi.fn()} onDeletePermanently={onDeletePermanently} />);
+  const trigger = screen.getByRole("button", { name: "Selection actions: 1 selected" });
+  expect(trigger).toBeDisabled();
+  fireEvent.click(trigger);
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  rerender(<LibraryBulkToolbar count={1} allVisibleSelected busy={false}
+    onClearSelection={vi.fn()} onOpenPanel={vi.fn()}
+    onSelectAllVisible={vi.fn()} onDeletePermanently={onDeletePermanently} />);
+  fireEvent.click(trigger);
+  expect(screen.queryByRole("menuitem", { name: "Organize" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Move to Trash" })).not.toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Delete permanently" })).toBeInTheDocument();
+});
 
 test("bulk trash confirmation puts Cancel before the destructive action", () => {
   const onClosePanel = vi.fn();

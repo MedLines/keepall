@@ -70,11 +70,13 @@ test("cards, bulk actions, folders, tags, and Trash share the same confirmation 
     await note.hover();
     await note.locator("[data-selection-indicator]").click();
     const bulk = page.getByRole("region", { name: "Bulk actions" });
-    await bulk.getByRole("button", { name: "Move to Trash" }).click();
+    await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+    await page.getByRole("menuitem", { name: "Move to Trash", exact: true }).click();
     await page.screenshot({ path: testInfo.outputPath(`bulk-trash-${layout.toLowerCase()}.png`) });
     await verifyAndCancel(page, "Move to Trash");
     await expect(bulk).toContainText("1 selected");
-    await bulk.getByRole("button", { name: "Deselect all" }).click();
+    await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+    await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
   }
   for (const [name, action] of [["Folder", "Delete collection"], ["Research", "Delete tag"]]) {
     await page.getByRole("button", { name: `${name} actions`, exact: true }).click();
@@ -89,9 +91,11 @@ test("cards, bulk actions, folders, tags, and Trash share the same confirmation 
   await trashed.hover();
   await trashed.locator("[data-selection-indicator]").click();
   const bulk = page.getByRole("region", { name: "Bulk actions" });
-  await bulk.getByRole("button", { name: "Delete permanently" }).click();
+  await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+  await page.getByRole("menuitem", { name: "Delete permanently", exact: true }).click();
   await verifyAndCancel(page, "Delete permanently");
-  await bulk.getByRole("button", { name: "Deselect all" }).click();
+  await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+  await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
   await page.getByRole("button", { name: "Empty Trash", exact: true }).click();
   await verifyAndCancel(page, "Empty Trash");
   await expect(trashed).toBeVisible();
