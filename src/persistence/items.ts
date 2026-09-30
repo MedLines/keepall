@@ -483,20 +483,47 @@ export async function appendImageAssetToItem(
   id: string,
   input: { bytes: Uint8Array; mimeType: string },
 ): Promise<ImageItem> {
-  const existing = await getDb().items.get(id);
+  return appendImageAssetsToItem(id, [input]);
+}
 
-  if (!existing || existing.deletedAt !== undefined || existing.type !== "image") {
-    throw new Error("Image not found");
+export async function appendImageAssetsToItem(
+  id: string,
+  uploads: { bytes: Uint8Array; mimeType: string }[],
+): Promise<ImageItem> {
+  const prepared: {
+    bytes: Uint8Array;
+    mimeType: string;
+    contentHash: string;
+    thumbnail: Blob | null;
+  }[] = [];
+  for (const upload of uploads) {
+    const mimeType = assertLocalImageBytes(upload.bytes, upload.mimeType);
+    prepared.push({
+      bytes: upload.bytes,
+      mimeType,
+      contentHash: await hashAssetBytes(upload.bytes),
+      thumbnail: await imageThumbnail(upload.bytes, mimeType),
+    });
   }
 
-  const mime = assertLocalImageBytes(input.bytes, input.mimeType);
-  const thumbnail = await imageThumbnail(input.bytes, mime);
-  const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
-  await putThumbnail(asset.id, thumbnail);
-  const current = normalizeItem(existing);
-  const next = appendImageAsset(current, asset.id);
-  await putActiveItem(next);
-  return next;
+  const db = getDb();
+  return db.transaction("rw", db.items, db.assets, db.thumbnails, async () => {
+    const existing = await db.items.get(id);
+    if (!existing || existing.deletedAt !== undefined || existing.type !== "image") {
+      throw new Error("Image not found");
+    }
+    let next = normalizeItem(existing);
+    if (next.type !== "image") throw new Error("Image not found");
+    if (prepared.length === 0) return next;
+
+    for (const upload of prepared) {
+      const asset = await putAsset(upload);
+      await putThumbnail(asset.id, upload.thumbnail);
+      next = appendImageAsset(next, asset.id);
+    }
+    await putActiveItem(next);
+    return next;
+  });
 }
 
 export async function replaceImageAssetAtIndex(

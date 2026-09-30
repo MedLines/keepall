@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildImageFromAssetIds } from "@/domain/image";
 import {
-  appendImageAssetToItem,
+  appendImageAssetsToItem,
   assignCollectionToItem,
   assignTagToItem,
   deleteItem,
@@ -15,6 +15,7 @@ import {
 import { createTag, listTags } from "@/persistence/tags";
 import { createCollection, listCollections } from "@/persistence/collections";
 import { ImageItemPage } from "./image-item-page";
+import { ITEMS_CHANGED_EVENT } from "./items-events";
 
 const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
 
@@ -24,7 +25,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/persistence/items", () => ({
   getItem: vi.fn(),
-  appendImageAssetToItem: vi.fn(),
+  appendImageAssetsToItem: vi.fn(),
   replaceImageAssetAtIndex: vi.fn(),
   removeImageAssetAtIndex: vi.fn(),
   updateImage: vi.fn(),
@@ -53,7 +54,7 @@ vi.mock("./library-item-media", () => ({
 describe("ImageItemPage", () => {
   beforeEach(() => {
     vi.mocked(getItem).mockReset();
-    vi.mocked(appendImageAssetToItem).mockReset();
+    vi.mocked(appendImageAssetsToItem).mockReset();
     vi.mocked(replaceImageAssetAtIndex).mockReset();
     vi.mocked(removeImageAssetAtIndex).mockReset();
     vi.mocked(updateImage).mockReset();
@@ -110,16 +111,16 @@ describe("ImageItemPage", () => {
       { assetIds: ["asset-1"] },
       { id: "image-1", now: 1 },
     );
-    const two = { ...one, assetIds: ["asset-1", "asset-2"] };
     const three = { ...one, assetIds: ["asset-1", "asset-2", "asset-3"] };
     vi.mocked(getItem).mockResolvedValue(one);
-    vi.mocked(appendImageAssetToItem)
-      .mockResolvedValueOnce(two)
+    vi.mocked(appendImageAssetsToItem)
       .mockImplementationOnce(async () => {
         vi.mocked(getItem).mockResolvedValue(three);
         return three;
       });
 
+    const changed = vi.fn();
+    window.addEventListener(ITEMS_CHANGED_EVENT, changed);
     render(<ImageItemPage itemId="image-1" returnHref="/" />);
     await screen.findByRole("button", { name: "View image full screen" });
 
@@ -133,12 +134,38 @@ describe("ImageItemPage", () => {
     });
 
     await waitFor(() => {
-      expect(appendImageAssetToItem).toHaveBeenCalledTimes(2);
+      expect(appendImageAssetsToItem).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(appendImageAssetsToItem).mock.calls[0]?.[1].map(upload => Array.from(upload.bytes))).toEqual([[1, 2], [3, 4]]);
       expect(screen.getByRole("button", { name: "Show image 3" })).toHaveAttribute(
         "aria-current",
         "true",
       );
     });
+    expect(changed).toHaveBeenCalledTimes(1);
+    window.removeEventListener(ITEMS_CHANGED_EVENT, changed);
+  });
+
+  test("an invalid later file leaves the original gallery visible and emits no change event", async () => {
+    const original = buildImageFromAssetIds({ assetIds: ["asset-1"] }, { id: "image-1", now: 1 });
+    vi.mocked(getItem).mockResolvedValue(original);
+    const changed = vi.fn();
+    window.addEventListener(ITEMS_CHANGED_EVENT, changed);
+    try {
+      render(<ImageItemPage itemId="image-1" returnHref="/" />);
+      fireEvent.change(await screen.findByLabelText("Choose images to add"), {
+        target: { files: [
+          new File([new Uint8Array([2])], "valid.png", { type: "image/png" }),
+          new File(["bad"], "invalid.txt", { type: "text/plain" }),
+        ] },
+      });
+      expect(await screen.findByRole("alert")).toHaveTextContent("No images were added.");
+      expect(screen.getByRole("button", { name: "View image full screen" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Show image 2" })).not.toBeInTheDocument();
+      expect(appendImageAssetsToItem).not.toHaveBeenCalled();
+      expect(changed).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener(ITEMS_CHANGED_EVENT, changed);
+    }
   });
 
   test("shows one saved image as a page and opens a separate focused viewer", async () => {

@@ -6,6 +6,7 @@ import { buildNote, NoteValidationError } from "@/domain/note";
 import {
   assignCollectionToItem,
   assignTagToItem,
+  appendImageAssetsToItem,
   deleteItem,
   listItems,
   unassignTagFromItem,
@@ -59,7 +60,7 @@ vi.mock("@/persistence/items", () => ({
   updateNote: vi.fn(),
   updateLink: vi.fn(),
   updateImage: vi.fn(),
-  appendImageAssetToItem: vi.fn(),
+  appendImageAssetsToItem: vi.fn(),
   replaceImageAssetAtIndex: vi.fn(),
   assignTagToItem: vi.fn(),
   unassignTagFromItem: vi.fn(),
@@ -175,6 +176,38 @@ describe("Library", () => {
     await waitFor(() => {
       expect(pinCollection).toHaveBeenCalledWith(collection.id);
     });
+  });
+
+  test("inspect appends selected images in one batch and updates to the last slide", async () => {
+    const image = buildImage({ assetId: "a1", title: "Inspect gallery" }, { id: "i1", now: 1 });
+    const updated = { ...image, assetIds: ["a1", "a2", "a3"] };
+    vi.mocked(listItems).mockResolvedValue([image]);
+    vi.mocked(appendImageAssetsToItem).mockResolvedValue(updated);
+    mockNavigation.push("/?item=i1");
+    const changed = vi.fn();
+    window.addEventListener(ITEMS_CHANGED_EVENT, changed);
+    try {
+      render(<Library />);
+      const add = await screen.findByRole("button", { name: "Add images" });
+      const input = add.parentElement!.querySelector('input[type="file"][multiple]')!;
+      fireEvent.change(input, { target: { files: [
+        new File([new Uint8Array([2])], "second.png", { type: "image/png" }),
+        new File(["bad"], "invalid.txt", { type: "text/plain" }),
+      ] } });
+      expect(await screen.findByRole("alert")).toHaveTextContent("No images were added.");
+      expect(appendImageAssetsToItem).not.toHaveBeenCalled();
+      expect(changed).not.toHaveBeenCalled();
+      fireEvent.change(input, { target: { files: [
+        new File([new Uint8Array([2])], "second.png", { type: "image/png" }),
+        new File([new Uint8Array([3])], "third.png", { type: "image/png" }),
+      ] } });
+      await waitFor(() => expect(appendImageAssetsToItem).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(appendImageAssetsToItem).mock.calls[0]?.[1].map(upload => Array.from(upload.bytes))).toEqual([[2], [3]]);
+      await waitFor(() => expect(mockNavigation.replace).toHaveBeenCalledWith("/?item=i1&slide=2", { scroll: false }));
+      expect(changed).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener(ITEMS_CHANGED_EVENT, changed);
+    }
   });
 
   test("renders persisted pinned collections before unpinned collections", async () => {

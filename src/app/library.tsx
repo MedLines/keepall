@@ -49,7 +49,7 @@ import {
   unpinItemInCollection,
 } from "@/persistence/collections";
 import {
-  appendImageAssetToItem,
+  appendImageAssetsToItem,
   assignCollectionToItem,
   clearCollectionOnItem,
   assignTagToItem,
@@ -117,7 +117,7 @@ import {
   LIBRARY_ITEM_DRAG_MIME,
   resolveLibraryDragIds,
 } from "./library-drag";
-import { ImageValidationError, clampImageSlideIndex, type ImageItem } from "@/domain/image";
+import { ImageValidationError, clampImageSlideIndex } from "@/domain/image";
 import { isPreviewEnrichPaused } from "./preview-enrich-pause";
 import { itemPageHref } from "./item-page-navigation";
 import type { ImageDetailsDraft, LinkDetailsDraft, NoteDetailsDraft, VideoDetailsDraft } from "./item-edit-dialog";
@@ -1063,27 +1063,26 @@ export function Library() {
     setGalleryError(null);
 
     try {
-      let updated: ImageItem | null = null;
+      const uploads = [];
       for (const file of files) {
         assertLocalImageFile(file);
         const bytes = new Uint8Array(await file.arrayBuffer());
-        updated = await appendImageAssetToItem(itemId, {
+        uploads.push({
           bytes,
           mimeType: file.type || "application/octet-stream",
         });
       }
-      if (updated) {
-        setItems((previous) =>
-          previous.map((entry) => (entry.id === itemId ? updated! : entry)),
-        );
-        updateView({ item: itemId, slide: updated.assetIds.length - 1 });
-      }
+      const updated = await appendImageAssetsToItem(itemId, uploads);
+      setItems((previous) =>
+        previous.map((entry) => (entry.id === itemId ? updated : entry)),
+      );
+      updateView({ item: itemId, slide: updated.assetIds.length - 1 });
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch (caught) {
       if (caught instanceof ImageValidationError) {
-        setGalleryError(caught.message);
+        setGalleryError(`${caught.message} No images were added.`);
       } else {
-        setGalleryError("Couldn't add images.");
+        setGalleryError("Couldn't add images. No images were added.");
       }
     } finally {
       setPendingMutation(null);
