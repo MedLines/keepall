@@ -73,6 +73,10 @@ type Props = {
   onEmptyTrash?: () => void;
   browseType: LibraryTypeFilter | null;
   browseTagId: string | null;
+  collectionsView?: boolean;
+  tagsView?: boolean;
+  onGoCollections?: () => void;
+  onGoTags?: () => void;
   collections: Collection[];
   pinnedCollectionIds: string[];
   tags: Tag[];
@@ -105,6 +109,7 @@ export function LibraryShell({
   browseTrash = false, trashCount = 0, onGoTrash, onEmptyTrash,
   browseType,
   browseTagId,
+  collectionsView = false, tagsView = false, onGoCollections, onGoTags,
   collections,
   pinnedCollectionIds,
   tags,
@@ -181,7 +186,8 @@ export function LibraryShell({
 
   const allItemsActive =
     browseCollectionId === null &&
-    !browseUnsorted && !browseTrash &&
+    !browseUnsorted && !browseTrash && !collectionsView && !tagsView &&
+    browseTagId === null &&
     browseType === null;
 
   const unsortedActive = browseUnsorted;
@@ -240,9 +246,11 @@ export function LibraryShell({
             {contentExpanded ? (
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <CollectionsSection
+                  onSeeAll={onGoCollections ? () => { onGoCollections(); closeOnMobile(); } : undefined}
+                  overviewActive={collectionsView}
                   rail={!isMobile && !expanded ? {
                     label: collectionsCollapsedLabel,
-                    active: browseCollectionId !== null,
+                    active: browseCollectionId !== null || collectionsView,
                     onExpand: () => onPanelOpenChange(true),
                   } : undefined}
                   collectionsOpen={collectionsOpen}
@@ -276,9 +284,11 @@ export function LibraryShell({
                 />
 
                 <TagsSection
+                  onSeeAll={onGoTags ? () => { onGoTags(); closeOnMobile(); } : undefined}
+                  overviewActive={tagsView}
                   rail={!isMobile && !expanded ? {
                     label: tagsCollapsedLabel,
-                    active: browseTagId !== null,
+                    active: browseTagId !== null || tagsView,
                     onExpand: () => onPanelOpenChange(true),
                   } : undefined}
                   tagsOpen={tagsOpen}
@@ -470,6 +480,7 @@ function ShellNavLink({ expanded, label, href, icon }: {
 
 function CollectionsSection({
   rail,
+  onSeeAll, overviewActive = false,
   collectionsOpen,
   onCollectionsOpenChange,
   collectionFilter,
@@ -494,6 +505,8 @@ function CollectionsSection({
   onDeleteCollection,
 }: {
   rail?: SidebarRailAction;
+  onSeeAll?: () => void;
+  overviewActive?: boolean;
   collectionsOpen: boolean;
   onCollectionsOpenChange: (open: boolean) => void;
   collectionFilter: string;
@@ -530,6 +543,9 @@ function CollectionsSection({
   return (
     <CollapsibleSection
       rail={rail}
+      onSeeAll={onSeeAll}
+      overviewActive={overviewActive}
+      overviewLabel="All collections"
       title="Collections"
       icon={<CollectionIcon />}
       open={collectionsOpen}
@@ -671,6 +687,7 @@ function CollectionsSection({
 
 function TagsSection({
   rail,
+  onSeeAll, overviewActive = false,
   tagsOpen,
   onTagsOpenChange,
   tagFilter,
@@ -685,6 +702,8 @@ function TagsSection({
   onDeleteTag,
 }: {
   rail?: SidebarRailAction;
+  onSeeAll?: () => void;
+  overviewActive?: boolean;
   tagsOpen: boolean;
   onTagsOpenChange: (open: boolean) => void;
   tagFilter: string;
@@ -701,6 +720,9 @@ function TagsSection({
   return (
     <CollapsibleSection
       rail={rail}
+      onSeeAll={onSeeAll}
+      overviewActive={overviewActive}
+      overviewLabel="All tags"
       icon={<HashIcon />}
       title={
         libraryLoading
@@ -763,7 +785,10 @@ function SidebarSectionScroll({ activeId, filter, itemCount, children }: {
     const bounds = container.getBoundingClientRect();
     const row = selected.getBoundingClientRect();
     // Clear the scroll-fade's min(12%, 40px) band plus a little breathing room.
-    const inset = Math.min(container.clientHeight * 0.12, 40) + 8;
+    const inset = Math.min(
+      Math.min(container.clientHeight * 0.12, 40) + 8,
+      Math.max(0, (bounds.height - row.height) / 2),
+    );
     const top = bounds.top + inset;
     const bottom = bounds.bottom - inset;
     if (row.top < top) container.scrollTop += row.top - top;
@@ -1118,6 +1143,7 @@ function NavCount({ value }: { value: number }) {
 
 function CollapsibleSection({
   rail,
+  onSeeAll, overviewActive = false, overviewLabel,
   title,
   icon,
   open,
@@ -1125,6 +1151,9 @@ function CollapsibleSection({
   children,
 }: {
   rail?: SidebarRailAction;
+  onSeeAll?: () => void;
+  overviewLabel?: string;
+  overviewActive?: boolean;
   title: string;
   icon: ReactNode;
   open: boolean;
@@ -1169,6 +1198,11 @@ function CollapsibleSection({
           className={`flex min-h-0 flex-1 flex-col gap-1 overflow-hidden ${rail ? "invisible" : ""}`}
         >
           {children}
+          {onSeeAll ? <div className="library-sidebar-overview-footer shrink-0 px-3 pt-1">
+            <button type="button" aria-current={overviewActive ? "page" : undefined} onClick={onSeeAll} className={`flex min-h-8 w-full items-center gap-2 rounded-control-md px-3 text-xs font-medium outline-none hover:bg-bg-active focus-visible:outline-2 focus-visible:outline-border-focus ${overviewActive ? "bg-bg-selected text-text-primary" : "bg-bg-raised text-text-secondary"}`}>
+              {overviewLabel === "All collections" ? <CollectionIcon className="size-3.5" /> : <HashIcon className="size-3.5" />}<span>{overviewLabel}</span>
+            </button>
+          </div> : null}
         </div>
       ) : null}
     </div>

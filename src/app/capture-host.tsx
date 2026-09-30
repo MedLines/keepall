@@ -46,7 +46,7 @@ import {
 } from "./capture-link-conflict-dialog";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
-import { OPEN_CAPTURE_EVENT } from "./capture-events";
+import { getCaptureCollectionName, OPEN_CAPTURE_EVENT } from "./capture-events";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_ACTIVE, SHELL_TOP_BTN_IDLE } from "./shell-styles";
@@ -185,6 +185,7 @@ export function CaptureHost() {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const saveInFlightRef = useRef(false);
   const savedItemIdRef = useRef<string | null>(null);
+  const defaultCollectionNameRef = useRef<string | null>(null);
   const isActive = state.status !== "idle";
   const classified = classifyCapture(state.input).type;
   const kind = state.override ?? classified;
@@ -198,6 +199,7 @@ export function CaptureHost() {
 
   useEffect(() => {
     function openCapture() {
+      defaultCollectionNameRef.current = getCaptureCollectionName();
       setCaptureSide(
         document.documentElement.dir === "rtl" ? "left" : "right",
       );
@@ -233,7 +235,7 @@ export function CaptureHost() {
     setLinkConflict(null);
     setDraftTagNames([]);
     setTagInput("");
-    setDraftCollectionName(null);
+    setDraftCollectionName(defaultCollectionNameRef.current);
     setCollectionInput("");
 
     let cancelled = false;

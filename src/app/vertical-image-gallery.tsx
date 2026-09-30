@@ -15,7 +15,7 @@ export function VerticalImageGallery({ item, active, listRef, scrollRef, preserv
   onOpen: (index: number) => void;
 }) {
   return (
-    <ol ref={listRef} hidden={!active} aria-label="Images in scroll view" className="space-y-6">
+    <ol ref={listRef} hidden={!active} aria-label="Images in scroll view" className="isolate space-y-6">
       {item.assetIds.map((assetId, index) => (
         <li key={`${assetId}-${index}`} data-gallery-index={index} data-gallery-asset={assetId}>
           <ScrollImage item={item} assetId={assetId} index={index} active={active} scrollRef={scrollRef} preserveScrollAnchor={preserveScrollAnchor} onOpen={() => onOpen(index)} />

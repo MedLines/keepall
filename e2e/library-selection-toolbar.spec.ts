@@ -81,31 +81,35 @@ test("browse controls follow Search while filters and selection actions share th
     const headerBefore = (await header.boundingBox())!;
     const cardBefore = (await firstCard.boundingBox())!;
 
-    if (!(await menuTrigger.isVisible())) {
+    if (await page.getByRole("region", { name: "Bulk actions" }).count() === 0) {
       await firstCard.getByRole("checkbox").focus();
       await page.keyboard.press("Space");
     }
-    await expect(menuTrigger).toBeVisible();
+    const bulk = page.getByRole("region", { name: "Bulk actions" });
+    await expect(bulk).toBeVisible();
     const headerAfter = (await header.boundingBox())!;
     const cardAfter = (await firstCard.boundingBox())!;
     const activeBox = (await activeFilters.boundingBox())!;
-    const bulk = page.getByRole("region", { name: "Bulk actions" });
     const toolbarBox = (await bulk.boundingBox())!;
     expect(Math.abs(headerAfter.height - headerBefore.height)).toBeLessThanOrEqual(1);
     expect(Math.abs(cardAfter.y - cardBefore.y)).toBeLessThanOrEqual(1);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    if (width >= 1280) {
+    const compact = await menuTrigger.isVisible();
+    if (width === 320) expect(compact).toBe(true);
+    if (width === 1440) expect(compact).toBe(false);
+    if (!compact) {
       expect(activeBox.x + activeBox.width).toBeLessThanOrEqual(toolbarBox.x + 1);
       await expect(bulk.getByRole("button", { name: "Select all", exact: true })).toBeVisible();
       await expect(bulk.getByRole("button", { name: "Deselect all", exact: true })).toBeVisible();
     }
     const directOrganize = bulk.locator("button").filter({ hasText: "Organize" });
     const directDestructive = bulk.locator("button").filter({ hasText: "Move to Trash" });
-    if (width < 1280) {
+    if (compact) {
       await expect(directOrganize).toBeHidden();
       await expect(directDestructive).toBeHidden();
       await expect(bulk.locator("button").filter({ hasText: "Deselect all" })).toBeHidden();
     } else {
+      await expect(menuTrigger).toHaveCount(0);
       await expect(directOrganize).toBeVisible();
       await expect(directDestructive).toBeVisible();
     }
@@ -114,13 +118,19 @@ test("browse controls follow Search while filters and selection actions share th
     }
 
     if (width !== 1440) {
-      await menuTrigger.click();
-      await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
+      if (compact) {
+        await menuTrigger.click();
+        await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
+      } else {
+        await bulk.getByRole("button", { name: "Deselect all", exact: true }).click();
+      }
       await expect(page.getByRole("region", { name: "Bulk actions" })).toHaveCount(0);
       await expect(search).toBeFocused();
     }
   }
 
+  await page.setViewportSize({ width: 320, height: 900 });
+  await expect(menuTrigger).toBeVisible();
   await menuTrigger.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("menuitem", { name: "Organize", exact: true })).toBeVisible();

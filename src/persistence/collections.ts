@@ -1,6 +1,5 @@
 import {
   buildCollection,
-  clearCollectionId,
   normalizeCollection,
   normalizeCollectionName,
   pinItemId,
@@ -9,7 +8,6 @@ import {
   type CreateCollectionInput,
   CollectionValidationError,
 } from "@/domain/collection";
-import { unpinCollectionId } from "@/domain/library-preferences";
 import { normalizeItem, type Item } from "@/domain/item";
 import { getDb } from "./db";
 
@@ -67,36 +65,37 @@ export async function renameCollection(
 
 /** Deletes the collection row and clears that id from every item (Unsorted). */
 export async function deleteCollection(collectionId: string): Promise<void> {
-  const existing = await getDb().collections.get(collectionId);
-  if (!existing) {
-    throw new Error("Collection not found");
-  }
+  return deleteCollections([collectionId]);
+}
 
+export async function deleteCollections(collectionIds: string[]): Promise<void> {
+  const ids = [...new Set(collectionIds)];
+  if (ids.length === 0) return;
+  const removed = new Set(ids);
   const db = getDb();
   await db.transaction("rw", db.collections, db.items, db.preferences, async () => {
+    const existing = await db.collections.bulkGet(ids);
+    if (existing.some(collection => !collection)) throw new Error("Collection not found");
     const items = await db.items.toArray();
     const now = Date.now();
     for (const raw of items) {
       const item = normalizeItem(raw);
-      if (!item.collectionIds.includes(collectionId)) {
+      if (!item.collectionIds.some(id => removed.has(id))) {
         continue;
       }
       const next: Item = {
         ...item,
-        collectionIds: clearCollectionId(item.collectionIds, collectionId),
+        collectionIds: item.collectionIds.filter(id => !removed.has(id)),
         updatedAt: now,
       };
       await db.items.put(next);
     }
-    await db.collections.delete(collectionId);
+    await db.collections.bulkDelete(ids);
     const preferences = await db.preferences.get("library");
-    if (preferences?.pinnedCollectionIds.includes(collectionId)) {
+    if (preferences?.pinnedCollectionIds.some(id => removed.has(id))) {
       await db.preferences.put({
         ...preferences,
-        pinnedCollectionIds: unpinCollectionId(
-          preferences.pinnedCollectionIds,
-          collectionId,
-        ),
+        pinnedCollectionIds: preferences.pinnedCollectionIds.filter(id => !removed.has(id)),
       });
     }
   });

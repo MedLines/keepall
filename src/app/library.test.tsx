@@ -1418,7 +1418,7 @@ describe("Library view state", () => {
 
     fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 1 selected" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Select all" }));
-    expect(screen.getByText("2 selected")).toBeInTheDocument();
+    expect(bulk).toHaveTextContent("2 selected");
 
     fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 2 selected" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Deselect all" }));
@@ -1432,7 +1432,7 @@ describe("Library view state", () => {
     await screen.findByText("A persisted note");
     const [checkbox] = screen.getAllByRole("checkbox");
     fireEvent.click(checkbox);
-    expect(screen.getByText("1 selected")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Bulk actions" })).toHaveTextContent("1 selected");
 
     fireEvent.keyDown(window, { key: "Escape" });
 

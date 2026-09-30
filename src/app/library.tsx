@@ -16,6 +16,7 @@ import {
   isItemPinnedInCollection,
   type Collection,
 } from "@/domain/collection";
+import { buildOrganizationPreviews } from "@/domain/organization-preview";
 import {
   itemInCollection,
   resolveItemCollectionNames,
@@ -27,6 +28,7 @@ import {
   libraryViewHref,
   mergeLibraryViewState,
   parseLibraryViewState,
+  sortLibraryItems,
   type LibraryTypeFilter,
   type LibraryViewState,
 } from "@/domain/library-view";
@@ -40,6 +42,7 @@ import { orderCollectionsByPins } from "@/domain/library-preferences";
 import {
   createCollection,
   deleteCollection,
+  deleteCollections,
   listCollections,
   pinItemInCollection,
   renameCollection,
@@ -61,7 +64,7 @@ import {
   updateNote,
   saveNoteWithImages,
 } from "@/persistence/items";
-import { createTag, deleteTag, listTags } from "@/persistence/tags";
+import { createTag, deleteTag, deleteTags, listTags } from "@/persistence/tags";
 import { updateVideoDetails } from "@/persistence/videos";
 import {
   getLibraryPreferences,
@@ -88,6 +91,8 @@ import { useLibraryTrashActions } from "./library-trash-actions";
 import { LibraryShell } from "./library-shell";
 import { countSidebarItems } from "./library-sidebar-counts";
 import { LibraryMainGrid } from "./library-main-grid";
+import { LibraryOrganizationOverview } from "./library-organization-overview";
+import { setCaptureCollectionName } from "./capture-events";
 import type { MasonryPlacement } from "./library-masonry";
 import {
   pausePreviewEnrichForNavigation,
@@ -277,6 +282,12 @@ export function Library() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [organizationDelete, setOrganizationDelete] = useState<{
+    kind: "collections" | "tags";
+    ids: string[];
+  } | null>(null);
+  const [organizationDeleteOpen, setOrganizationDeleteOpen] = useState(false);
+  const [organizationDeleteError, setOrganizationDeleteError] = useState<string | null>(null);
   const [bulkPanel, setBulkPanel] = useState<BulkPanel>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [bulkTagDraft, setBulkTagDraft] = useState("");
@@ -509,6 +520,8 @@ export function Library() {
 
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
+    setOrganizationDeleteOpen(false);
+    setOrganizationDeleteError(null);
     setBulkPanel(null);
     setBulkError(null);
     setBulkTagDraft("");
@@ -543,6 +556,10 @@ export function Library() {
     browseCollectionId !== null
       ? (collectionsById.get(browseCollectionId) ?? null)
       : null;
+  useLayoutEffect(() => {
+    setCaptureCollectionName(view.trash ? null : browseCollection?.name ?? null);
+    return () => setCaptureCollectionName(null);
+  }, [browseCollection, view.trash]);
   const browseTagId =
     view.tag !== null && tagsById.has(view.tag) ? view.tag : null;
   const browseTagName =
@@ -573,6 +590,22 @@ export function Library() {
     () => orderCollectionsByPins(collections, pinnedCollectionIds),
     [collections, pinnedCollectionIds],
   );
+  const collectionFolders = useMemo(
+    () => view.collections ? buildOrganizationPreviews(
+      orderCollectionsByPins(sortLibraryItems(collections, view.sort), pinnedCollectionIds),
+      items,
+      "",
+      "collections",
+    ) : [],
+    [collections, items, pinnedCollectionIds, view.collections, view.sort],
+  );
+  const tagCards = useMemo(
+    () => view.tags ? buildOrganizationPreviews(sortLibraryItems(tags, view.sort), items, "", "tags") : [],
+    [tags, items, view.tags, view.sort],
+  );
+  const overviewEntries = view.collections ? collectionFolders : tagCards;
+  const visibleOverviewEntries = overviewEntries.filter(entry => entry.organization.name.toLowerCase().includes(normalizeSearchQuery(view.q)));
+  const overviewCount = visibleOverviewEntries.length;
   const headerItemCount = useMemo(
     () =>
       filterAndSortLibraryItems(
@@ -595,17 +628,50 @@ export function Library() {
       ),
     [browseItems, tags, view, collectionsById, browseIndexEpoch],
   );
-  const browseScopeKey = `${Boolean(view.trash)}|${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
+  const browseScopeKey = `${Boolean(view.tags)}|${Boolean(view.collections)}|${Boolean(view.trash)}|${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
+  const selectionEntries = view.collections || view.tags
+    ? visibleOverviewEntries.map(entry => entry.organization)
+    : visibleItems;
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
   const emptyStateKind = getEmptyStateKind(view, hasActiveSearch);
   const emptyStateMessage = getEmptyStateMessage(view, hasActiveSearch, browseCollectionId);
   const allVisibleSelected =
-    visibleItems.length > 0 &&
-    visibleItems.every((item) => selectedIds.has(item.id));
+    selectionEntries.length > 0 &&
+    selectionEntries.every(entry => selectedIds.has(entry.id));
 
   function selectAllVisible() {
-    setSelectedIds(new Set(visibleItems.map((item) => item.id)));
+    setSelectedIds(new Set(selectionEntries.map(entry => entry.id)));
   }
+
+  function requestOrganizationDelete(ids: string[]) {
+    if (mutationBusy || ids.length === 0) return;
+    setOrganizationDelete({ kind: view.collections ? "collections" : "tags", ids });
+    setOrganizationDeleteError(null);
+    setOrganizationDeleteOpen(true);
+  }
+
+  async function confirmOrganizationDelete() {
+    if (!organizationDelete || mutationBusy) return;
+    setPendingMutation({ op: "bulk-delete" });
+    setOrganizationDeleteError(null);
+    try {
+      if (organizationDelete.kind === "collections") {
+        await deleteCollections(organizationDelete.ids);
+      } else {
+        await deleteTags(organizationDelete.ids);
+      }
+      clearSelection();
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      libraryHeadingRef.current?.focus();
+    } catch (error) {
+      setOrganizationDeleteError(error instanceof Error ? error.message : "Could not delete. Try again.");
+    } finally {
+      setPendingMutation(null);
+    }
+  }
+
+  const organizationDeleteNoun = organizationDelete?.kind === "collections" ? "folders" : "tags";
+  const organizationDeleteCount = organizationDelete?.ids.length ?? 0;
 
   const selectionActive = selectedIds.size > 0;
   const itemsById = new Map(items.map((item) => [item.id, item]));
@@ -650,6 +716,8 @@ export function Library() {
       const current = viewRef.current;
       const next = mergeLibraryViewState(current, patch);
       const scopeChanged =
+        next.tags !== current.tags ||
+        next.collections !== current.collections ||
         next.trash !== current.trash ||
         next.collection !== current.collection ||
         next.unsorted !== current.unsorted ||
@@ -1504,7 +1572,7 @@ export function Library() {
     }
   }
 
-  const viewTitle = view.trash ? "Trash" : libraryViewTitle(
+  const viewTitle = view.collections ? "Collections" : view.tags ? "Tags" : view.trash ? "Trash" : libraryViewTitle(
     browseCollection,
     browseUnsorted,
     browseType,
@@ -1621,7 +1689,7 @@ export function Library() {
       <LibraryTopBar
         headingRef={libraryHeadingRef}
         title={viewTitle}
-        itemCount={headerItemCount}
+        itemCount={view.collections || view.tags ? overviewCount : headerItemCount}
         searchQuery={searchQuery}
         onSearchChange={(value) => updateView({ q: value })}
         searchPlaceholder={view.trash ? "Search Trash…" : browseCollection ? `Search in ${browseCollection.name}…` : browseUnsorted ? "Search Unsorted…" : "Search your library…"}
@@ -1629,6 +1697,8 @@ export function Library() {
         onSortChange={(sort) => updateView({ sort }, "push")}
         layout={browseLayout}
         onLayoutChange={(layout) => updateView({ layout }, "replace")}
+        collectionsView={Boolean(view.collections)}
+        tagsView={Boolean(view.tags)}
         typeFilter={browseType}
         typeCounts={typeFilterCounts}
         trash={Boolean(view.trash)}
@@ -1644,6 +1714,15 @@ export function Library() {
         panelOpen={panelOpen}
         onPanelOpenChange={setPanelOpen}
         libraryLoading={loadState === "loading"}
+        selection={view.collections || view.tags ? {
+          count: selectedIds.size,
+          allVisibleSelected,
+          busy: mutationBusy,
+          onClearSelection: clearSelection,
+          onSelectAllVisible: selectAllVisible,
+          onDelete: () => requestOrganizationDelete([...selectedIds]),
+          deleteLabel: view.collections ? "Delete folders" : "Delete tags",
+        } : undefined}
         bulk={{
           allVisibleSelected,
           busy: mutationBusy,
@@ -1701,6 +1780,10 @@ export function Library() {
           onEmptyTrash={() => trashActions.requestEmpty(trashedItems)}
           browseType={browseType}
           browseTagId={browseTagId}
+          collectionsView={Boolean(view.collections)}
+          tagsView={Boolean(view.tags)}
+          onGoCollections={() => updateView({ collections: true, tags: false, collection: null, unsorted: false, type: null, tag: null, trash: false, item: null, slide: 0, q: "" }, "push")}
+          onGoTags={() => updateView({ tags: true, collections: false, collection: null, unsorted: false, type: null, tag: null, trash: false, item: null, slide: 0, q: "" }, "push")}
           collections={orderedCollections}
           pinnedCollectionIds={pinnedCollectionIds}
           tags={tags}
@@ -1712,7 +1795,7 @@ export function Library() {
           libraryLoading={loadState === "loading"}
           onGoAll={() =>
             updateView(
-              { trash: false, collection: null, unsorted: false, type: null },
+              { collections: false, tags: false, trash: false, collection: null, unsorted: false, type: null },
               "push",
             )
           }
@@ -1772,7 +1855,21 @@ export function Library() {
                   {previewEnrichProgress.total}
                 </p>
               ) : null}
-              {visibleItems.length === 0 ? (
+              {view.collections || view.tags ? (
+                <LibraryOrganizationOverview
+                  key={view.collections ? "collections" : "tags"}
+                  entries={overviewEntries}
+                  layout={browseLayout}
+                  kind={view.collections ? "collections" : "tags"}
+                  query={searchQuery}
+                  selectedIds={selectedIds}
+                  busy={mutationBusy}
+                  onToggleSelect={toggleItemSelected}
+                  onDelete={requestOrganizationDelete}
+                  hrefFor={(id) => libraryViewHref(pathname, mergeLibraryViewState(view, view.collections ? { collection: id, q: "", item: null, slide: 0 } : { tag: id, q: "", item: null, slide: 0 }))}
+                  onOpen={(id) => updateView(view.collections ? { collection: id, q: "" } : { tag: id, q: "" }, "push")}
+                />
+              ) : visibleItems.length === 0 ? (
                 <LibraryEmptyState
                   kind={emptyStateKind}
                   message={emptyStateMessage}
@@ -1943,6 +2040,22 @@ export function Library() {
         />
         </div>
         {trashActions.dialog}
+        <ConfirmDialog
+          open={organizationDeleteOpen}
+          title={`Delete ${organizationDeleteCount} ${organizationDeleteNoun}?`}
+          description={organizationDelete?.kind === "collections"
+            ? "Items stay in your library and become Unsorted if they have no other collection."
+            : "These tags will be removed from every item. Items stay in your library."}
+          confirmLabel={`Delete ${organizationDeleteNoun}`}
+          pendingLabel="Deleting…"
+          busy={pendingMutation?.op === "bulk-delete"}
+          error={organizationDeleteError}
+          onConfirm={() => void confirmOrganizationDelete()}
+          onOpenChange={open => {
+            setOrganizationDeleteOpen(open);
+            if (!open) setOrganizationDeleteError(null);
+          }}
+        />
         <ConfirmDialog
           open={deleteItemTarget !== null}
           title="Move this item to Trash?"

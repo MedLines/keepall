@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu } from "@base-ui/react/menu";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { OrganizerDrawer, OrganizerTagChip } from "./organizer-drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
@@ -42,16 +42,19 @@ export type LibraryBulkBarProps = {
 
 const BULK_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-10 shrink-0 px-3 text-xs`;
 
-type ToolbarProps = Pick<
+export type LibraryBulkToolbarProps = Pick<
   LibraryBulkBarProps,
   | "count"
   | "allVisibleSelected"
   | "busy"
-  | "onOpenPanel"
   | "onSelectAllVisible"
   | "onClearSelection"
   | "onDeletePermanently"
->;
+> & {
+  onOpenPanel?: LibraryBulkBarProps["onOpenPanel"];
+  onDelete?: () => void;
+  deleteLabel?: string;
+};
 
 /** Compact bulk buttons for the top bar (selection must be active). */
 export function LibraryBulkToolbar({
@@ -62,16 +65,51 @@ export function LibraryBulkToolbar({
   onSelectAllVisible,
   onClearSelection,
   onDeletePermanently,
-}: ToolbarProps) {
+  onDelete,
+  deleteLabel,
+}: LibraryBulkToolbarProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const restoreTriggerFocus = useRef(true);
   const focusSearchAfterClose = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(true);
+  const [preferredWidth, setPreferredWidth] = useState<number>();
 
+  useEffect(() => {
+    const container = containerRef.current;
+    const actions = actionsRef.current;
+    if (!container || !actions || typeof ResizeObserver === "undefined") return;
+    const row = container.closest<HTMLElement>("[data-library-toolbar-row]");
+    const left = row?.querySelector<HTMLElement>("[data-library-toolbar-left]");
+    const measure = () => {
+      const width = actions.scrollWidth;
+      const rowWidth = row?.clientWidth ?? container.clientWidth;
+      const leftChildren = left ? Array.from(left.children) as HTMLElement[] : [];
+      const leftGap = left ? Number.parseFloat(getComputedStyle(left).columnGap) || 0 : 0;
+      const rowGap = row ? Number.parseFloat(getComputedStyle(row).columnGap) || 0 : 0;
+      const leftWidth = leftChildren.reduce((sum, child) => sum + child.scrollWidth, 0)
+        + Math.max(0, leftChildren.length - 1) * leftGap;
+      const available = row && getComputedStyle(row).flexDirection === "row"
+        ? rowWidth - leftWidth - rowGap
+        : row ? rowWidth : container.clientWidth;
+      setPreferredWidth(width);
+      setCompact(available < width);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    observer.observe(actions);
+    if (row) observer.observe(row);
+    if (left instanceof HTMLElement) observer.observe(left);
+    measure();
+    return () => observer.disconnect();
+  }, [count, allVisibleSelected, onOpenPanel, onDelete, onDeletePermanently, deleteLabel]);
   if (count === 0) {
     return null;
   }
 
-  const destructiveAction = onDeletePermanently ?? (() => onOpenPanel("delete"));
+  const destructiveAction = onDelete ?? onDeletePermanently ?? (() => onOpenPanel?.("delete"));
+  const destructiveLabel = deleteLabel ?? (onDeletePermanently ? "Delete permanently" : "Move to Trash");
 
   function runWithoutTriggerRestore(action: () => void) {
     restoreTriggerFocus.current = false;
@@ -79,8 +117,8 @@ export function LibraryBulkToolbar({
   }
 
   return (
-    <div className="flex min-w-0 items-center gap-1.5" role="region" aria-label="Bulk actions">
-      <Menu.Root
+    <div ref={containerRef} className="relative flex min-w-0 max-w-full justify-end" style={{ width: compact ? undefined : preferredWidth }} role="region" aria-label="Bulk actions">
+      {compact ? <Menu.Root
         modal={false}
         disabled={busy}
         onOpenChange={(open, details) => {
@@ -126,39 +164,40 @@ export function LibraryBulkToolbar({
               })}>
                 Deselect all
               </Menu.Item>
-              {!onDeletePermanently ? (
+              {onOpenPanel && !onDeletePermanently && !onDelete ? (
                 <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(() => onOpenPanel("organize"))}>
                   Organize
                 </Menu.Item>
               ) : null}
               <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-danger data-[highlighted]:bg-bg-danger" onClick={() => runWithoutTriggerRestore(destructiveAction)}>
-                {onDeletePermanently ? "Delete permanently" : "Move to Trash"}
+                {destructiveLabel}
               </Menu.Item>
             </Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>
-      </Menu.Root>
-      <div className="hidden items-center gap-1.5 xl:flex">
+      </Menu.Root> : null}
+      <div ref={actionsRef} inert={compact} aria-hidden={compact} className={`inline-flex w-max items-center gap-1.5 ${compact ? "pointer-events-none invisible absolute right-0 top-0" : ""}`}>
+        <span className="mr-1 shrink-0 text-xs tabular-nums text-text-secondary">{count} selected</span>
         {!allVisibleSelected ? (
           <button className={BULK_BTN} disabled={busy} type="button" onClick={onSelectAllVisible}>
             Select all
           </button>
         ) : null}
-        <button className={BULK_BTN} disabled={busy} type="button" onClick={onClearSelection}>
+        <button className={BULK_BTN} disabled={busy} type="button" onClick={() => { document.getElementById("library-search")?.focus(); onClearSelection(); }}>
           Deselect all
         </button>
-        {!onDeletePermanently ? (
+        {onOpenPanel && !onDeletePermanently && !onDelete ? (
           <button className={BULK_BTN} disabled={busy} type="button" onClick={() => onOpenPanel("organize")}>
             Organize
           </button>
         ) : null}
         <button
-          className={`${onDeletePermanently ? `${SHELL_TOP_BTN} text-text-danger` : BULK_BTN} h-10 shrink-0 px-3 text-xs`}
+          className={`${onDeletePermanently || onDelete ? `${SHELL_TOP_BTN} text-text-danger` : BULK_BTN} h-10 shrink-0 px-3 text-xs`}
           disabled={busy}
           type="button"
           onClick={destructiveAction}
         >
-          {onDeletePermanently ? "Delete permanently" : "Move to Trash"}
+          {destructiveLabel}
         </button>
       </div>
     </div>
@@ -248,7 +287,7 @@ export function LibraryBulkPanels({
     <OrganizerDrawer
       open={panel !== null || Boolean(error)}
       title={bulkPanelTitle(panel, count)}
-      description="Add tags or move the selected items to a collection. Changes apply immediately."
+      description="Move the selected items to a collection or add tags. Changes apply immediately."
       disabled={busy}
       error={error}
       onOpenChange={(open) => { if (!open) onClosePanel(); }}

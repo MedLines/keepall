@@ -195,6 +195,21 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
   await expect.poll(() => tagsScroll.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
   expect(await sidebar.evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
 
+  for (const [index, name] of [[0, "collections"], [1, "tags"]] as const) {
+    const scroll = sectionScrolls.nth(index);
+    const seeAll = sidebar.getByRole("button", { name: `All ${name}`, exact: true });
+    const buttonBefore = (await seeAll.boundingBox())!;
+    const title = sidebar.locator(`[data-sidebar-anchor^="${name === "collections" ? "Collections" : "Tags"}"]`);
+    const titleBefore = (await title.boundingBox())!;
+    const scrollBounds = (await scroll.boundingBox())!;
+    expect(buttonBefore.y).toBeGreaterThanOrEqual(scrollBounds.y + scrollBounds.height);
+    await scroll.evaluate(element => { element.scrollTop = element.scrollHeight; });
+    expect((await seeAll.boundingBox())!.y).toBeCloseTo(buttonBefore.y, 1);
+    expect((await title.boundingBox())!.y).toBeCloseTo(titleBefore.y, 1);
+    expect((await title.boundingBox())!.width).toBeCloseTo(titleBefore.width, 1);
+    await scroll.evaluate(element => { element.scrollTop = 0; });
+  }
+
   const settings = sidebar.getByRole("link", { name: "Settings" });
   const settingsY = (await settings.boundingBox())!.y;
   const tagHeight = await tagsScroll.evaluate(element => element.clientHeight);

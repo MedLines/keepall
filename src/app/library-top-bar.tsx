@@ -11,6 +11,7 @@ import {
   LibraryBulkPanels,
   LibraryBulkToolbar,
   type LibraryBulkBarProps,
+  type LibraryBulkToolbarProps,
 } from "./library-bulk-bar";
 import {
   CloseIcon,
@@ -54,31 +55,23 @@ type Props = {
   panelOpen: boolean;
   onPanelOpenChange: (open: boolean) => void;
   bulk?: LibraryBulkBarProps;
+  selection?: LibraryBulkToolbarProps;
+  collectionsView?: boolean;
+  tagsView?: boolean;
   libraryLoading?: boolean;
 };
 
-function LibraryBulkActions({ bulk }: { bulk: LibraryBulkBarProps | undefined }) {
-  if (!bulk) return null;
-  if (bulk.count > 0) {
-    return (
-      <LibraryBulkToolbar
-        allVisibleSelected={bulk.allVisibleSelected}
-        busy={bulk.busy}
-        count={bulk.count}
-        onClearSelection={bulk.onClearSelection}
-        onOpenPanel={bulk.onOpenPanel}
-        onSelectAllVisible={bulk.onSelectAllVisible}
-        onDeletePermanently={bulk.onDeletePermanently}
-      />
-    );
-  }
-  if (bulk.visibleCount > 0) {
+function LibraryBulkActions({ bulk, selection, itemCount }: { bulk: LibraryBulkBarProps | undefined; selection?: LibraryBulkToolbarProps; itemCount: number }) {
+  const toolbar = selection ?? bulk;
+  if (!toolbar) return null;
+  if (toolbar.count > 0) return <LibraryBulkToolbar {...toolbar} />;
+  if (itemCount > 0) {
     return (
       <button
         className="ui-control inline-flex h-10 shrink-0 items-center justify-center px-3 text-xs font-medium text-text-primary"
-        disabled={bulk.busy}
+        disabled={toolbar.busy}
         type="button"
-        onClick={bulk.onSelectAllVisible}
+        onClick={toolbar.onSelectAllVisible}
       >
         Select all
       </button>
@@ -92,7 +85,7 @@ export function LibraryTopBar({
   sort, onSortChange, layout, onLayoutChange, panelOpen, onPanelOpenChange,
   typeFilter, typeCounts, onTypeFilterChange, tagFilterName,
   searchPlaceholder, typeFilterName, onClearSearchFilter, onClearTypeFilter,
-  onClearTagFilter, onClearFilters, bulk, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
+  onClearTagFilter, onClearFilters, bulk, selection, collectionsView = false, tagsView = false, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
 }: Props) {
   const hasSearchFilter = searchQuery.trim().length > 0;
   const hasFilters = hasSearchFilter || typeFilterName !== null || tagFilterName !== null;
@@ -124,18 +117,18 @@ export function LibraryTopBar({
               className="ui-field h-10 w-full pl-10 pr-3 text-sm"
               id="library-search"
               type="search"
-              placeholder={searchPlaceholder ?? (trash ? "Search Trash…" : "Search your library…")}
+              placeholder={collectionsView ? "Search collections…" : tagsView ? "Search tags…" : searchPlaceholder ?? (trash ? "Search Trash…" : "Search your library…")}
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
             />
           </label>
           <div className="flex shrink-0 items-center gap-2">
-            <LibraryTypeFilterMenu
+            {!collectionsView && !tagsView ? <LibraryTypeFilterMenu
               value={typeFilter}
               counts={typeCounts}
               loading={libraryLoading}
               onChange={onTypeFilterChange}
-            />
+            /> : null}
             <ShellTopMenu
               ariaLabel="Sort library"
               iconOnly
@@ -180,13 +173,13 @@ export function LibraryTopBar({
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:flex-1">
+      <div data-library-toolbar-row className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div data-library-toolbar-left className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:min-w-[220px] sm:flex-1">
           <div className="flex min-w-0 items-center gap-3">
           <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-[34px] text-text-primary sm:text-[28px]">
             {title}
           </h1>
-          <span className="squircle-panel flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} items`}>
+          <span className="squircle-panel flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} ${collectionsView ? "collections" : tagsView ? "tags" : "items"}`}>
             {libraryLoading ? "…" : itemCount}
           </span>
           </div>
@@ -214,12 +207,12 @@ export function LibraryTopBar({
           ) : null}
         </div>
 
-        <div className="flex justify-end sm:shrink-0">
-          <LibraryBulkActions bulk={bulk} />
+        <div className="flex min-w-0 max-w-full justify-end sm:shrink">
+          <LibraryBulkActions bulk={bulk} selection={selection} itemCount={itemCount} />
         </div>
       </div>
 
-      {bulk && (bulk.panel !== null || bulk.error) ? <LibraryBulkPanels {...bulk} /> : null}
+      {!selection && bulk && (bulk.panel !== null || bulk.error) ? <LibraryBulkPanels {...bulk} /> : null}
     </header>
   );
 }

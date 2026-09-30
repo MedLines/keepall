@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { TagValidationError } from "@/domain/tag";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { assignTagToItem, createNote, listItems, unassignTagFromItem } from "./items";
-import { createTag, deleteTag, listTags } from "./tags";
+import { createTag, deleteTag, deleteTags, listTags } from "./tags";
 
 describe("tags persistence", () => {
   beforeEach(async () => {
@@ -78,4 +78,32 @@ describe("tags persistence", () => {
     expect(await listTags()).toEqual([]);
     expect((await listItems())[0]?.tagIds).toEqual([]);
   });
+  test("bulk deletion removes selected tags from active and trashed items while retaining other tags", async () => {
+    const first = await createTag({ name: "first" });
+    const second = await createTag({ name: "second" });
+    const keep = await createTag({ name: "keep" });
+    const active = await createNote({ content: "Active" });
+    const trashed = await createNote({ content: "Trashed" });
+    await getDb().items.update(active.id, { tagIds: [first.id, second.id, keep.id] });
+    await getDb().items.update(trashed.id, { tagIds: [second.id], deletedAt: 10 });
+
+    await deleteTags([first.id, second.id, first.id]);
+
+    expect(await listTags()).toEqual([keep]);
+    expect((await getDb().items.get(active.id))?.tagIds).toEqual([keep.id]);
+    expect(await getDb().items.get(trashed.id)).toMatchObject({ tagIds: [], deletedAt: 10 });
+    expect(await getDb().items.count()).toBe(2);
+  });
+
+  test("bulk deletion with a missing tag leaves all memberships intact", async () => {
+    const tag = await createTag({ name: "keep" });
+    const note = await createNote({ content: "Keep" });
+    await assignTagToItem(note.id, tag.id);
+
+    await expect(deleteTags([tag.id, "missing"])).rejects.toThrow("Tag not found");
+
+    expect(await listTags()).toEqual([tag]);
+    expect((await getDb().items.get(note.id))?.tagIds).toEqual([tag.id]);
+  });
+
 });

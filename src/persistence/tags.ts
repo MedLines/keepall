@@ -1,6 +1,5 @@
 import {
   buildTag,
-  removeTagId,
   type CreateTagInput,
   type Tag,
 } from "@/domain/tag";
@@ -28,27 +27,32 @@ export async function listTags(): Promise<Tag[]> {
 
 /** Deletes the tag row and removes its id from every item in one transaction. */
 export async function deleteTag(tagId: string): Promise<void> {
+  return deleteTags([tagId]);
+}
+
+export async function deleteTags(tagIds: string[]): Promise<void> {
+  const ids = [...new Set(tagIds)];
+  if (ids.length === 0) return;
+  const removed = new Set(ids);
   const db = getDb();
-  const existing = await db.tags.get(tagId);
-  if (!existing) {
-    throw new Error("Tag not found");
-  }
 
   await db.transaction("rw", db.tags, db.items, async () => {
+    const existing = await db.tags.bulkGet(ids);
+    if (existing.some(tag => !tag)) throw new Error("Tag not found");
     const items = await db.items.toArray();
     const now = Date.now();
     for (const raw of items) {
       const item = normalizeItem(raw);
-      if (!item.tagIds.includes(tagId)) {
+      if (!item.tagIds.some(id => removed.has(id))) {
         continue;
       }
       const next: Item = {
         ...item,
-        tagIds: removeTagId(item.tagIds, tagId),
+        tagIds: item.tagIds.filter(id => !removed.has(id)),
         updatedAt: now,
       };
       await db.items.put(next);
     }
-    await db.tags.delete(tagId);
+    await db.tags.bulkDelete(ids);
   });
 }
