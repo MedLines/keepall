@@ -129,7 +129,18 @@ test("validated review merges newer details and replacement requires confirmatio
   await review.getByRole("button", { name: "Replace library" }).click();
   const confirm = page.getByRole("dialog", { name: "Replace library?" });
   await expect(confirm).toContainText("4 items (3 active, 1 in Trash)");
+  await expect.poll(() => confirm.evaluate((dialog) => dialog.contains(document.activeElement))).toBe(true);
+  for (let press = 0; press < 6; press += 1) {
+    await page.keyboard.press("Tab");
+    await expect.poll(() => confirm.evaluate((dialog) => dialog.contains(document.activeElement)),
+      { message: `Tab ${press + 1} stays inside confirmation` }).toBe(true);
+  }
   await confirm.getByRole("button", { name: "Cancel" }).click();
+  await expect.poll(() => review.evaluate((dialog) => dialog.contains(document.activeElement))).toBe(true);
+  for (let press = 0; press < 3; press += 1) {
+    await page.keyboard.press("Tab");
+    await expect.poll(() => review.evaluate((dialog) => dialog.contains(document.activeElement))).toBe(true);
+  }
   expect((await readItems()).length).toBe(4);
   await review.getByRole("button", { name: "Replace library" }).click();
   await confirm.getByRole("button", { name: "Confirm replacement" }).click();
