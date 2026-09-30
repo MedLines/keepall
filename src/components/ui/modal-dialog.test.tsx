@@ -14,3 +14,13 @@ test("Escape and close are blocked while busy and work again when idle", async (
   fireEvent.keyDown(dialog, { key: "Escape" });
   await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
 });
+
+test("dismissal interception leaves the parent open until the caller accepts it", async () => {
+  const onOpenChange = vi.fn();
+  const onDismiss = vi.fn((details: { cancel: () => void }) => details.cancel());
+  render(<ModalDialog open onOpenChange={onOpenChange} onDismiss={onDismiss} title="Edit draft" description="Unsaved draft" footer={<button>Save</button>} />);
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  await waitFor(() => expect(onDismiss).toHaveBeenCalledOnce());
+  expect(onOpenChange).not.toHaveBeenCalled();
+  expect(screen.getByRole("dialog", { name: "Edit draft" })).toBeVisible();
+});

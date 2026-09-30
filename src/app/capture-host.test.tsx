@@ -161,6 +161,47 @@ describe("CaptureHost", () => {
     });
   }
 
+  test("clipboard prefill and the initial folder are pristine, and text reversion clears dirty state", async () => {
+    setCaptureCollectionName("Reading");
+    vi.mocked(readClipboardImageAndText).mockResolvedValue({ image: null, text: "Clipboard note" });
+    const input = await openDraft("Changed");
+    fireEvent.change(input, { target: { value: "Clipboard note" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Save to Keepall" })).toBeNull());
+    expect(screen.queryByRole("dialog", { name: "Discard unsaved changes?" })).toBeNull();
+  });
+
+  test("organization input alone guards dismissal and footer Cancel still discards immediately", async () => {
+    const input = await openDraft("");
+    fireEvent.change(screen.getByRole("textbox", { name: "Tags" }), { target: { value: "Unsubmitted tag" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+    const confirmation = await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    fireEvent.click(within(confirmation).getByRole("button", { name: "Keep editing" }));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Tags" })).toHaveValue("Unsubmitted tag"));
+    fireEvent.click(screen.getByRole("button", { name: /^Cancel$/ }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Save to Keepall" })).toBeNull());
+    expect(createNote).not.toHaveBeenCalled();
+  });
+
+  test("image preview survives Keep editing and is revoked once after confirmed discard", async () => {
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockClear();
+    const input = await openDraft("");
+    const fileInput = input.closest("form")!.querySelector('input[type="file"]')!;
+    fireEvent.change(fileInput, { target: { files: [new File([new Uint8Array([137, 80, 78, 71])], "draft.png", { type: "image/png" })] } });
+    await screen.findByLabelText("1 image attached");
+    const preview = screen.getByLabelText("1 image attached").querySelector("img")!.src;
+    fireEvent.click(screen.getByRole("button", { name: "Close drawer" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Keep editing" }));
+    await waitFor(() => expect(screen.getByLabelText("1 image attached")).toBeVisible());
+    expect(revoke).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("1 image attached").querySelector("img")!.src).toBe(preview);
+    fireEvent.keyDown(input, { key: "Escape" });
+    fireEvent.click(await screen.findByRole("button", { name: "Discard changes" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Save to Keepall" })).toBeNull());
+    expect(revoke).toHaveBeenCalledExactlyOnceWith(preview);
+    revoke.mockRestore();
+  });
+
   test("opens on Alt+K and ignores Ctrl+K", async () => {
     render(<CaptureHost />);
 

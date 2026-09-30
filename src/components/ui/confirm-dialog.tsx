@@ -9,6 +9,9 @@ type ConfirmDialogProps = {
   title: string;
   description: string;
   confirmLabel: string;
+  cancelLabel?: string;
+  cancelRef?: RefObject<HTMLButtonElement | null>;
+  returnFocusRef?: RefObject<HTMLElement | null>;
   pendingLabel?: string;
   busy?: boolean;
   error?: string | null;
@@ -22,6 +25,9 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  cancelLabel = "Cancel",
+  cancelRef,
+  returnFocusRef,
   pendingLabel = "Working…",
   busy = false,
   error = null,
@@ -46,7 +52,8 @@ export function ConfirmDialog({
         <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
           <Dialog.Popup
             className="confirm-dialog-popup ui-popover w-full max-w-[28rem] overflow-hidden p-0 outline-none"
-            initialFocus={confirmRef}
+            initialFocus={cancelRef ?? confirmRef}
+            finalFocus={returnFocusRef ? () => returnFocusRef.current?.isConnected ? returnFocusRef.current : true : undefined}
           >
             <header className="flex items-start gap-4 border-b border-border-control px-6 py-5">
               <div className="min-w-0 flex-1">
@@ -67,9 +74,9 @@ export function ConfirmDialog({
             </header>
             <div className="flex flex-col gap-4 px-6 py-5">
               {error ? <p className="text-sm text-text-danger" role="alert">{error}</p> : null}
-              <div className="flex justify-end gap-2">
-                <Dialog.Close className="ui-control min-h-10 px-4 text-sm font-medium" disabled={busy}>
-                  Cancel
+              <div className="flex flex-wrap justify-end gap-2">
+                <Dialog.Close ref={cancelRef} className="ui-control min-h-10 px-4 text-sm font-medium" disabled={busy}>
+                  {cancelLabel}
                 </Dialog.Close>
                 <button
                   ref={confirmRef}

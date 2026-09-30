@@ -432,3 +432,41 @@ test("Ctrl+Enter saves a note from the textarea", async ({ page }) => {
     page.getByRole("heading", { name: "From keyboard shortcut", exact: true }),
   ).toBeVisible();
 });
+
+for (const width of [320, 1440]) {
+  test(`unsaved capture dismissal retains draft through confirmation and discards at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    const navigation = page.getByRole("button", { name: "Close navigation", exact: true });
+    if (await navigation.isVisible()) await navigation.click();
+    await openCaptureFromShortcut(page);
+    const drawer = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+    const input = drawer.getByRole("textbox", { name: "Link, note, or image", exact: true });
+    await input.fill("Capture draft to keep");
+    await drawer.getByRole("button", { name: "Close drawer", exact: true }).click();
+    const confirmation = page.getByRole("dialog", { name: "Discard unsaved changes?", exact: true });
+    await expect(confirmation.getByRole("button", { name: "Keep editing", exact: true })).toBeFocused();
+    await confirmation.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue("Capture draft to keep");
+    await input.press("Escape");
+    await confirmation.getByRole("button", { name: "Keep editing", exact: true }).click();
+    await expect(input).toBeFocused();
+    if (width === 1440) {
+      await page.mouse.click(12, 450);
+      await expect(confirmation).toBeVisible();
+      await page.mouse.click(12, 450);
+      await expect(confirmation).toBeHidden();
+      await expect(input).toBeFocused();
+    }
+    await input.press("Escape");
+    await confirmation.getByRole("button", { name: "Discard changes", exact: true }).click();
+    await expect(drawer).toBeHidden();
+    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    await openCaptureFromShortcut(page);
+    await expect(input).toHaveValue("");
+    await input.press("Escape");
+    await expect(drawer).toBeHidden();
+    await expect(confirmation).toBeHidden();
+  });
+}

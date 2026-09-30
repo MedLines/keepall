@@ -56,6 +56,8 @@ import {
 } from "@/domain/link";
 import type { CaptureOrgDrafts } from "@/domain/capture-org";
 import { SideDrawer } from "@/components/ui/side-drawer";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useDirtyDismissal } from "./use-dirty-dismissal";
 import { NoteContent } from "./note-content";
 import { NoteEditorControls } from "./note-editor-controls";
 
@@ -180,6 +182,7 @@ export function CaptureHost() {
   const [previewKind, setPreviewKind] = useState<"link" | "note" | "image" | "video" | null>(null);
   const [linkNoteDraft, setLinkNoteDraft] = useState("");
   const [videoNoteDraft, setVideoNoteDraft] = useState("");
+  const [baseline, setBaseline] = useState<{ input: string; images: string[]; collection: string | null } | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -196,6 +199,23 @@ export function CaptureHost() {
     savedItemId !== null ||
     imageUpload !== null || videoPreparing;
   const orgLocked = state.status === "saving" || state.status === "reading";
+
+  function dismiss() {
+    resetSession();
+    dispatch({ type: "dismiss" });
+  }
+  const dirty = baseline !== null && (
+    state.input !== baseline.input || state.override !== null ||
+    linkNoteDraft !== "" || videoNoteDraft !== "" || noteFormat !== "plain" ||
+    tagInput !== "" || collectionInput !== "" || draftTagNames.length > 0 ||
+    draftCollectionName !== baseline.collection || videoDraft !== null ||
+    JSON.stringify(imageDrafts.map((draft) => draft.previewUrl)) !== JSON.stringify(baseline.images)
+  );
+  const dismissal = useDirtyDismissal(dirty && state.status !== "saved", dismiss);
+
+  function establishBaseline(input: string, images: string[] = []) {
+    setBaseline({ input, images, collection: defaultCollectionNameRef.current });
+  }
 
   useEffect(() => {
     function openCapture() {
@@ -249,10 +269,12 @@ export function CaptureHost() {
           void setDraftFromBlob(image, text, "reading");
           return;
         }
+        establishBaseline(text);
         dispatch({ type: "clipboard", text });
       })
       .catch(() => {
         if (!cancelled) {
+          establishBaseline("");
           dispatch({ type: "clipboardUnavailable" });
         }
       });
@@ -342,6 +364,7 @@ export function CaptureHost() {
   }
 
   function resetSession() {
+    setBaseline(null);
     savedItemIdRef.current = null;
     setSavedItemId(null);
     setLinkConflict(null);
@@ -418,6 +441,10 @@ export function CaptureHost() {
         return;
       }
       setImageDrafts((previous) => [...previous, ...drafts]);
+      if (status === "reading") {
+        const fields = textFieldsFromAccompanyingText(accompanyingText);
+        establishBaseline(fields.sourceUrl || fields.caption || accompanyingText, drafts.map((draft) => draft.previewUrl));
+      }
       dispatchDraftText(accompanyingText, status);
     } catch (caught) {
       if (generation !== imageReadGenerationRef.current) return;
@@ -425,6 +452,7 @@ export function CaptureHost() {
       imageUploadErrorRef.current = message;
       setImageUploadError(message);
       if (status === "reading") {
+        establishBaseline("");
         dispatch({ type: "clipboardUnavailable" });
       }
     } finally {
@@ -755,15 +783,16 @@ export function CaptureHost() {
           eventDetails.cancel();
           return;
         }
-        resetSession();
-        dispatch({ type: "dismiss" });
+        dismissal.requestDismiss(eventDetails);
       }}
     >
       <form
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        onFocusCapture={dismissal.rememberFocus}
         onSubmit={onSubmit}
         onPaste={onPaste}
         onKeyDown={(event) => {
+          if ((event.target as HTMLElement).closest("[role=dialog]") !== event.currentTarget.closest("[role=dialog]")) return;
           if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
             event.preventDefault();
             event.currentTarget.requestSubmit();
@@ -1055,6 +1084,7 @@ export function CaptureHost() {
           )}
         </div>
       </form>
+      <ConfirmDialog {...dismissal.confirmationProps} />
       <CaptureLinkConflictDialog
         conflict={linkConflict}
         busy={state.status === "saving"}

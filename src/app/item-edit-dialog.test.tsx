@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import { buildNote } from "@/domain/note";
-import { NoteItemEditDialog } from "./item-edit-dialog";
+import { buildLink } from "@/domain/link";
+import { LinkItemEditDialog, NoteItemEditDialog } from "./item-edit-dialog";
 
 describe("shared note edit dialog", () => {
   test("saves exactly once with Ctrl+Enter", () => {
@@ -43,4 +44,43 @@ describe("shared note edit dialog", () => {
     expect(onSave).toHaveBeenCalledWith({ content: "# My heading", format: "markdown", images: [] });
   });
 
+});
+
+test("dirty note Escape keeps the draft until discard is confirmed", async () => {
+  const onOpenChange = vi.fn();
+  render(<NoteItemEditDialog item={buildNote({ content: "Original" })} open busy={false} error={null} onOpenChange={onOpenChange} onSave={vi.fn()} />);
+  const editor = screen.getByRole("textbox", { name: "Note content" });
+  fireEvent.change(editor, { target: { value: "Unsaved" } });
+  fireEvent.keyDown(editor, { key: "Escape" });
+  expect(await screen.findByRole("dialog", { name: "Discard unsaved changes?" })).toBeVisible();
+  expect(onOpenChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+  expect(editor).toHaveValue("Unsaved");
+  fireEvent.keyDown(editor, { key: "Escape" });
+  fireEvent.click(await screen.findByRole("button", { name: "Discard changes" }));
+  expect(onOpenChange).toHaveBeenCalledWith(false);
+});
+
+
+test("media edits use an immutable baseline, with immediate footer cancel and pristine reversion", async () => {
+  const item = buildLink({ url: "https://example.com", title: "Original" });
+  const onOpenChange = vi.fn();
+  const props = { item, open: true, busy: false, error: null, onOpenChange, onSave: vi.fn() };
+  const { rerender } = render(<LinkItemEditDialog {...props} />);
+  const title = screen.getByRole("textbox", { name: "Title" });
+  fireEvent.change(title, { target: { value: "Changed" } });
+  rerender(<LinkItemEditDialog {...props} item={{ ...item, title: "Changed" }} />);
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  const confirmation = await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+  await waitFor(() => expect(within(confirmation).getByRole("button", { name: "Keep editing" })).toHaveFocus());
+  fireEvent.keyDown(confirmation, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Discard unsaved changes?" })).toBeNull());
+  expect(onOpenChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: /^Cancel$/ }));
+  expect(onOpenChange).toHaveBeenCalledOnce();
+  onOpenChange.mockClear();
+  fireEvent.change(title, { target: { value: "Original" } });
+  fireEvent.keyDown(title, { key: "Escape" });
+  expect(onOpenChange).toHaveBeenCalledWith(false);
+  expect(screen.queryByRole("dialog", { name: "Discard unsaved changes?" })).toBeNull();
 });

@@ -1,7 +1,8 @@
 "use client";
 
-import { Dialog } from "@base-ui/react/dialog";
 import { useEffect, useRef, useState } from "react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useDirtyDismissal } from "./use-dirty-dismissal";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { assertLocalImageBytes, assertLocalImageFile, ImageValidationError } from "@/domain/image";
 import { NoteEditor } from "./note-editor";
@@ -80,10 +81,13 @@ function MediaItemEditDialog({
   const [format, setFormat] = useState(initialFormat);
   const [sourceUrl, setSourceUrl] = useState(initialSourceUrl);
   const [preview, setPreview] = useState(false);
+  const [baseline] = useState({ title: initialTitle, notes: initialNotes, format: initialFormat, sourceUrl: initialSourceUrl });
+  const dismissal = useDirtyDismissal(title !== baseline.title || notes !== baseline.notes || format !== baseline.format || sourceUrl !== baseline.sourceUrl, () => onOpenChange(false));
 
   return (
     <ModalDialog
       open={open} busy={busy} onOpenChange={onOpenChange} size="editor"
+      onDismiss={dismissal.requestDismiss} onFocusCapture={dismissal.rememberFocus}
       title={`Edit ${media} details`}
       description={media === "image"
         ? "Change the title, notes, or source. Gallery images stay unchanged."
@@ -92,12 +96,13 @@ function MediaItemEditDialog({
           : "Change the URL, title, or your note."}
       onSubmit={() => onSave({ title, notes, format, sourceUrl })}
       footer={<>
-        <Dialog.Close
+        <button
+          type="button" onClick={() => onOpenChange(false)}
           className="ui-control flex min-h-10 items-center justify-center px-4 text-sm font-medium"
           disabled={busy}
         >
           Cancel
-        </Dialog.Close>
+        </button>
         <button
           className="ui-primary flex min-h-10 items-center justify-center px-4 rounded-control-md text-sm font-medium disabled:opacity-60"
           type="submit"
@@ -157,6 +162,7 @@ function MediaItemEditDialog({
           {error}
         </p>
       ) : null}
+      <ConfirmDialog {...dismissal.confirmationProps} />
     </ModalDialog>
   );
 }
@@ -224,6 +230,8 @@ export function NoteItemEditDialog({ item, onSave, open, busy, error, onOpenChan
   const [preparing, setPreparing] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const disabled = busy || preparing;
+  const [baseline] = useState({ content: item.content, format: item.format === "markdown" ? "markdown" : "plain" });
+  const dismissal = useDirtyDismissal(content !== baseline.content || format !== baseline.format || images.some((image) => noteImageAssetIds(content).includes(image.id)), () => onOpenChange(false));
 
   useEffect(() => () => {
     generationRef.current += 1;
@@ -289,6 +297,7 @@ export function NoteItemEditDialog({ item, onSave, open, busy, error, onOpenChan
   return (
     <ModalDialog
       open={open} busy={disabled} onOpenChange={onOpenChange}
+      onDismiss={dismissal.requestDismiss} onFocusCapture={dismissal.rememberFocus}
       title="Edit note" description="Change the note, its format, or images." size="editor"
       onSubmit={save}
       footer={<>
@@ -307,6 +316,7 @@ export function NoteItemEditDialog({ item, onSave, open, busy, error, onOpenChan
         onAddImages={(files, start, end) => void addImages(files, start, end)}
         onRemoveImage={removeImage} pendingImageUrls={new Map(images.map((image) => [image.id, image.url]))}
       />
+      <ConfirmDialog {...dismissal.confirmationProps} />
     </ModalDialog>
   );
 }

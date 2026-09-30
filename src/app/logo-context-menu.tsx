@@ -12,7 +12,6 @@ export function LogoContextMenu({ children }: { children: ReactElement }) {
         <ContextMenu.Positioner sideOffset={4} collisionPadding={8} className="z-[60]">
           <ContextMenu.Popup aria-label="Keepall navigation" className="ui-popover w-48 outline-none">
             {[
-              ["/", "Library homepage"],
               ["/about", "About"],
               ["/help", "Help"],
             ].map(([href, label]) => (

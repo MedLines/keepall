@@ -323,3 +323,37 @@ for (const clearHidden of [false, true]) {
     }
   });
 }
+
+for (const width of [320, 1440]) {
+  test(`unsaved editor dismissal keeps nested focus and saves once at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const card = await createNote(page);
+    await cardAction(page, card, "Edit");
+    const dialog = page.getByRole("dialog", { name: "Edit note", exact: true });
+    const editor = dialog.getByRole("textbox", { name: "Note content", exact: true });
+    await editor.fill("Unsaved revised note");
+    await editor.press("Escape");
+    const confirmation = page.getByRole("dialog", { name: "Discard unsaved changes?", exact: true });
+    const keep = confirmation.getByRole("button", { name: "Keep editing", exact: true });
+    await expect(keep).toBeFocused();
+    await expect(confirmation.getByRole("button", { name: "Discard changes", exact: true })).toBeInViewport();
+    expect(await confirmation.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await page.keyboard.press("Shift+Tab");
+    await expect(confirmation.getByRole("button", { name: "Close", exact: true })).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(confirmation.getByRole("button", { name: "Discard changes", exact: true })).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(confirmation).toBeHidden();
+    await expect(editor).toBeFocused();
+    await expect(editor).toHaveValue("Unsaved revised note");
+    await dialog.getByRole("button", { name: "Close", exact: true }).click();
+    await keep.click();
+    await expect(editor).toBeFocused();
+    await editor.press("Control+Enter");
+    await expect(dialog).toBeHidden();
+    await expect(confirmation).toBeHidden();
+    await expect(page.getByRole("heading", { name: "Unsaved revised note", exact: true })).toHaveCount(1);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Unsaved revised note", exact: true })).toHaveCount(1);
+  });
+}
