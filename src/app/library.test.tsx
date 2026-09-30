@@ -1425,6 +1425,58 @@ describe("Library view state", () => {
     expect(screen.queryByText("2 selected")).not.toBeInTheDocument();
   });
 
+  test("search keeps hidden selections until Clear hidden removes only those IDs", async () => {
+    vi.mocked(getLibraryPreferences).mockResolvedValue({ id: "library", pinnedCollectionIds: [] });
+    const one = buildNote({ content: "one" }, { id: "n1", now: 1 });
+    const two = buildNote({ content: "two" }, { id: "n2", now: 2 });
+    vi.mocked(listItems).mockResolvedValue([one, two]);
+    render(<Library />);
+    await screen.findByText("one");
+    for (const checkbox of screen.getAllByRole("checkbox")) fireEvent.click(checkbox);
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "one" } });
+    const bulk = screen.getByRole("region", { name: "Bulk actions" });
+    expect(bulk).toHaveTextContent("2 selected");
+    expect(bulk).toHaveTextContent("1 hidden");
+    fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 2 selected" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Clear hidden selection" }));
+    expect(bulk).toHaveTextContent("1 selected");
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "" } });
+    expect(screen.getByRole("checkbox", { name: "Select one" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Select two" })).not.toBeChecked();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select two" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "one" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select one" }));
+    fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 1 selected" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Select all" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "" } });
+    expect(screen.getByRole("checkbox", { name: "Select one" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Select two" })).not.toBeChecked();
+  });
+
+  test("Trash confirmation keeps its targets and hidden count after a reload changes selection", async () => {
+    vi.mocked(getLibraryPreferences).mockResolvedValue({ id: "library", pinnedCollectionIds: [] });
+    const one = buildNote({ content: "one" }, { id: "n1", now: 1 });
+    const two = buildNote({ content: "two" }, { id: "n2", now: 2 });
+    vi.mocked(listItems).mockResolvedValue([one, two]);
+    vi.mocked(deleteItem).mockResolvedValue(undefined);
+    render(<Library />);
+    await screen.findByText("one");
+    for (const checkbox of screen.getAllByRole("checkbox")) fireEvent.click(checkbox);
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "one" } });
+    fireEvent.click(screen.getByRole("button", { name: "Selection actions: 2 selected" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Move to Trash" }));
+    const dialog = screen.getByRole("dialog", { name: "Move 2 selected items to Trash" });
+    expect(dialog).toHaveTextContent("1 selected item is hidden");
+    vi.mocked(listItems).mockResolvedValue([one]);
+    window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    await waitFor(() => expect(screen.getByRole("region", { name: "Bulk actions", hidden: true })).toHaveTextContent("1 selected"));
+    expect(dialog).toHaveTextContent("Move 2 items to Trash");
+    expect(dialog).toHaveTextContent("1 selected item is hidden");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Move to Trash" }));
+    await waitFor(() => expect(deleteItem).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(deleteItem).mock.calls.map(([id]) => id)).toEqual(expect.arrayContaining(["n1", "n2"]));
+  });
+
   test("clear selection with Escape when inspect is closed", async () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);

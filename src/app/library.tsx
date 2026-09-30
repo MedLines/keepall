@@ -285,10 +285,12 @@ export function Library() {
   const [organizationDelete, setOrganizationDelete] = useState<{
     kind: "collections" | "tags";
     ids: string[];
+    hiddenCount: number;
   } | null>(null);
   const [organizationDeleteOpen, setOrganizationDeleteOpen] = useState(false);
   const [organizationDeleteError, setOrganizationDeleteError] = useState<string | null>(null);
   const [bulkPanel, setBulkPanel] = useState<BulkPanel>(null);
+  const [bulkDeleteTarget, setBulkDeleteTarget] = useState<{ ids: string[]; hiddenCount: number } | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [bulkTagDraft, setBulkTagDraft] = useState("");
   const [bulkCollectionDraft, setBulkCollectionDraft] = useState("");
@@ -354,6 +356,14 @@ export function Library() {
           setTrashedItems(nextTrash);
           setTags(nextTags);
           setCollections(nextCollections);
+          const currentView = viewRef.current;
+          const available = new Set((currentView.collections ? nextCollections
+            : currentView.tags ? nextTags
+            : currentView.trash ? nextTrash : nextItems).map((entry) => entry.id));
+          setSelectedIds((previous) => {
+            const retained = [...previous].filter((id) => available.has(id));
+            return retained.length === previous.size ? previous : new Set(retained);
+          });
           setPinnedCollectionIds(preferences.pinnedCollectionIds);
           setLoadState("ready");
           setError(null);
@@ -523,6 +533,7 @@ export function Library() {
     setOrganizationDeleteOpen(false);
     setOrganizationDeleteError(null);
     setBulkPanel(null);
+    setBulkDeleteTarget(null);
     setBulkError(null);
     setBulkTagDraft("");
     setBulkCollectionDraft("");
@@ -638,14 +649,20 @@ export function Library() {
   const allVisibleSelected =
     selectionEntries.length > 0 &&
     selectionEntries.every(entry => selectedIds.has(entry.id));
+  const visibleSelectionIds = new Set(selectionEntries.map((entry) => entry.id));
+  const hiddenSelectedCount = [...selectedIds].filter((id) => !visibleSelectionIds.has(id)).length;
 
   function selectAllVisible() {
     setSelectedIds(new Set(selectionEntries.map(entry => entry.id)));
   }
 
+  function clearHiddenSelection() {
+    setSelectedIds((previous) => new Set([...previous].filter((id) => visibleSelectionIds.has(id))));
+  }
+
   function requestOrganizationDelete(ids: string[]) {
     if (mutationBusy || ids.length === 0) return;
-    setOrganizationDelete({ kind: view.collections ? "collections" : "tags", ids });
+    setOrganizationDelete({ kind: view.collections ? "collections" : "tags", ids: [...ids], hiddenCount: ids.filter((id) => !visibleSelectionIds.has(id)).length });
     setOrganizationDeleteError(null);
     setOrganizationDeleteOpen(true);
   }
@@ -1188,7 +1205,7 @@ export function Library() {
   }
 
   async function bulkDeleteSelected() {
-    const ids = [...selectedIds];
+    const ids = bulkDeleteTarget?.ids ?? [];
     if (ids.length === 0 || pendingMutation) {
       return;
     }
@@ -1716,9 +1733,11 @@ export function Library() {
         libraryLoading={loadState === "loading"}
         selection={view.collections || view.tags ? {
           count: selectedIds.size,
+          hiddenCount: hiddenSelectedCount,
           allVisibleSelected,
           busy: mutationBusy,
           onClearSelection: clearSelection,
+          onClearHidden: clearHiddenSelection,
           onSelectAllVisible: selectAllVisible,
           onDelete: () => requestOrganizationDelete([...selectedIds]),
           deleteLabel: view.collections ? "Delete folders" : "Delete tags",
@@ -1729,6 +1748,9 @@ export function Library() {
           collectionDraft: bulkCollectionDraft,
           collectionSuggestions,
           count: selectedIds.size,
+          hiddenCount: hiddenSelectedCount,
+          panelCount: bulkPanel === "delete" ? bulkDeleteTarget?.ids.length : undefined,
+          panelHiddenCount: bulkPanel === "delete" ? bulkDeleteTarget?.hiddenCount : undefined,
           error: bulkError,
           panel: bulkPanel,
           pendingAddCollection:
@@ -1745,16 +1767,22 @@ export function Library() {
           onBulkRemoveTag: (name) => void bulkRemoveTag(name),
           onBulkRemoveAllTags: () => void bulkRemoveAllTags(),
           onClearSelection: clearSelection,
+          onClearHidden: clearHiddenSelection,
           onSelectAllVisible: selectAllVisible,
           onClosePanel: () => {
             setBulkPanel(null);
+            setBulkDeleteTarget(null);
             setBulkError(null);
           },
           onCollectionDraftChange: setBulkCollectionDraft,
           onConfirmDelete: () => void bulkDeleteSelected(),
-          onDeletePermanently: view.trash ? () => trashActions.requestDeleteSelected(trashedItems.filter((item) => selectedIds.has(item.id)).map((item) => item.id)) : undefined,
+          onDeletePermanently: view.trash ? () => {
+            const ids = trashedItems.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
+            trashActions.requestDeleteSelected(ids, ids.filter((id) => !visibleSelectionIds.has(id)).length);
+          } : undefined,
           onOpenPanel: (panel) => {
             setBulkError(null);
+            setBulkDeleteTarget(panel === "delete" ? { ids: [...selectedIds], hiddenCount: hiddenSelectedCount } : null);
             setBulkPanel(panel);
           },
           onTagDraftChange: setBulkTagDraft,
@@ -2044,8 +2072,8 @@ export function Library() {
           open={organizationDeleteOpen}
           title={`Delete ${organizationDeleteCount} ${organizationDeleteNoun}?`}
           description={organizationDelete?.kind === "collections"
-            ? "Items stay in your library and become Unsorted if they have no other collection."
-            : "These tags will be removed from every item. Items stay in your library."}
+            ? `${organizationDelete.hiddenCount > 0 ? `${organizationDelete.hiddenCount} selected folder${organizationDelete.hiddenCount === 1 ? " is" : "s are"} hidden by search or filters. ` : ""}Items stay in your library and become Unsorted if they have no other collection.`
+            : `${organizationDelete?.hiddenCount ? `${organizationDelete.hiddenCount} selected tag${organizationDelete.hiddenCount === 1 ? " is" : "s are"} hidden by search or filters. ` : ""}These tags will be removed from every item. Items stay in your library.`}
           confirmLabel={`Delete ${organizationDeleteNoun}`}
           pendingLabel="Deleting…"
           busy={pendingMutation?.op === "bulk-delete"}

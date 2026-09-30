@@ -1,6 +1,17 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test.use({ serviceWorkers: "block" });
+
+async function clickSelectionAction(page: Page, label: string) {
+  const bulk = page.getByRole("region", { name: "Bulk actions" });
+  const trigger = bulk.getByRole("button", { name: /Selection actions:/ });
+  if (await trigger.isVisible()) {
+    await trigger.click();
+    await page.getByRole("menuitem", { name: label, exact: true }).click();
+  } else {
+    await bulk.getByRole("button", { name: label, exact: true }).click();
+  }
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -38,6 +49,7 @@ test("card deletion moves to Trash and restore preserves search, tags and collec
   await expect(page.locator('[data-item-id="link"]')).toHaveCount(0);
   await page.getByRole("button", { name: "Trash", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Saved reference" })).toBeVisible();
+  await expect(page).toHaveURL(/trash=1/);
   await page.reload();
   await expect(page.locator('[data-item-id="link"]')).toBeVisible();
   await card.hover();
@@ -66,8 +78,7 @@ test("bulk deletion and permanent deletion work across reloads, with cancellatio
     await card.hover();
     await card.locator("[data-selection-indicator]").click();
   }
-  await page.getByRole("button", { name: "Selection actions: 2 selected" }).click();
-  await page.getByRole("menuitem", { name: "Move to Trash", exact: true }).click();
+  await clickSelectionAction(page, "Move to Trash");
   await page.getByRole("button", { name: "Move to Trash" }).click();
   await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Trash", exact: true }).click();
@@ -135,36 +146,46 @@ for (const layout of ["Grid", "List"]) {
     await page.keyboard.press("Space");
     const bulk = page.getByRole("region", { name: "Bulk actions" });
     await expect(bulk).toContainText("1 selected");
-    await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
-    await expect(page.getByRole("menuitem", { name: "Organize", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("menuitem", { name: "Move to Trash", exact: true })).toHaveCount(0);
-    await page.getByRole("menuitem", { name: "Select all", exact: true }).click();
+    const trigger = bulk.getByRole("button", { name: /Selection actions:/ });
+    if (await trigger.isVisible()) {
+      await trigger.click();
+      await expect(page.getByRole("menuitem", { name: "Organize", exact: true })).toHaveCount(0);
+      await expect(page.getByRole("menuitem", { name: "Move to Trash", exact: true })).toHaveCount(0);
+      await page.keyboard.press("Escape");
+    } else {
+      await expect(bulk.getByRole("button", { name: "Organize" })).toHaveCount(0);
+      await expect(bulk.getByRole("button", { name: "Move to Trash" })).toHaveCount(0);
+    }
+    await clickSelectionAction(page, "Select all");
     await expect(bulk).toContainText("2 selected");
-    await bulk.getByRole("button", { name: "Selection actions: 2 selected" }).click();
-    await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
+    await clickSelectionAction(page, "Deselect all");
     await expect(bulk).toHaveCount(0);
     for (const id of ["chosen-a", "chosen-b"]) {
       const card = page.locator(`[data-item-id="${id}"]`);
       await card.hover();
       await card.locator("[data-selection-indicator]").click();
     }
-    const remove = page.getByRole("button", { name: "Selection actions: 2 selected" });
     await page.screenshot({ path: testInfo.outputPath(`trash-${layout.toLowerCase()}-selection.png`) });
-    await remove.click();
-    const permanentDelete = page.getByRole("menuitem", { name: "Delete permanently", exact: true });
-    await expect(permanentDelete).toHaveCSS("color", await page.getByRole("button", { name: "Empty Trash", exact: true }).evaluate((button) => getComputedStyle(button).color));
-    await permanentDelete.click();
+    const dangerColor = await page.getByRole("button", { name: "Empty Trash", exact: true }).evaluate((button) => getComputedStyle(button).color);
+    if (await trigger.isVisible()) {
+      await trigger.click();
+      const action = page.getByRole("menuitem", { name: "Delete permanently", exact: true });
+      await expect(action).toHaveCSS("color", dangerColor);
+      await action.click();
+    } else {
+      const action = bulk.getByRole("button", { name: "Delete permanently", exact: true });
+      await expect(action).toHaveCSS("color", dangerColor);
+      await action.click();
+    }
     const dialog = page.getByRole("dialog", { name: "Permanently delete selected items?" });
     await expect(dialog).toContainText("2 selected items");
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(bulk).toContainText("2 selected");
-    await remove.click();
-    await page.getByRole("menuitem", { name: "Delete permanently", exact: true }).click();
+    await clickSelectionAction(page, "Delete permanently");
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(bulk).toContainText("2 selected");
-    await remove.click();
-    await page.getByRole("menuitem", { name: "Delete permanently", exact: true }).click();
+    await clickSelectionAction(page, "Delete permanently");
     await dialog.getByRole("button", { name: "Delete permanently", exact: true }).click();
     await expect(bulk).toHaveCount(0);
     await search.fill("");

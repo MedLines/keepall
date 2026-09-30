@@ -7,7 +7,7 @@ import { emptyTrash, permanentlyDeleteItem, restoreItem } from "@/persistence/it
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 
-type Confirmation = { kind: "item"; item: Item } | { kind: "all" | "selected"; ids: string[] };
+type Confirmation = { kind: "item"; item: Item } | { kind: "all" | "selected"; ids: string[]; hiddenCount: number };
 
 export function useLibraryTrashActions(heading: RefObject<HTMLHeadingElement | null>, onItemsRemoved?: (ids: string[]) => void) {
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
@@ -49,14 +49,14 @@ export function useLibraryTrashActions(heading: RefObject<HTMLHeadingElement | n
     notice,
     restore: (item: Item) => void run(() => restoreItem(item.id), `${itemActionLabel(item)} restored to your library.`, [item.id]),
     requestDelete: (item: Item) => request({ kind: "item", item }),
-    requestEmpty: (items: Item[]) => request({ kind: "all", ids: items.map((item) => item.id) }),
-    requestDeleteSelected: (ids: string[]) => { if (ids.length) request({ kind: "selected", ids: [...new Set(ids)] }); },
+    requestEmpty: (items: Item[]) => request({ kind: "all", ids: items.map((item) => item.id), hiddenCount: 0 }),
+    requestDeleteSelected: (ids: string[], hiddenCount = 0) => { if (ids.length) request({ kind: "selected", ids: [...new Set(ids)], hiddenCount }); },
     dialog: <ConfirmDialog
       open={confirmation !== null}
       title={all ? "Empty Trash?" : confirmation?.kind === "selected" ? "Permanently delete selected items?" : "Permanently delete this item?"}
       description={confirmation?.kind === "all"
         ? `Permanently delete all ${confirmation.ids.length} items in Trash, including items hidden by search or filters? This cannot be undone.`
-        : confirmation?.kind === "selected" ? `Permanently delete ${confirmation.ids.length} selected item${confirmation.ids.length === 1 ? "" : "s"}? Other items in Trash will remain. This cannot be undone.`
+        : confirmation?.kind === "selected" ? `Permanently delete ${confirmation.ids.length} selected item${confirmation.ids.length === 1 ? "" : "s"}?${confirmation.hiddenCount > 0 ? ` ${confirmation.hiddenCount} selected item${confirmation.hiddenCount === 1 ? " is" : "s are"} hidden by search or filters.` : ""} Other items in Trash will remain. This cannot be undone.`
         : confirmation?.kind === "item" ? `Delete “${itemActionLabel(confirmation.item)}” and its unshared media? This cannot be undone.` : ""}
       confirmLabel={all ? "Empty Trash" : "Delete permanently"}
       pendingLabel="Deleting…" busy={busy} error={error}

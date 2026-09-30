@@ -12,6 +12,9 @@ export type BulkPanel = null | "delete" | "organize";
 
 export type LibraryBulkBarProps = {
   count: number;
+  hiddenCount?: number;
+  panelCount?: number;
+  panelHiddenCount?: number;
   visibleCount: number;
   allVisibleSelected: boolean;
   panel: BulkPanel;
@@ -30,6 +33,7 @@ export type LibraryBulkBarProps = {
   onClosePanel: () => void;
   onSelectAllVisible: () => void;
   onClearSelection: () => void;
+  onClearHidden?: () => void;
   onConfirmDelete: () => void;
   onDeletePermanently?: () => void;
   onTagDraftChange: (value: string) => void;
@@ -45,10 +49,12 @@ const BULK_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-10 shrink-0 px-3 text
 export type LibraryBulkToolbarProps = Pick<
   LibraryBulkBarProps,
   | "count"
+  | "hiddenCount"
   | "allVisibleSelected"
   | "busy"
   | "onSelectAllVisible"
   | "onClearSelection"
+  | "onClearHidden"
   | "onDeletePermanently"
 > & {
   onOpenPanel?: LibraryBulkBarProps["onOpenPanel"];
@@ -59,11 +65,13 @@ export type LibraryBulkToolbarProps = Pick<
 /** Compact bulk buttons for the top bar (selection must be active). */
 export function LibraryBulkToolbar({
   count,
+  hiddenCount = 0,
   allVisibleSelected,
   busy,
   onOpenPanel,
   onSelectAllVisible,
   onClearSelection,
+  onClearHidden,
   onDeletePermanently,
   onDelete,
   deleteLabel,
@@ -103,7 +111,7 @@ export function LibraryBulkToolbar({
     if (left instanceof HTMLElement) observer.observe(left);
     measure();
     return () => observer.disconnect();
-  }, [count, allVisibleSelected, onOpenPanel, onDelete, onDeletePermanently, deleteLabel]);
+  }, [count, hiddenCount, allVisibleSelected, onOpenPanel, onDelete, onDeletePermanently, deleteLabel]);
   if (count === 0) {
     return null;
   }
@@ -117,7 +125,7 @@ export function LibraryBulkToolbar({
   }
 
   return (
-    <div ref={containerRef} className="relative flex min-w-0 max-w-full justify-end" style={{ width: compact ? undefined : preferredWidth }} role="region" aria-label="Bulk actions">
+    <div ref={containerRef} className="relative flex min-w-0 max-w-full items-center justify-end gap-1.5" style={{ width: compact ? undefined : preferredWidth }} role="region" aria-label="Bulk actions">
       {compact ? <Menu.Root
         modal={false}
         disabled={busy}
@@ -164,6 +172,12 @@ export function LibraryBulkToolbar({
               })}>
                 Deselect all
               </Menu.Item>
+              {hiddenCount > 0 ? <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(() => {
+                focusSearchAfterClose.current = true;
+                onClearHidden?.();
+              })}>
+                Clear hidden selection
+              </Menu.Item> : null}
               {onOpenPanel && !onDeletePermanently && !onDelete ? (
                 <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(() => onOpenPanel("organize"))}>
                   Organize
@@ -176,8 +190,9 @@ export function LibraryBulkToolbar({
           </Menu.Positioner>
         </Menu.Portal>
       </Menu.Root> : null}
+      {compact && hiddenCount > 0 ? <span className="shrink-0 text-xs tabular-nums text-text-secondary">{hiddenCount} hidden</span> : null}
       <div ref={actionsRef} inert={compact} aria-hidden={compact} className={`inline-flex w-max items-center gap-1.5 ${compact ? "pointer-events-none invisible absolute right-0 top-0" : ""}`}>
-        <span className="mr-1 shrink-0 text-xs tabular-nums text-text-secondary">{count} selected</span>
+        <span className="mr-1 shrink-0 text-xs tabular-nums text-text-secondary">{count} selected{hiddenCount > 0 ? ` · ${hiddenCount} hidden` : ""}</span>
         {!allVisibleSelected ? (
           <button className={BULK_BTN} disabled={busy} type="button" onClick={onSelectAllVisible}>
             Select all
@@ -186,6 +201,9 @@ export function LibraryBulkToolbar({
         <button className={BULK_BTN} disabled={busy} type="button" onClick={() => { document.getElementById("library-search")?.focus(); onClearSelection(); }}>
           Deselect all
         </button>
+        {hiddenCount > 0 ? <button className={BULK_BTN} disabled={busy} type="button" onClick={() => { document.getElementById("library-search")?.focus(); onClearHidden?.(); }}>
+          Clear hidden
+        </button> : null}
         {onOpenPanel && !onDeletePermanently && !onDelete ? (
           <button className={BULK_BTN} disabled={busy} type="button" onClick={() => onOpenPanel("organize")}>
             Organize
@@ -207,6 +225,7 @@ export function LibraryBulkToolbar({
 type PanelsProps = Pick<
   LibraryBulkBarProps,
   | "count"
+  | "hiddenCount"
   | "panel"
   | "busy"
   | "error"
@@ -244,6 +263,7 @@ function bulkPanelTitle(panel: BulkPanel, count: number): string {
 /** Shared organization drawer or trash confirmation for the selection. */
 export function LibraryBulkPanels({
   count,
+  hiddenCount = 0,
   panel,
   busy,
   error,
@@ -269,7 +289,7 @@ export function LibraryBulkPanels({
     return <ConfirmDialog
       open
       title={bulkPanelTitle(panel, count)}
-      description={`Move ${count} item${count === 1 ? "" : "s"} to Trash? You can restore ${count === 1 ? "it" : "them"} later.`}
+      description={`Move ${count} item${count === 1 ? "" : "s"} to Trash?${hiddenCount > 0 ? ` ${hiddenCount} selected item${hiddenCount === 1 ? " is" : "s are"} hidden by search or filters.` : ""} You can restore ${count === 1 ? "it" : "them"} later.`}
       confirmLabel="Move to Trash"
       pendingLabel={pendingDelete ? "Moving…" : "Working…"}
       busy={busy}
@@ -287,7 +307,7 @@ export function LibraryBulkPanels({
     <OrganizerDrawer
       open={panel !== null || Boolean(error)}
       title={bulkPanelTitle(panel, count)}
-      description="Move the selected items to a collection or add tags. Changes apply immediately."
+      description={`Move the selected items to a collection or add tags. Changes apply immediately${hiddenCount > 0 ? ` to all ${count} selected items, including ${hiddenCount} hidden by search or filters` : ""}.`}
       disabled={busy}
       error={error}
       onOpenChange={(open) => { if (!open) onClosePanel(); }}

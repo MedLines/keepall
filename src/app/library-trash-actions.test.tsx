@@ -7,14 +7,14 @@ import { useLibraryTrashActions } from "./library-trash-actions";
 
 vi.mock("@/persistence/items", () => ({ emptyTrash: vi.fn(), permanentlyDeleteItem: vi.fn(), restoreItem: vi.fn() }));
 const note = { ...buildNote({ content: "Keep me" }, { id: "note", now: 1 }), deletedAt: 2 };
-function Harness({ onItemsRemoved }: { onItemsRemoved?: (ids: string[]) => void }) {
+function Harness({ onItemsRemoved, selectedIds = ["note", "other"], hiddenCount = 1 }: { onItemsRemoved?: (ids: string[]) => void; selectedIds?: string[]; hiddenCount?: number }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const actions = useLibraryTrashActions(heading, onItemsRemoved);
   return <><h1 ref={heading} tabIndex={-1}>Trash</h1>
     <button disabled={actions.busy} onClick={() => actions.restore(note)}>Restore</button>
     <button disabled={actions.busy} onClick={() => actions.requestEmpty([note])}>Empty</button>
     <button disabled={actions.busy} onClick={() => actions.requestDelete(note)}>Delete</button>
-    <button disabled={actions.busy} onClick={() => actions.requestDeleteSelected(["note", "other"])}>Delete selection</button>
+    <button disabled={actions.busy} onClick={() => actions.requestDeleteSelected(selectedIds, hiddenCount)}>Delete selection</button>
     {actions.error ? <p role="alert">{actions.error}</p> : null}
     <p role="status">{actions.notice}</p>{actions.dialog}</>;
 }
@@ -64,6 +64,7 @@ test("selected deletion retains selection on cancel or failure and removes only 
   render(<Harness onItemsRemoved={onItemsRemoved} />);
   fireEvent.click(screen.getByRole("button", { name: "Delete selection" }));
   expect(screen.getByRole("dialog")).toHaveTextContent("2 selected items");
+  expect(screen.getByRole("dialog")).toHaveTextContent("1 selected item is hidden by search or filters");
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(emptyTrash).not.toHaveBeenCalled();
   expect(onItemsRemoved).not.toHaveBeenCalled();
@@ -76,4 +77,17 @@ test("selected deletion retains selection on cancel or failure and removes only 
   expect(emptyTrash).toHaveBeenLastCalledWith(["note", "other"]);
   expect(onItemsRemoved).toHaveBeenCalledExactlyOnceWith(["note", "other"]);
   expect(permanentlyDeleteItem).not.toHaveBeenCalled();
+});
+
+test("permanent deletion uses the IDs and hidden count captured when the dialog opened", async () => {
+  vi.mocked(emptyTrash).mockResolvedValue(undefined);
+  const { rerender } = render(<Harness selectedIds={["note", "other"]} hiddenCount={1} />);
+  fireEvent.click(screen.getByRole("button", { name: "Delete selection" }));
+  const dialog = screen.getByRole("dialog", { name: "Permanently delete selected items?" });
+  rerender(<Harness selectedIds={["new"]} hiddenCount={0} />);
+  expect(dialog).toHaveTextContent("2 selected items");
+  expect(dialog).toHaveTextContent("1 selected item is hidden");
+  fireEvent.click(within(dialog).getByRole("button", { name: "Delete permanently" }));
+  await screen.findByText("Selected items permanently deleted.");
+  expect(emptyTrash).toHaveBeenCalledExactlyOnceWith(["note", "other"]);
 });

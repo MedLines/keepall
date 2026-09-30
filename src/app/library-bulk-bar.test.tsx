@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { expect, test, vi } from "vitest";
 import { LibraryBulkPanels, LibraryBulkToolbar } from "./library-bulk-bar";
 
@@ -48,6 +49,34 @@ test("selection menu offers only permanent deletion in Trash and disables action
   expect(screen.queryByRole("menuitem", { name: "Organize" })).not.toBeInTheDocument();
   expect(screen.queryByRole("menuitem", { name: "Move to Trash" })).not.toBeInTheDocument();
   expect(screen.getByRole("menuitem", { name: "Delete permanently" })).toBeInTheDocument();
+});
+
+test("hidden selection is visible without opening the menu and can be cleared", () => {
+  const onClearHidden = vi.fn();
+  render(<LibraryBulkToolbar count={2} hiddenCount={1} allVisibleSelected busy={false}
+    onClearSelection={vi.fn()} onClearHidden={onClearHidden}
+    onSelectAllVisible={vi.fn()} />);
+  expect(screen.getByRole("region", { name: "Bulk actions" })).toHaveTextContent("1 hidden");
+  const trigger = screen.getByRole("button", { name: "Selection actions: 2 selected" });
+  fireEvent.click(trigger);
+  fireEvent.click(screen.getByRole("menuitem", { name: "Clear hidden selection" }));
+  expect(onClearHidden).toHaveBeenCalledOnce();
+});
+
+test("clearing an entirely hidden selection returns focus to search", async () => {
+  function Harness() {
+    const [count, setCount] = useState(1);
+    return <><input id="library-search" aria-label="Search" type="search" />
+      <LibraryBulkToolbar count={count} hiddenCount={count} allVisibleSelected={false} busy={false}
+        onClearSelection={() => setCount(0)} onClearHidden={() => setCount(0)}
+        onSelectAllVisible={vi.fn()} />
+    </>;
+  }
+  render(<Harness />);
+  fireEvent.click(screen.getByRole("button", { name: "Selection actions: 1 selected" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Clear hidden selection" }));
+  await waitFor(() => expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus());
+  expect(screen.queryByRole("region", { name: "Bulk actions" })).not.toBeInTheDocument();
 });
 
 test("bulk trash confirmation puts Cancel before the destructive action", () => {

@@ -212,7 +212,11 @@ export function LibraryTopBar({
         </div>
       </div>
 
-      {!selection && bulk && (bulk.panel !== null || bulk.error) ? <LibraryBulkPanels {...bulk} /> : null}
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {(selection ?? bulk)?.count ? `${(selection ?? bulk)?.count} selected, ${(selection ?? bulk)?.hiddenCount ?? 0} hidden by search or filters` : "No items selected"}
+      </span>
+
+      {!selection && bulk && (bulk.panel !== null || bulk.error) ? <LibraryBulkPanels {...bulk} count={bulk.panelCount ?? bulk.count} hiddenCount={bulk.panelHiddenCount ?? bulk.hiddenCount} /> : null}
     </header>
   );
 }
