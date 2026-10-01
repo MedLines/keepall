@@ -142,6 +142,9 @@ test("switching note format does not move collection or tag controls", async ({ 
   ]) {
     await page.setViewportSize({ width, height });
     await page.goto("/");
+    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
+    if (await closeNavigation.isVisible()) await closeNavigation.click();
     await openCaptureFromShortcut(page);
     const capture = page.getByRole("dialog", { name: "Save to Keepall" });
     await capture.getByLabel("Link, note, or image").fill(text);

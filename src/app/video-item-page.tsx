@@ -19,7 +19,9 @@ import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ItemLibraryDetails } from "./item-library-details";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
-import { ArrowLeftIcon, DeleteIcon, EditIcon, LayersIcon, VideoIcon } from "./shell-icons";
+import { VideoIcon } from "./shell-icons";
+import { ItemPageHeader } from "./item-page-header";
+import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
 
 type VideoState =
   | { itemId: string; status: "loading" | "missing" | "error" }
@@ -122,18 +124,10 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
   };
 
   return <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
-    <header className="z-10 shrink-0 border-b border-border-control bg-bg-canvas/95 backdrop-blur-sm">
-      <div className="mx-auto flex min-h-16 w-full max-w-[100rem] items-center gap-2 px-3 sm:gap-3 sm:px-5">
-        <Link href={returnHref} aria-label="Library" className="ui-control inline-flex min-h-10 shrink-0 items-center gap-2 px-3 text-sm"><ArrowLeftIcon /><span className="hidden sm:inline">Library</span></Link>
-        <span className="min-w-0 flex-1 truncate text-sm text-text-secondary" title={item.title}>{item.title}</span>
-        <button type="button" aria-label="Edit details" className="ui-control inline-flex min-h-10 shrink-0 items-center gap-2 px-3 text-sm" onClick={() => { setEditError(null); setEditing(true); }}><EditIcon /><span className="hidden sm:inline">Edit details</span></button>
-        <button type="button" aria-label="Organize" className="ui-control inline-flex min-h-10 shrink-0 items-center gap-2 px-3 text-sm" onClick={() => { setActionError(null); setOrganizerOpen(true); }}><LayersIcon /><span className="hidden sm:inline">Organize</span></button>
-        <button type="button" aria-label="Move to Trash" className="ui-control inline-flex min-h-10 shrink-0 items-center gap-2 px-3 text-sm text-text-danger" onClick={() => { setActionError(null); setDeleteOpen(true); }}><DeleteIcon /><span className="hidden sm:inline">Move to Trash</span></button>
-      </div>
-    </header>
-    <main className="ui-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain" data-testid="item-page-scroll">
-      <div className="mx-auto grid w-full max-w-[100rem] items-start gap-8 px-5 pb-24 pt-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
-        <div className="min-w-0 lg:mx-auto lg:w-full lg:max-w-5xl">
+    <ItemPageHeader returnHref={returnHref} title={item.title} />
+    <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
+      <div className={ITEM_PAGE_GRID}>
+        <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
           <h1 className="mb-5 break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{item.title}</h1>
           <VideoPlayback title={item.title} poster={poster} media={currentMedia} onRetry={() => setRetry((value) => value + 1)} onError={() => setMedia((current) => current.key === mediaKey ? { key: mediaKey, status: "unsupported" } : current)} />
           {item.noteContent?.trim() ? <article aria-labelledby="video-notes-heading" className="mt-10 border-t border-border-control pt-7">
@@ -141,7 +135,22 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
             <NoteContent content={item.noteContent} format={item.noteFormat === "markdown" ? "markdown" : "plain"} className="mt-5 text-text-primary" />
           </article> : null}
         </div>
-        <ItemLibraryDetails label="Video details" summary={{ label: "Type", value: "Local video" }} collections={collections} tags={tags} createdAt={item.createdAt} updatedAt={item.updatedAt} sourceFileName={item.sourceFileName} className="lg:sticky lg:top-8" />
+        <ItemLibraryDetails
+          label="Video details"
+          summary={{ label: "Type", value: "Local video" }}
+          collections={collections}
+          tags={tags}
+          createdAt={item.createdAt}
+          updatedAt={item.updatedAt}
+          sourceFileName={item.sourceFileName}
+          className={ITEM_DETAILS_POSITION}
+          disabled={busy}
+          editDisabled={editing}
+          deleteLabel="Move to Trash"
+          onEdit={() => { setEditError(null); setEditing(true); }}
+          onOrganize={() => { setActionError(null); setOrganizerOpen(true); }}
+          onDelete={() => { setActionError(null); setDeleteOpen(true); }}
+        />
       </div>
     </main>
     {editing ? <VideoItemEditDialog item={item} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}

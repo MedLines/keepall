@@ -68,7 +68,7 @@ export function ShellTopMenu<T extends string>({
           positionMethod="fixed"
           className="z-50 data-[anchor-hidden]:invisible"
         >
-          <Select.Popup className="ui-popover max-h-[var(--available-height)] min-w-[11rem] max-w-[calc(100vw-1rem)] overflow-y-auto outline-none">
+          <Select.Popup className="ui-popover ui-scrollbar max-h-[min(24rem,var(--available-height))] min-w-[11rem] max-w-[calc(100vw-1rem)] overflow-y-auto outline-none">
             <Select.List aria-label={ariaLabel} className="flex flex-col gap-1">
               {options.map((option) => (
                 <Select.Item

@@ -66,7 +66,7 @@ export function CaptureOrgBrowser({
       <Dialog.Portal>
         <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[80]" />
         <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
-          <Dialog.Popup className="ui-popover flex max-h-[min(80dvh,36rem)] w-full max-w-[28rem] flex-col overflow-hidden p-0 outline-none">
+          <Dialog.Popup className="ui-popover flex h-[min(80dvh,36rem)] w-full max-w-[28rem] flex-col overflow-hidden p-0 outline-none">
             <header className="flex shrink-0 items-start gap-4 border-b border-border-control px-5 py-4">
               <div className="min-w-0 flex-1">
                 <Dialog.Title className="text-lg font-semibold text-text-primary">
@@ -98,7 +98,7 @@ export function CaptureOrgBrowser({
                 />
               </label>
             </div>
-            <div className="scroll-fade min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+            <div className="ui-scrollbar scroll-fade min-h-0 flex-1 overflow-y-auto px-3 pb-3">
               {filtered.length > 0 ? (
                 <ul className="flex flex-col gap-1" aria-label={title}>
                   {filtered.map((entry) => {

@@ -15,7 +15,7 @@ import { createPortal } from "react-dom";
 
 export type OrgNameSuggestion = { id: string; name: string };
 
-type SuggestionPosition = Pick<CSSProperties, "top" | "left" | "width" | "maxHeight">;
+type SuggestionPosition = Pick<CSSProperties, "top" | "left" | "width" | "height">;
 
 type Props = {
   inputId: string;
@@ -83,19 +83,19 @@ export function OrgNameSuggest({
     const rect = input.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     const margin = 8;
-    const preferredHeight = Math.min(160, filtered.length * 40 + 8);
+    const preferredHeight = 160;
     const spaceBelow = viewportHeight - rect.bottom - margin;
     const spaceAbove = rect.top - margin;
     const openBelow = spaceBelow >= preferredHeight || spaceBelow >= spaceAbove;
-    const maxHeight = Math.max(80, Math.min(preferredHeight, openBelow ? spaceBelow : spaceAbove));
+    const height = Math.max(0, Math.min(preferredHeight, openBelow ? spaceBelow : spaceAbove));
 
     setSuggestionPosition({
       left: rect.left,
-      top: openBelow ? rect.bottom + margin : rect.top - margin - maxHeight,
+      top: openBelow ? rect.bottom + margin : rect.top - margin - height,
       width: rect.width,
-      maxHeight,
+      height,
     });
-  }, [filtered.length]);
+  }, []);
 
   useLayoutEffect(() => {
     if (!suggestionsVisible) {
@@ -193,7 +193,7 @@ export function OrgNameSuggest({
           {suggestionsVisible && suggestionPosition
             ? createPortal(
             <div
-              className="ui-popover scroll-fade fixed z-[100] overflow-y-auto py-1"
+              className="ui-popover ui-scrollbar scroll-fade fixed z-[100] overflow-y-auto py-1"
               style={suggestionPosition}
             >
               <ul

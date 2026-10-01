@@ -38,16 +38,14 @@ import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
 import { NoteContent } from "./note-content";
 import { VerticalImageGallery } from "./vertical-image-gallery";
-import { ThemeControl } from "./theme-control";
+import { ItemPageHeader } from "./item-page-header";
+import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
   CloseIcon,
   DeleteIcon,
-  EditIcon,
   FullScreenIcon,
-  LayersIcon,
-  LinkIcon,
   PlusIcon,
   ImageIcon,
   MoreIcon,
@@ -660,53 +658,21 @@ function ImageWorkspace({
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Image actions">
-        <button className="ui-control inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 px-2.5 text-xs font-medium disabled:opacity-60" type="button" aria-label={galleryMutation === "add" ? "Adding images" : "Add images"} title="Add images" disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
-          <PlusIcon className="size-4" />
-          <span>{galleryMutation === "add" ? "Adding…" : "Add images"}</span>
-        </button>
-        <button className="ui-control inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 px-2.5 text-xs font-medium disabled:opacity-60" type="button" disabled={actionBusy} onClick={onEdit}>
-          <EditIcon className="size-4" />Edit details
-        </button>
-      </div>
     </div>
   );
 
   return (
     <div className="h-full overflow-hidden bg-bg-canvas">
       <div className="flex size-full flex-col">
-        <header className="shrink-0 border-b border-border-control">
-          <div className="mx-auto flex min-h-16 w-full max-w-[100rem] items-center gap-3 px-3 sm:px-5">
-            <Link className={CONTROL} href={returnHref} aria-label="Back to library">
-              <ArrowLeftIcon />
-              <span className="hidden sm:inline">Library</span>
-            </Link>
-            {title ? (
-              <h1 className="min-w-0 flex-1 truncate text-base font-semibold text-text-primary sm:text-lg">
-                {title}
-              </h1>
-            ) : (
-              <h1 className="sr-only">Image item</h1>
-            )}
-            <div className="ms-auto flex shrink-0 items-center gap-2" aria-label="Item actions">
-              {item.sourceUrl ? (
-                <a className={CONTROL} href={item.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label="Open source">
-                  <LinkIcon />
-                  <span className="hidden xl:inline">Open source</span>
-                </a>
-              ) : null}
-              <ThemeControl compact />
-            </div>
-          </div>
-        </header>
+        <ItemPageHeader returnHref={returnHref} title={title || "Image item"} sourceUrl={item.sourceUrl} titleAsHeading />
 
         <main
           ref={scrollRef}
           onScroll={rememberReadingPosition}
-          className="ui-scrollbar scroll-fade scroll-fade-6 min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]"
+          className={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`}
           data-testid="item-page-scroll"
         >
-          <div className="mx-auto grid w-full max-w-[100rem] items-start gap-x-6 gap-y-3 px-3 pb-8 pt-3 [--image-viewer-height:max(24rem,min(76dvh,54rem))] sm:px-5 sm:pb-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-0">
+          <div className={`${ITEM_PAGE_GRID} [--image-viewer-height:max(24rem,min(76dvh,54rem))]`}>
                 <input
                   ref={addInputRef}
                   className="sr-only"
@@ -846,15 +812,15 @@ function ImageWorkspace({
               createdAt={item.createdAt}
               updatedAt={item.updatedAt}
               sourceFileName={item.sourceFileName}
-              className="row-start-1 lg:sticky lg:col-start-2 lg:row-start-1 lg:min-h-[var(--image-viewer-height)] lg:top-3 lg:ms-6 lg:mt-0"
-              organizationActions={
-                <button className="ui-control inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 px-2.5 text-xs font-medium disabled:opacity-60" type="button" disabled={actionBusy} onClick={onOrganize}>
-                  <LayersIcon className="size-4" />Organize
-                </button>
-              }
-              actions={
-                <button className="ui-control inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap px-2.5 text-xs font-medium text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60" type="button" aria-label="Move item to Trash" title="Move to Trash" disabled={actionBusy} onClick={onDelete}>
-                  <DeleteIcon className="size-4" />Move to Trash
+              className={`${ITEM_DETAILS_POSITION} lg:min-h-[var(--image-viewer-height)]`}
+              disabled={actionBusy}
+              onOrganize={onOrganize}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              mediaAction={
+                <button className={ITEM_DETAILS_CONTROL} type="button" aria-label={galleryMutation === "add" ? "Adding images" : "Add images"} title="Add images" disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
+                  <PlusIcon className="size-4" />
+                  <span>{galleryMutation === "add" ? "Adding…" : "Add images"}</span>
                 </button>
               }
             />

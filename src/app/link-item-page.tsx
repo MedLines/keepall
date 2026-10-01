@@ -27,7 +27,9 @@ import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
 import { NoteContent } from "./note-content";
 import { LinkItemEditDialog, type LinkDetailsDraft } from "./item-edit-dialog";
-import { ArrowLeftIcon, DeleteIcon, EditIcon, LayersIcon, LinkIcon } from "./shell-icons";
+import { LinkIcon } from "./shell-icons";
+import { ItemPageHeader } from "./item-page-header";
+import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
 
 type LoadState =
   | { status: "loading" | "missing" | "error" }
@@ -181,64 +183,59 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
   }
 
   return (
-    <div className="ui-scrollbar h-full overflow-y-auto bg-bg-canvas text-text-primary">
-      <header className="sticky top-0 z-10 border-b border-border-control bg-bg-canvas/95 backdrop-blur-sm">
-        <div className="mx-auto flex min-h-16 w-full max-w-[100rem] items-center gap-3 px-3 sm:px-5">
-          <Link href={returnHref} aria-label="Back to library" className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm">
-            <ArrowLeftIcon /><span className="hidden sm:inline">Library</span>
-          </Link>
-          <span className="min-w-0 flex-1 truncate text-sm text-text-secondary">Saved link</span>
-          <button type="button" aria-label="Edit details" disabled={busy || editing} className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm disabled:opacity-60" onClick={() => {
-            setEditError(null);
-            setEditing(true);
-          }}><EditIcon /><span className="hidden sm:inline">Edit</span></button>
-          <button type="button" aria-label="Organize" disabled={busy} className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm disabled:opacity-60" onClick={() => {
-            setTagError(null);
-            setCollectionError(null);
-            setOrganizerSide(document.documentElement.dir === "rtl" ? "left" : "right");
-            setOrganizerOpen(true);
-          }}><LayersIcon /><span className="hidden sm:inline">Organize</span></button>
-          <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label="Open source" className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm">
-            <LinkIcon /><span className="hidden sm:inline">Open source</span>
-          </a>
-          <button type="button" aria-label="Move link to Trash" disabled={busy} className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60" onClick={() => {
-            setDeleteError(null);
-            setDeleteOpen(true);
-          }}><DeleteIcon /><span className="hidden sm:inline">Move to Trash</span></button>
-        </div>
-      </header>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+      <ItemPageHeader returnHref={returnHref} title={title} sourceUrl={link.url} />
 
-      <main className="mx-auto grid w-full max-w-[100rem] items-start gap-8 px-5 pb-24 pt-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
-        <div className="min-w-0 lg:mx-auto lg:w-full lg:max-w-5xl">
-        <div className="squircle-panel overflow-hidden rounded-panel border border-border-control bg-bg-surface">
-          {link.previewAssetId ? <LibraryItemMedia item={link} variant="card" className="max-h-96 w-full" /> : null}
-          <div className="px-5 pb-6 pt-5 sm:px-7">
-            <div className="flex min-w-0 items-center gap-2 text-sm text-text-secondary"><LinkIcon className="size-4" />{linkCardHost(link)}</div>
-            <h1 className="mt-3 break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{title}</h1>
-            {link.previewDescription ? <p className="mt-3 text-sm leading-relaxed text-text-secondary">{link.previewDescription}</p> : null}
-            <a href={link.url} target="_blank" rel="noopener noreferrer" className="mt-4 block break-all text-sm text-text-secondary underline underline-offset-2 hover:text-text-primary">{link.url}</a>
+      <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
+        <div className={ITEM_PAGE_GRID}>
+          <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
+            <div className="squircle-panel overflow-hidden rounded-panel border border-border-control bg-bg-surface">
+              {link.previewAssetId ? <LibraryItemMedia item={link} variant="card" className="max-h-96 w-full" /> : null}
+              <div className="px-5 pb-6 pt-5 sm:px-7">
+                <div className="flex min-w-0 items-center gap-2 text-sm text-text-secondary"><LinkIcon className="size-4" />{linkCardHost(link)}</div>
+                <h1 className="mt-3 break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{title}</h1>
+                {link.previewDescription ? <p className="mt-3 text-sm leading-relaxed text-text-secondary">{link.previewDescription}</p> : null}
+                <a href={link.url} target="_blank" rel="noopener noreferrer" className="mt-4 block break-all text-sm text-text-secondary underline underline-offset-2 hover:text-text-primary">{link.url}</a>
+              </div>
+            </div>
+
+            <section aria-labelledby="personal-note-heading" className="mt-10 border-t border-border-control pt-7">
+              <h2 id="personal-note-heading" className="text-xl font-semibold">My note</h2>
+              {link.noteContent?.trim() ? (
+                <article className="mt-6"><NoteContent content={link.noteContent} format={link.noteFormat === "markdown" ? "markdown" : "plain"} headingStart={2} /></article>
+              ) : (
+                <p className="mt-5 text-sm text-text-secondary">Use Edit details to add your own thoughts to this link.</p>
+              )}
+            </section>
           </div>
-        </div>
 
-        <section aria-labelledby="personal-note-heading" className="mt-10 border-t border-border-control pt-7">
-          <h2 id="personal-note-heading" className="text-xl font-semibold">My note</h2>
-          {link.noteContent?.trim() ? (
-            <article className="mt-6"><NoteContent content={link.noteContent} format={link.noteFormat === "markdown" ? "markdown" : "plain"} headingStart={2} /></article>
-          ) : (
-            <p className="mt-5 text-sm text-text-secondary">Use Edit to add your own thoughts to this link.</p>
-          )}
-        </section>
+          <ItemLibraryDetails
+            label="Link details"
+            summary={{ label: "Notes", value: link.noteContent?.trim() ? "Added" : "None" }}
+            collections={itemCollections}
+            tags={itemTags}
+            createdAt={link.createdAt}
+            updatedAt={link.updatedAt}
+            className={ITEM_DETAILS_POSITION}
+            disabled={busy}
+            editDisabled={editing}
+            deleteLabel="Move link to Trash"
+            onEdit={() => {
+              setEditError(null);
+              setEditing(true);
+            }}
+            onOrganize={() => {
+              setTagError(null);
+              setCollectionError(null);
+              setOrganizerSide(document.documentElement.dir === "rtl" ? "left" : "right");
+              setOrganizerOpen(true);
+            }}
+            onDelete={() => {
+              setDeleteError(null);
+              setDeleteOpen(true);
+            }}
+          />
         </div>
-
-        <ItemLibraryDetails
-          label="Link details"
-          summary={{ label: "Notes", value: link.noteContent?.trim() ? "Added" : "None" }}
-          collections={itemCollections}
-          tags={itemTags}
-          createdAt={link.createdAt}
-          updatedAt={link.updatedAt}
-          className="lg:sticky lg:top-24"
-        />
       </main>
 
       {editing ? <LinkItemEditDialog item={link} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}

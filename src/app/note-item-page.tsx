@@ -31,7 +31,9 @@ import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { NoteContent } from "./note-content";
 import { NoteItemEditDialog, type NoteDetailsDraft } from "./item-edit-dialog";
-import { ArrowLeftIcon, DeleteIcon, EditIcon, LayersIcon } from "./shell-icons";
+import { PlusIcon } from "./shell-icons";
+import { ItemPageHeader } from "./item-page-header";
+import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
 
 type LoadState =
   | { status: "loading" | "missing" | "error" }
@@ -255,89 +257,47 @@ export function NoteItemPage({
   }
 
   return (
-    <div className="ui-scrollbar h-full overflow-y-auto bg-bg-canvas text-text-primary">
-      <header className="sticky top-0 z-10 border-b border-border-control bg-bg-canvas/95 backdrop-blur-sm">
-        <div className="mx-auto flex min-h-16 w-full max-w-[100rem] items-center gap-3 px-3 sm:px-5">
-          <Link
-            href={returnHref}
-            aria-label="Back to library"
-            className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm"
-          >
-            <ArrowLeftIcon />
-            <span className="hidden sm:inline">Library</span>
-          </Link>
-          <span className="min-w-0 flex-1 truncate text-sm text-text-secondary">
-            Note
-          </span>
-          <button
-            type="button"
-            aria-label="Edit note"
-            className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm"
-            disabled={editing || saving || deleting || organizeBusy}
-            onClick={beginEdit}
-          >
-            <EditIcon />
-            <span className="hidden sm:inline">Edit</span>
-          </button>
-          {!editing ? (
-            <button
-              type="button"
-              className="ui-control inline-flex min-h-10 items-center px-3 text-sm"
-              disabled={saving || deleting || organizeBusy}
-              onClick={beginEdit}
-            >
-              Add image
-            </button>
-          ) : null}
-          <button
-            type="button"
-            aria-label="Organize"
-            className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm"
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+      <ItemPageHeader returnHref={returnHref} title={title} />
+
+      <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
+        <div className={ITEM_PAGE_GRID}>
+          <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-4xl lg:pt-6">
+            <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+              {title}
+            </h1>
+            <article className="mt-9 border-t border-border-control pt-8">
+              <NoteContent content={noteReadingBody(note)} format={note.format === "markdown" ? "markdown" : "plain"} headingStart={2} />
+            </article>
+          </div>
+
+          <ItemLibraryDetails
+            label="Note details"
+            summary={{ label: "Format", value: note.format === "markdown" ? "Markdown" : "Plain text" }}
+            collections={itemCollections}
+            tags={itemTags}
+            createdAt={note.createdAt}
+            updatedAt={note.updatedAt}
+            className={ITEM_DETAILS_POSITION}
             disabled={saving || deleting || organizeBusy}
-            onClick={() => {
+            editDisabled={editing}
+            editLabel="Edit note"
+            deleteLabel="Move note to Trash"
+            onEdit={beginEdit}
+            onOrganize={() => {
               setTagError(null);
               setCollectionError(null);
-              setOrganizerSide(
-                document.documentElement.dir === "rtl" ? "left" : "right",
-              );
+              setOrganizerSide(document.documentElement.dir === "rtl" ? "left" : "right");
               setOrganizerOpen(true);
             }}
-          >
-            <LayersIcon />
-            <span className="hidden sm:inline">Organize</span>
-          </button>
-          <button
-            type="button"
-            aria-label="Move note to Trash"
-            className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60"
-            disabled={saving || deleting || organizeBusy}
-            onClick={() => setDeleteOpen(true)}
-          >
-            <DeleteIcon />
-            <span className="hidden sm:inline">Move to Trash</span>
-          </button>
+            onDelete={() => setDeleteOpen(true)}
+            mediaAction={
+              <button className={ITEM_DETAILS_CONTROL} type="button" disabled={editing || saving || deleting || organizeBusy} onClick={beginEdit}>
+                <PlusIcon className="size-4" />Add image
+              </button>
+            }
+          />
         </div>
-      </header>
-
-      <main className="mx-auto grid w-full max-w-[100rem] items-start gap-8 px-5 pb-24 pt-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
-        <div className="min-w-0 lg:mx-auto lg:w-full lg:max-w-4xl lg:pt-6">
-          <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            {title}
-          </h1>
-          <article className="mt-9 border-t border-border-control pt-8">
-            <NoteContent content={noteReadingBody(note)} format={note.format === "markdown" ? "markdown" : "plain"} headingStart={2} />
-          </article>
-        </div>
-
-        <ItemLibraryDetails
-          label="Note details"
-          summary={{ label: "Format", value: note.format === "markdown" ? "Markdown" : "Plain text" }}
-          collections={itemCollections}
-          tags={itemTags}
-          createdAt={note.createdAt}
-          updatedAt={note.updatedAt}
-          className="lg:sticky lg:top-24"
-        />
       </main>
 
       {editing ? <NoteItemEditDialog

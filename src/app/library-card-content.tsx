@@ -29,7 +29,7 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
   return (
     <motion.div
       id={id}
-      className="ui-popover absolute right-0 top-[calc(100%+8px)] z-40 w-64 max-w-[calc(100vw-6rem)]"
+      className="ui-popover ui-scrollbar absolute right-0 top-[calc(100%+8px)] z-40 max-h-[min(20rem,50dvh)] w-64 max-w-[calc(100vw-6rem)] overflow-y-auto"
       style={{ transformOrigin: "top right", pointerEvents: isPresent ? "auto" : "none" }}
       inert={!isPresent}
       aria-hidden={!isPresent}

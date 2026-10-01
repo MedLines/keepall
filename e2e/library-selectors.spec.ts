@@ -52,6 +52,8 @@ test("selector popup stays inside a 320px viewport", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto("/");
   await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
+  if (await closeNavigation.isVisible()) await closeNavigation.click();
 
   const sort = page.getByRole("combobox", { name: /^Sort library:/ });
   await sort.focus();

@@ -456,6 +456,7 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
 .ui-scrollbar,
 .scroll-fade,
 .library-sidebar-section-scroll {
+  scrollbar-gutter: stable;
   scrollbar-color: var(--color-border-subtle) transparent;
   scrollbar-width: thin;
 }

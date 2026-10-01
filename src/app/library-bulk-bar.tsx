@@ -148,7 +148,7 @@ export function LibraryBulkToolbar({
           <Menu.Positioner align="start" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
             <Menu.Popup
               aria-label="Selection actions"
-              className="ui-popover max-h-[var(--available-height)] min-w-48 max-w-[calc(100vw-1rem)] overflow-y-auto outline-none"
+              className="ui-popover ui-scrollbar max-h-[min(24rem,var(--available-height))] min-w-48 max-w-[calc(100vw-1rem)] overflow-y-auto outline-none"
               finalFocus={() => focusSearchAfterClose.current
                 ? document.getElementById("library-search")
                 : restoreTriggerFocus.current ? triggerRef.current : false}

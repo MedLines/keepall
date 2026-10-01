@@ -142,8 +142,8 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
         {isTags ? <HashIcon /> : <CollectionIcon />}{label}<ArrowRightIcon className="ms-auto size-4 rtl:rotate-180" />
       </Menu.SubmenuTrigger>
       <Menu.Portal>
-        <Menu.Positioner className="z-[61]" sideOffset={4} alignOffset={-4} collisionPadding={8}>
-          <Menu.Popup aria-label={label} className="ui-popover flex max-h-[var(--available-height)] w-64 max-w-[calc(100vw-1rem)] flex-col overflow-hidden outline-none">
+        <Menu.Positioner className="z-[61] data-[anchor-hidden]:invisible" align="start" sideOffset={4} alignOffset={-4} collisionPadding={8} positionMethod="fixed">
+          <Menu.Popup aria-label={label} className="ui-popover flex h-[min(20rem,var(--available-height))] w-64 max-w-[calc(100vw-1rem)] flex-col overflow-hidden outline-none">
             <div className="flex shrink-0 items-center gap-2 border-b border-border-edge px-3 pb-2 pt-1">
               <SearchIcon className="size-4 text-text-secondary" />
               <input
@@ -167,7 +167,7 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
                 }}
               />
             </div>
-            <div ref={resultsRef} className="ui-scrollbar min-h-0 overflow-y-auto pt-1">
+            <div ref={resultsRef} className="ui-scrollbar min-h-0 flex-1 overflow-y-auto pt-1">
               {isTags ? matches.map((tag) => (
                 <Menu.CheckboxItem
                   key={tag.id}
