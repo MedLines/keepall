@@ -67,6 +67,7 @@ export type LibraryItemProps = {
   inspected: boolean;
   openHref?: string;
   onOpenInspect: () => void;
+  onPreview?: () => void;
   tagNames: { id: string; name: string }[];
   tagError: string | null;
   collections: { id: string; name: string }[];
@@ -112,6 +113,7 @@ export function LibraryItem({
   inspected,
   openHref,
   onOpenInspect,
+  onPreview,
   tagNames,
   tagError,
   collections,
@@ -309,6 +311,7 @@ export function LibraryItem({
       tagError={tagError}
       onAddTag={onAddTag}
       onRemoveTag={onRemoveTag}
+      onPreview={onPreview}
       onEdit={onStartEdit}
       onDelete={onStartDelete}
       onTogglePin={pinVisible ? onTogglePin : undefined}
@@ -323,8 +326,12 @@ export function LibraryItem({
       style={placement?.style}
       data-index={placement?.index}
       data-item-id={item.id}
+      tabIndex={0}
+      aria-label={title}
+      aria-description="Arrow keys browse in result order. Shift and an arrow selects a range. Space previews. Enter opens the full item."
+      aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Space Enter Shift+ArrowLeft Shift+ArrowRight Shift+ArrowUp Shift+ArrowDown"
       draggable={dragEnabled}
-      className={`library-item-root min-w-0 focus-within:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
+      className={`library-item-root min-w-0 rounded-control-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-border-focus focus-within:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
     >

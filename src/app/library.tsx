@@ -91,7 +91,7 @@ import {
 import { useLibraryTrashActions } from "./library-trash-actions";
 import { LibraryShell } from "./library-shell";
 import { countSidebarItems } from "./library-sidebar-counts";
-import { LibraryMainGrid } from "./library-main-grid";
+import { LibraryMainGrid, type LibraryPreviewHandle } from "./library-main-grid";
 import { LibraryOrganizationOverview } from "./library-organization-overview";
 import { setCaptureCollectionName } from "./capture-events";
 import type { MasonryPlacement } from "./library-masonry";
@@ -311,6 +311,8 @@ export function Library() {
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
   const mainScrollRef = useRef<HTMLElement>(null);
+  const libraryGridRef = useRef<LibraryPreviewHandle>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const prevBrowseScopeRef = useRef<string | null>(null);
   const pendingNavScopeLabelRef = useRef<string | null>(null);
   const browseIndexesRef = useRef(buildLibraryBrowseIndexes([]));
@@ -1633,6 +1635,7 @@ export function Library() {
             : undefined
         }
         onOpenInspect={() => openInspect(item)}
+        onPreview={!view.trash ? () => libraryGridRef.current?.openPreview(item.id) : undefined}
         tagNames={resolveItemTags(item, tagsById)}
         tagError={tagErrorItemId === item.id ? tagError : null}
         collections={
@@ -1729,6 +1732,8 @@ export function Library() {
         onSortChange={(sort) => updateView({ sort }, "push")}
         layout={browseLayout}
         onLayoutChange={(layout) => updateView({ layout }, "replace")}
+        onPreview={() => libraryGridRef.current?.openPreview()}
+        previewDisabled={mutationBusy || loadState !== "ready" || visibleItems.length === 0}
         collectionsView={Boolean(view.collections)}
         tagsView={Boolean(view.tags)}
         typeFilter={browseType}
@@ -1816,6 +1821,7 @@ export function Library() {
       <div className="relative flex h-full min-h-0 overflow-hidden bg-bg-shell py-2.5 pr-2.5">
         <LibraryShell
           panelOpen={panelOpen}
+          previewOpen={previewOpen}
           panelReady={panelPreference !== null}
           onPanelOpenChange={setPanelOpen}
           browseCollectionId={browseCollectionId}
@@ -1923,11 +1929,18 @@ export function Library() {
                 />
               ) : (
                 <LibraryMainGrid
+                  ref={libraryGridRef}
+                  onPreviewOpenChange={setPreviewOpen}
                   visibleItems={visibleItems}
                   scopeKey={browseScopeKey}
                   layout={browseLayout}
                   scrollRef={mainScrollRef}
                   renderItem={renderLibraryItem}
+                  selectedIds={selectedIds}
+                  onSelectIds={setSelectedIds}
+                  keyboardDisabled={mutationBusy}
+                  previewEnabled={!view.trash}
+                  onOpenItem={item => router.push(itemPageHref(item.id, libraryViewHref(pathname, mergeLibraryViewState(viewRef.current, { item: null, slide: 0 }))))}
                   empty={
                     <LibraryEmptyState
                       kind={emptyStateKind}

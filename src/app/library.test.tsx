@@ -1328,6 +1328,7 @@ describe("Library search", () => {
 
 describe("Library view state", () => {
   beforeEach(() => {
+    vi.mocked(clearCollectionOnItem).mockReset();
     vi.mocked(getLibraryPreferences).mockResolvedValue({ id: "library", pinnedCollectionIds: [] });
     vi.mocked(listItems).mockReset();
     vi.mocked(deleteItem).mockReset();
@@ -1788,6 +1789,35 @@ describe("Library inspect", () => {
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
     vi.mocked(assignCollectionToItem).mockReset();
+  });
+
+  test("toolbar and item menus share a preview of the current results", async () => {
+    const one = buildNote({ title: "Alpha", content: "First body" }, { id: "alpha", now: 3 });
+    const two = buildNote({ title: "Beta", content: "Second body" }, { id: "beta", now: 2 });
+    vi.mocked(listItems).mockResolvedValue([one, two]);
+    render(<Library />);
+    await screen.findByRole("listitem", { name: "Alpha" });
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    const dialog = await screen.findByRole("dialog", { name: "Alpha" });
+    expect(dialog).toHaveTextContent("First body");
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    const beta = screen.getByRole("listitem", { name: "Beta" });
+    fireEvent.click(within(beta).getByRole("button", { name: "Actions for Beta" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Preview" }));
+    expect(await screen.findByRole("dialog", { name: "Beta" })).toHaveTextContent("Second body");
+  });
+
+  test("preview entry is disabled for empty results and absent from overview and Trash", async () => {
+    vi.mocked(listItems).mockResolvedValue([]);
+    render(<Library />);
+    await screen.findByText("No items yet.");
+    expect(screen.getByRole("button", { name: "Preview" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "All collections" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Trash" }));
+    await screen.findByText("Trash is empty.");
+    expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument();
   });
 
   test("links from the note card to its page", async () => {

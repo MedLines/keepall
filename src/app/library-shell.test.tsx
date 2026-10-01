@@ -59,3 +59,15 @@ test("desktop navigation does not close the sidebar after choosing All items", (
   expect(input.onGoAll).toHaveBeenCalledOnce();
   expect(input.onPanelOpenChange).not.toHaveBeenCalled();
 });
+
+
+test("preview keeps mobile navigation closed after resizing while preserving desktop navigation", () => {
+  vi.mocked(useShellMobile).mockReturnValue(false);
+  const input = props({ previewOpen: true });
+  const { rerender } = render(<LibraryShell {...input} />);
+  expect(input.onPanelOpenChange).not.toHaveBeenCalled();
+  vi.mocked(useShellMobile).mockReturnValue(true);
+  rerender(<LibraryShell {...input} />);
+  expect(screen.queryByRole("dialog", { name: "Sidebar navigation" })).not.toBeInTheDocument();
+  expect(input.onPanelOpenChange).toHaveBeenCalledExactlyOnceWith(false);
+});

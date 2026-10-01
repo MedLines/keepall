@@ -30,9 +30,10 @@ type Props = {
   scrollRef: RefObject<HTMLElement | null>;
   scopeKey: string;
   renderItem: (item: Item, placement?: MasonryPlacement) => ReactNode;
+  focusedIndex?: number;
 };
 
-export function LibraryMasonry({ items, scrollRef, scopeKey, renderItem }: Props) {
+export function LibraryMasonry({ items, scrollRef, scopeKey, renderItem, focusedIndex = -1 }: Props) {
   const gridRef = useRef<HTMLUListElement>(null);
   const [width, setWidth] = useState(0);
   const [scrollMargin, setScrollMargin] = useState(0);
@@ -51,9 +52,9 @@ export function LibraryMasonry({ items, scrollRef, scopeKey, renderItem }: Props
   );
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => (
     virtualized
-      ? defaultRangeExtractor(range)
+      ? [...new Set([...defaultRangeExtractor(range), ...(focusedIndex >= 0 ? [focusedIndex] : [])])].sort((a, b) => a - b)
       : Array.from({ length: items.length }, (_, index) => index)
-  ), [items.length, virtualized]);
+  ), [items.length, virtualized, focusedIndex]);
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollRef.current,

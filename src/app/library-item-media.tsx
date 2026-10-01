@@ -8,11 +8,11 @@ import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { useState } from "react";
 import { ImageIcon, LinkIcon, NoteIcon, VideoIcon } from "./shell-icons";
 
-type MediaVariant = "card" | "grid" | "inspect" | "viewer";
+type MediaVariant = "card" | "grid" | "inspect" | "viewer" | "preview";
 
 type Props = {
   item: Item;
-  /** Grid preserves proportions, cards crop, inspect fits, and viewer keeps natural height. */
+  /** Grid preserves proportions, cards crop, inspect fits, viewer keeps natural height, and preview contains without upscaling. */
   variant?: MediaVariant;
   onImageLoad?: (ratio: number, dimensions: { width: number; height: number }) => void;
   /** Inspect gallery: show this asset instead of the cover. */
@@ -32,7 +32,7 @@ export function LibraryItemMedia({
   className = "",
 }: Props) {
   const assetIdForDisplay = resolveAssetId(item, assetId);
-  const useThumbnail = (item.type === "image" || item.type === "video") && variant !== "inspect" && variant !== "viewer";
+  const useThumbnail = ["card", "grid"].includes(variant) && (item.type === "image" || item.type === "video");
   const originalUrl = useAssetObjectUrl(assetIdForDisplay, { enabled: !useThumbnail });
   const thumbnailUrl = useThumbnailObjectUrl(useThumbnail ? assetIdForDisplay : null);
   const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl;
@@ -106,6 +106,9 @@ function imageClassName(
   if (variant === "grid") {
     return `media-outline media-squircle-inset block h-auto w-full ${className}`;
   }
+  if (variant === "preview") {
+    return `media-outline block h-auto w-auto max-h-full max-w-full rounded-input object-contain ${className}`;
+  }
   if (variant === "viewer") {
     return `media-outline mx-auto block h-auto w-auto max-w-full ${className}`;
   }
@@ -123,6 +126,9 @@ function fallbackClassName(
   compact: boolean,
   className: string,
 ) {
+  if (variant === "preview") {
+    return `flex size-full min-h-0 items-center justify-center rounded-input bg-bg-media text-5xl font-semibold text-text-on-media ${className}`;
+  }
   if (variant === "inspect" || variant === "viewer") {
     return `flex min-h-48 items-center justify-center bg-bg-media text-5xl font-semibold text-text-on-media ${className}`;
   }

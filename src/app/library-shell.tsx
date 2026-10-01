@@ -65,6 +65,7 @@ type SidebarRailAction = {
 type Props = {
   panelOpen: boolean;
   panelReady: boolean;
+  previewOpen?: boolean;
   onPanelOpenChange: (open: boolean) => void;
   browseCollectionId: string | null;
   browseUnsorted: boolean;
@@ -104,6 +105,7 @@ type Props = {
 export function LibraryShell({
   panelOpen: expanded,
   panelReady,
+  previewOpen = false,
   onPanelOpenChange,
   browseCollectionId,
   browseUnsorted,
@@ -138,7 +140,10 @@ export function LibraryShell({
   const [collectionsOpen, setCollectionsOpen] = useState(true);
   const [tagsOpen, setTagsOpen] = useState(true);
   const isMobile = useShellMobile();
-  const mobileSidebarOpen = isMobile && expanded;
+  const mobileSidebarOpen = isMobile && expanded && !previewOpen;
+  useEffect(() => {
+    if (isMobile && expanded && previewOpen) onPanelOpenChange(false);
+  }, [isMobile, expanded, previewOpen, onPanelOpenChange]);
   const mobileOpener = useRef<HTMLElement | null>(null);
   const mobileOpenerAnchor = useRef<string | null>(null);
 

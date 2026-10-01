@@ -510,6 +510,7 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
     pointer-events: none;
   }
 
+  .library-item-root:focus-within .library-card-actions,
   .library-card:hover .library-card-actions,
   .library-card:focus-within .library-card-actions,
   .library-list-row:hover .library-card-actions,
@@ -521,6 +522,7 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
 
   .library-list-select:not([data-visible="true"]) { opacity: 0; pointer-events: none; }
   .library-list-row:hover .library-list-select,
+  .library-item-root:focus-within .library-list-select,
   .library-list-row:focus-within .library-list-select { opacity: 1; pointer-events: auto; }
 }
 
@@ -547,3 +549,37 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
 .note-markdown table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: 0.875rem; }
 .note-markdown :is(th, td) { border-bottom: 1px solid var(--color-border-control); padding: 0.5rem 0.75rem; text-align: start; }
 .note-markdown th { font-weight: 600; }
+
+.library-quick-preview { container-type: inline-size; }
+.library-preview-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.library-preview-navigation { flex-shrink: 0; }
+.library-preview-document img { margin-inline: auto; max-height: min(24rem, 45dvh); }
+
+@container (max-width: 26rem) {
+  .library-preview-navigation { width: 100%; justify-content: center; }
+  .library-preview-footer > button { width: 100%; }
+}
+
+.library-quick-preview [data-preview-media] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.library-quick-preview [data-preview-media] > :is(img, video) {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
+.library-quick-preview [data-image-sizing="scroll"] {
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.library-quick-preview [data-image-sizing="scroll"] > img {
+  position: static;
+  max-block-size: none;
+  flex-shrink: 0;
+}

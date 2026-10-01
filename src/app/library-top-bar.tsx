@@ -16,6 +16,7 @@ import {
 import {
   CloseIcon,
   DeleteIcon,
+  EyeIcon,
   GridIcon,
   ListIcon,
   PlusIcon,
@@ -42,6 +43,8 @@ type Props = {
   onSortChange: (sort: LibrarySort) => void;
   layout: LibraryLayout;
   onLayoutChange: (layout: LibraryLayout) => void;
+  onPreview?: () => void;
+  previewDisabled?: boolean;
   typeFilter: LibraryTypeFilter | null;
   typeCounts: LibrarySidebarCounts;
   onTypeFilterChange: (type: LibraryTypeFilter | null) => void;
@@ -68,7 +71,7 @@ function LibraryBulkActions({ bulk, selection }: { bulk: LibraryBulkBarProps | u
 
 export function LibraryTopBar({
   headingRef, title, itemCount, searchQuery, onSearchChange,
-  sort, onSortChange, layout, onLayoutChange, panelOpen, onPanelOpenChange,
+  sort, onSortChange, layout, onLayoutChange, onPreview, previewDisabled = false, panelOpen, onPanelOpenChange,
   typeFilter, typeCounts, onTypeFilterChange, tagFilterName,
   searchPlaceholder, typeFilterName, onClearSearchFilter, onClearTypeFilter,
   onClearTagFilter, onClearFilters, bulk, selection, collectionsView = false, tagsView = false, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
@@ -146,6 +149,13 @@ export function LibraryTopBar({
                 </button>
               ))}
             </div>
+            {!trash && !collectionsView && !tagsView && onPreview ? <button
+              type="button" aria-label="Preview" title="Preview current results" aria-haspopup="dialog"
+              className="ui-control inline-flex h-11 shrink-0 items-center justify-center gap-2 px-3 text-sm disabled:opacity-50"
+              disabled={previewDisabled} onClick={onPreview}
+            >
+              <EyeIcon className="size-4" /><span className="hidden xl:inline">Preview</span>
+            </button> : null}
           </div>
         </div>
         <div className="flex w-full shrink-0 items-center justify-end gap-3 sm:w-auto">

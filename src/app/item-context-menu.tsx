@@ -7,7 +7,7 @@ import { RowActionMenu } from "./row-action-menu";
 import { normalizeCollectionName } from "@/domain/collection";
 import { normalizeTagName } from "@/domain/tag";
 import {
-  ArrowRightIcon, CollectionIcon, DeleteIcon, EditIcon, HashIcon, LayersIcon, LinkIcon,
+  ArrowRightIcon, CollectionIcon, DeleteIcon, EditIcon, EyeIcon, HashIcon, LayersIcon, LinkIcon,
   PinIcon, PlusIcon, SearchIcon, SelectionCheckedIcon,
 } from "./shell-icons";
 
@@ -32,6 +32,7 @@ type Props = {
   tagError: string | null;
   onAddTag: (name: string) => void;
   onRemoveTag: (id: string) => void;
+  onPreview?: () => void;
   onEdit: () => void;
   onOrganize: () => void;
   onDelete: () => void;
@@ -44,7 +45,7 @@ const MENU_ITEM = "ui-menu-item flex w-full items-center gap-2 text-left text-sm
 
 export function ItemContextMenu({
   children, trigger, title, openHref, tags, assignedTagIds, busy, disabled, tagError,
-  onAddTag, onRemoveTag, onEdit, onOrganize, onDelete, onTogglePin, pinned, onOpen,
+  onAddTag, onRemoveTag, onPreview, onEdit, onOrganize, onDelete, onTogglePin, pinned, onOpen,
   collections, assignedCollectionIds, collectionError, onMoveToCollection, onClearCollection, triggerRef, trashActions,
 }: Props) {
   const openingDialog = useRef(false);
@@ -76,6 +77,9 @@ export function ItemContextMenu({
               <Menu.Separator className="my-1 border-t border-border-edge" />
             </>
           ) : null}
+          {onPreview ? <Menu.Item className={MENU_ITEM} disabled={busy} onClick={() => openDialog(onPreview)}>
+            <EyeIcon />Preview
+          </Menu.Item> : null}
           <OrganizationSubmenu kind="tags" entries={tags} assignedIds={assignedTagIds} busy={busy} error={tagError} onSelect={onAddTag} onRemove={onRemoveTag} />
           <OrganizationSubmenu kind="collections" entries={collections} assignedIds={assignedCollectionIds} busy={busy} error={collectionError} onSelect={onMoveToCollection} onClear={onClearCollection} />
           <ContextMenu.Separator className="my-1 border-t border-border-edge" />
