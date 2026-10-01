@@ -4,6 +4,13 @@ export function normalizeSearchQuery(query: string): string {
   return query.trim().toLowerCase();
 }
 
+/** An unfinished quote keeps its phrase together while the user types. */
+export function parseSearchTerms(query: string): string[] {
+  const terms = Array.from(query.matchAll(/"([^"]*)"|"([^"]*)$|([^\s"]+)/g),
+    match => normalizeSearchQuery(match[1] ?? match[2] ?? match[3])).filter(Boolean);
+  return [...new Set(terms)];
+}
+
 export type SearchRange = { start: number; end: number };
 type SearchField = {
   field: "title" | "content" | "noteContent" | "caption" | "previewTitle" | "previewDescription" | "url" | "sourceUrl" | "sourceFileName" | "tag";
@@ -11,6 +18,19 @@ type SearchField = {
   text: string;
 };
 export type SearchMatch = SearchField & { ranges: SearchRange[] };
+
+const SEARCH_FIELD_WEIGHTS: Record<SearchField["field"], number> = {
+  title: 8,
+  content: 4,
+  noteContent: 4,
+  caption: 4,
+  tag: 4,
+  previewTitle: 2,
+  previewDescription: 2,
+  url: 1,
+  sourceUrl: 1,
+  sourceFileName: 1,
+};
 
 /** Personal content comes first when choosing a result's explanatory excerpt. */
 function searchableFields(item: Item, tagNames: readonly string[]): SearchField[] {
@@ -66,16 +86,31 @@ export function findTextMatches(text: string, query: string): SearchRange[] {
   return ranges;
 }
 
+export function findQueryTextMatches(text: string, query: string): SearchRange[] {
+  const matches = parseSearchTerms(query).flatMap(term => findTextMatches(text, term))
+    .sort((left, right) => left.start - right.start || right.end - left.end);
+  const ranges: SearchRange[] = [];
+  for (const match of matches) {
+    const previous = ranges[ranges.length - 1];
+    if (previous && match.start < previous.end) {
+      previous.end = Math.max(previous.end, match.end);
+    } else {
+      ranges.push({ ...match });
+    }
+  }
+  return ranges;
+}
+
 export function findSearchMatches(item: Item, query: string, tagNames: readonly string[] = []): SearchMatch[] {
   if (!normalizeSearchQuery(query)) return [];
   return searchableFields(item, tagNames).flatMap(field => {
-    const ranges = findTextMatches(field.text, query);
+    const ranges = findQueryTextMatches(field.text, query);
     return ranges.length ? [{ ...field, ranges }] : [];
   });
 }
 
 export function createSearchExcerpt(text: string, query: string): string {
-  const match = findTextMatches(text, query)[0];
+  const match = findQueryTextMatches(text, query)[0];
   if (!match) return "";
   const length = Math.max(160, match.end - match.start);
   const start = Math.max(0, match.start - 40);
@@ -83,8 +118,24 @@ export function createSearchExcerpt(text: string, query: string): string {
   return `${start ? "…" : ""}${text.slice(start, end)}${end < text.length ? "…" : ""}`;
 }
 
-/** Case-insensitive substring match, without allocating ranges for the whole library. */
+/** Null means a missing term; otherwise each term contributes its strongest field match. */
+export function searchRelevanceScore(item: Item, terms: readonly string[], tagNames: readonly string[] = []): number | null {
+  if (!terms.length) return 0;
+  const fields = searchableFields(item, tagNames).map(field => ({ ...field, text: field.text.toLowerCase() }));
+  let score = 0;
+  for (const term of terms) {
+    let best = 0;
+    for (const field of fields) {
+      if (!field.text.includes(term)) continue;
+      best = Math.max(best, SEARCH_FIELD_WEIGHTS[field.field]);
+    }
+    if (!best) return null;
+    score += best;
+  }
+  if (normalizeSearchQuery(item.title) === terms.join(" ")) score += 8;
+  return score;
+}
+
 export function matchesSearchQuery(item: Item, query: string, tagNames: readonly string[] = []): boolean {
-  const needle = normalizeSearchQuery(query);
-  return !needle || searchableFields(item, tagNames).some(({ text }) => text.toLowerCase().includes(needle));
+  return searchRelevanceScore(item, parseSearchTerms(query), tagNames) !== null;
 }

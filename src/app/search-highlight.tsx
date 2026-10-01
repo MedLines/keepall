@@ -1,11 +1,11 @@
 "use client";
 
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from "react";
-import { createSearchExcerpt, findSearchMatches, findTextMatches } from "@/domain/search";
+import { createSearchExcerpt, findSearchMatches, findQueryTextMatches } from "@/domain/search";
 import type { Item } from "@/domain/item";
 
 export function SearchHighlight({ text, query = "" }: { text: string; query?: string }) {
-  const ranges = findTextMatches(text, query);
+  const ranges = findQueryTextMatches(text, query);
   if (!ranges.length) return text;
   return <>{ranges.map((range, index) => (
     <Fragment key={range.start}>

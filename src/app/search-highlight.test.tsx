@@ -17,3 +17,15 @@ test("renders saved HTML as text rather than elements", () => {
   expect(container.querySelector("img")).toBeNull();
   expect(container.querySelector("mark")).toHaveTextContent("img");
 });
+
+test("highlights separate words and exact phrases without duplicating overlapping text", () => {
+  const { container, rerender } = render(<SearchHighlight text="React patterns for animation" query="animation react" />);
+  expect(Array.from(container.querySelectorAll("mark"), mark => mark.textContent)).toEqual(["React", "animation"]);
+  rerender(<SearchHighlight text="React animation examples" query='react "animation examples"' />);
+  expect(Array.from(container.querySelectorAll("mark"), mark => mark.textContent)).toEqual(["React", "animation examples"]);
+  rerender(<SearchHighlight text="Animation" query="anim animation" />);
+  expect(container.textContent).toBe("Animation");
+  expect(container.querySelectorAll("mark")).toHaveLength(1);
+  rerender(<SearchHighlight text="İstanbul DESIGN" query="design i̇st" />);
+  expect(Array.from(container.querySelectorAll("mark"), mark => mark.textContent)).toEqual(["İst", "DESIGN"]);
+});

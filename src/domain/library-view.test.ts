@@ -25,6 +25,12 @@ const emptyView = {
   slide: 0,
 };
 
+test("best match sort survives URL serialization and reload", () => {
+  const view = parseLibraryViewState(new URLSearchParams("q=react+animation&sort=relevance"));
+  expect(view.sort).toBe("relevance");
+  expect(parseLibraryViewState(libraryViewStateToSearchParams(view))).toEqual(view);
+});
+
 test("collections view round-trips and exits when navigating to an item scope", () => {
   const folders = parseLibraryViewState(new URLSearchParams("collections=1&q=read"));
   expect(folders.collections).toBe(true);

@@ -36,6 +36,23 @@ describe("matchesSearchQuery", () => {
     expect(matchesSearchQuery(note, "missing")).toBe(false);
   });
 
+  test("requires every word across fields, in any order", () => {
+    const saved = { ...link, title: "React patterns", noteContent: "Useful animation examples" };
+    expect(matchesSearchQuery(saved, " REACT   animation ")).toBe(true);
+    expect(matchesSearchQuery(saved, "animation react")).toBe(true);
+    expect(matchesSearchQuery(saved, "react missing")).toBe(false);
+    expect(matchesSearchQuery(saved, "react inspiration", ["Inspiration"])).toBe(true);
+  });
+
+  test("keeps quoted phrases in one field and supports mixed terms", () => {
+    const saved = { ...link, title: "React patterns", noteContent: "Useful animation examples" };
+    expect(matchesSearchQuery(saved, 'react "animation examples"')).toBe(true);
+    expect(matchesSearchQuery(saved, '"react animation"')).toBe(false);
+    expect(matchesSearchQuery(saved, 'react "examples animation"')).toBe(false);
+    expect(matchesSearchQuery(saved, 'react "animation examples')).toBe(true);
+    expect(matchesSearchQuery(saved, '""')).toBe(true);
+  });
+
   test("matches link title and URL case-insensitively", () => {
     expect(matchesSearchQuery(link, "docs")).toBe(true);
     expect(matchesSearchQuery(link, "EXAMPLE.COM")).toBe(true);
@@ -69,6 +86,13 @@ describe("matchesSearchQuery", () => {
 });
 
 describe("search ranges and excerpts", () => {
+  test("finds separate term matches and excerpts even when other words match another field", () => {
+    const saved = buildNote({ title: "React patterns", content: "x".repeat(250) + "Animation examples" });
+    const matches = findSearchMatches(saved, "react animation");
+    expect(matches.map(match => match.field)).toEqual(["content", "title"]);
+    expect(matches[0].ranges).toEqual([{ start: 250, end: 259 }]);
+    expect(createSearchExcerpt(saved.content, "react animation")).toContain("Animation");
+  });
   test("finds literal repeated matches and preserves original offsets", () => {
     expect(findTextMatches("A+B then a+b", " a+b ")).toEqual([{ start: 0, end: 3 }, { start: 9, end: 12 }]);
     expect(findTextMatches("anything", " ")).toEqual([]);

@@ -103,6 +103,7 @@ export function LibraryTopBar({
               className="ui-field h-10 w-full pl-10 pr-3 text-sm"
               id="library-search"
               type="search"
+              title={collectionsView || tagsView ? undefined : 'Search words in any order. Use "quotes" for an exact phrase.'}
               placeholder={collectionsView ? "Search collections…" : tagsView ? "Search tags…" : searchPlaceholder ?? (trash ? "Search Trash…" : "Search your library…")}
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
@@ -115,12 +116,13 @@ export function LibraryTopBar({
               loading={libraryLoading}
               onChange={onTypeFilterChange}
             /> : null}
-            <ShellTopMenu
+            <ShellTopMenu<LibrarySort>
               ariaLabel="Sort library"
               iconOnly
-              value={sort}
+              value={(collectionsView || tagsView) && sort === "relevance" ? "newest" : sort}
               options={[
                 { value: "newest", label: "Newest", icon: <SortDescIcon /> },
+                ...(!collectionsView && !tagsView ? [{ value: "relevance" as const, label: "Best match", icon: <SearchIcon /> }] : []),
                 { value: "oldest", label: "Oldest", icon: <SortAscIcon /> },
               ]}
               onChange={onSortChange}

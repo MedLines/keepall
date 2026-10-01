@@ -1,6 +1,6 @@
 import type { Item } from "./item";
 
-export type LibrarySort = "newest" | "oldest";
+export type LibrarySort = "newest" | "oldest" | "relevance";
 
 /** Item kind filter; null means All types. */
 export type LibraryTypeFilter = "link" | "note" | "image" | "video";
@@ -42,7 +42,7 @@ function isCollectionOverviewScope(
 }
 
 export function parseLibrarySort(value: string | null): LibrarySort {
-  return value === "oldest" ? "oldest" : "newest";
+  return value === "oldest" || value === "relevance" ? value : "newest";
 }
 
 export function parseLibraryType(
@@ -153,23 +153,28 @@ export function libraryViewHref(
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function sortLibraryItems<T extends Pick<Item, "createdAt">>(
+export function sortLibraryItems<T extends Pick<Item, "id" | "createdAt">>(
   items: T[],
   sort: LibrarySort,
+  searchScores?: ReadonlyMap<string, number>,
 ): T[] {
   const copy = [...items];
-  copy.sort((a, b) =>
-    sort === "newest" ? b.createdAt - a.createdAt : a.createdAt - b.createdAt,
-  );
+  copy.sort((a, b) => {
+    if (sort === "relevance") {
+      const difference = (searchScores?.get(b.id) ?? 0) - (searchScores?.get(a.id) ?? 0);
+      if (difference) return difference;
+    }
+    return sort === "oldest" ? a.createdAt - b.createdAt : b.createdAt - a.createdAt;
+  });
   return copy;
 }
 
 /** Pinned ids first (stable array order), then remaining items by sort. Ignored when pins is null. */
 export function sortLibraryItemsWithCollectionPins<
   T extends Pick<Item, "id" | "createdAt">,
->(items: T[], sort: LibrarySort, pinnedItemIds: string[] | null): T[] {
+>(items: T[], sort: LibrarySort, pinnedItemIds: string[] | null, searchScores?: ReadonlyMap<string, number>): T[] {
   if (!pinnedItemIds || pinnedItemIds.length === 0) {
-    return sortLibraryItems(items, sort);
+    return sortLibraryItems(items, sort, searchScores);
   }
 
   const byId = new Map(items.map((item) => [item.id, item]));
@@ -185,6 +190,7 @@ export function sortLibraryItemsWithCollectionPins<
   const rest = sortLibraryItems(
     items.filter((item) => !pinnedSet.has(item.id)),
     sort,
+    searchScores,
   );
   return [...pinned, ...rest];
 }

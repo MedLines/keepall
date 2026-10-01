@@ -8,7 +8,7 @@ import {
   itemIsUnsorted,
   resolveItemTagNames,
 } from "@/domain/item";
-import { matchesSearchQuery } from "@/domain/search";
+import { parseSearchTerms, searchRelevanceScore } from "@/domain/search";
 import { sortLibraryItemsWithCollectionPins } from "@/domain/library-view";
 
 /** Precomputed pools so folder/tag/type browse avoids scanning the whole library. */
@@ -128,6 +128,8 @@ export function filterAndSortLibraryItems(
   const collection =
     collectionId !== null ? (collectionsById.get(collectionId) ?? null) : null;
   const pool = browseCandidatePool(items, view, indexes);
+  const terms = parseSearchTerms(view.q);
+  const searchScores = new Map<string, number>();
 
   return sortLibraryItemsWithCollectionPins(
     pool.filter((item) => {
@@ -143,13 +145,17 @@ export function filterAndSortLibraryItems(
       if (view.tag !== null && !itemHasTag(item, view.tag)) {
         return false;
       }
-      return matchesSearchQuery(
+      const score = searchRelevanceScore(
         item,
-        view.q,
+        terms,
         resolveItemTagNames(item, tagMap),
       );
+      if (score === null) return false;
+      searchScores.set(item.id, score);
+      return true;
     }),
     view.sort,
     collectionId !== null ? (collection?.pinnedItemIds ?? null) : null,
+    searchScores,
   );
 }

@@ -3,6 +3,7 @@ import { buildImage } from "@/domain/image";
 import { buildLink } from "@/domain/link";
 import { buildNote } from "@/domain/note";
 import type { LibraryViewState } from "@/domain/library-view";
+import { parseLibraryViewState } from "@/domain/library-view";
 import type { Collection } from "@/domain/collection";
 import {
   buildLibraryBrowseIndexes,
@@ -28,6 +29,24 @@ describe("library-browse-index", () => {
     ["c2", { id: "c2", name: "Two", createdAt: 1, pinnedItemIds: [] }],
   ]);
   const indexes = buildLibraryBrowseIndexes(items);
+
+  test("best match ranks titles above incidental text, breaks ties by date, and respects pins", () => {
+    const title = buildNote({ title: "React patterns", content: "Animation examples" }, { id: "title", now: 1 });
+    const titleNewer = { ...title, id: "title-newer", createdAt: 2 };
+    const incidental = buildNote({ title: "Reference", content: "React animation" }, { id: "incidental", now: 10 });
+    const missing = buildNote({ title: "React only", content: "Missing the other term" }, { id: "missing", now: 20 });
+    const candidates = [incidental, title, titleNewer, missing].map(item => ({ ...item, collectionIds: ["c1"] }));
+    const browseIndexes = buildLibraryBrowseIndexes(candidates);
+    const view = parseLibraryViewState(new URLSearchParams("q=react+animation&sort=relevance"));
+    expect(filterAndSortLibraryItems(candidates, [], view, collectionsById, browseIndexes).map(item => item.id))
+      .toEqual(["title-newer", "title", "incidental"]);
+    const pinnedCollections = new Map<string, Collection>(collectionsById);
+    pinnedCollections.set("c1", { ...collectionsById.get("c1")!, pinnedItemIds: ["incidental"] });
+    expect(filterAndSortLibraryItems(candidates, [], { ...view, collection: "c1" }, pinnedCollections, browseIndexes).map(item => item.id))
+      .toEqual(["incidental", "title-newer", "title"]);
+    expect(filterAndSortLibraryItems(candidates, [], { ...view, q: "" }, collectionsById, browseIndexes).map(item => item.id))
+      .toEqual(["missing", "incidental", "title-newer", "title"]);
+  });
 
   test("personal-note search respects combined filters and collection pin order", () => {
     const older = { ...link, noteContent: "Quartz layout", tagIds: ["t1"] };
