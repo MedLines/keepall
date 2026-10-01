@@ -26,6 +26,42 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+for (const scope of ["collection", "tag"] as const) {
+  test(`sidebar logo returns home from a ${scope}`, async ({ page }) => {
+    const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+    await sidebar.getByRole("button", { name: scope === "collection" ? "Design" : "Tag design", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`${scope}=`));
+    await expect(page.getByRole("main")).toContainText("Saved Design content");
+    await expect(page.getByRole("main")).not.toContainText("Saved Reading content");
+
+    await sidebar.getByRole("link", { name: "Keepall home" }).click();
+
+    await expect(page).toHaveURL("/");
+    await expect(page.locator("#library-heading")).toHaveText("All items");
+    await expect(sidebar.getByRole("button", { name: "All items", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("main")).toContainText("Saved Design content");
+    await expect(page.getByRole("main")).toContainText("Saved Reading content");
+    await expect(page.getByRole("main")).toContainText("Saved Keep content");
+
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`${scope}=`));
+    await expect(page.getByRole("main")).toContainText("Saved Design content");
+    await expect(page.getByRole("main")).not.toContainText("Saved Reading content");
+  });
+}
+
+test("sidebar logo returns home and closes mobile navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 825 });
+  await page.getByRole("dialog", { name: "Sidebar navigation" }).getByRole("button", { name: "Tag design", exact: true }).click();
+  await expect(page).toHaveURL(/tag=tag-design/);
+  await page.getByRole("button", { name: "Expand", exact: true }).click();
+  await page.getByRole("dialog", { name: "Sidebar navigation" }).getByRole("link", { name: "Keepall home" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.locator("#library-heading")).toHaveText("All items");
+  await expect(page.getByRole("main")).toContainText("Saved Reading content");
+  await expect(page.getByRole("dialog", { name: "Sidebar navigation" })).toHaveCount(0);
+});
+
 test("tags show item previews in cards and open their matching items", async ({ page }, testInfo) => {
   await page.evaluate(async () => {
     const canvas = document.createElement("canvas");

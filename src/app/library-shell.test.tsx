@@ -23,6 +23,7 @@ function props(overrides: Partial<ComponentProps<typeof LibraryShell>> = {}): Co
     collectionManageError: null,
     dragError: null,
     mutationBusy: false,
+    onGoHome: vi.fn(),
     onGoAll: vi.fn(),
     onGoUnsorted: vi.fn(),
     onGoCollection: vi.fn(),

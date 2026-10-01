@@ -37,6 +37,7 @@ import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
 import { NoteContent } from "./note-content";
 import { VerticalImageGallery } from "./vertical-image-gallery";
+import { ThemeControl } from "./theme-control";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -698,6 +699,7 @@ function ImageWorkspace({
                 <DeleteIcon />
                 <span className="hidden xl:inline">Move to Trash</span>
               </button>
+              <ThemeControl compact />
             </div>
           </div>
         </header>

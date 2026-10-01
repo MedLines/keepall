@@ -1845,6 +1845,12 @@ export function Library() {
           dragError={dragError}
           mutationBusy={mutationBusy}
           libraryLoading={loadState === "loading"}
+          onGoHome={() =>
+            updateView(
+              { collections: false, tags: false, trash: false, collection: null, unsorted: false, type: null, tag: null, q: "", item: null, slide: 0 },
+              "push",
+            )
+          }
           onGoAll={() =>
             updateView(
               { collections: false, tags: false, trash: false, collection: null, unsorted: false, type: null },

@@ -88,6 +88,7 @@ type Props = {
   dragError: string | null;
   mutationBusy: boolean;
   libraryLoading?: boolean;
+  onGoHome: () => void;
   onGoAll: () => void;
   onGoUnsorted: () => void;
   onGoCollection: (id: string) => void;
@@ -122,6 +123,7 @@ export function LibraryShell({
   dragError,
   mutationBusy,
   libraryLoading = false,
+  onGoHome,
   onGoAll,
   onGoUnsorted,
   onGoCollection,
@@ -237,6 +239,10 @@ export function LibraryShell({
         expanded={contentExpanded}
         mobileSidebarOpen={mobileSidebarOpen}
         onClose={() => onPanelOpenChange(false)}
+        onGoHome={() => {
+          onGoHome();
+          closeOnMobile();
+        }}
       />
       <nav
           data-sidebar-nav
@@ -452,16 +458,21 @@ export function LibraryShell({
   );
 }
 
-function SidebarBrand({ expanded, mobileSidebarOpen, onClose }: {
+function SidebarBrand({ expanded, mobileSidebarOpen, onClose, onGoHome }: {
   expanded: boolean;
   mobileSidebarOpen: boolean;
   onClose: () => void;
+  onGoHome: () => void;
 }) {
   return (
     <div data-sidebar-brand className={`mb-5 mt-[18px] flex h-10 shrink-0 items-center ${expanded ? "mx-4" : "mx-2"}`}>
       <LogoContextMenu>
         <Link
           href="/"
+          onNavigate={(event) => {
+            event.preventDefault();
+            onGoHome();
+          }}
           aria-label="Keepall home"
           data-sidebar-anchor="logo"
           className={`keepall-logo-link flex h-10 min-w-0 items-center gap-0 rounded-control text-text-primary ${expanded ? "w-fit px-3" : "w-10 justify-center"}`}

@@ -64,6 +64,28 @@ async function readImage(page: Page, index: number, offset = 100) {
   await expect.poll(() => row.locator("img").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
 }
 
+test("image header theme control stays on the far right and persists the selected theme", async ({ page }, testInfo) => {
+  await seedGallery(page);
+  const header = page.getByRole("banner");
+  const theme = header.getByRole("button", { name: "Theme", exact: true });
+  for (const width of [1707, 320]) {
+    await page.setViewportSize({ width, height: 825 });
+    await expect(theme).toBeInViewport();
+    const themeBounds = await theme.boundingBox();
+    const trashBounds = await header.getByRole("button", { name: "Move item to Trash" }).boundingBox();
+    expect(themeBounds!.x).toBeGreaterThan(trashBounds!.x + trashBounds!.width);
+    expect(await page.locator("body").evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+    const previous = await page.locator("html").getAttribute("data-theme");
+    await theme.click();
+    const selected = previous === "dark" ? "light" : "dark";
+    await expect(page.locator("html")).toHaveAttribute("data-theme", selected);
+    await page.reload();
+    await expect(theme).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", selected);
+    await page.screenshot({ path: testInfo.outputPath(`image-header-theme-${width}.png`) });
+  }
+});
+
 test("gallery toolbar keeps actions on the left and the view toggle fixed when switching modes", async ({ page }, testInfo) => {
   await seedGallery(page);
   const controls = ["Add images", "Replace", "Remove current image", "Slides view", "Scroll view"];
