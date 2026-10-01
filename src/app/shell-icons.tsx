@@ -6,7 +6,8 @@ import {
   Image01Icon as Image01, ImagesIcon as Images, InboxIcon as Inbox, Layers01Icon as Layers01,
   Link01Icon as Link01, ListViewIcon as ListView, MoreVerticalIcon as MoreVertical,
   Note01Icon as Note01, Search01Icon as Search01, SidebarLeft01Icon as SidebarLeft01,
-  Sorting05Icon as Sorting05, Sorting02Icon as Sorting02,
+  Sorting01Icon as Sorting01,
+  Target02Icon as Target02,
   Moon02Icon as Moon02, Sun03Icon as Sun03, Tag01Icon as Tag01,
   Edit02Icon as Edit02, Delete02Icon as Delete02, PinIcon as Pin,
   ArrowLeft01Icon as ArrowLeft01, ArrowRight01Icon as ArrowRight01,
@@ -55,8 +56,9 @@ export function GridIcon(props: IconProps) { return <ShellIcon icon={GridView} {
 export function ListIcon(props: IconProps) { return <ShellIcon icon={ListView} {...props} />; }
 export function LayersIcon(props: IconProps) { return <ShellIcon icon={Layers01} {...props} />; }
 export function ChevronDownIcon(props: IconProps) { return <ShellIcon icon={ArrowDown01} {...props} />; }
-export function SortDescIcon(props: IconProps) { return <ShellIcon icon={Sorting05} {...props} />; }
-export function SortAscIcon(props: IconProps) { return <ShellIcon icon={Sorting02} {...props} />; }
+export function SortDescIcon(props: IconProps) { return <ShellIcon icon={Sorting01} {...props} />; }
+export function SortAscIcon({ className = "", ...props }: IconProps) { return <ShellIcon icon={Sorting01} {...props} className={`-scale-y-100 ${className}`} />; }
+export function RelevanceIcon(props: IconProps) { return <ShellIcon icon={Target02} {...props} />; }
 export function PlusIcon(props: IconProps) { return <ShellIcon icon={Add01} {...props} />; }
 export function InboxIcon(props: IconProps) { return <ShellIcon icon={Inbox} {...props} />; }
 export function HashIcon(props: IconProps) { return <ShellIcon icon={Tag01} {...props} />; }

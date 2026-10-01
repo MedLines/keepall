@@ -1166,7 +1166,7 @@ test("masonry preserves ordering through search, sorting and view switching", as
   const headings = page.locator(".library-card").getByRole("heading");
   await expect(headings).toHaveText(["Customer support", "Design notes", "Footer reference", "example.com/fallback"]);
   await page.getByRole("combobox", { name: /^Sort library:/ }).click();
-  await page.getByRole("option", { name: "Oldest", exact: true }).click();
+  await page.getByRole("option", { name: "Oldest first", exact: true }).click();
   await expect(headings).toHaveText(["example.com/fallback", "Footer reference", "Design notes", "Customer support"]);
   await expectCardsNotToOverlap(page);
   await page.getByLabel("Search", { exact: true }).fill("Design notes");
@@ -1624,7 +1624,8 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
   await organizer.getByRole("button", { name: "Done" }).click();
   await expect(organizer).toBeHidden();
 
-  await page.getByRole("button", { name: "Remove current image" }).click();
+  await page.getByRole("button", { name: "Current image actions" }).click();
+  await page.getByRole("menuitem", { name: "Remove current image" }).click();
   const removeImageDialog = page.getByRole("dialog", {
     name: "Remove this image?",
   });
@@ -1633,7 +1634,9 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
   await expect(removeImage).toHaveCSS("border-radius", "999px");
   await removeImage.click();
   await expect(removeImageDialog).toBeHidden();
-  await expect(page.getByRole("button", { name: "Remove current image" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Current image actions" }).click();
+  await expect(page.getByRole("menuitem", { name: "Remove current image" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await page.screenshot({
     path: testInfo.outputPath("image-item-page-actions.png"),
   });

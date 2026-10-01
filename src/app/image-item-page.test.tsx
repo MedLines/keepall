@@ -196,18 +196,16 @@ describe("ImageItemPage", () => {
       "/?collection=design",
     );
     const toolbar = screen.getByRole("banner");
-    expect(within(toolbar).getByRole("button", { name: "Edit details" })).toBeInTheDocument();
-    expect(within(toolbar).getByRole("button", { name: "Organize" })).toBeInTheDocument();
-    expect(within(toolbar).getByRole("button", { name: "Move item to Trash" })).toBeInTheDocument();
+    expect(within(screen.getByRole("group", { name: "Image actions" })).getByRole("button", { name: "Add images" })).toBeEnabled();
+    const details = screen.getByRole("complementary", { name: "Image details" });
+    expect(within(details).getByRole("button", { name: "Organize" })).toBeEnabled();
+    expect(within(details).getByRole("button", { name: "Move item to Trash" })).toBeEnabled();
     expect(within(toolbar).getByRole("link", { name: "Open source" })).toHaveAttribute("href", "https://example.com/checkout");
     expect(within(screen.getByRole("complementary", { name: "Image details" })).queryByRole("link", { name: "Open source" })).not.toBeInTheDocument();
     expect(screen.queryByText("Saved image")).not.toBeInTheDocument();
-    expect(
-      within(screen.getByRole("complementary", { name: "Image details" })).queryByRole(
-        "button",
-        { name: "Edit details" },
-      ),
-    ).not.toBeInTheDocument();
+    expect(within(details).getByRole("button", { name: "Edit details" })).toBeEnabled();
+    expect(within(details).getByRole("button", { name: "Slides view" })).toBeEnabled();
+    expect(within(details).getByRole("button", { name: "Add images" })).toBeEnabled();
     expect(screen.getByLabelText("Current image")).toHaveTextContent("Image 1 of 2");
     expect(screen.getAllByTestId("rendered-asset")[0]).toHaveTextContent("asset-1");
     expect(
@@ -347,7 +345,9 @@ describe("ImageItemPage", () => {
 
     render(<ImageItemPage itemId="image-1" returnHref="/" />);
     await screen.findByRole("heading", { name: "Interface references" });
-    fireEvent.click(screen.getByRole("button", { name: "Remove current image" }));
+    expect(screen.queryByRole("menuitem", { name: "Remove current image" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Current image actions" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Remove current image" }));
 
     const confirmation = screen.getByRole("dialog", { name: "Remove this image?" });
     fireEvent.click(
@@ -356,7 +356,7 @@ describe("ImageItemPage", () => {
 
     await waitFor(() => {
       expect(removeImageAssetAtIndex).toHaveBeenCalledWith("image-1", 0);
-      expect(screen.queryByRole("button", { name: "Remove current image" })).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Current image", { exact: true })).toHaveTextContent("Image 1 of 1");
     });
   });
 

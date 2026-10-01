@@ -20,6 +20,7 @@ import {
   GridIcon,
   ListIcon,
   PlusIcon,
+  RelevanceIcon,
   SearchIcon,
   SortAscIcon,
   SortDescIcon,
@@ -77,6 +78,7 @@ export function LibraryTopBar({
   onClearTagFilter, onClearFilters, bulk, selection, collectionsView = false, tagsView = false, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
 }: Props) {
   const hasSearchFilter = searchQuery.trim().length > 0;
+  const canSortByRelevance = hasSearchFilter && !collectionsView && !tagsView;
   const hasFilters = hasSearchFilter || typeFilterName !== null || tagFilterName !== null;
 
   function clearWithSearchFocus(action: () => void) {
@@ -122,11 +124,11 @@ export function LibraryTopBar({
             <ShellTopMenu<LibrarySort>
               ariaLabel="Sort library"
               iconOnly
-              value={(collectionsView || tagsView) && sort === "relevance" ? "newest" : sort}
+              value={!canSortByRelevance && sort === "relevance" ? "newest" : sort}
               options={[
-                { value: "newest", label: "Newest", icon: <SortDescIcon /> },
-                ...(!collectionsView && !tagsView ? [{ value: "relevance" as const, label: "Best match", icon: <SearchIcon /> }] : []),
-                { value: "oldest", label: "Oldest", icon: <SortAscIcon /> },
+                { value: "newest", label: "Newest first", icon: <SortDescIcon /> },
+                ...(canSortByRelevance ? [{ value: "relevance" as const, label: "Best match", icon: <RelevanceIcon /> }] : []),
+                { value: "oldest", label: "Oldest first", icon: <SortAscIcon /> },
               ]}
               onChange={onSortChange}
             />

@@ -150,7 +150,7 @@ for (const width of [320, 768, 1024, 1440]) {
     await page.getByRole("option", { name: /Images/ }).click();
     await expect(typeFilter).toHaveAttribute("title", "Filter by type: Images");
     await page.getByRole("combobox", { name: /^Sort library:/ }).click();
-    await expect(page.getByRole("option", { name: "Oldest" })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Oldest first" })).toBeVisible();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "List view" }).click();
     await expect(page.getByRole("button", { name: "List view" })).toHaveAttribute("aria-pressed", "true");

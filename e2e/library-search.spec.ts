@@ -41,7 +41,7 @@ test("search matches remembered words, highlights them, and preserves best match
   await expect.poll(ids).toEqual(["incidental", "reference", "patterns"]);
   await expect(cards.filter({ hasText: "React patterns" }).locator("mark").filter({ hasText: /^React$/ }).first()).toBeVisible();
   await expect(cards.filter({ hasText: "React patterns" }).locator("mark").filter({ hasText: /^animation$/ }).first()).toBeVisible();
-  await page.getByRole("combobox", { name: "Sort library: Newest", exact: true }).click();
+  await page.getByRole("combobox", { name: "Sort library: Newest first", exact: true }).click();
   await page.getByRole("option", { name: "Best match", exact: true }).click();
   await expect.poll(ids).toEqual(["reference", "patterns", "incidental"]);
   await expect(page).toHaveURL(/sort=relevance/);
@@ -56,6 +56,10 @@ test("search matches remembered words, highlights them, and preserves best match
   await search.fill("");
   await expect(cards).toHaveCount(4);
   await expect.poll(ids).toEqual(["missing", "incidental", "reference", "patterns"]);
+  await page.getByRole("combobox", { name: "Sort library: Newest first", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Best match", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: "Newest first", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 320, height: 900 });
   await page.getByRole("button", { name: "Close navigation", exact: true }).click();
   await search.fill("animation react");

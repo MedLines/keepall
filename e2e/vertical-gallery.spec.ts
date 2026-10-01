@@ -57,11 +57,15 @@ async function readImage(page: Page, index: number, offset = 100) {
   const row = page.locator(`[data-gallery-index="${index}"]`);
   await row.evaluate((element, offset) => {
     const scroller = element.closest("main")!;
-    const toolbar = scroller.querySelector('[aria-label="Gallery view"]')!.parentElement!;
-    scroller.scrollTop += element.getBoundingClientRect().top - scroller.getBoundingClientRect().top - toolbar.offsetHeight - 12 + offset;
+    scroller.scrollTop += element.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 12 + offset;
   }, offset);
   await expect(row.locator("img")).toBeVisible();
   await expect.poll(() => row.locator("img").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+  await row.evaluate((element, offset) => new Promise<void>(resolve => requestAnimationFrame(() => {
+    const scroller = element.closest("main")!;
+    scroller.scrollTop += element.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 12 + offset;
+    resolve();
+  })), offset);
 }
 
 test("image header theme control stays on the far right and persists the selected theme", async ({ page }, testInfo) => {
@@ -72,8 +76,9 @@ test("image header theme control stays on the far right and persists the selecte
     await page.setViewportSize({ width, height: 825 });
     await expect(theme).toBeInViewport();
     const themeBounds = await theme.boundingBox();
-    const trashBounds = await header.getByRole("button", { name: "Move item to Trash" }).boundingBox();
-    expect(themeBounds!.x).toBeGreaterThan(trashBounds!.x + trashBounds!.width);
+    const headerBounds = await header.locator("div").first().boundingBox();
+    expect(themeBounds!.x + themeBounds!.width).toBeGreaterThan(headerBounds!.x + headerBounds!.width - 30);
+    await expect(header.getByRole("button", { name: "Move item to Trash" })).toHaveCount(0);
     expect(await page.locator("body").evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     const previous = await page.locator("html").getAttribute("data-theme");
     await theme.click();
@@ -86,27 +91,73 @@ test("image header theme control stays on the far right and persists the selecte
   }
 });
 
-test("gallery toolbar keeps actions on the left and the view toggle fixed when switching modes", async ({ page }, testInfo) => {
+test("image details hold gallery controls and the viewer aligns its menu and image count", async ({ page }, testInfo) => {
   await seedGallery(page);
-  const controls = ["Add images", "Replace", "Remove current image", "Slides view", "Scroll view"];
-  for (const width of [1440, 768, 390, 320, 1024]) {
+  const controls = ["Slides view", "Scroll view", "Add images", "Edit details"];
+  for (const width of [1707, 1440, 768, 390, 320, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     await page.getByRole("button", { name: "Slides view", exact: true }).click();
     await page.getByTestId("item-page-scroll").evaluate(node => { node.scrollTop = 0; });
     const before = await Promise.all(controls.map(name => page.getByRole("button", { name, exact: true }).boundingBox()));
     expect(before.every(Boolean)).toBe(true);
-    expect(before[0]!.x).toBeLessThan(before[3]!.x);
+    const details = page.getByRole("complementary", { name: "Image details" });
+    for (const name of controls) await expect(details.getByRole("button", { name, exact: true })).toBeVisible();
+    const viewerBounds = (await page.getByRole("region", { name: "Image gallery" }).boundingBox())!;
+    const countBounds = (await page.getByLabel("Current image", { exact: true }).boundingBox())!;
+    const thumbnails = (await page.getByRole("navigation", { name: "Image slides" }).boundingBox())!;
+    expect(countBounds.x + countBounds.width).toBeCloseTo(viewerBounds.x + viewerBounds.width, 0);
+    expect(countBounds.y).toBeGreaterThan(viewerBounds.y);
+    expect(countBounds.y + countBounds.height).toBeLessThan(thumbnails.y + thumbnails.height);
+    expect(countBounds.y).toBeGreaterThanOrEqual(thumbnails.y);
+    const thumbnailBounds = (await page.getByRole("button", { name: "Show image 1", exact: true }).boundingBox())!;
+    expect(countBounds.height).toBeCloseTo(thumbnailBounds.height, 0);
+    const imageMenu = page.getByRole("button", { name: "Current image actions" });
+    const menuBounds = (await imageMenu.boundingBox())!;
+    const nextBounds = (await page.getByRole("button", { name: "Next image", exact: true }).boundingBox())!;
+    expect(menuBounds.x + menuBounds.width).toBeCloseTo(nextBounds.x + nextBounds.width, 0);
+    expect(menuBounds.y).toBeCloseTo(viewerBounds.y + 24, 0);
+    expect(menuBounds.y - viewerBounds.y).toBeCloseTo(viewerBounds.x + viewerBounds.width - menuBounds.x - menuBounds.width, 0);
+    const fullScreenButton = page.getByRole("button", { name: "View image full screen", exact: true });
+    await fullScreenButton.hover();
+    const fullScreenIcon = (await fullScreenButton.locator(":scope > span").boundingBox())!;
+    const mediaBounds = (await fullScreenButton.boundingBox())!;
+    expect(fullScreenIcon.y + fullScreenIcon.height).toBeCloseTo(mediaBounds.y + mediaBounds.height - 12, 0);
+    await page.screenshot({ path: testInfo.outputPath(`gallery-slides-${width}.png`) });
+    if (width === 1707) {
+      await imageMenu.click();
+      const menu = page.getByRole("menu", { name: "Current image actions" });
+      await expect(menu.getByRole("menuitem", { name: "Replace current image" })).toBeVisible();
+      await expect(menu.getByRole("menuitem", { name: "Remove current image" })).toBeVisible();
+      await page.keyboard.press("ArrowRight");
+      await expect(page.getByLabel("Current image", { exact: true })).toHaveText("Image 1 of 10");
+      await page.screenshot({ path: testInfo.outputPath("gallery-image-actions.png") });
+      await page.keyboard.press("Escape");
+      await expect(imageMenu).toBeFocused();
+    }
+    await expect(details.getByRole("button", { name: "Organize", exact: true })).toBeVisible();
+    await expect(details.getByRole("button", { name: "Move item to Trash" })).toBeVisible();
+    const organize = (await details.getByRole("button", { name: "Organize", exact: true }).boundingBox())!;
+    const trash = (await details.getByRole("button", { name: "Move item to Trash" }).boundingBox())!;
+    const controlHeading = (await details.getByRole("heading", { name: "Gallery", exact: true }).boundingBox())!;
+    const saved = (await details.getByText("Saved", { exact: true }).boundingBox())!;
+    expect(controlHeading.y + controlHeading.height).toBeLessThan(saved.y);
+    const edit = (await details.getByRole("button", { name: "Edit details" }).boundingBox())!;
+    expect(organize.y).toBeGreaterThan(edit.y + edit.height);
+    expect(organize.x).toBeCloseTo(trash.x, 0);
+    expect(organize.width).toBeCloseTo(trash.width, 0);
+    expect(trash.y).toBeGreaterThan(organize.y + organize.height);
     await page.getByRole("button", { name: "Scroll view", exact: true }).click();
     await expect(page.getByRole("list", { name: "Images in scroll view" })).toBeVisible();
     const after = await Promise.all(controls.map(name => page.getByRole("button", { name, exact: true }).boundingBox()));
     for (let index = 0; index < controls.length; index++) {
+      if (width < 1024) continue;
       for (const dimension of ["x", "y", "width", "height"] as const) {
         expect(after[index]![dimension], `${controls[index]} ${dimension} at ${width}px`).toBeCloseTo(before[index]![dimension], 0);
       }
       await expect(page.getByRole("button", { name: controls[index], exact: true })).toBeInViewport();
     }
     expect(await page.locator("body").evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath(`gallery-toolbar-${width}.png`) });
+    await page.screenshot({ path: testInfo.outputPath(`gallery-details-${width}.png`) });
   }
 });
 
@@ -238,14 +289,15 @@ test("zoomed originals remain fully reachable in the viewer", async ({ page }, t
 });
 
 test("scroll view stays usable at narrow widths and removes only the current image", async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
   await seedGallery(page);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Scroll view" }).focus();
   await page.keyboard.press("Enter");
   await readImage(page, 1, 30);
   await expect(page.getByLabel("Current image", { exact: true })).toHaveText("Image 2 of 10");
-  await page.getByRole("button", { name: "Remove current image" }).click();
+  await page.getByRole("button", { name: "Current image actions" }).click();
+  await page.getByRole("menuitem", { name: "Remove current image" }).click();
   const confirmation = page.getByRole("dialog", { name: "Remove this image?" });
   await expect(confirmation).toContainText("Remove image 2");
   await confirmation.getByRole("button", { name: "Remove image", exact: true }).click();
@@ -260,6 +312,6 @@ test("scroll view stays usable at narrow widths and removes only the current ima
     const columnWidth = await page.getByRole("list", { name: "Images in scroll view" }).evaluate(element => element.clientWidth);
     expect(imageWidth).toBeCloseTo(Math.min(800, columnWidth), 0);
     expect(await page.locator("body").evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
-    await expect(page.getByRole("button", { name: "Slides view" })).toBeInViewport();
+    await expect(page.getByRole("button", { name: "Slides view" })).toBeVisible();
   }
 });

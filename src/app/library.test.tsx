@@ -1378,6 +1378,38 @@ describe("Library view state", () => {
     vi.mocked(assignCollectionToItem).mockReset();
   });
 
+  test.each(["", "   "])("hides best match without a search (%j), including inside a collection", async (query) => {
+    mockNavigation.searchParams.set("q", query);
+    mockNavigation.searchParams.set("sort", "relevance");
+    mockNavigation.searchParams.set("collection", "c1");
+    vi.mocked(listCollections).mockResolvedValue([
+      { id: "c1", name: "Reading", createdAt: 1, pinnedItemIds: [] },
+    ]);
+    vi.mocked(listItems).mockResolvedValue([{ ...note, collectionIds: ["c1"] }]);
+    render(<Library />);
+
+    await screen.findByRole("heading", { name: "Reading", level: 1 });
+    fireEvent.click(screen.getByRole("combobox", { name: "Sort library: Newest first" }));
+    expect(screen.queryByRole("option", { name: "Best match" })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Newest first" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("option", { name: "Oldest first" })).toBeInTheDocument();
+  });
+
+  test("offers best match during search and falls back to newest after clearing it", async () => {
+    vi.mocked(listItems).mockResolvedValue([note]);
+    render(<Library />);
+    await screen.findByText("A persisted note");
+    const search = screen.getByLabelText("Search");
+    fireEvent.change(search, { target: { value: "persisted" } });
+    pickTopMenu("Sort library", "Best match");
+    expect(screen.getByRole("combobox", { name: "Sort library: Best match" })).toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "" } });
+    fireEvent.click(screen.getByRole("combobox", { name: "Sort library: Newest first" }));
+    expect(screen.queryByRole("option", { name: "Best match" })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Newest first" })).toHaveAttribute("aria-selected", "true");
+  });
+
   test("writes search and sort into the URL", async () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);

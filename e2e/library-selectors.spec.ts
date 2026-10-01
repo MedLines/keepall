@@ -7,7 +7,7 @@ test("library selectors support tab, arrow, home/end, selection, and Escape", as
   await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
 
   const typeFilter = page.getByRole("combobox", { name: /^Filter by type: All types$/ });
-  const sort = page.getByRole("combobox", { name: /^Sort library: Newest$/ });
+  const sort = page.getByRole("combobox", { name: /^Sort library: Newest first$/ });
 
   await typeFilter.focus();
   await page.keyboard.press("Tab");
@@ -15,8 +15,8 @@ test("library selectors support tab, arrow, home/end, selection, and Escape", as
   await page.keyboard.press("Enter");
 
   const sortList = page.getByRole("listbox", { name: "Sort library" });
-  const newest = sortList.getByRole("option", { name: "Newest" });
-  const oldest = sortList.getByRole("option", { name: "Oldest" });
+  const newest = sortList.getByRole("option", { name: "Newest first" });
+  const oldest = sortList.getByRole("option", { name: "Oldest first" });
   await expect(newest).toHaveAttribute("data-highlighted", "");
   await page.keyboard.press("End");
   await expect(oldest).toHaveAttribute("data-highlighted", "");

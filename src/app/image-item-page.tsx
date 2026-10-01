@@ -1,6 +1,7 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
+import { Menu } from "@base-ui/react/menu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -49,6 +50,7 @@ import {
   LinkIcon,
   PlusIcon,
   ImageIcon,
+  MoreIcon,
 } from "./shell-icons";
 
 type LoadState =
@@ -143,7 +145,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
         (event.key !== "ArrowLeft" && event.key !== "ArrowRight") ||
         event.altKey || event.ctrlKey || event.metaKey ||
         (event.target instanceof Element &&
-          event.target.closest("input, textarea, select, [contenteditable='true']"))
+          event.target.closest("input, textarea, select, [contenteditable='true'], [role='menu']"))
       ) return;
 
       event.preventDefault();
@@ -584,7 +586,6 @@ function ImageWorkspace({
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLElement>(null);
   const galleryListRef = useRef<HTMLOListElement>(null);
-  const galleryToolbarRef = useRef<HTMLDivElement>(null);
   const readingPosition = useRef<{ assetId: string; offset: number } | null>(null);
   const viewerStartAsset = useRef<string | null>(null);
   const gallerySignature = item.assetIds.join(",");
@@ -618,7 +619,7 @@ function ImageWorkspace({
     const container = scrollRef.current;
     const rows = galleryListRef.current?.children;
     if (!container || !rows?.length) return;
-    const readingLine = (galleryToolbarRef.current?.getBoundingClientRect().bottom ?? container.getBoundingClientRect().top) + 12;
+    const readingLine = container.getBoundingClientRect().top + 12;
     const atBottom = container.scrollHeight - container.clientHeight - container.scrollTop <= 1;
     const row = (atBottom ? null : Array.from(rows).find(row => row.getBoundingClientRect().bottom > readingLine)) ?? rows[rows.length - 1];
     const index = Number(row.getAttribute("data-gallery-index"));
@@ -643,8 +644,33 @@ function ImageWorkspace({
     const row = galleryListRef.current?.children[currentSlide];
     if (!row) return;
     const offset = saved?.assetId === currentAssetId ? saved.offset : 0;
-    container.scrollTop += row.getBoundingClientRect().top - (galleryToolbarRef.current?.getBoundingClientRect().bottom ?? container.getBoundingClientRect().top) - 12 + offset;
+    container.scrollTop += row.getBoundingClientRect().top - container.getBoundingClientRect().top - 12 + offset;
   }, [galleryMode, viewerOpen, currentSlide, currentAssetId, gallerySignature]);
+
+  const galleryControls = (
+    <div className="grid gap-2">
+      <div className="icon-segmented-switch squircle-panel relative isolate flex h-11 w-full rounded-control-lg bg-bg-control p-0.5" role="group" aria-label="Gallery view" data-selected={galleryMode === "scroll" ? "end" : "start"}>
+        <span aria-hidden="true" className="icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[calc(50%_-_2px)] rounded-control-sm" />
+        {(["slides", "scroll"] as const).map(mode => (
+          <button key={mode} type="button" aria-label={`${mode === "slides" ? "Slides" : "Scroll"} view`}
+            aria-pressed={galleryMode === mode}
+            className={`squircle-panel relative flex h-10 min-w-0 flex-1 items-center justify-center rounded-control-sm px-2 text-xs font-medium ${galleryMode === mode ? "text-text-primary" : "text-text-secondary hover:text-text-primary"}`}
+            onClick={() => onGalleryModeChange(mode)}>
+            {mode === "slides" ? "Slides" : "Scroll"}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Image actions">
+        <button className="ui-control inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 px-2.5 text-xs font-medium disabled:opacity-60" type="button" aria-label={galleryMutation === "add" ? "Adding images" : "Add images"} title="Add images" disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
+          <PlusIcon className="size-4" />
+          <span>{galleryMutation === "add" ? "Adding…" : "Add images"}</span>
+        </button>
+        <button className="ui-control inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 px-2.5 text-xs font-medium disabled:opacity-60" type="button" disabled={actionBusy} onClick={onEdit}>
+          <EditIcon className="size-4" />Edit details
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="h-full overflow-hidden bg-bg-canvas">
@@ -663,42 +689,12 @@ function ImageWorkspace({
               <h1 className="sr-only">Image item</h1>
             )}
             <div className="ms-auto flex shrink-0 items-center gap-2" aria-label="Item actions">
-              <button
-                className={CONTROL}
-                type="button"
-                aria-label="Edit details"
-                disabled={actionBusy}
-                onClick={onEdit}
-              >
-                <EditIcon />
-                <span className="hidden xl:inline">Edit</span>
-              </button>
-              <button
-                className={CONTROL}
-                type="button"
-                aria-label="Organize"
-                disabled={actionBusy}
-                onClick={onOrganize}
-              >
-                <LayersIcon />
-                <span className="hidden xl:inline">Organize</span>
-              </button>
               {item.sourceUrl ? (
                 <a className={CONTROL} href={item.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label="Open source">
                   <LinkIcon />
                   <span className="hidden xl:inline">Open source</span>
                 </a>
               ) : null}
-              <button
-                className={`${CONTROL} text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger`}
-                type="button"
-                aria-label="Move item to Trash"
-                disabled={actionBusy}
-                onClick={onDelete}
-              >
-                <DeleteIcon />
-                <span className="hidden xl:inline">Move to Trash</span>
-              </button>
               <ThemeControl compact />
             </div>
           </div>
@@ -710,9 +706,7 @@ function ImageWorkspace({
           className="ui-scrollbar scroll-fade scroll-fade-6 min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]"
           data-testid="item-page-scroll"
         >
-          <div className="mx-auto grid w-full max-w-[100rem] items-start gap-x-6 gap-y-3 px-3 pb-8 sm:px-5 sm:pb-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-0">
-              <div ref={galleryToolbarRef} className="sticky top-0 z-20 col-span-full grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 border-b border-border-control bg-bg-canvas py-4 md:grid-cols-[auto_minmax(0,1fr)_auto]">
-                <span aria-hidden="true" className="scroll-fade-overlay absolute start-0 end-0 top-full h-6 lg:end-80" />
+          <div className="mx-auto grid w-full max-w-[100rem] items-start gap-x-6 gap-y-3 px-3 pb-8 pt-3 [--image-viewer-height:max(24rem,min(76dvh,54rem))] sm:px-5 sm:pb-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-0">
                 <input
                   ref={addInputRef}
                   className="sr-only"
@@ -738,45 +732,30 @@ function ImageWorkspace({
                     event.target.value = "";
                   }}
                 />
-                <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-1.5" role="group" aria-label="Image actions">
-                  <button className="ui-control inline-flex h-10 shrink-0 items-center justify-center gap-1.5 px-2.5 text-xs font-medium disabled:opacity-60" type="button" aria-label={galleryMutation === "add" ? "Adding images" : "Add images"} title="Add images" disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
-                    <PlusIcon className="size-4" />
-                    <span className="hidden sm:inline">{galleryMutation === "add" ? "Adding…" : "Add images"}</span>
-                  </button>
-                  <button className="ui-control inline-flex h-10 shrink-0 items-center justify-center gap-1.5 px-2.5 text-xs font-medium disabled:opacity-60" type="button" aria-label={galleryMutation === "replace" ? "Replacing image" : "Replace"} title="Replace current image" disabled={galleryMutation !== null} onClick={() => replaceInputRef.current?.click()}>
-                    <ImageIcon className="size-4" />
-                    <span className="hidden sm:inline">{galleryMutation === "replace" ? "Replacing…" : "Replace"}</span>
-                  </button>
-                  {item.assetIds.length > 1 ? (
-                    <button
-                      className="ui-control inline-flex size-10 shrink-0 items-center justify-center text-text-danger hover:bg-bg-danger disabled:opacity-60"
-                      type="button"
-                      aria-label="Remove current image"
-                      title="Remove current image"
-                      disabled={galleryMutation !== null}
-                      onClick={onRemoveImage}
-                    >
-                      <DeleteIcon className="size-4" />
-                    </button>
-                  ) : null}
-                </div>
-                <span className="col-span-2 row-start-2 text-xs tabular-nums text-text-secondary md:col-span-1 md:col-start-2 md:row-start-1 md:text-center" aria-label="Current image">Image {currentSlide + 1} of {item.assetIds.length}</span>
-                <div className="icon-segmented-switch squircle-panel relative isolate col-start-2 row-start-1 flex h-11 w-36 shrink-0 rounded-control-lg bg-bg-raised p-0.5 md:col-start-3" role="group" aria-label="Gallery view" data-selected={galleryMode === "scroll" ? "end" : "start"}>
-                  <span aria-hidden="true" className="icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[calc(50%_-_2px)] rounded-control-sm" />
-                  {(["slides", "scroll"] as const).map(mode => (
-                    <button key={mode} type="button" aria-label={`${mode === "slides" ? "Slides" : "Scroll"} view`}
-                      aria-pressed={galleryMode === mode}
-                      className={`squircle-panel relative flex h-10 min-w-0 flex-1 items-center justify-center rounded-control-sm px-2 text-xs font-medium ${galleryMode === mode ? "text-text-primary" : "text-text-secondary hover:text-text-primary"}`}
-                      onClick={() => onGalleryModeChange(mode)}>
-                      {mode === "slides" ? "Slides" : "Scroll"}
-                    </button>
-                  ))}
+            <div className="min-w-0 row-start-2 lg:col-start-1 lg:row-start-1">
+            <section className="relative flex min-w-0 flex-col gap-3" aria-label="Image gallery">
+              {galleryMode === "scroll" ? (
+              <div className="sticky top-0 z-10 -mb-3 h-0 self-end">
+                <div className="absolute right-4 top-4">
+                  <CurrentImageMenu
+                    busy={galleryMutation !== null}
+                    canRemove={item.assetIds.length > 1}
+                    onReplace={() => replaceInputRef.current?.click()}
+                    onRemove={onRemoveImage}
+                  />
                 </div>
               </div>
-            <div className="min-w-0">
-            <section className="flex min-w-0 flex-col gap-3" aria-label="Image gallery">
+              ) : null}
               {galleryMode === "slides" ? (
-              <div className="item-workspace-media relative isolate flex h-[min(76dvh,54rem)] min-h-[24rem] items-center justify-center overflow-hidden rounded-card bg-bg-media">
+              <div className="item-workspace-media relative isolate flex h-[var(--image-viewer-height)] items-center justify-center overflow-hidden rounded-card bg-bg-media">
+                <div className="pointer-events-none absolute inset-4 z-10 flex items-start justify-end">
+                  <CurrentImageMenu
+                    busy={galleryMutation !== null}
+                    canRemove={item.assetIds.length > 1}
+                    onReplace={() => replaceInputRef.current?.click()}
+                    onRemove={onRemoveImage}
+                  />
+                </div>
                 <button
                   type="button"
                   className="control-shape-none group relative flex size-full min-h-0 items-center justify-center overflow-hidden"
@@ -789,7 +768,7 @@ function ImageWorkspace({
                     assetId={currentAssetId}
                     className="max-h-[calc(100dvh-14rem)]"
                   />
-                  <span className="ui-control pointer-events-none absolute right-3 top-3 flex size-11 items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">
+                  <span className="ui-control pointer-events-none absolute bottom-3 right-3 flex size-11 items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">
                     <FullScreenIcon />
                   </span>
                 </button>
@@ -837,6 +816,11 @@ function ImageWorkspace({
                   onViewerOpenChange(true);
                 }}
               />
+              {galleryMode === "scroll" ? (
+                <div className="sticky bottom-0 z-10 flex justify-end bg-bg-canvas py-3">
+                  <ImageCount current={currentSlide + 1} total={item.assetIds.length} />
+                </div>
+              ) : null}
               {galleryError ? <p className="text-sm text-text-danger" role="alert">{galleryError}</p> : null}
             </section>
 
@@ -855,13 +839,24 @@ function ImageWorkspace({
 
             <ItemLibraryDetails
               label="Image details"
+              controls={galleryControls}
               summary={{ label: "Contents", value: `${item.assetIds.length} ${item.assetIds.length === 1 ? "image" : "images"} · ${item.caption?.trim() ? "Notes added" : "No notes"}` }}
               collections={itemCollections}
               tags={itemTags}
               createdAt={item.createdAt}
               updatedAt={item.updatedAt}
               sourceFileName={item.sourceFileName}
-              className="mt-3 lg:sticky lg:top-[calc(var(--spacing)*22+1px)] lg:ms-6 lg:mt-0"
+              className="row-start-1 lg:sticky lg:col-start-2 lg:row-start-1 lg:min-h-[var(--image-viewer-height)] lg:top-3 lg:ms-6 lg:mt-0"
+              organizationActions={
+                <button className="ui-control inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 px-2.5 text-xs font-medium disabled:opacity-60" type="button" disabled={actionBusy} onClick={onOrganize}>
+                  <LayersIcon className="size-4" />Organize
+                </button>
+              }
+              actions={
+                <button className="ui-control inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap px-2.5 text-xs font-medium text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60" type="button" aria-label="Move item to Trash" title="Move to Trash" disabled={actionBusy} onClick={onDelete}>
+                  <DeleteIcon className="size-4" />Move to Trash
+                </button>
+              }
             />
           </div>
         </main>
@@ -880,6 +875,52 @@ function ImageWorkspace({
   );
 }
 
+function CurrentImageMenu({ busy, canRemove, onReplace, onRemove }: {
+  busy: boolean;
+  canRemove: boolean;
+  onReplace: () => void;
+  onRemove: () => void;
+}) {
+  const openingDialog = useRef(false);
+  return (
+    <Menu.Root modal={false} onOpenChange={(open) => { if (open) openingDialog.current = false; }}>
+      <Menu.Trigger className="ui-control pointer-events-auto flex size-11 items-center justify-center bg-bg-surface disabled:opacity-60" aria-label="Current image actions" title="Current image actions" disabled={busy}>
+        <MoreIcon />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
+          <Menu.Popup aria-label="Current image actions" className="ui-popover w-56 max-w-[calc(100vw-1rem)] outline-none" finalFocus={() => openingDialog.current ? false : true}>
+            <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active data-[disabled]:opacity-50" disabled={busy} onClick={onReplace}>
+              <ImageIcon />Replace current image
+            </Menu.Item>
+            {canRemove ? (
+              <>
+                <Menu.Separator className="my-1 border-t border-border-edge" />
+                <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger data-[disabled]:opacity-50" disabled={busy} onClick={() => { openingDialog.current = true; onRemove(); }}>
+                  <DeleteIcon />Remove current image
+                </Menu.Item>
+              </>
+            ) : null}
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
+}
+
+function ImageCount({ current, total, className = "" }: { current: number; total: number; className?: string }) {
+  return (
+    <span className={`inline-flex h-12 min-w-16 shrink-0 items-center justify-center rounded-[24px] border border-border-control bg-bg-control px-3 tabular-nums [corner-shape:var(--corner-shape-panel)] ${className}`} aria-label="Current image" title={`Image ${current} of ${total}`}>
+      <span className="sr-only">Image {current} of {total}</span>
+      <span aria-hidden="true" className="flex items-baseline gap-1.5 text-sm">
+        <span className="font-semibold text-text-primary">{current}</span>
+        <span className="text-text-secondary">/</span>
+        <span className="font-medium text-text-secondary">{total}</span>
+      </span>
+    </span>
+  );
+}
+
 function GalleryControls({
   item,
   currentSlide,
@@ -890,9 +931,6 @@ function GalleryControls({
   onSlideChange: (slide: number) => void;
 }) {
   const slideCount = item.assetIds.length;
-  if (slideCount <= 1) {
-    return null;
-  }
   const visibleCount = Math.min(slideCount, MAX_VISIBLE_GALLERY_PREVIEWS);
   const firstVisibleSlide = Math.max(
     0,
@@ -907,8 +945,8 @@ function GalleryControls({
   );
 
   return (
-    <nav className="min-w-0 flex-1" aria-label="Image slides">
-      <div className="ui-scrollbar-hidden scroll-fade-x flex min-w-0 items-center justify-start gap-1 overflow-x-auto p-1 sm:gap-2">
+    <nav className="flex min-w-0 items-center gap-3" aria-label="Image slides">
+      {slideCount > 1 ? <div className="ui-scrollbar-hidden scroll-fade-x flex min-w-0 flex-1 items-center justify-start gap-1 overflow-x-auto p-1 sm:gap-2">
         {visibleSlides.map((index) => (
           <button
             key={index}
@@ -927,7 +965,8 @@ function GalleryControls({
             />
           </button>
         ))}
-      </div>
+      </div> : null}
+      <ImageCount current={currentSlide + 1} total={slideCount} className="ms-auto" />
     </nav>
   );
 }
