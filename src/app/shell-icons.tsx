@@ -14,6 +14,7 @@ import {
   CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle,
   Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
   KeyboardIcon as Keyboard, TextFontIcon as TextFont, SourceCodeIcon as SourceCode,
+  RefreshIcon as Refresh,
 } from "@hugeicons/core-free-icons";
 
 type IconProps = { className?: string; fill?: "none" | "currentColor" };
@@ -62,6 +63,7 @@ export function HashIcon(props: IconProps) { return <ShellIcon icon={Tag01} {...
 export function MoreIcon(props: IconProps) { return <ShellIcon icon={MoreVertical} {...props} />; }
 export function EditIcon(props: IconProps) { return <ShellIcon icon={Edit02} {...props} />; }
 export function EyeIcon(props: IconProps) { return <ShellIcon icon={Eye} {...props} />; }
+export function RefreshIcon(props: IconProps) { return <ShellIcon icon={Refresh} {...props} />; }
 export function DeleteIcon(props: IconProps) { return <ShellIcon icon={Delete02} {...props} />; }
 export function PinIcon(props: IconProps) { return <ShellIcon icon={Pin} {...props} />; }
 export function ArrowLeftIcon(props: IconProps) { return <ShellIcon icon={ArrowLeft01} {...props} />; }

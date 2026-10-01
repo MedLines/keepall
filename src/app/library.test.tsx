@@ -27,6 +27,7 @@ import {
 } from "@/persistence/library-preferences";
 import { mockNavigation } from "../../vitest.setup";
 import { enrichLinkPreview } from "./enrich-link-preview";
+import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { Library } from "./library";
 import {
@@ -139,6 +140,8 @@ describe("Library", () => {
     vi.mocked(updateNote).mockReset();
     vi.mocked(updateLink).mockReset();
     vi.mocked(enrichLinkPreview).mockReset();
+    vi.mocked(requestManualPreviewEnrich).mockReset();
+    vi.mocked(requestManualPreviewEnrich).mockResolvedValue(undefined);
     vi.mocked(listTags).mockReset();
     vi.mocked(listTags).mockResolvedValue([]);
     vi.mocked(createTag).mockReset();
@@ -183,6 +186,36 @@ describe("Library", () => {
     await waitFor(() => {
       expect(pinCollection).toHaveBeenCalledWith(collection.id);
     });
+  });
+
+  test.each(["idle", "failed", "ready"] as const)("manually fetches a %s link preview from the card menu", async (previewStatus) => {
+    vi.mocked(listItems).mockResolvedValue([{ ...link, previewStatus, previewRetry: "none" }]);
+    render(<Library />);
+    await clickItemAction(previewStatus === "ready" ? "Refresh preview" : "Fetch preview");
+    expect(requestManualPreviewEnrich).toHaveBeenCalledExactlyOnceWith(link.id, link.url);
+  });
+
+  test("disables manual preview fetching until the request finishes", async () => {
+    vi.mocked(listItems).mockResolvedValue([link]);
+    let finish!: () => void;
+    vi.mocked(requestManualPreviewEnrich).mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
+    render(<Library />);
+    await clickItemAction("Fetch preview");
+    fireEvent.click((await screen.findAllByRole("button", { name: /^Actions for / }))[0]);
+    const fetching = await screen.findByRole("menuitem", { name: "Fetching preview…" });
+    expect(fetching).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(fetching);
+    expect(requestManualPreviewEnrich).toHaveBeenCalledOnce();
+    finish();
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Fetch preview" })).not.toHaveAttribute("aria-disabled", "true"));
+  });
+
+  test("does not offer link enrichment for note cards", async () => {
+    vi.mocked(listItems).mockResolvedValue([note]);
+    render(<Library />);
+    fireEvent.click((await screen.findAllByRole("button", { name: /^Actions for / }))[0]);
+    await screen.findByRole("menuitem", { name: "Edit" });
+    expect(screen.queryByRole("menuitem", { name: /(?:Fetch|Refresh) preview/ })).not.toBeInTheDocument();
   });
 
   test("inspect appends selected images in one batch and updates to the last slide", async () => {

@@ -8,7 +8,7 @@ import { normalizeCollectionName } from "@/domain/collection";
 import { normalizeTagName } from "@/domain/tag";
 import {
   ArrowRightIcon, CollectionIcon, DeleteIcon, EditIcon, EyeIcon, HashIcon, LayersIcon, LinkIcon,
-  PinIcon, PlusIcon, SearchIcon, SelectionCheckedIcon,
+  PinIcon, PlusIcon, RefreshIcon, SearchIcon, SelectionCheckedIcon,
 } from "./shell-icons";
 
 type NamedEntry = { id: string; name: string };
@@ -33,6 +33,9 @@ type Props = {
   onAddTag: (name: string) => void;
   onRemoveTag: (id: string) => void;
   onPreview?: () => void;
+  onFetchPreview?: () => void;
+  fetchingPreview?: boolean;
+  hasPreview?: boolean;
   onEdit: () => void;
   onOrganize: () => void;
   onDelete: () => void;
@@ -47,6 +50,7 @@ export function ItemContextMenu({
   children, trigger, title, openHref, tags, assignedTagIds, busy, disabled, tagError,
   onAddTag, onRemoveTag, onPreview, onEdit, onOrganize, onDelete, onTogglePin, pinned, onOpen,
   collections, assignedCollectionIds, collectionError, onMoveToCollection, onClearCollection, triggerRef, trashActions,
+  onFetchPreview, fetchingPreview = false, hasPreview = false,
 }: Props) {
   const openingDialog = useRef(false);
 
@@ -79,6 +83,9 @@ export function ItemContextMenu({
           ) : null}
           {onPreview ? <Menu.Item className={MENU_ITEM} disabled={busy} onClick={() => openDialog(onPreview)}>
             <EyeIcon />Preview
+          </Menu.Item> : null}
+          {onFetchPreview ? <Menu.Item className={MENU_ITEM} disabled={busy || fetchingPreview} onClick={onFetchPreview}>
+            <RefreshIcon />{fetchingPreview ? "Fetching preview…" : hasPreview ? "Refresh preview" : "Fetch preview"}
           </Menu.Item> : null}
           <OrganizationSubmenu kind="tags" entries={tags} assignedIds={assignedTagIds} busy={busy} error={tagError} onSelect={onAddTag} onRemove={onRemoveTag} />
           <OrganizationSubmenu kind="collections" entries={collections} assignedIds={assignedCollectionIds} busy={busy} error={collectionError} onSelect={onMoveToCollection} onClear={onClearCollection} />

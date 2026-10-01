@@ -1,8 +1,9 @@
 "use client";
 
-import { cardInitial, linkFaviconUrl } from "@/domain/card-display";
+import { cardInitial, linkFaviconUrls } from "@/domain/card-display";
 import { imageCoverAssetId } from "@/domain/image";
 import type { Item } from "@/domain/item";
+import type { LinkItem } from "@/domain/link";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { useState } from "react";
@@ -37,7 +38,6 @@ export function LibraryItemMedia({
   const thumbnailUrl = useThumbnailObjectUrl(useThumbnail ? assetIdForDisplay : null);
   const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl;
   const [brokenAssetId, setBrokenAssetId] = useState<string | null>(null);
-  const [brokenFaviconUrl, setBrokenFaviconUrl] = useState<string | null>(null);
   const imageSrc = brokenAssetId === assetIdForDisplay ? null : localObjectUrl;
 
   if (imageSrc && (item.type === "link" || item.type === "image" || item.type === "video")) {
@@ -58,26 +58,8 @@ export function LibraryItemMedia({
     );
   }
 
-  const faviconUrl = item.type === "link"
-    ? linkFaviconUrl(item.url, { size: compact ? 64 : 128 })
-    : null;
-  const faviconSrc = faviconUrl === brokenFaviconUrl ? null : faviconUrl;
-
-  if (item.type === "link" && faviconSrc) {
-    return (
-      <div
-        aria-hidden="true"
-        className={fallbackClassName(variant, compact, className)}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- remote favicon is best-effort and falls back offline */}
-        <img
-          alt=""
-          className={compact ? "size-8 object-contain" : "size-16 object-contain"}
-          src={faviconSrc}
-          onError={() => setBrokenFaviconUrl(faviconUrl)}
-        />
-      </div>
-    );
+  if (item.type === "link") {
+    return <LinkFavicon key={item.url} item={item} variant={variant} compact={compact} className={className} />;
   }
 
   return (
@@ -86,6 +68,28 @@ export function LibraryItemMedia({
       className={fallbackClassName(variant, compact, className)}
     >
       <FallbackContent item={item} compact={compact} />
+    </div>
+  );
+}
+
+function LinkFavicon({ item, variant, compact, className }: {
+  item: LinkItem; variant: MediaVariant; compact: boolean; className: string;
+}) {
+  const [faviconIndex, setFaviconIndex] = useState(0);
+  const candidates = linkFaviconUrls(item.url, { size: compact ? 64 : 128 });
+  const faviconSrc = candidates[faviconIndex];
+
+  return (
+    <div aria-hidden="true" className={fallbackClassName(variant, compact, className)}>
+      {faviconSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element -- best-effort favicon sources, then an offline icon
+        <img
+          alt=""
+          className={compact || faviconIndex > 0 ? "size-8 object-contain" : "size-16 object-contain"}
+          src={faviconSrc}
+          onError={() => setFaviconIndex(faviconIndex + 1)}
+        />
+      ) : <FallbackContent item={item} compact={compact} />}
     </div>
   );
 }

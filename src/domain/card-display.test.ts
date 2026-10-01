@@ -4,6 +4,7 @@ import {
   cardSecondaryLine,
   linkCardHost,
   linkFaviconUrl,
+  linkFaviconUrls,
   noteCardSnippet,
   noteCardExcerpt,
   noteCardText,
@@ -46,6 +47,16 @@ describe("linkCardHost", () => {
 });
 
 describe("linkFaviconUrl", () => {
+  test("provides independent and normal-size fallbacks for a link favicon", () => {
+    expect(linkFaviconUrls("https://www.youtube.com/@amrmohamed2608")).toEqual([
+      "https://www.google.com/s2/favicons?domain=www.youtube.com&sz=128",
+      "https://www.youtube.com/favicon.ico",
+      "https://www.google.com/s2/favicons?domain=www.youtube.com&sz=32",
+    ]);
+    expect(linkFaviconUrls("not-a-url")).toEqual([]);
+    expect(linkFaviconUrls("javascript:alert(1)")).toEqual([]);
+  });
+
   test("builds a Google favicon URL from the link hostname", () => {
     expect(linkFaviconUrl("https://docs.example.com/path")).toBe(
       "https://www.google.com/s2/favicons?domain=docs.example.com&sz=128",

@@ -25,6 +25,7 @@ import type { MasonryPlacement } from "./library-masonry";
 import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ItemContextMenu } from "./item-context-menu";
+import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
 import {
   ImageItemEditDialog,
   LinkItemEditDialog,
@@ -153,6 +154,7 @@ export function LibraryItem({
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
   const [imageRatio, setImageRatio] = useState(1.6);
+  const [fetchingPreview, setFetchingPreview] = useState(false);
   const actionsRef = useRef<HTMLButtonElement>(null);
   const reduceMotion = useReducedMotion();
 
@@ -312,6 +314,13 @@ export function LibraryItem({
       onAddTag={onAddTag}
       onRemoveTag={onRemoveTag}
       onPreview={onPreview}
+      onFetchPreview={item.type === "link" && !trashActions ? () => {
+        if (fetchingPreview || item.previewStatus === "pending") return;
+        setFetchingPreview(true);
+        void requestManualPreviewEnrich(item.id, item.url).finally(() => setFetchingPreview(false));
+      } : undefined}
+      fetchingPreview={fetchingPreview || (item.type === "link" && item.previewStatus === "pending")}
+      hasPreview={item.type === "link" && (item.previewStatus === "ready" || Boolean(item.previewTitle || item.previewDescription || item.previewAssetId))}
       onEdit={onStartEdit}
       onDelete={onStartDelete}
       onTogglePin={pinVisible ? onTogglePin : undefined}

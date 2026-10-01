@@ -50,6 +50,22 @@ export function linkFaviconUrl(
   }
 }
 
+/** Try the site's own icon and a normal-size icon if the large service image fails. */
+export function linkFaviconUrls(linkUrl: string, options?: { size?: number }): string[] {
+  try {
+    const url = new URL(linkUrl.trim());
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) return [];
+    const candidates = [
+      linkFaviconUrl(linkUrl, options),
+      new URL("/favicon.ico", url.origin).toString(),
+      linkFaviconUrl(linkUrl, { size: 32 }),
+    ];
+    return [...new Set(candidates.filter((candidate): candidate is string => candidate !== null))];
+  } catch {
+    return [];
+  }
+}
+
 /** Short plain-text preview of note content for the secondary line. */
 export function noteCardText(note: Pick<NoteItem, "content" | "format">): string {
   if (note.format !== "markdown") return note.content.trim();

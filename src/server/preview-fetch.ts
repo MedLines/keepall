@@ -17,7 +17,7 @@ export class PreviewFetchError extends Error {
 }
 
 const MAX_REDIRECTS = 5;
-const MAX_BYTES = 1_000_000;
+const MAX_BYTES = 5 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 8_000;
 
 function metaContent(html: string, property: string): string {
@@ -89,6 +89,42 @@ export function parseOpenGraphHtml(html: string, pageUrl: string): LinkPreviewPa
   };
 }
 
+async function readPreviewHtml(response: Response, pageUrl: string): Promise<LinkPreviewPayload> {
+  if (!response.body) return parseOpenGraphHtml("", pageUrl);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8", { fatal: false });
+  let html = "";
+  let bytes = 0;
+  let checkedHead = false;
+
+  try {
+    while (bytes < MAX_BYTES) {
+      const { done, value } = await reader.read();
+      if (done) {
+        html += decoder.decode();
+        return parseOpenGraphHtml(html, pageUrl);
+      }
+      const chunk = value.subarray(0, MAX_BYTES - bytes);
+      bytes += chunk.byteLength;
+      html += decoder.decode(chunk, { stream: true });
+
+      if (!checkedHead && /<\/head\s*>/i.test(html)) {
+        checkedHead = true;
+        const preview = parseOpenGraphHtml(html, pageUrl);
+        if (preview.title && preview.description && preview.imageUrl) return preview;
+      }
+    }
+
+    html += decoder.decode();
+    const preview = parseOpenGraphHtml(html, pageUrl);
+    if (preview.title || preview.description || preview.imageUrl) return preview;
+    throw new PreviewFetchError("Response too large");
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
+
 export async function fetchLinkPreview(
   rawUrl: string,
   options?: {
@@ -105,9 +141,8 @@ export async function fetchLinkPreview(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-    let response: Response;
     try {
-      response = await fetchImpl(allowed.toString(), {
+      const response = await fetchImpl(allowed.toString(), {
         method: "GET",
         redirect: "manual",
         signal: controller.signal,
@@ -116,45 +151,36 @@ export async function fetchLinkPreview(
           "User-Agent": "KeepallPreview/1.0",
         },
       });
-    } catch {
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        await response.body?.cancel();
+        const location = response.headers.get("location");
+        if (!location) throw new PreviewFetchError("Redirect missing location");
+        try {
+          current = new URL(location, allowed).toString();
+        } catch {
+          throw new PreviewFetchError("Redirect location is invalid");
+        }
+        continue;
+      }
+
+      if (!response.ok) {
+        await response.body?.cancel();
+        throw new PreviewFetchError(`Upstream responded with ${response.status}`);
+      }
+
+      const contentType = response.headers.get("content-type") ?? "";
+      if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
+        await response.body?.cancel();
+        throw new PreviewFetchError("Unsupported content type");
+      }
+
+      return await readPreviewHtml(response, allowed.toString());
+    } catch (error) {
+      if (error instanceof PreviewFetchError) throw error;
       throw new PreviewFetchError("Could not fetch URL");
     } finally {
       clearTimeout(timer);
     }
-
-    if ([301, 302, 303, 307, 308].includes(response.status)) {
-      const location = response.headers.get("location");
-      if (!location) {
-        throw new PreviewFetchError("Redirect missing location");
-      }
-      try {
-        current = new URL(location, allowed).toString();
-      } catch {
-        throw new PreviewFetchError("Redirect location is invalid");
-      }
-      continue;
-    }
-
-    if (!response.ok) {
-      throw new PreviewFetchError(`Upstream responded with ${response.status}`);
-    }
-
-    const contentType = response.headers.get("content-type") ?? "";
-    if (
-      contentType &&
-      !contentType.includes("text/html") &&
-      !contentType.includes("application/xhtml")
-    ) {
-      throw new PreviewFetchError("Unsupported content type");
-    }
-
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength > MAX_BYTES) {
-      throw new PreviewFetchError("Response too large");
-    }
-
-    const html = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
-    return parseOpenGraphHtml(html, allowed.toString());
   }
 
   throw new PreviewFetchError("Too many redirects");
