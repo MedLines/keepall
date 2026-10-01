@@ -124,12 +124,15 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
 
 async function captureFeedbackActions(tabId, origin, result) {
   const id = crypto.randomUUID();
-  const canUndo = result.outcome === "created" && typeof result.undoToken === "string";
+  const undoExpiresAt = Number.isFinite(result.undoExpiresAt) ? result.undoExpiresAt : Date.now() + 60_000;
+  const canUndo = result.outcome === "created" && typeof result.undoToken === "string" && undoExpiresAt > Date.now();
+  // Keep actions until the next save or tab close. In-page navigation can report
+  // "loading" while the notification and its organizer are still open.
   await chrome.storage.session.set({ [`save-feedback:${tabId}`]: {
     id, origin, itemId: result.itemId,
     ...(canUndo ? { undoToken: result.undoToken } : {}),
   } });
-  return { id, canUndo };
+  return { id, canUndo, ...(canUndo ? { undoExpiresAt } : {}) };
 }
 
 async function handleFeedbackAction(message, tabId) {
@@ -149,7 +152,7 @@ async function handleFeedbackAction(message, tabId) {
     }
     return { success: true };
   }
-  if (message.action === "collections" || message.action === "move") {
+  if (message.action === "collections" || message.action === "move" || message.action === "tag") {
     return organizeCapture(message, record);
   }
   if (message.action !== "undo" || !record.undoToken) throw new Error("This save cannot be undone from this notification.");
@@ -170,27 +173,41 @@ async function handleFeedbackAction(message, tabId) {
 
 async function organizeCapture(message, record) {
   const moving = message.action === "move";
+  const tagging = message.action === "tag";
   if (moving && ((message.collectionId !== null && (typeof message.collectionId !== "string" || message.collectionId.length > 100)) ||
+      (message.collectionName !== undefined && (message.collectionId !== null || typeof message.collectionName !== "string" || !message.collectionName.trim() || message.collectionName.length > 120)) ||
       !Array.isArray(message.expectedCollectionIds) || message.expectedCollectionIds.length > 1 ||
       !message.expectedCollectionIds.every((id) => typeof id === "string" && id.length <= 100))) {
     throw new Error("Choose a collection and try again.");
   }
+  if (tagging) {
+    const hasId = typeof message.tagId === "string" && message.tagId.length > 0 && message.tagId.length <= 100;
+    const hasName = typeof message.tagName === "string" && message.tagName.trim().length > 0 && message.tagName.length <= 120;
+    if (hasId === hasName || (hasName && message.assigned !== true) || typeof message.assigned !== "boolean" ||
+        !Array.isArray(message.expectedTagIds) || message.expectedTagIds.length > 1000 ||
+        !message.expectedTagIds.every((id) => typeof id === "string" && id.length > 0 && id.length <= 100)) {
+      throw new Error("Choose a tag and try again.");
+    }
+  }
   await ensureOffscreen(record.origin);
   const captureId = crypto.randomUUID();
   const result = await chrome.runtime.sendMessage({
-    target: "offscreen", type: moving ? "move-capture" : "capture-collections", origin: record.origin,
+    target: "offscreen", type: tagging ? "tag-capture" : moving ? "move-capture" : "capture-collections", origin: record.origin,
     payload: { captureId, itemId: record.itemId, ...(moving ? {
-      collectionId: message.collectionId, expectedCollectionIds: message.expectedCollectionIds,
+      collectionId: message.collectionId, collectionName: message.collectionName, expectedCollectionIds: message.expectedCollectionIds,
+    } : tagging ? {
+      tagId: message.tagId, tagName: message.tagName, assigned: message.assigned, expectedTagIds: message.expectedTagIds,
     } : {}) },
   });
   if (result?.error) throw new Error(result.error);
   if (result?.captureId !== captureId || result.itemId !== record.itemId ||
-      (moving ? typeof result.collectionName !== "string" || typeof result.changed !== "boolean" :
-        !Array.isArray(result.collections) || !Array.isArray(result.collectionIds))) {
+      (moving ? typeof result.collectionName !== "string" || typeof result.changed !== "boolean" : tagging ?
+        typeof result.tag?.id !== "string" || typeof result.tag?.name !== "string" || !Array.isArray(result.tagIds) || typeof result.changed !== "boolean" || typeof result.assigned !== "boolean" :
+        !Array.isArray(result.collections) || !Array.isArray(result.collectionIds) || !Array.isArray(result.tags) || !Array.isArray(result.tagIds))) {
     throw new Error("Keepall did not confirm this action. Try again.");
   }
   await requireLibraryAccess(record.origin);
-  if (moving && result.changed) await notifyOpenKeepallTabs(record.origin).catch(() => {});
+  if ((moving || tagging) && result.changed) await notifyOpenKeepallTabs(record.origin).catch(() => {});
   return { ...result, success: true };
 }
 
@@ -280,7 +297,7 @@ async function saveTab(tab, options = {}) {
     }
     if (result.outcome === "updated") message = result.movedTo ? `Moved to ${result.movedTo}` : "Your changes were saved";
     if (result.outcome === "unchanged") message = "This link was already saved";
-    const actions = options.source === "editor" ? undefined : await captureFeedbackActions(tab.id, origin, result).catch(() => undefined);
+    const actions = await captureFeedbackActions(tab.id, origin, result).catch(() => undefined);
     await feedback(message, true, actions);
   } catch (error) {
     await feedback(error instanceof Error ? error.message : "Could not save to Keepall", false);
@@ -447,7 +464,6 @@ async function saveImage(tab, srcUrl, context = {}) {
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === "loading") {
-    void chrome.storage.session.remove(`save-feedback:${tabId}`);
     void chrome.action.setBadgeText({ tabId, text: "" }).catch(() => {});
     void chrome.action.setTitle({ tabId, title: "Save page to Keepall" }).catch(() => {});
   }
@@ -505,7 +521,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type === "capture-feedback-action" && sender.tab?.id &&
-      typeof message.actionId === "string" && ["open", "undo", "collections", "move"].includes(message.action)) {
+      typeof message.actionId === "string" && ["open", "undo", "collections", "move", "tag"].includes(message.action)) {
     void handleFeedbackAction(message, sender.tab.id)
       .then(sendResponse)
       .catch((error) => sendResponse({ success: false, error: error.message || "Could not complete this action. Try again." }));

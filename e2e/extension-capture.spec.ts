@@ -7,7 +7,7 @@ import { runInNewContext } from "node:vm";
 type ExtensionTab = { id: number; url?: string; title?: string };
 declare const chrome: {
   storage: { local: { set(values: Record<string, string>): Promise<void> } };
-  runtime: { id: string; getURL(path: string): string };
+  runtime: { id: string; getURL(path: string): string; sendMessage(message: Record<string, unknown>): Promise<Record<string, unknown>> };
   tabs: {
     query(query: { active: boolean; currentWindow: boolean }): Promise<ExtensionTab[]>;
     setZoom(tabId: number, zoomFactor: number): Promise<void>;
@@ -22,6 +22,7 @@ declare function openEditor(tab: ExtensionTab): Promise<void>;
 declare function saveContext(info: { menuItemId: string; mediaType?: string; srcUrl?: string; linkUrl?: string; pageUrl?: string; frameUrl?: string; selectionText?: string }, tab: ExtensionTab): Promise<void> | undefined;
 declare function imageSourceUrl(pageUrl: string, linkUrl?: string): string;
 declare function keepallOrigin(): Promise<string>;
+declare function advanceNotificationClock(): void;
 
 test("extension registers one direct menu action for images and links", async () => {
   const menus: Array<{ id: string; title: string; contexts: string[] }> = [];
@@ -386,6 +387,8 @@ test("connection checks, selected text, and appearance work together", async ({}
     await saveText("A useful passage");
     await expect(toast).toContainText("Text saved to Keepall");
     await expect(toast.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
+    await expect(toast.locator(".toast-mark svg")).toHaveCount(1);
+    await expect(toast.locator(".toast-mark")).toHaveText("");
     await saveText("A useful passage");
     await expect(toast).toContainText("This text was already saved");
     await saveText("Another useful passage");
@@ -446,7 +449,7 @@ test("connection checks, selected text, and appearance work together", async ({}
   }
 });
 
-test("extension saves and edits links through the hidden Keepall bridge", async () => {
+test("extension saves and edits links through the hidden Keepall bridge", async ({}, testInfo) => {
   test.setTimeout(60_000);
   const profile = await mkdtemp(path.join(tmpdir(), "keepall-extension-"));
   const extensionPath = path.resolve("extension");
@@ -609,6 +612,16 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       return chrome.action.getTitle({ tabId: tab.id });
     })).toBe("Saved to Keepall");
+    const complete = editor.locator(".save-complete");
+    await expect(complete.getByRole("button", { name: "Open in Keepall", exact: true })).toBeFocused();
+    await editorPage.screenshot({ path: testInfo.outputPath("drawer-saved.png"), animations: "disabled" });
+    const pageCount = context.pages().length;
+    await complete.getByRole("button", { name: "Open in Keepall", exact: true }).click();
+    await expect(openLibrary).toHaveURL(/localhost:3100\/items\/[0-9a-f-]+\?from=%2F$/);
+    await expect(openLibrary.getByRole("heading", { name: "Chosen title", level: 1 })).toBeVisible();
+    expect(context.pages()).toHaveLength(pageCount);
+    await expect(editorHost.locator("dialog")).toHaveCount(0);
+    await editorPage.bringToFront();
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await openEditor(tab);
@@ -751,6 +764,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
 
 
 test("save notifications open the item and undo only new captures", async ({}, testInfo) => {
+  test.setTimeout(90_000);
   const profile = await mkdtemp(path.join(tmpdir(), "keepall-extension-actions-"));
   const extensionPath = path.resolve("extension");
   const context = await chromium.launchPersistentContext(profile, {
@@ -810,21 +824,38 @@ test("save notifications open the item and undo only new captures", async ({}, t
       const request = indexedDB.open("keepall");
       request.onsuccess = () => {
         const db = request.result;
-        const tx = db.transaction("collections", "readwrite");
+        const tx = db.transaction(["collections", "tags"], "readwrite");
         for (const [id, name] of [["reading", "Reading"], ["inspiration", "Inspiration"]]) {
           tx.objectStore("collections").put({ id, name, createdAt: Date.now(), pinnedItemIds: [] });
         }
+        for (let index = 1; index <= 16; index++) {
+          tx.objectStore("collections").put({ id: `archive-${index}`, name: `Archive ${index}`, createdAt: Date.now(), pinnedItemIds: [] });
+        }
+        tx.objectStore("tags").put({ id: "reference", name: "Reference", createdAt: Date.now() });
         tx.oncomplete = () => { db.close(); resolve(); };
         tx.onerror = () => reject(tx.error);
       };
       request.onerror = () => reject(request.error);
     }));
     await toast.getByRole("button", { name: "Organize", exact: true }).click();
-    const picker = toast.getByRole("dialog", { name: "Move to collection" });
+    const picker = toast.getByRole("dialog", { name: "Organize item" });
     await expect(picker.getByRole("button", { name: "Unsorted", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(picker.getByRole("searchbox")).toBeFocused();
+    await source.clock.install();
+    await source.clock.fastForward(35_000);
+    await source.evaluate(() => history.pushState({}, "", "/action-article?view=related"));
+    await picker.getByRole("button", { name: "Tags", exact: true }).click();
+    await picker.getByRole("button", { name: "Reference", exact: true }).click();
+    await expect.poll(async () => ({
+      selected: await picker.getByRole("button", { name: "Reference", exact: true }).getAttribute("aria-pressed"),
+      error: (await picker.getByRole("alert").allTextContents())[0] ?? null,
+    })).toEqual({ selected: "true", error: null });
+    await picker.getByRole("button", { name: "Reference", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Reference", exact: true })).toHaveAttribute("aria-pressed", "false");
+    await source.evaluate(() => history.replaceState({}, "", "/action-article"));
+    await picker.getByRole("button", { name: "Collection", exact: true }).click();
     await picker.getByRole("searchbox").fill("missing collection");
-    await expect(picker).toContainText("No collections found");
+    await expect(picker.getByRole("button", { name: "Create “missing collection”" })).toBeVisible();
     await picker.getByRole("searchbox").fill("");
     for (const colorScheme of ["light", "dark"] as const) {
       await source.emulateMedia({ colorScheme });
@@ -845,6 +876,55 @@ test("save notifications open the item and undo only new captures", async ({}, t
     await expect(picker.getByRole("button", { name: "Reading", exact: true })).toHaveAttribute("aria-pressed", "true");
     await picker.getByRole("button", { name: "Unsorted", exact: true }).click();
     await expect(toast).toContainText("Moved to Unsorted");
+    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    await expect(picker).toHaveCSS("transform", "none");
+    const panelBefore = (await picker.boundingBox())!;
+    const inputBefore = (await picker.getByRole("searchbox").boundingBox())!;
+    expect(await picker.locator(".toast-collections-list").evaluate((list) => list.scrollHeight > list.clientHeight)).toBe(true);
+    await picker.getByRole("searchbox").fill("  Side   projects ");
+    await expect(picker.getByRole("button", { name: "Create “Side projects”" })).toBeVisible();
+    for (const colorScheme of ["light", "dark"] as const) {
+      await source.emulateMedia({ colorScheme });
+      await source.screenshot({ path: testInfo.outputPath(`organize-create-${colorScheme}.png`), animations: "disabled" });
+    }
+    const panelAfter = (await picker.boundingBox())!;
+    expect(panelAfter).toEqual(panelBefore);
+    expect(await picker.getByRole("searchbox").boundingBox()).toEqual(inputBefore);
+    for (const control of [picker.getByRole("group", { name: "Organization type" }), picker.getByRole("button", { name: "Create “Side projects”" })]) {
+      const bounds = (await control.boundingBox())!;
+      expect(bounds.x).toBe(inputBefore.x);
+      expect(bounds.width).toBe(inputBefore.width);
+    }
+    await picker.getByRole("searchbox").press("Enter");
+    await expect(picker).toHaveCount(0);
+    await expect(toast).toContainText("Moved to Side projects");
+    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    await picker.getByRole("searchbox").fill(" SIDE PROJECTS ");
+    await expect(picker.getByRole("button", { name: /Create/ })).toHaveCount(0);
+    await expect(picker.getByRole("button", { name: "Side projects", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await picker.getByRole("button", { name: "Tags", exact: true }).click();
+    const tagSearch = picker.getByRole("searchbox", { name: "Find a tag" });
+    await tagSearch.fill("reference");
+    await expect(picker.getByRole("button", { name: /Create/ })).toHaveCount(0);
+    await picker.getByRole("button", { name: "Reference", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Reference", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await tagSearch.fill("  Planning ");
+    await picker.getByRole("button", { name: "Create “Planning”" }).click();
+    await expect(picker.getByRole("button", { name: "Planning", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await source.screenshot({ path: testInfo.outputPath("organize-tags.png"), animations: "disabled" });
+    await tagSearch.fill("Reference");
+    await picker.getByRole("button", { name: "Reference", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Reference", exact: true })).toHaveAttribute("aria-pressed", "false");
+    await tagSearch.fill("PLANNING");
+    await expect(picker.getByRole("button", { name: /Create/ })).toHaveCount(0);
+    await expect(picker.getByRole("button", { name: "Planning", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await picker.getByRole("button", { name: "Close organizer" }).click();
+    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Side projects", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await picker.getByRole("button", { name: "Tags", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Planning", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(picker.getByRole("button", { name: "Reference", exact: true })).toHaveAttribute("aria-pressed", "false");
+    await picker.getByRole("button", { name: "Close organizer" }).click();
     const pageCount = context.pages().length;
     await toast.getByRole("button", { name: "Open in Keepall" }).click();
     await expect(library).toHaveURL(/localhost:3100\/items\/[0-9a-f-]+\?from=%2F$/);
@@ -858,7 +938,7 @@ test("save notifications open the item and undo only new captures", async ({}, t
     await expect(library).toHaveURL(/localhost:3100\/items\/[0-9a-f-]+\?from=%2F$/);
     expect(context.pages()).toHaveLength(pageCount);
 
-    // Image undo also cleans its stored bytes without touching the saved link.
+    // Image undo moves the image to Trash and retains its media without touching the saved link.
     await source.bringToFront();
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -867,7 +947,7 @@ test("save notifications open the item and undo only new captures", async ({}, t
     await expect(toast).toContainText("Image saved to Keepall");
     await toast.getByRole("button", { name: "Undo", exact: true }).click();
     await expect(toast).toContainText("Save undone");
-    const stored = await library.evaluate(() => new Promise<{ types: string[]; assets: number }>((resolve, reject) => {
+    const stored = await library.evaluate(() => new Promise<{ types: string[]; trashedTypes: string[]; assets: number }>((resolve, reject) => {
       const request = indexedDB.open("keepall");
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
@@ -875,11 +955,18 @@ test("save notifications open the item and undo only new captures", async ({}, t
         const tx = db.transaction(["items", "assets"], "readonly");
         const items = tx.objectStore("items").getAll();
         const assets = tx.objectStore("assets").count();
-        tx.oncomplete = () => { db.close(); resolve({ types: items.result.map((item) => item.type), assets: assets.result }); };
+        tx.oncomplete = () => {
+          db.close();
+          resolve({
+            types: items.result.filter((item) => item.deletedAt === undefined).map((item) => item.type),
+            trashedTypes: items.result.filter((item) => item.deletedAt !== undefined).map((item) => item.type).sort(),
+            assets: assets.result,
+          });
+        };
         tx.onerror = () => reject(tx.error);
       };
     }));
-    expect(stored).toEqual({ types: ["link"], assets: 0 });
+    expect(stored).toEqual({ types: ["link"], trashedTypes: ["image", "link"], assets: 1 });
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await saveContext({ menuItemId: "save-to-keepall", mediaType: "image", srcUrl: "http://localhost:3100/icons/icon-192.png" }, tab);
@@ -891,7 +978,10 @@ test("save notifications open the item and undo only new captures", async ({}, t
     await expect(toast.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0);
     await toast.getByRole("button", { name: "Organize", exact: true }).click();
     await expect(picker.getByRole("button", { name: "Inspiration", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await picker.getByRole("button", { name: "Close collections" }).click();
+    await picker.getByRole("button", { name: "Tags", exact: true }).click();
+    await picker.getByRole("button", { name: "Reference", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Reference", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await picker.getByRole("button", { name: "Close organizer" }).click();
     await library.close();
     await source.bringToFront();
     await save();
@@ -901,6 +991,114 @@ test("save notifications open the item and undo only new captures", async ({}, t
     await expect(opened).toHaveURL(/localhost:3100\/items\/[0-9a-f-]+\?from=%2F$/);
     await expect(opened.getByRole("heading", { name: "Action article", level: 1 })).toBeVisible();
     await expect(opened.getByRole("link", { name: "Back to library" })).toHaveAttribute("href", "/");
+  } finally {
+    await context.close();
+    await rm(profile, { recursive: true, force: true });
+  }
+});
+
+test("notifications expire Undo and retry loading organizations without closing", async () => {
+  test.setTimeout(60_000);
+  const profile = await mkdtemp(path.join(tmpdir(), "keepall-extension-retry-"));
+  const extensionPath = path.resolve("extension");
+  const context = await chromium.launchPersistentContext(profile, {
+    channel: "chromium", headless: true,
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+  try {
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
+    await worker.evaluate(() => chrome.storage.local.set({ origin: "http://localhost:3100" }));
+    const source = await context.newPage();
+    await source.route("http://localhost:3100/retry-article", (route) => route.fulfill({
+      contentType: "text/html", body: "<!doctype html><title>Retry article</title><h1>Article</h1>",
+    }));
+    await source.goto("http://localhost:3100/retry-article");
+    await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => {
+        const attach = Element.prototype.attachShadow;
+        Element.prototype.attachShadow = function (options) { return attach.call(this, { ...options, mode: "open" }); };
+        // Playwright's page clock does not reach extension scripts' isolated world.
+        const timerWindow: Window = window;
+        const realNow = Date.now.bind(Date);
+        const setTimer = timerWindow.setTimeout.bind(timerWindow);
+        const clearTimer = timerWindow.clearTimeout.bind(timerWindow);
+        const timers = new Map<number, { due: number; run: () => void }>();
+        let offset = 0;
+        Date.now = () => realNow() + offset;
+        timerWindow.setTimeout = (handler: TimerHandler, delay = 0, ...args: unknown[]) => {
+          if (typeof handler !== "function") return setTimer(handler, delay, ...args);
+          const run = () => { timers.delete(id); handler(...args); };
+          const id = setTimer(run, delay);
+          timers.set(id, { due: Date.now() + delay, run });
+          return id;
+        };
+        timerWindow.clearTimeout = (id) => { if (id !== undefined) timers.delete(id); clearTimer(id); };
+        Object.assign(globalThis, { advanceNotificationClock: () => {
+          offset += 61_000;
+          for (const [id, timer] of [...timers]) {
+            if (timer.due <= Date.now()) { clearTimer(id); timer.run(); }
+          }
+        } });
+      } });
+      await saveTab(tab);
+    });
+    const toast = source.locator("#keepall-capture-ui .toast");
+    const undo = toast.getByRole("button", { name: "Undo", exact: true });
+    const organize = toast.getByRole("button", { name: "Organize", exact: true });
+    await expect(undo).toBeEnabled();
+    await organize.click();
+    const picker = toast.getByRole("dialog", { name: "Organize item" });
+    await expect(picker.getByRole("searchbox")).toBeFocused();
+    await undo.focus();
+    await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => advanceNotificationClock() });
+    });
+    await expect(undo).toBeDisabled();
+    await expect(undo).toHaveAttribute("title", /expired/);
+    await expect(organize).toBeFocused();
+    await expect(toast.getByRole("button", { name: "Open in Keepall" })).toBeEnabled();
+    await picker.getByRole("button", { name: "Close organizer" }).click();
+    await worker.evaluate(() => {
+      const send = chrome.runtime.sendMessage.bind(chrome.runtime);
+      let failLoad = true;
+      let failMove = true;
+      chrome.runtime.sendMessage = (message) => {
+        if (message.target === "offscreen" && message.type === "capture-collections" && failLoad) {
+          failLoad = false;
+          return Promise.resolve({ error: "Library temporarily unavailable." });
+        }
+        if (message.target === "offscreen" && message.type === "move-capture" && failMove) {
+          failMove = false;
+          return Promise.resolve({ error: "Could not move this item. Try again." });
+        }
+        return send(message);
+      };
+    });
+    await organize.click();
+    await expect(picker.getByRole("alert")).toHaveText("Library temporarily unavailable.");
+    await expect(picker).toHaveCSS("transform", "none");
+    const bounds = await picker.boundingBox();
+    await picker.getByRole("button", { name: "Tags", exact: true }).click();
+    await picker.getByRole("button", { name: "Retry", exact: true }).click();
+    await expect(picker.getByRole("searchbox", { name: "Find a tag" })).toBeFocused();
+    await expect(picker.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
+    expect(await picker.boundingBox()).toEqual(bounds);
+    await picker.getByRole("button", { name: "Collection", exact: true }).click();
+    await picker.getByRole("searchbox").fill("Retry collection");
+    const create = picker.getByRole("button", { name: "Create “Retry collection”" });
+    await create.click();
+    await expect(picker.getByRole("alert")).toHaveText("Could not move this item. Try again.");
+    await expect(undo).toBeDisabled();
+    await create.click();
+    await expect(toast).toContainText("Moved to Retry collection");
+    await expect(picker).toHaveCount(0);
+    const libraryPage = context.waitForEvent("page");
+    await toast.getByRole("button", { name: "Open in Keepall" }).click();
+    const library = await libraryPage;
+    await expect(library.getByRole("heading", { name: "Retry article", level: 1 })).toBeVisible();
+    await expect(library.getByText("Retry collection", { exact: true })).toBeVisible();
   } finally {
     await context.close();
     await rm(profile, { recursive: true, force: true });
@@ -1108,6 +1306,25 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
     await expect(editorHost.locator("dialog")).toHaveCount(0);
   };
 
+  for (const [index, siteStyle] of ["html { font-size: 10px; }", "html { zoom: .75; }", "html { zoom: 1.25; }"].entries()) {
+    const pageStyles = await page.addStyleTag({ content: siteStyle });
+    await open();
+    await editor.locator("dialog").evaluate(async (node) => {
+      await Promise.all(node.getAnimations().map((animation) => animation.finished));
+    });
+    const bounds = (await editor.locator("dialog").boundingBox())!;
+    const surfaceBounds = (await editorHost.locator(".editor-surface").boundingBox())!;
+    expect(surfaceBounds.width, siteStyle).toBeCloseTo(1280, 0);
+    expect(surfaceBounds.height, siteStyle).toBeCloseTo(720, 0);
+    expect(bounds.width, siteStyle).toBeCloseTo(480, 0);
+    expect(bounds.height).toBeCloseTo(720, 0);
+    expect(bounds.x + bounds.width).toBeCloseTo(1280, 0);
+    await page.screenshot({ path: testInfo.outputPath(`drawer-site-scale-${index}.png`) });
+    await editor.getByRole("button", { name: "Close", exact: true }).click({ timeout: 2000 });
+    await expect(editorHost.locator("dialog")).toHaveCount(0);
+    await pageStyles.evaluate((node) => node.parentNode?.removeChild(node));
+  }
+
   await open();
   await note.fill("# Unfinished note");
   await editor.getByRole("checkbox", { name: "Markdown" }).check();
@@ -1188,6 +1405,14 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
   await expect(note).toHaveValue("Typed while loading");
   await editor.getByRole("button", { name: "Save changes" }).click();
   expect(await bridge.evaluate((value) => value.lastSave())).toMatchObject({ existingLink: organizations.existingLink });
+  await bridge.evaluate((value, message) => value.send(message), {
+    type: "editor-feedback", editorId, success: true, message: "Your changes were saved", actions: { id: "saved-action", canUndo: false },
+  });
+  await editor.getByRole("button", { name: "Open in Keepall", exact: true }).click();
+  await expect(editor.locator(".save-complete").getByRole("alert")).toHaveText("Could not open Keepall. Try again.");
+  await expect(editor.getByRole("button", { name: "Open in Keepall", exact: true })).toBeEnabled();
+  await editor.locator(".save-complete").getByRole("button", { name: "Close", exact: true }).click();
+  await expect(editorHost.locator("dialog")).toHaveCount(0);
 });
 
 test("extension picker browses the full list and accepts new names", async ({ page }) => {

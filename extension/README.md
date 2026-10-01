@@ -10,25 +10,37 @@ write; an error never reports success.
 Quick-save confirmations show a separate icon-and-label action row below the
 message. **Open in Keepall** opens the saved item's `/items/<id>?from=%2F` detail
 page and reuses an existing library or item-detail tab when possible. **Undo** appears only for a new
-link or image, never an update or duplicate. Undo removes the new item and its
-unreferenced image assets, but refuses if the item was edited, organized, or
+link or image, never an update or duplicate. Undo moves the new item to Trash
+and retains its media, but refuses if the item was edited, organized, or
 pinned after saving. Automatic link previews do not prevent Undo. Actions stay
-visible for eight seconds and pause while hovered or keyboard-focused. Undo is
-available for up to one minute and requires the same live bridge; if it expires,
-the toast explains that you can remove the item in Keepall instead.
+visible for eight seconds and pause while hovered, keyboard-focused, or while
+Organize is open. Undo is available for up to one minute and requires the same
+live bridge. It disables at the library's deadline, with an explanation that
+you can remove the item in Keepall instead.
 The action's library and item IDs stay in extension session storage until the
-next quick-save notification, navigation, tab closure, or browser restart.
+next quick-save notification in that tab, tab closure, or browser restart.
+In-page URL changes keep the visible notification's actions connected to its item.
 The drawer keeps its existing centered save confirmation.
 New quick saves identify the type: “Link saved to Keepall” or
 “Image saved to Keepall.” An older deployed bridge can still save and open items,
 but it cannot offer Undo until the updated web app is deployed.
 
+**Organize** opens a compact panel with **Collection** and **Tags** switches.
+Search either list and choose **Create “name”** when there is no exact match.
+Creating a collection moves the saved item into it immediately. Tags can be
+created, added, or removed without closing the panel. Searches ignore case and
+reuse existing names. The panel keeps a fixed height while filtering, with
+scrolling inside the results and space reserved for its scrollbar.
+If collections and tags fail to load, **Retry** reloads them in the same panel
+and returns focus to the selected search field.
+
 Alt/Option+K opens a Keepall-style drawer over the current page for an optional
 title and personal note. It also loads collections and tags from your library.
 Six quick choices appear for each; **Browse all** searches the complete list,
 and the inputs can create new collections and tags. A successful drawer save
-replaces the form with a centered checkmark and confirmation before the drawer
-closes. Feedback names a collection-only move, confirms other saved changes,
+replaces the form with a centered checkmark, confirmation, and **Open in Keepall**
+button. The confirmation stays open until you open the item or choose **Close**.
+Feedback names a collection-only move, confirms other saved changes,
 or says “This link was already saved” when nothing changed. A failed save keeps
 the form open and shows an error toast.
 

@@ -80,12 +80,13 @@ async function selectedOrganization(db: KeepallDB, input: ExtensionLinkCapture) 
   };
 }
 
-type ExtensionSaveResult = {
+export type ExtensionSaveResult = {
   itemId: string;
   created: boolean;
   outcome: "created" | "updated" | "unchanged";
   movedTo?: string;
   undoToken?: string;
+  undoExpiresAt?: number;
 };
 
 export type ExtensionImageCapture = {
@@ -112,7 +113,7 @@ export async function saveExtensionImage(input: ExtensionImageCapture): Promise<
     assets: [{ bytes: input.bytes, mimeType: input.mimeType }],
     sourceUrl: input.sourcePageUrl,
   });
-  return { itemId: image.id, created, outcome: created ? "created" : "unchanged", ...(created ? { undoToken: createCaptureUndo(image) } : {}) };
+  return { itemId: image.id, created, outcome: created ? "created" : "unchanged", ...(created ? createCaptureUndo(image) : {}) };
 }
 
 function hasNoteFormatChange(link: LinkItem, input: ExtensionLinkCapture, nextNote: string): boolean {
@@ -317,6 +318,6 @@ export async function saveExtensionLink(
       tagIds: organization.tagIds ?? link.tagIds,
     };
     await db.items.add(createdLink);
-    return { itemId: link.id, created: true, outcome: "created", undoToken: createCaptureUndo(createdLink) };
+    return { itemId: link.id, created: true, outcome: "created", ...createCaptureUndo(createdLink) };
   });
 }

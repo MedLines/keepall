@@ -12,13 +12,14 @@ function fingerprint(item: Item): string {
   throw new Error("Unsupported capture type");
 }
 
-export function createCaptureUndo(item: Item): string {
+export function createCaptureUndo(item: Item): { undoToken: string; undoExpiresAt: number } {
   for (const [token, receipt] of receipts) {
     if (receipt.expiresAt <= Date.now()) receipts.delete(token);
   }
   const token = crypto.randomUUID();
-  receipts.set(token, { itemId: item.id, fingerprint: fingerprint(item), expiresAt: Date.now() + 60_000, undone: false });
-  return token;
+  const expiresAt = Date.now() + 60_000;
+  receipts.set(token, { itemId: item.id, fingerprint: fingerprint(item), expiresAt, undone: false });
+  return { undoToken: token, undoExpiresAt: expiresAt };
 }
 
 export async function undoExtensionCapture(token: string): Promise<string> {

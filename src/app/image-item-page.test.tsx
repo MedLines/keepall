@@ -200,8 +200,8 @@ describe("ImageItemPage", () => {
     const details = screen.getByRole("complementary", { name: "Image details" });
     expect(within(details).getByRole("button", { name: "Organize" })).toBeEnabled();
     expect(within(details).getByRole("button", { name: "Move item to Trash" })).toBeEnabled();
-    expect(within(toolbar).getByRole("link", { name: "Open source" })).toHaveAttribute("href", "https://example.com/checkout");
-    expect(within(screen.getByRole("complementary", { name: "Image details" })).queryByRole("link", { name: "Open source" })).not.toBeInTheDocument();
+    expect(within(toolbar).getByRole("link", { name: "Source link" })).toHaveAttribute("href", "https://example.com/checkout");
+    expect(within(screen.getByRole("complementary", { name: "Image details" })).queryByRole("link", { name: "Source link" })).not.toBeInTheDocument();
     expect(screen.queryByText("Saved image")).not.toBeInTheDocument();
     expect(within(details).getByRole("button", { name: "Edit details" })).toBeEnabled();
     expect(within(details).getByRole("button", { name: "Slides view" })).toBeEnabled();

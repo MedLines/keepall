@@ -70,7 +70,7 @@ describe("LinkItemPage", () => {
     expect(details).toHaveTextContent("review");
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(screen.getByText("My notes", { selector: "article p" })).toBeVisible();
-    expect(screen.getByRole("link", { name: /Open source/ })).toHaveAttribute("href", "https://example.com/article");
+    expect(screen.getByRole("link", { name: "Source link" })).toHaveAttribute("href", "https://example.com/article");
   });
 
   test("shows the website preview separately from a Markdown personal note", async () => {
@@ -83,7 +83,7 @@ describe("LinkItemPage", () => {
     expect(screen.getByText("Website summary")).toBeVisible();
     expect(screen.queryByTestId("link-preview")).toBeNull();
     expect(screen.getByRole("heading", { name: "Why I saved this" })).toBeVisible();
-    expect(screen.getByRole("link", { name: /Open source/ })).toHaveAttribute("href", "https://example.com/article");
+    expect(screen.getByRole("link", { name: "Source link" })).toHaveAttribute("href", "https://example.com/article");
     expect(screen.getByRole("link", { name: "Back to library" })).toHaveAttribute("href", "/?tag=design");
   });
 
@@ -142,7 +142,7 @@ describe("LinkItemPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't move link to Trash.");
     expect(routerPush).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.getByRole("link", { name: "Open source" })).toHaveAttribute("href", "https://example.com/article");
+    expect(screen.getByRole("link", { name: "Source link" })).toHaveAttribute("href", "https://example.com/article");
   });
 
 });

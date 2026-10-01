@@ -62,10 +62,15 @@ if (!globalThis.__keepallPageUi) {
     .header, form { transition: opacity 160ms cubic-bezier(.19, 1, .22, 1), transform 160ms cubic-bezier(.19, 1, .22, 1); }
     dialog[data-state="saved"] > .header, dialog[data-state="saved"] > form { opacity: 0; transform: translateY(-8px); visibility: hidden; transition: opacity 160ms cubic-bezier(.19, 1, .22, 1), transform 160ms cubic-bezier(.19, 1, .22, 1), visibility 0s linear 160ms; }
     .save-complete { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 20px; padding: 32px; text-align: center; visibility: hidden; opacity: 0; transform: translateY(10px) scale(.96); pointer-events: none; transition: opacity 180ms cubic-bezier(.19, 1, .22, 1), transform 220ms cubic-bezier(.19, 1, .22, 1), visibility 0s linear 220ms; }
-    dialog[data-state="saved"] .save-complete { visibility: visible; opacity: 1; transform: none; transition-delay: 40ms, 40ms, 0s; }
+    dialog[data-state="saved"] .save-complete { visibility: visible; opacity: 1; transform: none; pointer-events: auto; transition-delay: 40ms, 40ms, 0s; }
     .save-complete-mark { display: grid; place-items: center; width: 96px; height: 96px; border-radius: 32px; corner-shape: squircle; background: var(--action); color: var(--on-action); }
     .save-complete-mark svg { width: 52px; height: 52px; }
     .save-complete-title { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.025em; line-height: 1.3; }
+    .save-complete-actions { display: grid; justify-items: center; gap: 12px; }
+    .save-complete-actions[hidden] { display: none; }
+    .save-complete-actions button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px; font-size: 14px; font-weight: 500; }
+    .save-complete-actions svg { flex: none; width: 16px; height: 16px; }
+    .save-complete-actions button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
     .heading { min-width: 0; flex: 1; }
     h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.025em; line-height: 1.35; }
     .description { margin: 12px 0 0; max-width: 380px; overflow-wrap: anywhere; color: var(--secondary); line-height: 1.5; }
@@ -151,9 +156,11 @@ if (!globalThis.__keepallPageUi) {
     .toast { --toast-offset: max(20px, env(safe-area-inset-right)); position: fixed; z-index: 2147483647; right: var(--toast-offset); top: max(20px, env(safe-area-inset-top)); display: grid; width: max-content; max-width: min(320px, calc(100vw - 40px)); border-radius: 28px; color: var(--primary); font-size: 14px; font-weight: 500; line-height: 1.4; opacity: 0; transform: translateX(calc(100% + var(--toast-offset))); transition: transform 260ms cubic-bezier(.32, .72, 0, 1), opacity 180ms cubic-bezier(.32, .72, 0, 1); }
     .toast-card { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 48px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 32px; corner-shape: superellipse(1.5); background: var(--toast); box-shadow: 0 12px 36px #00000024, 0 2px 8px #00000012; }
     .toast.is-visible { opacity: 1; transform: translateX(0); }
+    .toast.has-actions { width: min(320px, calc(100vw - 40px)); }
     dialog .toast { position: absolute; top: 88px; }
     .toast.is-leaving { pointer-events: none; transition-duration: 180ms, 140ms; }
     .toast-mark { display: grid; flex: none; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--action); color: var(--on-action); font-size: 12px; }
+    .toast-mark svg { width: 16px; height: 16px; }
     .toast[data-success="false"] .toast-mark { background: var(--danger); color: var(--canvas); }
     .toast-label { flex: 0 1 auto; overflow-wrap: anywhere; }
     .toast-content { min-width: 0; flex: 1; }
@@ -163,20 +170,36 @@ if (!globalThis.__keepallPageUi) {
     .toast-action:hover { background: var(--raised); color: var(--primary); }
     .toast-action:active { transform: scale(.96); }
     @media (prefers-reduced-motion: reduce) { .toast-action { transition: none; } .toast-action:active { transform: none; } }
-    .toast-collections { width: 100%; min-width: 0; max-height: calc(100dvh - 144px); display: flex; flex-direction: column; margin-top: 8px; padding: 8px; background: var(--toast); border: 1px solid var(--border); border-radius: 24px; corner-shape: superellipse(1.5); box-shadow: 0 8px 24px #00000014; animation: collection-enter 160ms cubic-bezier(.2, 0, 0, 1); }
+    .toast-collections { width: 100%; min-width: 0; height: min(320px, calc(100dvh - 144px)); display: flex; flex-direction: column; overflow: hidden; margin-top: 8px; padding: 8px; background: var(--toast); border: 1px solid var(--border); border-radius: 24px; corner-shape: superellipse(1.5); box-shadow: 0 8px 24px #00000014; animation: collection-enter 160ms cubic-bezier(.2, 0, 0, 1); }
     .toast-collections-header { display: flex; align-items: center; justify-content: space-between; padding-left: 6px; font-size: 12px; font-weight: 600; }
+    .toast-collections-controls { flex: none; min-width: 0; overflow-y: hidden; scrollbar-width: thin; scrollbar-gutter: stable; }
+    .toast-organize-types { display: flex; flex: none; gap: 4px; margin: 4px 0; padding: 3px; border: 1px solid var(--border); border-radius: 12px; background: var(--control); }
+    .toast-organize-types button { flex: 1; min-height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--secondary); font-size: 12px; }
+    .toast-organize-types button:hover { background: var(--raised); }
+    .toast-organize-types button[aria-pressed="true"] { background: var(--selected); color: var(--primary); }
     .toast-collections-search { display: block; flex: none; width: 100%; min-width: 0; min-height: 34px; margin: 4px 0 6px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--control); color: var(--primary); font-size: 12px; }
     .toast-collections-search::placeholder { color: var(--secondary); }
-    .toast-collections-list { display: grid; gap: 2px; min-height: 0; overflow-y: auto; max-height: 180px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; scrollbar-gutter: stable; }
+    .toast-collections-list { display: grid; align-content: start; flex: 1; gap: 2px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; scrollbar-gutter: stable; }
     .toast-collection { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 8px; border: 0; border-radius: 10px; background: transparent; color: var(--primary); text-align: left; font-size: 12px; }
-    .toast-collection > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .toast-collection-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .toast-collection-check { flex: none; width: 14px; }
     .toast-collection:hover { background: var(--raised); }
     .toast-collection[aria-pressed="true"] { background: var(--selected); }
-    .toast-collections-status { margin: 6px; font-size: 12px; color: var(--secondary); }
+    .toast-create { justify-content: flex-start; min-height: 36px; border: 1px solid transparent; background: var(--action); color: var(--on-action); font-weight: 500; }
+    .toast-create:hover { background: color-mix(in srgb, var(--action) 90%, var(--toast)); }
+    .toast-create-icon { display: flex; flex: none; width: 16px; height: 16px; }
+    .toast-create-icon svg { width: 100%; height: 100%; }
+    .toast-create:active { background: color-mix(in srgb, var(--action) 80%, var(--toast)); }
+    .toast-collections-footer { display: flex; flex: none; align-items: center; gap: 8px; min-height: 28px; margin-top: 4px; overflow-y: hidden; scrollbar-width: thin; scrollbar-gutter: stable; }
+    .toast-collections-status { flex: 1; min-width: 0; margin: 0 6px; overflow-wrap: anywhere; font-size: 12px; color: var(--secondary); }
+    .toast-collections-retry { flex: none; min-height: 28px; padding: 4px 8px; border: 0; border-radius: 8px; background: var(--action); color: var(--on-action); font-size: 12px; font-weight: 500; }
+    .toast-collections-retry:hover { background: color-mix(in srgb, var(--action) 90%, var(--toast)); }
+    .toast-collections-retry[hidden] { display: none; }
     .toast-collections-status[role="alert"] { color: var(--danger); }
     .toast-collections-status[hidden] { display: none; }
     .toast button:focus-visible, .toast input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+    .toast .toast-collections-search:focus-visible { outline: none; border-color: var(--focus); }
+    .toast-collections-controls button:focus-visible { outline-width: 1px; outline-offset: -2px; }
     .toast button:disabled { cursor: default; opacity: .5; }
     @keyframes collection-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
     @media (prefers-reduced-motion: reduce) { .toast-collections { animation: none; } }
@@ -207,6 +230,14 @@ if (!globalThis.__keepallPageUi) {
     const modal = document.createElement("dialog");
     modal.className = "editor-surface";
     modal.setAttribute("aria-label", "Keepall capture");
+    const updateScale = () => {
+      const pageZoom = Number.parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+      modal.style.zoom = String(1 / pageZoom);
+    };
+    updateScale();
+    const scaleObserver = new MutationObserver(updateScale);
+    scaleObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["style", "class"] });
+    window.addEventListener("resize", updateScale);
     const frame = document.createElement("iframe");
     frame.className = "editor-frame";
     frame.title = "Keepall capture editor";
@@ -232,6 +263,8 @@ if (!globalThis.__keepallPageUi) {
       shadow: frameShadow,
       host: frameHost,
       destroy() {
+        scaleObserver.disconnect();
+        window.removeEventListener("resize", updateScale);
         modal.close();
         modal.remove();
         for (const { node, value, priority } of scrollStyles) {
@@ -267,7 +300,11 @@ if (!globalThis.__keepallPageUi) {
     const mark = document.createElement("span");
     mark.className = "toast-mark";
     mark.setAttribute("aria-hidden", "true");
-    mark.textContent = success ? "✓" : "!";
+    function setMark(value) {
+      const paths = value ? '<path d="M5 14L8.5 17.5L19 6.5"/>' : '<path d="M12 6v8M12 18h.01"/>';
+      mark.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+    }
+    setMark(success);
     const label = document.createElement("span");
     label.className = "toast-label";
     label.textContent = message;
@@ -277,7 +314,9 @@ if (!globalThis.__keepallPageUi) {
     let actionRow;
     let busy = false;
     let collectionPicker;
-    cleanupToast = () => collectionPicker?.destroy();
+    let undoTimer;
+    const undoExpiresAt = Number.isFinite(actions?.undoExpiresAt) ? actions.undoExpiresAt : Date.now() + 60_000;
+    cleanupToast = () => { clearTimeout(undoTimer); collectionPicker?.destroy(); };
     const duration = actions ? 8000 : 4000;
     const scheduleDismiss = () => {
       if (!node.isConnected) return;
@@ -292,6 +331,19 @@ if (!globalThis.__keepallPageUi) {
       buttons.className = "toast-actions";
       buttons.setAttribute("role", "group");
       buttons.setAttribute("aria-label", "Save actions");
+      function expireUndo() {
+        const undo = buttons.querySelector('[data-action="undo"]');
+        if (!undo) return;
+        const wasFocused = node.getRootNode().activeElement === undo;
+        undo.disabled = true;
+        undo.title = "Undo expired. You can remove this item in Keepall.";
+        undo.setAttribute("aria-description", undo.title);
+        if (wasFocused && !busy) buttons.querySelector('[data-action="organize"]')?.focus();
+      }
+      function setActionsDisabled(value) {
+        for (const control of buttons.children) control.disabled = value;
+        if (Date.now() >= undoExpiresAt) expireUndo();
+      }
       // Hugeicons, matching the app's icon family.
       const actionIcons = {
         open: '<path d="M11.0991 3.00012C7.45013 3.00669 5.53932 3.09629 4.31817 4.31764C3.00034 5.63568 3.00034 7.75704 3.00034 11.9997C3.00034 16.2424 3.00034 18.3638 4.31817 19.6818C5.63599 20.9999 7.75701 20.9999 11.9991 20.9999C16.241 20.9999 18.3621 20.9999 19.6799 19.6818C20.901 18.4605 20.9906 16.5493 20.9972 12.8998"/><path d="M20.556 3.49612L11.0487 13.0586M20.556 3.49612C20.062 3.00151 16.7343 3.04761 16.0308 3.05762M20.556 3.49612C21.05 3.99074 21.0039 7.32273 20.9939 8.02714"/>',
@@ -313,6 +365,7 @@ if (!globalThis.__keepallPageUi) {
         button.append(document.createTextNode(text));
         button.addEventListener("click", async () => {
           if (busy) return;
+          if (action === "undo" && Date.now() >= undoExpiresAt) { expireUndo(); return; }
           if (action === "organize") {
             if (collectionPicker) { closeCollections(true); return; }
             clearTimeout(toastTimer);
@@ -320,18 +373,18 @@ if (!globalThis.__keepallPageUi) {
             collectionPicker = globalThis.__keepallCreateToastCollections({
               host,
               request: async (operation, payload = {}) => {
-                if (operation === "move") {
+                if (operation === "move" || operation === "tag") {
                   busy = true;
-                  for (const control of buttons.children) control.disabled = true;
+                  setActionsDisabled(true);
                 }
                 try {
                   const result = await chrome.runtime.sendMessage({ type: "capture-feedback-action", action: operation, actionId: actions.id, ...payload });
                   if (!result?.success) throw new Error(result?.error || "Could not organize this item. Try again.");
                   return result;
                 } finally {
-                  if (operation === "move") {
+                  if (operation === "move" || operation === "tag") {
                     busy = false;
-                    for (const control of buttons.children) control.disabled = false;
+                    setActionsDisabled(false);
                     scheduleDismiss();
                   }
                 }
@@ -341,9 +394,15 @@ if (!globalThis.__keepallPageUi) {
                 label.textContent = result.changed ? `Moved to ${result.collectionName}` : `Already in ${result.collectionName}`;
                 node.dataset.success = "true";
                 node.setAttribute("role", "status");
-                mark.textContent = "✓";
+                setMark(true);
                 if (result.changed) buttons.querySelector('[data-action="undo"]')?.remove();
                 closeCollections(true);
+              },
+              onTagged: (result) => {
+                node.dataset.success = "true";
+                node.setAttribute("role", "status");
+                setMark(true);
+                if (result.changed) buttons.querySelector('[data-action="undo"]')?.remove();
               },
             });
             node.append(collectionPicker.element);
@@ -353,7 +412,7 @@ if (!globalThis.__keepallPageUi) {
           closeCollections(false);
           busy = true;
           clearTimeout(toastTimer);
-          for (const control of buttons.children) control.disabled = true;
+          setActionsDisabled(true);
           if (action === "undo") label.textContent = "Undoing save…";
           try {
             const result = await chrome.runtime.sendMessage({ type: "capture-feedback-action", action, actionId: actions.id });
@@ -366,13 +425,17 @@ if (!globalThis.__keepallPageUi) {
             label.textContent = error.message || "Could not complete this action. Try again.";
             node.dataset.success = "false";
             node.setAttribute("role", "alert");
-            mark.textContent = "!";
+            setMark(false);
             busy = false;
-            for (const control of buttons.children) control.disabled = false;
+            setActionsDisabled(false);
             scheduleDismiss();
           }
         });
         buttons.append(button);
+      }
+      if (actions.canUndo) {
+        if (Date.now() >= undoExpiresAt) expireUndo();
+        else undoTimer = setTimeout(expireUndo, undoExpiresAt - Date.now());
       }
       function closeCollections(restoreFocus) {
         if (!collectionPicker) return;
@@ -611,7 +674,40 @@ if (!globalThis.__keepallPageUi) {
     completeMark.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>';
     const completeTitle = document.createElement("p");
     completeTitle.className = "save-complete-title";
-    complete.append(completeMark, completeTitle);
+    const completeActions = document.createElement("div");
+    completeActions.className = "save-complete-actions";
+    completeActions.hidden = true;
+    const openSaved = document.createElement("button");
+    openSaved.type = "button";
+    openSaved.className = "primary";
+    openSaved.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h10a4 4 0 0 0 4-4v-3M14 3h7v7M21 3l-9 9"/></svg><span>Open in Keepall</span>';
+    const done = document.createElement("button");
+    done.type = "button";
+    done.className = "secondary";
+    done.textContent = "Close";
+    done.addEventListener("click", dismissEditor);
+    const completeError = document.createElement("p");
+    completeError.className = "error";
+    completeError.setAttribute("role", "alert");
+    let savedActionId;
+    openSaved.addEventListener("click", async () => {
+      if (!savedActionId || openSaved.disabled) return;
+      openSaved.disabled = true;
+      done.disabled = true;
+      completeError.textContent = "";
+      try {
+        const result = await chrome.runtime.sendMessage({ type: "capture-feedback-action", action: "open", actionId: savedActionId });
+        if (!result?.success) throw new Error(result?.error || "Could not open Keepall. Try again.");
+        dismissEditor();
+      } catch (error) {
+        completeError.textContent = error.message || "Could not open Keepall. Try again.";
+        openSaved.disabled = false;
+        done.disabled = false;
+        openSaved.focus();
+      }
+    });
+    completeActions.append(openSaved, done, completeError);
+    complete.append(completeMark, completeTitle, completeActions);
     form.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
@@ -650,8 +746,13 @@ if (!globalThis.__keepallPageUi) {
         completeTitle.textContent = message.message;
         complete.setAttribute("aria-hidden", "false");
         dialog.dataset.state = "saved";
-        complete.focus({ preventScroll: true });
-        closeTimer = setTimeout(() => dismissEditor(), 1600);
+        savedActionId = message.actions?.id;
+        completeActions.hidden = !savedActionId;
+        if (savedActionId) openSaved.focus({ preventScroll: true });
+        else {
+          complete.focus({ preventScroll: true });
+          closeTimer = setTimeout(() => dismissEditor(), 1600);
+        }
       } else {
         dialog.dataset.state = "error";
         saveButton.disabled = false;

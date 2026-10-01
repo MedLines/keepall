@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { getExtensionOrganizationOptions, saveExtensionImage, saveExtensionLink, type ExtensionImageCapture, type ExtensionLinkCapture } from "@/persistence/extension-capture";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
-import { getCaptureCollections, moveCaptureToCollection } from "@/persistence/extension-collections";
+import { getCaptureCollections, moveCaptureToCollection, updateCaptureTag } from "@/persistence/extension-collections";
 import { saveExtensionSelection } from "@/persistence/extension-selection";
 import { undoExtensionCapture } from "@/persistence/extension-capture-undo";
 
@@ -75,12 +75,30 @@ async function captureCollectionsReply(type: string, value: unknown) {
   const base = { type: "result", captureId: input.captureId, itemId: input.itemId };
   try {
     if (type === "capture-collections") return { ...base, ...await getCaptureCollections(input.itemId) };
+    if (type === "tag-capture") {
+      const hasId = typeof input.tagId === "string" && input.tagId.length > 0 && input.tagId.length <= 100;
+      const hasName = typeof input.tagName === "string" && input.tagName.trim().length > 0 && input.tagName.length <= 120;
+      if (hasId === hasName || (hasName && input.assigned !== true) || typeof input.assigned !== "boolean" ||
+          !Array.isArray(input.expectedTagIds) || input.expectedTagIds.length > 1000 ||
+          !input.expectedTagIds.every((id) => typeof id === "string" && id.length > 0 && id.length <= 100)) {
+        return { ...base, error: "Choose a tag and try again." };
+      }
+      const result = await updateCaptureTag(input.itemId, {
+        tagId: hasId ? input.tagId as string : undefined,
+        tagName: hasName ? input.tagName as string : undefined,
+        assigned: input.assigned,
+        expectedTagIds: input.expectedTagIds,
+      });
+      if (result.changed) window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      return { ...base, ...result };
+    }
     if ((input.collectionId !== null && (typeof input.collectionId !== "string" || input.collectionId.length > 100)) ||
+        (input.collectionName !== undefined && (input.collectionId !== null || typeof input.collectionName !== "string" || !input.collectionName.trim() || input.collectionName.length > 120)) ||
         !Array.isArray(input.expectedCollectionIds) || input.expectedCollectionIds.length > 1 ||
         !input.expectedCollectionIds.every((id) => typeof id === "string" && id.length <= 100)) {
       return { ...base, error: "Choose a collection and try again." };
     }
-    const result = await moveCaptureToCollection(input.itemId, input.collectionId as string | null, input.expectedCollectionIds);
+    const result = await moveCaptureToCollection(input.itemId, input.collectionId as string | null, input.expectedCollectionIds, input.collectionName as string | undefined);
     if (result.changed) window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     return { ...base, ...result };
   } catch (error) {
@@ -125,7 +143,7 @@ export function ExtensionBridge() {
         return;
       }
 
-      if (event.data.type === "capture-collections" || event.data.type === "move-capture") {
+      if (event.data.type === "capture-collections" || event.data.type === "move-capture" || event.data.type === "tag-capture") {
         const result = await captureCollectionsReply(event.data.type, event.data.payload);
         if (result) reply(result, event.origin);
         return;

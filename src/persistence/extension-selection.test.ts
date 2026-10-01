@@ -11,6 +11,7 @@ const input = () => ({ captureId: crypto.randomUUID(), url: "https://example.com
 test("saves literal text with its source, deduplicates repeat saves, and supports Undo", async () => {
   const capture = input();
   const result = await saveExtensionSelection(capture);
+  expect(result.undoExpiresAt).toEqual(expect.any(Number));
   expect(await getDb().items.get(result.itemId)).toMatchObject({ type: "link", url: capture.url, noteContent: capture.text, collectionIds: [] });
   expect((await saveExtensionSelection({ ...capture, captureId: crypto.randomUUID() })).outcome).toBe("unchanged");
   expect(await getDb().items.count()).toBe(1);

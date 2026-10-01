@@ -2,6 +2,7 @@ import { normalizeItem } from "@/domain/item";
 import { buildLink, normalizeLinkUrl, type LinkItem } from "@/domain/link";
 import { getDb } from "./db";
 import { createCaptureUndo } from "./extension-capture-undo";
+import type { ExtensionSaveResult } from "./extension-capture";
 
 export type ExtensionSelection = { captureId: string; url: string; title: string; text: string };
 
@@ -14,7 +15,7 @@ export async function saveExtensionSelection(input: ExtensionSelection) {
   if (text.length > 10000 || input.title.length > 500) throw new Error("This selection is too long. Select less text and try again.");
   const db = getDb();
   const sameSource = (source: string) => normalizeLinkUrl(source) === url && new URL(source).port === new URL(input.url).port;
-  return db.transaction("rw", db.items, async () => {
+  return db.transaction("rw", db.items, async (): Promise<ExtensionSaveResult> => {
     const prior = await db.items.get(input.captureId);
     if (prior?.deletedAt !== undefined) throw new Error("This capture is in Trash. Reopen capture to save it again.");
     if (prior && (prior.type !== "link" || !sameSource(prior.url))) throw new Error("Invalid capture ID");
@@ -35,6 +36,6 @@ export async function saveExtensionSelection(input: ExtensionSelection) {
     }
     const item = buildLink({ url: input.url, title: input.title, noteContent: text, noteFormat: "plain" }, { id: input.captureId });
     await db.items.add(item);
-    return { itemId: item.id, created: true, outcome: "created", undoToken: createCaptureUndo(item) };
+    return { itemId: item.id, created: true, outcome: "created", ...createCaptureUndo(item) };
   });
 }

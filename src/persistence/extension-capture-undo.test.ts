@@ -48,6 +48,7 @@ test("undo moves the new image to Trash and retains its media", async () => {
     mimeType: "image/png", bytes: new Uint8Array([137, 80, 78, 71, 1]),
   });
   const image = await getItem(saved.itemId);
+  expect(saved.undoExpiresAt).toEqual(expect.any(Number));
   if (image?.type !== "image") throw new Error("Expected image");
   expect(await getDb().assets.get(image.assetIds[0])).toBeDefined();
   await undoExtensionCapture(saved.undoToken!);
@@ -61,6 +62,16 @@ test("unknown and expired undo tokens never remove items", async () => {
   const saved = await saveExtensionLink(capture());
   await expect(undoExtensionCapture(crypto.randomUUID())).rejects.toThrow("expired");
   vi.spyOn(Date, "now").mockReturnValue(Date.now() + 61_000);
+  await expect(undoExtensionCapture(saved.undoToken!)).rejects.toThrow("expired");
+  expect(await getItem(saved.itemId)).not.toBeNull();
+});
+
+test("reports the same deadline that expires Undo, including its exact boundary", async () => {
+  const now = 1_800_000_000_000;
+  const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+  const saved = await saveExtensionLink(capture());
+  expect(saved).toMatchObject({ undoToken: expect.any(String), undoExpiresAt: now + 60_000 });
+  clock.mockReturnValue(now + 60_000);
   await expect(undoExtensionCapture(saved.undoToken!)).rejects.toThrow("expired");
   expect(await getItem(saved.itemId)).not.toBeNull();
 });
