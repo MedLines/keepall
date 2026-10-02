@@ -4,7 +4,7 @@ import {
   Cancel01Icon as Cancel01, Archive01Icon as Archive01,
   Folder01Icon as Folder01, GridViewIcon as GridView,
   Image01Icon as Image01, ImagesIcon as Images, InboxIcon as Inbox, Layers01Icon as Layers01,
-  Link01Icon as Link01, ListViewIcon as ListView, MoreVerticalIcon as MoreVertical,
+  Link04Icon as Link04, ListViewIcon as ListView, MoreVerticalIcon as MoreVertical,
   Note01Icon as Note01, Search01Icon as Search01, SidebarLeft01Icon as SidebarLeft01,
   Sorting01Icon as Sorting01,
   Target02Icon as Target02,
@@ -38,7 +38,7 @@ export function LogoIcon({ className = "" }: IconProps) {
 
 export function LibraryIcon(props: IconProps) { return <ShellIcon icon={AllBookmark} {...props} />; }
 export function CollectionIcon(props: IconProps) { return <ShellIcon icon={Folder01} {...props} />; }
-export function LinkIcon(props: IconProps) { return <ShellIcon icon={Link01} {...props} />; }
+export function LinkIcon(props: IconProps) { return <ShellIcon icon={Link04} {...props} />; }
 export function NoteIcon(props: IconProps) { return <ShellIcon icon={Note01} {...props} />; }
 export function ImageIcon(props: IconProps) { return <ShellIcon icon={Image01} {...props} />; }
 export function ImagesIcon(props: IconProps) { return <ShellIcon icon={Images} {...props} />; }

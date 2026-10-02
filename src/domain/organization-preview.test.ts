@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import type { Item } from "./item";
 import { buildNote } from "./note";
+import { buildLink } from "./link";
 import { buildOrganizationPreviews } from "./organization-preview";
 
 test("tag cards include empty tags and count shared items without counting Trash", () => {
@@ -57,4 +58,19 @@ test("folder previews follow addition time, keep only three, and ignore later ed
   const folders = buildOrganizationPreviews([{ id: "folder", name: "Folder" }], items, "", "collections");
   expect(folders[0].previews.map(item => item.id)).toEqual(["n1", "n4", "n3"]);
   expect(buildOrganizationPreviews([{ id: "folder", name: "Folder" }], [items[0]], "", "collections")[0].previews).toEqual([items[0]]);
+});
+
+test("folder content types include older items outside the previews and exclude Trash", () => {
+  const notes = [2, 3, 4].map(now => ({
+    ...buildNote({ content: "Note" }, { id: `n${now}`, now }), collectionIds: ["folder"],
+  }));
+  const link = { ...buildLink({ url: "https://example.com" }, { id: "link", now: 1 }), collectionIds: ["folder"] };
+  const image: Item = {
+    id: "image", type: "image", title: "Image", assetIds: [], sourceUrl: "", caption: "",
+    collectionIds: ["folder"], tagIds: [], createdAt: 5, updatedAt: 5, deletedAt: 6,
+  };
+  const folders = buildOrganizationPreviews([{ id: "folder", name: "Folder" }, { id: "empty", name: "Empty" }], [...notes, link, image], "", "collections");
+  expect(folders[0].previews.map(item => item.type)).toEqual(["note", "note", "note"]);
+  expect(folders[0].itemTypes).toEqual(["note", "link"]);
+  expect(folders[1].itemTypes).toEqual([]);
 });

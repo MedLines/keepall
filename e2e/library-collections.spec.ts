@@ -64,24 +64,31 @@ test("collection folders preview recent items, lift on hover, and open their col
   await expect(design).toBeVisible();
   await expect(folders.getByRole("link", { name: "Open Someday, 0 items" })).toBeVisible();
   await expect(design.locator(".collection-folder-preview")).toHaveCount(3);
-  await expect(design.locator(".collection-folder-preview-title")).toHaveText(["Mountain study", "Idea 4", "Idea 3"]);
+  await expect(design.locator(".collection-folder-preview-title")).toHaveText(["Idea 4", "Idea 3"]);
+  await expect(design.locator('.collection-folder-preview[data-type="image"]')).not.toHaveText('Mountain study');
+  await expect(design.locator('.collection-folder-text-preview svg')).toHaveCount(2);
+  await expect(design).not.toContainText('Keep a little room for the unexpected.');
   await expect(design.locator("img")).toBeVisible();
-  await expect(design.locator("img")).toHaveCSS("outline-style", "none");
+  await expect(design.locator("img")).toHaveCSS("outline-style", "solid");
   await expect(design.locator("img")).toHaveCSS("border-top-width", "0px");
-  await expect(design.locator('.collection-folder-types, .collection-folder-preview-header')).toHaveCount(0);
+  await expect(design.locator('.collection-folder-preview-header')).toHaveCount(0);
+  await expect(design.locator('.collection-folder-type')).toHaveCount(2);
+  await expect(design.locator('.collection-folder-type[data-type="note"] svg')).toBeVisible();
+  await expect(design.locator('.collection-folder-type[data-type="image"] svg')).toBeVisible();
+  await expect(folders.getByRole('link', { name: 'Open Someday, 0 items' }).locator('.collection-folder-types')).toHaveCount(0);
   await expect(design.locator('.collection-folder-item-card').first().locator(':scope > :first-child')).toHaveClass('collection-folder-media');
   const backgroundBefore = await design.evaluate(element => getComputedStyle(element).backgroundColor);
   const preview = design.locator(".collection-folder-preview").first();
   const front = design.locator(".collection-folder-front");
   await page.mouse.move(0, 0);
   for (const innerCard of await design.locator('.collection-folder-item-card').all()) {
-    await expect(innerCard).toHaveCSS('background-color', 'rgb(247, 247, 245)');
+    await expect(innerCard).toHaveCSS('background-color', 'rgb(250, 250, 248)');
   }
   await page.screenshot({ path: testInfo.outputPath('collections-rest-light.png'), fullPage: true });
   const stage = (await design.locator('.collection-folder-stage').boundingBox())!;
   const rest = await preview.boundingBox();
   expect(rest!.y - stage.y).toBeLessThan(50);
-  const frontTop = await design.locator('.collection-folder-front-solid').evaluate(element => element.getBoundingClientRect().y);
+  const frontTop = await design.locator('.collection-folder-front-surface').evaluate(element => element.getBoundingClientRect().y);
   // Each resting preview exposes content above the closed front.
   for (const tile of await design.locator('.collection-folder-preview').all()) {
     expect((await tile.boundingBox())!.y + 8).toBeLessThan(frontTop);
@@ -95,13 +102,24 @@ test("collection folders preview recent items, lift on hover, and open their col
   await session.send('Emulation.setCPUThrottlingRate', { rate: 6 });
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await design.hover();
+  const midOpening = await design.locator('.collection-folder-gradient-top').evaluate(element => {
+    const front = element.closest('.collection-folder-front')!;
+    const animations = front.getAnimations({ subtree: true });
+    for (const animation of animations) { animation.pause(); animation.currentTime = 130; }
+    const state = { opacity: Number(getComputedStyle(element).stopOpacity), transform: getComputedStyle(front).transform };
+    for (const animation of animations) animation.play();
+    return state;
+  });
+  expect(midOpening.opacity).toBeGreaterThan(0.86);
+  expect(midOpening.opacity).toBeLessThan(1);
+  expect(midOpening.transform).not.toBe('none');
   await expect.poll(async () => (await preview.boundingBox())!.y).toBeLessThan(rest!.y - 38);
   await expect.poll(async () => (await leftPreview.boundingBox())!.x).toBeLessThan(leftRest!.x - 30);
   await expect.poll(async () => (await rightPreview.boundingBox())!.x).toBeGreaterThan(rightRest!.x + 30);
   await expect.poll(async () => (await front.boundingBox())!.width).toBeGreaterThan(frontRest!.width + 10);
   await expect(design).toHaveCSS('background-color', backgroundBefore);
-  await expect(design.locator('.collection-folder-front-glass')).toHaveCSS('opacity', '1');
-  await expect(design.locator('.collection-folder-front-solid')).toHaveCSS('opacity', '0');
+  await expect(design.locator('.collection-folder-gradient-top')).toHaveCSS('stop-opacity', '0.86');
+  await expect(design.locator('.collection-folder-gradient-middle')).toHaveCSS('stop-opacity', '0.97');
   await expect(design.locator('.collection-folder-front')).toHaveCSS('filter', 'none');
   await expect(design.locator('.collection-folder-front')).toHaveCSS('backdrop-filter', 'none');
   const scrollTop = (await page.getByRole('main').boundingBox())!.y;
@@ -118,20 +136,20 @@ test("collection folders preview recent items, lift on hover, and open their col
   }
   await card.getByRole('button', { name: 'Design Inspiration actions', exact: true }).hover();
   await expect.poll(async () => (await preview.boundingBox())!.y).toBeLessThan(rest!.y - 38);
-  await expect(design.locator('.collection-folder-glass-bottom')).toHaveCSS('stop-opacity', '1');
-  await expect(design.locator('.collection-folder-glass-bottom')).toHaveCSS('stop-color', 'rgb(173, 92, 128)');
+  await expect(design.locator('.collection-folder-gradient-bottom')).toHaveCSS('stop-opacity', '1');
+  await expect(design.locator('.collection-folder-gradient-bottom')).toHaveCSS('stop-color', 'rgb(158, 158, 158)');
   await page.screenshot({ path: testInfo.outputPath('collections-glass-light.png'), fullPage: true });
   if (await page.locator("html").getAttribute("data-theme") !== "dark") await page.getByRole("button", { name: "Theme", exact: true }).click();
   await page.mouse.move(0, 0);
-  await expect(design.locator('.collection-folder-front-glass')).toHaveCSS('opacity', '0');
+  await expect(design.locator('.collection-folder-gradient-top')).toHaveCSS('stop-opacity', '1');
   const notePaper = design.locator('.collection-folder-preview[data-type="note"] .collection-folder-item-card').first();
   const linkCard = folders.getByRole('link', { name: 'Open Reading, 1 item', exact: true }).locator('.collection-folder-item-card');
   for (const innerCard of await design.locator('.collection-folder-item-card').all()) {
-    await expect(innerCard).toHaveCSS('background-color', 'rgb(69, 71, 75)');
+    await expect(innerCard).toHaveCSS('background-color', 'rgb(152, 152, 152)');
   }
-  await expect(notePaper).toHaveCSS('background-color', 'rgb(69, 71, 75)');
-  await expect(linkCard).toHaveCSS('background-color', 'rgb(69, 71, 75)');
-  const textPairs = await page.locator('.collection-folder-note, .collection-folder-preview[data-type="note"] .collection-folder-preview-title, .collection-folder-media .library-tag-link-title, .collection-folder-media .library-tag-link-host').evaluateAll(elements => elements.map(element => {
+  await expect(notePaper).toHaveCSS('background-color', 'rgb(152, 152, 152)');
+  await expect(linkCard).toHaveCSS('background-color', 'rgb(152, 152, 152)');
+  const textPairs = await page.locator('.collection-folder-preview-title').evaluateAll(elements => elements.map(element => {
     const style = getComputedStyle(element);
     const surface = element.closest('.collection-folder-item-card')!;
     return { text: style.color, background: getComputedStyle(surface).backgroundColor };
@@ -155,6 +173,17 @@ test("collection folders preview recent items, lift on hover, and open their col
   await page.screenshot({ path: testInfo.outputPath("collections-dark.png"), fullPage: true });
   await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
   await session.detach();
+
+  const selection = card.getByRole('checkbox', { name: 'Select Design Inspiration', exact: true });
+  await card.locator('label').click();
+  await expect(selection).toBeChecked();
+  await expect(selection).toBeFocused();
+  await page.mouse.move(0, 0);
+  await expect(design.locator('.collection-folder-gradient-top')).toHaveCSS('stop-opacity', '1');
+  await expect(front).toHaveCSS('transform', 'none');
+  await expect.poll(async () => (await preview.boundingBox())!.y).toBeCloseTo(rest!.y, 1);
+  await card.locator('label').click();
+  await expect(selection).not.toBeChecked();
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.mouse.move(0, 0);
@@ -183,8 +212,10 @@ test("collection folders preview recent items, lift on hover, and open their col
     const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
     if (width < 768) await closeNavigation.click();
     await expect(design).toBeVisible();
+    await card.scrollIntoViewIfNeeded();
     await design.hover();
-    await expect(design.locator('.collection-folder-front-glass')).toHaveCSS('opacity', '1');
+    await expect(design.locator('.collection-folder-gradient-top')).toHaveCSS('stop-opacity', '0.86');
+    await page.getByRole('main').evaluate(element => { element.scrollTop = 0; });
     await expect.poll(async () => (await preview.boundingBox())!.y).toBeLessThan((await design.locator('.collection-folder-stage').boundingBox())!.y);
     const mainTop = (await page.getByRole('main').boundingBox())!.y;
     const controlBottoms = await card.locator('label, button.organization-actions').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().bottom));

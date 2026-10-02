@@ -21,7 +21,7 @@ type Props = {
   onDelete: () => void;
 };
 
-export function LibraryOrganizationCard({ entry: { organization, count, previews }, kind, href, selected, selectionActive, busy, onToggleSelect, onOpen, onDelete }: Props) {
+export function LibraryOrganizationCard({ entry: { organization, count, previews, itemTypes }, kind, href, selected, selectionActive, busy, onToggleSelect, onOpen, onDelete }: Props) {
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const folder = kind === "collections";
   return (
@@ -49,7 +49,7 @@ export function LibraryOrganizationCard({ entry: { organization, count, previews
             onOpen();
           }}
         >
-          {folder ? <LibraryFolderArtwork previews={previews} /> : <LibraryTagArtwork previews={previews} />}
+          {folder ? <LibraryFolderArtwork previews={previews} itemTypes={itemTypes} /> : <LibraryTagArtwork previews={previews} />}
           <span className="collection-folder-name">{organization.name}</span>
           <span className="collection-folder-count">{count} {count === 1 ? "item" : "items"}</span>
         </a>
