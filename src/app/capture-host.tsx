@@ -1,6 +1,7 @@
 "use client";
 
 import { type ClipboardEvent, type FormEvent, useEffect, useReducer, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   captureReducer,
   initialCaptureState,
@@ -60,23 +61,14 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useDirtyDismissal } from "./use-dirty-dismissal";
 import { NoteContent } from "./note-content";
 import { NoteEditorControls } from "./note-editor-controls";
+import { CloseIcon } from "./shell-icons";
+import { ImageFolderImport } from "./image-folder-import";
+import { BookmarksImport } from "./bookmarks-import";
+import { ModalDialog } from "@/components/ui/modal-dialog";
 
 
 const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} order-last h-8 px-3 text-xs disabled:opacity-60`;
 const CAPTURE_PREVIEW_CLASS = "ui-scrollbar max-h-36 overflow-y-auto overscroll-contain rounded-input border border-border-control bg-bg-control p-4";
-
-function imageDraftPreviewMaxHeightClass(count: number): string {
-  if (count <= 2) {
-    return "max-h-16";
-  }
-  if (count <= 4) {
-    return "max-h-14";
-  }
-  if (count <= 6) {
-    return "max-h-12";
-  }
-  return "max-h-10";
-}
 
 /** Alt+K (Windows/Linux) and Option+K (macOS). Option is altKey; code stays KeyK even when Option remaps the character. */
 export function isCaptureOpenShortcut(event: KeyboardEvent): boolean {
@@ -149,10 +141,15 @@ async function applyCaptureOrg(
 }
 
 export function CaptureHost() {
+  const router = useRouter();
+  const importedFolderHrefRef = useRef<string | null>(null);
   const [state, dispatch] = useReducer(captureReducer, initialCaptureState);
   const [imageDrafts, setImageDrafts] = useState<ImageDraft[]>([]);
   const [videoDraft, setVideoDraft] = useState<{ file: File; poster: Blob | null } | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
+  const [folderImportBusy, setFolderImportBusy] = useState(false);
+  const [bookmarksImportBusy, setBookmarksImportBusy] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const imageDraftsRef = useRef<ImageDraft[]>([]);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const imageUploadErrorRef = useRef<string | null>(null);
@@ -197,12 +194,15 @@ export function CaptureHost() {
     state.status === "saving" ||
     state.status === "reading" ||
     savedItemId !== null ||
-    imageUpload !== null || videoPreparing;
-  const orgLocked = state.status === "saving" || state.status === "reading";
+    imageUpload !== null || videoPreparing || folderImportBusy || bookmarksImportBusy;
+  const orgLocked = state.status === "saving" || state.status === "reading" || folderImportBusy || bookmarksImportBusy;
+  const dismissLocked = shouldBlockDialogDismiss(state.status) || folderImportBusy || bookmarksImportBusy;
 
   function dismiss() {
+    const href = importedFolderHrefRef.current;
     resetSession();
     dispatch({ type: "dismiss" });
+    if (href) router.push(href);
   }
   const dirty = baseline !== null && (
     state.input !== baseline.input || state.override !== null ||
@@ -364,6 +364,8 @@ export function CaptureHost() {
   }
 
   function resetSession() {
+    importedFolderHrefRef.current = null;
+    setBulkImportOpen(false);
     setBaseline(null);
     savedItemIdRef.current = null;
     setSavedItemId(null);
@@ -482,6 +484,12 @@ export function CaptureHost() {
     });
   }
 
+  function removeImageDraft(draft: ImageDraft) {
+    URL.revokeObjectURL(draft.previewUrl);
+    setImageDrafts((previous) => previous.filter((entry) => entry !== draft));
+    setPreviewKind(null);
+  }
+
   async function onPickFiles(files: FileList | File[] | undefined) {
     if (!files || files.length === 0) {
       return;
@@ -548,6 +556,8 @@ export function CaptureHost() {
   }) {
     if (
       saveInFlightRef.current ||
+      folderImportBusy ||
+      bookmarksImportBusy ||
       imageUploadInFlightRef.current ||
       imageUploadErrorRef.current
     ) {
@@ -774,12 +784,12 @@ export function CaptureHost() {
       title="Save to Keepall"
       description="Paste a link, write a note, or add images or video."
       widthClassName="w-[min(30rem,100vw)]"
-      closeDisabled={shouldBlockDialogDismiss(state.status)}
+      closeDisabled={dismissLocked}
       onOpenChange={(open, eventDetails) => {
         if (open) {
           return;
         }
-        if (shouldBlockDialogDismiss(state.status)) {
+        if (dismissLocked) {
           eventDetails.cancel();
           return;
         }
@@ -807,32 +817,47 @@ export function CaptureHost() {
           <p className="rounded-input border border-border-control bg-bg-raised px-3 py-2 text-sm text-text-primary">Video: {videoDraft.file.name}</p>
         ) : null}
         {imageDrafts.length > 0 ? (
-          <ul
-            className={`flex gap-1.5 ${imageDrafts.length === 1 ? "" : "w-full"}`}
-            aria-label={`${imageDrafts.length} image${imageDrafts.length === 1 ? "" : "s"} attached`}
-          >
-            {imageDrafts.map((draft) => (
-              <li
-                key={draft.previewUrl}
-                className={imageDrafts.length === 1 ? "shrink-0" : "min-w-0 flex-1"}
-              >
-                <div
-                  className={`overflow-hidden rounded-lg bg-bg-raised shadow-[0_0_0_1px_oklch(0_0_0_/_0.05)] ${
-                    imageDrafts.length === 1
-                      ? "size-16"
-                      : `aspect-square w-full ${imageDraftPreviewMaxHeightClass(imageDrafts.length)}`
-                  }`}
+          <div className="flex flex-col items-start gap-2">
+            <ul
+              className="flex w-full flex-wrap gap-2"
+              aria-label={`${imageDrafts.length} image${imageDrafts.length === 1 ? "" : "s"} attached`}
+            >
+              {imageDrafts.map((draft, index) => (
+                <li
+                  key={draft.previewUrl}
+                  className="shrink-0"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
-                  <img
-                    alt=""
-                    className="media-outline size-full object-cover"
-                    src={draft.previewUrl}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
+                  <div
+                    className="relative size-16 overflow-hidden rounded-lg bg-bg-raised shadow-[0_0_0_1px_oklch(0_0_0_/_0.05)]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
+                    <img
+                      alt=""
+                      className="media-outline size-full object-cover"
+                      src={draft.previewUrl}
+                    />
+                    <button
+                      type="button"
+                      aria-label={`Remove image ${index + 1}`}
+                      className="ui-control absolute right-0.5 top-0.5 flex size-6 items-center justify-center rounded-full shadow-sm disabled:opacity-60"
+                      disabled={composeLocked}
+                      onClick={() => removeImageDraft(draft)}
+                    >
+                      <CloseIcon className="size-3.5" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <button
+              className={IMAGE_ACTION_BTN}
+              type="button"
+              disabled={composeLocked}
+              onClick={() => { clearImageDrafts(); setPreviewKind(null); }}
+            >
+              Remove all images
+            </button>
+          </div>
         ) : null}
         {imageUploadError ? (
           <div className="flex items-start justify-between gap-3 rounded-input border border-border-control bg-bg-raised px-3 py-2" role="alert">
@@ -977,16 +1002,6 @@ export function CaptureHost() {
           {videoDraft ? (
             <button className={IMAGE_ACTION_BTN} type="button" disabled={composeLocked} onClick={() => setVideoDraft(null)}>Remove video</button>
           ) : null}
-          {imageDrafts.length > 0 ? (
-            <button
-              className={IMAGE_ACTION_BTN}
-              type="button"
-              disabled={composeLocked}
-              onClick={() => clearImageDrafts()}
-            >
-              Remove images
-            </button>
-          ) : null}
           {!savingImage && !videoDraft ? (
             <div className="order-first mr-auto flex gap-1">
               <button
@@ -1049,13 +1064,21 @@ export function CaptureHost() {
         ) : null}
         </div>
         <div
-          className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border-control bg-bg-canvas px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5"
+          className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border-control bg-bg-canvas px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5"
           data-testid="capture-footer"
         >
           <button
+            className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} mr-auto px-3 text-xs disabled:opacity-60`}
+            type="button"
+            disabled={composeLocked}
+            onClick={() => setBulkImportOpen(true)}
+          >
+            Bulk import
+          </button>
+          <button
             className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-4 disabled:opacity-60`}
             type="button"
-            disabled={shouldBlockDialogDismiss(state.status)}
+            disabled={dismissLocked}
             onClick={() => {
               resetSession();
               dispatch({ type: "dismiss" });
@@ -1072,6 +1095,8 @@ export function CaptureHost() {
               state.status === "saved" ||
               imageUpload !== null ||
               videoPreparing ||
+              folderImportBusy ||
+              bookmarksImportBusy ||
               imageUploadError !== null
             }
           >
@@ -1080,11 +1105,55 @@ export function CaptureHost() {
           {state.status === "saved" ? (
             <p className="text-xs text-text-secondary">Saved.</p>
           ) : (
-            <p className="mr-auto order-first basis-full text-xs text-text-secondary sm:basis-auto">Ctrl/⌘ Enter to save</p>
+            <p className="order-first basis-full text-xs text-text-secondary">Ctrl/⌘ Enter to save</p>
           )}
         </div>
       </form>
-      <ConfirmDialog {...dismissal.confirmationProps} />
+      {isActive ? (
+        <ModalDialog
+          open={bulkImportOpen}
+          onOpenChange={setBulkImportOpen}
+          title="Bulk import"
+          description="Add an image folder or an exported browser bookmarks HTML file to your library."
+          busy={folderImportBusy || bookmarksImportBusy}
+          footer={(
+            <button
+              className="ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60"
+              type="button"
+              disabled={folderImportBusy || bookmarksImportBusy}
+              onClick={() => setBulkImportOpen(false)}
+            >
+              Done
+            </button>
+          )}
+        >
+          <ImageFolderImport
+            buttonClassName="ui-control min-h-11 w-full px-4 text-left text-sm font-medium disabled:opacity-60"
+            label="Import image folder"
+            disabled={composeLocked}
+            defaultCollectionName={draftCollectionName ?? collectionInput.trim()}
+            onBusyChange={setFolderImportBusy}
+            onOpenFolder={(href) => {
+              setBulkImportOpen(false);
+              importedFolderHrefRef.current = href;
+              dismissal.requestDismiss({ cancel: () => {} });
+            }}
+          />
+          <BookmarksImport
+            buttonClassName="ui-control min-h-11 w-full px-4 text-left text-sm font-medium disabled:opacity-60"
+            label="Import bookmarks HTML"
+            disabled={composeLocked}
+            onBusyChange={setBookmarksImportBusy}
+          />
+        </ModalDialog>
+      ) : null}
+      <ConfirmDialog
+        {...dismissal.confirmationProps}
+        onOpenChange={(open) => {
+          if (!open) importedFolderHrefRef.current = null;
+          dismissal.confirmationProps.onOpenChange(open);
+        }}
+      />
       <CaptureLinkConflictDialog
         conflict={linkConflict}
         busy={state.status === "saving"}

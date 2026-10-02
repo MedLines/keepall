@@ -3,35 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { BookmarksHtmlCollectionPolicy } from "@/domain/bookmarks-html";
-import {
-  formatImageFolderImportStatus,
-  imageFolderImportSkippedDetail,
-  suggestImageFolderCollectionName,
-} from "@/domain/image-folder-import";
+import { BookmarksImport } from "./bookmarks-import";
+import { ImageFolderImport } from "./image-folder-import";
+import { useRouter } from "next/navigation";
 import { BackupValidationError, type BackupCounts } from "@/domain/backup";
 import { exportKeepallArchive, prepareBackupFile, type PreparedBackup } from "@/persistence/backup-archive";
 import { countCurrentLibrary } from "@/persistence/backup";
-import {
-  BookmarksHtmlParseError,
-  formatSkippedBookmarksLog,
-  importBookmarksHtmlMerge,
-  type BookmarksHtmlImportSummary,
-} from "@/persistence/bookmarks-html-import";
-import { importImageFolder } from "@/persistence/image-folder-import";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
-import {
-  storageQuotaWarningForImport,
-  sumImportableFolderBytes,
-} from "./storage-quota-warning";
 import { BackupIcon, ChevronDownIcon, CloseIcon, CollectionIcon, HashIcon, ImageIcon, ImagesIcon, LinkIcon, NoteIcon, VideoIcon } from "./shell-icons";
 
 type ImportMode = "merge" | "replace";
-type Operation = "export" | "read-backup" | "restore" | "read-bookmarks" | "import-bookmarks" | "read-images" | "import-images";
+type Operation = "export" | "read-backup" | "restore";
 const operationLabels: Record<Operation, string> = {
   export: "Preparing backup…", "read-backup": "Reading backup…", restore: "Restoring library…",
-  "read-bookmarks": "Reading bookmarks…", "import-bookmarks": "Importing bookmarks…",
-  "read-images": "Reading image folder…", "import-images": "Importing images…",
 };
 function countText(counts: BackupCounts) {
   return `${counts.total} items (${counts.active} active, ${counts.trash} in Trash)`;
@@ -63,20 +47,13 @@ type Props = {
   onClose?: () => void;
 };
 
-function downloadTextFile(filename: string, text: string) {
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
 export function BackupPanel({ variant = "page", onClose }: Props) {
+  const router = useRouter();
+  function openImportedFolder(href: string) {
+    onClose?.();
+    router.push(href);
+  }
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bookmarksFileInputRef = useRef<HTMLInputElement>(null);
-  const imageFolderInputRef = useRef<HTMLInputElement>(null);
   const [prepared, setPrepared] = useState<{ backup: PreparedBackup; current: BackupCounts } | null>(null);
   const [confirmReplace, setConfirmReplace] = useState(false);
   const operationRef = useRef<Operation | null>(null);
@@ -86,33 +63,12 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     mounted.current = true;
     return () => { mounted.current = false; readVersion.current += 1; };
   }, []);
-  const [pendingBookmarksHtml, setPendingBookmarksHtml] = useState<string | null>(
-    null,
-  );
-  const [pendingImageFiles, setPendingImageFiles] = useState<File[] | null>(
-    null,
-  );
-  const [imageCollectionDraft, setImageCollectionDraft] = useState("");
-  const [imageQuotaWarning, setImageQuotaWarning] = useState<string | null>(
-    null,
-  );
-  const [imageImportProgress, setImageImportProgress] = useState<{
-    done: number;
-    total: number;
-    currentName: string;
-    added: number;
-    reused: number;
-  } | null>(null);
-  const [collectionPolicy, setCollectionPolicy] =
-    useState<BookmarksHtmlCollectionPolicy>("unsorted-only");
-  const [lastBookmarksSummary, setLastBookmarksSummary] =
-    useState<BookmarksHtmlImportSummary | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [feedbackSection, setFeedbackSection] =
-    useState<"backup" | "import">("backup");
   const [operation, setOperation] = useState<Operation | null>(null);
-  const busy = operation !== null;
+  const [imageImportBusy, setImageImportBusy] = useState(false);
+  const [bookmarksImportBusy, setBookmarksImportBusy] = useState(false);
+  const busy = operation !== null || imageImportBusy || bookmarksImportBusy;
   function start(next: Operation): boolean {
     if (operationRef.current) return false;
     operationRef.current = next;
@@ -125,11 +81,9 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   }
 
   async function onExport() {
-    setFeedbackSection("backup");
     if (!start("export")) return;
     setError(null);
     setStatus(null);
-    setLastBookmarksSummary(null);
 
     try {
       const blob = await exportKeepallArchive();
@@ -151,24 +105,14 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     fileInputRef.current?.click();
   }
 
-  function onPickBookmarksImport() {
-    bookmarksFileInputRef.current?.click();
-  }
-
-  function onPickImageFolder() {
-    imageFolderInputRef.current?.click();
-  }
-
   async function onFileChange(fileList: FileList | null) {
     const file = fileList?.[0];
     if (!file || !start("read-backup")) return;
     const version = ++readVersion.current;
-    setFeedbackSection("backup");
     setPrepared(null);
     setConfirmReplace(false);
     setError(null);
     setStatus(null);
-    setLastBookmarksSummary(null);
     try {
       const backup = await prepareBackupFile(file);
       if (!mounted.current || version !== readVersion.current) return;
@@ -183,31 +127,6 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     } finally {
       finish();
       if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }
-
-  async function onBookmarksFileChange(fileList: FileList | null) {
-    const file = fileList?.[0];
-    if (!file) {
-      return;
-    }
-    setFeedbackSection("import");
-
-    if (!start("read-bookmarks")) return;
-    setError(null);
-    setStatus(null);
-    setLastBookmarksSummary(null);
-
-    try {
-      setPendingBookmarksHtml(await file.text());
-      setCollectionPolicy("unsorted-only");
-    } catch {
-      setError("Couldn't read bookmarks file.");
-    } finally {
-      finish();
-      if (bookmarksFileInputRef.current) {
-        bookmarksFileInputRef.current.value = "";
-      }
     }
   }
 
@@ -234,14 +153,6 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     } finally {
       finish();
     }
-  }
-
-  function cancelBookmarksImport() {
-    if (busy) {
-      return;
-    }
-    setPendingBookmarksHtml(null);
-    setStatus("Bookmarks import canceled.");
   }
 
   async function runImport(mode: ImportMode) {
@@ -272,133 +183,6 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     }
   }
 
-  async function runBookmarksImport() {
-    if (pendingBookmarksHtml === null) {
-      return;
-    }
-
-    const html = pendingBookmarksHtml;
-    if (!start("import-bookmarks")) return;
-    setError(null);
-    setStatus(null);
-
-    try {
-      const summary = await importBookmarksHtmlMerge(html, { collectionPolicy });
-      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-      dispatchPreviewWelcome(summary.addedLinkIds);
-      setLastBookmarksSummary(summary);
-      setStatus(
-        `Bookmarks: ${summary.added} added, ${summary.merged} merged, ${summary.skipped} skipped.`,
-      );
-      setPendingBookmarksHtml(null);
-    } catch (caught) {
-      if (caught instanceof BookmarksHtmlParseError) {
-        setError(caught.message);
-      } else {
-        setError("Couldn't import bookmarks.");
-      }
-      setPendingBookmarksHtml(null);
-    } finally {
-      finish();
-    }
-  }
-
-  async function onImageFolderChange(fileList: FileList | null) {
-    if (!fileList || fileList.length === 0) {
-      return;
-    }
-    setFeedbackSection("import");
-
-    if (!start("read-images")) return;
-    setError(null);
-    setStatus(null);
-    setLastBookmarksSummary(null);
-
-    try {
-      const files = Array.from(fileList);
-      setPendingImageFiles(files);
-      setImageCollectionDraft(suggestImageFolderCollectionName(files));
-      const importableBytes = sumImportableFolderBytes(files);
-      setImageQuotaWarning(
-        await storageQuotaWarningForImport(importableBytes),
-      );
-    } catch {
-      setError("Couldn't read folder.");
-    } finally {
-      finish();
-      if (imageFolderInputRef.current) {
-        imageFolderInputRef.current.value = "";
-      }
-    }
-  }
-
-  function cancelImageFolderImport() {
-    if (busy) {
-      return;
-    }
-    setPendingImageFiles(null);
-    setImageCollectionDraft("");
-    setImageQuotaWarning(null);
-    setStatus("Image import canceled.");
-  }
-
-  async function runImageFolderImport() {
-    if (pendingImageFiles === null) {
-      return;
-    }
-    if (!start("import-images")) return;
-
-    const files = pendingImageFiles;
-    const collectionName = imageCollectionDraft.trim() || undefined;
-    const total = files.length;
-
-    setPendingImageFiles(null);
-    setImageQuotaWarning(null);
-    setImageImportProgress({ done: 0, total, currentName: "", added: 0, reused: 0 });
-    setError(null);
-    setStatus(null);
-
-    try {
-      const summary = await importImageFolder(files, {
-        collectionName,
-        batchEvery: 8,
-        onBatch: () => window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT)),
-        onProgress: ({ done, total: progressTotal, currentName, added, reused }) => {
-          setImageImportProgress({
-            done,
-            total: progressTotal,
-            currentName,
-            added,
-            reused,
-          });
-        },
-      });
-      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-      let message = formatImageFolderImportStatus(summary);
-      const skippedDetail = imageFolderImportSkippedDetail(summary);
-      if (skippedDetail) {
-        message = `${message} (${skippedDetail})`;
-      }
-      setStatus(message);
-      setImageCollectionDraft("");
-    } catch {
-      setError("Couldn't import images.");
-    } finally {
-      setImageImportProgress(null);
-      finish();
-    }
-  }
-
-  function onDownloadSkippedLog() {
-    if (!lastBookmarksSummary || lastBookmarksSummary.skippedRows.length === 0) {
-      return;
-    }
-    downloadTextFile(
-      `keepall-skipped-bookmarks-${Date.now()}.txt`,
-      formatSkippedBookmarksLog(lastBookmarksSummary.skippedRows),
-    );
-  }
-
   const fileInput = (
     <input
       ref={fileInputRef}
@@ -411,86 +195,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     />
   );
 
-  const bookmarksFileInput = (
-    <input
-      ref={bookmarksFileInputRef}
-      hidden
-      aria-hidden="true"
-      tabIndex={-1}
-      type="file"
-      accept=".html,text/html,.htm"
-      onChange={(event) => void onBookmarksFileChange(event.target.files)}
-    />
-  );
-
-  const imageFolderInput = (
-    <input
-      ref={imageFolderInputRef}
-      hidden
-      aria-hidden="true"
-      tabIndex={-1}
-      type="file"
-      accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
-      multiple
-      onChange={(event) => void onImageFolderChange(event.target.files)}
-      {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
-    />
-  );
-
   const dialogButtonClass =
     "ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60";
-
-  const imageFolderDialog = (
-    <ModalDialog
-      open={pendingImageFiles !== null} busy={busy} title="Import image folder"
-      description={`${pendingImageFiles?.length ?? 0} file${pendingImageFiles?.length === 1 ? "" : "s"} selected. Images under 20 MiB become separate library items.`}
-      onOpenChange={(open) => { if (!open) cancelImageFolderImport(); }}
-      footer={<>
-        <button
-          className={dialogButtonClass}
-          type="button"
-          disabled={busy}
-          onClick={cancelImageFolderImport}
-        >
-    Cancel
-        </button>
-        <button
-    className={`${dialogButtonClass} ui-primary`}
-    type="button"
-    disabled={busy}
-    onClick={() => void runImageFolderImport()}
-        >
-    {busy && imageImportProgress
-      ? `Importing… ${imageImportProgress.done} / ${imageImportProgress.total}`
-      : "Import images"}
-        </button>
-      </>}
-    >
-
-      <label className="flex flex-col gap-2 text-sm">
-        <span className="font-medium text-text-primary">
-          Collection (optional)
-        </span>
-        <input
-          className="ui-field min-h-11 px-3 py-2 disabled:opacity-60"
-          type="text"
-          value={imageCollectionDraft}
-          placeholder="e.g. Vacation 2024"
-          disabled={busy}
-          onChange={(event) => setImageCollectionDraft(event.target.value)}
-        />
-        <span className="text-xs leading-relaxed text-text-secondary">
-          Leave blank to keep the images unsorted. Unsupported or larger
-          files are skipped. Subfolders are not converted into collections.
-        </span>
-      </label>
-      {imageQuotaWarning ? (
-        <p className="mt-4 text-sm text-text-warning" role="status">
-          {imageQuotaWarning}
-        </p>
-      ) : null}
-    </ModalDialog>
-  );
 
   const choiceDialog = (
     <>
@@ -581,96 +287,6 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     </>
   );
 
-  const bookmarksDialog = (
-    <ModalDialog
-      open={pendingBookmarksHtml !== null} busy={busy} title="Import browser bookmarks"
-      description="Choose how browser folders update collections when links already exist."
-      onOpenChange={(open) => { if (!open) cancelBookmarksImport(); }}
-      footer={<>
-        <button
-          className={dialogButtonClass}
-          type="button"
-          disabled={busy}
-          onClick={cancelBookmarksImport}
-        >
-    Cancel
-        </button>
-        <button
-    className={`${dialogButtonClass} ui-primary`}
-    type="button"
-    disabled={busy}
-    onClick={() => void runBookmarksImport()}
-        >
-    {operation === "import-bookmarks" ? "Importing bookmarks…" : "Import bookmarks"}
-        </button>
-      </>}
-    >
-
-    <p role="status" aria-live="polite">{operation === "import-bookmarks" ? "Importing bookmarks…" : ""}</p>
-
-    <fieldset className="flex flex-col gap-2 border-0 p-0">
-      <legend className="text-sm font-medium text-text-primary">
-        When a link already exists, which collection wins?
-      </legend>
-      <p className="text-xs leading-relaxed text-text-secondary">
-        Browser tags are always added. This choice only controls browser
-        folders and Keepall collections.
-      </p>
-      <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
-        <input
-          type="radio"
-          name="collection-policy"
-          disabled={busy}
-          className="mt-0.5"
-          checked={collectionPolicy === "unsorted-only"}
-          onChange={() => setCollectionPolicy("unsorted-only")}
-        />
-        <span>
-          <span className="font-medium">Browser folder → Unsorted only</span>
-          <span className="mt-0.5 block text-xs text-text-secondary">
-            Already in a Keepall collection → leave it. In Keepall Unsorted
-            → file using the browser folder name.
-          </span>
-        </span>
-      </label>
-      <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
-        <input
-          type="radio"
-          name="collection-policy"
-          disabled={busy}
-          className="mt-0.5"
-          checked={collectionPolicy === "keep"}
-          onChange={() => setCollectionPolicy("keep")}
-        />
-        <span>
-          <span className="font-medium">Keep Keepall collections</span>
-          <span className="mt-0.5 block text-xs text-text-secondary">
-            Browser folders apply only to links not in Keepall yet. Existing
-            Keepall links keep their collection.
-          </span>
-        </span>
-      </label>
-      <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
-        <input
-          type="radio"
-          name="collection-policy"
-          disabled={busy}
-          className="mt-0.5"
-          checked={collectionPolicy === "apply"}
-          onChange={() => setCollectionPolicy("apply")}
-        />
-        <span>
-          <span className="font-medium">Browser folders win</span>
-          <span className="mt-0.5 block text-xs text-text-secondary">
-            If the browser file has a folder, move the Keepall link into
-            that collection — even when already filed.
-          </span>
-        </span>
-      </label>
-    </fieldset>
-    </ModalDialog>
-  );
-
   const heading = (
     <div className="flex items-start gap-2">
       <BackupIcon className="mt-0.5 size-5 shrink-0 text-text-secondary" />
@@ -726,83 +342,16 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       >
         Import
       </button>
-      <button
-        className={buttonClass}
-        type="button"
-        disabled={busy}
-        onClick={onPickBookmarksImport}
-      >
-        Import bookmarks
-      </button>
-      <button
-        className={buttonClass}
-        type="button"
-        disabled={busy}
-        onClick={onPickImageFolder}
-      >
-        Import images
-      </button>
+      <BookmarksImport buttonClassName={buttonClass} disabled={busy} onBusyChange={setBookmarksImportBusy} />
+      <ImageFolderImport buttonClassName={buttonClass} disabled={busy} onBusyChange={setImageImportBusy} onOpenFolder={openImportedFolder} />
       {fileInput}
-      {bookmarksFileInput}
-      {imageFolderInput}
     </div>
   );
 
   const feedback = (
     <>
-      {imageImportProgress ? (
-        <div
-          className={
-            variant === "sidebar" ? "mt-2 space-y-1" : "mt-3 space-y-2"
-          }
-
-        >
-          <p
-            className={
-              variant === "sidebar" ? "text-xs text-text-primary" : "text-sm text-text-primary"
-            }
-          >
-            Importing images… {imageImportProgress.done} /{" "}
-            {imageImportProgress.total}
-            {imageImportProgress.reused > 0
-              ? ` · ${imageImportProgress.reused} already in library`
-              : ""}
-            {imageImportProgress.currentName
-              ? ` — ${imageImportProgress.currentName}`
-              : ""}
-          </p>
-          <progress
-            className="h-2 w-full overflow-hidden rounded-full accent-action-primary"
-            max={imageImportProgress.total}
-            value={imageImportProgress.done}
-          />
-          <p
-            className={
-              variant === "sidebar" ? "text-[11px] text-text-secondary" : "text-xs text-text-secondary"
-            }
-          >
-            {imageImportProgress.added > 0
-              ? "New images appear as they import. "
-              : ""}
-            Same file bytes are reused — the library count should not double.
-          </p>
-        </div>
-      ) : null}
       {(operation || status) ? <p className="mt-2 text-sm text-text-primary">{operation ? operationLabels[operation] : status}</p> : null}
-      {operation && operation !== "import-images" ? <progress aria-label={operationLabels[operation]} className="mt-2 h-2 w-full accent-action-primary" /> : null}
-      {lastBookmarksSummary && lastBookmarksSummary.skippedRows.length > 0 ? (
-        <button
-          className={
-            variant === "sidebar"
-              ? "mt-2 text-left text-xs font-medium text-text-primary underline"
-              : "mt-2 text-left text-sm font-medium text-text-primary underline"
-          }
-          type="button"
-          onClick={onDownloadSkippedLog}
-        >
-          Download skipped links (.txt)
-        </button>
-      ) : null}
+      {operation ? <progress aria-label={operationLabels[operation]} className="mt-2 h-2 w-full accent-action-primary" /> : null}
       {error ? (
         <p
           className={
@@ -819,9 +368,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   );
 
   const liveStatus = <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-    {operation === "import-images" && imageImportProgress
-      ? `Importing images… ${Math.min(imageImportProgress.total, Math.floor(imageImportProgress.done / 8) * 8)} of ${imageImportProgress.total}`
-      : operation ? operationLabels[operation] : status}
+    {operation ? operationLabels[operation] : status}
   </div>;
 
   const description =
@@ -851,8 +398,6 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         {actions}
         {feedback}
         {choiceDialog}
-        {bookmarksDialog}
-        {imageFolderDialog}
       </section>
     );
   }
@@ -889,12 +434,12 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
           </button>
           {fileInput}
         </div>
-        {feedbackSection === "backup" ? feedback : null}
+        {feedback}
       </section>
       <section
         className="library-panel border border-border-control bg-bg-surface p-5 sm:p-7"
         aria-labelledby="import-heading"
-        aria-busy={operation === "read-bookmarks" || operation === "import-bookmarks" || operation === "read-images" || operation === "import-images"}
+        aria-busy={bookmarksImportBusy || imageImportBusy}
       >
         <h2 id="import-heading" className="text-lg font-semibold text-text-primary">
           Import
@@ -904,30 +449,11 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
           Images are limited to 20 MiB per file.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <button
-            className={buttonClass}
-            type="button"
-            disabled={busy}
-            onClick={onPickBookmarksImport}
-          >
-            Import bookmarks
-          </button>
-          <button
-            className={buttonClass}
-            type="button"
-            disabled={busy}
-            onClick={onPickImageFolder}
-          >
-            Import images
-          </button>
-          {bookmarksFileInput}
-          {imageFolderInput}
+          <BookmarksImport buttonClassName={buttonClass} disabled={busy} onBusyChange={setBookmarksImportBusy} />
+          <ImageFolderImport buttonClassName={buttonClass} disabled={busy} onBusyChange={setImageImportBusy} onOpenFolder={openImportedFolder} />
         </div>
-        {feedbackSection === "import" ? feedback : null}
       </section>
       {choiceDialog}
-      {bookmarksDialog}
-      {imageFolderDialog}
     </>
   );
 }

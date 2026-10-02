@@ -243,6 +243,10 @@
   border-radius: 999px;
 }
 
+.bookmark-import-option {
+  border-radius: var(--radius-control);
+}
+
 .library-panel {
   border-radius: var(--radius-library-panel);
 }

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildLink, LinkValidationError } from "@/domain/link";
 import { buildImage } from "@/domain/image";
@@ -162,6 +162,27 @@ describe("Library", () => {
     vi.mocked(pinCollection).mockReset();
     vi.mocked(unpinCollection).mockReset();
     vi.mocked(movePinnedCollectionBefore).mockReset();
+  });
+
+  test("opens a newly imported collection before the delayed library refresh", async () => {
+    vi.mocked(listItems).mockResolvedValue([]);
+    render(<Library />);
+    await screen.findByRole("main", { name: "All items" });
+    const collection = { id: "new-photos", name: "New photos", createdAt: 1, pinnedItemIds: [] };
+    vi.mocked(listCollections).mockResolvedValue([collection]);
+    act(() => { mockNavigation.push("/?collection=new-photos"); });
+    expect(await screen.findByRole("main", { name: "New photos" })).toBeVisible();
+    expect(mockNavigation.searchParams.get("collection")).toBe("new-photos");
+    expect(mockNavigation.replace).not.toHaveBeenCalled();
+  });
+
+  test("clears a missing collection after confirming it is absent from storage", async () => {
+    vi.mocked(listItems).mockResolvedValue([]);
+    render(<Library />);
+    await screen.findByRole("main", { name: "All items" });
+    act(() => { mockNavigation.push("/?collection=missing"); });
+    await waitFor(() => expect(mockNavigation.replace).toHaveBeenCalledWith("/", { scroll: false }));
+    expect(mockNavigation.searchParams.has("collection")).toBe(false);
   });
 
   test("pins a collection from its sidebar menu", async () => {

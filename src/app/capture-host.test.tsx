@@ -8,6 +8,7 @@ import { listCollections } from "@/persistence/collections";
 import { createOrReuseImage, createOrReuseLink, createNote, findImageByAssetPayloads, findLinkByNormalizedUrl, clearCollectionOnItem, listItems, replaceItemTagsByNames, updateLink } from "@/persistence/items";
 import { listTags } from "@/persistence/tags";
 import { getLibraryPreferences } from "@/persistence/library-preferences";
+import { importImageFolder } from "@/persistence/image-folder-import";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
@@ -45,6 +46,8 @@ vi.mock("@/persistence/collections", () => ({
 vi.mock("@/persistence/library-preferences", () => ({
   getLibraryPreferences: vi.fn(),
 }));
+
+vi.mock("@/persistence/image-folder-import", () => ({ importImageFolder: vi.fn() }));
 
 vi.mock("./enrich-link-preview", () => ({
   enrichLinkPreview: vi.fn(),
@@ -137,6 +140,7 @@ describe("CaptureHost", () => {
       text: "",
     });
     vi.mocked(prepareLocalVideo).mockReset();
+    vi.mocked(importImageFolder).mockReset();
   });
 
   for (const opener of ["shortcut", "button"] as const) {
@@ -753,6 +757,130 @@ describe("CaptureHost", () => {
       });
     });
     expect(applyItemOrg).not.toHaveBeenCalled();
+  });
+
+  test("removing one attachment preserves and saves the other image", async () => {
+    vi.spyOn(URL, "createObjectURL")
+      .mockReturnValueOnce("blob:first-image")
+      .mockReturnValueOnce("blob:second-image");
+    const revoke = vi.spyOn(URL, "revokeObjectURL");
+    await openDraft("Keep this caption");
+    const fileInput = screen.getByRole("dialog").querySelector('input[type="file"]')!;
+    fireEvent.change(fileInput, { target: { files: [
+      new File([new Uint8Array([1])], "one.png", { type: "image/png" }),
+      new File([new Uint8Array([2, 3])], "two.png", { type: "image/png" }),
+    ] } });
+    await screen.findByLabelText("2 images attached");
+    fireEvent.click(screen.getByRole("button", { name: "Remove image 1" }));
+    const images = screen.getByLabelText("1 image attached");
+    expect(images.querySelector("img")).toHaveAttribute("src", "blob:second-image");
+    expect(revoke).toHaveBeenCalledWith("blob:first-image");
+    expect(revoke).not.toHaveBeenCalledWith("blob:second-image");
+    expect(screen.getByLabelText("Optional source URL or caption")).toHaveValue("Keep this caption");
+    vi.mocked(createOrReuseImage).mockResolvedValue({
+      image: buildImageFromAssetIds({ assetIds: ["a2"] }, { id: "img1", now: 1 }), created: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(createOrReuseImage).toHaveBeenCalledWith({
+      assets: [{ bytes: new Uint8Array([2, 3]), mimeType: "image/png" }],
+      caption: "Keep this caption", sourceUrl: undefined,
+    }));
+    revoke.mockRestore();
+    vi.mocked(URL.createObjectURL).mockRestore();
+  });
+
+  test("Remove all images sits below attachments and returns to the text draft", async () => {
+    await openDraft("Keep this note");
+    const fileInput = screen.getByRole("dialog").querySelector('input[type="file"]')!;
+    fireEvent.change(fileInput, { target: { files: [
+      new File([new Uint8Array([1])], "one.png", { type: "image/png" }),
+    ] } });
+    const images = await screen.findByLabelText("1 image attached");
+    const removeAll = screen.getByRole("button", { name: "Remove all images" });
+    expect(images.nextElementSibling).toBe(removeAll);
+    fireEvent.click(removeAll);
+    expect(screen.queryByLabelText(/images? attached/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Link, note, or image")).toHaveValue("Keep this note");
+    expect(screen.getByRole("button", { name: "Add video" })).toBeEnabled();
+  });
+
+  test("folder import opens from the drawer and cancel preserves its draft", async () => {
+    await openDraft("My unfinished note");
+    fireEvent.click(screen.getByRole("button", { name: "Bulk import" }));
+    const bulk = await screen.findByRole("dialog", { name: "Bulk import" });
+    expect(within(bulk).getByRole("button", { name: "Import image folder" })).toBeEnabled();
+    const folderInput = bulk.querySelector('input[webkitdirectory]')!;
+    const file = new File([new Uint8Array([1])], "photo.png", { type: "image/png" });
+    Object.defineProperty(file, "webkitRelativePath", { value: "Holiday/photo.png" });
+    fireEvent.change(folderInput, { target: { files: [file] } });
+    const review = await screen.findByRole("dialog", { name: "Import image folder" });
+    expect(within(review).getByLabelText("Collection (optional)")).toHaveValue("Holiday");
+    expect(review).toHaveTextContent("separate library items");
+    await waitFor(() => expect(within(review).getByRole("button", { name: "Cancel" })).toBeEnabled());
+    fireEvent.click(within(review).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "Save to Keepall" })).toBeVisible());
+    expect(screen.getByLabelText("Link, note, or image")).toHaveValue("My unfinished note");
+  });
+
+  test("bookmark file import opens from Bulk import and cancel preserves the draft", async () => {
+    await openDraft("Unfinished note");
+    const drawer = screen.getByRole("dialog", { name: "Save to Keepall" });
+    fireEvent.click(screen.getByRole("button", { name: "Bulk import" }));
+    const bulk = await screen.findByRole("dialog", { name: "Bulk import" });
+    expect(within(bulk).getByRole("button", { name: "Import bookmarks HTML" })).toBeEnabled();
+    const file = new File(["<DL></DL>"], "bookmarks.html", { type: "text/html" });
+    Object.defineProperty(file, "text", { value: async () => "<DL></DL>" });
+    fireEvent.change(bulk.querySelector('input[accept*="text/html"]')!, { target: { files: [file] } });
+    const review = await screen.findByRole("dialog", { name: "Import browser bookmarks" });
+    expect(within(review).getByRole("radio", { name: /Browser folder → Unsorted only/ })).toBeChecked();
+    fireEvent.click(within(review).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Done" }));
+    await waitFor(() => expect(within(drawer).getByRole("button", { name: "Save" })).toBeEnabled());
+    expect(screen.getByLabelText("Link, note, or image")).toHaveValue("Unfinished note");
+  });
+
+  test("folder import locks the draft until completion and reports its summary", async () => {
+    const pending = deferred<Awaited<ReturnType<typeof importImageFolder>>>();
+    vi.mocked(importImageFolder).mockImplementation((_files, options) => {
+      options?.onProgress?.({ done: 1, total: 2, currentName: "photo", added: 1, reused: 0 });
+      return pending.promise;
+    });
+    await openDraft("Unfinished note");
+    fireEvent.change(screen.getByPlaceholderText("Collection name"), { target: { value: "My photos" } });
+    const drawer = screen.getByRole("dialog", { name: "Save to Keepall" });
+    fireEvent.click(screen.getByRole("button", { name: "Bulk import" }));
+    const bulk = await screen.findByRole("dialog", { name: "Bulk import" });
+    fireEvent.change(bulk.querySelector('input[webkitdirectory]')!, { target: { files: [
+      new File([new Uint8Array([1])], "photo.png", { type: "image/png" }),
+      new File(["text"], "readme.txt", { type: "text/plain" }),
+    ] } });
+    const review = await screen.findByRole("dialog", { name: "Import image folder" });
+    expect(within(review).getByLabelText("Collection (optional)")).toHaveValue("My photos");
+    const confirm = within(review).getByRole("button", { name: "Import images" });
+    await waitFor(() => expect(confirm).toBeEnabled());
+    fireEvent.click(confirm);
+    await waitFor(() => expect(within(drawer).getByRole("button", { name: "Save", hidden: true })).toBeDisabled());
+    expect(within(drawer).getByRole("button", { name: "Cancel", hidden: true })).toBeDisabled();
+    expect(drawer.querySelector('button[aria-label="Close drawer"]')).toBeDisabled();
+    const progress = await screen.findByRole("dialog", { name: "Importing images" });
+    expect(within(progress).getByRole("status")).toHaveTextContent("Importing images… 1 of 2");
+    expect(within(progress).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+    expect(within(progress).getByRole("button", { name: "Close" })).toBeDisabled();
+    fireEvent.keyDown(progress, { key: "Escape" });
+    expect(progress).toBeVisible();
+    expect(importImageFolder).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ collectionName: "My photos" }));
+    await act(async () => {
+      pending.resolve({ added: 1, reused: 0, skippedInvalid: 1, skippedOversize: 0, skippedEmpty: 0, skippedRead: 0 });
+    });
+    const complete = await screen.findByRole("dialog", { name: "Import complete" });
+    expect(within(complete).getByRole("status")).toHaveTextContent("Images: 1 added, 1 skipped.");
+    expect(within(complete).getByRole("status")).toHaveTextContent("Skipped: 1 unsupported type.");
+    expect(within(complete).getByRole("button", { name: "Open folder" })).toBeEnabled();
+    fireEvent.click(within(complete).getByRole("button", { name: "Done" }));
+    fireEvent.click(within(bulk).getByRole("button", { name: "Done" }));
+    expect(screen.getByLabelText("Link, note, or image")).toHaveValue("Unfinished note");
+    expect(within(drawer).getByRole("button", { name: "Save" })).toBeEnabled();
   });
 
   test("opts an image caption into Markdown during capture", async () => {

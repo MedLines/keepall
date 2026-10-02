@@ -817,7 +817,19 @@ export function Library() {
       loadState === "ready" &&
       browseCollection === null
     ) {
-      updateView({ collection: null }, "replace");
+      let canceled = false;
+      const collectionId = browseCollectionId;
+      void listCollections().then((latestCollections) => {
+        if (canceled) return;
+        if (latestCollections.some((collection) => collection.id === collectionId)) {
+          setCollections(latestCollections);
+        } else {
+          updateView({ collection: null }, "replace");
+        }
+      }).catch(() => {
+        // Keep the selection if storage is temporarily unavailable.
+      });
+      return () => { canceled = true; };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- clear stale collection once after load
   }, [browseCollectionId, browseCollection, loadState]);
