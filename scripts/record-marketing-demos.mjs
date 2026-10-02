@@ -34,8 +34,8 @@ try {
     const pointer = document.createElement("div");
     pointer.id = "recording-pointer";
     pointer.setAttribute("aria-hidden", "true");
-    pointer.style.cssText = "position:fixed;left:720px;top:700px;z-index:2147483647;pointer-events:none;width:20px;height:24px;filter:drop-shadow(0 1px 2px #0008)";
-    pointer.innerHTML = '<svg viewBox="0 0 20 24"><path d="M2 2v18l5-5 4 7 3-2-4-7h7Z" fill="white" stroke="#202024" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+    pointer.style.cssText = "position:fixed;left:720px;top:700px;z-index:2147483647;pointer-events:none;width:20px;height:24px;filter:drop-shadow(0 1px 2px oklch(0 0 0 / 0.533333333))";
+    pointer.innerHTML = '<svg viewBox="0 0 20 24"><path d="M2 2v18l5-5 4 7 3-2-4-7h7Z" fill="oklch(1 0 0)" stroke="oklch(0.245204495 0.007523708 285.83183319)" stroke-width="1.5" stroke-linejoin="round"/></svg>';
     document.body.append(pointer);
     addEventListener("pointermove", event => { pointer.style.left = `${event.clientX}px`; pointer.style.top = `${event.clientY}px`; });
   });

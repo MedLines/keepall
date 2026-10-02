@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { oklchToHex } from "@/color-format.mjs";
 import { ArrowLeftIcon, ArrowRightIcon, PlayIcon } from "../shell-icons";
 import { RecordedDemo } from "./recorded-demo";
 import { HeroFlightLayer, useHeroFlight } from "./hero-flight";
@@ -56,8 +57,8 @@ const phrases = ["A link that sends you somewhere.", "An image that stays with y
 
 function RevealedPhrase({ text, index, progress }: { text: string; index: number; progress: MotionValue<number> }) {
   const reduceMotion = useReducedMotion();
-  const color = useTransform(progress, [index / phrases.length, (index + 1) / phrases.length], ["#777477", "#f3eeea"]);
-  return <motion.span style={{ color: reduceMotion ? "#f3eeea" : color }}>{text}{" "}</motion.span>;
+  const color = useTransform(progress, [index / phrases.length, (index + 1) / phrases.length], [oklchToHex("oklch(0.562593681 0.005813544 325.653702919)"), oklchToHex("oklch(0.951883059 0.00761396 61.450898715)")]);
+  return <motion.span style={{ color: reduceMotion ? "oklch(0.951883059 0.00761396 61.450898715)" : color }}>{text}{" "}</motion.span>;
 }
 
 export function ScrollStatement() {

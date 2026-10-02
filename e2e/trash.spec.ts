@@ -206,7 +206,7 @@ test("Trash uses the library shell and both sidebar menus can empty all matching
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve) => { const req = indexedDB.open("keepall"); req.onsuccess = () => resolve(req.result); });
     const canvas = document.createElement("canvas"); canvas.width = 120; canvas.height = 80;
-    const ctx = canvas.getContext("2d")!; ctx.fillStyle = "#66898a"; ctx.fillRect(0, 0, 120, 80);
+    const ctx = canvas.getContext("2d")!; ctx.fillStyle = "oklch(0.604165533 0.039188126 198.365758744)"; ctx.fillRect(0, 0, 120, 80);
     const blob = await new Promise<Blob>((resolve) => canvas.toBlob((blob) => resolve(blob!)));
     const bytes = new Uint8Array(await blob.arrayBuffer());
     await new Promise<void>((resolve, reject) => {

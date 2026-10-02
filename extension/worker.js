@@ -100,7 +100,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 async function showFeedback(tabId, message, success, source = "toolbar", editorId, actions) {
   try {
-    await chrome.action.setBadgeBackgroundColor({ tabId, color: success ? "#16803c" : "#b42318" });
+    // Chrome's badge API rejects OKLCH strings and requires legacy RGBA here.
+    await chrome.action.setBadgeBackgroundColor({ tabId, color: success ? [22, 128, 60, 255] : [180, 35, 24, 255] });
     await chrome.action.setBadgeText({ tabId, text: success ? "✓" : "!" });
     await chrome.action.setTitle({ tabId, title: message });
   } catch {

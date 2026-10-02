@@ -18,9 +18,9 @@ async function seedGallery(page: Page) {
       canvas.width = 800;
       canvas.height = index % 3 === 1 ? 500 : 1200;
       const ctx = canvas.getContext("2d")!;
-      ctx.fillStyle = ["#e8dfd2", "#cbd9d1", "#d6dbea"][index % 3];
+      ctx.fillStyle = ["oklch(0.907238442 0.020052611 77.308684788)", "oklch(0.872405343 0.018586383 161.060208768)", "oklch(0.89207818 0.021224501 271.174151757)"][index % 3];
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#283b35";
+      ctx.fillStyle = "oklch(0.33387358 0.026677417 173.069141888)";
       ctx.font = "24px sans-serif";
       ctx.fillText("DESIGN REFERENCE", 60, 84);
       ctx.font = "bold 72px sans-serif";
@@ -201,7 +201,7 @@ test("adding and replacing images in scroll view keeps natural sizes and the aff
     canvas.width = 120;
     canvas.height = 180;
     const context = canvas.getContext("2d")!;
-    context.fillStyle = "#7c9478";
+    context.fillStyle = "oklch(0.639808265 0.049293261 141.104434878)";
     context.fillRect(0, 0, 120, 180);
     const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!)));
     return Array.from(new Uint8Array(await blob.arrayBuffer()));

@@ -22,7 +22,7 @@
 .about-hero-footnote { margin-top: 1.2rem; color: var(--color-text-secondary); font-size: .78rem; }
 .about-product-preview { width: 100%; margin-bottom: clamp(5rem, 8vw, 8rem); }
 .about-preview-stage { position: relative; width: 100%; aspect-ratio: 2; container-type: inline-size; }
-.about-preview-app { position: absolute; top: 0; left: 0; display: grid; grid-template-columns: 180px minmax(0, 1fr); width: 1320px; height: 660px; overflow: hidden; transform: scale(min(1, calc(100cqw / 1320px))); transform-origin: top left; border: 1px solid var(--color-border-edge); border-radius: var(--radius-library-panel); background: var(--color-bg-canvas); color-scheme: dark; color: var(--color-text-primary); box-shadow: 0 25px 70px #00000020; }
+.about-preview-app { position: absolute; top: 0; left: 0; display: grid; grid-template-columns: 180px minmax(0, 1fr); width: 1320px; height: 660px; overflow: hidden; transform: scale(min(1, calc(100cqw / 1320px))); transform-origin: top left; border: 1px solid var(--color-border-edge); border-radius: var(--radius-library-panel); background: var(--color-bg-canvas); color-scheme: dark; color: var(--color-text-primary); box-shadow: 0 25px 70px oklch(0 0 0 / 0.125490196); }
 .about-preview-sidebar { display: flex; flex-direction: column; align-items: stretch; gap: .25rem; min-width: 0; padding: 1.1rem .6rem; background: var(--color-bg-shell); color: var(--color-text-secondary); font-size: .67rem; }
 .about-preview-brand { display: flex; align-items: center; gap: .3rem; margin: 0 0 1.1rem .35rem; color: var(--color-text-primary); font-size: 1rem; font-weight: 650; letter-spacing: -.04em; }
 .about-preview-nav-row { display: flex; align-items: center; gap: .5rem; min-width: 0; min-height: 30px; padding: .25rem .5rem; white-space: nowrap; }
@@ -31,7 +31,7 @@
 .about-preview-sidebar-search { display: flex; align-items: center; gap: .45rem; padding: .35rem .5rem; font-size: .62rem; }
 .about-preview-nav-current { border-radius: var(--radius-control-sm); background: var(--color-bg-raised); color: var(--color-text-primary); }
 .about-preview-dot { display: block; width: 5px; height: 5px; flex: none; border-radius: 50%; }
-.about-preview-dot-orange { background: #f4a340; }.about-preview-dot-green { background: #8aba78; }.about-preview-dot-blue { background: #6ea5ee; }.about-preview-dot-purple { background: #a783d6; }
+.about-preview-dot-orange { background: oklch(0.778839832 0.146135805 67.557527593); }.about-preview-dot-green { background: oklch(0.738219238 0.10490461 137.445155773); }.about-preview-dot-blue { background: oklch(0.714227348 0.122204994 255.880407697); }.about-preview-dot-purple { background: oklch(0.676313141 0.124741734 303.194803912); }
 .about-preview-tags-heading { margin-top: 1.5rem; }
 .about-preview-content { min-width: 0; overflow: hidden; }
 .about-preview-toolbar { display: flex; align-items: center; justify-content: space-between; height: 55px; padding-inline: 1rem; }

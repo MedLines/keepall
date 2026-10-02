@@ -76,11 +76,11 @@
     var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
   );
   --scroll-fade-block: linear-gradient(
-    to bottom,
-    rgb(0 0 0 / var(--scroll-fade-edge-opacity, 0)) 0,
-    #000 var(--scroll-fade-t, 0px),
-    #000 calc(100% - var(--scroll-fade-b, 0px)),
-    rgb(0 0 0 / var(--scroll-fade-edge-opacity, 0)) 100%
+    to bottom in srgb,
+    oklch(0 0 0 / var(--scroll-fade-edge-opacity, 0)) 0,
+    oklch(0 0 0) var(--scroll-fade-t, 0px),
+    oklch(0 0 0) calc(100% - var(--scroll-fade-b, 0px)),
+    oklch(0 0 0 / var(--scroll-fade-edge-opacity, 0)) 100%
   );
   -webkit-mask-image: var(--scroll-fade-block);
   mask-image: var(--scroll-fade-block);
@@ -120,10 +120,10 @@
     var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
   );
   --scroll-fade-inline: linear-gradient(
-    to right,
+    to right in srgb,
     transparent 0,
-    #000 var(--scroll-fade-s, 0px),
-    #000 calc(100% - var(--scroll-fade-e, 0px)),
+    oklch(0 0 0) var(--scroll-fade-s, 0px),
+    oklch(0 0 0) calc(100% - var(--scroll-fade-e, 0px)),
     transparent 100%
   );
   -webkit-mask-image: var(--scroll-fade-inline);
@@ -133,10 +133,10 @@
 
   &:where([dir="rtl"], [dir="rtl"] *) {
     --scroll-fade-inline: linear-gradient(
-      to left,
+      to left in srgb,
       transparent 0,
-      #000 var(--scroll-fade-s, 0px),
-      #000 calc(100% - var(--scroll-fade-e, 0px)),
+      oklch(0 0 0) var(--scroll-fade-s, 0px),
+      oklch(0 0 0) calc(100% - var(--scroll-fade-e, 0px)),
       transparent 100%
     );
   }

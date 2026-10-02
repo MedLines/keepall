@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { oklchToHex } from "@/color-format.mjs";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -7,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "A local-first personal library for links and notes.",
     start_url: "/",
     display: "standalone",
-    background_color: "#fafafa",
-    theme_color: "#18181b",
+    background_color: oklchToHex("oklch(0.985103652 0 0)"),
+    theme_color: oklchToHex("oklch(0.210330931 0.005860382 285.885132689)"),
     icons: [
       {
         src: "/icons/icon-192.png?v=2",

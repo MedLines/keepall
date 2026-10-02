@@ -68,10 +68,10 @@ test("tags show item previews in cards and open their matching items", async ({ 
     canvas.width = 180; canvas.height = 140;
     const ctx = canvas.getContext("2d")!;
     const photos: Blob[] = [];
-    for (const color of ["#93b2a6", "#b7a68d"]) {
+    for (const color of ["oklch(0.736847425 0.038027069 169.79531752)", "oklch(0.733095307 0.040008644 77.50318316)"]) {
       ctx.fillStyle = color; ctx.fillRect(0, 0, 180, 140);
-      ctx.fillStyle = "#edf0e5"; ctx.fillRect(30, 25, 75, 90);
-      ctx.fillStyle = "#496660"; ctx.fillRect(42, 38, 52, 20);
+      ctx.fillStyle = "oklch(0.949833156 0.014914344 119.107827256)"; ctx.fillRect(30, 25, 75, 90);
+      ctx.fillStyle = "oklch(0.485506831 0.035452373 180.529915971)"; ctx.fillRect(42, 38, 52, 20);
       photos.push(await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!), "image/png")));
     }
     const db = await new Promise<IDBDatabase>(resolve => {

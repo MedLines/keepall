@@ -69,7 +69,7 @@ test("shared controls use flat surfaces in both themes", async ({ page }) => {
   for (const theme of ["light", "dark"]) {
     const toggle = page.getByRole("button", { name: "Theme", exact: true });
     if ((await toggle.getAttribute("aria-pressed")) !== String(theme === "dark")) await toggle.click();
-    await expect(page.locator(".library-panel")).toHaveCSS("background-color", theme === "light" ? "rgb(245, 245, 243)" : "rgb(14, 14, 15)");
+    await expect(page.locator(".library-panel")).toHaveCSS("background-color", theme === "light" ? "oklch(0.969593 0.00264729 106.449)" : "oklch(0.164205 0.00207156 286.169)");
     for (const name of ["Theme", "Save item", "Collapse", "Filter by type", "Sort library"]) {
       const button = name === "Filter by type" || name === "Sort library"
         ? page.getByRole("combobox", { name: new RegExp(`^${name}:`) })
@@ -106,17 +106,17 @@ test("theme toggles between light and dark and survives reload", async ({ page }
   await expect(page.getByRole("combobox", { name: "Theme" })).toHaveCount(0);
   await expect(theme).toHaveAttribute("aria-pressed", "false");
   const panel = page.getByRole("main").locator("..");
-  await expect(panel).toHaveCSS("background-color", "rgb(245, 245, 243)");
+  await expect(panel).toHaveCSS("background-color", "oklch(0.969593 0.00264729 106.449)");
   await theme.click();
-  await expect(panel).toHaveCSS("background-color", "rgb(14, 14, 15)");
+  await expect(panel).toHaveCSS("background-color", "oklch(0.164205 0.00207156 286.169)");
   await page.reload();
   await expect(theme).toHaveAttribute("aria-pressed", "true");
-  await expect(panel).toHaveCSS("background-color", "rgb(14, 14, 15)");
+  await expect(panel).toHaveCSS("background-color", "oklch(0.164205 0.00207156 286.169)");
   await page.emulateMedia({ colorScheme: "light" });
-  await expect(panel).toHaveCSS("background-color", "rgb(14, 14, 15)");
+  await expect(panel).toHaveCSS("background-color", "oklch(0.164205 0.00207156 286.169)");
   await theme.click();
   await expect(theme).toHaveAttribute("aria-pressed", "false");
-  await expect(panel).toHaveCSS("background-color", "rgb(245, 245, 243)");
+  await expect(panel).toHaveCSS("background-color", "oklch(0.969593 0.00264729 106.449)");
   await page.getByRole("button", { name: "Save item", exact: true }).click();
   await page.getByLabel("Link, note, or image").fill("Theme review note");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -131,7 +131,7 @@ test("saved dark theme applies before the React bundles arrive", async ({ page }
   await page.route("**/_next/static/**/*.js", (route) => route.abort());
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(14, 14, 15)");
+  await expect(page.locator("body")).toHaveCSS("background-color", "oklch(0.164205 0.00207156 286.169)");
 });
 
 for (const width of [320, 768, 1024, 1440]) {

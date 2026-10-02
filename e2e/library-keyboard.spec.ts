@@ -132,7 +132,7 @@ test("gallery controls stay separate from item navigation and Markdown remains r
     const canvas = document.createElement("canvas");
     canvas.width = 600; canvas.height = 420;
     const context = canvas.getContext("2d")!;
-    context.fillStyle = "#9cb7a4"; context.fillRect(0, 0, 600, 420);
+    context.fillStyle = "oklch(0.753606315 0.040021131 154.672039391)"; context.fillRect(0, 0, 600, 420);
     const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!), "image/png"));
     const bytes = new Uint8Array(await blob.arrayBuffer());
     await new Promise<void>((resolve, reject) => {

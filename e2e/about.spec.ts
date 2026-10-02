@@ -202,7 +202,7 @@ test("footer needs extra scrolling and drops icons to the floor with CSS motion"
   await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }));
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
   const wordmark = page.locator(".ka-footer-wordmark");
-  await expect(wordmark).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(wordmark).toHaveCSS("color", "oklch(1 0 0)");
   await expect(wordmark).toHaveCSS("opacity", "0.3");
   const wordmarkBefore = await wordmark.boundingBox();
   await page.waitForTimeout(300);

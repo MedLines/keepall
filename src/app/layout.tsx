@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { oklchToHex } from "@/color-format.mjs";
 import { Analytics } from "@vercel/analytics/next";
 import { CaptureHost } from "./capture-host";
 import { DevToolsEntry } from "./dev-tools-entry";
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#18181b",
+  themeColor: oklchToHex("oklch(0.210330931 0.005860382 285.885132689)"),
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

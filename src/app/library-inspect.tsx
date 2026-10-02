@@ -235,7 +235,7 @@ export function LibraryInspect({
           <motion.div
             ref={panelRef}
             tabIndex={-1}
-            className="relative z-10 flex max-h-[min(96vh,64rem)] w-full max-w-4xl flex-col overflow-hidden bg-bg-surface shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.18)] outline-none sm:rounded-2xl"
+            className="relative z-10 flex max-h-[min(96vh,64rem)] w-full max-w-4xl flex-col overflow-hidden bg-bg-surface shadow-[0_0_0_1px_oklch(0_0_0_/_0.06),0_16px_40px_oklch(0_0_0_/_0.18)] outline-none sm:rounded-2xl"
             style={{ borderRadius: 16 }}
             initial={
               reduceMotion ? false : { opacity: 0, scale: 0.95 }

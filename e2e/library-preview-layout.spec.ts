@@ -17,9 +17,9 @@ test.beforeEach(async ({ page }) => {
       const canvas = document.createElement("canvas");
       canvas.width = Number(width); canvas.height = Number(height);
       const context = canvas.getContext("2d")!;
-      context.fillStyle = id === "tall" ? "#4c82a7" : "#ceab6c";
+      context.fillStyle = id === "tall" ? "oklch(0.584477764 0.081003757 240.069917981)" : "oklch(0.758491244 0.09085318 81.374817162)";
       context.fillRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = "#fafafa";
+      context.fillStyle = "oklch(0.985103652 0 0)";
       context.fillRect(8, 8, canvas.width - 16, canvas.height - 16);
       const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!), "image/png"));
       return { id: String(id), bytes: new Uint8Array(await blob.arrayBuffer()), mimeType: blob.type, byteLength: blob.size, contentHash: String(id), createdAt: 1 };

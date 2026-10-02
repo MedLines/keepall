@@ -817,7 +817,7 @@ export function CaptureHost() {
                 className={imageDrafts.length === 1 ? "shrink-0" : "min-w-0 flex-1"}
               >
                 <div
-                  className={`overflow-hidden rounded-lg bg-bg-raised shadow-[0_0_0_1px_rgba(0,0,0,0.05)] ${
+                  className={`overflow-hidden rounded-lg bg-bg-raised shadow-[0_0_0_1px_oklch(0_0_0_/_0.05)] ${
                     imageDrafts.length === 1
                       ? "size-16"
                       : `aspect-square w-full ${imageDraftPreviewMaxHeightClass(imageDrafts.length)}`

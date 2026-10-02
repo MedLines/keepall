@@ -28,7 +28,7 @@ async function seedMeasuredLibrary(page: Page, options?: { imageOnly?: boolean }
     canvas.width = 360;
     canvas.height = 540;
     const context = canvas.getContext("2d")!;
-    context.fillStyle = "#b8d4ca";
+    context.fillStyle = "oklch(0.84640393 0.032936183 171.964186181)";
     context.fillRect(0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob>((resolve) =>
       canvas.toBlob((value) => resolve(value!), "image/png"),

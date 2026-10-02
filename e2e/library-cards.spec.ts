@@ -40,7 +40,7 @@ test.beforeEach(async ({ page }) => {
     canvas.width = 600;
     canvas.height = 240;
     const context = canvas.getContext("2d")!;
-    context.fillStyle = "#d9e7e2";
+    context.fillStyle = "oklch(0.916042316 0.016354056 172.616843475)";
     context.fillRect(0, 0, 600, 240);
     const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!)));
     const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -486,7 +486,7 @@ test("a link without preview bytes shows its favicon", async ({ page }, testInfo
   await page.unroute("https://www.google.com/s2/favicons**");
   await page.route("https://www.google.com/s2/favicons**", (route) =>
     route.fulfill({
-      body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#725cff"/><path d="M9 16h14M16 9v14" stroke="white" stroke-width="3"/></svg>',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="oklch(0.590960289 0.230996727 282.863669006)"/><path d="M9 16h14M16 9v14" stroke="oklch(1 0 0)" stroke-width="3"/></svg>',
       contentType: "image/svg+xml",
       status: 200,
     }),
@@ -827,7 +827,7 @@ test("mixed cards preserve image proportions, readable notes and compact fallbac
   expect(fallbackMedia.width / fallbackMedia.height).toBeCloseTo(1.6, 1);
   await page.getByRole("button", { name: "Theme", exact: true }).click();
   await expect(fallback).toHaveCSS("background-image", "none");
-  await expect(fallback).toHaveCSS("background-color", "rgb(35, 37, 38)");
+  await expect(fallback).toHaveCSS("background-color", "oklch(0.262807 0.00348218 228.927)");
 });
 
 test("desktop card actions reveal on hover or focus and stay visible while open", async ({ page }) => {
@@ -927,7 +927,7 @@ test("image edge overlay follows the media clip in both themes", async ({ page }
   await expect(card).toHaveCSS("padding", "8px");
   await expect(image).toHaveCSS("border-radius", "0px");
   const media = card.locator(".library-card-media");
-  for (const [theme, color] of [["light", "rgba(0, 0, 0, 0.08)"], ["dark", "rgba(255, 255, 255, 0.08)"]]) {
+  for (const [theme, color] of [["light", "oklch(0 0 0 / 0.08)"], ["dark", "oklch(1 0 0 / 0.08)"]]) {
     if (await page.locator("html").getAttribute("data-theme") !== theme) {
       await page.getByRole("button", { name: "Theme", exact: true }).click();
     }
@@ -1278,7 +1278,7 @@ test("image page shares the rounder card and panel curves", async ({ page }, tes
     if ((await toggle.getAttribute("aria-pressed")) !== String(theme === "dark")) await toggle.click();
     await expect(libraryImage).toHaveCSS(
       "outline-color",
-      theme === "light" ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)",
+      theme === "light" ? "oklch(0 0 0 / 0.08)" : "oklch(1 0 0 / 0.08)",
     );
   }
   await expect(libraryImage).toHaveCSS("border-radius", "56px");
@@ -1353,8 +1353,8 @@ test("image counter and arrow keys stay in sync in both views", async ({ page },
     canvas.height = 400;
     const context = canvas.getContext("2d")!;
     for (const [x, y, color] of [
-      [0, 0, "#d88474"], [300, 0, "#79b7a4"],
-      [0, 200, "#8ea6c9"], [300, 200, "#e5bd74"],
+      [0, 0, "oklch(0.698143973 0.107042033 31.532390105)"], [300, 0, "oklch(0.731683642 0.069949897 173.038778453)"],
+      [0, 200, "oklch(0.719162079 0.057884495 257.738024631)"], [300, 200, "oklch(0.817921445 0.102354539 81.559706876)"],
     ] as const) {
       context.fillStyle = color;
       context.fillRect(x, y, 300, 200);
@@ -2031,8 +2031,10 @@ test("search excerpts survive virtualized layout changes and clipped titles", as
   const search = page.getByRole("searchbox", { name: "Search", exact: true });
   for (const width of [975, 2196, 390, 975]) {
     await page.setViewportSize({ width, height: 900 });
+    await expect(page.locator('.library-sidebar-desktop')).toHaveCount(width < 768 ? 0 : 1);
     const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
     if (await closeNavigation.isVisible()) await closeNavigation.click();
+    await expect(closeNavigation).toBeHidden();
     for (const layout of ["Grid", "List"]) {
       await page.getByRole("button", { name: `${layout} view`, exact: true }).click();
       const item = page.locator('[data-item-id="search-788"]');

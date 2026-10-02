@@ -1,4 +1,6 @@
 import sharp from "sharp";
+import { readFile } from "node:fs/promises";
+import { svgToSrgb } from "../src/color-format.mjs";
 
 // Seed only the disposable browser passed by a marketing capture script.
 export async function seedMarketingLibrary(page) {
@@ -9,7 +11,9 @@ export async function seedMarketingLibrary(page) {
     "studio-interface.svg", "night-product.svg", "signal-landing.svg",
   ].map(async (name, index) => ({
     id: `sample-asset-${index}`,
-    data: (await sharp(new URL(name, output).pathname).png().toBuffer()).toString("base64"),
+    data: (await sharp(name.endsWith(".svg")
+      ? Buffer.from(svgToSrgb(await readFile(new URL(name, output), "utf8")))
+      : new URL(name, output).pathname).png().toBuffer()).toString("base64"),
   })));
   await page.evaluate(async (assets) => {
     const db = await new Promise((resolve, reject) => {

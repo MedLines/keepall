@@ -1,10 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
+import { oklchToRgba, svgToSrgb } from "../src/color-format.mjs";
 
 // Use the same cropped brand mark as the browser favicon.
-const source = await readFile(new URL("../src/app/icon.svg", import.meta.url));
-const logo = await sharp(source, { density: 1152 }).trim().png().toBuffer();
+const source = await readFile(new URL("../src/app/icon.svg", import.meta.url), "utf8");
+const logo = await sharp(Buffer.from(svgToSrgb(source)), { density: 1152 }).trim().png().toBuffer();
 
 async function writeIcon(path, size, scale, background) {
   const mark = await sharp(logo)
@@ -20,5 +21,6 @@ const transparent = { r: 0, g: 0, b: 0, alpha: 0 };
 await writeIcon("../public/icons/icon-192.png", 192, 0.9, transparent);
 await writeIcon("../public/icons/icon-512.png", 512, 0.9, transparent);
 // Extra space keeps the mark clear of launcher masks and rounded corners.
-await writeIcon("../public/icons/icon-maskable-512.png", 512, 0.64, "#18181b");
-await writeIcon("../src/app/apple-icon.png", 180, 0.76, "#18181b");
+const background = oklchToRgba("oklch(0.210330931 0.005860382 285.885132689)");
+await writeIcon("../public/icons/icon-maskable-512.png", 512, 0.64, background);
+await writeIcon("../src/app/apple-icon.png", 180, 0.76, background);

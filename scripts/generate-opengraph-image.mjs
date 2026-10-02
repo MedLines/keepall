@@ -26,18 +26,18 @@ try {
         width: 1200px;
         height: 630px;
         overflow: hidden;
-        color: #f8f7f9;
+        color: oklch(0.977463055 0.002838102 308.428134416);
         font-family: Inter, sans-serif;
         background:
-          radial-gradient(ellipse 430px 390px at 26% 52%, rgba(255, 68, 112, .27), transparent 82%),
-          radial-gradient(ellipse 430px 360px at 96% 2%, rgba(255, 129, 152, .075), transparent 80%),
-          linear-gradient(145deg, #202025, #141417 72%);
+          radial-gradient(ellipse 430px 390px at 26% 52% in srgb, oklch(0.67113669 0.221856036 12.190952936 / 0.27), transparent 82%),
+          radial-gradient(ellipse 430px 360px at 96% 2% in srgb, oklch(0.751482108 0.154058319 10.000737587 / 0.075), transparent 80%),
+          linear-gradient(145deg in srgb, oklch(0.245648959 0.009412423 285.68645299), oklch(0.192582609 0.005994532 285.823429075) 72%);
       }
       .canvas::after {
         content: "";
         position: absolute;
         inset: 0;
-        border: 1px solid rgba(255, 255, 255, .09);
+        border: 1px solid oklch(1 0 0 / 0.09);
         pointer-events: none;
       }
       .logo {
@@ -52,7 +52,7 @@ try {
         display: flex;
         align-items: center;
         gap: 16px;
-        color: #ff9db2;
+        color: oklch(0.801248641 0.118820386 6.225045038);
         font-size: 17px;
         font-weight: 600;
         letter-spacing: .16em;
@@ -64,7 +64,7 @@ try {
         width: 43px;
         height: 3px;
         border-radius: 999px;
-        background: linear-gradient(90deg, #ff577c, #ffb3c3);
+        background: linear-gradient(90deg in srgb, oklch(0.691861834 0.203656757 11.114259268), oklch(0.842735894 0.090479972 5.334087616));
       }
       h1 {
         margin: 25px 0 25px;
@@ -76,7 +76,7 @@ try {
       p {
         margin: 0;
         max-width: 520px;
-        color: #d4d2d7;
+        color: oklch(0.866814238 0.007134219 304.226844616);
         font-size: 33px;
         font-weight: 380;
         line-height: 1.32;

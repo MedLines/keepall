@@ -35,7 +35,7 @@ const platforms = [
 ];
 
 function ChromeMark() {
-  return <svg className="ka-chrome-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ea4335" d="M12 0a12 12 0 0 1 10.392 6H12a6 6 0 0 0-5.196 9L1.608 6A12 12 0 0 1 12 0Z" /><path fill="#34a853" d="M1.608 6A12 12 0 0 0 12 24l5.196-9A6 6 0 0 1 6.804 15Z" /><path fill="#fbbc05" d="M22.392 6A12 12 0 0 1 12 24l5.196-9A6 6 0 0 0 12 6Z" /><circle cx="12" cy="12" r="6" fill="#fff" /><circle cx="12" cy="12" r="4.5" fill="#4285f4" /></svg>;
+  return <svg className="ka-chrome-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="oklch(0.625730845 0.205841062 29.077253722)" d="M12 0a12 12 0 0 1 10.392 6H12a6 6 0 0 0-5.196 9L1.608 6A12 12 0 0 1 12 0Z" /><path fill="oklch(0.647549305 0.160277201 148.495469399)" d="M1.608 6A12 12 0 0 0 12 24l5.196-9A6 6 0 0 1 6.804 15Z" /><path fill="oklch(0.830437542 0.169810122 83.992721714)" d="M22.392 6A12 12 0 0 1 12 24l5.196-9A6 6 0 0 0 12 6Z" /><circle cx="12" cy="12" r="6" fill="oklch(1 0 0)" /><circle cx="12" cy="12" r="4.5" fill="oklch(0.630386154 0.180027381 259.956004329)" /></svg>;
 }
 
 export default function AboutPage() {

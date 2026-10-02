@@ -115,7 +115,7 @@ export function LibraryListRow({
             <span className="size-10 shrink-0" aria-hidden />
           ) : (
             <motion.span
-              className={`flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] shadow-[0_0_0_1px_rgba(0,0,0,0.06)] ${
+              className={`flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] shadow-[0_0_0_1px_oklch(0_0_0_/_0.06)] ${
                 item.type === "link"
                   ? "bg-bg-surface"
                   : "bg-bg-raised text-sm font-semibold text-text-primary"

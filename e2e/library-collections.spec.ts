@@ -10,9 +10,9 @@ test("collection folders preview recent items, lift on hover, and open their col
     canvas.width = 200;
     canvas.height = 180;
     const ctx = canvas.getContext("2d")!;
-    ctx.fillStyle = "#b3c6c2";
+    ctx.fillStyle = "oklch(0.810944794 0.021439736 181.732278626)";
     ctx.fillRect(0, 0, 200, 180);
-    ctx.fillStyle = "#5c7871";
+    ctx.fillStyle = "oklch(0.548540852 0.03421723 177.9495173)";
     ctx.beginPath();
     ctx.moveTo(0, 180);
     ctx.lineTo(110, 35);
@@ -82,7 +82,13 @@ test("collection folders preview recent items, lift on hover, and open their col
   const front = design.locator(".collection-folder-front");
   await page.mouse.move(0, 0);
   for (const innerCard of await design.locator('.collection-folder-item-card').all()) {
-    await expect(innerCard).toHaveCSS('background-color', 'rgb(250, 250, 248)');
+    await expect(innerCard).toHaveCSS('background-color', 'oklch(0.984548 0.00263721 106.448)');
+  }
+  for (const content of await folders.locator('.collection-folder-text-preview').all()) {
+    await expect(content).toHaveCSS('background-color', 'oklch(0.247759 0 0)');
+    await expect(content).toHaveCSS('border-top-left-radius', '16px');
+    await expect(content).toHaveCSS('color', 'oklch(1 0 0)');
+    await expect(content.locator('svg')).toHaveCSS('color', 'oklch(1 0 0)');
   }
   await page.screenshot({ path: testInfo.outputPath('collections-rest-light.png'), fullPage: true });
   const stage = (await design.locator('.collection-folder-stage').boundingBox())!;
@@ -137,7 +143,7 @@ test("collection folders preview recent items, lift on hover, and open their col
   await card.getByRole('button', { name: 'Design Inspiration actions', exact: true }).hover();
   await expect.poll(async () => (await preview.boundingBox())!.y).toBeLessThan(rest!.y - 38);
   await expect(design.locator('.collection-folder-gradient-bottom')).toHaveCSS('stop-opacity', '1');
-  await expect(design.locator('.collection-folder-gradient-bottom')).toHaveCSS('stop-color', 'rgb(158, 158, 158)');
+  await expect(design.locator('.collection-folder-gradient-bottom')).toHaveCSS('stop-color', 'oklch(0.699261 0 0)');
   await page.screenshot({ path: testInfo.outputPath('collections-glass-light.png'), fullPage: true });
   if (await page.locator("html").getAttribute("data-theme") !== "dark") await page.getByRole("button", { name: "Theme", exact: true }).click();
   await page.mouse.move(0, 0);
@@ -145,14 +151,24 @@ test("collection folders preview recent items, lift on hover, and open their col
   const notePaper = design.locator('.collection-folder-preview[data-type="note"] .collection-folder-item-card').first();
   const linkCard = folders.getByRole('link', { name: 'Open Reading, 1 item', exact: true }).locator('.collection-folder-item-card');
   for (const innerCard of await design.locator('.collection-folder-item-card').all()) {
-    await expect(innerCard).toHaveCSS('background-color', 'rgb(152, 152, 152)');
+    await expect(innerCard).toHaveCSS('background-color', 'oklch(0.67968 0 0)');
   }
-  await expect(notePaper).toHaveCSS('background-color', 'rgb(152, 152, 152)');
-  await expect(linkCard).toHaveCSS('background-color', 'rgb(152, 152, 152)');
+  await expect(notePaper.locator('.collection-folder-text-preview')).toHaveCSS('background-color', 'oklch(0.247759 0 0)');
+  await expect(linkCard.locator('.collection-folder-text-preview')).toHaveCSS('background-color', 'oklch(0.247759 0 0)');
   const textPairs = await page.locator('.collection-folder-preview-title').evaluateAll(elements => elements.map(element => {
     const style = getComputedStyle(element);
-    const surface = element.closest('.collection-folder-item-card')!;
-    return { text: style.color, background: getComputedStyle(surface).backgroundColor };
+    const surface = element.closest('.collection-folder-text-preview')!;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d')!;
+    const toRgb = (color: string) => {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+      return `rgb(${r}, ${g}, ${b})`;
+    };
+    return { text: toRgb(style.color), background: toRgb(getComputedStyle(surface).backgroundColor) };
   }));
   for (const pair of textPairs) {
     const luminance = (color: string) => {

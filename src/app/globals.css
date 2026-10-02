@@ -5,29 +5,31 @@
 /* Fixed palette values. Components use the semantic roles below. */
 :root {
   color-scheme: light dark;
-  --neutral-25: #fdfdfc;
-  --neutral-50: #f5f5f3;
-  --neutral-100: #ecece9;
-  --neutral-150: #e6e6e3;
-  --neutral-200: #d8d9d5;
-  --neutral-500: #62656b;
-  --neutral-400: #aaaeb5;
-  --neutral-700: #36383c;
-  --neutral-750: #292b2e;
-  --neutral-800: #242424;
-  --neutral-850: #232526;
-  --neutral-875: #1b1c1d;
-  --neutral-900: #18181a;
-  --neutral-950: #171717;
-  --neutral-975: #0e0e0f;
-  --white: #ffffff;
-  --paper: #f2f2f0;
+  --neutral-25: oklch(0.993770382 0.001316042 106.423529177);
+  --neutral-50: oklch(0.969593227 0.002647287 106.448873318);
+  --neutral-100: oklch(0.942248937 0.003997688 106.476075543);
+  --neutral-150: oklch(0.924095637 0.004017056 106.477949299);
+  --neutral-200: oklch(0.883390679 0.005512472 117.935225642);
+  --neutral-500: oklch(0.506161125 0.010181703 264.477327445);
+  --neutral-400: oklch(0.749761596 0.010981499 261.783842373);
+  --neutral-700: oklch(0.340266774 0.007499577 264.468737509);
+  --neutral-750: oklch(0.288240789 0.006169116 258.356062838);
+  --neutral-800: oklch(0.260324813 0 0);
+  --neutral-850: oklch(0.262806549 0.003482183 228.926903774);
+  --neutral-875: oklch(0.225777762 0.002465731 247.935528101);
+  --neutral-900: oklch(0.2098857 0.00390174 286.058756954);
+  --neutral-950: oklch(0.204626531 0 0);
+  --neutral-975: oklch(0.164204829 0.002071559 286.169336643);
+  --white: oklch(1 0 0);
+  --paper: oklch(0.960592553 0.002653442 106.449449342);
 }
 
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 
 @theme inline {
+  --color-black: oklch(0 0 0);
+  --color-white: oklch(1 0 0);
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --color-bg-shell: light-dark(var(--neutral-100), var(--neutral-950));
   --color-bg-canvas: light-dark(var(--neutral-50), var(--neutral-975));
@@ -35,31 +37,31 @@
   --color-bg-card: light-dark(var(--white), var(--neutral-850));
   --color-bg-control: light-dark(var(--neutral-25), var(--neutral-875));
   --color-bg-raised: light-dark(var(--neutral-150), var(--neutral-750));
-  --color-bg-selected: light-dark(#f0f1f0, #1e2021);
-  --color-bg-active: light-dark(#0000000d, #ffffff1f);
-  --color-border-active: light-dark(#ffffffcc, #ffffff0f);
-  --color-bg-scrim: light-dark(#00000026, #00000066);
-  --color-bg-overlay: #09090b;
-  --color-bg-media: #18181a;
+  --color-bg-selected: light-dark(oklch(0.957102447 0.001695869 145.562810956), oklch(0.241832388 0.003552774 228.947041356));
+  --color-bg-active: light-dark(oklch(0 0 0 / 0.050980392), oklch(1 0 0 / 0.121568627));
+  --color-border-active: light-dark(oklch(1 0 0 / 0.8), oklch(1 0 0 / 0.058823529));
+  --color-bg-scrim: light-dark(oklch(0 0 0 / 0.149019608), oklch(0 0 0 / 0.4));
+  --color-bg-overlay: oklch(0.140765334 0.004385904 285.82285136);
+  --color-bg-media: oklch(0.2098857 0.00390174 286.058756954);
   --color-text-primary: light-dark(var(--neutral-850), var(--paper));
   --color-text-secondary: light-dark(var(--neutral-500), var(--neutral-400));
-  --color-text-on-media: #f2f2f0;
+  --color-text-on-media: oklch(0.960592553 0.002653442 106.449449342);
   --color-border-subtle: light-dark(var(--neutral-200), var(--neutral-700));
-  --color-border-edge: light-dark(#00000024, #ffffff24);
-  --color-border-media: light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 8%));
-  --color-border-control: light-dark(#00000014, #ffffff14);
-  --color-border-focus: light-dark(#737b84, #8d959f);
-  --color-border-selected: light-dark(#555e69, #c4cbd3);
+  --color-border-edge: light-dark(oklch(0 0 0 / 0.141176471), oklch(1 0 0 / 0.141176471));
+  --color-border-media: light-dark(oklch(0 0 0 / 0.08), oklch(1 0 0 / 0.08));
+  --color-border-control: light-dark(oklch(0 0 0 / 0.078431373), oklch(1 0 0 / 0.078431373));
+  --color-border-focus: light-dark(oklch(0.579227654 0.01681605 251.260610599), oklch(0.666552112 0.017467531 253.953432426));
+  --color-border-selected: light-dark(oklch(0.478112036 0.021030497 253.478913982), oklch(0.839078171 0.013548353 251.578187792));
   --color-action-primary: light-dark(var(--neutral-850), var(--paper));
   --color-text-on-action: light-dark(var(--white), var(--neutral-900));
-  --color-text-danger: light-dark(#b42318, #fca5a5);
-  --color-bg-danger: light-dark(#fff1ef, #391c20);
-  --color-border-danger: light-dark(#fca5a5, #a44a52);
-  --color-text-warning: light-dark(#78350f, #fcd38b);
-  --color-bg-warning: light-dark(#fffbeb, #332619);
-  --color-border-warning: light-dark(#fde68a, #856435);
-  --color-bg-search-match: light-dark(#ffedaa, #705018);
-  --color-text-search-match: light-dark(#30230b, #fff4c9);
+  --color-text-danger: light-dark(oklch(0.500335978 0.182051182 29.512714275), oklch(0.807689675 0.103485729 19.570623816));
+  --color-bg-danger: light-dark(oklch(0.968586961 0.015409139 27.280066214), oklch(0.268012128 0.045783995 11.811931989));
+  --color-border-danger: light-dark(oklch(0.807689675 0.103485729 19.570623816), oklch(0.526386657 0.119150064 16.638270002));
+  --color-text-warning: light-dark(oklch(0.41370733 0.105364833 45.903757687), oklch(0.886303525 0.101036799 80.9265957));
+  --color-bg-warning: light-dark(oklch(0.986879345 0.021402972 95.277433146), oklch(0.279993514 0.029659593 66.118892661));
+  --color-border-warning: light-dark(oklch(0.924276834 0.115126806 95.745862969), oklch(0.526468942 0.07671406 74.512358797));
+  --color-bg-search-match: light-dark(oklch(0.945107388 0.086846189 94.873876244), oklch(0.455050432 0.08252792 77.418640118));
+  --color-text-search-match: light-dark(oklch(0.265771697 0.042163708 80.495289208), oklch(0.965108469 0.056770316 95.33699577));
   --color-collection-marker: oklch(var(--collection-marker-lightness, 0.68) 0.15 var(--collection-marker-hue, 0));
   --radius-control: 0.625rem;
   --radius-control-sm: 0.75rem;
@@ -72,9 +74,9 @@
   --spacing-card-inset: 0.5rem;
   --corner-shape-panel: squircle;
   --corner-shape-control: superellipse(1.5);
-  --shadow-edge: 0 0 0 1px light-dark(#00000024, #ffffff24);
-  --shadow-menu: 0 4px 16px light-dark(#0000000f, #00000040);
-  --shadow-panel: 0 3px 12px #00000012;
+  --shadow-edge: 0 0 0 1px light-dark(oklch(0 0 0 / 0.141176471), oklch(1 0 0 / 0.141176471));
+  --shadow-menu: 0 4px 16px light-dark(oklch(0 0 0 / 0.058823529), oklch(0 0 0 / 0.250980392));
+  --shadow-panel: 0 3px 12px oklch(0 0 0 / 0.070588235);
 }
 
 @layer components {
@@ -134,25 +136,25 @@
     }
   }
   .ui-backdrop {
-    background: linear-gradient(135deg, rgb(0 0 0 / 14%), rgb(0 0 0 / 9%));
+    background: linear-gradient(135deg in srgb, oklch(0 0 0 / 0.14), oklch(0 0 0 / 0.09));
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
   }
   :root[data-theme="dark"] .ui-backdrop {
-    background: linear-gradient(135deg, rgb(255 255 255 / 7%), rgb(255 255 255 / 4%));
+    background: linear-gradient(135deg in srgb, oklch(1 0 0 / 0.07), oklch(1 0 0 / 0.04));
   }
   .focused-image-backdrop {
-    background: rgb(0 0 0 / 76%);
+    background: oklch(0 0 0 / 0.76);
     -webkit-backdrop-filter: blur(24px) saturate(0.5);
     backdrop-filter: blur(24px) saturate(0.5);
   }
   .ui-native-dialog::backdrop {
-    background: linear-gradient(135deg, rgb(0 0 0 / 14%), rgb(0 0 0 / 9%));
+    background: linear-gradient(135deg in srgb, oklch(0 0 0 / 0.14), oklch(0 0 0 / 0.09));
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
   }
   :root[data-theme="dark"] .ui-native-dialog::backdrop {
-    background: linear-gradient(135deg, rgb(255 255 255 / 7%), rgb(255 255 255 / 4%));
+    background: linear-gradient(135deg in srgb, oklch(1 0 0 / 0.07), oklch(1 0 0 / 0.04));
   }
   .ui-menu-item {
     cursor: pointer;
@@ -263,7 +265,7 @@
 
 .library-card {
   background: var(--color-bg-card);
-  box-shadow: 0 2px 4px #0000000a;
+  box-shadow: 0 2px 4px oklch(0 0 0 / 0.039215686);
 }
 
 /* The border's inner edge derives the media curve from the card's outer curve. */
@@ -288,16 +290,16 @@
 }
 
 .library-card-media-chrome {
-  border: 1px solid rgb(255 255 255 / 14%);
+  border: 1px solid oklch(1 0 0 / 0.14);
   border-radius: 999px;
-  background: rgb(9 9 11 / 72%);
+  background: oklch(0.140765334 0.004385904 285.82285136 / 0.72);
   color: var(--color-text-on-media);
   /* Backdrop blur on these controls makes Chrome drop card paint tiles when menus open. */
   transition: transform 150ms ease-out;
 }
 
 .library-card-media-chrome:hover {
-  background: rgb(9 9 11 / 84%);
+  background: oklch(0.140765334 0.004385904 285.82285136 / 0.84);
   color: var(--color-text-on-media);
 }
 

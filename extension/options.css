@@ -8,55 +8,55 @@
 
 :root {
   color-scheme: light;
-  --shell: #ecece9;
-  --canvas: #f5f5f3;
-  --surface: #fff;
-  --control: #fdfdfc;
-  --raised: #e6e6e3;
-  --selected: #e7e9e8;
-  --text: #232526;
-  --muted: #62656b;
-  --border: #00000014;
-  --focus: #737b84;
-  --action: #232526;
-  --on-action: #fff;
-  --danger: #b42318;
+  --shell: oklch(0.942248937 0.003997688 106.476075543);
+  --canvas: oklch(0.969593227 0.002647287 106.448873318);
+  --surface: oklch(1 0 0);
+  --control: oklch(0.993770382 0.001316042 106.423529177);
+  --raised: oklch(0.924095637 0.004017056 106.477949299);
+  --selected: oklch(0.93220818 0.002520972 165.072879009);
+  --text: oklch(0.262806549 0.003482183 228.926903774);
+  --muted: oklch(0.506161125 0.010181703 264.477327445);
+  --border: oklch(0 0 0 / 0.078431373);
+  --focus: oklch(0.579227654 0.01681605 251.260610599);
+  --action: oklch(0.262806549 0.003482183 228.926903774);
+  --on-action: oklch(1 0 0);
+  --danger: oklch(0.500335978 0.182051182 29.512714275);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
-    --shell: #171717;
-    --canvas: #0e0e0f;
-    --surface: #242424;
-    --control: #1b1c1d;
-    --raised: #292b2e;
-    --selected: #323538;
-    --text: #f2f2f0;
-    --muted: #aaaeb5;
-    --border: #ffffff14;
-    --focus: #8d959f;
-    --action: #f2f2f0;
-    --on-action: #18181a;
-    --danger: #fca5a5;
+    --shell: oklch(0.204626531 0 0);
+    --canvas: oklch(0.164204829 0.002071559 286.169336643);
+    --surface: oklch(0.260324813 0 0);
+    --control: oklch(0.225777762 0.002465731 247.935528101);
+    --raised: oklch(0.288240789 0.006169116 258.356062838);
+    --selected: oklch(0.327186684 0.006741073 248.034104045);
+    --text: oklch(0.960592553 0.002653442 106.449449342);
+    --muted: oklch(0.749761596 0.010981499 261.783842373);
+    --border: oklch(1 0 0 / 0.078431373);
+    --focus: oklch(0.666552112 0.017467531 253.953432426);
+    --action: oklch(0.960592553 0.002653442 106.449449342);
+    --on-action: oklch(0.2098857 0.00390174 286.058756954);
+    --danger: oklch(0.807689675 0.103485729 19.570623816);
   }
 }
 
 :root[data-theme="dark"] {
     color-scheme: dark;
-    --shell: #171717;
-    --canvas: #0e0e0f;
-    --surface: #242424;
-    --control: #1b1c1d;
-    --raised: #292b2e;
-    --selected: #323538;
-    --text: #f2f2f0;
-    --muted: #aaaeb5;
-    --border: #ffffff14;
-    --focus: #8d959f;
-    --action: #f2f2f0;
-    --on-action: #18181a;
-    --danger: #fca5a5;
+    --shell: oklch(0.204626531 0 0);
+    --canvas: oklch(0.164204829 0.002071559 286.169336643);
+    --surface: oklch(0.260324813 0 0);
+    --control: oklch(0.225777762 0.002465731 247.935528101);
+    --raised: oklch(0.288240789 0.006169116 258.356062838);
+    --selected: oklch(0.327186684 0.006741073 248.034104045);
+    --text: oklch(0.960592553 0.002653442 106.449449342);
+    --muted: oklch(0.749761596 0.010981499 261.783842373);
+    --border: oklch(1 0 0 / 0.078431373);
+    --focus: oklch(0.666552112 0.017467531 253.953432426);
+    --action: oklch(0.960592553 0.002653442 106.449449342);
+    --on-action: oklch(0.2098857 0.00390174 286.058756954);
+    --danger: oklch(0.807689675 0.103485729 19.570623816);
 }
 
 * { box-sizing: border-box; }
@@ -111,7 +111,7 @@ h4 { margin: 0; font-size: 14px; font-weight: 600; }
 .permission-explanation { margin-top: 20px; }
 .permission-explanation h4:not(:first-child) { margin-top: 24px; }
 figure { margin: 16px 0 0; }
-.screenshot-crop { --crop-left: 0; --crop-top: 0; position: relative; width: 100%; max-width: 560px; aspect-ratio: var(--crop-width) / var(--crop-height); overflow: hidden; border-radius: 16px; background: #1f1f1f; }
+.screenshot-crop { --crop-left: 0; --crop-top: 0; position: relative; width: 100%; max-width: 560px; aspect-ratio: var(--crop-width) / var(--crop-height); overflow: hidden; border-radius: 16px; background: oklch(0.239292378 0 0); }
 .screenshot-crop img { display: block; position: absolute; width: calc(100% * var(--source-width) / var(--crop-width)); height: auto; left: calc(-100% * var(--crop-left) / var(--crop-width)); top: calc(-100% * var(--crop-top) / var(--crop-height)); }
 .screenshot-crop-menu { --source-width: 405; --crop-width: 391; --crop-height: 429; --crop-left: 8; --crop-top: 9; max-width: 360px; border-radius: 22px; }
 .screenshot-crop-website { --source-width: 669; --crop-width: 669; --crop-height: 314; }
