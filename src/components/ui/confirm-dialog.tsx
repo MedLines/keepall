@@ -1,13 +1,14 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { CloseIcon } from "@/app/shell-icons";
 
 type ConfirmDialogProps = {
   open: boolean;
   title: string;
   description: string;
+  children?: ReactNode;
   confirmLabel: string;
   cancelLabel?: string;
   cancelRef?: RefObject<HTMLButtonElement | null>;
@@ -24,6 +25,7 @@ export function ConfirmDialog({
   open,
   title,
   description,
+  children,
   confirmLabel,
   cancelLabel = "Cancel",
   cancelRef,
@@ -73,6 +75,7 @@ export function ConfirmDialog({
               </Dialog.Close>
             </header>
             <div className="flex flex-col gap-4 px-6 py-5">
+              {children}
               {error ? <p className="text-sm text-text-danger" role="alert">{error}</p> : null}
               <div className="flex flex-wrap justify-end gap-2">
                 <Dialog.Close ref={cancelRef} className="ui-control min-h-10 px-4 text-sm font-medium" disabled={busy}>

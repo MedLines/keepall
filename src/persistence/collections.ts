@@ -63,12 +63,13 @@ export async function renameCollection(
   return next;
 }
 
-/** Deletes the collection row and clears that id from every item (Unsorted). */
-export async function deleteCollection(collectionId: string): Promise<void> {
-  return deleteCollections([collectionId]);
+export type CollectionDeleteDestination = "unsorted" | "trash";
+
+export async function deleteCollection(collectionId: string, destination: CollectionDeleteDestination = "unsorted"): Promise<void> {
+  return deleteCollections([collectionId], destination);
 }
 
-export async function deleteCollections(collectionIds: string[]): Promise<void> {
+export async function deleteCollections(collectionIds: string[], destination: CollectionDeleteDestination = "unsorted"): Promise<void> {
   const ids = [...new Set(collectionIds)];
   if (ids.length === 0) return;
   const removed = new Set(ids);
@@ -86,6 +87,7 @@ export async function deleteCollections(collectionIds: string[]): Promise<void> 
       const next: Item = {
         ...item,
         collectionIds: item.collectionIds.filter(id => !removed.has(id)),
+        ...(destination === "trash" && item.deletedAt === undefined ? { deletedAt: now } : {}),
         updatedAt: now,
       };
       await db.items.put(next);

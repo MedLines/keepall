@@ -81,8 +81,8 @@ test("unbroken labels keep dialogs and their actions inside a narrow viewport", 
   await page.getByRole("button", { name: "Organize", exact: true }).click();
   const organizer = page.getByRole("dialog");
   await expect(organizer).toHaveAccessibleName("Organize " + "x".repeat(63) + "…");
-  await expect(organizer.getByRole("combobox", { name: "Move to collection" })).toBeInViewport();
-  await organizer.getByRole("combobox", { name: "Add tag" }).scrollIntoViewIfNeeded();
-  await expect(organizer.getByRole("combobox", { name: "Add tag" })).toBeInViewport();
+  await expect(organizer.getByRole("textbox", { name: "Move to collection" })).toBeInViewport();
+  await organizer.getByRole("textbox", { name: "Add tag" }).scrollIntoViewIfNeeded();
+  await expect(organizer.getByRole("textbox", { name: "Add tag" })).toBeInViewport();
   expect(await organizer.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 });

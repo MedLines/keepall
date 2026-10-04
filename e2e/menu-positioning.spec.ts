@@ -117,15 +117,24 @@ for (const kind of ["collection", "tag"] as const) {
   });
 }
 
-test("organizer suggestions keep their size and position as matches narrow", async ({ page }) => {
+test("organizer choices filter inline and the full picker stays stable", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 560 });
   await page.goto("/items/note");
   await page.getByRole("button", { name: "Organize", exact: true }).click();
-  const field = page.getByRole("combobox", { name: "Add tag", exact: true });
+  const drawer = page.getByRole("dialog", { name: "Organize Menu reference" });
+  const field = drawer.getByRole("textbox", { name: "Add tag", exact: true });
   await field.fill("Tag");
-  const suggestions = page.getByRole("listbox").locator("..");
-  await expect(suggestions).toBeVisible();
-  const before = (await suggestions.boundingBox())!;
+  const before = (await field.boundingBox())!;
   await field.fill("Tag 29");
-  await expectSameBounds(suggestions, before);
+  await expectSameBounds(field, before);
+  await expect(drawer.getByRole("button", { name: "Tag 29", exact: true })).toBeInViewport();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await drawer.getByRole("button", { name: "Browse all tags" }).click();
+  const picker = page.getByRole("dialog", { name: "Choose a tag" });
+  const bounds = (await picker.boundingBox())!;
+  await picker.getByRole("searchbox", { name: "Search tags" }).fill("Tag 29");
+  await expectSameBounds(picker, bounds);
+  await picker.getByRole("button", { name: "Tag 29", exact: true }).click();
+  await expect(drawer.getByRole("button", { name: "Remove tag Tag 29" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("compact-organizer.png") });
 });

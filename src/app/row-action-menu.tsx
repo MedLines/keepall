@@ -8,7 +8,7 @@ import { useRef, useState, type ReactElement, type ReactNode, type RefObject } f
 export function RowActionMenu({ children, trigger, menu, label, disabled, triggerRef, onOpen, finalFocus }: {
   children: (trigger: ReactNode) => ReactElement;
   trigger: ReactElement | null;
-  menu: ReactNode;
+  menu: () => ReactNode;
   label: string;
   disabled?: boolean;
   triggerRef: RefObject<HTMLButtonElement | null>;
@@ -32,7 +32,7 @@ export function RowActionMenu({ children, trigger, menu, label, disabled, trigge
             return (finalFocus ?? triggerRef).current;
           }}
         >
-          {menu}
+          <RowMenuContent renderMenu={menu} />
         </Menu.Popup>
       </Menu.Positioner>
     </Menu.Portal>
@@ -57,4 +57,8 @@ export function RowActionMenu({ children, trigger, menu, label, disabled, trigge
       {popup("start", restoreContextFocus)}
     </ContextMenu.Root>
   );
+}
+
+function RowMenuContent({ renderMenu }: { renderMenu: () => ReactNode }) {
+  return renderMenu();
 }

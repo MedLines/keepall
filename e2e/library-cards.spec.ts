@@ -71,9 +71,9 @@ test("note page shows organization and keeps changes after reload", async ({ pag
   await expect(details.getByRole("link", { name: "minimal" })).toHaveAttribute("href", "/?tag=t");
 
   await page.getByRole("button", { name: "Organize" }).click();
-  await page.getByRole("combobox", { name: "Add tag" }).fill("writing");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(page.getByRole("list", { name: "Current tags" })).toContainText("writing");
+  await page.getByRole("textbox", { name: "Add tag" }).fill("writing");
+  await page.getByRole("textbox", { name: "Add tag" }).press("Enter");
+  await expect(page.getByRole("list", { name: "Selected tags" })).toContainText("writing");
   await page.getByRole("button", { name: "Done" }).click();
   await expect(details.getByRole("link", { name: "writing" })).toBeVisible();
   await page.reload();
@@ -92,7 +92,7 @@ test("note page shows organization and keeps changes after reload", async ({ pag
   await expect(page.getByRole("heading", { level: 1, name: "Design notes" })).toBeVisible();
   await page.getByRole("button", { name: "Move note to Trash" }).click();
   await page.getByRole("button", { name: "Move to Trash" }).click();
-  await expect(page).toHaveURL(/localhost:3100\/$/);
+  await expect(page).toHaveURL(new URL("/", page.url()).href);
   await expect(page.locator(".library-card").filter({ hasText: "Design notes" })).toHaveCount(0);
 });
 
@@ -155,10 +155,10 @@ test("note editor bounds long content and keeps its footer visible", async ({ pa
 
 test("open link with a personal note can be organized", async ({ page }) => {
   await page.goto("/items/link");
-  await expect(page.getByRole("link", { name: /Open source/ })).toHaveAttribute("href", "https://example.com/footer");
+  await expect(page.getByRole("link", { name: "Source link" })).toHaveAttribute("href", "https://example.com/footer");
   await page.getByRole("button", { name: "Organize" }).click();
-  await page.getByRole("combobox", { name: "Add tag" }).fill("reference");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("textbox", { name: "Add tag" }).fill("reference");
+  await page.getByRole("textbox", { name: "Add tag" }).press("Enter");
   await page.getByRole("button", { name: "Done" }).click();
   await expect(page.getByRole("complementary", { name: "Link details" }).getByRole("link", { name: "reference" })).toBeVisible();
   await page.reload();
@@ -890,8 +890,7 @@ test("organizer opens from the side without resizing the card", async ({ page })
   await expect(drawer.getByLabel("Move to collection")).toBeVisible();
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await drawer.getByLabel("Add tag").fill("res");
-  await expect(page.getByRole("listbox")).toBeVisible();
-  await page.keyboard.press("Escape");
+  await expect(drawer.getByRole("list", { name: "Existing tags" })).toContainText("research");
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await expect(drawer).toBeVisible();
 
@@ -900,12 +899,8 @@ test("organizer opens from the side without resizing the card", async ({ page })
   await expect(note.locator("button.library-card-actions")).toBeFocused();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  const sidebarBackdrop = page.getByRole("button", { name: "Close sidebar" });
-  const sidebarBackdropBox = (await sidebarBackdrop.boundingBox())!;
-  await page.mouse.click(
-    sidebarBackdropBox.x + sidebarBackdropBox.width - 8,
-    sidebarBackdropBox.y + sidebarBackdropBox.height / 2,
-  );
+  const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
+  if (await closeNavigation.isVisible()) await closeNavigation.click();
   await note.hover();
   await note.locator("button.library-card-actions").click();
   await page.getByRole("menuitem", { name: "Organize" }).click();
@@ -1014,6 +1009,14 @@ test("selecting a card keeps the library header in place and draws the state ins
 
   const bulkActions = page.getByRole("region", { name: "Bulk actions" });
   await expect(bulkActions).toBeVisible();
+  const chooseAction = async (name: string) => {
+    const inline = bulkActions.getByRole("button", { name, exact: true });
+    if (await inline.isVisible()) await inline.click();
+    else {
+      await bulkActions.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+      await page.getByRole("menuitem", { name, exact: true }).click();
+    }
+  };
   const headerAfter = (await header.boundingBox())!;
   const cardAfter = (await card.boundingBox())!;
   expect(Math.abs(headerAfter.height - headerBefore.height)).toBeLessThanOrEqual(1);
@@ -1023,8 +1026,7 @@ test("selecting a card keeps the library header in place and draws the state ins
   await expect(layoutControls).toBeVisible();
 
   await expect(bulkActions).toHaveCSS("overflow-x", "visible");
-  await bulkActions.getByRole("button", { name: "Selection actions: 1 selected" }).click();
-  await page.getByRole("menuitem", { name: "Organize", exact: true }).click();
+  await chooseAction("Organize");
   const tagDialog = page.getByRole("dialog", {
     name: "Organize 1 selected item",
   });
@@ -1035,32 +1037,25 @@ test("selecting a card keeps the library header in place and draws the state ins
   await expect(tagDialog.getByRole("button", { name: "Done", exact: true })).toBeInViewport();
   await page.screenshot({ path: testInfo.outputPath("bulk-tags-dialog.png") });
   await tagDialog.getByRole("button", { name: "Remove all tags" }).click();
-  await expect(tagDialog.getByText("The selected items have no tags.")).toBeVisible();
+  await expect(tagDialog.getByRole("list", { name: "Selected tags" })).toHaveCount(0);
   expect(Math.abs((await header.boundingBox())!.height - headerAfter.height)).toBeLessThanOrEqual(1);
   expect(Math.abs((await card.boundingBox())!.y - cardAfter.y)).toBeLessThanOrEqual(1);
   await page.keyboard.press("Escape");
   await expect(tagDialog).toBeHidden();
 
-  await bulkActions.getByRole("button", { name: "Selection actions: 1 selected" }).click();
-  await page.getByRole("menuitem", { name: "Organize", exact: true }).click();
+  await chooseAction("Organize");
   const collectionDialog = page.getByRole("dialog", {
     name: "Organize 1 selected item",
   });
   await collectionDialog.getByLabel("Move selection to collection").fill("UI");
-  const collectionOptions = page.getByRole("listbox");
-  await expect(collectionOptions).toBeVisible();
-  expect(await collectionOptions.evaluate(element => element.closest("[role=dialog]") === null)).toBe(true);
-  const optionBounds = (await collectionOptions.boundingBox())!;
-  expect(optionBounds.y).toBeGreaterThanOrEqual(8);
-  expect(optionBounds.y + optionBounds.height).toBeLessThanOrEqual(992);
+  const collectionChoice = collectionDialog.getByRole("button", { name: "UI inspiration", exact: true });
+  await expect(collectionChoice).toBeInViewport();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("bulk-collection-suggestions.png") });
-  await page.keyboard.press("Escape");
-  await expect(collectionOptions).toBeHidden();
   await page.keyboard.press("Escape");
   await expect(collectionDialog).toBeHidden();
 
-  await bulkActions.getByRole("button", { name: "Selection actions: 1 selected" }).click();
-  await page.getByRole("menuitem", { name: "Move to Trash", exact: true }).click();
+  await chooseAction("Move to Trash");
   const deleteDialog = page.getByRole("dialog", {
     name: "Move 1 selected item to Trash",
   });
@@ -1073,7 +1068,7 @@ test("selecting a card keeps the library header in place and draws the state ins
   await expect(card).toHaveCSS("outline-style", "none");
   const lightSelection = await card.evaluate(element => getComputedStyle(element).backgroundColor);
   expect(lightSelection).not.toBe(fillBefore);
-  await expect(card.getByRole("checkbox")).toHaveAttribute("aria-pressed", "true");
+  await expect(card.getByRole("checkbox")).toBeChecked();
   await card.screenshot({ path: testInfo.outputPath("selected-light.png") });
 
   await page.getByRole("button", { name: "Theme", exact: true }).click();
@@ -1607,7 +1602,7 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
   await page.getByRole("button", { name: "Organize" }).click();
   const organizer = page.getByRole("dialog", { name: "Organize Checkout flow" });
   await expect(organizer).toBeInViewport();
-  const organizerTag = organizer.getByRole("list", { name: "Current tags" }).getByRole("listitem");
+  const organizerTag = organizer.getByRole("list", { name: "Selected tags" }).getByRole("listitem");
   for (const control of [
     organizerTag,
     organizer.getByRole("button", { name: "Remove tag minimal" }),

@@ -1,6 +1,6 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { CaptureOrgBrowser } from "./capture-org-browser";
@@ -15,6 +15,15 @@ type Props = {
   tagSuggestions: OrgNameSuggestion[];
   collectionSuggestions: OrgNameSuggestion[];
   disabled: boolean;
+  selection?: {
+    partialTagNames: string[];
+    collectionMixed: boolean;
+    onRemoveAllTags: () => void;
+  };
+  tagInputLabel?: string;
+  collectionInputLabel?: string;
+  tagError?: string | null;
+  collectionError?: string | null;
   onTagInputChange: (value: string) => void;
   onAddTag: (name: string) => void;
   onRemoveTag: (name: string) => void;
@@ -92,13 +101,15 @@ function SectionHeader({
 }: SectionHeaderProps) {
   return (
     <div className="flex min-h-6 items-center justify-between gap-3">
-      <label
-        htmlFor={inputId}
-        className="flex items-center gap-2 text-sm font-semibold text-text-primary"
-      >
-        {kind === "collection" ? <CollectionIcon className="size-4" /> : <HashIcon className="size-4" />}
-        {label}
-      </label>
+      <h3>
+        <label
+          htmlFor={inputId}
+          className="flex items-center gap-2 text-sm font-semibold text-text-primary"
+        >
+          {kind === "collection" ? <CollectionIcon className="size-4" /> : <HashIcon className="size-4" />}
+          {label}
+        </label>
+      </h3>
       {showBrowse ? (
         <button
           className="min-h-7 rounded-control px-2 text-xs font-medium text-text-secondary hover:bg-bg-raised hover:text-text-primary"
@@ -136,7 +147,7 @@ function compactChoices(
 
 type BrowserSlotProps = Pick<
   Props,
-  "collectionName" | "tagNames" | "disabled" | "onSetCollection" | "onAddTag"
+  "collectionName" | "tagNames" | "disabled" | "onSetCollection" | "onAddTag" | "selection"
 > & {
   browserKind: "collection" | "tag" | null;
   collectionSuggestions: OrgNameSuggestion[];
@@ -145,6 +156,7 @@ type BrowserSlotProps = Pick<
 };
 
 function BrowserSlot({
+  selection,
   browserKind,
   collectionName,
   tagNames,
@@ -166,7 +178,7 @@ function BrowserSlot({
       kind={browserKind}
       suggestions={isCollection ? collectionSuggestions : unusedTags}
       selectedNames={
-        isCollection ? (collectionName ? [collectionName] : []) : tagNames
+        isCollection ? (selection?.collectionMixed ? [] : collectionName ? [collectionName] : []) : tagNames.filter(name => !selection?.partialTagNames.includes(name))
       }
       disabled={disabled}
       onChoose={isCollection ? onSetCollection : onAddTag}
@@ -223,6 +235,9 @@ function CreateButton({
 
 type CollectionSectionProps = Pick<
   Props,
+  | "selection"
+  | "collectionInputLabel"
+  | "collectionError"
   | "collectionName"
   | "collectionInput"
   | "collectionSuggestions"
@@ -233,6 +248,9 @@ type CollectionSectionProps = Pick<
 > & { onBrowse: () => void };
 
 function CollectionSection({
+  selection,
+  collectionInputLabel,
+  collectionError,
   collectionName,
   collectionInput,
   collectionSuggestions,
@@ -242,6 +260,7 @@ function CollectionSection({
   onClearCollection,
   onBrowse,
 }: CollectionSectionProps) {
+  const inputId = useId();
   const query = collectionInput.trim();
   const visible = compactChoices(
     collectionSuggestions,
@@ -275,7 +294,7 @@ function CollectionSection({
   return (
     <section className="flex flex-col gap-2 rounded-panel border border-border-control p-3">
       <SectionHeader
-        inputId="capture-add-collection"
+        inputId={inputId}
         label="Collection"
         kind="collection"
         browseLabel="Browse all collections"
@@ -289,7 +308,8 @@ function CollectionSection({
           autoComplete="off"
           className="min-h-7 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-secondary disabled:opacity-60"
           disabled={disabled}
-          id="capture-add-collection"
+          id={inputId}
+          aria-label={collectionInputLabel}
           placeholder={collectionSuggestions.length > 0 ? "Find or create a collection…" : "Collection name"}
           value={collectionInput}
           onChange={(event) => onCollectionInputChange(event.target.value)}
@@ -308,11 +328,11 @@ function CollectionSection({
         <li>
           <button
             className={`${PICK_CHIP} ${
-              collectionName === null ? PICK_CHIP_SELECTED : PICK_CHIP_OUTLINE
+              collectionName === null && !selection?.collectionMixed ? PICK_CHIP_SELECTED : PICK_CHIP_OUTLINE
             }`}
             type="button"
             disabled={disabled}
-            aria-pressed={collectionName === null}
+            aria-pressed={collectionName === null && !selection?.collectionMixed}
             onClick={onClearCollection}
           >
             <span className="truncate">Unsorted</span>
@@ -337,6 +357,7 @@ function CollectionSection({
           </li>
         ))}
       </ul>
+      {selection?.collectionMixed ? <p className="text-xs text-text-secondary">Selected items are in different collections.</p> : null}
       <NoMatches
         query={query}
         totalCount={collectionSuggestions.length}
@@ -344,6 +365,7 @@ function CollectionSection({
       >
         No matching collections.
       </NoMatches>
+      {collectionError ? <p role="alert" className="text-sm text-text-danger">{collectionError}</p> : null}
       <CreateButton query={query} matchesExisting={matchesExisting} kind="collection" disabled={disabled} onCreate={() => {
         onSetCollection(query);
         onCollectionInputChange("");
@@ -352,8 +374,42 @@ function CollectionSection({
   );
 }
 
+function SelectedTag({ name, disabled, selection, onAdd, onRemove }: {
+  name: string;
+  disabled: boolean;
+  selection?: Props["selection"];
+  onAdd: () => void;
+  onRemove: () => void;
+}) {
+  const partial = selection?.partialTagNames.includes(name) ?? false;
+  return (
+    <li className={`${PICK_CHIP} ${PICK_CHIP_SELECTED} pr-0.5`}>
+      {partial ? (
+        <button type="button" className="inline-flex min-h-6 min-w-0 items-center gap-1 text-start disabled:opacity-60"
+          aria-label={`Apply tag ${name} to all selected items`} aria-pressed="mixed" disabled={disabled} onClick={onAdd}>
+          <PlusIcon className="size-3.5 shrink-0" />
+          <span className="max-w-40 truncate">{name}</span>
+          <span className="text-text-secondary">· Some items</span>
+        </button>
+      ) : (
+        <>
+          <HugeiconsIcon icon={Tick02Icon} size={13} strokeWidth={1.5} aria-hidden="true" />
+          <span className="max-w-40 truncate">{name}</span>
+        </>
+      )}
+      <button className="flex size-6 shrink-0 items-center justify-center rounded-control text-text-secondary hover:bg-bg-danger hover:text-text-danger disabled:opacity-60"
+        type="button" disabled={disabled} aria-label={`Remove tag ${name}${selection ? " from selection" : ""}`} onClick={onRemove}>
+        <CloseIcon className="size-4" />
+      </button>
+    </li>
+  );
+}
+
 type TagSectionProps = Pick<
   Props,
+  | "selection"
+  | "tagInputLabel"
+  | "tagError"
   | "tagNames"
   | "tagInput"
   | "tagSuggestions"
@@ -367,6 +423,9 @@ type TagSectionProps = Pick<
 };
 
 function TagSection({
+  selection,
+  tagInputLabel,
+  tagError,
   tagNames,
   tagInput,
   tagSuggestions,
@@ -377,6 +436,7 @@ function TagSection({
   onRemoveTag,
   onBrowse,
 }: TagSectionProps) {
+  const inputId = useId();
   const query = tagInput.trim();
   const visible = compactChoices(unusedTags, tagInput);
   const suggestionsRef = useRef<HTMLUListElement>(null);
@@ -393,7 +453,7 @@ function TagSection({
     if (!query || disabled) {
       return;
     }
-    if (!tagNames.includes(query)) {
+    if (!tagNames.includes(query) || selection?.partialTagNames.includes(query)) {
       onAddTag(query);
     }
     onTagInputChange("");
@@ -402,7 +462,7 @@ function TagSection({
   return (
     <section className="flex flex-col gap-2 rounded-panel border border-border-control p-3">
       <SectionHeader
-        inputId="capture-add-tag"
+        inputId={inputId}
         label="Tags"
         kind="tag"
         browseLabel="Browse all tags"
@@ -416,7 +476,8 @@ function TagSection({
           autoComplete="off"
           className="min-h-7 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-secondary disabled:opacity-60"
           disabled={disabled}
-          id="capture-add-tag"
+          id={inputId}
+          aria-label={tagInputLabel}
           placeholder={tagSuggestions.length > 0 ? "Find or create a tag…" : "Tag name"}
           value={tagInput}
           onChange={(event) => onTagInputChange(event.target.value)}
@@ -426,24 +487,14 @@ function TagSection({
       {tagNames.length > 0 ? (
         <ul className="flex flex-wrap gap-1.5" aria-label="Selected tags">
           {tagNames.map((name) => (
-            <li
-              key={name}
-              className={`${PICK_CHIP} ${PICK_CHIP_SELECTED} pr-0.5`}
-            >
-              <HugeiconsIcon icon={Tick02Icon} size={13} strokeWidth={1.5} aria-hidden="true" />
-              <span className="max-w-40 truncate">{name}</span>
-              <button
-                className="flex size-6 shrink-0 items-center justify-center rounded-control text-text-secondary hover:bg-bg-danger hover:text-text-danger disabled:opacity-60"
-                type="button"
-                disabled={disabled}
-                aria-label={`Remove tag ${name}`}
-                onClick={() => onRemoveTag(name)}
-              >
-                <CloseIcon className="size-4" />
-              </button>
-            </li>
+            <SelectedTag key={name} name={name} disabled={disabled} selection={selection}
+              onAdd={() => onAddTag(name)} onRemove={() => onRemoveTag(name)} />
           ))}
         </ul>
+      ) : null}
+      {selection && tagNames.length > 0 ? (
+        <button type="button" className="min-h-7 self-start text-xs font-medium text-text-danger hover:underline disabled:opacity-60"
+          disabled={disabled} onClick={selection.onRemoveAllTags}>Remove all tags</button>
       ) : null}
       {visible.length > 0 ? (
         <ul ref={suggestionsRef} className="flex max-h-[3.875rem] flex-wrap gap-1.5 overflow-hidden" aria-label="Existing tags">
@@ -464,10 +515,11 @@ function TagSection({
       <NoMatches
         query={query}
         totalCount={tagSuggestions.length}
-        visibleCount={visible.length}
+        visibleCount={visible.length + tagNames.filter(name => name.toLowerCase().includes(query.toLowerCase())).length}
       >
         No matching tags.
       </NoMatches>
+      {tagError ? <p role="alert" className="text-sm text-text-danger">{tagError}</p> : null}
       <CreateButton query={query} matchesExisting={matchesExisting || tagNames.some((name) => name.toLowerCase() === query.toLowerCase())} kind="tag" disabled={disabled} onCreate={() => {
         onAddTag(query);
         onTagInputChange("");
@@ -491,6 +543,9 @@ export function CaptureOrgPanel(props: Props) {
   return (
     <div className="flex flex-col gap-4 py-1">
       <CollectionSection
+        selection={props.selection}
+        collectionInputLabel={props.collectionInputLabel}
+        collectionError={props.collectionError}
         collectionName={props.collectionName}
         collectionInput={props.collectionInput}
         collectionSuggestions={props.collectionSuggestions}
@@ -501,6 +556,9 @@ export function CaptureOrgPanel(props: Props) {
         onBrowse={() => setBrowserKind("collection")}
       />
       <TagSection
+        selection={props.selection}
+        tagInputLabel={props.tagInputLabel}
+        tagError={props.tagError}
         tagNames={props.tagNames}
         tagInput={props.tagInput}
         tagSuggestions={props.tagSuggestions}
@@ -512,11 +570,12 @@ export function CaptureOrgPanel(props: Props) {
         onBrowse={() => setBrowserKind("tag")}
       />
       <BrowserSlot
+        selection={props.selection}
         browserKind={browserKind}
         collectionName={props.collectionName}
         tagNames={props.tagNames}
         collectionSuggestions={props.collectionSuggestions}
-        unusedTags={unusedTags}
+        unusedTags={props.selection ? props.tagSuggestions.filter(entry => !props.tagNames.includes(entry.name) || props.selection?.partialTagNames.includes(entry.name)) : unusedTags}
         disabled={props.disabled}
         onSetCollection={props.onSetCollection}
         onAddTag={props.onAddTag}

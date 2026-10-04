@@ -335,6 +335,7 @@ export function LibraryItem({
       style={placement?.style}
       data-index={placement?.index}
       data-item-id={item.id}
+      data-selection-active={selectionActive || undefined}
       tabIndex={0}
       aria-label={title}
       aria-description="Arrow keys browse in result order. Shift and an arrow selects a range. Space previews. Enter opens the full item."
@@ -343,6 +344,13 @@ export function LibraryItem({
       className={`library-item-root min-w-0 rounded-control-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-border-focus focus-within:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
+      onClickCapture={event => {
+        if (!selectionActive || (event.target as HTMLElement).closest("label[data-visible], [data-item-actions]")) return;
+        if (!event.currentTarget.contains(event.target as Node)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (!mutationBusy) onToggleSelect();
+      }}
     >
       <ItemOrganizerDrawer
         open={organizerOpen}
@@ -485,6 +493,7 @@ export function LibraryItem({
       ) : null}
       <motion.div
         {...chromeMotion}
+        inert={selectionActive}
         hidden={!isList && !hasGridFooter}
         className={
           isList

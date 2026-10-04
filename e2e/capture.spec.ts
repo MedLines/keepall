@@ -151,8 +151,8 @@ test("switching note format does not move collection or tag controls", async ({ 
     const markdown = capture.getByRole("button", { name: "Markdown" });
     const positions = () => capture.evaluate((drawer) => {
       const region = drawer.querySelector('[data-testid="capture-scroll-region"]')!;
-      const collection = drawer.querySelector('#capture-add-collection')!;
-      const tags = drawer.querySelector('#capture-add-tag')!;
+      const collection = Array.from(drawer.querySelectorAll("label")).find(label => label.textContent?.trim() === "Collection")!.control!;
+      const tags = Array.from(drawer.querySelectorAll("label")).find(label => label.textContent?.trim() === "Tags")!.control!;
       const y = (element: Element) => Math.round(element.getBoundingClientRect().top - region.getBoundingClientRect().top + region.scrollTop);
       return { collection: y(collection), tags: y(tags) };
     });

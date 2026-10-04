@@ -67,7 +67,7 @@ export function ItemContextMenu({
       triggerRef={triggerRef}
       onOpen={() => { openingDialog.current = false; onOpen?.(); }}
       finalFocus={() => openingDialog.current ? false : triggerRef.current ?? true}
-      menu={trashActions ? <>
+      menu={() => trashActions ? <>
         <Menu.Item className={MENU_ITEM} disabled={busy} onClick={() => openDialog(trashActions.onRestore)}><ArrowRightIcon className="size-4" /><span className="leading-none">Restore</span></Menu.Item>
         <Menu.Separator className="my-1 border-t border-border-edge" />
         <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger data-[disabled]:opacity-50" disabled={busy} onClick={() => openDialog(trashActions.onDelete)}><DeleteIcon className="size-4" /><span className="leading-none">Delete permanently</span></Menu.Item>

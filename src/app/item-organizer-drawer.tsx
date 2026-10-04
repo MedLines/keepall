@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, useState } from "react";
-import { OrganizerDrawer, OrganizerTagChip } from "./organizer-drawer";
-import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
+import { useState } from "react";
+import { OrganizerDrawer } from "./organizer-drawer";
+import { CaptureOrgPanel } from "./capture-org-panel";
+import type { OrgNameSuggestion } from "./org-name-suggest";
 
 type NamedEntry = { id: string; name: string };
 
@@ -47,7 +48,6 @@ export function ItemOrganizerDrawer({
 }: ItemOrganizerDrawerProps) {
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
-  const id = useId();
 
   return (
     <OrganizerDrawer
@@ -55,65 +55,35 @@ export function ItemOrganizerDrawer({
       title={`Organize ${itemTitle}`}
       description="Move this item to a collection or add tags. Changes apply immediately."
       disabled={disabled}
-      tags={<>
-        {tags.length > 0 ? (
-          <ul className="mb-4 flex flex-wrap gap-2" aria-label="Current tags">
-            {tags.map((tag) => (
-              <OrganizerTagChip key={tag.id} name={tag.name} disabled={disabled} onRemove={() => onRemoveTag(tag.id)} />
-            ))}
-          </ul>
-        ) : (
-          <p className="mb-4 text-sm text-text-secondary">No tags added.</p>
-        )}
-        <OrgNameSuggest
-          embedded
-          inputId={`${id}-add-tag`}
-          label="Add tag"
-          placeholder="Search or create a tag"
-          value={tagDraft}
-          suggestions={tagSuggestions}
-          disabled={disabled}
-          pending={pendingTag}
-          error={tagError}
-          suggestWhenEmpty={false}
-          onChange={setTagDraft}
-          onSubmit={(name) => {
-            onAddTag(name);
-            setTagDraft("");
-          }}
-        />
-      </>}
-      collection={<>
-        <p className="mb-4 text-sm text-text-secondary">
-          {collections.length > 0
-            ? `Currently in ${collections.map((entry) => entry.name).join(", ")}.`
-            : "Currently unsorted."}
-        </p>
-        <OrgNameSuggest
-          embedded
-          inputId={`${id}-add-collection`}
-          label="Move to collection"
-          placeholder="Search or create a collection"
-          value={collectionDraft}
-          suggestions={collectionSuggestions}
-          disabled={disabled}
-          pending={pendingCollection}
-          submitLabel="Move"
-          error={collectionError}
-          suggestWhenEmpty={false}
-          onChange={setCollectionDraft}
-          onSubmit={(name) => {
-            onMoveToCollection(name);
-            setCollectionDraft("");
-          }}
-        />
-        {collections.length > 0 ? (
-          <button type="button" className="ui-control mt-4 inline-flex min-h-10 items-center px-3 text-sm disabled:opacity-60"
-            disabled={disabled || pendingCollection} onClick={onMoveToUnsorted}>
-            {pendingCollection ? "Moving…" : "Move to Unsorted"}
-          </button>
-        ) : null}
-      </>}
-    />
+    >
+      <CaptureOrgPanel
+        tagNames={tags.map((tag) => tag.name)}
+        tagInput={tagDraft}
+        tagInputLabel="Add tag"
+        collectionName={collections[0]?.name ?? null}
+        collectionInput={collectionDraft}
+        collectionInputLabel="Move to collection"
+        tagSuggestions={tagSuggestions}
+        collectionSuggestions={collectionSuggestions}
+        disabled={disabled || pendingTag || pendingCollection}
+        tagError={tagError}
+        collectionError={collectionError}
+        onTagInputChange={setTagDraft}
+        onCollectionInputChange={setCollectionDraft}
+        onAddTag={(name) => {
+          onAddTag(name);
+          setTagDraft("");
+        }}
+        onRemoveTag={(name) => {
+          const tag = tags.find((entry) => entry.name === name);
+          if (tag) onRemoveTag(tag.id);
+        }}
+        onSetCollection={(name) => {
+          onMoveToCollection(name);
+          setCollectionDraft("");
+        }}
+        onClearCollection={onMoveToUnsorted}
+      />
+    </OrganizerDrawer>
   );
 }

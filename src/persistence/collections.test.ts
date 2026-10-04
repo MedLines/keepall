@@ -171,6 +171,34 @@ describe("collections persistence", () => {
     expect((await getDb().preferences.get("library"))?.pinnedCollectionIds).toEqual([keep.id]);
   });
 
+  test.each([false, true])("deleting folders can move all their active contents to Trash, bulk=%s", async (bulk) => {
+    const a = await createCollection({ name: "A" });
+    const b = await createCollection({ name: "B" });
+    const keep = await createCollection({ name: "Keep" });
+    const first = await createNote({ content: "First" });
+    const second = await createNote({ content: "Second" });
+    const trashed = await createNote({ content: "Already trashed" });
+    const unrelated = await createNote({ content: "Unrelated" });
+    await assignCollectionToItem(first.id, a.id);
+    await assignCollectionToItem(second.id, b.id);
+    await assignCollectionToItem(trashed.id, a.id);
+    await assignCollectionToItem(unrelated.id, keep.id);
+    await getDb().items.update(first.id, { tagIds: ["tag"] });
+    await getDb().items.update(trashed.id, { deletedAt: 10 });
+    await getDb().preferences.put({ id: "library", pinnedCollectionIds: [a.id, keep.id] });
+
+    if (bulk) await deleteCollections([a.id, b.id, a.id], "trash");
+    else await deleteCollection(a.id, "trash");
+
+    expect(await getDb().items.get(first.id)).toMatchObject({ collectionIds: [], tagIds: ["tag"], deletedAt: expect.any(Number) });
+    expect(await getDb().items.get(trashed.id)).toMatchObject({ collectionIds: [], deletedAt: 10 });
+    expect(await getDb().items.get(unrelated.id)).toMatchObject({ collectionIds: [keep.id] });
+    expect((await getDb().items.get(unrelated.id))?.deletedAt).toBeUndefined();
+    expect((await getDb().items.get(second.id))?.deletedAt).toEqual(bulk ? expect.any(Number) : undefined);
+    expect((await listCollections()).map(collection => collection.id)).toEqual(bulk ? [keep.id] : [b.id, keep.id]);
+    expect((await getDb().preferences.get("library"))?.pinnedCollectionIds).toEqual([keep.id]);
+  });
+
   test("a missing folder cancels bulk deletion without changing any items", async () => {
     const collection = await createCollection({ name: "Reading" });
     const note = await createNote({ content: "Keep" });

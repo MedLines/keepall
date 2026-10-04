@@ -53,6 +53,17 @@ async function verifyAndCancel(page: Page, action: string) {
   await expect(dialog).toBeHidden();
 }
 
+async function bulkAction(page: Page, action: string) {
+  const bulk = page.getByRole("region", { name: "Bulk actions" });
+  const menu = bulk.getByRole("button", { name: /Selection actions:/ });
+  if (await menu.isVisible()) {
+    await menu.click();
+    await page.getByRole("menuitem", { name: action, exact: true }).click();
+  } else {
+    await bulk.getByRole("button", { name: action, exact: true }).click();
+  }
+}
+
 test("cards, bulk actions, folders, tags, and Trash share the same confirmation order", async ({ page }, testInfo) => {
   const note = page.locator('[data-item-id="note"]');
   for (const layout of ["Grid", "List"]) {
@@ -70,13 +81,11 @@ test("cards, bulk actions, folders, tags, and Trash share the same confirmation 
     await note.hover();
     await note.locator("[data-selection-indicator]").click();
     const bulk = page.getByRole("region", { name: "Bulk actions" });
-    await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
-    await page.getByRole("menuitem", { name: "Move to Trash", exact: true }).click();
+    await bulkAction(page, "Move to Trash");
     await page.screenshot({ path: testInfo.outputPath(`bulk-trash-${layout.toLowerCase()}.png`) });
     await verifyAndCancel(page, "Move to Trash");
     await expect(bulk).toContainText("1 selected");
-    await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
-    await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
+    await bulkAction(page, "Deselect all");
   }
   for (const [name, action] of [["Folder", "Delete collection"], ["Research", "Delete tag"]]) {
     await page.getByRole("button", { name: `${name} actions`, exact: true }).click();
@@ -90,12 +99,9 @@ test("cards, bulk actions, folders, tags, and Trash share the same confirmation 
   await verifyAndCancel(page, "Delete permanently");
   await trashed.hover();
   await trashed.locator("[data-selection-indicator]").click();
-  const bulk = page.getByRole("region", { name: "Bulk actions" });
-  await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
-  await page.getByRole("menuitem", { name: "Delete permanently", exact: true }).click();
+  await bulkAction(page, "Delete permanently");
   await verifyAndCancel(page, "Delete permanently");
-  await bulk.getByRole("button", { name: "Selection actions: 1 selected" }).click();
-  await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
+  await bulkAction(page, "Deselect all");
   await page.getByRole("button", { name: "Empty Trash", exact: true }).click();
   await verifyAndCancel(page, "Empty Trash");
   await expect(trashed).toBeVisible();

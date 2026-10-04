@@ -118,8 +118,8 @@ test("bulk organization exposes tags and collections together with Done", () => 
     onBulkAddTag={vi.fn()} onBulkRemoveTag={vi.fn()} onBulkRemoveAllTags={vi.fn()} onBulkAddCollection={vi.fn()} onBulkClearCollection={vi.fn()}
   />);
   const dialog = screen.getByRole("dialog", { name: "Organize 2 selected items" });
-  expect(within(dialog).getByRole("combobox", { name: "Add tag to selection" })).toBeVisible();
-  expect(within(dialog).getByRole("combobox", { name: "Move selection to collection" })).toBeVisible();
+  expect(within(dialog).getByRole("textbox", { name: "Add tag to selection" })).toBeVisible();
+  expect(within(dialog).getByRole("textbox", { name: "Move selection to collection" })).toBeVisible();
   fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
   expect(onClosePanel).toHaveBeenCalledOnce();
 });
@@ -148,9 +148,52 @@ test("bulk Unsorted action works independently of name input and shows disabled 
   const props = { count: 2, hiddenCount: 1, panel: "organize" as const, busy: false, error: null, tagDraft: "", collectionDraft: "", tagSuggestions: [], removeTagSuggestions: [], collectionSuggestions: [], pendingAddTag: false, pendingRemoveTag: false, pendingAddCollection: false, pendingClearCollection: false, pendingDelete: false, onClosePanel: vi.fn(), onConfirmDelete: vi.fn(), onTagDraftChange: vi.fn(), onCollectionDraftChange: vi.fn(), onBulkAddTag: vi.fn(), onBulkRemoveTag: vi.fn(), onBulkRemoveAllTags: vi.fn(), onBulkAddCollection: vi.fn(), onBulkClearCollection };
   const { rerender } = render(<LibraryBulkPanels {...props} />);
   expect(screen.getByRole("dialog")).toHaveTextContent("including 1 hidden");
-  fireEvent.click(screen.getByRole("button", { name: "Move selection to Unsorted" }));
+  fireEvent.click(screen.getByRole("button", { name: "Unsorted" }));
   expect(onBulkClearCollection).toHaveBeenCalledOnce();
   expect(props.onBulkAddCollection).not.toHaveBeenCalled();
   rerender(<LibraryBulkPanels {...props} busy pendingClearCollection />);
-  expect(screen.getByRole("button", { name: "Moving…" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Unsorted" })).toBeDisabled();
+});
+
+
+test("bulk chips distinguish mixed membership and apply a partial tag to every selected item", () => {
+  const onBulkAddTag = vi.fn();
+  const onBulkRemoveTag = vi.fn();
+  const onBulkRemoveAllTags = vi.fn();
+  const onBulkAddCollection = vi.fn();
+  const props = {
+    count: 2, panel: "organize" as const, busy: false, error: null,
+    tagDraft: "Work", collectionDraft: "", collectionName: null, collectionMixed: true,
+    partialTagNames: ["Work"],
+    tagSuggestions: [{ id: "work", name: "Work" }, { id: "ref", name: "Reference" }],
+    removeTagSuggestions: [{ id: "work", name: "Work" }, { id: "ref", name: "Reference" }],
+    collectionSuggestions: [{ id: "read", name: "Reading" }],
+    pendingAddTag: false, pendingRemoveTag: false, pendingAddCollection: false,
+    pendingClearCollection: false, pendingDelete: false,
+    onClosePanel: vi.fn(), onConfirmDelete: vi.fn(),
+    onTagDraftChange: vi.fn(), onCollectionDraftChange: vi.fn(),
+    onBulkAddTag, onBulkRemoveTag, onBulkRemoveAllTags, onBulkAddCollection,
+    onBulkClearCollection: vi.fn(),
+  };
+  render(<LibraryBulkPanels {...props} />);
+  expect(screen.getByText("Selected items are in different collections.")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Unsorted" })).toHaveAttribute("aria-pressed", "false");
+  const partialTag = screen.getByRole("button", { name: "Apply tag Work to all selected items" });
+  expect(partialTag).toHaveAttribute("aria-pressed", "mixed");
+  expect(screen.queryByText("No matching tags.")).not.toBeInTheDocument();
+  fireEvent.click(partialTag);
+  fireEvent.keyDown(screen.getByRole("textbox", { name: "Add tag to selection" }), { key: "Enter" });
+  expect(onBulkAddTag).toHaveBeenCalledTimes(2);
+  expect(onBulkAddTag).toHaveBeenCalledWith("Work");
+  fireEvent.click(screen.getByRole("button", { name: "Remove tag Work from selection" }));
+  expect(onBulkRemoveTag).toHaveBeenCalledWith("Work");
+  fireEvent.click(screen.getByRole("button", { name: "Remove all tags" }));
+  expect(onBulkRemoveAllTags).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: "Reading" }));
+  expect(onBulkAddCollection).toHaveBeenCalledWith("Reading");
+  fireEvent.click(screen.getByRole("button", { name: "Browse all tags" }));
+  const picker = screen.getByRole("dialog", { name: "Choose a tag" });
+  expect(within(picker).queryByRole("button", { name: "Reference" })).not.toBeInTheDocument();
+  fireEvent.click(within(picker).getByRole("button", { name: "Work" }));
+  expect(onBulkAddTag).toHaveBeenCalledTimes(3);
 });

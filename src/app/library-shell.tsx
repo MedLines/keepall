@@ -1080,7 +1080,7 @@ function SidebarRowMenu({
     <RowActionMenu trigger={trigger} label={actionsLabel} disabled={mutationBusy} triggerRef={triggerRef}
       onOpen={() => { openingDialog.current = false; }}
       finalFocus={() => openingDialog.current ? false : triggerRef.current}
-      menu={
+      menu={() =>
         <>
           {onTogglePin ? (
             <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onTogglePin}>

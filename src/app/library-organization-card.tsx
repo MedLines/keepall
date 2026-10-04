@@ -29,13 +29,21 @@ export function LibraryOrganizationCard({ entry: { organization, count, previews
       label={`Actions for ${organization.name}`}
       trigger={<button type="button" aria-label={`${organization.name} actions`} className="organization-actions library-card-actions library-card-media-chrome absolute end-4 top-4 z-30 flex size-11 items-center justify-center"><MoreIcon className="size-4" /></button>} triggerRef={triggerRef}
       disabled={busy}
-      menu={<>
+      menu={() => <>
         <Menu.Item className="ui-menu-item flex items-center gap-2 text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active" render={<a href={href} target="_blank" rel="noopener noreferrer" />}><LinkIcon />Open in new tab</Menu.Item>
         <Menu.Separator className="my-1 border-t border-border-edge" />
         <Menu.Item className="ui-menu-item flex items-center gap-2 text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger" disabled={busy} onClick={onDelete}><DeleteIcon />Delete {folder ? "folder" : "tag"}</Menu.Item>
       </>}
     >
-      {trigger => <li className="organization-card library-card relative min-w-0" data-kind={kind} data-selected={selected} data-selection-active={selectionActive}>
+      {trigger => <li className="organization-card library-card relative min-w-0" data-kind={kind} data-selected={selected} data-selection-active={selectionActive}
+        onClickCapture={event => {
+          if (!selectionActive || (event.target as HTMLElement).closest("label[data-visible], .organization-actions-container")) return;
+          if (!event.currentTarget.contains(event.target as Node)) return;
+          event.preventDefault();
+          event.stopPropagation();
+          if (!busy) onToggleSelect();
+        }}
+      >
         <LibrarySelectionControl label={`Select ${organization.name}`} className="organization-select library-card-media-chrome absolute start-4 top-4 z-20 flex size-11 items-center justify-center" visible={selected || selectionActive} selected={selected} disabled={busy} onToggle={onToggleSelect} />
         {trigger ? <span className="organization-actions-container">{trigger}</span> : null}
         <a

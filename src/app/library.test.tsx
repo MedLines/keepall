@@ -967,11 +967,12 @@ describe("Library tags", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Add tag")).toBeInTheDocument();
     expect(screen.getByLabelText("Move to collection")).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "inspiration" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "inspiration" })).toBeVisible();
     fireEvent.change(screen.getByLabelText("Add tag"), { target: { value: "in" } });
-    expect(screen.getByRole("option", { name: "inspiration" })).toBeInTheDocument();
-    fireEvent.keyDown(screen.getByLabelText("Add tag"), { key: "Escape" });
-    expect(screen.queryByRole("option", { name: "inspiration" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "inspiration" })).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Add tag"), { target: { value: "no match" } });
+    expect(screen.queryByRole("button", { name: "inspiration" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create tag “no match”" })).toBeVisible();
   });
 
   test("adds a tag to an item and shows the name after reload", async () => {
@@ -991,7 +992,7 @@ describe("Library tags", () => {
     fireEvent.change(screen.getByLabelText("Add tag"), {
       target: { value: "inspiration" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.keyDown(screen.getByLabelText("Add tag"), { key: "Enter" });
 
     await waitFor(() => {
       expect(createTag).toHaveBeenCalledWith({ name: "inspiration" });
@@ -1187,7 +1188,7 @@ describe("Library collections", () => {
     fireEvent.change(screen.getByLabelText("Move to collection"), {
       target: { value: "Reading" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Move" }));
+    fireEvent.keyDown(screen.getByLabelText("Move to collection"), { key: "Enter" });
 
     await waitFor(() => {
       expect(createCollection).toHaveBeenCalledWith({ name: "Reading" });
@@ -1262,7 +1263,7 @@ describe("Library collections", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete collection" }));
 
     await waitFor(() => {
-      expect(deleteCollection).toHaveBeenCalledWith("c1");
+      expect(deleteCollection).toHaveBeenCalledWith("c1", "unsorted");
     });
     expect(mockNavigation.push).toHaveBeenCalledWith("/", { scroll: false });
     expect(await screen.findByText("A persisted note")).toBeInTheDocument();
@@ -1512,10 +1513,8 @@ describe("Library view state", () => {
       target: { value: "work" },
     });
     const tagInput = screen.getByLabelText("Add tag to selection");
-    const tagOption = screen.getByRole("option", { name: "work" });
-    expect(tagInput).toHaveAttribute("aria-controls", tagOption.closest("ul")?.id);
-    expect(tagOption).toHaveAttribute("aria-selected", "true");
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Add" }));
+    expect(screen.getByRole("button", { name: "Apply tag work to all selected items" })).toHaveAttribute("aria-pressed", "mixed");
+    fireEvent.keyDown(tagInput, { key: "Enter" });
 
     await waitFor(() => {
       expect(createTag).toHaveBeenCalledWith({ name: "work" });
@@ -1594,8 +1593,8 @@ describe("Library view state", () => {
     render(<Library />);
     await screen.findByText("A persisted note");
     await clickItemAction("Organize");
-    fireEvent.click(screen.getByRole("button", { name: "Move to Unsorted" }));
-    expect(await screen.findByText("Currently unsorted.")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Unsorted" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Unsorted" })).toHaveAttribute("aria-pressed", "true"));
     expect(screen.getByRole("dialog")).toHaveTextContent("Reference");
     expect(clearCollectionOnItem).toHaveBeenCalledExactlyOnceWith("n1");
     expect(createCollection).not.toHaveBeenCalled();
@@ -1622,11 +1621,11 @@ describe("Library view state", () => {
       fireEvent.click(within(bulk).getByRole("button", { name: "Selection actions: 1 selected" }));
     }
     fireEvent.click(screen.getByRole("menuitem", { name: "Organize" }));
-    fireEvent.click(screen.getByRole("button", { name: "Move selection to Unsorted" }));
-    expect(screen.getByRole("button", { name: "Moving…" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Unsorted" }));
+    expect(screen.getByRole("button", { name: "Unsorted" })).toBeDisabled();
     expect(await screen.findByText("Couldn't move the selection to Unsorted.")).toBeVisible();
     const before = vi.mocked(listItems).mock.calls.length;
-    fireEvent.click(screen.getByRole("button", { name: "Move selection to Unsorted" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unsorted" }));
     await waitFor(() => expect(listItems).toHaveBeenCalledTimes(before + 1));
     expect(clearCollectionsOnItems).toHaveBeenLastCalledWith(clearHidden ? ["n1"] : ["n1", "l2"]);
     expect(screen.getByRole("dialog")).toHaveAccessibleName(`Organize ${clearHidden ? "1 selected item" : "2 selected items"}`);
@@ -1875,6 +1874,22 @@ describe("Library inspect", () => {
     vi.mocked(listCollections).mockResolvedValue([]);
     vi.mocked(createCollection).mockReset();
     vi.mocked(assignCollectionToItem).mockReset();
+  });
+
+  test("legacy item details open the shared organizer instead of separate add forms", async () => {
+    const link = buildLink({ title: "Reference link", url: "https://example.com" }, { id: "legacy-link", now: 1 });
+    vi.mocked(listItems).mockResolvedValue([link]);
+    mockNavigation.push("/?item=legacy-link");
+    render(<Library />);
+    const detail = await screen.findByRole("dialog", { name: "Reference link" });
+    expect(within(detail).queryByRole("combobox")).not.toBeInTheDocument();
+    fireEvent.click(within(detail).getByRole("button", { name: "Organize" }));
+    const organizer = await screen.findByRole("dialog", { name: "Organize Reference link" });
+    expect(within(organizer).getByRole("textbox", { name: "Add tag" })).toBeVisible();
+    expect(within(organizer).getByRole("textbox", { name: "Move to collection" })).toBeVisible();
+    fireEvent.click(within(organizer).getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Organize Reference link" })).not.toBeInTheDocument());
+    expect(detail).toBeVisible();
   });
 
   test("toolbar and item menus share a preview of the current results", async () => {

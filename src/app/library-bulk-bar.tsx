@@ -2,9 +2,10 @@
 
 import { Menu } from "@base-ui/react/menu";
 import { useLayoutEffect, useRef, useState } from "react";
-import { OrganizerDrawer, OrganizerTagChip } from "./organizer-drawer";
+import { OrganizerDrawer } from "./organizer-drawer";
+import { CaptureOrgPanel } from "./capture-org-panel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
+import type { OrgNameSuggestion } from "./org-name-suggest";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 import { ChevronDownIcon, SelectionCheckedIcon } from "./shell-icons";
 
@@ -25,6 +26,9 @@ export type LibraryBulkBarProps = {
   tagSuggestions: OrgNameSuggestion[];
   removeTagSuggestions: OrgNameSuggestion[];
   collectionSuggestions: OrgNameSuggestion[];
+  collectionName?: string | null;
+  collectionMixed?: boolean;
+  partialTagNames?: string[];
   pendingAddTag: boolean;
   pendingRemoveTag: boolean;
   pendingAddCollection: boolean;
@@ -232,6 +236,9 @@ type PanelsProps = Pick<
   | "tagSuggestions"
   | "removeTagSuggestions"
   | "collectionSuggestions"
+  | "collectionName"
+  | "collectionMixed"
+  | "partialTagNames"
   | "pendingAddTag"
   | "pendingRemoveTag"
   | "pendingAddCollection"
@@ -272,6 +279,9 @@ export function LibraryBulkPanels({
   tagSuggestions,
   removeTagSuggestions,
   collectionSuggestions,
+  collectionName = null,
+  collectionMixed = false,
+  partialTagNames = [],
   pendingAddTag,
   pendingRemoveTag,
   pendingAddCollection,
@@ -313,66 +323,26 @@ export function LibraryBulkPanels({
       disabled={busy}
       error={error}
       onOpenChange={(open) => { if (!open) onClosePanel(); }}
-      tags={
-        <div className="flex flex-col gap-6">
-
-          {removeTagSuggestions.length > 0 ? (
-            <section aria-labelledby="bulk-current-tags">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 id="bulk-current-tags" className="text-sm font-medium text-text-primary">Tags on the selection</h3>
-                <button className="text-sm font-medium text-text-danger hover:underline disabled:opacity-60" type="button" disabled={busy} onClick={onBulkRemoveAllTags}>
-                  {pendingRemoveTag ? "Removing…" : "Remove all tags"}
-                </button>
-              </div>
-              <ul className="flex flex-wrap gap-2" aria-label="Tags on selected items">
-                {removeTagSuggestions.map((tag) => (
-                  <OrganizerTagChip key={tag.id} name={tag.name} disabled={busy}
-                    removeLabel={`Remove tag ${tag.name} from selection`} onRemove={() => onBulkRemoveTag(tag.name)} />
-                ))}
-              </ul>
-            </section>
-          ) : (
-            <p className="text-sm text-text-secondary">The selected items have no tags.</p>
-          )}
-          <OrgNameSuggest
-            embedded
-            inputId="bulk-add-tag"
-            label="Add tag to selection"
-            placeholder="Search or create a tag"
-            value={tagDraft}
-            suggestions={tagSuggestions}
-            disabled={busy}
-            pending={pendingAddTag}
-            submitLabel="Add"
-            suggestWhenEmpty={false}
-            onChange={onTagDraftChange}
-            onSubmit={onBulkAddTag}
-          />
-        </div>
-      }
-      collection={
-        <div>
-          <OrgNameSuggest
-            embedded
-            inputId="bulk-add-collection"
-            label="Move selection to collection"
-            placeholder="Search or create a collection"
-            value={collectionDraft}
-            suggestions={collectionSuggestions}
-            disabled={busy}
-            pending={pendingAddCollection}
-            submitLabel="Move"
-            suggestWhenEmpty={false}
-            onChange={onCollectionDraftChange}
-            onSubmit={onBulkAddCollection}
-          />
-          <button type="button" className="ui-control mt-4 inline-flex min-h-10 items-center px-3 text-sm disabled:opacity-60"
-            disabled={busy || count === 0} onClick={onBulkClearCollection}>
-            {pendingClearCollection ? "Moving…" : "Move selection to Unsorted"}
-          </button>
-        </div>
-      }
-    />
+    >
+      <CaptureOrgPanel
+        collectionName={collectionName}
+        collectionInput={collectionDraft}
+        collectionInputLabel="Move selection to collection"
+        collectionSuggestions={collectionSuggestions}
+        tagNames={removeTagSuggestions.map(tag => tag.name)}
+        tagInput={tagDraft}
+        tagInputLabel="Add tag to selection"
+        tagSuggestions={tagSuggestions}
+        selection={{ partialTagNames, collectionMixed, onRemoveAllTags: onBulkRemoveAllTags }}
+        disabled={busy || count === 0 || pendingAddTag || pendingRemoveTag || pendingAddCollection || pendingClearCollection}
+        onTagInputChange={onTagDraftChange}
+        onCollectionInputChange={onCollectionDraftChange}
+        onAddTag={onBulkAddTag}
+        onRemoveTag={onBulkRemoveTag}
+        onSetCollection={onBulkAddCollection}
+        onClearCollection={onBulkClearCollection}
+      />
+    </OrganizerDrawer>
   );
 }
 

@@ -7,6 +7,7 @@ import {
   useReducedMotion,
 } from "motion/react";
 import { cardSecondaryLine } from "@/domain/card-display";
+import { itemActionLabel } from "@/domain/item-label";
 import { clampImageSlideIndex } from "@/domain/image";
 import { itemListTitle, type Item } from "@/domain/item";
 import { linkCanManualPreviewFetch } from "@/domain/preview-enrich";
@@ -14,7 +15,9 @@ import { itemMediaLayoutId } from "@/domain/library-view";
 import { LibraryItemMedia } from "./library-item-media";
 import { ItemTagChips } from "./item-tag-chips";
 import type { PendingMutation } from "./library-item";
-import { OrgNameSuggest, type OrgNameSuggestion } from "./org-name-suggest";
+import type { OrgNameSuggestion } from "./org-name-suggest";
+import { ItemOrganizerDrawer } from "./item-organizer-drawer";
+import { LayersIcon } from "./shell-icons";
 import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
 import { NoteContent } from "./note-content";
 import { NoteEditor } from "./note-editor";
@@ -65,6 +68,7 @@ type Props = {
   onAddTag: (name: string) => void;
   onRemoveTag: (tagId: string) => void;
   onAddCollection: (name: string) => void;
+  onClearCollection: () => void;
   onBrowseTag: (tagId: string) => void;
   onStartEdit: () => void;
   onStartDelete: () => void;
@@ -115,6 +119,7 @@ export function LibraryInspect({
   onAddTag,
   onRemoveTag,
   onAddCollection,
+  onClearCollection,
   onBrowseTag,
   onStartEdit,
   onStartDelete,
@@ -131,13 +136,15 @@ export function LibraryInspect({
   const [fetchingPreview, setFetchingPreview] = useState(false);
   const addImageInputRef = useRef<HTMLInputElement>(null);
   const replaceImageInputRef = useRef<HTMLInputElement>(null);
-  const [tagDraft, setTagDraft] = useState("");
-  const [collectionDraft, setCollectionDraft] = useState("");
+  const [organizerOpen, setOrganizerOpen] = useState(false);
+  const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
 
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const onSlideChangeRef = useRef(onSlideChange);
-  onSlideChangeRef.current = onSlideChange;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    onSlideChangeRef.current = onSlideChange;
+  }, [onClose, onSlideChange]);
 
   const imageSlide =
     item?.type === "image"
@@ -147,12 +154,18 @@ export function LibraryInspect({
     item?.type === "image" ? (item.assetIds[imageSlide] ?? null) : null;
   const imageSlideCount = item?.type === "image" ? item.assetIds.length : 0;
 
+  const inspectItemId = item?.id;
   useEffect(() => {
-    if (!item) {
-      return;
-    }
+    if (!inspectItemId) return;
     const previous = document.activeElement as HTMLElement | null;
     panelRef.current?.focus();
+    return () => { previous?.focus?.(); };
+  }, [inspectItemId]);
+
+  useEffect(() => {
+    if (!item || organizerOpen) {
+      return;
+    }
     const currentItem = item;
 
     function onKeyDown(event: globalThis.KeyboardEvent) {
@@ -180,26 +193,10 @@ export function LibraryInspect({
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      previous?.focus?.();
     };
-  }, [item, imageSlide, imageSlideCount, editing, pendingDelete]);
-
-  useEffect(() => {
-    setTagDraft("");
-    setCollectionDraft("");
-  }, [item?.id]);
+  }, [item, imageSlide, imageSlideCount, editing, pendingDelete, organizerOpen]);
 
   const open = item !== null;
-  const availableTagSuggestions =
-    item === null
-      ? []
-      : tagSuggestions.filter((entry) => !item.tagIds.includes(entry.id));
-  const availableCollectionSuggestions =
-    item === null
-      ? []
-      : collectionSuggestions.filter(
-          (entry) => !item.collectionIds.includes(entry.id),
-        );
   const title = item ? itemListTitle(item) : "";
   const typeLabel = item
     ? item.type === "link"
@@ -476,57 +473,33 @@ export function LibraryInspect({
                     </div>
                   ) : null}
 
-                  <div className="mt-4 max-w-md">
-                    <OrgNameSuggest
-                      inputId={`inspect-add-collection-${item.id}`}
-                      label="Add to collection"
-                      value={collectionDraft}
-                      suggestions={availableCollectionSuggestions}
-                      disabled={mutationBusy}
-                      pending={
-                        pendingMutation?.op === "assign-collection" &&
-                        pendingMutation.id === item.id
-                      }
-                      submitLabel={
-                        pendingMutation?.op === "assign-collection" &&
-                        pendingMutation.id === item.id
-                          ? "Adding…"
-                          : "Add to collection"
-                      }
-                      error={collectionError}
-                      onChange={setCollectionDraft}
-                      onSubmit={(name) => {
-                        onAddCollection(name);
-                        setCollectionDraft("");
-                      }}
-                    />
-                  </div>
-
-                  <div className="mt-3 max-w-md">
-                    <OrgNameSuggest
-                      inputId={`inspect-add-tag-${item.id}`}
-                      label="Add tag"
-                      value={tagDraft}
-                      suggestions={availableTagSuggestions}
-                      disabled={mutationBusy}
-                      pending={
-                        pendingMutation?.op === "assign-tag" &&
-                        pendingMutation.id === item.id
-                      }
-                      submitLabel={
-                        pendingMutation?.op === "assign-tag" &&
-                        pendingMutation.id === item.id
-                          ? "Adding…"
-                          : "Add tag"
-                      }
-                      error={tagError}
-                      onChange={setTagDraft}
-                      onSubmit={(name) => {
-                        onAddTag(name);
-                        setTagDraft("");
-                      }}
-                    />
-                  </div>
+                  <button type="button" className="ui-control mt-4 inline-flex min-h-10 items-center gap-2 px-3 text-sm font-medium disabled:opacity-60"
+                    disabled={mutationBusy} onClick={() => {
+                      setOrganizerSide(document.documentElement.dir === "rtl" ? "left" : "right");
+                      setOrganizerOpen(true);
+                    }}>
+                    <LayersIcon className="size-4" />Organize
+                  </button>
+                  <ItemOrganizerDrawer
+                    key={item.id}
+                    open={organizerOpen}
+                    onOpenChange={setOrganizerOpen}
+                    side={organizerSide}
+                    itemTitle={itemActionLabel(item)}
+                    tags={tagNames}
+                    collections={collectionSuggestions.filter(entry => item.collectionIds.includes(entry.id))}
+                    tagSuggestions={tagSuggestions}
+                    collectionSuggestions={collectionSuggestions}
+                    disabled={mutationBusy}
+                    pendingTag={pendingMutation?.op === "assign-tag" && pendingMutation.id === item.id}
+                    pendingCollection={pendingMutation?.op === "assign-collection" && pendingMutation.id === item.id}
+                    tagError={tagError}
+                    collectionError={collectionError}
+                    onAddTag={onAddTag}
+                    onRemoveTag={onRemoveTag}
+                    onMoveToCollection={onAddCollection}
+                    onMoveToUnsorted={onClearCollection}
+                  />
 
                   {item.type === "image" && !editing ? (
                     <div className="mt-4 flex flex-wrap gap-2">

@@ -247,6 +247,22 @@
   border-radius: var(--radius-control);
 }
 
+.collection-delete-option {
+  border-radius: 8px;
+}
+
+.collection-delete-option:active {
+  transform: none;
+}
+
+.library-item-root[data-selection-active="true"] {
+  cursor: pointer;
+}
+
+.library-item-root[data-selection-active="true"] :is(a, button:not([data-item-actions]), .library-card-media) {
+  pointer-events: none;
+}
+
 .library-panel {
   border-radius: var(--radius-library-panel);
 }

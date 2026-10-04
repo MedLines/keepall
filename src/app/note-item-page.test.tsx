@@ -74,9 +74,9 @@ describe("NoteItemPage", () => {
     expect(screen.getByRole("link", { name: "visual" })).toHaveAttribute("href", "/?tag=t1");
 
     fireEvent.click(screen.getByRole("button", { name: "Organize" }));
-    const tagInput = screen.getByRole("combobox", { name: "Add tag" });
+    const tagInput = screen.getByRole("textbox", { name: "Add tag" });
     fireEvent.change(tagInput, { target: { value: "review" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Add tag" }), { key: "Enter" });
     await waitFor(() => expect(assignTagToItem).toHaveBeenCalledWith("n3", "t2"));
     expect(details).toHaveTextContent("review");
 
@@ -84,9 +84,9 @@ describe("NoteItemPage", () => {
     await waitFor(() => expect(unassignTagFromItem).toHaveBeenCalledWith("n3", "t1"));
     expect(details).not.toHaveTextContent("visual");
 
-    const collectionInput = screen.getByRole("combobox", { name: "Move to collection" });
+    const collectionInput = screen.getByRole("textbox", { name: "Move to collection" });
     fireEvent.change(collectionInput, { target: { value: "Writing" } });
-    fireEvent.click(screen.getByRole("button", { name: "Move" }));
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Move to collection" }), { key: "Enter" });
     await waitFor(() => expect(assignCollectionToItem).toHaveBeenCalledWith("n3", "c2"));
     expect(details).toHaveTextContent("Writing");
     expect(details).not.toHaveTextContent("Inspiration");
@@ -208,15 +208,15 @@ test("moves note to Unsorted with busy protection, error retry, immediate state 
   window.addEventListener("keepall:items-changed", changed);
   render(<NoteItemPage itemId="unsorted-test" returnHref="/" />);
   fireEvent.click(await screen.findByRole("button", { name: "Organize" }));
-  fireEvent.click(screen.getByRole("button", { name: "Move to Unsorted" }));
-  expect(screen.getByRole("button", { name: "Moving…" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Unsorted" }));
+  expect(screen.getByRole("button", { name: "Unsorted" })).toBeDisabled();
   reject(new Error("failed"));
-  await waitFor(() => expect(screen.getByRole("button", { name: "Move to Unsorted" })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole("button", { name: "Unsorted" })).toBeEnabled());
   expect(screen.getByRole("dialog")).toHaveTextContent("Couldn't");
-  fireEvent.click(screen.getByRole("button", { name: "Move to Unsorted" }));
-  expect(await screen.findByText("Currently unsorted.")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Unsorted" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Unsorted" })).toHaveAttribute("aria-pressed", "true"));
   expect(screen.getByRole("dialog")).toHaveTextContent("Reference");
-  expect(screen.queryByRole("button", { name: "Move to Unsorted" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Unsorted" })).toHaveAttribute("aria-pressed", "true");
   expect(clearCollectionOnItem).toHaveBeenCalledTimes(2);
   expect(createCollection).not.toHaveBeenCalled();
   expect(stored).toEqual({ ...original, collectionIds: [], updatedAt: 2 });

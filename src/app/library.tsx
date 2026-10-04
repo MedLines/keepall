@@ -47,6 +47,7 @@ import {
   pinItemInCollection,
   renameCollection,
   unpinItemInCollection,
+  type CollectionDeleteDestination,
 } from "@/persistence/collections";
 import {
   appendImageAssetsToItem,
@@ -74,6 +75,7 @@ import {
   unpinCollection,
 } from "@/persistence/library-preferences";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CollectionDeleteOptions } from "./collection-delete-options";
 import { ITEMS_CHANGED_EVENT, enrichChangedItemId, isEnrichItemsChanged, PREVIEW_WELCOME_EVENT, type PreviewWelcomeDetail } from "./items-events";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import {
@@ -290,6 +292,7 @@ export function Library() {
   } | null>(null);
   const [organizationDeleteOpen, setOrganizationDeleteOpen] = useState(false);
   const [organizationDeleteError, setOrganizationDeleteError] = useState<string | null>(null);
+  const [collectionDeleteDestination, setCollectionDeleteDestination] = useState<CollectionDeleteDestination>("unsorted");
   const [bulkPanel, setBulkPanel] = useState<BulkPanel>(null);
   const [bulkDeleteTarget, setBulkDeleteTarget] = useState<{ ids: string[]; hiddenCount: number } | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
@@ -665,6 +668,7 @@ export function Library() {
 
   function requestOrganizationDelete(ids: string[]) {
     if (mutationBusy || ids.length === 0) return;
+    setCollectionDeleteDestination("unsorted");
     setOrganizationDelete({ kind: view.collections ? "collections" : "tags", ids: [...ids], hiddenCount: ids.filter((id) => !visibleSelectionIds.has(id)).length });
     setOrganizationDeleteError(null);
     setOrganizationDeleteOpen(true);
@@ -676,7 +680,7 @@ export function Library() {
     setOrganizationDeleteError(null);
     try {
       if (organizationDelete.kind === "collections") {
-        await deleteCollections(organizationDelete.ids);
+        await deleteCollections(organizationDelete.ids, collectionDeleteDestination);
       } else {
         await deleteTags(organizationDelete.ids);
       }
@@ -712,20 +716,25 @@ export function Library() {
       name: collection.name,
     }),
   );
-  const bulkRemoveTagSuggestions: OrgNameSuggestion[] = (() => {
-    const tagIdSet = new Set<string>();
-    for (const id of selectedIds) {
-      const item = itemsById.get(id);
-      if (item) {
-        for (const tagId of item.tagIds) {
-          tagIdSet.add(tagId);
-        }
-      }
+  const selectedOrganizationItems = [...selectedIds]
+    .map(id => itemsById.get(id))
+    .filter((item): item is Item => Boolean(item));
+  const selectionTagCounts = new Map<string, number>();
+  for (const item of selectedOrganizationItems) {
+    for (const tagId of item.tagIds) {
+      selectionTagCounts.set(tagId, (selectionTagCounts.get(tagId) ?? 0) + 1);
     }
-    return tags
-      .filter((tag) => tagIdSet.has(tag.id))
-      .map((tag) => ({ id: tag.id, name: tag.name }));
-  })();
+  }
+  const bulkRemoveTagSuggestions = tags
+    .filter(tag => selectionTagCounts.has(tag.id))
+    .map(tag => ({ id: tag.id, name: tag.name }));
+  const bulkPartialTagNames = bulkRemoveTagSuggestions
+    .filter(tag => selectionTagCounts.get(tag.id) !== selectedOrganizationItems.length)
+    .map(tag => tag.name);
+  const selectedCollectionIds = new Set(selectedOrganizationItems.map(item => item.collectionIds[0] ?? null));
+  const bulkCollectionMixed = selectedCollectionIds.size > 1;
+  const bulkCollectionId = bulkCollectionMixed ? null : selectedOrganizationItems[0]?.collectionIds[0];
+  const bulkCollectionName = bulkCollectionId ? collectionsById.get(bulkCollectionId)?.name ?? null : null;
   const inspectId = view.item;
 
   const updateView = useCallback(
@@ -1545,7 +1554,7 @@ export function Library() {
     setCollectionManageError(null);
 
     try {
-      await deleteCollection(id);
+      await deleteCollection(id, collectionDeleteDestination);
       if (browseCollectionId === id) {
         updateView({ collection: null }, "push");
       }
@@ -1778,6 +1787,9 @@ export function Library() {
           allVisibleSelected,
           busy: mutationBusy,
           collectionDraft: bulkCollectionDraft,
+          collectionName: bulkCollectionName,
+          collectionMixed: bulkCollectionMixed,
+          partialTagNames: bulkPartialTagNames,
           collectionSuggestions,
           count: selectedIds.size,
           hiddenCount: hiddenSelectedCount,
@@ -1884,6 +1896,7 @@ export function Library() {
           }
           onDeleteCollection={(id) => {
             setCollectionManageError(null);
+            setCollectionDeleteDestination("unsorted");
             setPendingCollectionDeleteId(id);
           }}
           onDeleteTag={(id) => {
@@ -2060,6 +2073,9 @@ export function Library() {
                     void addCollectionToItem(inspectedItem.id, name);
                   }
                 }}
+                onClearCollection={() => {
+                  if (inspectedItem) void clearItemCollection(inspectedItem.id);
+                }}
                 onStartEdit={() => {
                   if (!inspectedItem) {
                     return;
@@ -2121,7 +2137,7 @@ export function Library() {
           open={organizationDeleteOpen}
           title={`Delete ${organizationDeleteCount} ${organizationDeleteNoun}?`}
           description={organizationDelete?.kind === "collections"
-            ? `${organizationDelete.hiddenCount > 0 ? `${organizationDelete.hiddenCount} selected folder${organizationDelete.hiddenCount === 1 ? " is" : "s are"} hidden by search or filters. ` : ""}Items stay in your library and become Unsorted if they have no other collection.`
+            ? `${organizationDelete.hiddenCount > 0 ? `${organizationDelete.hiddenCount} selected folder${organizationDelete.hiddenCount === 1 ? " is" : "s are"} hidden by search or filters. ` : ""}Choose where to move the contents before deleting these folders.`
             : `${organizationDelete?.hiddenCount ? `${organizationDelete.hiddenCount} selected tag${organizationDelete.hiddenCount === 1 ? " is" : "s are"} hidden by search or filters. ` : ""}These tags will be removed from every item. Items stay in your library.`}
           confirmLabel={`Delete ${organizationDeleteNoun}`}
           pendingLabel="Deleting…"
@@ -2132,7 +2148,9 @@ export function Library() {
             setOrganizationDeleteOpen(open);
             if (!open) setOrganizationDeleteError(null);
           }}
-        />
+        >
+          {organizationDelete?.kind === "collections" ? <CollectionDeleteOptions value={collectionDeleteDestination} busy={pendingMutation?.op === "bulk-delete"} onChange={setCollectionDeleteDestination} /> : null}
+        </ConfirmDialog>
         <ConfirmDialog
           open={deleteItemTarget !== null}
           title="Move this item to Trash?"
@@ -2152,7 +2170,7 @@ export function Library() {
         <ConfirmDialog
           open={deleteCollectionTarget !== null}
           title="Delete collection?"
-          description={deleteCollectionTarget ? `Delete “${deleteCollectionTarget.name}”? Its items stay in your library.` : ""}
+          description={deleteCollectionTarget ? `Delete “${deleteCollectionTarget.name}”? Choose where to move its contents.` : ""}
           confirmLabel="Delete collection"
           pendingLabel="Deleting…"
           busy={pendingMutation?.op === "delete-collection"}
@@ -2166,7 +2184,9 @@ export function Library() {
               setCollectionManageError(null);
             }
           }}
-        />
+        >
+          <CollectionDeleteOptions value={collectionDeleteDestination} busy={pendingMutation?.op === "delete-collection"} onChange={setCollectionDeleteDestination} />
+        </ConfirmDialog>
         <ConfirmDialog
           open={deleteTagTarget !== null}
           title="Delete tag?"
