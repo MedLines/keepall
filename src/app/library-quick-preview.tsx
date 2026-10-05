@@ -125,6 +125,10 @@ function PreviewContent({ item, onGalleryStep }: { item: Item; onGalleryStep: ()
       <NoteContent className="library-preview-document mx-auto max-w-[65ch]" content={item.noteContent} format={item.noteFormat ?? "plain"} />
     </div> : null}
   </div>;
+  if (item.type === "document") return <div data-preview-scroll tabIndex={0} className="ui-scrollbar flex h-full min-h-0 flex-col gap-4 overflow-y-auto px-5 pb-5">
+    <p className="break-words text-sm text-text-secondary">{item.sourceFileName}</p>
+    {item.noteContent ? <NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /> : null}
+  </div>;
   const details = <div className="mx-auto flex w-full max-w-[65ch] flex-col gap-4">
     <a href={item.url} target="_blank" rel="noreferrer" className="break-words text-sm text-text-secondary underline underline-offset-2">{item.url}</a>
     {item.previewDescription ? <p className="whitespace-pre-wrap break-words text-text-secondary">{item.previewDescription}</p> : null}

@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
+import type { DocumentAsset } from "@/domain/document";
 import type { Asset } from "@/domain/asset";
 import type { Collection } from "@/domain/collection";
 import type { Item } from "@/domain/item";
@@ -20,6 +21,7 @@ export type KeepallDB = Dexie & {
   thumbnails: EntityTable<Thumbnail, "assetId">;
   videoAssets: EntityTable<VideoAsset, "id">;
   preferences: EntityTable<LibraryPreferences, "id">;
+  documentAssets: EntityTable<DocumentAsset, "id">;
   backupState: EntityTable<BackupRevision, "id">;
   backupSettings: EntityTable<BackupFolderSettings, "id">;
 };
@@ -86,6 +88,7 @@ function createKeepallDb(): KeepallDB {
   db.version(9).stores({ backupSettings: "id" });
 
   db.version(10).stores({ backupState: "id" });
+  db.version(11).stores({ documentAssets: "id, contentHash" });
   trackBackupRevision(db);
 
   return db;

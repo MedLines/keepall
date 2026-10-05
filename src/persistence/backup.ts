@@ -10,6 +10,8 @@ import { isIncomingNewer, unionIds } from "@/domain/backup-merge";
 import { buildAsset, sameContentHashMultiset } from "@/domain/asset";
 import { normalizeCollection } from "@/domain/collection";
 import { normalizeItem } from "@/domain/item";
+import type { DocumentAsset, DocumentItem } from "@/domain/document";
+import { mergeDocumentBackup } from "./document-backup";
 import type { VideoItem } from "@/domain/video";
 import type { ImageItem } from "@/domain/image";
 import type { LinkItem } from "@/domain/link";
@@ -28,12 +30,12 @@ import { readBackupSnapshot } from "./backup-snapshot";
 
 export async function countCurrentLibrary(): Promise<BackupCounts> {
   const db = getDb();
-  return db.transaction("r", [db.items, db.tags, db.collections, db.assets, db.videoAssets], async () => {
-    const [items, tags, collections, assets, videos] = await Promise.all([
+  return db.transaction("r", [db.items, db.tags, db.collections, db.assets, db.videoAssets, db.documentAssets], async () => {
+    const [items, tags, collections, assets, videos, documents] = await Promise.all([
       db.items.toArray(), db.tags.count(), db.collections.count(),
-      db.assets.count(), db.videoAssets.count(),
+      db.assets.count(), db.videoAssets.count(), db.documentAssets.count(),
     ]);
-    return summarizeBackupContents(items, tags, collections, assets, videos);
+    return summarizeBackupContents(items, tags, collections, assets, videos, documents);
   });
 }
 
@@ -42,8 +44,8 @@ export async function exportKeepallBackup(
 ): Promise<KeepallBackup> {
   const { items, tags, collections, assets, preferences } = await readBackupSnapshot();
 
-  if (items.some((item) => item.type === "video")) {
-    throw new Error("Use ZIP export for libraries containing video");
+  if (items.some((item) => (item.type === "video" || item.type === "document"))) {
+    throw new Error("Use ZIP export for libraries containing video or documents");
   }
 
   const backupAssets = assets.map((asset) => ({
@@ -77,6 +79,7 @@ export async function replaceValidatedBackup(
   binaryAssets?: Map<string, Uint8Array>,
   videos: VideoAsset[] = [],
   thumbnails: Thumbnail[] = [],
+  documents: DocumentAsset[] = [],
 ): Promise<KeepallBackup> {
   const db = getDb();
 
@@ -102,7 +105,7 @@ export async function replaceValidatedBackup(
 
   await db.transaction(
     "rw",
-    [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.preferences],
+    [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.preferences],
     async () => {
       await Promise.all([
         db.items.clear(),
@@ -111,6 +114,7 @@ export async function replaceValidatedBackup(
         db.assets.clear(),
         db.thumbnails.clear(),
         db.videoAssets.clear(),
+        db.documentAssets.clear(),
         db.preferences.clear(),
       ]);
 
@@ -126,6 +130,7 @@ export async function replaceValidatedBackup(
         await db.assets.bulkAdd(restoredAssets);
       }
 
+      if (documents.length > 0) await db.documentAssets.bulkAdd(documents);
       if (videos.length > 0) {
         await db.videoAssets.bulkAdd(videos);
       }
@@ -162,6 +167,7 @@ export async function importKeepallBackupMerge(
   raw: unknown,
   binaryAssets?: Map<string, Uint8Array>,
   media?: { items: VideoItem[]; assets: VideoAsset[]; thumbnails: Thumbnail[] },
+  documents?: { items: DocumentItem[]; assets: DocumentAsset[] },
 ): Promise<{ backup: KeepallBackup; summary: KeepallMergeSummary }> {
   const backup = parseKeepallBackup(raw);
   const db = getDb();
@@ -535,6 +541,10 @@ export async function importKeepallBackupMerge(
     }
   }
 
+  if (documents) {
+    await mergeDocumentBackup(documents, remapTagIds, remapCollectionIds, itemIdMap, summary);
+  }
+
   for (const backupCollection of backup.collections) {
     const localId = collectionIdMap.get(backupCollection.id);
     if (!localId) {
@@ -575,13 +585,14 @@ export async function importKeepallBackupMerge(
 
 export async function libraryHasLocalData(): Promise<boolean> {
   const db = getDb();
-  const [itemCount, tagCount, collectionCount, assetCount, videoCount] = await Promise.all([
+  const [itemCount, tagCount, collectionCount, assetCount, videoCount, documentCount] = await Promise.all([
     db.items.count(),
     db.tags.count(),
     db.collections.count(),
     db.assets.count(),
     db.videoAssets.count(),
+    db.documentAssets.count(),
   ]);
 
-  return itemCount + tagCount + collectionCount + assetCount + videoCount > 0;
+  return itemCount + tagCount + collectionCount + assetCount + videoCount + documentCount > 0;
 }

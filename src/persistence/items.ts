@@ -1,3 +1,4 @@
+import { deleteUnreferencedDocuments } from "./documents";
 import { normalizeItem, type Item } from "@/domain/item";
 import {
   appendImageAsset,
@@ -376,7 +377,7 @@ export async function restoreItems(ids: string[]): Promise<string[]> {
 
 export async function permanentlyDeleteItem(id: string): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", db.items, db.assets, db.thumbnails, db.videoAssets, db.collections, async () => {
+  await db.transaction("rw", [db.items, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.collections], async () => {
     const existing = await db.items.get(id);
     if (!existing) return;
     if (existing.deletedAt === undefined) throw new Error("Move the item to Trash first");
@@ -389,6 +390,7 @@ export async function permanentlyDeleteItem(id: string): Promise<void> {
       await db.videoAssets.delete(item.assetId);
       await db.thumbnails.delete(item.assetId);
     }
+    if (item.type === "document") await deleteUnreferencedDocuments([item.assetId]);
     await deleteUnreferencedAssets(assetIds);
   });
 }
@@ -396,7 +398,7 @@ export async function permanentlyDeleteItem(id: string): Promise<void> {
 /** Delete only the confirmed ids that are still in Trash, as one transaction. */
 export async function emptyTrash(ids: string[]): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", [db.items, db.assets, db.thumbnails, db.videoAssets, db.collections], async () => {
+  await db.transaction("rw", [db.items, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.collections], async () => {
     const rows = await db.items.bulkGet([...new Set(ids)]);
     const items = rows.filter((item): item is Item => item !== undefined && item.deletedAt !== undefined);
     const deletedIds = new Set(items.map((item) => item.id));
@@ -406,6 +408,7 @@ export async function emptyTrash(ids: string[]): Promise<void> {
     const videoIds = items.filter((item) => item.type === "video").map((item) => item.assetId);
     await db.videoAssets.bulkDelete(videoIds);
     await db.thumbnails.bulkDelete(videoIds);
+    await deleteUnreferencedDocuments(items.filter((item) => item.type === "document").map((item) => item.assetId));
     await deleteUnreferencedAssets(items.flatMap((item) => itemAssetIds(normalizeItem(item))));
   });
 }

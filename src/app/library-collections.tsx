@@ -7,7 +7,7 @@ import { ImageIcon, LinkIcon, NoteIcon, VideoIcon } from "./shell-icons";
 import "./library-collections.css";
 
 const FOLDER_FRONT_PATH = "M1 78C1 59 10 50 29 50H92C104 50 110 54 119 60L137 70C144 74 149 76 160 76H251C270 76 279 85 279 104V211C279 230 270 239 251 239H29C10 239 1 230 1 211Z";
-const itemIcons = { note: NoteIcon, image: ImageIcon, link: LinkIcon, video: VideoIcon };
+const itemIcons = { note: NoteIcon, image: ImageIcon, link: LinkIcon, video: VideoIcon, document: NoteIcon };
 
 export function LibraryFolderArtwork({ previews, itemTypes }: { previews: Item[]; itemTypes: Item["type"][] }) {
   return (

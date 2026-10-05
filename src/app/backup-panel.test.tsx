@@ -10,7 +10,7 @@ vi.mock("@/persistence/backup-archive", () => ({ prepareBackupFile, exportKeepal
 vi.mock("@/persistence/backup", () => ({ countCurrentLibrary }));
 
 const counts: BackupCounts = { total: 2, active: 1, trash: 1, links: 0, notes: 2,
-  images: 0, videos: 0, tags: 0, collections: 0, imageAssets: 0, videoAssets: 0 };
+  images: 0, videos: 0, documents: 0, documentAssets: 0, tags: 0, collections: 0, imageAssets: 0, videoAssets: 0 };
 const incoming: BackupCounts = { ...counts, total: 1, active: 1, trash: 0, notes: 1 };
 function chooseFile(container: HTMLElement) {
   const input = container.querySelector('input[accept*="application/json"]') as HTMLInputElement;

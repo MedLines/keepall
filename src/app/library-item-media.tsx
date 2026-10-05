@@ -147,7 +147,7 @@ function FallbackContent({ item, compact }: { item: Item; compact: boolean }) {
     return <LinkIcon className={compact ? "size-6" : "size-12"} />;
   }
   if (!compact) return cardInitial(item);
-  if (item.type === "note") return <NoteIcon className="size-6" />;
+  if (item.type === "note" || item.type === "document") return <NoteIcon className="size-6" />;
   if (item.type === "video") return <VideoIcon className="size-6" />;
   return <ImageIcon className="size-6" />;
 }

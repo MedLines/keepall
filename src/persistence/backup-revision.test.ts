@@ -39,7 +39,7 @@ test("rolled-back writes cannot advance the durable revision", async () => {
 
 test("every exported table advances revision, while backup configuration does not", async () => {
   const db = getDb();
-  for (const table of [db.items, db.tags, db.collections, db.assets, db.videoAssets, db.thumbnails, db.preferences]) {
+  for (const table of [db.items, db.tags, db.collections, db.assets, db.videoAssets, db.thumbnails, db.preferences, db.documentAssets]) {
     const before = await revision();
     await table.clear();
     expect(await revision()).not.toBe(before);

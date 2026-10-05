@@ -17,7 +17,7 @@ test("backup counts include Trash in totals and type counts", () => {
     buildImage({ assetId: "asset", sourceFileName: "photo.png" })];
   expect(summarizeBackupContents(items, 2, 1, 1, 0)).toMatchObject({
     total: 3, active: 2, trash: 1, links: 1, notes: 1, images: 1,
-    videos: 0, tags: 2, collections: 1, imageAssets: 1, videoAssets: 0,
+    videos: 0, documents: 0, documentAssets: 0, tags: 2, collections: 1, imageAssets: 1, videoAssets: 0,
   });
 });
 

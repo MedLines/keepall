@@ -35,6 +35,7 @@ const itemRows = [
   { label: "Notes", key: "notes", Icon: NoteIcon },
   { label: "Images", key: "images", Icon: ImageIcon },
   { label: "Videos", key: "videos", Icon: VideoIcon },
+  { label: "Documents", key: "documents", Icon: NoteIcon },
 ] as const;
 
 const detailRows = [
@@ -42,6 +43,7 @@ const detailRows = [
   { label: "Collections", key: "collections", Icon: CollectionIcon },
   { label: "Image files", key: "imageAssets", Icon: ImagesIcon },
   { label: "Video files", key: "videoAssets", Icon: VideoIcon },
+  { label: "Document files", key: "documentAssets", Icon: NoteIcon },
 ] as const;
 
 type Props = {
