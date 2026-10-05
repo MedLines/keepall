@@ -2,15 +2,12 @@ import { BlobReader, BlobWriter, TextReader, TextWriter, Uint8ArrayWriter, ZipRe
 import { BackupValidationError, KEEPALL_BACKUP_VERSION, parseTrashFields, parseKeepallBackup, summarizeBackupContents, type BackupCounts, type KeepallBackup } from "@/domain/backup";
 import { base64ToBytes } from "@/domain/backup-encoding";
 import { assetToBlob, hashAssetBytes } from "@/domain/asset";
-import { normalizeItem } from "@/domain/item";
 import { MAX_LOCAL_IMAGE_BYTES } from "@/domain/image";
-import { normalizePinnedCollectionIds } from "@/domain/library-preferences";
 import { MAX_LOCAL_VIDEO_BYTES, type VideoItem } from "@/domain/video";
-import { listAssets } from "./assets";
 import { importKeepallBackupMerge, replaceValidatedBackup } from "./backup";
 import type { KeepallMergeSummary } from "./backup";
-import { getDb, type Thumbnail, type VideoAsset } from "./db";
-import { getLibraryPreferences } from "./library-preferences";
+import type { Thumbnail, VideoAsset } from "./db";
+import { readBackupSnapshot } from "./backup-snapshot";
 
 const ARCHIVE_VERSION = 8;
 const UUID = "[0-9a-f-]{36}";
@@ -24,14 +21,10 @@ type ArchiveThumbnail = { assetId: string; mimeType: string; byteLength: number;
 type ArchiveManifest = Omit<KeepallBackup, "assets"> & { assets: ArchiveAsset[]; videos: ArchiveVideo[]; thumbnails: ArchiveThumbnail[] };
 
 export async function exportKeepallArchive(exportedAt = Date.now()): Promise<Blob> {
-  const db = getDb();
-  const [rawItems, tags, collections, assets, videos, thumbnails, preferences] = await Promise.all([
-    db.items.toArray(), db.tags.toArray(), db.collections.toArray(),
-    listAssets(), db.videoAssets.toArray(), db.thumbnails.toArray(), getLibraryPreferences(),
-  ]);
+  const { items, tags, collections, assets, videos, thumbnails, preferences } = await readBackupSnapshot();
   const manifest: ArchiveManifest = {
     format: "keepall", version: ARCHIVE_VERSION, exportedAt,
-    items: rawItems.map((item) => normalizeItem(item)), tags, collections,
+    items, tags, collections,
     assets: assets.map(({ id, mimeType, byteLength, contentHash, createdAt }) => ({
       id, mimeType, byteLength, contentHash, createdAt, path: `assets/${id}.bin`,
     })),
@@ -41,11 +34,7 @@ export async function exportKeepallArchive(exportedAt = Date.now()): Promise<Blo
     thumbnails: thumbnails.map(({ assetId, blob }) => ({
       assetId, mimeType: blob.type, byteLength: blob.size, path: `thumbnails/${assetId}.bin`,
     })),
-    preferences: {
-      pinnedCollectionIds: normalizePinnedCollectionIds(
-        preferences.pinnedCollectionIds, collections.map((collection) => collection.id),
-      ),
-    },
+    preferences,
   };
   const supportsBlobStream = typeof Blob.prototype.stream === "function";
   const writer = supportsBlobStream

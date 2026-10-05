@@ -8,7 +8,7 @@ import {
 } from "@/domain/asset";
 import { getDb } from "./db";
 
-function coerceAsset(row: Asset): Asset {
+export function coerceAsset(row: Asset): Asset {
   const raw = row.bytes;
   const bytes =
     raw instanceof Uint8Array
