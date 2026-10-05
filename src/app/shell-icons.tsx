@@ -2,7 +2,7 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
   Add01Icon as Add01, AllBookmarkIcon as AllBookmark, ArrowDown01Icon as ArrowDown01,
   Cancel01Icon as Cancel01, Archive01Icon as Archive01,
-  Folder01Icon as Folder01, GridViewIcon as GridView,
+  Folder01Icon as Folder01, GridViewIcon as GridView, FilterIcon as Filter,
   Image01Icon as Image01, ImagesIcon as Images, InboxIcon as Inbox, Layers01Icon as Layers01,
   Link04Icon as Link04, ListViewIcon as ListView, MoreVerticalIcon as MoreVertical,
   Note01Icon as Note01, Search01Icon as Search01, SidebarLeft01Icon as SidebarLeft01,
@@ -58,6 +58,7 @@ export function PanelIcon(props: IconProps) { return <ShellIcon icon={SidebarLef
 export function GridIcon(props: IconProps) { return <ShellIcon icon={GridView} {...props} />; }
 export function ListIcon(props: IconProps) { return <ShellIcon icon={ListView} {...props} />; }
 export function LayersIcon(props: IconProps) { return <ShellIcon icon={Layers01} {...props} />; }
+export function FilterIcon(props: IconProps) { return <ShellIcon icon={Filter} {...props} />; }
 export function ChevronDownIcon(props: IconProps) { return <ShellIcon icon={ArrowDown01} {...props} />; }
 export function SortDescIcon(props: IconProps) { return <ShellIcon icon={Sorting01} {...props} />; }
 export function SortAscIcon({ className = "", ...props }: IconProps) { return <ShellIcon icon={Sorting01} {...props} className={`-scale-y-100 ${className}`} />; }

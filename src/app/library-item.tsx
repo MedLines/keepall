@@ -31,10 +31,12 @@ import {
   LinkItemEditDialog,
   NoteItemEditDialog,
   VideoItemEditDialog,
+  DocumentItemEditDialog,
   type ImageDetailsDraft,
   type LinkDetailsDraft,
   type NoteDetailsDraft,
   type VideoDetailsDraft,
+  type DocumentDetailsDraft,
 } from "./item-edit-dialog";
 
 export type PendingMutation =
@@ -42,6 +44,7 @@ export type PendingMutation =
   | { op: "save-link"; id: string }
   | { op: "save-image"; id: string }
   | { op: "save-video"; id: string }
+  | { op: "save-document"; id: string }
   | { op: "append-image"; id: string }
   | { op: "replace-image-slide"; id: string }
   | { op: "delete"; id: string }
@@ -82,6 +85,7 @@ export type LibraryItemProps = {
   onSaveLink: (draft?: LinkDetailsDraft) => void;
   onSaveImage: (draft?: ImageDetailsDraft) => void;
   onSaveVideo: (draft: VideoDetailsDraft) => void;
+  onSaveDocument: (draft: DocumentDetailsDraft) => void;
   onCancelEdit: () => void;
   onAddTag: (name: string) => void;
   onAddCollection: (name: string) => void;
@@ -128,6 +132,7 @@ export function LibraryItem({
   onSaveLink,
   onSaveImage,
   onSaveVideo,
+  onSaveDocument,
   onCancelEdit,
   onAddTag,
   onAddCollection,
@@ -407,6 +412,12 @@ export function LibraryItem({
           error={editError}
           onSave={onSaveVideo}
           onOpenChange={(open) => { if (!open) onCancelEdit(); }}
+        />
+      ) : null}
+      {item.type === "document" && editing ? (
+        <DocumentItemEditDialog item={item} open error={editError}
+          busy={pendingMutation?.op === "save-document" && pendingMutation.id === item.id}
+          onSave={onSaveDocument} onOpenChange={(open) => { if (!open) onCancelEdit(); }}
         />
       ) : null}
       {item.type === "link" && editing ? (

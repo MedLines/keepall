@@ -138,3 +138,9 @@ Domain code stays independent of React and Dexie. UI uses the persistence layer 
 For a bug, [open an issue](https://github.com/MedLines/keepall/issues) with your browser, steps to reproduce it, and what you expected. A screenshot helps with layout problems. Do not attach a personal library backup.
 
 Keep pull requests focused, use pnpm, and run `pnpm lint`, `pnpm typecheck`, and `pnpm test`. Run the relevant Playwright tests for UI changes. Include a short explanation of the behavior change and how you checked it.
+
+## License
+
+Keepall is licensed under the [MIT License](LICENSE).
+
+Third-party dependencies and assets retain their own licenses. The Inter font bundled with the Chrome extension is licensed under the [SIL Open Font License](extension/INTER-LICENSE.txt).

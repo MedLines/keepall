@@ -17,7 +17,7 @@ import { ItemTagChips } from "./item-tag-chips";
 import type { PendingMutation } from "./library-item";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
-import { LayersIcon } from "./shell-icons";
+import { DeleteIcon, LayersIcon } from "./shell-icons";
 import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
 import { NoteContent } from "./note-content";
 import { NoteEditor } from "./note-editor";
@@ -572,11 +572,11 @@ export function LibraryInspect({
                     </button>
                     <button
                       type="button"
-                      className={BTN}
+                      className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm font-medium text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60"
                       disabled={mutationBusy}
                       onClick={onStartDelete}
                     >
-                      Move to Trash
+                      <DeleteIcon className="size-4" />Move to Trash
                     </button>
                   </div>
                 </>

@@ -117,6 +117,18 @@ test("empty text originals round-trip without losing their document record", asy
   expect(await countCurrentLibrary()).toMatchObject({ documents: 1, documentAssets: 1 });
 });
 
+test("file edits advance the backup revision and restore their updated text", async () => {
+  const item = await createTextDocument({ fileName: "edited.md", bytes });
+  const revision = (await getDb().backupState.get("library"))?.revision;
+  await updateDocument(item.id, { title: item.title, noteContent: "Personal note", content: "# Updated file\nمرحبا" });
+  expect((await getDb().backupState.get("library"))?.revision).not.toBe(revision);
+  const archive = await readable(await exportKeepallArchive());
+  await deleteKeepallDatabase();
+  await importKeepallArchiveReplace(archive);
+  expect(new TextDecoder().decode((await getDocumentOriginal(item.id))?.bytes)).toBe("# Updated file\nمرحبا");
+  expect(await getDb().items.get(item.id)).toMatchObject({ noteContent: "Personal note" });
+});
+
 test("document integrity validation detects changed bytes even when the file size matches", async () => {
   await createTextDocument({ fileName: "source.md", bytes });
   const archive = await modifiedArchive(await exportKeepallArchive(), (manifest, files) => {

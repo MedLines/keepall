@@ -58,6 +58,28 @@ test("quota failure rolls back the item, original and revision", async () => {
   expect(await getDb().backupState.get("library")).toBeUndefined();
 });
 
+test("editing a file replaces only its saved copy and retains shared originals and unchanged bytes", async () => {
+  const first = await createTextDocument({ fileName: "first.md", bytes });
+  const shared = await createTextDocument({ fileName: "shared.md", bytes });
+  const unchanged = await updateDocument(first.id, { title: "Renamed", noteContent: "Personal note", content: "# Original\r\nUnicode مرحبا\n", expectedAssetId: first.assetId });
+  expect(unchanged.assetId).toBe(first.assetId);
+  expect((await getDocumentOriginal(first.id))?.bytes).toEqual(bytes);
+  const changed = await updateDocument(first.id, { title: "Edited", noteContent: "Personal note", content: "# Updated body\nمرحبا", expectedAssetId: first.assetId });
+  expect(changed.assetId).not.toBe(first.assetId);
+  expect(new TextDecoder().decode((await getDocumentOriginal(first.id))?.bytes)).toBe("# Updated body\nمرحبا");
+  expect((await getDocumentOriginal(shared.id))?.bytes).toEqual(bytes);
+  expect(await getDb().documentAssets.count()).toBe(2);
+  await expect(updateDocument(first.id, { title: "Stale", noteContent: "", content: "Older edit", expectedAssetId: first.assetId })).rejects.toThrow("changed while");
+});
+
+test("a failed edit preserves the original file and leaves no replacement asset", async () => {
+  const item = await createTextDocument({ fileName: "safe.txt", bytes });
+  vi.spyOn(getDb().items, "put").mockRejectedValueOnce(new DOMException("Quota", "QuotaExceededError"));
+  await expect(updateDocument(item.id, { title: "Edited", noteContent: "", content: "Replacement" })).rejects.toThrow("Quota");
+  expect((await getDocumentOriginal(item.id))?.bytes).toEqual(bytes);
+  expect(await getDb().documentAssets.count()).toBe(1);
+});
+
 test("Trash preserves originals; permanent deletion keeps shared bytes until the last reference goes", async () => {
   const first = await createTextDocument({ fileName: "first.txt", bytes });
   const second = await createTextDocument({ fileName: "second.md", bytes });

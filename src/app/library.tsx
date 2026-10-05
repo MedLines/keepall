@@ -68,6 +68,8 @@ import {
 } from "@/persistence/items";
 import { createTag, deleteTag, deleteTags, listTags } from "@/persistence/tags";
 import { updateVideoDetails } from "@/persistence/videos";
+import { DocumentValidationError } from "@/domain/document";
+import { updateDocument } from "@/persistence/documents";
 import {
   getLibraryPreferences,
   movePinnedCollectionBefore,
@@ -123,7 +125,7 @@ import {
 import { ImageValidationError, clampImageSlideIndex } from "@/domain/image";
 import { isPreviewEnrichPaused } from "./preview-enrich-pause";
 import { itemPageHref } from "./item-page-navigation";
-import type { ImageDetailsDraft, LinkDetailsDraft, NoteDetailsDraft, VideoDetailsDraft } from "./item-edit-dialog";
+import type { ImageDetailsDraft, LinkDetailsDraft, NoteDetailsDraft, VideoDetailsDraft, DocumentDetailsDraft } from "./item-edit-dialog";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
 
@@ -178,6 +180,7 @@ function libraryViewTitle(
   }
   if (browseType === "image") return "Images";
   if (browseType === "video") return "Videos";
+  if (browseType === "document") return "Documents";
   return "All items";
 }
 
@@ -914,7 +917,7 @@ export function Library() {
   }
 
   function openInspect(item: Item) {
-    if (item.type === "image" || item.type === "note" || item.type === "video") {
+    if (item.type === "image" || item.type === "note" || item.type === "video" || item.type === "document") {
       const returnView = mergeLibraryViewState(viewRef.current, {
         item: null,
         slide: 0,
@@ -1076,6 +1079,18 @@ export function Library() {
     } finally {
       setPendingMutation(null);
     }
+  }
+
+  async function saveDocumentEdit(id: string, draft: DocumentDetailsDraft) {
+    if (pendingMutation) return;
+    setPendingMutation({ op: "save-document", id });
+    setEditError(null);
+    try {
+      await updateDocument(id, draft);
+      clearEdit();
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch (caught) { setEditError(caught instanceof DocumentValidationError ? caught.message : "Couldn't save document. Try again."); }
+    finally { setPendingMutation(null); }
   }
 
   async function addImagesToItem(itemId: string, files: File[]) {
@@ -1645,7 +1660,7 @@ export function Library() {
         inspected={!view.trash && inspectId === item.id}
         layoutMode={browseLayout}
         openHref={
-          item.type === "image" || item.type === "note" || item.type === "link" || item.type === "video"
+          item.type === "image" || item.type === "note" || item.type === "link" || item.type === "video" || item.type === "document"
             ? itemPageHref(
                 item.id,
                 libraryViewHref(
@@ -1681,6 +1696,7 @@ export function Library() {
         onSaveLink={(draft) => void saveLinkEdit(item.id, draft)}
         onSaveImage={(draft) => void saveImageEdit(item.id, draft)}
         onSaveVideo={(draft) => void saveVideoEdit(item.id, draft)}
+        onSaveDocument={(draft) => void saveDocumentEdit(item.id, draft)}
         onCancelEdit={() => clearEdit({ restoreFocus: true })}
         onAddTag={(name: string) => void addTagToItem(item.id, name)}
         onAddCollection={(name: string) =>
@@ -1764,7 +1780,7 @@ export function Library() {
         onEmptyTrash={() => trashActions.requestEmpty(trashedItems)}
         onTypeFilterChange={(type) => updateView({ type }, "push")}
         tagFilterName={browseTagName}
-        typeFilterName={browseType === "link" ? "Links" : browseType === "note" ? "Notes" : browseType === "image" ? "Images" : browseType === "video" ? "Videos" : null}
+        typeFilterName={browseType === "link" ? "Links" : browseType === "note" ? "Notes" : browseType === "image" ? "Images" : browseType === "video" ? "Videos" : browseType === "document" ? "Documents" : null}
         onClearSearchFilter={() => updateView({ q: "" }, "push")}
         onClearTypeFilter={() => updateView({ type: null }, "push")}
         onClearTagFilter={() => updateView({ tag: null }, "push")}

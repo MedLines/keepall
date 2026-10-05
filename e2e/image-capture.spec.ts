@@ -77,10 +77,13 @@ for (const failFirstSave of [false, true]) {
       await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
       await page.keyboard.press("Alt+k");
       const dialog = page.getByRole("dialog");
-      await dialog.locator('input[accept^="image/"]').setInputFiles([
+      await dialog.locator('input[data-capture-files]').setInputFiles([
         "public/icons/icon-192.png",
         "public/icons/icon-512.png",
       ]);
+      const choice = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+      await expect(choice.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+      await choice.getByRole("radio", { name: /One image item/ }).check();
       await page.getByLabel("Optional source URL or caption").fill("Atomic image capture");
       await dialog.getByRole("button", { name: "Save", exact: true }).click();
 
@@ -111,7 +114,7 @@ test("gallery append rejects a later invalid file, survives reload, and retries 
   await page.goto("/");
   await page.keyboard.press("Alt+k");
   const dialog = page.getByRole("dialog");
-  await dialog.locator('input[accept^="image/"]').setInputFiles("public/icons/icon-192.png");
+  await dialog.locator('input[data-capture-files]').setInputFiles("public/icons/icon-192.png");
   await page.getByLabel("Optional source URL or caption").fill("Append regression gallery");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
@@ -153,8 +156,10 @@ test("drawer image controls remove individual photos and clear all attachments",
   await page.keyboard.press("Alt+k");
   const drawer = page.getByRole("dialog", { name: "Save to Keepall" });
   const files = ["icon-192.png", "icon-512.png", "icon-maskable-512.png"];
-  const input = drawer.locator('input[accept^="image/"]');
+  const input = drawer.locator('input[data-capture-files]');
   await input.setInputFiles(files.map((name) => `public/icons/${name}`));
+  const choice = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+  await choice.getByRole("radio", { name: /One image item/ }).check();
   await drawer.getByLabel("Optional source URL or caption").fill("Gallery controls");
   const images = drawer.getByRole("list", { name: "3 images attached" });
   const removeAll = drawer.getByRole("button", { name: "Remove all images" });
@@ -172,7 +177,7 @@ test("drawer image controls remove individual photos and clear all attachments",
       expect(cross.y).toBeLessThan(thumbnail.y + thumbnail.height / 2);
     }
     const bulkButton = drawer.getByRole("button", { name: "Bulk import" });
-    await expect(drawer.getByRole("button", { name: "Import image folder" })).toHaveCount(0);
+    await expect(drawer.getByRole("button", { name: "Import folder" })).toHaveCount(0);
     const bulkBox = (await bulkButton.boundingBox())!;
     const cancelBox = (await drawer.getByRole("button", { name: "Cancel", exact: true }).boundingBox())!;
     expect(bulkBox.x + bulkBox.width).toBeLessThanOrEqual(cancelBox.x);
@@ -180,7 +185,7 @@ test("drawer image controls remove individual photos and clear all attachments",
     await page.screenshot({ path: testInfo.outputPath(`drawer-images-${width}.png`) });
     await bulkButton.click();
     const bulk = page.getByRole("dialog", { name: "Bulk import", exact: true });
-    await expect(bulk.getByRole("button", { name: "Import image folder" })).toBeVisible();
+    await expect(bulk.getByRole("button", { name: "Import folder" })).toBeVisible();
     await expect(bulk.getByRole("button", { name: "Import bookmarks HTML" })).toBeVisible();
     const bulkModalBox = (await bulk.boundingBox())!;
     expect(bulkModalBox.x + bulkModalBox.width / 2).toBeCloseTo(width / 2, 0);
@@ -193,6 +198,7 @@ test("drawer image controls remove individual photos and clear all attachments",
   await expect(drawer.getByRole("list", { name: /images? attached/ })).toHaveCount(0);
   await expect(drawer.getByLabel("Link, note, or image")).toHaveValue("Gallery controls");
   await input.setInputFiles(files.map((name) => `public/icons/${name}`));
+  await choice.getByRole("radio", { name: /One image item/ }).check();
   const removeSecond = drawer.getByRole("button", { name: "Remove image 2" });
   await removeSecond.focus();
   await page.keyboard.press("Enter");
@@ -224,7 +230,7 @@ for (const width of [320, 1024]) {
     mkdirSync(folder, { recursive: true });
     writeFileSync(join(folder, "first.png"), readFileSync("public/icons/icon-192.png"));
     writeFileSync(join(folder, "second.png"), readFileSync("public/icons/icon-512.png"));
-    writeFileSync(join(folder, "readme.txt"), "Skip this text file");
+    writeFileSync(join(folder, "unsupported.pdf"), "Unsupported PDF");
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
     await page.goto("/");
@@ -238,40 +244,25 @@ for (const width of [320, 1024]) {
     await page.getByLabel("Link, note, or image").fill("Unfinished note");
     await page.getByRole("button", { name: "Bulk import", exact: true }).click();
     const chooser = page.waitForEvent("filechooser");
-    await page.getByRole("button", { name: "Import image folder", exact: true }).click();
+    await page.getByRole("button", { name: "Import folder", exact: true }).click();
     await (await chooser).setFiles(folder);
-    const review = page.getByRole("dialog", { name: "Import image folder" });
-    await expect(review.getByLabel("Collection (optional)")).toHaveValue("Holiday");
-    await review.getByLabel("Collection (optional)").fill("Imported photos");
-    await review.getByRole("button", { name: "Import images", exact: true }).click();
-    const importing = page.getByRole("dialog", { name: "Importing images", exact: true });
-    await expect(importing).toBeVisible();
-    await expect(importing.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "3");
-    await expect(importing.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
+    const review = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+    await expect(review.getByRole("button", { name: "Holiday", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await review.getByRole("button", { name: "Unsorted", exact: true }).click();
+    await review.getByRole("textbox", { name: "Collection", exact: true }).fill("Imported photos");
+    await review.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(review.getByText("Saving files… 0 of 3", { exact: true })).toBeVisible();
+    await expect(review.getByRole("button", { name: "Close drawer", exact: true })).toBeDisabled();
     await page.keyboard.press("Escape");
-    await expect(importing).toBeVisible();
-    await importing.screenshot({ path: testInfo.outputPath(`image-import-progress-${entry}.png`) });
-    const complete = page.getByRole("dialog", { name: "Import complete", exact: true });
-    await expect(complete).toBeVisible();
-    await expect(complete.getByRole("status")).toContainText("Images: 2 added, 1 skipped.");
-    await expect(complete.getByRole("status")).toContainText("Skipped: 1 unsupported type.");
-    await expect(complete.getByRole("button", { name: "Open folder", exact: true })).toBeEnabled();
-    const completionIcon = complete.locator(".rounded-panel > span").filter({
-      has: page.locator('path[d="M8 12.5L10.5 15L16 9"]'),
-    });
-    await expect(completionIcon).toHaveCSS("opacity", "1");
-    await complete.screenshot({ path: testInfo.outputPath(`image-import-complete-${entry}.png`) });
+    await expect(review).toBeVisible();
+    await review.screenshot({ path: testInfo.outputPath(`image-import-progress-${entry}.png`) });
+    await expect(review).toContainText("2 saved, 1 failed.");
+    await expect(review).toContainText("unsupported.pdf");
+    await expect(review.getByRole("button", { name: "Retry failed files", exact: true })).toBeEnabled();
+    await review.screenshot({ path: testInfo.outputPath(`image-import-complete-${entry}.png`) });
     expect(await storedRecordCounts(page)).toEqual([2, 2]);
-    await complete.getByRole("button", { name: "Open folder", exact: true }).click();
-    const confirmation = page.getByRole("dialog", { name: "Discard unsaved changes?" });
-    await expect(confirmation).toBeVisible();
-    await confirmation.getByRole("button", { name: "Keep editing", exact: true }).click();
-    await expect(page).not.toHaveURL(/collection=/);
-    await expect(page.getByLabel("Link, note, or image")).toHaveValue("Unfinished note");
-    await page.getByRole("button", { name: "Bulk import", exact: true }).click();
-    await page.getByRole("dialog", { name: "Bulk import", exact: true }).getByRole("button", { name: "Done", exact: true }).click();
-    await expect(page.getByLabel("Link, note, or image")).toHaveValue("Unfinished note");
-    await page.getByRole("dialog", { name: "Save to Keepall" }).getByRole("button", { name: "Cancel", exact: true }).click();
+    await review.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(review).toBeHidden();
     await page.goto("/");
     if (width < 768) {
       await page.locator('button[aria-controls="library-sidebar"]').click();
@@ -343,10 +334,11 @@ test("Open folder from an empty drawer closes the import dialogs and shows its i
   await expect(page.getByLabel("Link, note, or image")).toBeEnabled();
   await page.getByRole("button", { name: "Bulk import", exact: true }).click();
   const chooser = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Import image folder", exact: true }).click();
+  await page.getByRole("button", { name: "Import folder", exact: true }).click();
   await (await chooser).setFiles(folder);
-  await page.getByRole("dialog", { name: "Import image folder" }).getByRole("button", { name: "Import images", exact: true }).click();
-  await page.getByRole("dialog", { name: "Import complete" }).getByRole("button", { name: "Open folder", exact: true }).click();
+  await page.getByRole("dialog", { name: "Save to Keepall" }).getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Save to Keepall" })).toBeHidden();
+  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "New photos", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/collection=/);
   await expect(page.getByRole("main", { name: "New photos" }).getByRole("link", { name: "Open Image", exact: true })).toHaveCount(1);
@@ -381,7 +373,7 @@ test("read-only folder import scans nested files without triggering the upload c
             kind: "directory", name: "Nested",
             async *values() { yield fileEntry(files[1]); },
           };
-          yield fileEntry(new File(["Skip this file"], "readme.txt", { type: "text/plain" }));
+          yield fileEntry(new File(["# Folder note"], "readme.md", { type: "text/markdown" }));
         },
       };
     };
@@ -393,22 +385,25 @@ test("read-only folder import scans nested files without triggering the upload c
   await page.goto("/");
   await page.keyboard.press("Alt+k");
   await page.getByRole("button", { name: "Bulk import", exact: true }).click();
-  await page.getByRole("button", { name: "Import image folder", exact: true }).click();
-  const reading = page.getByRole("dialog", { name: "Reading image folder", exact: true });
-  await expect(reading).toBeVisible();
-  await expect(reading.getByRole("progressbar")).not.toHaveAttribute("aria-valuenow");
+  await page.getByRole("button", { name: "Import folder", exact: true }).click();
+  const reading = page.getByRole("dialog", { name: "Bulk import", exact: true });
+  await expect(reading.getByRole("progressbar")).toBeVisible();
   await expect(reading.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
   await reading.screenshot({ path: testInfo.outputPath("image-folder-scanning.png") });
-  const review = page.getByRole("dialog", { name: "Import image folder", exact: true });
-  await expect(review.getByLabel("Collection (optional)")).toHaveValue("Read-only photos");
-  await expect(review).toContainText("3 files selected");
+  const review = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+  await expect(review.getByRole("button", { name: "Read-only photos", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(review).toContainText("3 files · Separate items");
   expect(uploadChooserOpened).toBe(false);
-  expect(await page.evaluate(() => (window as unknown as { keepallPickerOptions: unknown }).keepallPickerOptions)).toEqual({ mode: "read", id: "keepall-image-folder" });
-  await review.getByRole("button", { name: "Import images", exact: true }).click();
-  const complete = page.getByRole("dialog", { name: "Import complete", exact: true });
-  await expect(complete.getByRole("status")).toContainText("Images: 2 added, 1 skipped.");
-  await complete.getByRole("button", { name: "Open folder", exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { keepallPickerOptions: unknown }).keepallPickerOptions)).toEqual({ mode: "read", id: "keepall-import-folder" });
+  await review.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(review).toBeHidden();
+  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Read-only photos", exact: true }).click();
   await expect(page).toHaveURL(/collection=/);
   await expect(page.getByRole("main", { name: "Read-only photos" }).getByRole("link", { name: "Open Image", exact: true })).toHaveCount(2);
+  await expect(page.locator("[data-item-id]")).toHaveCount(3);
+  await page.getByRole("link", { name: /readme.md/ }).click();
+  await expect(page.getByRole("heading", { name: "Folder note", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Folder note", exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });

@@ -1,5 +1,6 @@
 import {
   buildCollection,
+  coerceExclusiveCollectionIds,
   normalizeCollection,
   normalizeCollectionName,
   pinItemId,
@@ -26,6 +27,12 @@ export async function createCollection(
 
   await getDb().collections.add(collection);
   return collection;
+}
+
+/** Resolve a new import collection inside the caller's item/asset transaction. */
+export async function resolveItemCollectionIds(ids: string[] = [], name?: string): Promise<string[]> {
+  if (ids.length || !name?.trim()) return coerceExclusiveCollectionIds(ids);
+  return [(await createCollection({ name })).id];
 }
 
 export async function listCollections(): Promise<Collection[]> {

@@ -21,6 +21,13 @@ export async function createTag(input: CreateTagInput): Promise<Tag> {
   return tag;
 }
 
+/** Resolve import tags inside the caller's item/asset transaction. */
+export async function resolveItemTagIds(ids: string[] = [], names: readonly string[] = []): Promise<string[]> {
+  const resolved = new Set(ids);
+  for (const name of names) resolved.add((await createTag({ name })).id);
+  return [...resolved];
+}
+
 export async function listTags(): Promise<Tag[]> {
   return getDb().tags.orderBy("name").toArray();
 }

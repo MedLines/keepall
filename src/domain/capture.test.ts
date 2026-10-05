@@ -75,6 +75,12 @@ describe("captureReducer", () => {
     expect(captureReducer(saving, { type: "save" })).toEqual(saving);
   });
 
+  test("a completed batch reopens the retained draft without changing its text or kind", () => {
+    expect(captureReducer(state({ status: "saving", input: "Keep my note", override: "note" }), { type: "batchSaved" }))
+      .toMatchObject({ status: "open", input: "Keep my note", override: "note", error: null });
+    expect(captureReducer(initialCaptureState, { type: "batchSaved" })).toBe(initialCaptureState);
+  });
+
   test("failed from saving keeps the input", () => {
     expect(
       captureReducer(state({ status: "saving", input: "https://x.com" }), {

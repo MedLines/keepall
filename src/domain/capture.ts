@@ -30,6 +30,7 @@ export type CaptureEvent =
   | { type: "override"; kind: CaptureOverride }
   | { type: "save" }
   | { type: "saved" }
+  | { type: "batchSaved" }
   | { type: "failed"; message: string }
   | { type: "dismiss" };
 
@@ -93,6 +94,11 @@ export function captureReducer(
       }
 
       return { ...state, status: "saving", error: null };
+
+    case "batchSaved":
+      return state.status === "saving"
+        ? { ...state, status: "open", error: null }
+        : state;
 
     case "saved":
       if (state.status !== "saving") {

@@ -263,7 +263,7 @@ export function NoteItemPage({
       <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
         <div className={ITEM_PAGE_GRID}>
           <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-4xl lg:pt-6">
-            <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+            <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-4xl">
               {title}
             </h1>
             <article className="mt-9 border-t border-border-control pt-8">

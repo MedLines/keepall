@@ -11,8 +11,10 @@ import type { LinkItem } from "@/domain/link";
 import type { NoteItem } from "@/domain/note";
 import { insertNoteImageMarker, noteImageAssetIds, noteImageMarkers, removeNoteImageMarkerAt } from "@/domain/note";
 import type { VideoItem } from "@/domain/video";
+import type { DocumentItem } from "@/domain/document";
 import { NoteContent } from "./note-content";
 import { NoteEditorControls } from "./note-editor-controls";
+import { DocumentEditDialog } from "./document-edit-dialog";
 
 export type ImageDetailsDraft = {
   title: string;
@@ -23,6 +25,14 @@ export type ImageDetailsDraft = {
 
 export type VideoDetailsDraft = {
   title: string;
+  noteContent: string;
+  noteFormat: "plain" | "markdown";
+};
+
+export type DocumentDetailsDraft = {
+  title: string;
+  content: string;
+  expectedAssetId: string;
   noteContent: string;
   noteFormat: "plain" | "markdown";
 };
@@ -199,6 +209,13 @@ export function VideoItemEditDialog({ item, onSave, ...props }: CommonProps & {
       title, noteContent: notes, noteFormat: format,
     })}
   />;
+}
+
+export function DocumentItemEditDialog({ item, onSave, ...props }: CommonProps & {
+  item: DocumentItem;
+  onSave: (draft: DocumentDetailsDraft) => void;
+}) {
+  return <DocumentEditDialog {...props} item={item} onSave={onSave} />;
 }
 
 export function LinkItemEditDialog({ item, onSave, ...props }: CommonProps & {

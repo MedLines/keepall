@@ -1,7 +1,6 @@
 "use client";
 
 import { type ClipboardEvent, type FormEvent, useEffect, useReducer, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   captureReducer,
   initialCaptureState,
@@ -21,6 +20,8 @@ import {
 } from "@/domain/image";
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
+import { decodeTextDocument, documentFormat, DocumentValidationError } from "@/domain/document";
+import { createTextDocument } from "@/persistence/documents";
 import { VideoValidationError } from "@/domain/video";
 import { createVideo } from "@/persistence/videos";
 import { prepareLocalVideo } from "./prepare-local-video";
@@ -28,6 +29,7 @@ import { applyItemOrg } from "@/persistence/apply-item-org";
 import {
   clearCollectionOnItem,
   createNote,
+  createImage,
   createOrReuseImage,
   createOrReuseLink,
   updateLink,
@@ -61,14 +63,21 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useDirtyDismissal } from "./use-dirty-dismissal";
 import { NoteContent } from "./note-content";
 import { NoteEditorControls } from "./note-editor-controls";
-import { CloseIcon } from "./shell-icons";
-import { ImageFolderImport } from "./image-folder-import";
+import { CloseIcon, UploadIcon, NoteIcon } from "./shell-icons";
+import { BulkFileImport } from "./bulk-file-import";
 import { BookmarksImport } from "./bookmarks-import";
+import { importFiles, type FileImportResult } from "@/persistence/file-import";
+import { CaptureImageLayout } from "./capture-image-layout";
+import { CaptureFileList } from "./capture-file-list";
+import { CaptureTypeMenu } from "./capture-type-menu";
+import { CAPTURE_FILE_ACCEPT, classifyCaptureFile } from "@/domain/capture-file";
 import { ModalDialog } from "@/components/ui/modal-dialog";
+import { DocumentText } from "./document-content";
 
 
-const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} order-last h-8 px-3 text-xs disabled:opacity-60`;
+const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-8 px-3 text-xs disabled:opacity-60`;
 const CAPTURE_PREVIEW_CLASS = "ui-scrollbar max-h-36 overflow-y-auto overscroll-contain rounded-input border border-border-control bg-bg-control p-4";
+const FILE_PREVIEW_CLASS = "shrink-0 rounded-input border border-border-control bg-bg-control p-4";
 
 /** Alt+K (Windows/Linux) and Option+K (macOS). Option is altKey; code stays KeyK even when Option remaps the character. */
 export function isCaptureOpenShortcut(event: KeyboardEvent): boolean {
@@ -84,6 +93,7 @@ type ImageDraft = {
   bytes: Uint8Array;
   mimeType: string;
   previewUrl: string;
+  file: File;
 };
 
 function revokeImageDraftPreviews(drafts: ImageDraft[]): void {
@@ -141,12 +151,14 @@ async function applyCaptureOrg(
 }
 
 export function CaptureHost() {
-  const router = useRouter();
-  const importedFolderHrefRef = useRef<string | null>(null);
   const [state, dispatch] = useReducer(captureReducer, initialCaptureState);
   const [imageDrafts, setImageDrafts] = useState<ImageDraft[]>([]);
   const [videoDraft, setVideoDraft] = useState<{ file: File; poster: Blob | null } | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
+  const [documentDraft, setDocumentDraft] = useState<{ fileName: string; bytes: Uint8Array; text: string } | null>(null);
+  const [documentReading, setDocumentReading] = useState(false);
+  const documentReadGenerationRef = useRef(0);
+  const documentReadInFlightRef = useRef(false);
   const [folderImportBusy, setFolderImportBusy] = useState(false);
   const [bookmarksImportBusy, setBookmarksImportBusy] = useState(false);
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
@@ -181,34 +193,41 @@ export function CaptureHost() {
   const [videoNoteDraft, setVideoNoteDraft] = useState("");
   const [baseline, setBaseline] = useState<{ input: string; images: string[]; collection: string | null } | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const clipboardTextUntouchedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const [fileDrafts, setFileDrafts] = useState<File[] | null>(null);
+  const [imageLayoutRequired, setImageLayoutRequired] = useState(false);
+  const [imageLayout, setImageLayout] = useState<"gallery" | "separate" | null>(null);
+  const [fileResults, setFileResults] = useState<FileImportResult[]>([]);
+  const [fileProgress, setFileProgress] = useState<{ done: number; total: number } | null>(null);
+  const [fileQuotaWarning, setFileQuotaWarning] = useState<string | null>(null);
+  const [importSavedCount, setImportSavedCount] = useState(0);
   const saveInFlightRef = useRef(false);
   const savedItemIdRef = useRef<string | null>(null);
   const defaultCollectionNameRef = useRef<string | null>(null);
   const isActive = state.status !== "idle";
+  const hasFileBatch = fileDrafts !== null;
   const classified = classifyCapture(state.input).type;
-  const kind = state.override ?? classified;
+  const kind = documentDraft ? "note" : state.override ?? classified;
   const savingImage = imageDrafts.length > 0;
   const composeLocked =
     state.status === "saving" ||
     state.status === "reading" ||
     savedItemId !== null ||
-    imageUpload !== null || videoPreparing || folderImportBusy || bookmarksImportBusy;
-  const orgLocked = state.status === "saving" || state.status === "reading" || folderImportBusy || bookmarksImportBusy;
+    imageUpload !== null || videoPreparing || documentReading || folderImportBusy || bookmarksImportBusy || fileResults.length > 0;
+  const orgLocked = state.status === "saving" || state.status === "reading" || documentReading || folderImportBusy || bookmarksImportBusy || fileResults.some((result) => result.status === "saved");
   const dismissLocked = shouldBlockDialogDismiss(state.status) || folderImportBusy || bookmarksImportBusy;
 
   function dismiss() {
-    const href = importedFolderHrefRef.current;
     resetSession();
     dispatch({ type: "dismiss" });
-    if (href) router.push(href);
   }
-  const dirty = baseline !== null && (
+  const hasContent = Boolean(state.input.trim() || linkNoteDraft.trim() || videoNoteDraft.trim() || imageDrafts.length || videoDraft || documentDraft || hasFileBatch);
+  const dirty = hasContent && baseline !== null && (
     state.input !== baseline.input || state.override !== null ||
     linkNoteDraft !== "" || videoNoteDraft !== "" || noteFormat !== "plain" ||
     tagInput !== "" || collectionInput !== "" || draftTagNames.length > 0 ||
-    draftCollectionName !== baseline.collection || videoDraft !== null ||
+    draftCollectionName !== baseline.collection || videoDraft !== null || documentDraft !== null || hasFileBatch ||
     JSON.stringify(imageDrafts.map((draft) => draft.previewUrl)) !== JSON.stringify(baseline.images)
   );
   const dismissal = useDirtyDismissal(dirty && state.status !== "saved", dismiss);
@@ -265,6 +284,7 @@ export function CaptureHost() {
         if (cancelled) {
           return;
         }
+        clipboardTextUntouchedRef.current = Boolean(text);
         if (image) {
           void setDraftFromBlob(image, text, "reading");
           return;
@@ -311,6 +331,7 @@ export function CaptureHost() {
     return () => {
       revokeImageDraftPreviews(imageDraftsRef.current);
       videoPreparationGenerationRef.current += 1;
+      documentReadGenerationRef.current += 1;
     };
   }, []);
 
@@ -364,8 +385,15 @@ export function CaptureHost() {
   }
 
   function resetSession() {
-    importedFolderHrefRef.current = null;
+    clipboardTextUntouchedRef.current = false;
     setBulkImportOpen(false);
+    setFileDrafts(null);
+    setImportSavedCount(0);
+    setImageLayoutRequired(false);
+    setImageLayout(null);
+    setFileResults([]);
+    setFileProgress(null);
+    setFileQuotaWarning(null);
     setBaseline(null);
     savedItemIdRef.current = null;
     setSavedItemId(null);
@@ -376,6 +404,10 @@ export function CaptureHost() {
     setCollectionInput("");
     imageReadGenerationRef.current += 1;
     videoPreparationGenerationRef.current += 1;
+    documentReadGenerationRef.current += 1;
+    documentReadInFlightRef.current = false;
+    setDocumentDraft(null);
+    setDocumentReading(false);
     imageUploadInFlightRef.current = false;
     imageUploadErrorRef.current = null;
     setImageUpload(null);
@@ -394,7 +426,7 @@ export function CaptureHost() {
     status: typeof state.status,
   ) {
     const fields = textFieldsFromAccompanyingText(accompanyingText);
-    const text = fields.sourceUrl || fields.caption || accompanyingText;
+    const text = documentDraft ? accompanyingText : fields.sourceUrl || fields.caption || accompanyingText;
     if (status === "reading") {
       dispatch({ type: "clipboard", text });
     } else if (status === "open" || status === "failed") {
@@ -432,7 +464,7 @@ export function CaptureHost() {
       const drafts: ImageDraft[] = [];
       try {
         for (const { file, bytes, mimeType } of prepared) {
-          drafts.push({ bytes, mimeType, previewUrl: URL.createObjectURL(file) });
+          drafts.push({ file, bytes, mimeType, previewUrl: URL.createObjectURL(file) });
         }
       } catch (caught) {
         revokeImageDraftPreviews(drafts);
@@ -448,6 +480,7 @@ export function CaptureHost() {
         establishBaseline(fields.sourceUrl || fields.caption || accompanyingText, drafts.map((draft) => draft.previewUrl));
       }
       dispatchDraftText(accompanyingText, status);
+      return true;
     } catch (caught) {
       if (generation !== imageReadGenerationRef.current) return;
       const message = imageSelectionError(caught, currentFile);
@@ -478,6 +511,8 @@ export function CaptureHost() {
   }
 
   function clearImageDrafts() {
+    setImageLayoutRequired(false);
+    setImageLayout(null);
     setImageDrafts((previous) => {
       revokeImageDraftPreviews(previous);
       return [];
@@ -488,13 +523,67 @@ export function CaptureHost() {
     URL.revokeObjectURL(draft.previewUrl);
     setImageDrafts((previous) => previous.filter((entry) => entry !== draft));
     setPreviewKind(null);
+    if (imageDrafts.length <= 2) { setImageLayoutRequired(false); setImageLayout(null); }
   }
 
   async function onPickFiles(files: FileList | File[] | undefined) {
-    if (!files || files.length === 0) {
+    if (!files || files.length === 0 || composeLocked || documentReadInFlightRef.current) {
       return;
     }
-    await setDraftFromFiles(Array.from(files), state.input, state.status);
+    await stageFiles(Array.from(files));
+  }
+
+  async function stageFiles(files: File[], bulk = false) {
+    const selected = files.map((file) => {
+      const { kind, mimeType } = classifyCaptureFile(file);
+      return (kind === "image" || kind === "video") && file.type !== mimeType
+        ? new File([file], file.name, { type: mimeType }) : file;
+    });
+    if (!selected.length) return;
+    if (selected.every((file) => classifyCaptureFile(file).kind === "image") && !videoDraft && !hasFileBatch) {
+      const added = await setDraftFromFiles(selected, state.input, state.status);
+      if (added && (selected.length > 1 || imageDrafts.length > 0)) {
+        if (!imageLayoutRequired) setImageLayout(null);
+        setImageLayoutRequired(true);
+      }
+    } else if (!bulk && selected.length === 1 && classifyCaptureFile(selected[0]).kind === "document" && !videoDraft && !hasFileBatch) {
+      await addTextFile(selected[0]);
+    } else if (!bulk && selected.length === 1 && classifyCaptureFile(selected[0]).kind === "video" && !savingImage && !videoDraft && !hasFileBatch) {
+      await onPickVideo(selected[0]);
+    } else {
+      setFileDrafts((previous) => [...(previous ?? []), ...selected]);
+      setFileResults([]);
+    }
+  }
+
+  async function addTextFile(file: File) {
+    const generation = ++documentReadGenerationRef.current;
+    documentReadInFlightRef.current = true;
+    setDocumentReading(true);
+    try {
+      const format = documentFormat(file.name, file.size);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (generation !== documentReadGenerationRef.current) return;
+      documentFormat(file.name, bytes.byteLength);
+      const text = decodeTextDocument(bytes);
+      const existingText = clipboardTextUntouchedRef.current ? "" : state.input;
+      const combined = [existingText, linkNoteDraft, text].filter((part) => part.length > 0).join("\n\n");
+      setDocumentDraft(documentDraft ?? { fileName: file.name, bytes, text });
+      clipboardTextUntouchedRef.current = false;
+      setNoteFormat(noteFormat === "markdown" || format === "markdown" ? "markdown" : "plain");
+      setPreviewKind(null);
+      setLinkNoteDraft("");
+      dispatch({ type: "input", text: combined });
+    } catch (error) {
+      if (generation === documentReadGenerationRef.current) {
+        dispatch({ type: "failed", message: error instanceof DocumentValidationError ? error.message : "Couldn't read this file. Try again." });
+      }
+    } finally {
+      if (generation === documentReadGenerationRef.current) {
+        documentReadInFlightRef.current = false;
+        setDocumentReading(false);
+      }
+    }
   }
 
   async function onPickVideo(file: File | undefined) {
@@ -505,6 +594,7 @@ export function CaptureHost() {
       const poster = await prepareLocalVideo(file);
       if (generation !== videoPreparationGenerationRef.current) return;
       setVideoDraft({ file, poster });
+      if (documentDraft) setVideoNoteDraft(state.input);
       dispatch({ type: "input", text: "" });
     } catch (error) {
       if (generation !== videoPreparationGenerationRef.current) return;
@@ -513,16 +603,6 @@ export function CaptureHost() {
       if (generation === videoPreparationGenerationRef.current) {
         setVideoPreparing(false);
       }
-    }
-  }
-
-  async function pasteImageFromClipboard() {
-    if (composeLocked || videoDraft) {
-      return;
-    }
-    const { image, text } = await readClipboardImageAndText();
-    if (image) {
-      await setDraftFromBlob(image, text || state.input, state.status);
     }
   }
 
@@ -551,6 +631,45 @@ export function CaptureHost() {
     }
   }
 
+  async function saveSeparateFiles(files: File[], org: CaptureOrgDrafts) {
+    if (saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
+    dispatch({ type: "save" });
+    const previous = fileResults;
+    const indexes = files.map((_, index) => index).filter((index) => previous[index]?.status !== "saved");
+    const pending = indexes.map((index) => files[index]);
+    const completed = [...previous];
+    setFileProgress({ done: 0, total: pending.length });
+    try {
+      const summary = await importFiles(pending, {
+        prepareVideo: prepareLocalVideo, collectionName: org.collectionName ?? undefined, tagNames: org.tagNames,
+        onProgress: (done, result) => {
+          completed[indexes[done - 1]] = result;
+          if (done % 8 === 0 || done === pending.length) { setFileProgress({ done, total: pending.length }); setFileResults([...completed]); }
+        },
+      });
+      summary.results.forEach((result, index) => { completed[indexes[index]] = result; });
+      setFileResults(completed);
+      const saved = completed.filter((result) => result.status === "saved").length;
+      const failed = completed.length - saved;
+      if (saved) window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      if (failed) dispatch({ type: "failed", message: `${saved} saved, ${failed} failed. Retry saves only the failed files.` });
+      else {
+        const keepDraft = Boolean(imageDrafts.length && hasFileBatch || videoDraft || documentDraft || state.input.trim() && !clipboardTextUntouchedRef.current);
+        setFileDrafts(null);
+        setFileResults([]);
+        setFileQuotaWarning(null);
+        if (!hasFileBatch) clearImageDrafts();
+        if (keepDraft) { setImportSavedCount(saved); dispatch({ type: "batchSaved" }); }
+        else dispatch({ type: "saved" });
+      }
+    } catch {
+      if (completed.some((result) => result?.status === "saved")) window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      setFileResults(files.map((file, index) => completed[index] ?? { fileName: file.name, status: "failed", error: "Import stopped. Retry this file." }));
+      dispatch({ type: "failed", message: "Import stopped. Retry saves only the failed files." });
+    } finally { saveInFlightRef.current = false; setFileProgress(null); }
+  }
+
   async function persistCapture(options?: {
     conflictChoice?: CaptureLinkConflictChoice;
   }) {
@@ -558,6 +677,8 @@ export function CaptureHost() {
       saveInFlightRef.current ||
       folderImportBusy ||
       bookmarksImportBusy ||
+      videoPreparing ||
+      documentReadInFlightRef.current ||
       imageUploadInFlightRef.current ||
       imageUploadErrorRef.current
     ) {
@@ -568,6 +689,12 @@ export function CaptureHost() {
       [...draftTagNames, tagInput],
       draftCollectionName ?? collectionInput,
     );
+    if (imageLayoutRequired && !hasFileBatch && !imageLayout) return;
+    if (hasFileBatch || imageLayoutRequired && imageLayout === "separate") {
+      await saveSeparateFiles(fileDrafts ?? imageDrafts.map((draft) => draft.file), org);
+      return;
+    }
+    const atomicGallery = savingImage && imageLayoutRequired && imageLayout === "gallery";
     const conflictChoice = options?.conflictChoice ?? null;
 
     let collectionChoice: "keep" | "move" | null = null;
@@ -620,7 +747,7 @@ export function CaptureHost() {
     }
 
     try {
-      if (!savedItemIdRef.current && imageDrafts.length > 0) {
+      if (!savedItemIdRef.current && imageDrafts.length > 0 && !documentDraft && !atomicGallery) {
         const existing = await findImageByAssetPayloads(
           imageDrafts.map((draft) => ({
             bytes: draft.bytes,
@@ -633,7 +760,7 @@ export function CaptureHost() {
             return;
           }
         }
-      } else if (!savedItemIdRef.current && imageDrafts.length === 0 && !videoDraft) {
+      } else if (!savedItemIdRef.current && imageDrafts.length === 0 && !videoDraft && !documentDraft) {
         const resolved = resolveCapture(state.input, state.override);
         if (!resolved.ok) {
           dispatch({ type: "failed", message: resolved.error });
@@ -682,8 +809,9 @@ export function CaptureHost() {
           const video = await createVideo(videoDraft.file, videoDraft.poster, state.input, { content: videoNoteDraft, format: noteFormat });
           itemId = video.id;
         } else if (imageDrafts.length > 0) {
-          const fields = textFieldsFromAccompanyingText(state.input);
-          const { image } = await createOrReuseImage({
+          const fields = documentDraft ? { sourceUrl: "", caption: state.input } : textFieldsFromAccompanyingText(state.input);
+          const input = {
+            ...(documentDraft ? { sourceFileName: documentDraft.fileName } : {}),
             assets: imageDrafts.map((draft) => ({
               bytes: draft.bytes,
               mimeType: draft.mimeType,
@@ -691,8 +819,15 @@ export function CaptureHost() {
             sourceUrl: fields.sourceUrl || undefined,
             caption: fields.caption || undefined,
             ...(fields.caption && noteFormat === "markdown" ? { captionFormat: "markdown" as const } : {}),
-          });
+          };
+          // A file's text belongs to this item, even if its images were saved before.
+          const image = atomicGallery ? await createImage({ ...input, collectionName: org.collectionName ?? undefined, tagNames: org.tagNames }) : documentDraft ? await createImage(input) : (await createOrReuseImage(input)).image;
           itemId = image.id;
+        } else if (documentDraft) {
+          const format = noteFormat === "markdown" ? "markdown" : "text";
+          const fileName = documentFormat(documentDraft.fileName, 0) === format ? documentDraft.fileName : documentDraft.fileName.replace(/\.(txt|md)$/i, format === "markdown" ? ".md" : ".txt");
+          const bytes = state.input === documentDraft.text ? documentDraft.bytes : new TextEncoder().encode(state.input);
+          itemId = (await createTextDocument({ fileName, bytes })).id;
         } else {
           const resolved = resolveCapture(state.input, state.override);
           if (!resolved.ok) {
@@ -718,8 +853,11 @@ export function CaptureHost() {
               void enrichLinkPreview(link.id, link.url);
             }
           } else {
+            const content = state.override === "note" && classified === "link" && linkNoteDraft.trim()
+              ? `${resolved.classification.content}\n\n${linkNoteDraft.trim()}`
+              : resolved.classification.content;
             const note = await createNote({
-              content: resolved.classification.content,
+              content,
               ...(noteFormat === "markdown" ? { format: "markdown" as const } : {}),
             });
             itemId = note.id;
@@ -730,7 +868,7 @@ export function CaptureHost() {
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
       }
 
-      await applyCaptureOrg(itemId, org, { collectionChoice, tagChoice });
+      if (!atomicGallery) await applyCaptureOrg(itemId, org, { collectionChoice, tagChoice });
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
 
       dispatch({ type: "saved" });
@@ -743,7 +881,7 @@ export function CaptureHost() {
         return;
       }
 
-      if (caught instanceof ImageValidationError || caught instanceof VideoValidationError) {
+      if (caught instanceof ImageValidationError || caught instanceof VideoValidationError || caught instanceof DocumentValidationError) {
         dispatch({ type: "failed", message: caught.message });
       } else if (
         caught instanceof NoteValidationError ||
@@ -774,6 +912,7 @@ export function CaptureHost() {
   function addDraftTag(name: string) {
     const next = captureOrgDrafts([...draftTagNames, name], null);
     setDraftTagNames(next.tagNames);
+    setTagInput("");
   }
 
   return (
@@ -782,7 +921,7 @@ export function CaptureHost() {
       open={isActive}
       side={captureSide}
       title="Save to Keepall"
-      description="Paste a link, write a note, or add images or video."
+      description="Paste a link, write a note, or add files."
       widthClassName="w-[min(30rem,100vw)]"
       closeDisabled={dismissLocked}
       onOpenChange={(open, eventDetails) => {
@@ -813,6 +952,15 @@ export function CaptureHost() {
           className="scroll-fade flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-6 pb-5 pt-3 [scrollbar-gutter:stable]"
           data-testid="capture-scroll-region"
         >
+        {documentReading ? <p role="status" className="text-sm text-text-secondary">Reading text file…</p> : null}
+        {importSavedCount > 0 ? <p role="status" className="text-sm text-text-secondary">{importSavedCount} files saved. Your draft is still here.</p> : null}
+        {documentDraft ? <div className="flex items-start gap-3 rounded-input border border-border-control bg-bg-raised p-3">
+          <NoteIcon className="mt-0.5 shrink-0 text-text-secondary" />
+          <div className="min-w-0 text-sm">
+            <p className="break-all font-medium">{documentDraft.fileName.replace(/\.(txt|md)$/i, noteFormat === "markdown" ? ".md" : ".txt")}</p>
+            <p className="mt-1 text-xs text-text-secondary">{savingImage ? "Images and text save as one item." : videoDraft ? "Video and text save as one item." : "Edit the text below, then Save."}</p>
+          </div>
+        </div> : null}
         {videoDraft ? (
           <p className="rounded-input border border-border-control bg-bg-raised px-3 py-2 text-sm text-text-primary">Video: {videoDraft.file.name}</p>
         ) : null}
@@ -890,24 +1038,37 @@ export function CaptureHost() {
             Adding images… {imageUpload.completed} of {imageUpload.total}
           </p>
         ) : null}
-        {kind === "note" && !savingImage && !videoDraft ? (
+        {hasFileBatch ? <CaptureFileList files={fileDrafts!} results={fileResults} disabled={composeLocked}
+          onRemove={(index) => { setFileDrafts((files) => files && files.length > 1 ? files.filter((_, position) => position !== index) : null); }} /> : null}
+        {!hasFileBatch && fileResults.some((result) => result.status === "failed") ? <ul aria-label="Failed files" className="space-y-2 text-xs text-text-danger">
+          {fileResults.map((result, index) => result.status === "failed" ? <li key={index}>{result.fileName}: {result.error}</li> : null)}
+        </ul> : null}
+        {fileQuotaWarning ? <p role="status" className="text-sm text-text-warning">{fileQuotaWarning}</p> : null}
+        {savingImage && imageLayoutRequired && !hasFileBatch ? <CaptureImageLayout mode={imageLayout} disabled={composeLocked}
+          value={state.input} format={noteFormat} preview={previewKind === "image"} inputRef={inputRef}
+          label={documentDraft ? "Text beneath images" : "Optional source URL or caption"}
+          onModeChange={(mode) => { setImageLayout(mode); setPreviewKind(null); }}
+          onChange={(text) => { clipboardTextUntouchedRef.current = false; dispatch({ type: "input", text }); }}
+          onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "image" : null)} /> : null}
+        {kind === "note" && !savingImage && !videoDraft && !hasFileBatch ? (
           <NoteEditorControls format={noteFormat} preview={previewKind === "note"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "note" : null)} />
         ) : null}
-        {savingImage && textFieldsFromAccompanyingText(state.input).caption ? (
+        {savingImage && !imageLayoutRequired && !hasFileBatch && (documentDraft || textFieldsFromAccompanyingText(state.input).caption) ? (
           <NoteEditorControls format={noteFormat} preview={previewKind === "image"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "image" : null)} />
         ) : null}
-        {previewKind !== "note" && previewKind !== "image" ? (
+        {previewKind !== "note" && previewKind !== "image" && !hasFileBatch && !(savingImage && imageLayoutRequired) ? (
           <div className="flex flex-col gap-2">
+            {documentDraft ? <span className="text-sm font-medium text-text-primary">{videoDraft ? "Video title" : savingImage ? "Text beneath images" : noteFormat === "markdown" ? "Markdown content" : "Text content"}</span> : null}
             {kind === "link" && !savingImage && !videoDraft ? <span className="text-sm font-medium text-text-secondary">Link URL</span> : null}
             <label className="sr-only" htmlFor="capture-input">
               {videoDraft ? "Video title" : savingImage
-                ? "Optional source URL or caption"
-                : "Link, note, or image"}
+                ? documentDraft ? "Text beneath images" : "Optional source URL or caption"
+                : documentDraft ? noteFormat === "markdown" ? "Markdown content" : "Text content" : "Link, note, or image"}
             </label>
             <textarea
               ref={inputRef}
               className={`ui-field w-full rounded-input px-4 py-3 text-sm disabled:opacity-60 ${
-                videoDraft ? "min-h-11" : savingImage ? "min-h-16" : kind === "link" ? "min-h-11" : "min-h-24"
+                videoDraft ? "min-h-11" : documentDraft ? "min-h-48" : savingImage ? "min-h-16" : kind === "link" ? "min-h-11" : "min-h-24"
               }`}
               id="capture-input"
               placeholder={
@@ -916,24 +1077,25 @@ export function CaptureHost() {
                   : kind === "link" ? "https://example.com/page" : "Paste a link, note, or image"
               }
               value={state.input}
-              onChange={(event) =>
-                dispatch({ type: "input", text: event.target.value })
-              }
+              onChange={(event) => {
+                clipboardTextUntouchedRef.current = false;
+                dispatch({ type: "input", text: event.target.value });
+              }}
               disabled={composeLocked}
             />
           </div>
         ) : null}
-        {kind === "note" && !savingImage && !videoDraft && previewKind === "note" ? (
-          <section aria-label="Note preview" className={CAPTURE_PREVIEW_CLASS}>
-            <NoteContent content={state.input} format={noteFormat} />
+        {kind === "note" && !savingImage && !videoDraft && !hasFileBatch && previewKind === "note" ? (
+          <section aria-label="Note preview" className={documentDraft ? FILE_PREVIEW_CLASS : CAPTURE_PREVIEW_CLASS}>
+            {documentDraft ? <DocumentText text={state.input} format={noteFormat === "markdown" ? "markdown" : "text"} /> : <NoteContent content={state.input} format={noteFormat} />}
           </section>
         ) : null}
-        {savingImage && previewKind === "image" ? (
-          <section aria-label="Image note preview" className={CAPTURE_PREVIEW_CLASS}>
-            <NoteContent content={state.input} format={noteFormat} />
+        {savingImage && !imageLayoutRequired && !hasFileBatch && previewKind === "image" ? (
+          <section aria-label="Image note preview" className={documentDraft ? FILE_PREVIEW_CLASS : CAPTURE_PREVIEW_CLASS}>
+            {documentDraft ? <DocumentText text={state.input} format={noteFormat === "markdown" ? "markdown" : "text"} /> : <NoteContent content={state.input} format={noteFormat} />}
           </section>
         ) : null}
-        {videoDraft ? (
+        {videoDraft && !hasFileBatch ? (
           <div className="flex flex-col gap-3">
             {previewKind === "video" ? <span className="text-sm font-medium text-text-primary">Notes (optional)</span> : <label className="text-sm font-medium text-text-primary" htmlFor="capture-video-note">Notes (optional)</label>}
             <NoteEditorControls format={noteFormat} preview={previewKind === "video"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "video" : null)} />
@@ -941,7 +1103,7 @@ export function CaptureHost() {
             {previewKind === "video" ? <section aria-label="Video note preview" className={CAPTURE_PREVIEW_CLASS}><NoteContent content={videoNoteDraft} format={noteFormat} /></section> : null}
           </div>
         ) : null}
-        {kind === "link" && !savingImage && !videoDraft ? (
+        {kind === "link" && !savingImage && !videoDraft && !hasFileBatch ? (
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               {previewKind === "link" ? (
@@ -966,70 +1128,38 @@ export function CaptureHost() {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <input
             ref={fileInputRef}
-            accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
+            accept={CAPTURE_FILE_ACCEPT}
+            aria-label="Choose files"
+            data-capture-files
             className="sr-only"
             type="file"
-            disabled={Boolean(videoDraft)}
+            disabled={composeLocked}
             multiple
             onChange={(event) => {
               void onPickFiles(event.target.files ?? undefined);
               event.target.value = "";
             }}
           />
-          {!videoDraft ? <button
+          <button
             className={IMAGE_ACTION_BTN}
             type="button"
             disabled={composeLocked}
             onClick={() => fileInputRef.current?.click()}
           >
-            Add image
-          </button> : null}
-          <input ref={videoInputRef} type="file" accept="video/mp4,video/webm" className="sr-only" disabled={savingImage || Boolean(videoDraft)} onChange={(event) => {
-            void onPickVideo(event.target.files?.[0]);
-            event.target.value = "";
-          }} />
-          {!savingImage && !videoDraft ? <button className={IMAGE_ACTION_BTN} type="button" disabled={composeLocked} onClick={() => videoInputRef.current?.click()}>
-            Add video
-          </button> : null}
-          {!videoDraft ? <button
-            className={IMAGE_ACTION_BTN}
-            type="button"
-            disabled={composeLocked}
-            onClick={() => void pasteImageFromClipboard()}
-          >
-            Paste image
-          </button> : null}
+            <UploadIcon className="size-4" />Add files
+          </button>
           {videoDraft ? (
-            <button className={IMAGE_ACTION_BTN} type="button" disabled={composeLocked} onClick={() => setVideoDraft(null)}>Remove video</button>
+            <button className={IMAGE_ACTION_BTN} type="button" disabled={composeLocked} onClick={() => { setVideoDraft(null); if (documentDraft) { dispatch({ type: "input", text: videoNoteDraft }); setVideoNoteDraft(""); } }}>Remove video</button>
           ) : null}
-          {!savingImage && !videoDraft ? (
-            <div className="order-first mr-auto flex gap-1">
-              <button
-                className={`${SHELL_TOP_BTN} h-8 px-2.5 text-xs ${
-                  kind === "link" ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE
-                }`}
-                type="button"
-                aria-pressed={kind === "link"}
-                disabled={composeLocked}
-                onClick={() => dispatch({ type: "override", kind: "link" })}
-              >
-                Link
-              </button>
-              <button
-                className={`${SHELL_TOP_BTN} h-8 px-2.5 text-xs ${
-                  kind === "note" ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE
-                }`}
-                type="button"
-                aria-pressed={kind === "note"}
-                disabled={composeLocked}
-                onClick={() => dispatch({ type: "override", kind: "note" })}
-              >
-                Note
-              </button>
-            </div>
+          {!savingImage && !videoDraft && !documentDraft && !hasFileBatch ? (
+            state.input.trim() ? <div className="ml-auto flex items-center gap-2">
+              <p className="text-xs text-text-secondary">Saving as {kind}</p>
+              {classified === "link" ? <CaptureTypeMenu value={kind} disabled={composeLocked}
+                onChange={(next) => dispatch({ type: "override", kind: next === "link" ? null : "note" })} /> : null}
+            </div> : null
           ) : (
             <p className="ml-auto text-xs text-text-secondary">
-              {videoDraft ? "Saving as video" : imageDrafts.length > 1
+              {hasFileBatch ? "Each file saves separately" : imageLayoutRequired && imageLayout !== "gallery" ? imageLayout === "separate" ? "Separate image items" : "Choose an image layout" : videoDraft ? "Saving as video" : documentDraft && !savingImage ? "Saving as note" : imageDrafts.length > 1
                 ? "One item, several photos"
                 : "Saving as image"}
             </p>
@@ -1054,9 +1184,11 @@ export function CaptureHost() {
           onSetCollection={(name) => {
             const next = captureOrgDrafts([], name);
             setDraftCollectionName(next.collectionName);
+            setCollectionInput("");
           }}
           onClearCollection={() => setDraftCollectionName(null)}
         />
+        {fileProgress ? <p role="status" className="text-sm tabular-nums text-text-secondary">Saving files… {fileProgress.done} of {fileProgress.total}</p> : null}
         {state.error ? (
           <p className="text-sm text-text-danger" role="alert">
             {state.error}
@@ -1084,7 +1216,7 @@ export function CaptureHost() {
               dispatch({ type: "dismiss" });
             }}
           >
-            Cancel
+            {fileResults.some((result) => result.status === "saved") ? "Done" : "Cancel"}
           </button>
           <button
             className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} px-4 disabled:opacity-60`}
@@ -1095,12 +1227,14 @@ export function CaptureHost() {
               state.status === "saved" ||
               imageUpload !== null ||
               videoPreparing ||
+              documentReading ||
               folderImportBusy ||
+              imageLayoutRequired && !hasFileBatch && !imageLayout ||
               bookmarksImportBusy ||
               imageUploadError !== null
             }
           >
-            {state.status === "saving" ? "Saving…" : "Save"}
+            {state.status === "saving" ? "Saving…" : fileResults.some((result) => result.status === "failed") ? "Retry failed files" : "Save"}
           </button>
           {state.status === "saved" ? (
             <p className="text-xs text-text-secondary">Saved.</p>
@@ -1114,7 +1248,7 @@ export function CaptureHost() {
           open={bulkImportOpen}
           onOpenChange={setBulkImportOpen}
           title="Bulk import"
-          description="Add an image folder or an exported browser bookmarks HTML file to your library."
+          description="Import separate items from files, a folder, or browser bookmarks."
           busy={folderImportBusy || bookmarksImportBusy}
           footer={(
             <button
@@ -1127,17 +1261,18 @@ export function CaptureHost() {
             </button>
           )}
         >
-          <ImageFolderImport
+          <BulkFileImport
+            onSelect={(files, collectionName, quotaWarning) => {
+              setBulkImportOpen(false);
+              setDraftCollectionName(collectionName.trim() || null);
+              setCollectionInput("");
+              setFileQuotaWarning(quotaWarning);
+              void stageFiles(files, true);
+            }}
             buttonClassName="ui-control min-h-11 w-full px-4 text-left text-sm font-medium disabled:opacity-60"
-            label="Import image folder"
             disabled={composeLocked}
             defaultCollectionName={draftCollectionName ?? collectionInput.trim()}
             onBusyChange={setFolderImportBusy}
-            onOpenFolder={(href) => {
-              setBulkImportOpen(false);
-              importedFolderHrefRef.current = href;
-              dismissal.requestDismiss({ cancel: () => {} });
-            }}
           />
           <BookmarksImport
             buttonClassName="ui-control min-h-11 w-full px-4 text-left text-sm font-medium disabled:opacity-60"
@@ -1147,13 +1282,7 @@ export function CaptureHost() {
           />
         </ModalDialog>
       ) : null}
-      <ConfirmDialog
-        {...dismissal.confirmationProps}
-        onOpenChange={(open) => {
-          if (!open) importedFolderHrefRef.current = null;
-          dismissal.confirmationProps.onOpenChange(open);
-        }}
-      />
+      <ConfirmDialog {...dismissal.confirmationProps} />
       <CaptureLinkConflictDialog
         conflict={linkConflict}
         busy={state.status === "saving"}

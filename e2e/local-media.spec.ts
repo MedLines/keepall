@@ -12,7 +12,7 @@ test("captures, plays, and backs up a local video", async ({ page }) => {
   await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Save item", exact: true }).click();
   const capture = page.getByRole("dialog", { name: "Save to Keepall" });
-  await capture.locator('input[accept="video/mp4,video/webm"]').setInputFiles(videoFile);
+  await capture.locator('input[data-capture-files]').setInputFiles(videoFile);
   await expect(capture.getByText("Video: tiny.mp4")).toBeVisible();
   await expect(capture.getByRole("button", { name: "Add image" })).toHaveCount(0);
   await expect(capture.getByRole("button", { name: "Paste image" })).toHaveCount(0);
@@ -59,6 +59,7 @@ test("captures, plays, and backs up a local video", async ({ page }) => {
 
   await page.getByRole("link", { name: "Library" }).click();
   await page.getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("tab", { name: "Storage & backups", exact: true }).click();
   const backup = page.getByRole("region", { name: "Backup" });
   const downloadPromise = page.waitForEvent("download");
   await backup.getByRole("button", { name: "Export backup", exact: true }).click();
@@ -66,7 +67,8 @@ test("captures, plays, and backs up a local video", async ({ page }) => {
   expect(download.suggestedFilename()).toMatch(/\.keepall\.zip$/);
   const archivePath = await download.path();
   await backup.locator('input[accept*="application/zip"]').setInputFiles(archivePath!);
-  await page.getByRole("dialog", { name: "Import backup" }).getByRole("button", { name: "Replace" }).click();
+  await page.getByRole("dialog", { name: "Import backup", exact: true }).getByRole("button", { name: "Replace library", exact: true }).click();
+  await page.getByRole("dialog", { name: "Replace library?", exact: true }).getByRole("button", { name: "Confirm replacement", exact: true }).click();
   await expect(backup).toContainText("Library replaced from backup.");
   await page.getByRole("link", { name: "Back to library" }).click();
   await expect(page.getByText("Local test video", { exact: true })).toBeVisible();
@@ -87,7 +89,7 @@ test("a large image uses a small card thumbnail and opens its original", async (
   await page.goto("/");
   await page.getByRole("button", { name: "Save item", exact: true }).click();
   const capture = page.getByRole("dialog", { name: "Save to Keepall" });
-  await capture.locator('input[accept^="image/"]').setInputFiles({
+  await capture.locator('input[data-capture-files]').setInputFiles({
     name: "large.png", mimeType: "image/png", buffer: image,
   });
   await capture.getByRole("textbox", { name: "Optional source URL or caption" }).fill("Large image test");
@@ -110,7 +112,7 @@ test("video details keep actions reachable and link metadata across widths", asy
   await page.goto("/");
   await page.getByRole("button", { name: "Save item", exact: true }).click();
   const capture = page.getByRole("dialog", { name: "Save to Keepall" });
-  await capture.locator('input[accept="video/mp4,video/webm"]').setInputFiles(videoFile);
+  await capture.locator('input[data-capture-files]').setInputFiles(videoFile);
   await capture.getByRole("textbox", { name: "Video title" }).fill("A very long local video title about a collection of favorite scenes and edits");
   await capture.getByRole("textbox", { name: "Notes (optional)" }).fill("A long note about this video.\n".repeat(100));
   await capture.getByRole("button", { name: "Save", exact: true }).click();
@@ -147,6 +149,7 @@ test("video details keep actions reachable and link metadata across widths", asy
     await page.setViewportSize({ width, height: 700 });
     const scroll = page.getByTestId("item-page-scroll");
     await scroll.evaluate((element) => element.scrollTo(0, element.scrollHeight));
+    await details.scrollIntoViewIfNeeded();
     await expect(page.getByRole("link", { name: "Library" })).toBeInViewport();
     for (const action of ["Edit details", "Organize", "Move to Trash"]) {
       await expect(page.getByRole("button", { name: action, exact: true })).toBeInViewport();
@@ -165,7 +168,7 @@ test("missing local video ends loading and offers a retry", async ({ page }) => 
   await page.goto("/");
   await page.getByRole("button", { name: "Save item", exact: true }).click();
   const capture = page.getByRole("dialog", { name: "Save to Keepall" });
-  await capture.locator('input[accept="video/mp4,video/webm"]').setInputFiles(videoFile);
+  await capture.locator('input[data-capture-files]').setInputFiles(videoFile);
   await capture.getByRole("textbox", { name: "Video title" }).fill("Missing video example");
   await capture.getByRole("button", { name: "Save", exact: true }).click();
   await expect(capture).toBeHidden();

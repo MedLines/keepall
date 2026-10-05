@@ -36,6 +36,7 @@ test.beforeEach(async ({ page }) => {
     db.close();
   });
   await page.reload();
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
 });
 
 test("card deletion moves to Trash and restore preserves search, tags and collection pins", async ({ page }, testInfo) => {
@@ -149,9 +150,11 @@ for (const layout of ["Grid", "List"]) {
     const trigger = bulk.getByRole("button", { name: /Selection actions:/ });
     if (await trigger.isVisible()) {
       await trigger.click();
+      await expect(page.getByRole("menu", { name: /^Selection actions:/ })).toBeVisible();
       await expect(page.getByRole("menuitem", { name: "Organize", exact: true })).toHaveCount(0);
       await expect(page.getByRole("menuitem", { name: "Move to Trash", exact: true })).toHaveCount(0);
       await page.keyboard.press("Escape");
+      await expect(bulk).toContainText("1 selected");
     } else {
       await expect(bulk.getByRole("button", { name: "Organize" })).toHaveCount(0);
       await expect(bulk.getByRole("button", { name: "Move to Trash" })).toHaveCount(0);

@@ -87,9 +87,9 @@ export function LibraryTopBar({
   }
 
   return (
-    <header className="library-top-bar relative z-40 flex shrink-0 flex-col gap-3 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 sm:flex-nowrap">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
+    <header className="library-top-bar @container/toolbar relative z-40 flex shrink-0 flex-col gap-3 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 @min-[44rem]/toolbar:flex-nowrap">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 @min-[44rem]/toolbar:flex-nowrap @min-[44rem]/toolbar:gap-3">
           <button
             type="button"
             className="ui-control flex size-10 shrink-0 items-center justify-center text-text-primary"
@@ -156,11 +156,11 @@ export function LibraryTopBar({
               className="ui-control inline-flex h-11 shrink-0 items-center justify-center gap-2 px-3 text-sm disabled:opacity-50"
               disabled={previewDisabled} onClick={onPreview}
             >
-              <EyeIcon className="size-4" /><span className="hidden xl:inline">Preview</span>
+              <EyeIcon className="size-4" /><span className="hidden @min-[54rem]/toolbar:inline">Preview</span>
             </button> : null}
           </div>
         </div>
-        <div className="flex w-full shrink-0 items-center justify-end gap-3 sm:w-auto">
+        <div className="flex w-full shrink-0 items-center justify-end gap-3 @min-[44rem]/toolbar:w-auto">
           <ThemeControl compact />
           {trash ? <button type="button" disabled={trashEmptyDisabled} onClick={onEmptyTrash} className="ui-control inline-flex h-11 items-center justify-center gap-2 px-4 text-sm text-text-danger disabled:opacity-50"><DeleteIcon className="size-4" /><span className="leading-none">Empty Trash</span></button> : <button
             type="button"
@@ -207,7 +207,7 @@ export function LibraryTopBar({
           ) : null}
         </div>
 
-        <div className="flex h-10 w-full min-w-0 shrink-0 justify-end sm:w-[min(50%,28rem)]">
+        <div className="flex h-10 w-full min-w-0 shrink-0 justify-end sm:w-[min(50%,32rem)]">
           <LibraryBulkActions bulk={bulk} selection={selection} />
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { itemListTitle, type Item } from "@/domain/item";
 import { LibraryItemMedia } from "./library-item-media";
 import { NoteContent } from "./note-content";
+import { DocumentContent } from "./document-content";
 import { getVideoBlob } from "@/persistence/videos";
 import { SegmentedControl } from "./segmented-control";
 import { ArrowLeftIcon, ArrowRightIcon, CloseIcon } from "./shell-icons";
@@ -127,6 +128,7 @@ function PreviewContent({ item, onGalleryStep }: { item: Item; onGalleryStep: ()
   </div>;
   if (item.type === "document") return <div data-preview-scroll tabIndex={0} className="ui-scrollbar flex h-full min-h-0 flex-col gap-4 overflow-y-auto px-5 pb-5">
     <p className="break-words text-sm text-text-secondary">{item.sourceFileName}</p>
+    <DocumentContent item={item} />
     {item.noteContent ? <NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /> : null}
   </div>;
   const details = <div className="mx-auto flex w-full max-w-[65ch] flex-col gap-4">

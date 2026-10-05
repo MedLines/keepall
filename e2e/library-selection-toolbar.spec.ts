@@ -1,5 +1,39 @@
 import { expect, test } from "@playwright/test";
 
+test("toolbar controls stay clickable across narrow panels and sidebar resizing", async ({ page }, testInfo) => {
+  await page.goto("/");
+  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  const header = page.locator(".library-top-bar");
+  for (const width of [320, 640, 768, 900, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const navigation = page.getByRole("button", { name: "Close navigation", exact: true });
+    if (await navigation.isVisible()) await navigation.click();
+    const expand = page.getByRole("button", { name: "Expand", exact: true });
+    if (width >= 768 && await expand.isVisible()) await expand.click();
+    await expect.poll(() => header.evaluate((node) => {
+      const bounds = node.getBoundingClientRect();
+      return [...node.querySelectorAll<HTMLElement>('button, input[type="search"], [role="combobox"]')].filter((control) => {
+        const box = control.getBoundingClientRect();
+        if (!box.width || !box.height || control.closest('[inert]') || getComputedStyle(control).visibility === "hidden") return false;
+        const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return box.left < bounds.left || box.right > bounds.right + 1 || !hit || !control.contains(hit);
+      }).map(control => control.getAttribute("aria-label") || control.textContent);
+    })).toEqual([]);
+    await page.getByRole("button", { name: "Save item", exact: true }).click();
+    const drawer = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+    await expect(drawer).toBeVisible();
+    await drawer.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(drawer).toBeHidden();
+    if (width === 768) await header.screenshot({ path: testInfo.outputPath("toolbar-768.png") });
+  }
+  const resize = page.getByRole("separator", { name: "Resize sidebar", exact: true });
+  await resize.focus();
+  await page.keyboard.press("End");
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.getByRole("button", { name: "Save item", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Save to Keepall", exact: true })).toBeVisible();
+});
+
 test("browse controls follow Search while filters and selection actions share the lower row", async ({ page }, testInfo) => {
   await page.goto("/");
   await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
@@ -37,10 +71,11 @@ test("browse controls follow Search while filters and selection actions share th
   await expect(page.locator(".library-card")).toHaveCount(2);
   const activeFilters = page.getByRole("group", { name: "Active filters" });
   await expect(activeFilters.getByRole("button", { name: /Remove search filter: needle/ })).toBeVisible();
-  const quickSelectAll = page.getByRole("button", { name: "Select all", exact: true });
-  await expect(quickSelectAll).toBeVisible();
   await expect(page.getByRole("region", { name: "Bulk actions" })).toHaveCount(0);
-  await quickSelectAll.click();
+  await page.locator(".library-card").first().getByRole("checkbox").focus();
+  await page.keyboard.press("Space");
+  await page.getByRole("button", { name: "Selection actions: 1 selected" }).click();
+  await page.getByRole("menuitem", { name: "Select all", exact: true }).click();
   await expect(page.getByRole("button", { name: "Selection actions: 2 selected" })).toBeVisible();
   await page.getByRole("button", { name: "Selection actions: 2 selected" }).click();
   await page.getByRole("menuitem", { name: "Deselect all", exact: true }).click();
@@ -112,6 +147,14 @@ test("browse controls follow Search while filters and selection actions share th
       await expect(menuTrigger).toHaveCount(0);
       await expect(directOrganize).toBeVisible();
       await expect(directDestructive).toBeVisible();
+      await expect(directOrganize.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+      await expect(directDestructive.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+      expect(await directOrganize.locator("path").first().getAttribute("d")).not.toBe(await typeFilter.locator("path").first().getAttribute("d"));
+      for (const theme of ["light", "dark"]) {
+        if (await page.locator("html").getAttribute("data-theme") !== theme) await page.getByRole("button", { name: "Theme", exact: true }).click();
+        await expect(directDestructive).toHaveCSS("color", theme === "light" ? "oklch(0.500336 0.182051 29.5127)" : "oklch(0.80769 0.103486 19.5706)");
+        await page.screenshot({ path: testInfo.outputPath(`selection-${width}-${theme}.png`) });
+      }
     }
     if (width === 320 || width === 1440) {
       await page.screenshot({ path: testInfo.outputPath(`selection-toolbar-${width}.png`) });
@@ -134,6 +177,9 @@ test("browse controls follow Search while filters and selection actions share th
   await menuTrigger.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("menuitem", { name: "Organize", exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Organize", exact: true }).locator('svg[aria-hidden="true"]')).toHaveCount(1);
+  await expect(page.getByRole("menuitem", { name: "Move to Trash", exact: true }).locator('svg[aria-hidden="true"]')).toHaveCount(1);
+  await expect(page.getByRole("menuitem", { name: "Move to Trash", exact: true })).toHaveCSS("color", "oklch(0.80769 0.103486 19.5706)");
   await page.keyboard.press("Escape");
   await expect(menuTrigger).toBeFocused();
   await expect(page.getByRole("region", { name: "Bulk actions" })).toContainText("1 selected");

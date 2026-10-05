@@ -60,11 +60,22 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
 }) {
   const readOnly = item.deletedAt !== undefined;
   const wrap = (content: ReactNode) => <SearchResult item={item} query={query} tagNames={tagNames}>{content}</SearchResult>;
+  if (item.type === "document") {
+    const body = <>
+      <h2 className="break-words text-lg font-semibold leading-snug"><SearchHighlight text={itemListTitle(item)} query={query} /></h2>
+      <p className="mt-2 break-all text-sm text-text-secondary"><SearchHighlight text={item.sourceFileName} query={query} /></p>
+      <span className="mt-4 block text-xs font-medium">Read note →</span>
+    </>;
+    return wrap(<div className="min-w-0">
+      <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary"><NoteIcon className="size-4" />{item.format === "markdown" ? "Markdown note" : "Text note"}{pinned ? <PinIcon className="ms-auto size-4" /> : null}</div>
+      {readOnly ? <h2 className="break-words text-lg font-semibold">{itemListTitle(item)}</h2> : openHref ? <Link href={openHref} prefetch={false} className="block min-w-0 rounded-control-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">{body}</Link> : <button type="button" className="block w-full min-w-0 rounded-control-sm text-left" onClick={onOpen}>{body}</button>}
+    </div>);
+  }
   if (item.type === "note") {
     const title = itemListTitle(item);
     const excerpt = noteCardExcerpt(item);
     const body = <>
-      <h2 className="text-lg font-semibold leading-snug text-text-primary"><SearchHighlight text={title} query={query} /></h2>
+      <h2 className="text-lg font-semibold leading-snug text-text-primary [overflow-wrap:anywhere]"><SearchHighlight text={title} query={query} /></h2>
       {excerpt ? <p className="mt-2 break-words text-sm leading-6 text-text-secondary"><SearchHighlight text={excerpt} query={query} /></p> : null}
       {!readOnly ? <span className="mt-4 block text-xs font-medium text-text-secondary">Read note →</span> : null}
     </>;

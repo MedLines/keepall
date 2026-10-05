@@ -156,26 +156,31 @@ export const guides: Guide[] = [
     slug: "images-and-videos", category: "Media", title: "Keep images and videos",
     summary: "Paste images, build a gallery, and keep video files from your device.", minutes: "2 min read",
     sections: [
-      { id: "images", visual: { kind: "video", src: "/marketing/capture-image-demo", poster: "/marketing/capture-image-poster.webp", caption: "With the extension, right-click an image and choose Save to Keepall." }, title: "Add an image", paragraphs: ["Open Save item to choose image files or use Paste image. Add a title, a note, and a source link if you want to remember where an image came from.", "Keepall accepts PNG, JPEG, GIF, WebP, and AVIF images up to 20 MiB each. Unsupported or oversized files need to be converted or made smaller before saving."], links: [{ label: "Save images directly from websites", href: "/help/chrome-capture#right-click" }] },
+      { id: "images", visual: { kind: "video", src: "/marketing/capture-image-demo", poster: "/marketing/capture-image-poster.webp", caption: "With the extension, right-click an image and choose Save to Keepall." }, title: "Add an image", paragraphs: ["Open Save item and choose Add files, or paste an image with Ctrl/⌘ + V. Add a title, a note, and a source link if you want to remember where an image came from.", "Keepall accepts PNG, JPEG, GIF, WebP, and AVIF images up to 20 MiB each. Unsupported or oversized files need to be converted or made smaller before saving."], links: [{ label: "Save images directly from websites", href: "/help/chrome-capture#right-click" }] },
       { id: "gallery", title: "Keep related images together", paragraphs: ["One image item can hold several pictures. Open it to browse the gallery, add more images, or replace or remove the current image. The first image is the cover. Choose Scroll to read the whole gallery vertically, or Slides to view one image at a time. Switching views keeps your place.", "Select the large image to view it full screen. You can zoom in and move through the gallery. Close the viewer to return to the item's details."] },
       { id: "videos", title: "Add a video from your device", paragraphs: ["Use Save item to choose an MP4 or WebM file up to 100 MiB. Give it a title or note, then open the saved item to play it. Playback depends on whether your browser supports the file's video format.", "Saving a link to an online video keeps its web address. It does not download the video file."] },
-      { id: "media-backup", visual: { kind: "image", src: "/help/backup-settings.webp", width: 1536, height: 350, alt: "Backup settings with Export backup and Import backup buttons", caption: "Export backup includes the image and video files stored in your library." }, title: "Keep a copy of your media", paragraphs: ["Images and local video files are part of your browser's library. A Keepall ZIP backup includes those files. Download one before clearing site data or changing devices."], links: [{ label: "Import a folder of images", href: "/help/import#images" }, { label: "Download a library backup", href: "/help/storage-and-backups#download" }] },
+      { id: "media-backup", visual: { kind: "image", src: "/help/backup-settings.webp", width: 1536, height: 350, alt: "Backup settings with Export backup and Import backup buttons", caption: "Export backup includes the image and video files stored in your library." }, title: "Keep a copy of your media", paragraphs: ["Images and local video files are part of your browser's library. A Keepall ZIP backup includes those files. Download one before clearing site data or changing devices."], links: [{ label: "Import files or a folder", href: "/help/import#images" }, { label: "Download a library backup", href: "/help/storage-and-backups#download" }] },
     ],
     action: { label: "Open your library", href: "/" },
   },
   {
     slug: "import", category: "Bring your saves", title: "Bring an existing library",
-    summary: "Import browser bookmarks, a folder of images, or a Keepall backup.", minutes: "3 min read",
+    summary: "Import documents, browser bookmarks, images, or a Keepall backup.", minutes: "3 min read",
     sections: [
+      {
+        id: "documents", title: "Import text and Markdown files",
+        steps: ["Open Save item, or press Alt + K, then choose Add files.", "Select .txt or .md files saved as UTF-8, up to 10 MiB each. One file opens as editable text in the drawer. Multiple files stay in the drawer and save as separate items.", "Choose tags and a collection below your files, then Save. If some files fail, Retry failed files keeps items that already saved."],
+        paragraphs: ["Text and Markdown files appear under Notes. Files are read and saved locally. Open a document to read or edit its text, add a personal note, or download the saved file. Editing changes Keepall’s copy; the file on your device stays unchanged. Markdown images and embedded HTML do not load. Large files have a shortened preview; download the file for the full text.", "Search currently finds document titles, filenames, personal notes, and tags. Keepall backups include the saved files and their edits."],
+      },
       {
         id: "bookmarks", title: "Import browser bookmarks",
         paragraphs: ["Start with an HTML bookmark export from your browser. A Keepall backup uses a different format."],
         steps: ["Use your browser's bookmark manager to export bookmarks as an HTML file.", "Open Save item, or press Alt + K, then choose Bulk import and Import bookmarks HTML. Select the exported file.", "Review how bookmark folders will be used for collections, then confirm the import and read the result."],
       },
       {
-        id: "images", title: "Import a folder of images",
-        paragraphs: ["You can bring in a folder without adding each image separately."],
-        steps: ["Open Save item, or press Alt + K, then choose Bulk import and Import image folder. Select the folder on your device.", "Choose a collection, or leave it blank to keep the images in Unsorted.", "Choose Import images and wait for the result. Keepall reports files it skipped, including unsupported images and those over 20 MiB."],
+        id: "images", title: "Import files or a folder",
+        paragraphs: ["Bulk import reads nested folders too. For multiple images, choose one image item with a gallery or separate image items. Text, video, and mixed selections always save as separate items. PDF and HTML documents are not supported yet."],
+        steps: ["Open Save item, or press Alt + K, then choose Bulk import. Choose Import files to select several files, or Import folder to bring in a folder.", "Your files appear in the drawer. For multiple images, choose One image item to add a caption, or Separate image items. Add files stays available. Choose tags and a collection below; folders start with their name as the collection. Choose Unsorted to remove it.", "Choose Save when ready. Cancel before saving leaves your library unchanged. Keepall lists any failed files; Retry failed files keeps items that already saved."],
       },
       {
         id: "backup", visual: { kind: "transfer" }, title: "Restore a Keepall backup",
