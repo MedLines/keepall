@@ -5,6 +5,7 @@ import { ModalDialog } from "@/components/ui/modal-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BookmarksImport } from "./bookmarks-import";
 import { ImageFolderImport } from "./image-folder-import";
+import { BackupFolderControls } from "./settings/backup-folder-controls";
 import { useRouter } from "next/navigation";
 import { BackupValidationError, type BackupCounts } from "@/domain/backup";
 import { exportKeepallArchive, prepareBackupFile, type PreparedBackup } from "@/persistence/backup-archive";
@@ -68,7 +69,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const [operation, setOperation] = useState<Operation | null>(null);
   const [imageImportBusy, setImageImportBusy] = useState(false);
   const [bookmarksImportBusy, setBookmarksImportBusy] = useState(false);
-  const busy = operation !== null || imageImportBusy || bookmarksImportBusy;
+  const [folderBackupBusy, setFolderBackupBusy] = useState(false);
+  const busy = operation !== null || imageImportBusy || bookmarksImportBusy || folderBackupBusy;
   function start(next: Operation): boolean {
     if (operationRef.current) return false;
     operationRef.current = next;
@@ -408,7 +410,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       <section
         className="library-panel border border-border-control bg-bg-surface p-5 sm:p-7"
         aria-labelledby="backup-heading"
-        aria-busy={operation === "export" || operation === "read-backup" || operation === "restore"}
+        aria-busy={operation !== null || folderBackupBusy}
       >
         {heading}
         <p className="mt-1 text-sm leading-6 text-text-secondary">
@@ -435,6 +437,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
           {fileInput}
         </div>
         {feedback}
+        <BackupFolderControls disabled={operation !== null || imageImportBusy || bookmarksImportBusy} onBusyChange={setFolderBackupBusy} />
       </section>
       <section
         className="library-panel border border-border-control bg-bg-surface p-5 sm:p-7"

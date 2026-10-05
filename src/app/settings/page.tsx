@@ -87,7 +87,7 @@ export default function SettingsPage() {
                 Storage
               </h2>
               <p className="mt-1 text-sm leading-6 text-text-secondary">
-                Your library currently lives in this browser. A downloaded backup is the way to recover it if browser data is cleared.
+                Your library currently lives in this browser. A downloaded or folder backup lets you recover it if browser data is cleared.
               </p>
               <StorageHealth />
               <p className="mt-4 text-xs text-text-secondary">

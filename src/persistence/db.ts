@@ -4,6 +4,7 @@ import type { Collection } from "@/domain/collection";
 import type { Item } from "@/domain/item";
 import type { LibraryPreferences } from "@/domain/library-preferences";
 import type { Tag } from "@/domain/tag";
+import type { BackupFolderSettings } from "./backup-settings";
 
 export const KEEPALL_DB_NAME = "keepall";
 
@@ -18,6 +19,7 @@ export type KeepallDB = Dexie & {
   thumbnails: EntityTable<Thumbnail, "assetId">;
   videoAssets: EntityTable<VideoAsset, "id">;
   preferences: EntityTable<LibraryPreferences, "id">;
+  backupSettings: EntityTable<BackupFolderSettings, "id">;
 };
 
 function createKeepallDb(): KeepallDB {
@@ -78,6 +80,8 @@ function createKeepallDb(): KeepallDB {
     thumbnails: "assetId",
     videoAssets: "id",
   });
+
+  db.version(9).stores({ backupSettings: "id" });
 
   return db;
 }
