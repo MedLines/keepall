@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { oklchToHex } from "@/color-format.mjs";
 import { Analytics } from "@vercel/analytics/next";
+import { AutomaticBackupRunner } from "./automatic-backup-runner";
 import { CaptureHost } from "./capture-host";
 import { DevToolsEntry } from "./dev-tools-entry";
 import { PwaProvider } from "./pwa-provider";
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <PwaProvider>
           {children}
           <CaptureHost />
+          <AutomaticBackupRunner />
         </PwaProvider>
         {process.env.NODE_ENV === "development" ? <DevToolsEntry /> : null}
         <Analytics />

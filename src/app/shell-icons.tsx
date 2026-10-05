@@ -16,6 +16,9 @@ import {
   Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
   KeyboardIcon as Keyboard, TextFontIcon as TextFont, SourceCodeIcon as SourceCode,
   RefreshIcon as Refresh,
+  ComputerIcon as Computer, WifiOff01Icon as WifiOff,
+  Globe02Icon as Globe, Clock01Icon as Clock,
+  Download01Icon as Download, Upload01Icon as Upload,
 } from "@hugeicons/core-free-icons";
 
 type IconProps = { className?: string; fill?: "none" | "currentColor" };
@@ -66,6 +69,12 @@ export function MoreIcon(props: IconProps) { return <ShellIcon icon={MoreVertica
 export function EditIcon(props: IconProps) { return <ShellIcon icon={Edit02} {...props} />; }
 export function EyeIcon(props: IconProps) { return <ShellIcon icon={Eye} {...props} />; }
 export function RefreshIcon(props: IconProps) { return <ShellIcon icon={Refresh} {...props} />; }
+export function DeviceIcon(props: IconProps) { return <ShellIcon icon={Computer} {...props} />; }
+export function OfflineIcon(props: IconProps) { return <ShellIcon icon={WifiOff} {...props} />; }
+export function InternetIcon(props: IconProps) { return <ShellIcon icon={Globe} {...props} />; }
+export function ClockIcon(props: IconProps) { return <ShellIcon icon={Clock} {...props} />; }
+export function DownloadIcon(props: IconProps) { return <ShellIcon icon={Download} {...props} />; }
+export function UploadIcon(props: IconProps) { return <ShellIcon icon={Upload} {...props} />; }
 export function DeleteIcon(props: IconProps) { return <ShellIcon icon={Delete02} {...props} />; }
 export function PinIcon(props: IconProps) { return <ShellIcon icon={Pin} {...props} />; }
 export function ArrowLeftIcon(props: IconProps) { return <ShellIcon icon={ArrowLeft01} {...props} />; }

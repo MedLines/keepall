@@ -5,12 +5,14 @@ import { ModalDialog } from "@/components/ui/modal-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BookmarksImport } from "./bookmarks-import";
 import { ImageFolderImport } from "./image-folder-import";
+import { BackupFolderControls } from "./settings/backup-folder-controls";
+import { SettingsLink } from "./settings/settings-link";
 import { useRouter } from "next/navigation";
 import { BackupValidationError, type BackupCounts } from "@/domain/backup";
 import { exportKeepallArchive, prepareBackupFile, type PreparedBackup } from "@/persistence/backup-archive";
 import { countCurrentLibrary } from "@/persistence/backup";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
-import { BackupIcon, ChevronDownIcon, CloseIcon, CollectionIcon, HashIcon, ImageIcon, ImagesIcon, LinkIcon, NoteIcon, VideoIcon } from "./shell-icons";
+import { BackupIcon, ChevronDownIcon, CloseIcon, CollectionIcon, DownloadIcon, HashIcon, ImageIcon, ImagesIcon, LinkIcon, NoteIcon, UploadIcon, VideoIcon } from "./shell-icons";
 
 type ImportMode = "merge" | "replace";
 type Operation = "export" | "read-backup" | "restore";
@@ -68,7 +70,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const [operation, setOperation] = useState<Operation | null>(null);
   const [imageImportBusy, setImageImportBusy] = useState(false);
   const [bookmarksImportBusy, setBookmarksImportBusy] = useState(false);
-  const busy = operation !== null || imageImportBusy || bookmarksImportBusy;
+  const [folderBackupBusy, setFolderBackupBusy] = useState(false);
+  const busy = operation !== null || imageImportBusy || bookmarksImportBusy || folderBackupBusy;
   function start(next: Operation): boolean {
     if (operationRef.current) return false;
     operationRef.current = next;
@@ -318,7 +321,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const buttonClass =
     variant === "sidebar"
       ? "ui-control min-h-10 px-3 py-2 text-sm font-medium disabled:opacity-60"
-      : "ui-control min-h-10 px-4 py-2 text-sm font-medium disabled:opacity-60";
+      : "ui-control inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2 text-sm font-medium disabled:opacity-60";
 
   const actions = (
     <div
@@ -408,21 +411,20 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       <section
         className="library-panel border border-border-control bg-bg-surface p-5 sm:p-7"
         aria-labelledby="backup-heading"
-        aria-busy={operation === "export" || operation === "read-backup" || operation === "restore"}
+        aria-busy={operation !== null || folderBackupBusy}
       >
         {heading}
         <p className="mt-1 text-sm leading-6 text-text-secondary">
-          Download a <code>.keepall.zip</code> recovery copy, or restore one into
-          this browser.
+          A <code>.keepall.zip</code> copy of your library, media, and Trash.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <button
-            className={buttonClass}
+            className={`${buttonClass} ui-primary`}
             type="button"
             disabled={busy}
             onClick={() => void onExport()}
           >
-            Export backup
+            <DownloadIcon className="size-4" /> Export backup
           </button>
           <button
             className={buttonClass}
@@ -430,28 +432,14 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             disabled={busy}
             onClick={onPickImport}
           >
-            Import backup
+            <UploadIcon className="size-4" /> Import backup
           </button>
           {fileInput}
         </div>
+        <p className="mt-3 text-xs leading-5 text-text-secondary">Keep exported files outside the browser. Use Import backup to recover or move your library.</p>
+        <div className="mt-3"><SettingsLink href="/help/storage-and-backups#restore">Recovery guide</SettingsLink></div>
         {feedback}
-      </section>
-      <section
-        className="library-panel border border-border-control bg-bg-surface p-5 sm:p-7"
-        aria-labelledby="import-heading"
-        aria-busy={bookmarksImportBusy || imageImportBusy}
-      >
-        <h2 id="import-heading" className="text-lg font-semibold text-text-primary">
-          Import
-        </h2>
-        <p className="mt-1 text-sm leading-6 text-text-secondary">
-          Add browser bookmarks or an image folder to your existing library.
-          Images are limited to 20 MiB per file.
-        </p>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <BookmarksImport buttonClassName={buttonClass} disabled={busy} onBusyChange={setBookmarksImportBusy} />
-          <ImageFolderImport buttonClassName={buttonClass} disabled={busy} onBusyChange={setImageImportBusy} onOpenFolder={openImportedFolder} />
-        </div>
+        <BackupFolderControls disabled={operation !== null || imageImportBusy || bookmarksImportBusy} onBusyChange={setFolderBackupBusy} />
       </section>
       {choiceDialog}
     </>

@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { mkdir, writeFile } from "node:fs/promises";
 
 test.use({ serviceWorkers: "block" });
 
@@ -14,21 +13,26 @@ test("settings owns backup and import recovery", async ({ page }, testInfo) => {
     "/",
   );
 
+  await page.getByRole("tab", { name: "Storage & backups", exact: true }).click();
+
   const backup = page.getByRole("region", { name: "Backup" });
-  const importSection = page.getByRole("region", { name: "Import" });
   const backupInput = backup.locator('input[accept*="application/json"]');
   await expect(backup.getByRole("button", { name: "Export backup" })).toBeVisible();
-  await expect(importSection.getByRole("button", { name: "Import bookmarks" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Import", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Import bookmarks", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Import images", exact: true })).toHaveCount(0);
   const storage = page.getByRole("region", { name: "Storage" });
-  await expect(storage).toContainText("Planned");
+  await expect(storage).toContainText("Saved locally in this browser profile");
   await expect(storage.getByText("Site storage used")).toBeVisible();
   await expect(storage.getByRole("button", { name: "Refresh storage status" })).toBeEnabled();
   await page.screenshot({ path: testInfo.outputPath("settings-desktop.png"), fullPage: true });
 
   for (const theme of ["light", "dark"] as const) {
+    await page.getByRole("tab", { name: "General", exact: true }).click();
     if (await page.locator("html").getAttribute("data-theme") !== theme) {
       await page.getByRole("button", { name: "Theme", exact: true }).click();
     }
+    await page.getByRole("tab", { name: "Storage & backups", exact: true }).click();
     await backupInput.setInputFiles({
       name: "library.keepall.json",
       mimeType: "application/json",
@@ -51,28 +55,10 @@ test("settings owns backup and import recovery", async ({ page }, testInfo) => {
     await expect(dialog).toBeHidden();
   }
 
-  await importSection.locator('input[accept*="text/html"]').setInputFiles({
-    name: "bookmarks.html",
-    mimeType: "text/html",
-    buffer: Buffer.from("<DL><p></DL>"),
-  });
-  const bookmarksDialog = page.getByRole("dialog", { name: "Import browser bookmarks" });
-  await expect(bookmarksDialog).toBeVisible();
-  await expect(bookmarksDialog.getByRole("radio")).toHaveCount(3);
-  await bookmarksDialog.getByRole("button", { name: "Cancel", exact: true }).click();
-
-  const imageFolder = testInfo.outputPath("image-folder");
-  await mkdir(imageFolder, { recursive: true });
-  await writeFile(`${imageFolder}/reference.png`, Buffer.from([137, 80, 78, 71]));
-  await importSection.locator('input[webkitdirectory]').setInputFiles(imageFolder);
-  const imageDialog = page.getByRole("dialog", { name: "Import image folder" });
-  await expect(imageDialog).toBeVisible();
-  await expect(imageDialog.getByLabel("Collection (optional)")).toBeVisible();
-  await imageDialog.getByRole("button", { name: "Cancel", exact: true }).click();
-
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("heading", { name: "Help" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Help & guides", exact: true })).toBeInViewport();
   await page.screenshot({ path: testInfo.outputPath("settings-mobile.png"), fullPage: true });
+  await page.getByRole("tab", { name: "Storage & backups", exact: true }).click();
   await storage.scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath("storage-mobile.png") });
 });
@@ -111,7 +97,7 @@ test("validated review merges newer details and replacement requires confirmatio
       tx.onerror = () => reject(tx.error);
     });
   }, [note("same", "Old detail", 1), note("old", "Remove later", 1), note("trash", "In Trash", 1, 3)]);
-  await page.goto("/settings");
+  await page.goto("/settings#storage");
   const input = page.getByRole("region", { name: "Backup" }).locator('input[accept*="application/json"]');
   const incoming = { format: "keepall", version: 7, exportedAt: 50,
     items: [note("same", "Newer detail", 10), note("new", "Fresh note", 2)],

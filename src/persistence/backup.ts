@@ -9,14 +9,13 @@ import { base64ToBytes, bytesToBase64 } from "@/domain/backup-encoding";
 import { isIncomingNewer, unionIds } from "@/domain/backup-merge";
 import { buildAsset, sameContentHashMultiset } from "@/domain/asset";
 import { normalizeCollection } from "@/domain/collection";
-import { normalizePinnedCollectionIds } from "@/domain/library-preferences";
 import { normalizeItem } from "@/domain/item";
 import type { VideoItem } from "@/domain/video";
 import type { ImageItem } from "@/domain/image";
 import type { LinkItem } from "@/domain/link";
 import { normalizeLinkUrl } from "@/domain/link";
 import { replaceNoteImageAssetIds, type NoteItem } from "@/domain/note";
-import { listAssets, putAsset, ensureContentHash, getAsset } from "./assets";
+import { putAsset, ensureContentHash, getAsset } from "./assets";
 import { createCollection } from "./collections";
 import { getDb, type Thumbnail, type VideoAsset } from "./db";
 import { imageThumbnail, putThumbnail } from "./thumbnails";
@@ -25,6 +24,7 @@ import {
   putLibraryPreferences,
 } from "./library-preferences";
 import { createTag } from "./tags";
+import { readBackupSnapshot } from "./backup-snapshot";
 
 export async function countCurrentLibrary(): Promise<BackupCounts> {
   const db = getDb();
@@ -40,16 +40,9 @@ export async function countCurrentLibrary(): Promise<BackupCounts> {
 export async function exportKeepallBackup(
   exportedAt?: number,
 ): Promise<KeepallBackup> {
-  const db = getDb();
-  const [rawItems, tags, collections, assets, preferences] = await Promise.all([
-    db.items.toArray(),
-    db.tags.toArray(),
-    db.collections.toArray(),
-    listAssets(),
-    getLibraryPreferences(),
-  ]);
+  const { items, tags, collections, assets, preferences } = await readBackupSnapshot();
 
-  if (rawItems.some((item) => item.type === "video")) {
+  if (items.some((item) => item.type === "video")) {
     throw new Error("Use ZIP export for libraries containing video");
   }
 
@@ -63,17 +56,12 @@ export async function exportKeepallBackup(
   }));
 
   return buildKeepallBackup({
-    items: rawItems.map((item) => normalizeItem(item)),
+    items,
     tags,
     collections,
     assets: backupAssets,
     exportedAt,
-    preferences: {
-      pinnedCollectionIds: normalizePinnedCollectionIds(
-        preferences.pinnedCollectionIds,
-        collections.map((collection) => collection.id),
-      ),
-    },
+    preferences,
   });
 }
 

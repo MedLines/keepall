@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { openCaptureDialog } from "./capture-events";
 
 export type LibraryEmptyStateKind = "library" | "collection" | "unsorted" | "trash" | "filtered";
@@ -20,9 +19,6 @@ export function LibraryEmptyState({ kind, message, onClearFilters }: Props) {
           <button type="button" className="ui-control ui-primary h-10 px-4 text-sm font-medium" onClick={openCaptureDialog}>
             Save your first item
           </button>
-          <Link className="rounded-control px-2 py-2 text-sm text-text-secondary underline-offset-4 hover:text-text-primary hover:underline" href="/settings">
-            Import from Settings
-          </Link>
         </div>
       ) : null}
       {kind === "collection" || kind === "unsorted" ? (
