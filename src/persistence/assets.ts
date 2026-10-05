@@ -1,3 +1,4 @@
+import Dexie from "dexie";
 import {
   assetToBlob,
   buildAsset,
@@ -27,9 +28,11 @@ async function ensureContentHash(asset: Asset): Promise<Asset> {
   if (asset.contentHash) {
     return asset;
   }
-  const contentHash = await hashAssetBytes(asset.bytes);
+  // Bind the backfill to its caller's transaction before awaiting Web Crypto.
+  const table = Dexie.currentTransaction?.table<Asset, string>("assets") ?? getDb().assets;
+  const contentHash = await Dexie.waitFor(Dexie.ignoreTransaction(() => hashAssetBytes(asset.bytes)));
   const next = { ...asset, contentHash };
-  await getDb().assets.put(next);
+  await table.put(next);
   return next;
 }
 

@@ -68,6 +68,20 @@ test("invalid files show an alert and never offer restore actions", async () => 
   expect(replace).not.toHaveBeenCalled();
 });
 
+test("failed merges explain that the library is unchanged and allow another attempt", async () => {
+  merge.mockRejectedValueOnce(new DOMException("Storage full", "QuotaExceededError"));
+  const { container } = render(<BackupPanel />);
+  chooseFile(container);
+  let review = await screen.findByRole("dialog", { name: "Import backup" });
+  fireEvent.click(within(review).getByRole("button", { name: "Merge" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Your library wasn't changed");
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Import backup" })).not.toBeInTheDocument());
+  chooseFile(container);
+  review = await screen.findByRole("dialog", { name: "Import backup" });
+  fireEvent.click(within(review).getByRole("button", { name: "Merge" }));
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Merged: 1 added"));
+});
+
 test("restore shows pending state and blocks a second operation until completion", async () => {
   let finish!: (value: string[]) => void;
   replace.mockReturnValue(new Promise<string[]>((resolve) => { finish = resolve; }));
