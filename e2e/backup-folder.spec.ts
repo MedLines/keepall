@@ -49,10 +49,10 @@ test.beforeEach(async ({ page }) => {
 test("choose, save, reload, retain three backups, and turn off without deleting files", async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/settings");
+  await page.goto("/settings#storage");
   const backup = page.getByRole("region", { name: "Backup", exact: true });
   await expect(backup.getByRole("button", { name: "Choose backup folder" })).toBeEnabled();
-  await expect(backup).toContainText("every 30 minutes while the app is open");
+  await expect(backup).toContainText("Every 30 minutes");
   expect(await page.evaluate(() => (window as unknown as { pickerCalls: number }).pickerCalls)).toBe(0);
   await backup.getByRole("button", { name: "Choose backup folder" }).click();
   await expect(backup.getByRole("button", { name: "Back up now" })).toBeEnabled();
@@ -88,13 +88,13 @@ test("choose, save, reload, retain three backups, and turn off without deleting 
 
 test("revoked permission is checked on reload and requested only by reconnecting", async ({ page }) => {
   await page.clock.install({ time: new Date("2030-01-01T12:00:00Z") });
-  await page.goto("/settings");
+  await page.goto("/settings#storage");
   const backup = page.getByRole("region", { name: "Backup", exact: true });
   await backup.getByRole("button", { name: "Choose backup folder" }).click();
   await expect(backup.getByRole("button", { name: "Back up now" })).toBeEnabled();
   await page.getByRole("link", { name: "Back to library" }).click();
   await addNote(page, "Pending before permission was revoked");
-  await page.goto("/settings");
+  await page.goto("/settings#storage");
   await page.addInitScript(() => {
     (window as unknown as { permissionOverride: string; denyReconnect: boolean }).permissionOverride = "prompt";
     (window as unknown as { denyReconnect: boolean }).denyReconnect = true;
@@ -116,7 +116,7 @@ test("revoked permission is checked on reload and requested only by reconnecting
 });
 
 test("failed first writes stay pending and can be retried", async ({ page }) => {
-  await page.goto("/settings");
+  await page.goto("/settings#storage");
   await page.evaluate(() => { (window as unknown as { failBackupWrite: boolean }).failBackupWrite = true; });
   const backup = page.getByRole("region", { name: "Backup", exact: true });
   await backup.getByRole("button", { name: "Choose backup folder" }).click();
@@ -147,6 +147,37 @@ async function backupRecord(page: import("@playwright/test").Page) {
   });
 }
 
+test("switching settings tabs preserves an in-progress folder backup", async ({ page }) => {
+  await page.goto("/settings#storage");
+  await page.evaluate(() => {
+    const createWritable = FileSystemFileHandle.prototype.createWritable;
+    FileSystemFileHandle.prototype.createWritable = async function (options) {
+      const stream = await createWritable.call(this, options);
+      if (this.name.endsWith(".keepall.zip")) {
+        const write = stream.write.bind(stream);
+        stream.write = async (data) => {
+          await new Promise<void>((resolve) => {
+            (window as unknown as { finishBackupWrite: () => void }).finishBackupWrite = resolve;
+          });
+          await write(data);
+        };
+      }
+      return stream;
+    };
+  });
+  const backup = page.getByRole("region", { name: "Backup", exact: true });
+  await backup.getByRole("button", { name: "Choose backup folder" }).click();
+  await expect.poll(() => page.evaluate(() => typeof (window as unknown as { finishBackupWrite?: () => void }).finishBackupWrite)).toBe("function");
+  await page.getByRole("tab", { name: "General", exact: true }).click();
+  await expect(page.getByRole("tabpanel", { name: "General", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Storage & backups", exact: true }).click();
+  await expect(backup.getByRole("progressbar", { name: "Saving folder backup", exact: true })).toBeVisible();
+  await page.evaluate(() => (window as unknown as { finishBackupWrite: () => void }).finishBackupWrite());
+  await expect(backup.locator("time")).toBeVisible();
+  await expect(backup.getByRole("alert")).toHaveCount(0);
+  expect((await backupRecord(page))?.completed).toHaveLength(1);
+});
+
 async function addNote(page: import("@playwright/test").Page, content: string) {
   await page.getByRole("button", { name: "Save item", exact: true }).click();
   const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
@@ -157,7 +188,7 @@ async function addNote(page: import("@playwright/test").Page, content: string) {
 
 test("automatic backups run from the library, survive reload, and skip unchanged intervals", async ({ page }) => {
   await page.clock.install({ time: new Date("2030-01-01T12:00:00Z") });
-  await page.goto("/settings");
+  await page.goto("/settings#storage");
   const backup = page.getByRole("region", { name: "Backup", exact: true });
   await backup.getByRole("button", { name: "Choose backup folder" }).click();
   await expect(backup.locator("time")).toBeVisible();
@@ -175,8 +206,8 @@ test("automatic backups run from the library, survive reload, and skip unchanged
   await page.clock.fastForward(31 * 60_000);
   expect((await backupRecord(page))?.completed).toHaveLength(2);
   expect(await page.evaluate(() => (window as unknown as { permissionRequests: number }).permissionRequests)).toBe(0);
-  await page.goto("/settings");
-  await expect(backup).toContainText("every 30 minutes while the app is open");
+  await page.goto("/settings#storage");
+  await expect(backup).toContainText("Every 30 minutes");
   await backup.getByRole("button", { name: "Turn off folder backups" }).click();
   await page.getByRole("link", { name: "Back to library" }).click();
   await addNote(page, "Not backed up while disabled");
@@ -187,7 +218,7 @@ test("automatic backups run from the library, survive reload, and skip unchanged
 test("two tabs share one scheduled backup for a changed revision", async ({ page, context }) => {
   const time = new Date("2030-01-01T12:00:00Z");
   await page.clock.install({ time });
-  await page.goto("/settings");
+  await page.goto("/settings#storage");
   const backup = page.getByRole("region", { name: "Backup", exact: true });
   await backup.getByRole("button", { name: "Choose backup folder" }).click();
   await expect(backup.locator("time")).toBeVisible();
@@ -204,7 +235,7 @@ test("two tabs share one scheduled backup for a changed revision", async ({ page
 
 test("large originals can be backed up and verified without losing library data", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
-  await page.goto("/settings");
+  await page.goto("/settings#storage");
   await expect(page.getByRole("button", { name: "Choose backup folder" })).toBeEnabled();
   await page.evaluate(async () => {
     const request = indexedDB.open("keepall");
@@ -253,7 +284,7 @@ test("empty replacement pauses backups and restoring a recovery copy resumes the
   await page.clock.install({ time: new Date("2030-01-01T12:00:00Z") });
   await page.goto("/");
   await addNote(page, "Recoverable original note");
-  await page.goto("/settings");
+  await page.goto("/settings#storage");
   const backup = page.getByRole("region", { name: "Backup", exact: true });
   await backup.getByRole("button", { name: "Choose backup folder" }).click();
   await expect(backup.locator("time")).toBeVisible();

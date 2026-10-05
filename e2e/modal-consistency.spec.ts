@@ -174,14 +174,19 @@ test("duplicate links and every import dialog share close, footer and backdrop b
       await capture.getByRole("button", { name: "Cancel", exact: true }).click();
     }
   }
-  await page.goto("/settings");
+  await page.goto("/settings#storage");
   const backup = page.getByRole("region", { name: "Backup", exact: true });
   const downloadPromise = page.waitForEvent("download");
   await backup.getByRole("button", { name: "Export backup", exact: true }).click();
   const archivePath = await (await downloadPromise).path();
-  const imports = page.getByRole("region", { name: "Import", exact: true });
   const bookmarkHtml = '<!DOCTYPE NETSCAPE-Bookmark-file-1><DL><p><DT><A HREF="https://example.com">Example</A></DL><p>';
   for (const kind of ["backup", "bookmarks", "images"]) {
+    if (kind !== "backup") {
+      await page.goto("/");
+      await page.keyboard.press("Alt+k");
+      await page.getByRole("button", { name: "Bulk import", exact: true }).click();
+    }
+    const imports = page.getByRole("dialog", { name: "Bulk import", exact: true });
     if (kind === "backup") await backup.locator('input[accept*="application/zip"]').setInputFiles(archivePath!);
     if (kind === "bookmarks") await imports.locator('input[accept*="text/html"]').setInputFiles({ name: "bookmarks.html", mimeType: "text/html", buffer: Buffer.from(bookmarkHtml) });
     if (kind === "images") {

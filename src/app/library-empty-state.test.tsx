@@ -4,10 +4,10 @@ import { OPEN_CAPTURE_EVENT } from "./capture-events";
 import { LibraryEmptyState } from "./library-empty-state";
 
 describe("LibraryEmptyState", () => {
-  test("offers a first save and Settings import in a new library", () => {
+  test("offers a first save in a new library", () => {
     render(<LibraryEmptyState kind="library" message="No items yet." onClearFilters={vi.fn()} />);
     expect(screen.getByText("No items yet.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Import from Settings" })).toHaveAttribute("href", "/settings");
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save your first item" })).toBeVisible();
   });
 

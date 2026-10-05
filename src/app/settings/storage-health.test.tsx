@@ -26,6 +26,7 @@ test("shows approximate site usage and persistence without requesting it", async
   expect(screen.getByText("Granted")).toBeInTheDocument();
   expect(screen.getByText(/not a backup/i)).toBeInTheDocument();
   expect(persist).not.toHaveBeenCalled();
+  expect(screen.getByRole("meter", { name: "Estimated storage usage" })).toHaveAttribute("aria-valuetext", "20 MB used out of 2 GB");
 });
 
 test("keeps the persistence result when the size estimate fails", async () => {
@@ -48,6 +49,7 @@ test("shows unavailable states when the browser has no storage API", async () =>
   render(<StorageHealth />);
 
   expect(await screen.findAllByText("Unavailable")).toHaveLength(3);
+  expect(screen.queryByRole("meter")).not.toBeInTheDocument();
 });
 
 test("refreshes the read-only values on request", async () => {
@@ -72,4 +74,13 @@ test("refreshes the read-only values on request", async () => {
     expect(screen.getByText("4 MB")).toBeInTheDocument();
   });
   expect(estimate).toHaveBeenCalledTimes(2);
+});
+
+test("caps the meter when usage exceeds the browser allowance", async () => {
+  vi.stubGlobal("navigator", { storage: {
+    estimate: vi.fn().mockResolvedValue({ usage: 2048, quota: 1024 }),
+    persisted: vi.fn().mockResolvedValue(false),
+  } });
+  render(<StorageHealth />);
+  expect(await screen.findByRole("meter")).toHaveAttribute("aria-valuenow", "100");
 });

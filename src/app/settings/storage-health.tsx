@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RefreshIcon } from "../shell-icons";
 
 type StorageHealthSnapshot = {
   usage: number | null;
@@ -67,6 +68,9 @@ export function StorageHealth() {
       : snapshot.persisted
         ? "Granted"
         : "Not granted";
+  const usedPercent = snapshot?.usage != null && snapshot.quota != null
+    ? Math.min(100, snapshot.usage / snapshot.quota * 100)
+    : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -94,11 +98,12 @@ export function StorageHealth() {
           Browser storage health
         </p>
         <button
-          className="ui-control min-h-10 px-3 text-sm font-medium"
+          className="ui-control inline-flex min-h-11 items-center gap-2 px-3 text-sm font-medium"
           type="button"
           disabled={loading}
           onClick={() => void refresh()}
         >
+          <RefreshIcon className="size-4" />
           {loading && snapshot ? "Refreshing…" : "Refresh storage status"}
         </button>
       </div>
@@ -118,10 +123,18 @@ export function StorageHealth() {
           </dd>
         </div>
       </dl>
+      {usedPercent !== null ? <div
+        role="meter"
+        aria-label="Estimated storage usage"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={usedPercent}
+        aria-valuetext={`${usage} used out of ${quota}`}
+        className="mt-4 h-1.5 overflow-hidden rounded-full bg-bg-raised"
+      ><div className="h-full rounded-full bg-text-primary" style={{ width: `${usedPercent}%` }} /></div> : null}
       <p className="mt-4 text-xs leading-5 text-text-secondary">
-        These are browser estimates for this site, including its offline files.
-        The allowance can change. Persistent storage reduces automatic clearing,
-        but it is not a backup. Clearing site data still removes your library.
+        Usage and allowance are estimates, including offline files. Persistent
+        storage reduces automatic clearing; it is not a backup.
       </p>
     </div>
   );

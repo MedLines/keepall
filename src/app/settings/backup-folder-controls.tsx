@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BackupFolderError } from "@/persistence/backup-folder";
+import { BackupIcon, ClockIcon, EditIcon } from "../shell-icons";
 import {
   backupFailureMessage, chooseBackupFolder, connectBackupFolder, disableBackupFolder,
   observeBackupFolderSettings, saveFolderBackup, supportsFolderBackups,
@@ -164,13 +165,18 @@ function FolderBackupContent({ view, disabled, actions, status }: {
   const needsAccess = enabled && view.permission !== "granted";
   return <>
     <p className="mt-3 text-xs leading-5 text-text-secondary">
-      Select a dedicated empty <span className="font-medium">Keepall Backups</span> folder.
-      Keepall gets read and write access to everything inside it. Your browser may keep this permission for future visits and app updates.
+      Use a dedicated, empty <span className="font-medium">Keepall Backups</span> folder.
+      Keepall gets read and write access to everything inside it. Your browser may remember access for future visits and app updates.
     </p>
     {settings ? <FolderBackupDetails settings={settings} /> : null}
     <FolderBackupButtons settings={settings} needsAccess={needsAccess} disabled={disabled} actions={actions} />
     {actions.action ? <progress className="mt-3 h-2 w-full accent-action-primary" aria-label={actions.action === "save" ? "Saving folder backup" : status} /> : null}
-    <p className="mt-3 text-xs leading-5 text-text-secondary">When enabled, Keepall backs up changed library data every 30 minutes while the app is open. Sleeping or inactive tabs can delay a backup until you return. Background checks never ask for permission. The latest three completed folder backups are kept.</p>
+    <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-text-primary" aria-label="Folder backup schedule">
+      <li className="flex items-center gap-2"><ClockIcon className="size-4" />Every 30 minutes</li>
+      <li className="flex items-center gap-2"><EditIcon className="size-4" />Changes only</li>
+      <li className="flex items-center gap-2"><BackupIcon className="size-4" />Latest 3 copies</li>
+    </ul>
+    <p className="mt-3 text-xs leading-5 text-text-secondary">Runs while Keepall is open. Sleeping or inactive tabs may delay it. Background checks never ask for permission.</p>
     {settings && !enabled ? <p className="mt-2 text-xs leading-5 text-text-secondary">Folder backups are off. Saved files stay in your folder.</p> : null}
     {settings?.cleanupWarning && enabled ? <p className="mt-2 text-sm text-text-secondary">{settings.cleanupWarning}</p> : null}
   </>;

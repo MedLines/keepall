@@ -51,7 +51,10 @@ test("starts off, explains folder access, and saves the first backup only after 
   const choose = await screen.findByRole("button", { name: "Choose backup folder" });
   expect(screen.getByText(/read and write access/i)).toBeVisible();
   expect(screen.getByText(/future visits and app updates/i)).toBeVisible();
-  expect(screen.getByText(/every 30 minutes while the app is open/i)).toBeVisible();
+  expect(screen.getByText("Every 30 minutes")).toBeVisible();
+  expect(screen.getByText("Changes only")).toBeVisible();
+  expect(screen.getByText("Latest 3 copies")).toBeVisible();
+  expect(screen.getByText(/Runs while Keepall is open/i)).toBeVisible();
   expect(mocks.chooseBackupFolder).not.toHaveBeenCalled();
   fireEvent.click(choose);
   expect(await screen.findByText("Keepall Backups")).toBeVisible();

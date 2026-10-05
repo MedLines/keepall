@@ -208,9 +208,10 @@ test("drawer image controls remove individual photos and clear all attachments",
   expect(pageErrors).toEqual([]);
 });
 
-for (const entry of ["drawer", "settings"] as const) {
-  test(`image folder import from ${entry} saves separate items and reports skipped files`, async ({ page }, testInfo) => {
-    await page.setViewportSize({ width: entry === "drawer" ? 320 : 1024, height: 900 });
+for (const width of [320, 1024]) {
+  const entry = "drawer";
+  test(`image folder import from ${entry} at ${width}px saves separate items and reports skipped files`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
     await page.addInitScript(() => {
       Object.defineProperty(window, "showDirectoryPicker", { value: undefined, configurable: true });
       const readBytes = File.prototype.arrayBuffer;
@@ -226,14 +227,18 @@ for (const entry of ["drawer", "settings"] as const) {
     writeFileSync(join(folder, "readme.txt"), "Skip this text file");
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
-    await page.goto(entry === "settings" ? "/settings" : "/");
-    if (entry === "drawer") {
-      await page.keyboard.press("Alt+k");
-      await page.getByLabel("Link, note, or image").fill("Unfinished note");
-      await page.getByRole("button", { name: "Bulk import", exact: true }).click();
+    await page.goto("/");
+    if (width < 768) {
+      const navigation = page.getByRole("dialog", { name: "Sidebar navigation", exact: true });
+      await expect(navigation).toBeVisible();
+      await navigation.getByRole("button", { name: "Close navigation", exact: true }).click();
+      await expect(navigation).toBeHidden();
     }
+    await page.keyboard.press("Alt+k");
+    await page.getByLabel("Link, note, or image").fill("Unfinished note");
+    await page.getByRole("button", { name: "Bulk import", exact: true }).click();
     const chooser = page.waitForEvent("filechooser");
-    await page.getByRole("button", { name: entry === "drawer" ? "Import image folder" : "Import images", exact: true }).click();
+    await page.getByRole("button", { name: "Import image folder", exact: true }).click();
     await (await chooser).setFiles(folder);
     const review = page.getByRole("dialog", { name: "Import image folder" });
     await expect(review.getByLabel("Collection (optional)")).toHaveValue("Holiday");
@@ -257,22 +262,22 @@ for (const entry of ["drawer", "settings"] as const) {
     await expect(completionIcon).toHaveCSS("opacity", "1");
     await complete.screenshot({ path: testInfo.outputPath(`image-import-complete-${entry}.png`) });
     expect(await storedRecordCounts(page)).toEqual([2, 2]);
-    if (entry === "drawer") {
-      await complete.getByRole("button", { name: "Open folder", exact: true }).click();
-      const confirmation = page.getByRole("dialog", { name: "Discard unsaved changes?" });
-      await expect(confirmation).toBeVisible();
-      await confirmation.getByRole("button", { name: "Keep editing", exact: true }).click();
-      await expect(page).not.toHaveURL(/collection=/);
-      await expect(page.getByLabel("Link, note, or image")).toHaveValue("Unfinished note");
-      await page.getByRole("button", { name: "Bulk import", exact: true }).click();
-      await page.getByRole("dialog", { name: "Bulk import", exact: true }).getByRole("button", { name: "Done", exact: true }).click();
-      await expect(page.getByLabel("Link, note, or image")).toHaveValue("Unfinished note");
-      await page.getByRole("dialog", { name: "Save to Keepall" }).getByRole("button", { name: "Cancel", exact: true }).click();
-      await page.goto("/");
-      await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Imported photos", exact: true }).click();
-    } else {
-      await complete.getByRole("button", { name: "Open folder", exact: true }).click();
+    await complete.getByRole("button", { name: "Open folder", exact: true }).click();
+    const confirmation = page.getByRole("dialog", { name: "Discard unsaved changes?" });
+    await expect(confirmation).toBeVisible();
+    await confirmation.getByRole("button", { name: "Keep editing", exact: true }).click();
+    await expect(page).not.toHaveURL(/collection=/);
+    await expect(page.getByLabel("Link, note, or image")).toHaveValue("Unfinished note");
+    await page.getByRole("button", { name: "Bulk import", exact: true }).click();
+    await page.getByRole("dialog", { name: "Bulk import", exact: true }).getByRole("button", { name: "Done", exact: true }).click();
+    await expect(page.getByLabel("Link, note, or image")).toHaveValue("Unfinished note");
+    await page.getByRole("dialog", { name: "Save to Keepall" }).getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.goto("/");
+    if (width < 768) {
+      await page.locator('button[aria-controls="library-sidebar"]').click();
+      await expect(page.getByRole("dialog", { name: "Sidebar navigation", exact: true })).toBeVisible();
     }
+    await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Imported photos", exact: true }).click();
     await expect(page).toHaveURL(/collection=/);
     await expect(page.getByRole("main", { name: "Imported photos" }).getByRole("link", { name: "Open Image", exact: true })).toHaveCount(2);
     await page.reload();
@@ -282,18 +287,24 @@ for (const entry of ["drawer", "settings"] as const) {
   });
 }
 
-for (const entry of ["drawer", "settings"] as const) {
-  test(`bookmark file import from ${entry} preserves the draft and survives reload`, async ({ page }, testInfo) => {
+for (const width of [320, 1024]) {
+  const entry = "drawer";
+  test(`bookmark file import from ${entry} at ${width}px preserves the draft and survives reload`, async ({ page }, testInfo) => {
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
-    await page.goto(entry === "settings" ? "/settings" : "/");
-    if (entry === "drawer") {
-      await page.keyboard.press("Alt+k");
-      await page.getByLabel("Link, note, or image").fill("Unfinished note");
-      await page.getByRole("button", { name: "Bulk import", exact: true }).click();
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    if (width < 768) {
+      const navigation = page.getByRole("dialog", { name: "Sidebar navigation", exact: true });
+      await expect(navigation).toBeVisible();
+      await navigation.getByRole("button", { name: "Close navigation", exact: true }).click();
+      await expect(navigation).toBeHidden();
     }
+    await page.keyboard.press("Alt+k");
+    await page.getByLabel("Link, note, or image").fill("Unfinished note");
+    await page.getByRole("button", { name: "Bulk import", exact: true }).click();
     const chooser = page.waitForEvent("filechooser");
-    await page.getByRole("button", { name: entry === "drawer" ? "Import bookmarks HTML" : "Import bookmarks", exact: true }).click();
+    await page.getByRole("button", { name: "Import bookmarks HTML", exact: true }).click();
     await (await chooser).setFiles({
       name: "bookmarks.html",
       mimeType: "text/html",
@@ -308,11 +319,9 @@ for (const entry of ["drawer", "settings"] as const) {
     await expect(review).toBeHidden();
     await expect(page.getByRole("status").filter({ hasText: "Bookmarks: 1 added, 0 merged, 0 skipped." })).toBeVisible();
     expect(await storedRecordCounts(page)).toEqual([1, 0]);
-    if (entry === "drawer") {
-      await page.getByRole("dialog", { name: "Bulk import", exact: true }).getByRole("button", { name: "Done", exact: true }).click();
-      await expect(page.getByLabel("Link, note, or image")).toHaveValue("Unfinished note");
-      await page.getByRole("dialog", { name: "Save to Keepall" }).getByRole("button", { name: "Cancel", exact: true }).click();
-    }
+    await page.getByRole("dialog", { name: "Bulk import", exact: true }).getByRole("button", { name: "Done", exact: true }).click();
+    await expect(page.getByLabel("Link, note, or image")).toHaveValue("Unfinished note");
+    await page.getByRole("dialog", { name: "Save to Keepall" }).getByRole("button", { name: "Cancel", exact: true }).click();
     await page.goto("/");
     const bookmark = page.getByRole("heading", { name: "Example bookmark", level: 2 }).getByRole("link");
     await expect(bookmark).toHaveAttribute("href", "https://example.com/article");

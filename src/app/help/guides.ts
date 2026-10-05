@@ -168,22 +168,22 @@ export const guides: Guide[] = [
     summary: "Import browser bookmarks, a folder of images, or a Keepall backup.", minutes: "3 min read",
     sections: [
       {
-        id: "bookmarks", visual: { kind: "image", src: "/help/import-settings.webp", width: 1536, height: 348, alt: "Keepall Settings with Import bookmarks and Import images buttons", caption: "The Import section in Settings is where you bring in bookmarks and image folders." }, title: "Import browser bookmarks",
+        id: "bookmarks", title: "Import browser bookmarks",
         paragraphs: ["Start with an HTML bookmark export from your browser. A Keepall backup uses a different format."],
-        steps: ["Use your browser's bookmark manager to export bookmarks as an HTML file.", "Open Keepall Settings and choose Import bookmarks. Select the exported file.", "Review how bookmark folders will be used for collections, then confirm the import and read the result."],
+        steps: ["Use your browser's bookmark manager to export bookmarks as an HTML file.", "Open Save item, or press Alt + K, then choose Bulk import and Import bookmarks HTML. Select the exported file.", "Review how bookmark folders will be used for collections, then confirm the import and read the result."],
       },
       {
         id: "images", title: "Import a folder of images",
         paragraphs: ["You can bring in a folder without adding each image separately."],
-        steps: ["In Settings, choose Import images and select the folder on your device.", "Choose a collection, or leave it blank to keep the images in Unsorted.", "Choose Import images and wait for the result. Keepall reports files it skipped, including unsupported images and those over 20 MiB."],
+        steps: ["Open Save item, or press Alt + K, then choose Bulk import and Import image folder. Select the folder on your device.", "Choose a collection, or leave it blank to keep the images in Unsorted.", "Choose Import images and wait for the result. Keepall reports files it skipped, including unsupported images and those over 20 MiB."],
       },
       {
         id: "backup", visual: { kind: "transfer" }, title: "Restore a Keepall backup",
-        paragraphs: ["Use a .keepall.zip file or an older Keepall JSON backup. In Settings, choose Import backup. Keepall checks the whole file before showing its date, item counts, Trash, tags, collections, and media beside your current library totals.", "Merge adds missing items. Matching items may take newer saved details, and their tags combine. Replace library opens a separate confirmation showing both library totals, including Trash. Download a fresh backup first if you may want to keep your current items.", "After importing, check a few notes and media items before deleting your original copy."],
+        paragraphs: ["Use a .keepall.zip file or an older Keepall JSON backup. In Settings, choose Storage & backups, then Import backup. Keepall checks the whole file before showing its date, item counts, Trash, tags, collections, and media beside your current library totals.", "Merge adds missing items. Matching items may take newer saved details, and their tags combine. Replace library opens a separate confirmation showing both library totals, including Trash. Download a fresh backup first if you may want to keep your current items.", "After importing, check a few notes and media items before deleting your original copy."],
         links: [{ label: "Understand storage and backups", href: "/help/storage-and-backups" }],
       },
     ],
-    action: { label: "Open Settings", href: "/settings" },
+    action: { label: "Open your library", href: "/" },
   },
   {
     slug: "storage-and-backups", category: "Your data", title: "Understand storage and backups",
@@ -193,13 +193,13 @@ export const guides: Guide[] = [
       {
         id: "download", visual: { kind: "image", src: "/help/backup-settings.webp", width: 1536, height: 350, alt: "Keepall Backup settings showing Export backup and Import backup", caption: "Choose Export backup to download your library." }, title: "Download a backup",
         paragraphs: ["Make a backup after important additions and before clearing browser data, resetting a device, or changing browsers."],
-        steps: ["Open Settings and find the Backup section.", "Choose Export backup. Keepall downloads a .keepall.zip file containing library data and saved images and videos.", "Keep that file somewhere you can find it again. For protection against losing the device, keep a copy on another device or storage service you choose."],
-        links: [{ label: "Open backup settings", href: "/settings" }],
+        steps: ["Open Settings, choose Storage & backups, and find the Backup section.", "Choose Export backup. Keepall downloads a .keepall.zip file containing library data and saved images and videos.", "Keep that file somewhere you can find it again. For protection against losing the device, keep a copy on another device or storage service you choose."],
+        links: [{ label: "Open backup settings", href: "/settings#backup-heading" }],
       },
       {
         id: "automatic", title: "Back up automatically to a folder",
         paragraphs: ["In a browser that supports folder backups, open Settings, choose a dedicated empty Keepall Backups folder, and allow read and write access. Keepall saves the first backup immediately. The browser may remember access for future visits and app updates. Other browsers can use Export backup.", "While Keepall is open, changed library data is backed up every 30 minutes. Inactive tabs or a sleeping device can delay it until you return. No file is created when nothing has changed. Background checks never request permission; use Reconnect folder if access is lost. A failed save preserves completed backups and retries after 30 minutes, or you can choose Back up now.", "Keepall keeps the latest three verified backups for this library in the chosen folder. If a previously backed-up library becomes empty, backups and cleanup pause so recovery copies remain available. Import a saved backup or add an item to resume. Turn off folder backups stops future saves and leaves completed files in place.", "To recover, use Import backup and select a saved .keepall.zip file. Clearing browser data also forgets the folder connection, so choose a folder again after restoring. Backups on this device do not protect against losing the device; keep a separate copy elsewhere when you need that protection."],
-        links: [{ label: "Open backup settings", href: "/settings" }],
+        links: [{ label: "Open backup settings", href: "/settings#backup-heading" }],
       },
       { id: "restore", visual: { kind: "transfer" }, title: "Restore or move your library", paragraphs: ["Open Keepall in the destination browser and import your backup from Settings. Review the validated file and current totals. Merge adds missing items and may update matching items from newer saved details; tags combine. Replace library requires a separate confirmation and removes the current library, including Trash.", "Keep the original copy until you have checked the restored items. Importing a backup is a one-time transfer; it does not keep two libraries in sync."], links: [{ label: "Follow the import guide", href: "/help/import#backup" }] },
       {
@@ -210,7 +210,7 @@ export const guides: Guide[] = [
       { id: "space", visual: { kind: "image", src: "/help/storage-settings.webp", width: 1536, height: 726, alt: "Keepall Storage settings showing browser storage usage and protection status", caption: "Check your own storage status in Settings. This example’s values will differ from yours." }, title: "Check available storage", paragraphs: ["Settings shows the browser's estimated storage usage and allowance, plus whether it has granted storage protection. These estimates can change. Protection is not a substitute for a backup.", "Large images and videos use more space. If saving fails because storage is full, download a backup before removing items you no longer need."] },
       { id: "previews", title: "How link previews use the internet", paragraphs: ["While online, Keepall may send a saved page's URL to its preview service to request a title, description, or image. Your personal notes, collections, and tags are not included in that request."], links: [{ label: "Read extension privacy details", href: "/extension-privacy" }] },
     ],
-    action: { label: "Open Settings", href: "/settings" },
+    action: { label: "Open Settings", href: "/settings#storage" },
   },
   {
     slug: "offline", category: "Everyday use", title: "Use Keepall offline",
