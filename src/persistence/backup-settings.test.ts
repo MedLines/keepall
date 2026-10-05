@@ -44,7 +44,7 @@ beforeEach(() => {
   }));
   pruneAutomaticBackups.mockImplementation(async (_directory, _libraryId, completed) => ({ backups: completed, cleanupError: null }));
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 test("folder access is off until the user connects a folder", async () => {
   expect(await getBackupFolderSettings()).toBeUndefined();
@@ -61,6 +61,25 @@ test("upgrading an existing version 8 library preserves its items and adds no ac
   previous.close();
   expect(await getDb().items.get(note.id)).toEqual(note);
   expect(await getBackupFolderSettings()).toBeUndefined();
+});
+
+test("upgrading version 9 preserves the existing folder configuration and library", async () => {
+  const previous = new Dexie("keepall");
+  previous.version(9).stores({
+    items: "id, type, createdAt", tags: "id, name", collections: "id, name", assets: "id, contentHash",
+    preferences: "id", thumbnails: "assetId", videoAssets: "id", backupSettings: "id",
+  });
+  const note = buildNote({ content: "Before scheduling" });
+  const configuration = {
+    id: "folder", libraryId, connectionId: "existing", enabled: true,
+    directory: storedDirectory, completed: [], lastError: null, cleanupWarning: null,
+  };
+  await previous.table("items").put(note);
+  await previous.table("backupSettings").put(configuration);
+  previous.close();
+  expect(await getDb().items.get(note.id)).toEqual(note);
+  expect(await getBackupFolderSettings()).toEqual(configuration);
+  expect(await getDb().backupState.get("library")).toBeUndefined();
 });
 
 test("a folder without write permission is not connected and no hidden request is made", async () => {
@@ -156,4 +175,110 @@ test("changing the destination starts its own history and cannot prune the previ
   expect(settings?.completed).toHaveLength(1);
   expect(pruneAutomaticBackups.mock.calls.at(-1)?.[2]).toHaveLength(1);
   expect(settings?.completed[0].snapshotId).not.toBe(previous?.completed[0].snapshotId);
+});
+
+function restoreStoredHandle(directory = handle()) {
+  const table = getDb().backupSettings;
+  const read = table.get.bind(table);
+  vi.spyOn(table, "get").mockImplementation(((key: "folder") => read(key).then((stored) =>
+    stored ? { ...stored, directory } : stored,
+  )) as typeof table.get);
+  return directory;
+}
+
+test("scheduled backups wait thirty minutes, then skip unchanged content without exporting", async () => {
+  const { runScheduledFolderBackup, AUTOMATIC_BACKUP_INTERVAL_MS } = await import("./backup-settings");
+  restoreStoredHandle();
+  await getDb().items.add(buildNote({ content: "Original" }));
+  await connectBackupFolder(handle());
+  const initial = await getBackupFolderSettings();
+  const due = initial!.lastAttemptAt! + AUTOMATIC_BACKUP_INTERVAL_MS;
+  expect(await runScheduledFolderBackup(due)).toBe("unchanged");
+  const note = buildNote({ content: "New" });
+  await getDb().items.add(note);
+  expect(await runScheduledFolderBackup(due - 1)).toBe("not-due");
+  expect(await runScheduledFolderBackup(due)).toBe("saved");
+  expect(writeAutomaticBackup).toHaveBeenCalledTimes(2);
+  expect(await runScheduledFolderBackup(due)).toBe("unchanged");
+});
+
+test("edits during a backup stay pending for the next interval", async () => {
+  const { runScheduledFolderBackup, AUTOMATIC_BACKUP_INTERVAL_MS } = await import("./backup-settings");
+  restoreStoredHandle();
+  await getDb().items.add(buildNote({ content: "Before" }));
+  writeAutomaticBackup.mockImplementationOnce(async (_directory, blob, identity) => {
+    await getDb().items.add(buildNote({ content: "During write" }));
+    return { ...identity, fileName: "saved.keepall.zip", byteLength: blob.size, exportedAt: 1, completedAt: 2 };
+  });
+  await connectBackupFolder(handle());
+  const saved = await getBackupFolderSettings();
+  expect(saved?.lastBackupRevision).not.toBe((await getDb().backupState.get("library"))?.revision);
+  expect(await runScheduledFolderBackup(saved!.lastAttemptAt! + AUTOMATIC_BACKUP_INTERVAL_MS)).toBe("saved");
+});
+
+test("failed scheduled writes preserve success and wait thirty minutes before retrying", async () => {
+  const { runScheduledFolderBackup, AUTOMATIC_BACKUP_INTERVAL_MS } = await import("./backup-settings");
+  restoreStoredHandle();
+  await connectBackupFolder(handle());
+  const before = await getBackupFolderSettings();
+  await getDb().items.add(buildNote({ content: "New" }));
+  const due = before!.lastAttemptAt! + AUTOMATIC_BACKUP_INTERVAL_MS;
+  writeAutomaticBackup.mockRejectedValueOnce(new Error("Disk full"));
+  expect(await runScheduledFolderBackup(due)).toBe("failed");
+  expect((await getBackupFolderSettings())?.completed).toEqual(before?.completed);
+  expect(await runScheduledFolderBackup(due + 60_000)).toBe("not-due");
+  expect(await runScheduledFolderBackup(due + AUTOMATIC_BACKUP_INTERVAL_MS)).toBe("saved");
+});
+
+test("an unexpectedly empty library pauses writes and pruning until items are restored", async () => {
+  const { runScheduledFolderBackup, AUTOMATIC_BACKUP_INTERVAL_MS } = await import("./backup-settings");
+  restoreStoredHandle();
+  const note = buildNote({ content: "Protect this" });
+  await getDb().items.add(note);
+  await connectBackupFolder(handle());
+  const before = await getBackupFolderSettings();
+  await getDb().items.clear();
+  const due = before!.lastAttemptAt! + AUTOMATIC_BACKUP_INTERVAL_MS;
+  expect(await runScheduledFolderBackup(due)).toBe("failed");
+  expect(writeAutomaticBackup).toHaveBeenCalledOnce();
+  expect(pruneAutomaticBackups).toHaveBeenCalledOnce();
+  expect((await getBackupFolderSettings())?.lastError).toMatch(/empty/i);
+  await expect(saveFolderBackup()).rejects.toThrow(/empty/i);
+  await getDb().items.add(note);
+  expect(await runScheduledFolderBackup(due + AUTOMATIC_BACKUP_INTERVAL_MS)).toBe("saved");
+});
+
+test("scheduled permission checks never prompt and competing tabs skip a held lock", async () => {
+  const { runScheduledFolderBackup, AUTOMATIC_BACKUP_INTERVAL_MS } = await import("./backup-settings");
+  const directory = restoreStoredHandle();
+  await connectBackupFolder(handle());
+  await getDb().items.add(buildNote({ content: "New" }));
+  const settings = (await getBackupFolderSettings())!;
+  const due = settings.lastAttemptAt! + AUTOMATIC_BACKUP_INTERVAL_MS;
+  vi.mocked(directory.queryPermission).mockResolvedValue("prompt");
+  expect(await runScheduledFolderBackup(due)).toBe("failed");
+  expect(directory.requestPermission).not.toHaveBeenCalled();
+  vi.stubGlobal("navigator", { locks: { request: vi.fn(async (_name, _options, action) => action(null)) } });
+  expect(await runScheduledFolderBackup(due + AUTOMATIC_BACKUP_INTERVAL_MS)).toBe("busy");
+  expect(writeAutomaticBackup).toHaveBeenCalledOnce();
+});
+
+test("turning off during archive generation prevents the later file write", async () => {
+  const { runScheduledFolderBackup, AUTOMATIC_BACKUP_INTERVAL_MS } = await import("./backup-settings");
+  const archive = await import("./backup-archive");
+  restoreStoredHandle();
+  await connectBackupFolder(handle());
+  await getDb().items.add(buildNote({ content: "Pending" }));
+  const settings = (await getBackupFolderSettings())!;
+  let finish!: () => void;
+  const exporting = vi.spyOn(archive, "exportKeepallArchive").mockImplementationOnce(() => new Promise((resolve) => {
+    finish = () => resolve(new Blob(["archive"]));
+  }));
+  const pending = runScheduledFolderBackup(settings.lastAttemptAt! + AUTOMATIC_BACKUP_INTERVAL_MS);
+  await vi.waitFor(() => expect(exporting).toHaveBeenCalledOnce());
+  await disableBackupFolder();
+  finish();
+  expect(await pending).toBe("off");
+  expect(writeAutomaticBackup).toHaveBeenCalledOnce();
+  expect((await getBackupFolderSettings())?.enabled).toBe(false);
 });

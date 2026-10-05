@@ -21,8 +21,8 @@ type ArchiveVideo = { id: string; mimeType: string; byteLength: number; createdA
 type ArchiveThumbnail = { assetId: string; mimeType: string; byteLength: number; path: string };
 type ArchiveManifest = Omit<KeepallBackup, "assets"> & { assets: ArchiveAsset[]; videos: ArchiveVideo[]; thumbnails: ArchiveThumbnail[]; automaticBackup?: AutomaticBackupIdentity };
 
-export async function exportKeepallArchive(exportedAt = Date.now(), automaticBackup?: AutomaticBackupIdentity): Promise<Blob> {
-  const { items, tags, collections, assets, videos, thumbnails, preferences } = await readBackupSnapshot();
+export async function exportKeepallArchive(exportedAt = Date.now(), automaticBackup?: AutomaticBackupIdentity, snapshot?: Awaited<ReturnType<typeof readBackupSnapshot>>): Promise<Blob> {
+  const { items, tags, collections, assets, videos, thumbnails, preferences } = snapshot ?? await readBackupSnapshot();
   const manifest: ArchiveManifest = {
     format: "keepall", version: ARCHIVE_VERSION, exportedAt,
     items, tags, collections,

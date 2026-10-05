@@ -6,13 +6,13 @@ import { getDb } from "./db";
 
 export async function readBackupSnapshot() {
   const db = getDb();
-  const [rawItems, tags, collections, rawAssets, videos, thumbnails, preferences] = await db.transaction(
+  const [rawItems, tags, collections, rawAssets, videos, thumbnails, preferences, state] = await db.transaction(
     "r",
-    [db.items, db.tags, db.collections, db.assets, db.videoAssets, db.thumbnails, db.preferences],
+    [db.items, db.tags, db.collections, db.assets, db.videoAssets, db.thumbnails, db.preferences, db.backupState],
     () => Promise.all([
       db.items.toArray(), db.tags.toArray(), db.collections.toArray(),
       db.assets.toArray(), db.videoAssets.toArray(), db.thumbnails.toArray(),
-      db.preferences.get("library"),
+      db.preferences.get("library"), db.backupState.get("library"),
     ]),
   );
 
@@ -26,6 +26,7 @@ export async function readBackupSnapshot() {
   }));
 
   return {
+    revision: state?.revision ?? "initial",
     items: rawItems.map((item) => normalizeItem(item)),
     tags, collections, assets, videos, thumbnails,
     preferences: {

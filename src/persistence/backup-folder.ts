@@ -167,6 +167,7 @@ export async function pruneAutomaticBackups(
   directory: BackupDirectory,
   libraryId: string,
   completed: CompletedAutomaticBackup[],
+  canPrune?: () => Promise<boolean>,
 ): Promise<{ backups: CompletedAutomaticBackup[]; cleanupError: Error | null }> {
   const removed = new Set<string>();
   try {
@@ -180,6 +181,7 @@ export async function pruneAutomaticBackups(
     // Verify every retained and removable record before deleting any archive.
     for (const backup of ownBackups) await verifyCompletedBackup(directory, backup);
     for (const backup of ownBackups.slice(3)) {
+      if (canPrune && !await canPrune()) break;
       await directory.removeEntry(backup.fileName);
       removed.add(backup.fileName);
       await directory.removeEntry(`${backup.fileName}.complete.json`);

@@ -1,3 +1,4 @@
+import { readBackupSnapshot } from "./backup-snapshot";
 import { liveQuery } from "dexie";
 import { getDb } from "./db";
 import { exportKeepallArchive } from "./backup-archive";
@@ -17,6 +18,9 @@ export type BackupFolderSettings = {
   completed: CompletedAutomaticBackup[];
   lastError: string | null;
   cleanupWarning: string | null;
+  lastBackupRevision?: string;
+  lastBackedUpItemCount?: number;
+  lastAttemptAt?: number;
 };
 
 type PickerWindow = Window & {
@@ -79,26 +83,55 @@ async function withBackupLock<T>(job: () => Promise<T>): Promise<T> {
   });
 }
 
-async function saveConnectedBackup(settings: BackupFolderSettings, signal?: AbortSignal) {
+function ensureLibraryNotEmpty(settings: BackupFolderSettings, count: number) {
+  const previouslyPopulated = (settings.lastBackedUpItemCount ?? 0) > 0 ||
+    (settings.lastBackedUpItemCount === undefined && settings.completed.length > 0);
+  if (count === 0 && previouslyPopulated) {
+    throw new BackupFolderError("write-failed", "Folder backups are paused because your library is empty. Import a saved backup or add an item to resume. Existing backups are kept.");
+  }
+}
+
+async function connectionIsCurrent(settings: BackupFolderSettings) {
+  const current = await getBackupFolderSettings();
+  return current?.enabled && current.connectionId === settings.connectionId;
+}
+
+async function saveConnectedBackup(settings: BackupFolderSettings, signal?: AbortSignal, now = Date.now()) {
   try {
     signal?.throwIfAborted();
+    await updateConnection(settings, { lastAttemptAt: now });
     if (await settings.directory.queryPermission({ mode: "readwrite" }) !== "granted") {
       throw new BackupFolderError("permission-required", "Reconnect the backup folder to allow writing.");
     }
+    await ensureLibraryNotEmpty(settings, await getDb().items.count());
+    const snapshot = await readBackupSnapshot();
+    await ensureLibraryNotEmpty(settings, snapshot.items.length);
+    signal?.throwIfAborted();
+    if (!await connectionIsCurrent(settings)) return false;
     const identity = { libraryId: settings.libraryId, snapshotId: crypto.randomUUID() };
-    const archive = await exportKeepallArchive(Date.now(), identity);
+    const archive = await exportKeepallArchive(now, identity, snapshot);
+    signal?.throwIfAborted();
+    if (!await connectionIsCurrent(settings)) return false;
     const completed = await writeAutomaticBackup(settings.directory, archive, identity, signal);
     signal?.throwIfAborted();
     // Persist the new success before pruning, so a crash cannot lose its receipt.
     const saved = await updateConnection(settings, {
       completed: [...settings.completed, completed], lastError: null, cleanupWarning: null,
+      lastBackupRevision: snapshot.revision, lastBackedUpItemCount: snapshot.items.length,
     });
-    if (!saved || signal?.aborted) return;
-    const cleaned = await pruneAutomaticBackups(settings.directory, settings.libraryId, saved.completed);
+    if (!saved || signal?.aborted) return false;
+    await ensureLibraryNotEmpty(saved, await getDb().items.count());
+    if (!await connectionIsCurrent(settings) || signal?.aborted) return true;
+    const cleaned = await pruneAutomaticBackups(settings.directory, settings.libraryId, saved.completed, async () => {
+      if (signal?.aborted || !await connectionIsCurrent(settings)) return false;
+      ensureLibraryNotEmpty(saved, await getDb().items.count());
+      return true;
+    });
     await updateConnection(settings, {
       completed: cleaned.backups,
       cleanupWarning: cleaned.cleanupError ? "Backup saved, but older backups couldn't be removed. Try Back up now again later." : null,
     });
+    return true;
   } catch (error) {
     if (!signal?.aborted) await updateConnection(settings, { lastError: backupFailureMessage(error) });
     throw error;
@@ -117,6 +150,7 @@ export function connectBackupFolder(directory: BackupFolderHandle, signal?: Abor
       id: "folder", libraryId: previous?.libraryId ?? crypto.randomUUID(), connectionId: crypto.randomUUID(),
       enabled: true, directory, completed: sameFolder ? previous!.completed : [],
       lastError: null, cleanupWarning: null,
+      lastBackedUpItemCount: previous?.lastBackedUpItemCount ?? (previous?.completed.length ? 1 : undefined),
     };
     signal?.throwIfAborted();
     await getDb().backupSettings.put(settings);
@@ -139,5 +173,29 @@ export async function disableBackupFolder() {
     if (settings) await db.backupSettings.put({
       ...settings, enabled: false, connectionId: crypto.randomUUID(), lastError: null, cleanupWarning: null,
     });
+  });
+}
+
+export const AUTOMATIC_BACKUP_INTERVAL_MS = 30 * 60 * 1000;
+type ScheduledResult = "saved" | "unchanged" | "not-due" | "off" | "busy" | "failed";
+
+/** Recheck under the shared lock so two tabs cannot back up the same revision. */
+export async function runScheduledFolderBackup(now = Date.now(), signal?: AbortSignal): Promise<ScheduledResult> {
+  return navigator.locks.request("keepall:folder-backup", { ifAvailable: true }, async (lock) => {
+    if (!lock) return "busy";
+    const db = getDb();
+    const [settings, state] = await db.transaction("r", db.backupSettings, db.backupState, () =>
+      Promise.all([getBackupFolderSettings(), db.backupState.get("library")]),
+    );
+    if (!settings?.enabled || signal?.aborted) return "off";
+    if (settings.lastBackupRevision === (state?.revision ?? "initial")) return "unchanged";
+    const lastAttempt = Math.max(settings.lastAttemptAt ?? 0, settings.completed.at(-1)?.completedAt ?? 0);
+    if (now - lastAttempt < AUTOMATIC_BACKUP_INTERVAL_MS) return "not-due";
+    try {
+      return await saveConnectedBackup(settings, signal, now) ? "saved" : "off";
+    } catch {
+      // The save records actionable errors. Wait for the next interval or a user retry.
+      return signal?.aborted ? "off" : "failed";
+    }
   });
 }

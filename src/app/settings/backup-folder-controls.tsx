@@ -170,7 +170,7 @@ function FolderBackupContent({ view, disabled, actions, status }: {
     {settings ? <FolderBackupDetails settings={settings} /> : null}
     <FolderBackupButtons settings={settings} needsAccess={needsAccess} disabled={disabled} actions={actions} />
     {actions.action ? <progress className="mt-3 h-2 w-full accent-action-primary" aria-label={actions.action === "save" ? "Saving folder backup" : status} /> : null}
-    <p className="mt-3 text-xs leading-5 text-text-secondary">Scheduled backups are not active yet. For now, use Back up now. The latest three completed folder backups are kept.</p>
+    <p className="mt-3 text-xs leading-5 text-text-secondary">When enabled, Keepall backs up changed library data every 30 minutes while the app is open. Sleeping or inactive tabs can delay a backup until you return. Background checks never ask for permission. The latest three completed folder backups are kept.</p>
     {settings && !enabled ? <p className="mt-2 text-xs leading-5 text-text-secondary">Folder backups are off. Saved files stay in your folder.</p> : null}
     {settings?.cleanupWarning && enabled ? <p className="mt-2 text-sm text-text-secondary">{settings.cleanupWarning}</p> : null}
   </>;
@@ -193,7 +193,7 @@ export function BackupFolderControls({ disabled = false, onBusyChange }: {
         <h3 id="folder-backups-heading" className="text-sm font-semibold text-text-primary">Folder backups</h3>
         {view?.supported ? <span className="text-xs text-text-secondary" aria-live="polite">{status}</span> : null}
       </div>
-      <p className="mt-1 text-sm leading-6 text-text-secondary">Save recovery copies directly to a folder on this device.</p>
+      <p className="mt-1 text-sm leading-6 text-text-secondary">Automatically save recovery copies to a folder on this device.</p>
       {!view ? <p className="mt-3 text-sm text-text-secondary">Checking folder backups…</p> : !view.supported ? (
         <p className="mt-3 text-sm leading-6 text-text-secondary">Folder backups are not supported in this browser. Use Export backup above to download a recovery copy.</p>
       ) : <FolderBackupContent view={view} disabled={disabled} actions={actions} status={status} />}

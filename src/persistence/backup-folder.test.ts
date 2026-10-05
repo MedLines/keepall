@@ -265,3 +265,13 @@ test("duplicate history records cannot cause a retained backup to be removed", a
   expect(result.cleanupError).toBeTruthy();
   expect(destination.files).toEqual(before);
 });
+
+test("retention stops before deleting files when the connection has been disabled", async () => {
+  const destination = folder();
+  const backups = await completedBackups(destination);
+  const before = new Map(destination.files);
+  const result = await pruneAutomaticBackups(destination.directory, libraryId, backups, async () => false);
+  expect(result.cleanupError).toBeNull();
+  expect(result.backups).toEqual(backups);
+  expect(destination.files).toEqual(before);
+});
