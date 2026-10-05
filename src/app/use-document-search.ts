@@ -19,6 +19,11 @@ export function useDocumentSearch(items: Item[], tags: Tag[], query: string) {
     entries: typeof entries; query: string; attempt: number;
     matches?: Map<string, DocumentSearchMatch>; unavailable: number; error: boolean;
   } | null>(null);
+  const [wasEnabled, setWasEnabled] = useState(enabled);
+  if (wasEnabled !== enabled) {
+    setWasEnabled(enabled);
+    if (!enabled) setResult(null);
+  }
 
   // New library snapshots also cover backup replacement with reused original IDs.
   useEffect(() => () => client.reset(), [client, entries]);
@@ -34,9 +39,12 @@ export function useDocumentSearch(items: Item[], tags: Tag[], query: string) {
     return () => { active = false; };
   }, [client, entries, query, attempt, enabled]);
 
-  const current = enabled && result?.entries === entries && result.query === query && result.attempt === attempt ? result : null;
+  const settled = enabled && result?.entries === entries ? result : null;
+  const current = settled?.query === query && settled.attempt === attempt ? settled : null;
   return {
-    matches: current?.matches,
+    enabled,
+    query: enabled ? settled?.query ?? "" : query,
+    matches: settled?.matches,
     pending: enabled && !current,
     error: current?.error ?? false,
     unavailable: current?.unavailable ?? 0,

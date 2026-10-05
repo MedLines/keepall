@@ -91,6 +91,7 @@ test("imported file contents produce highlighted results through filters, editin
   await expect(page.locator(".search-excerpt mark")).toHaveText("Newkeyword");
   await expect(page).toHaveURL(/q=newkeyword/);
   await page.reload();
+  await expect(page.locator("[data-item-id]")).toHaveCount(1);
   await expect(page.locator("[data-item-id]")).toHaveAttribute("data-item-id", id!);
   await expect(page.locator(".search-excerpt mark")).toHaveText("Newkeyword");
   await page.getByRole("link", { name: "Open reference", exact: true }).last().click();
@@ -101,6 +102,7 @@ test("imported file contents produce highlighted results through filters, editin
   await expect(page.locator(".search-excerpt mark")).toHaveText("Newkeyword");
   await page.getByRole("button", { name: "Restore", exact: true }).click();
   await page.goto("/?q=newkeyword");
+  await expect(page.locator("[data-item-id]")).toHaveCount(1);
   await expect(page.locator("[data-item-id]")).toHaveAttribute("data-item-id", id!);
   await expect(page.locator(".search-excerpt mark")).toHaveText("Newkeyword");
   await page.setViewportSize({ width: 320, height: 900 });
@@ -133,6 +135,56 @@ test("large originals search in a worker and rapid queries keep only the newest 
   await expect(page.locator("[data-item-id]")).toHaveCount(1);
   await expect(page.locator("[data-item-id]")).toHaveAttribute("data-item-id", "large-1");
   await testInfo.attach("large-search-timing", { body: `Five 6.3 MB originals; initial rapid search plus two subsequent queries: ${Date.now() - started} ms`, contentType: "text/plain" });
+});
+
+test("refining document searches keeps existing results mounted and in place", async ({ page }) => {
+  await page.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    const delayedEvents = new WeakSet<Event>();
+    window.Worker = class extends NativeWorker {
+      constructor(...args: ConstructorParameters<typeof Worker>) {
+        super(...args);
+        this.addEventListener("message", event => {
+          if (delayedEvents.has(event)) return;
+          event.stopImmediatePropagation();
+          const delayed = new MessageEvent("message", { data: event.data });
+          delayedEvents.add(delayed);
+          // Make the pending state observable even with cached, tiny originals.
+          setTimeout(() => this.dispatchEvent(delayed), 750);
+        });
+      }
+    };
+  });
+  await seed(page, [
+    { id: "reference", title: "Reading material", text: "Unicorn animation examples" },
+    { id: "replacement", title: "Another reference", text: "Replacement subject" },
+  ]);
+  const search = page.getByRole("searchbox", { name: "Search", exact: true });
+  const result = page.locator('[data-item-id="reference"]');
+  await search.fill("unicorn");
+  await expect(page.locator("[data-item-id]")).toHaveCount(1);
+  await expect(result.locator(".search-excerpt mark")).toHaveText("Unicorn");
+  await expect(page.getByText("Searching file contents…", { exact: true })).toBeHidden();
+  const originalNode = await result.elementHandle();
+  expect(originalNode).not.toBeNull();
+  const originalBounds = await result.boundingBox();
+  expect(originalBounds).not.toBeNull();
+
+  await search.fill("unicorn animation");
+  await expect(page.getByText("Searching file contents…", { exact: true })).toBeVisible();
+  expect(await originalNode!.evaluate(node => node.isConnected)).toBe(true);
+  const pendingBounds = await result.boundingBox();
+  expect(pendingBounds).not.toBeNull();
+  expect(pendingBounds!.y).toBeCloseTo(originalBounds!.y, 0);
+  await expect(result.locator(".search-excerpt mark")).toHaveText(["Unicorn", "animation"]);
+  await expect(page.getByText("Searching file contents…", { exact: true })).toBeHidden();
+  expect(await originalNode!.evaluate(node => node.isConnected)).toBe(true);
+
+  await search.fill("replacement");
+  await expect(page.locator('[data-item-id="replacement"]')).toBeVisible();
+  await expect(result).toHaveCount(0);
+  await expect(page.locator("[data-item-id]")).toHaveCount(1);
+  await expect(page.locator(".search-excerpt mark")).toHaveText("Replacement");
 });
 
 test("missing originals leave title search usable and Retry search recovers restored text", async ({ page }) => {

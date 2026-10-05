@@ -56,6 +56,31 @@ test("a new library snapshot resets cached originals, including backups that reu
   expect(result.current.pending).toBe(false);
 });
 
+test("keeps settled results and their query together while the next document search is pending", async () => {
+  const { result, rerender } = renderHook(({ query }) => useDocumentSearch(items, tags, query), { initialProps: { query: "animation" } });
+  await act(async () => workers[0].reply(workers[0].postMessage.mock.calls[0][0]));
+  const settled = result.current.matches;
+
+  rerender({ query: "animation examples" });
+  expect(result.current.pending).toBe(true);
+  expect(result.current.matches).toBe(settled);
+  expect(result.current.query).toBe("animation");
+
+  await act(async () => workers[0].reply(workers[0].postMessage.mock.calls[1][0]));
+  expect(result.current.pending).toBe(false);
+  expect(result.current.query).toBe("animation examples");
+  expect(result.current.matches?.get(item.id)?.excerpt?.text).toBe("animation examples");
+
+  rerender({ query: "" });
+  expect(result.current.pending).toBe(false);
+  expect(result.current.query).toBe("");
+  expect(result.current.matches).toBeUndefined();
+  rerender({ query: "another subject" });
+  expect(result.current.pending).toBe(true);
+  expect(result.current.query).toBe("");
+  expect(result.current.matches).toBeUndefined();
+});
+
 test("search failure and unavailable files can be retried without hiding metadata results", async () => {
   const { result } = renderHook(() => useDocumentSearch(items, tags, "keyword"));
   await act(async () => workers[0].onerror?.({ preventDefault: vi.fn() } as unknown as ErrorEvent));

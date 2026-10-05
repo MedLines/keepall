@@ -592,6 +592,8 @@ export function Library() {
   const trashIndexes = useMemo(() => buildLibraryBrowseIndexes(trashedItems), [trashedItems]);
   const browseItems = view.trash ? trashedItems : items;
   const documentSearch = useDocumentSearch(browseItems, tags, view.collections || view.tags ? "" : searchQuery);
+  const resultQuery = view.collections || view.tags ? searchQuery : documentSearch.query;
+  const resultView = useMemo(() => ({ ...view, q: resultQuery }), [view, resultQuery]);
   const browseIndexes = view.trash ? trashIndexes : browseIndexesRef.current;
   const typeCountIndexes = useMemo(
     () => buildLibraryBrowseIndexes(browseItems),
@@ -602,12 +604,12 @@ export function Library() {
     () => countSidebarItems(filterAndSortLibraryItems(
       browseItems,
       tags,
-      { ...view, type: null },
+      { ...resultView, type: null },
       collectionsById,
       typeCountIndexes,
       documentSearch.matches,
     )),
-    [browseItems, tags, view, collectionsById, typeCountIndexes, documentSearch.matches],
+    [browseItems, tags, resultView, collectionsById, typeCountIndexes, documentSearch.matches],
   );
   const orderedCollections = useMemo(
     () => orderCollectionsByPins(collections, pinnedCollectionIds),
@@ -634,24 +636,24 @@ export function Library() {
       filterAndSortLibraryItems(
         browseItems,
         tags,
-        view,
+        resultView,
         collectionsById,
         browseIndexes,
         documentSearch.matches,
       ).length,
-    [browseItems, tags, view, collectionsById, browseIndexEpoch, documentSearch.matches],
+    [browseItems, tags, resultView, collectionsById, browseIndexEpoch, documentSearch.matches],
   );
   const visibleItems = useMemo(
     () =>
       filterAndSortLibraryItems(
         browseItems,
         tags,
-        view,
+        resultView,
         collectionsById,
         browseIndexes,
         documentSearch.matches,
       ),
-    [browseItems, tags, view, collectionsById, browseIndexEpoch, documentSearch.matches],
+    [browseItems, tags, resultView, collectionsById, browseIndexEpoch, documentSearch.matches],
   );
   const browseScopeKey = `${Boolean(view.tags)}|${Boolean(view.collections)}|${Boolean(view.trash)}|${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
   const selectionEntries = view.collections || view.tags
@@ -1661,7 +1663,7 @@ export function Library() {
         placement={placement}
         item={item}
         trashActions={view.trash ? { onRestore: () => trashActions.restore(item), onDelete: () => trashActions.requestDelete(item) } : undefined}
-        searchQuery={searchQuery}
+        searchQuery={resultQuery}
         searchExcerpt={documentSearch.matches?.get(item.id)?.excerpt}
         inspected={!view.trash && inspectId === item.id}
         layoutMode={browseLayout}
@@ -1933,6 +1935,7 @@ export function Library() {
           ref={mainScrollRef}
           className="scroll-fade min-h-0 min-w-0 flex-1 overflow-auto px-3 pb-6 sm:px-6 [--scroll-fade-edge-opacity:0.35]"
           aria-labelledby="library-heading"
+          aria-busy={documentSearch.pending}
         >
           {loadState === "loading" ? (
             <p className="text-sm text-text-secondary">Loading…</p>
@@ -1942,7 +1945,7 @@ export function Library() {
             </p>
           ) : (
             <>
-              {documentSearch.pending ? <p role="status" className="mb-3 text-sm text-text-secondary">Searching file contents…</p> : null}
+              {documentSearch.enabled ? <p role="status" className={`mb-3 min-h-5 text-sm text-text-secondary transition-[visibility] duration-0 ${documentSearch.pending ? "visible delay-200" : "invisible"}`}>{documentSearch.pending ? "Searching file contents…" : ""}</p> : null}
               {documentSearch.error || documentSearch.unavailable > 0 ? <p role="status" className="mb-3 text-sm text-text-secondary">
                 {documentSearch.error ? "Couldn't search file contents. Titles, tags, and personal notes are still searchable." : `${documentSearch.unavailable} file${documentSearch.unavailable === 1 ? " couldn't" : "s couldn't"} be searched. Try again or restore missing files from a backup.`}
                 {" "}<button type="button" className="ui-control inline-flex min-h-8 items-center px-2 text-sm" onClick={documentSearch.retry}>Retry search</button>
