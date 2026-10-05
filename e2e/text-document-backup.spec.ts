@@ -83,4 +83,10 @@ test("document originals survive native storage, ZIP export, replacement and rel
   await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Library replaced from backup");
   await page.reload();
   expect(await documentSnapshot(page)).toEqual(snapshot);
+  await page.goto("/?q=" + encodeURIComponent("مرحبا café"));
+  await expect(page.locator("[data-item-id]")).toHaveCount(1);
+  await expect(page.locator(".search-excerpt mark")).toHaveText(["مرحبا", "café"]);
+  await page.goto("/?trash=1&q=" + encodeURIComponent("مرحبا café"));
+  await expect(page.locator("[data-item-id]")).toHaveCount(1);
+  await expect(page.locator(".search-excerpt mark")).toHaveText(["مرحبا", "café"]);
 });

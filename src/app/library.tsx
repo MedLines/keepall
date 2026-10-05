@@ -36,7 +36,7 @@ import { itemActionLabel } from "@/domain/item-label";
 import { LinkValidationError } from "@/domain/link";
 import { assertLocalImageFile } from "@/domain/image";
 import { NoteValidationError } from "@/domain/note";
-import { matchesSearchQuery, normalizeSearchQuery } from "@/domain/search";
+import { normalizeSearchQuery } from "@/domain/search";
 import { TagValidationError, normalizeTagName, type Tag } from "@/domain/tag";
 import { orderCollectionsByPins } from "@/domain/library-preferences";
 import {
@@ -93,6 +93,7 @@ import {
   LibraryNavigationProvider,
 } from "./library-navigation";
 import { useLibraryTrashActions } from "./library-trash-actions";
+import { useDocumentSearch } from "./use-document-search";
 import { LibraryShell } from "./library-shell";
 import { countSidebarItems } from "./library-sidebar-counts";
 import { LibraryMainGrid, type LibraryPreviewHandle } from "./library-main-grid";
@@ -590,6 +591,7 @@ export function Library() {
   const searchQuery = view.q;
   const trashIndexes = useMemo(() => buildLibraryBrowseIndexes(trashedItems), [trashedItems]);
   const browseItems = view.trash ? trashedItems : items;
+  const documentSearch = useDocumentSearch(browseItems, tags, view.collections || view.tags ? "" : searchQuery);
   const browseIndexes = view.trash ? trashIndexes : browseIndexesRef.current;
   const typeCountIndexes = useMemo(
     () => buildLibraryBrowseIndexes(browseItems),
@@ -603,8 +605,9 @@ export function Library() {
       { ...view, type: null },
       collectionsById,
       typeCountIndexes,
+      documentSearch.matches,
     )),
-    [browseItems, tags, view, collectionsById, typeCountIndexes],
+    [browseItems, tags, view, collectionsById, typeCountIndexes, documentSearch.matches],
   );
   const orderedCollections = useMemo(
     () => orderCollectionsByPins(collections, pinnedCollectionIds),
@@ -634,8 +637,9 @@ export function Library() {
         view,
         collectionsById,
         browseIndexes,
+        documentSearch.matches,
       ).length,
-    [browseItems, tags, view, collectionsById, browseIndexEpoch],
+    [browseItems, tags, view, collectionsById, browseIndexEpoch, documentSearch.matches],
   );
   const visibleItems = useMemo(
     () =>
@@ -645,8 +649,9 @@ export function Library() {
         view,
         collectionsById,
         browseIndexes,
+        documentSearch.matches,
       ),
-    [browseItems, tags, view, collectionsById, browseIndexEpoch],
+    [browseItems, tags, view, collectionsById, browseIndexEpoch, documentSearch.matches],
   );
   const browseScopeKey = `${Boolean(view.tags)}|${Boolean(view.collections)}|${Boolean(view.trash)}|${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
   const selectionEntries = view.collections || view.tags
@@ -1657,6 +1662,7 @@ export function Library() {
         item={item}
         trashActions={view.trash ? { onRestore: () => trashActions.restore(item), onDelete: () => trashActions.requestDelete(item) } : undefined}
         searchQuery={searchQuery}
+        searchExcerpt={documentSearch.matches?.get(item.id)?.excerpt}
         inspected={!view.trash && inspectId === item.id}
         layoutMode={browseLayout}
         openHref={
@@ -1936,6 +1942,11 @@ export function Library() {
             </p>
           ) : (
             <>
+              {documentSearch.pending ? <p role="status" className="mb-3 text-sm text-text-secondary">Searching file contents…</p> : null}
+              {documentSearch.error || documentSearch.unavailable > 0 ? <p role="status" className="mb-3 text-sm text-text-secondary">
+                {documentSearch.error ? "Couldn't search file contents. Titles, tags, and personal notes are still searchable." : `${documentSearch.unavailable} file${documentSearch.unavailable === 1 ? " couldn't" : "s couldn't"} be searched. Try again or restore missing files from a backup.`}
+                {" "}<button type="button" className="ui-control inline-flex min-h-8 items-center px-2 text-sm" onClick={documentSearch.retry}>Retry search</button>
+              </p> : null}
               {trashActions.notice ? <p role="status" className="mb-3 text-sm text-text-secondary">{trashActions.notice}</p> : null}
               {trashActions.error ? <p role="alert" className="mb-3 text-sm text-text-danger">{trashActions.error}</p> : null}
               {deleteError ? (
@@ -1968,7 +1979,7 @@ export function Library() {
                   hrefFor={(id) => libraryViewHref(pathname, mergeLibraryViewState(view, view.collections ? { collection: id, q: "", item: null, slide: 0 } : { tag: id, q: "", item: null, slide: 0 }))}
                   onOpen={(id) => updateView(view.collections ? { collection: id, q: "" } : { tag: id, q: "" }, "push")}
                 />
-              ) : visibleItems.length === 0 ? (
+              ) : visibleItems.length === 0 && documentSearch.pending ? null : visibleItems.length === 0 ? (
                 <LibraryEmptyState
                   kind={emptyStateKind}
                   message={emptyStateMessage}

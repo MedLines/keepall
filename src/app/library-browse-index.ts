@@ -8,7 +8,7 @@ import {
   itemIsUnsorted,
   resolveItemTagNames,
 } from "@/domain/item";
-import { parseSearchTerms, searchRelevanceScore } from "@/domain/search";
+import { parseSearchTerms, searchRelevanceScore, type DocumentSearchMatch } from "@/domain/search";
 import { sortLibraryItemsWithCollectionPins } from "@/domain/library-view";
 
 /** Precomputed pools so folder/tag/type browse avoids scanning the whole library. */
@@ -125,6 +125,7 @@ export function filterAndSortLibraryItems(
   view: LibraryViewState,
   collectionsById: Map<string, Collection>,
   indexes: LibraryBrowseIndexes,
+  documentMatches?: ReadonlyMap<string, DocumentSearchMatch>,
 ): Item[] {
   const tagMap = new Map(tags.map((tag) => [tag.id, tag]));
   const collectionId = view.collection;
@@ -148,7 +149,7 @@ export function filterAndSortLibraryItems(
       if (view.tag !== null && !itemHasTag(item, view.tag)) {
         return false;
       }
-      const score = searchRelevanceScore(
+      const score = item.type === "document" && terms.length && documentMatches ? documentMatches.get(item.id)?.score ?? null : searchRelevanceScore(
         item,
         terms,
         resolveItemTagNames(item, tagMap),

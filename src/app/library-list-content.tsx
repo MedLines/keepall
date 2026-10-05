@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SearchHighlight, SearchResult } from "./search-highlight";
+import type { SearchExcerpt } from "@/domain/search";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { cardSecondaryLine, linkCardHost } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
@@ -46,13 +47,14 @@ function LinkContext({ item, query }: { item: LinkItem; query: string }) {
   );
 }
 
-export function LibraryListContent({ item, pinned, onOpen, openHref, query = "", tagNames = [] }: {
+export function LibraryListContent({ item, pinned, onOpen, openHref, query = "", tagNames = [], searchExcerpt }: {
   item: Item;
   pinned: boolean;
   onOpen: () => void;
   openHref?: string;
   query?: string;
   tagNames?: readonly string[];
+  searchExcerpt?: SearchExcerpt;
 }) {
   const title = item.type === "link" && !item.title.trim() && !item.previewTitle.trim()
     ? item.url.replace(/^https?:\/\//, "")
@@ -71,7 +73,7 @@ export function LibraryListContent({ item, pinned, onOpen, openHref, query = "",
     </>
   );
   return (
-    <SearchResult item={item} query={query} tagNames={tagNames}>
+    <SearchResult item={item} query={query} tagNames={tagNames} excerpt={searchExcerpt}>
       {hasContent ? item.deletedAt !== undefined ? <div className="min-w-0">{content}</div> : item.type === "link" ? (
         <a
           href={item.url}
