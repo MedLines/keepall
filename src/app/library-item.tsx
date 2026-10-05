@@ -11,6 +11,7 @@ import Link from "next/link";
 import { itemActionLabel } from "@/domain/item-label";
 import { itemListTitle, type Item } from "@/domain/item";
 import type { LibraryLayout } from "@/domain/library-view";
+import type { SearchExcerpt } from "@/domain/search";
 import {
   BROWSE_CHROME_FADE_S,
   useBrowseChromeVisible,
@@ -67,6 +68,7 @@ export type LibraryItemProps = {
   placement?: MasonryPlacement;
   item: Item;
   searchQuery?: string;
+  searchExcerpt?: SearchExcerpt;
   trashActions?: { onRestore: () => void; onDelete: () => void };
   inspected: boolean;
   openHref?: string;
@@ -114,6 +116,7 @@ export function LibraryItem({
   placement,
   item,
   searchQuery = "",
+  searchExcerpt,
   trashActions,
   inspected,
   openHref,
@@ -517,6 +520,7 @@ export function LibraryItem({
           <LibraryCardContent
             item={item}
             query={searchQuery}
+            searchExcerpt={searchExcerpt}
             tagNames={tagNames.map(tag => tag.name)}
             onOpen={onOpenInspect}
             openHref={trashActions ? undefined : openHref}
@@ -525,7 +529,7 @@ export function LibraryItem({
         ) : (
           <div className={isList ? "min-w-0 flex-1 text-left" : undefined}>
             {isList && !pendingDelete ? (
-              <LibraryListContent query={searchQuery} tagNames={tagNames.map(tag => tag.name)} item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} openHref={trashActions ? undefined : openHref} />
+              <LibraryListContent query={searchQuery} searchExcerpt={searchExcerpt} tagNames={tagNames.map(tag => tag.name)} item={item} pinned={pinVisible && pinned} onOpen={onOpenInspect} openHref={trashActions ? undefined : openHref} />
             ) : <p className="text-sm font-medium">{title}</p>}
           </div>
         )}

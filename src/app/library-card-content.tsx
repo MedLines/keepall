@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SearchHighlight, SearchResult } from "./search-highlight";
+import type { SearchExcerpt } from "@/domain/search";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { itemListTitle, type Item } from "@/domain/item";
@@ -50,16 +51,17 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
   );
 }
 
-export function LibraryCardContent({ item, onOpen, openHref, pinned = false, query = "", tagNames = [] }: {
+export function LibraryCardContent({ item, onOpen, openHref, pinned = false, query = "", tagNames = [], searchExcerpt }: {
   item: Item;
   onOpen: () => void;
   openHref?: string;
   pinned?: boolean;
   query?: string;
   tagNames?: readonly string[];
+  searchExcerpt?: SearchExcerpt;
 }) {
   const readOnly = item.deletedAt !== undefined;
-  const wrap = (content: ReactNode) => <SearchResult item={item} query={query} tagNames={tagNames}>{content}</SearchResult>;
+  const wrap = (content: ReactNode) => <SearchResult item={item} query={query} tagNames={tagNames} excerpt={searchExcerpt}>{content}</SearchResult>;
   if (item.type === "document") {
     const body = <>
       <h2 className="break-words text-lg font-semibold leading-snug"><SearchHighlight text={itemListTitle(item)} query={query} /></h2>

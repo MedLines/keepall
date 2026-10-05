@@ -3,7 +3,30 @@ import { buildLink } from "./link";
 import { buildNote } from "./note";
 import { buildImage } from "./image";
 import { buildVideo } from "./video";
-import { createSearchExcerpt, findSearchMatches, findTextMatches, matchesSearchQuery, normalizeSearchQuery } from "./search";
+import type { DocumentItem } from "./document";
+import { createSearchExcerpt, findSearchExcerpt, findSearchMatches, findTextMatches, matchesSearchQuery, normalizeSearchQuery } from "./search";
+
+const document: DocumentItem = { id: "document", type: "document", format: "markdown", title: "Design reference", sourceFileName: "reference.md", assetId: "original", noteContent: "Review later", tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 1 };
+
+test("document search combines original text with title, personal notes and tags", () => {
+  const text = "# Animation examples\nمرحبا café\nİstanbul";
+  expect(matchesSearchQuery(document, 'design "animation examples"', [], text)).toBe(true);
+  expect(matchesSearchQuery(document, "review animation inspiration", ["Inspiration"], text)).toBe(true);
+  expect(matchesSearchQuery(document, "مرحبا CAFÉ", [], text)).toBe(true);
+  expect(matchesSearchQuery(document, '"design animation"', [], text)).toBe(false);
+  expect(matchesSearchQuery(document, "animation missing", [], text)).toBe(false);
+  expect(matchesSearchQuery(buildNote({ content: "Different note" }), "animation", [], text)).toBe(false);
+});
+
+test("file excerpts find late matches and preserve their case and Unicode offsets", () => {
+  const text = "İ" + "x".repeat(30_000) + " Animation examples مرحبا";
+  const excerpt = findSearchExcerpt(document, "animation", [], text);
+  expect(excerpt?.label).toBe("File contents");
+  expect(excerpt?.text).toContain("Animation examples");
+  expect(excerpt?.text.length).toBeLessThanOrEqual(162);
+  expect(findSearchExcerpt(document, "review animation", [], text)?.label).toBe("My note");
+  expect(findSearchExcerpt(document, "missing", [], text)).toBeUndefined();
+});
 
 describe("normalizeSearchQuery", () => {
   test("trims and lowercases", () => {

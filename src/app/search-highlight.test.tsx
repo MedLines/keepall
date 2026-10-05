@@ -1,6 +1,21 @@
 import { render } from "@testing-library/react";
-import { expect, test } from "vitest";
-import { SearchHighlight } from "./search-highlight";
+import { expect, test, vi } from "vitest";
+import type { DocumentItem } from "@/domain/document";
+import { SearchHighlight, SearchResult } from "./search-highlight";
+
+test("file-content excerpts remain visible when another term matches the displayed title", () => {
+  const item: DocumentItem = { id: "file", type: "document", format: "text", title: "Reference", sourceFileName: "reference.txt", assetId: "original", noteContent: "", tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 1 };
+  const rect = new DOMRect(0, 0, 100, 20);
+  const rectangles = vi.spyOn(Element.prototype, "getClientRects").mockReturnValue([rect] as unknown as DOMRectList);
+  const bounds = vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(rect);
+  try {
+    const { container } = render(<SearchResult item={item} query="reference animation" excerpt={{ label: "File contents", text: "Useful Animation examples" }}>
+      <h2><SearchHighlight text={item.title} query="reference animation" /></h2>
+    </SearchResult>);
+    expect(container.querySelector(".search-excerpt")).toBeVisible();
+    expect(container.querySelector(".search-excerpt mark")).toHaveTextContent("Animation");
+  } finally { rectangles.mockRestore(); bounds.mockRestore(); }
+});
 
 test("highlights every literal match while retaining text and case", () => {
   const { container, rerender } = render(<SearchHighlight text="A+B then a+b" query="a+b" />);

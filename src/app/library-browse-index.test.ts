@@ -13,6 +13,18 @@ import {
 } from "./library-browse-index";
 
 describe("library-browse-index", () => {
+  test("file-content matches participate in combined filters, relevance and collection pins", () => {
+    const first: DocumentItem = { id: "first", type: "document", format: "text", title: "Reference", sourceFileName: "reference.txt", assetId: "one", noteContent: "", tagIds: ["tag"], collectionIds: ["collection"], createdAt: 1, updatedAt: 1 };
+    const second = { ...first, id: "second", createdAt: 2 };
+    const outside = { ...first, id: "outside", collectionIds: [] };
+    const candidates = [first, second, outside];
+    const view = parseLibraryViewState(new URLSearchParams("q=animation&type=note&tag=tag&collection=collection&sort=relevance"));
+    const matches = new Map([[first.id, { score: 4 }], [second.id, { score: 8 }], [outside.id, { score: 8 }]]);
+    const collections = new Map([["collection", { id: "collection", name: "Reading", createdAt: 1, pinnedItemIds: [first.id] }]]);
+    expect(filterAndSortLibraryItems(candidates, [], view, collections, buildLibraryBrowseIndexes(candidates), matches).map(item => item.id)).toEqual([first.id, second.id]);
+    expect(filterAndSortLibraryItems(candidates, [], { ...view, collection: null }, collections, buildLibraryBrowseIndexes(candidates), matches).map(item => item.id)).toEqual([second.id, outside.id, first.id]);
+    expect(filterAndSortLibraryItems(candidates, [], view, collections, buildLibraryBrowseIndexes(candidates), new Map())).toEqual([]);
+  });
   test("Notes includes imported text and Markdown, including combined collection and tag filters", () => {
     const note = buildNote({ content: "Inline note" }, { id: "note", now: 1 });
     const text: DocumentItem = { id: "text", type: "document", format: "text", title: "Imported text", sourceFileName: "note.txt", assetId: "original", noteContent: "", tagIds: ["tag"], collectionIds: ["collection"], createdAt: 2, updatedAt: 2 };
