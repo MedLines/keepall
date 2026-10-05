@@ -82,7 +82,7 @@ export function LibraryListContent({ item, pinned, onOpen, openHref, query = "",
         >
           {content}
         </a>
-      ) : item.type === "note" && openHref ? (
+      ) : (item.type === "note" || item.type === "document") && openHref ? (
         <Link href={openHref} prefetch={false} aria-label={`Open ${itemListTitle(item)}`} className="block min-h-11 w-full min-w-0 rounded-sm text-start">{content}</Link>
       ) : (
         <button type="button" onClick={onOpen} aria-label={`Open ${itemListTitle(item)}`} className="block min-h-11 w-full min-w-0 rounded-sm text-start">

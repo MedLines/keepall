@@ -1,3 +1,4 @@
+import { documentFormat, DocumentValidationError } from "./document";
 import { isHttpUrl } from "./classify";
 import type { Collection } from "./collection";
 import { coerceExclusiveCollectionIds } from "./collection";
@@ -44,6 +45,8 @@ export type BackupCounts = Readonly<{
   notes: number;
   images: number;
   videos: number;
+  documents: number;
+  documentAssets: number;
   tags: number;
   collections: number;
   imageAssets: number;
@@ -57,16 +60,18 @@ export function summarizeBackupContents(
   collections: number,
   imageAssets: number,
   videoAssets: number,
+  documentAssets = 0,
 ): BackupCounts {
   const counts = { total: items.length, active: 0, trash: 0, links: 0, notes: 0,
-    images: 0, videos: 0, tags, collections, imageAssets, videoAssets };
+    images: 0, videos: 0, documents: 0, documentAssets, tags, collections, imageAssets, videoAssets };
   for (const item of items) {
     if (item.deletedAt === undefined) counts.active += 1;
     else counts.trash += 1;
     if (item.type === "link") counts.links += 1;
     else if (item.type === "note") counts.notes += 1;
     else if (item.type === "image") counts.images += 1;
-    else counts.videos += 1;
+    else if (item.type === "video") counts.videos += 1;
+    else if (item.type === "document") counts.documents += 1;
   }
   return Object.freeze(counts);
 }
@@ -98,7 +103,7 @@ export function buildKeepallBackup(input: {
   };
 }
 
-export function parseKeepallBackup(raw: unknown): KeepallBackup {
+export function parseKeepallBackup(raw: unknown, documentAssetIds: Set<string> = new Set()): KeepallBackup {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
     throw new BackupValidationError("Backup must be a JSON object");
   }
@@ -168,7 +173,7 @@ export function parseKeepallBackup(raw: unknown): KeepallBackup {
   );
   const assetIds = new Set(assets.map((asset) => asset.id));
   const items = candidate.items.map((item, index) =>
-    parseItem(item, index, tagIds, collectionIds, assetIds),
+    parseItem(item, index, tagIds, collectionIds, assetIds, documentAssetIds),
   );
   assertUniqueIds(
     items.map((item) => item.id),
@@ -396,6 +401,7 @@ function parseItem(
   tagIds: Set<string>,
   collectionIds: Set<string>,
   assetIds: Set<string>,
+  documentAssetIds: Set<string>,
 ): Item {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
     throw new BackupValidationError(`Item at index ${index} must be an object`);
@@ -558,6 +564,25 @@ function parseItem(
       ...trash,
     };
     return image;
+  }
+
+  if (item.type === "document") {
+    try {
+      if (typeof item.sourceFileName !== "string" || documentFormat(item.sourceFileName, 0) !== item.format ||
+          typeof item.assetId !== "string" || !documentAssetIds.has(item.assetId) ||
+          typeof item.noteContent !== "string" || (item.noteFormat !== undefined && item.noteFormat !== "markdown")) {
+        throw new DocumentValidationError("Document metadata or original is invalid. Use a ZIP backup containing the original file.");
+      }
+    } catch (error) {
+      throw new BackupValidationError(error instanceof Error ? error.message : "Invalid document");
+    }
+    return {
+      id: item.id, type: "document", format: item.format as "text" | "markdown", title: item.title,
+      sourceFileName: item.sourceFileName as string, assetId: item.assetId as string, noteContent: item.noteContent as string,
+      ...(item.noteFormat === "markdown" ? { noteFormat: "markdown" as const } : {}),
+      tagIds: itemTagIds, collectionIds: itemCollectionIds, createdAt: item.createdAt, updatedAt: item.updatedAt,
+      ...membership, ...trash,
+    };
   }
 
   throw new BackupValidationError(

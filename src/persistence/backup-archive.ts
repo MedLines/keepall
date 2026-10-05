@@ -1,3 +1,5 @@
+import type { DocumentAsset, DocumentItem } from "@/domain/document";
+import { parseArchiveDocuments, readArchiveDocuments, type ArchiveDocument } from "./document-archive";
 import { BlobReader, BlobWriter, TextReader, TextWriter, Uint8ArrayWriter, ZipReader, ZipWriter } from "@zip.js/zip.js";
 import { BackupValidationError, KEEPALL_BACKUP_VERSION, parseTrashFields, parseKeepallBackup, summarizeBackupContents, type BackupCounts, type KeepallBackup } from "@/domain/backup";
 import { base64ToBytes } from "@/domain/backup-encoding";
@@ -10,7 +12,7 @@ import type { Thumbnail, VideoAsset } from "./db";
 import { readBackupSnapshot } from "./backup-snapshot";
 import { parseAutomaticBackupIdentity, type AutomaticBackupIdentity } from "@/domain/automatic-backup";
 
-const ARCHIVE_VERSION = 8;
+const ARCHIVE_VERSION = 9;
 const UUID = "[0-9a-f-]{36}";
 const assetPath = new RegExp(`^assets/(${UUID})\\.bin$`, "i");
 const videoPath = new RegExp(`^videos/(${UUID})\\.bin$`, "i");
@@ -19,10 +21,13 @@ const thumbnailPath = new RegExp(`^thumbnails/(${UUID})\\.bin$`, "i");
 type ArchiveAsset = Omit<KeepallBackup["assets"][number], "dataBase64"> & { path: string };
 type ArchiveVideo = { id: string; mimeType: string; byteLength: number; createdAt: number; path: string };
 type ArchiveThumbnail = { assetId: string; mimeType: string; byteLength: number; path: string };
-type ArchiveManifest = Omit<KeepallBackup, "assets"> & { assets: ArchiveAsset[]; videos: ArchiveVideo[]; thumbnails: ArchiveThumbnail[]; automaticBackup?: AutomaticBackupIdentity };
+type ArchiveManifest = Omit<KeepallBackup, "assets"> & { assets: ArchiveAsset[]; videos: ArchiveVideo[]; thumbnails: ArchiveThumbnail[]; documents: ArchiveDocument[]; automaticBackup?: AutomaticBackupIdentity };
 
 export async function exportKeepallArchive(exportedAt = Date.now(), automaticBackup?: AutomaticBackupIdentity, snapshot?: Awaited<ReturnType<typeof readBackupSnapshot>>): Promise<Blob> {
-  const { items, tags, collections, assets, videos, thumbnails, preferences } = snapshot ?? await readBackupSnapshot();
+  const { items, tags, collections, assets, videos, thumbnails, preferences, documents: allDocuments } = snapshot ?? await readBackupSnapshot();
+  const referenced = new Set(items.filter((item) => item.type === "document").map((item) => item.assetId));
+  const documents = allDocuments.filter((asset) => referenced.has(asset.id));
+  if (documents.length !== referenced.size) throw new BackupValidationError("A document original is missing. Existing backups were kept.");
   const manifest: ArchiveManifest = {
     format: "keepall", version: ARCHIVE_VERSION, exportedAt,
     items, tags, collections,
@@ -35,6 +40,7 @@ export async function exportKeepallArchive(exportedAt = Date.now(), automaticBac
     thumbnails: thumbnails.map(({ assetId, blob }) => ({
       assetId, mimeType: blob.type, byteLength: blob.size, path: `thumbnails/${assetId}.bin`,
     })),
+    documents: documents.map(({ id, byteLength, contentHash, createdAt }) => ({ id, byteLength, contentHash, createdAt, path: `documents/${id}.bin` })),
     preferences,
     automaticBackup: parseAutomaticBackupIdentity(automaticBackup),
   };
@@ -49,6 +55,9 @@ export async function exportKeepallArchive(exportedAt = Date.now(), automaticBac
     }
     for (const video of videos) {
       await writer.add(`videos/${video.id}.bin`, new BlobReader(video.blob));
+    }
+    for (const document of documents) {
+      await writer.add(`documents/${document.id}.bin`, new BlobReader(new Blob([new Uint8Array(document.bytes)])));
     }
     for (const thumbnail of thumbnails) {
       await writer.add(`thumbnails/${thumbnail.assetId}.bin`, new BlobReader(thumbnail.blob));
@@ -66,6 +75,7 @@ async function readArchive(file: Blob): Promise<{
   binaryAssets: Map<string, Uint8Array>;
   videoAssets: VideoAsset[];
   thumbnails: Thumbnail[];
+  documentAssets: DocumentAsset[];
   automaticBackup?: AutomaticBackupIdentity;
 }> {
   const reader = new ZipReader(new BlobReader(file));
@@ -87,7 +97,7 @@ async function readArchive(file: Blob): Promise<{
       throw new BackupValidationError("Archive manifest must be an object");
     }
     const candidate = raw as Record<string, unknown>;
-    if (candidate.format !== "keepall" || ![6, ARCHIVE_VERSION].includes(candidate.version as number) ||
+    if (candidate.format !== "keepall" || ![6, 8, ARCHIVE_VERSION].includes(candidate.version as number) ||
         !Array.isArray(candidate.assets) || !Array.isArray(candidate.videos) ||
         !Array.isArray(candidate.thumbnails) || !Array.isArray(candidate.items)) {
       throw new BackupValidationError("Unsupported archive format");
@@ -95,7 +105,8 @@ async function readArchive(file: Blob): Promise<{
     const assets = candidate.assets as Record<string, unknown>[];
     const videos = candidate.videos as Record<string, unknown>[];
     const thumbnailRecords = candidate.thumbnails as Record<string, unknown>[];
-    const paths = new Set<string>();
+    const documents = parseArchiveDocuments(candidate.documents, candidate.version === ARCHIVE_VERSION);
+    const paths = new Set<string>(documents.map((record) => record.path));
     for (const record of assets) {
       if (!record || typeof record.id !== "string" || typeof record.path !== "string" ||
           !assetPath.test(record.path) || record.path !== `assets/${record.id}.bin` || paths.has(record.path) ||
@@ -116,12 +127,13 @@ async function readArchive(file: Blob): Promise<{
       }
       paths.add(record.path);
     }
-    const mediaIds = new Set([...assets.map((asset) => asset.id), ...videos.map((video) => video.id)]);
-    if (mediaIds.size !== assets.length + videos.length) {
+    const thumbnailAssetIds = new Set([...assets.map((asset) => asset.id), ...videos.map((video) => video.id)]);
+    const mediaIds = new Set([...thumbnailAssetIds, ...documents.map((document) => document.id)]);
+    if (mediaIds.size !== assets.length + videos.length + documents.length) {
       throw new BackupValidationError("Archive has duplicate media ids");
     }
     for (const record of thumbnailRecords) {
-      if (!record || typeof record.assetId !== "string" || !mediaIds.has(record.assetId) ||
+      if (!record || typeof record.assetId !== "string" || !thumbnailAssetIds.has(record.assetId) ||
           typeof record.path !== "string" || !thumbnailPath.test(record.path) ||
           record.path !== `thumbnails/${record.assetId}.bin` || paths.has(record.path) ||
           !["image/webp", "image/png", "image/jpeg"].includes(record.mimeType as string) ||
@@ -164,7 +176,9 @@ async function readArchive(file: Blob): Promise<{
       assets: assets.map(({ id, mimeType, byteLength, contentHash, createdAt }) => ({
         id, mimeType, byteLength, contentHash, createdAt, dataBase64: "AA==",
       })),
-    });
+    }, new Set(documents.map((record) => record.id)));
+    const documentRefs = new Set(backup.items.filter((item) => item.type === "document").map((item) => item.assetId));
+    if (documentRefs.size !== documents.length) throw new BackupValidationError("Archive has an unreferenced document original.");
     const validTagIds = new Set(backup.tags.map((tag) => tag.id));
     const validCollectionIds = new Set(backup.collections.map((collection) => collection.id));
     if (videoItems.some((item) =>
@@ -185,6 +199,11 @@ async function readArchive(file: Blob): Promise<{
       }
       binaryAssets.set(record.id as string, bytes);
     }
+    const documentAssets = await readArchiveDocuments(documents, async (path, size) => {
+      const entry = byName.get(path);
+      if (!entry || entry.directory || entry.uncompressedSize !== size) throw new BackupValidationError("Document original is missing or damaged.");
+      return entry.getData(new Uint8ArrayWriter());
+    });
     const videoAssets: VideoAsset[] = [];
     for (const record of videos) {
       const entry = byName.get(record.path as string);
@@ -209,7 +228,7 @@ async function readArchive(file: Blob): Promise<{
       if (bytes.byteLength !== record.byteLength) throw new BackupValidationError("Archive thumbnail is damaged");
       thumbnails.push({ assetId: record.assetId as string, blob: new Blob([new Uint8Array(bytes)], { type: record.mimeType as string }) });
     }
-    return { backup, binaryAssets, videoAssets, thumbnails, automaticBackup: parseAutomaticBackupIdentity(candidate.automaticBackup) };
+    return { backup, binaryAssets, videoAssets, thumbnails, documentAssets, automaticBackup: parseAutomaticBackupIdentity(candidate.automaticBackup) };
   } catch (error) {
     if (error instanceof BackupValidationError) throw error;
     throw new BackupValidationError("Could not read backup archive");
@@ -235,7 +254,7 @@ export async function readAutomaticBackupMetadata(file: Blob) {
     }
     const raw: unknown = JSON.parse(await manifest.getData(new TextWriter()));
     if (!raw || typeof raw !== "object" || !("format" in raw) || raw.format !== "keepall" ||
-        !("version" in raw) || raw.version !== ARCHIVE_VERSION ||
+        !("version" in raw) || ![8, ARCHIVE_VERSION].includes(raw.version as number) ||
         !("exportedAt" in raw) || typeof raw.exportedAt !== "number" || !Number.isFinite(raw.exportedAt) ||
         !("automaticBackup" in raw)) {
       throw new BackupValidationError("Automatic backup metadata is invalid");
@@ -247,17 +266,18 @@ export async function readAutomaticBackupMetadata(file: Blob) {
 }
 
 export async function importKeepallArchiveReplace(file: Blob): Promise<KeepallBackup> {
-  const { backup, binaryAssets, videoAssets, thumbnails } = await readArchive(file);
-  return replaceValidatedBackup(backup, binaryAssets, videoAssets, thumbnails);
+  const { backup, binaryAssets, videoAssets, thumbnails, documentAssets } = await readArchive(file);
+  return replaceValidatedBackup(backup, binaryAssets, videoAssets, thumbnails, documentAssets);
 }
 
 export async function importKeepallArchiveMerge(file: Blob) {
-  const { backup, binaryAssets, videoAssets, thumbnails } = await readArchive(file);
+  const { backup, binaryAssets, videoAssets, thumbnails, documentAssets } = await readArchive(file);
   const videoItems = backup.items.filter((item): item is VideoItem => item.type === "video");
   return importKeepallBackupMerge(
-    { ...backup, items: backup.items.filter((item) => item.type !== "video") },
+    { ...backup, items: backup.items.filter((item) => item.type !== "video" && item.type !== "document") },
     binaryAssets,
     { items: videoItems, assets: videoAssets, thumbnails },
+    { items: backup.items.filter((item): item is DocumentItem => item.type === "document"), assets: documentAssets },
   );
 }
 
@@ -295,25 +315,26 @@ export async function prepareBackupFile(file: File): Promise<PreparedBackup> {
       }
       binaryAssets.set(record.id, bytes);
     }
-    payload = { backup, binaryAssets, videoAssets: [], thumbnails: [] };
+    payload = { backup, binaryAssets, videoAssets: [], thumbnails: [], documentAssets: [] };
   }
-  const { backup, binaryAssets, videoAssets, thumbnails } = payload;
+  const { backup, binaryAssets, videoAssets, thumbnails, documentAssets } = payload;
   const counts = summarizeBackupContents(backup.items, backup.tags.length,
-    backup.collections.length, backup.assets.length, videoAssets.length);
+    backup.collections.length, backup.assets.length, videoAssets.length, documentAssets.length);
   return Object.freeze({
     name: file.name,
     size: file.size,
     exportedAt: backup.exportedAt,
     counts,
     replace: async () => {
-      await replaceValidatedBackup(backup, binaryAssets, videoAssets, thumbnails);
+      await replaceValidatedBackup(backup, binaryAssets, videoAssets, thumbnails, documentAssets);
       return backup.items.filter((item) => item.type === "link").map((item) => item.id);
     },
     merge: async () => {
       const videoItems = backup.items.filter((item): item is VideoItem => item.type === "video");
       const { summary } = await importKeepallBackupMerge(
-        { ...backup, items: backup.items.filter((item) => item.type !== "video") },
+        { ...backup, items: backup.items.filter((item) => item.type !== "video" && item.type !== "document") },
         binaryAssets, { items: videoItems, assets: videoAssets, thumbnails },
+        { items: backup.items.filter((item): item is DocumentItem => item.type === "document"), assets: documentAssets },
       );
       return summary;
     },

@@ -1,7 +1,7 @@
 import type Dexie from "dexie";
 
 export type BackupRevision = { id: "library"; revision: string };
-export const BACKUP_TABLES = ["items", "tags", "collections", "assets", "videoAssets", "thumbnails", "preferences"];
+export const BACKUP_TABLES = ["items", "tags", "collections", "assets", "videoAssets", "thumbnails", "preferences", "documentAssets"];
 
 /** Keep the revision atomic with every exported write, including bulk deletes and restores. */
 export function trackBackupRevision(db: Dexie) {

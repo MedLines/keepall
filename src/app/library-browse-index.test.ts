@@ -5,6 +5,7 @@ import { buildNote } from "@/domain/note";
 import type { LibraryViewState } from "@/domain/library-view";
 import { parseLibraryViewState } from "@/domain/library-view";
 import type { Collection } from "@/domain/collection";
+import type { DocumentItem } from "@/domain/document";
 import {
   buildLibraryBrowseIndexes,
   filterAndSortLibraryItems,
@@ -12,6 +13,16 @@ import {
 } from "./library-browse-index";
 
 describe("library-browse-index", () => {
+  test("Notes includes imported text and Markdown, including combined collection and tag filters", () => {
+    const note = buildNote({ content: "Inline note" }, { id: "note", now: 1 });
+    const text: DocumentItem = { id: "text", type: "document", format: "text", title: "Imported text", sourceFileName: "note.txt", assetId: "original", noteContent: "", tagIds: ["tag"], collectionIds: ["collection"], createdAt: 2, updatedAt: 2 };
+    const markdown: DocumentItem = { ...text, id: "markdown", format: "markdown", sourceFileName: "note.md", createdAt: 3 };
+    const items = [note, text, markdown, buildLink({ url: "https://example.com" })];
+    const indexes = buildLibraryBrowseIndexes(items);
+    const view = parseLibraryViewState(new URLSearchParams("type=note"));
+    expect(filterAndSortLibraryItems(items, [], view, new Map(), indexes).map((item) => item.id)).toEqual(["markdown", "text", "note"]);
+    expect(filterAndSortLibraryItems(items, [], { ...view, collection: "collection", tag: "tag" }, new Map(), indexes).map((item) => item.id)).toEqual(["markdown", "text"]);
+  });
   const note = buildNote({ content: "n" }, { id: "n1", now: 1 });
   const link = {
     ...buildLink({ url: "https://a.example" }, { id: "l1", now: 2 }),

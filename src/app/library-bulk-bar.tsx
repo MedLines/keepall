@@ -7,7 +7,7 @@ import { CaptureOrgPanel } from "./capture-org-panel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
-import { ChevronDownIcon, SelectionCheckedIcon } from "./shell-icons";
+import { ArrowRightIcon, ChevronDownIcon, DeleteIcon, LayersIcon, SelectionCheckedIcon } from "./shell-icons";
 
 export type BulkPanel = null | "delete" | "organize";
 
@@ -175,15 +175,15 @@ export function LibraryBulkToolbar({
                 Clear hidden selection
               </Menu.Item> : null}
               {onOpenPanel && !onDeletePermanently && !onDelete ? (
-                <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(() => onOpenPanel("organize"))}>
-                  Organize
+                <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(() => onOpenPanel("organize"))}>
+                  <LayersIcon className="size-4" />Organize
                 </Menu.Item>
               ) : null}
-              {onRestoreSelected && count > 0 ? <Menu.Item disabled={busy} className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(onRestoreSelected)}>
-                Restore selected
+              {onRestoreSelected && count > 0 ? <Menu.Item disabled={busy} className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(onRestoreSelected)}>
+                <ArrowRightIcon className="size-4" />Restore selected
               </Menu.Item> : null}
-              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-danger data-[highlighted]:bg-bg-danger" onClick={() => runWithoutTriggerRestore(destructiveAction)}>
-                {destructiveLabel}
+              <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-danger data-[highlighted]:bg-bg-danger" onClick={() => runWithoutTriggerRestore(destructiveAction)}>
+                <DeleteIcon className="size-4" />{destructiveLabel}
               </Menu.Item>
             </Menu.Popup>
           </Menu.Positioner>
@@ -205,19 +205,19 @@ export function LibraryBulkToolbar({
         </button> : null}
         {onOpenPanel && !onDeletePermanently && !onDelete ? (
           <button className={BULK_BTN} disabled={busy} type="button" onClick={() => onOpenPanel("organize")}>
-            Organize
+            <LayersIcon className="size-4" />Organize
           </button>
         ) : null}
         {onRestoreSelected && count > 0 ? <button className={BULK_BTN} disabled={busy} type="button" onClick={onRestoreSelected}>
-          Restore selected
+          <ArrowRightIcon className="size-4" />Restore selected
         </button> : null}
         <button
-          className={`${onDeletePermanently || onDelete ? `${SHELL_TOP_BTN} text-text-danger` : BULK_BTN} h-10 shrink-0 px-3 text-xs`}
+          className={`${SHELL_TOP_BTN} h-10 shrink-0 px-3 text-xs text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger`}
           disabled={busy}
           type="button"
           onClick={destructiveAction}
         >
-          {destructiveLabel}
+          <DeleteIcon className="size-4" />{destructiveLabel}
         </button>
       </div>
     </div>

@@ -11,6 +11,7 @@ type Props = {
   className?: string;
   headingStart?: 2 | 3;
   pendingImageUrls?: ReadonlyMap<string, string>;
+  allowLocalImages?: boolean;
 };
 
 function LocalNoteImage({ assetId, alt, pendingImageUrls }: {
@@ -56,14 +57,16 @@ function PlainNoteContent({ content, className, pendingImageUrls }: {
     : <p key={index} className="whitespace-pre-wrap break-words text-base leading-relaxed">{segment.text}</p>)}</div>;
 }
 
-export function NoteContent({ content, format, className = "", headingStart = 3, pendingImageUrls }: Props) {
+export function NoteContent({ content, format, className = "", headingStart = 3, pendingImageUrls, allowLocalImages = true }: Props) {
   if (format === "plain") {
+    if (!allowLocalImages) return <p className={`whitespace-pre-wrap break-words text-base leading-relaxed ${className}`}>{content}</p>;
     return <PlainNoteContent content={content} className={className} pendingImageUrls={pendingImageUrls} />;
   }
 
   return (
     <div className={`note-markdown min-w-0 break-words ${className}`}>
       <Markdown
+        skipHtml={!allowLocalImages}
         remarkPlugins={[remarkGfm]}
         urlTransform={(url, key, node) => key === "src" && node.tagName === "img" && /^keepall-image:[A-Za-z0-9_-]+$/.test(url)
           ? url : defaultUrlTransform(url)}
@@ -76,7 +79,7 @@ export function NoteContent({ content, format, className = "", headingStart = 3,
             const localId = typeof src === "string"
               ? src.match(/^keepall-image:([A-Za-z0-9_-]+)$/)?.[1]
               : undefined;
-            return localId
+            return localId && allowLocalImages
               ? <LocalNoteImage assetId={localId} alt={alt ?? ""} pendingImageUrls={pendingImageUrls} />
               : <span className="text-text-secondary">Image: {alt || "no description"}</span>;
           },

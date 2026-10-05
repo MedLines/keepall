@@ -12,10 +12,10 @@ type Props = {
 
 export function NoteEditorControls({ format, preview, disabled = false, onFormatChange, onPreviewChange }: Props) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
       <NoteFormatControl format={format} disabled={disabled} onChange={onFormatChange} />
       <Tooltip.Provider delay={350}>
-        <div role="group" aria-label="Note editor view" data-selected={preview ? "end" : "start"} className="icon-segmented-switch squircle-panel relative isolate flex h-11 shrink-0 rounded-control-lg bg-bg-raised p-0.5">
+        <div role="group" aria-label="Note editor view" data-selected={preview ? "end" : "start"} className="icon-segmented-switch squircle-panel relative isolate ms-auto flex h-11 shrink-0 rounded-control-lg bg-bg-raised p-0.5">
           <span aria-hidden="true" className="icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[42px] rounded-control-sm" />
           {([
             { preview: false, label: "Edit", hint: "Edit notes", icon: <EditIcon /> },

@@ -127,5 +127,6 @@ export function cardSecondaryLine(item: Item): string {
     return imageCardSecondary(item);
   }
   if (item.type === "video") return "Video";
+  if (item.type === "document") return item.sourceFileName;
   return linkCardHost(item);
 }

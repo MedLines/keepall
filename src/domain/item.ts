@@ -5,10 +5,11 @@ import {
 } from "./link";
 import { coerceImageFields, imageListTitle, type ImageItem } from "./image";
 import { noteListTitle, type NoteItem } from "./note";
+import type { DocumentItem } from "./document";
 import type { VideoItem } from "./video";
 import { coerceExclusiveCollectionIds } from "./collection";
 
-export type Item = (NoteItem | LinkItem | ImageItem | VideoItem) & {
+export type Item = (NoteItem | LinkItem | ImageItem | VideoItem | DocumentItem) & {
   collectionAddedAt?: number;
 };
 
@@ -53,6 +54,7 @@ export function itemListTitle(item: Item): string {
   }
   if (item.type === "image") return imageListTitle(item);
   if (item.type === "video") return item.title || "Video";
+  if (item.type === "document") return item.title || item.sourceFileName;
   return linkListTitle(item);
 }
 

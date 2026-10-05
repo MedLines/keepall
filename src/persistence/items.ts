@@ -1,3 +1,5 @@
+import { resolveItemCollectionIds } from "./collections";
+import { deleteUnreferencedDocuments } from "./documents";
 import { normalizeItem, type Item } from "@/domain/item";
 import {
   appendImageAsset,
@@ -41,7 +43,7 @@ import {
 import { getDb } from "./db";
 import { putActiveItem } from "./active-item";
 import { imageThumbnail, putThumbnail } from "./thumbnails";
-import { createTag } from "./tags";
+import { createTag, resolveItemTagIds } from "./tags";
 
 export async function createNote(input: CreateNoteInput): Promise<NoteItem> {
   const note = buildNote(input);
@@ -179,6 +181,9 @@ export async function createImage(input: {
   captionFormat?: "plain" | "markdown";
   title?: string;
   sourceFileName?: string;
+  collectionIds?: string[];
+  collectionName?: string;
+  tagNames?: readonly string[];
 }): Promise<ImageItem> {
   if (input.assets.length === 0) {
     throw new ImageValidationError("Image asset is required");
@@ -199,7 +204,10 @@ export async function createImage(input: {
   }
 
   const db = getDb();
-  return db.transaction("rw", db.assets, db.items, db.thumbnails, async () => {
+  return db.transaction("rw", [db.assets, db.items, db.thumbnails, db.collections, db.tags], async () => {
+    const collectionIds = await resolveItemCollectionIds(input.collectionIds, input.collectionName);
+    for (const id of collectionIds) if (!await db.collections.get(id)) throw new Error("The selected collection no longer exists.");
+    const tagIds = await resolveItemTagIds([], input.tagNames);
     const assetIds: string[] = [];
     for (const payload of preparedAssets) {
       const asset = await putAsset(payload);
@@ -215,6 +223,8 @@ export async function createImage(input: {
       title: input.title,
       sourceFileName: input.sourceFileName,
     });
+    image.collectionIds = collectionIds;
+    image.tagIds = tagIds;
     await db.items.add(image);
     return image;
   });
@@ -376,7 +386,7 @@ export async function restoreItems(ids: string[]): Promise<string[]> {
 
 export async function permanentlyDeleteItem(id: string): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", db.items, db.assets, db.thumbnails, db.videoAssets, db.collections, async () => {
+  await db.transaction("rw", [db.items, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.collections], async () => {
     const existing = await db.items.get(id);
     if (!existing) return;
     if (existing.deletedAt === undefined) throw new Error("Move the item to Trash first");
@@ -389,6 +399,7 @@ export async function permanentlyDeleteItem(id: string): Promise<void> {
       await db.videoAssets.delete(item.assetId);
       await db.thumbnails.delete(item.assetId);
     }
+    if (item.type === "document") await deleteUnreferencedDocuments([item.assetId]);
     await deleteUnreferencedAssets(assetIds);
   });
 }
@@ -396,7 +407,7 @@ export async function permanentlyDeleteItem(id: string): Promise<void> {
 /** Delete only the confirmed ids that are still in Trash, as one transaction. */
 export async function emptyTrash(ids: string[]): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", [db.items, db.assets, db.thumbnails, db.videoAssets, db.collections], async () => {
+  await db.transaction("rw", [db.items, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.collections], async () => {
     const rows = await db.items.bulkGet([...new Set(ids)]);
     const items = rows.filter((item): item is Item => item !== undefined && item.deletedAt !== undefined);
     const deletedIds = new Set(items.map((item) => item.id));
@@ -406,6 +417,7 @@ export async function emptyTrash(ids: string[]): Promise<void> {
     const videoIds = items.filter((item) => item.type === "video").map((item) => item.assetId);
     await db.videoAssets.bulkDelete(videoIds);
     await db.thumbnails.bulkDelete(videoIds);
+    await deleteUnreferencedDocuments(items.filter((item) => item.type === "document").map((item) => item.assetId));
     await deleteUnreferencedAssets(items.flatMap((item) => itemAssetIds(normalizeItem(item))));
   });
 }

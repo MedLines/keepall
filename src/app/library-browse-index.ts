@@ -110,6 +110,9 @@ function browseCandidatePool(
   if (view.tag !== null) {
     return indexes.byTag.get(view.tag) ?? [];
   }
+  if (view.type === "note") {
+    return [...(indexes.byType.get("note") ?? []), ...(indexes.byType.get("document") ?? [])];
+  }
   if (view.type !== null) {
     return indexes.byType.get(view.type) ?? [];
   }
@@ -133,7 +136,7 @@ export function filterAndSortLibraryItems(
 
   return sortLibraryItemsWithCollectionPins(
     pool.filter((item) => {
-      if (view.type !== null && item.type !== view.type) {
+      if (view.type !== null && item.type !== view.type && !(view.type === "note" && item.type === "document")) {
         return false;
       }
       if (collectionId !== null && !itemInCollection(item, collectionId)) {

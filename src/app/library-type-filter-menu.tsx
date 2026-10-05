@@ -5,7 +5,7 @@ import type { LibraryTypeFilter } from "@/domain/library-view";
 import type { LibrarySidebarCounts } from "./library-sidebar-counts";
 import {
   ImageIcon,
-  LayersIcon,
+  FilterIcon,
   LinkIcon,
   NoteIcon,
   VideoIcon,
@@ -37,7 +37,7 @@ export function LibraryTypeFilterMenu({
     {
       value: "all",
       label: "All types",
-      icon: <LayersIcon />,
+      icon: <FilterIcon />,
       count: count(counts.all),
     },
     {
@@ -62,7 +62,7 @@ export function LibraryTypeFilterMenu({
       value: "note",
       label: "Notes",
       icon: <NoteIcon />,
-      count: count(counts.byType.note),
+      count: count(counts.byType.note + counts.byType.document),
     },
   ];
 

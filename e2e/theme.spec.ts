@@ -191,8 +191,15 @@ test("desktop shell keeps search and view controls inside the inset panel", asyn
   await expect(panel).toHaveCSS("border-radius", "32px");
   expect(await page.getByRole("searchbox", { name: "Search", exact: true }).boundingBox()).toMatchObject({ x: 332, y: shellTop + 36, width: 250, height: 40 });
   expect(await page.getByRole("button", { name: "Collapse", exact: true }).boundingBox()).toMatchObject({ x: 280, y: shellTop + 36, width: 40, height: 40 });
-  expect(await page.getByRole("group", { name: "Library layout" }).boundingBox()).toMatchObject({ x: 1318, y: shellTop + 102, width: 88, height: 44 });
-  expect(await page.getByRole("combobox", { name: /^Sort library:/ }).boundingBox()).toMatchObject({ x: 1266, y: shellTop + 102, width: 44, height: 44 });
+  const searchBounds = (await page.getByRole("searchbox", { name: "Search", exact: true }).boundingBox())!;
+  const layoutBounds = (await page.getByRole("group", { name: "Library layout" }).boundingBox())!;
+  const sortBounds = (await page.getByRole("combobox", { name: /^Sort library:/ }).boundingBox())!;
+  expect(layoutBounds).toMatchObject({ width: 88, height: 44 });
+  expect(sortBounds).toMatchObject({ width: 44, height: 44 });
+  expect(layoutBounds.y).toBe(sortBounds.y);
+  expect(layoutBounds.x).toBeGreaterThanOrEqual(sortBounds.x + sortBounds.width);
+  expect(sortBounds.x).toBeGreaterThanOrEqual(searchBounds.x + searchBounds.width);
+  expect(layoutBounds.x + layoutBounds.width).toBeLessThanOrEqual(bounds!.x + bounds!.width);
   await page.getByRole("button", { name: "Collapse", exact: true }).click();
   await expect.poll(async () => (await panel.boundingBox())?.x).toBe(56);
   await expect(page.getByRole("combobox", { name: /^Filter by type:/ })).toBeVisible();

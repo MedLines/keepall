@@ -7,6 +7,12 @@ vi.mock("./use-asset-object-url", () => ({
 }));
 
 describe("NoteContent", () => {
+  test.each(["plain", "markdown"] as const)("imported %s content cannot read library images or load external resources", (format) => {
+    const { container } = render(<NoteContent allowLocalImages={false} format={format} content={'![Local](keepall-image:a1)\n\n![Remote](https://example.com/pixel)\n\n<iframe src="https://example.com"></iframe><script>alert(1)</script>'} />);
+    expect(container.querySelector("img, iframe, script")).toBeNull();
+    if (format === "plain") expect(container.textContent).toContain("keepall-image:a1");
+    else expect(screen.getByText("Image: Local")).toBeVisible();
+  });
   test("keeps quick notes literal", () => {
     render(<NoteContent content={"# Card idea\n**Keep this literal**"} format="plain" />);
     expect(screen.queryByRole("heading", { name: "Card idea" })).toBeNull();

@@ -2,14 +2,14 @@
 
 import { useState, type CSSProperties } from "react";
 import Image from "next/image";
-import { CollectionIcon, ImageIcon, KeyboardIcon, LinkIcon, NoteIcon } from "../shell-icons";
+import { LayersIcon, ImageIcon, KeyboardIcon, LinkIcon, NoteIcon } from "../shell-icons";
 import { RecordedDemo } from "./recorded-demo";
 
 const examples = [
   { id: "page", label: "Page", icon: LinkIcon, instruction: "One click on the Keepall icon saves the page.", detail: "A confirmation appears right where you’re browsing." },
   { id: "image", label: "Image", icon: ImageIcon, instruction: "Right-click an image. Choose Save to Keepall.", detail: "Keep the image itself, together with its source." },
   { id: "text", label: "Text", icon: NoteIcon, instruction: "Highlight a passage. Right-click to save it.", detail: "Your selection stays attached to the original page." },
-  { id: "organize", label: "Organize", icon: CollectionIcon, instruction: "Save it. Choose Organize. Pick a collection.", detail: "Put it where it belongs without leaving the page." },
+  { id: "organize", label: "Organize", icon: LayersIcon, instruction: "Save it. Choose Organize. Pick a collection.", detail: "Put it where it belongs without leaving the page." },
   { id: "notes", label: "Alt+K", icon: KeyboardIcon, instruction: "Press Alt+K to add a note before saving.", detail: "Plain text or Markdown. Option+K on Mac. Works on most websites." },
 ] as const;
 

@@ -3,7 +3,7 @@ import type { Item } from "./item";
 export type LibrarySort = "newest" | "oldest" | "relevance";
 
 /** Item kind filter; null means All types. */
-export type LibraryTypeFilter = "link" | "note" | "image" | "video";
+export type LibraryTypeFilter = "link" | "note" | "image" | "video" | "document";
 
 /** How the library paints items; null/grid is default. */
 export type LibraryLayout = "grid" | "list";
@@ -48,7 +48,7 @@ export function parseLibrarySort(value: string | null): LibrarySort {
 export function parseLibraryType(
   value: string | null,
 ): LibraryTypeFilter | null {
-  if (value === "link" || value === "note" || value === "image" || value === "video") {
+  if (value === "link" || value === "note" || value === "image" || value === "video" || value === "document") {
     return value;
   }
   return null;

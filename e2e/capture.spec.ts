@@ -1,6 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function openCaptureFromShortcut(page: Page) {
+  const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
+  if (await closeNavigation.isVisible()) {
+    await closeNavigation.click();
+    await expect(page.getByRole("dialog", { name: "Sidebar navigation", exact: true })).toBeHidden();
+  }
   await expect(
     page.getByRole("button", { name: "Save item", exact: true }),
   ).toBeVisible();
@@ -8,6 +13,142 @@ async function openCaptureFromShortcut(page: Page) {
   await expect(
     page.getByRole("dialog", { name: "Save to Keepall" }),
   ).toBeVisible();
+}
+
+test("empty Alt+K drawers have no type controls and close without a discard prompt after tag changes", async ({ page }) => {
+  await page.goto("/");
+  await openCaptureFromShortcut(page);
+  const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+  await capture.getByRole("textbox", { name: "Link, note, or image", exact: true }).fill(" ");
+  await expect(capture.getByRole("button", { name: "Change type", exact: true })).toHaveCount(0);
+  await expect(capture.getByText(/Saving as (link|note)/)).toHaveCount(0);
+  await capture.getByRole("textbox", { name: "Tags", exact: true }).fill("Unsubmitted tag");
+  await page.keyboard.press("Escape");
+  await expect(capture).toBeHidden();
+  await expect(page.getByRole("dialog", { name: "Discard unsaved changes?", exact: true })).toHaveCount(0);
+});
+
+for (const width of [320, 1024]) {
+  test(`URLs saved as notes stay within their card and reading page at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await openCaptureFromShortcut(page);
+    const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+    const url = "https://x.com/atulchaurasia/status/2017160961234567890";
+    await capture.getByRole("textbox", { name: "Link, note, or image", exact: true }).fill(url);
+    await capture.getByRole("textbox", { name: "Your note (optional)", exact: true }).fill("Saved as a note");
+    await capture.getByRole("button", { name: "Change type", exact: true }).click();
+    await page.getByRole("menuitemradio", { name: "Save as note", exact: true }).click();
+    await capture.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(capture).toBeHidden();
+    await page.reload();
+    const title = page.getByRole("heading", { name: url, exact: true });
+    await expect(title).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("url-note-card.png") });
+    expect(await title.evaluate((heading) => heading.scrollWidth <= heading.clientWidth + 1)).toBe(true);
+    const search = page.getByRole("searchbox", { name: "Search", exact: true });
+    await search.fill("atulchaurasia");
+    await expect(title.locator("mark")).toHaveText("atulchaurasia");
+    expect(await title.evaluate((heading) => heading.scrollWidth <= heading.clientWidth + 1)).toBe(true);
+    await search.fill("");
+    await title.click();
+    await expect(page.getByRole("button", { name: "Edit note", exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("url-note-page.png") });
+    expect(await title.evaluate((heading) => heading.scrollWidth <= heading.clientWidth + 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole("button", { name: "Edit note", exact: true }).click();
+    const editor = page.getByRole("dialog", { name: "Edit note", exact: true });
+    const content = editor.getByRole("textbox", { name: "Note content", exact: true });
+    await expect(content).toHaveValue(`${url}\n\nSaved as a note`);
+    await expect.poll(async () => {
+      const fieldBox = (await content.boundingBox())!;
+      const viewBox = (await editor.getByRole("group", { name: "Note editor view", exact: true }).boundingBox())!;
+      return Math.abs(fieldBox.x + fieldBox.width - viewBox.x - viewBox.width);
+    }).toBeLessThan(1);
+    await editor.screenshot({ path: testInfo.outputPath("note-edit-controls.png") });
+  });
+
+  test(`note editor view toggle aligns with the textarea end at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await openCaptureFromShortcut(page);
+    const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+    const input = capture.getByRole("textbox", { name: "Link, note, or image", exact: true });
+    await input.fill("A note to preview");
+    const view = capture.getByRole("group", { name: "Note editor view", exact: true });
+    await expect.poll(async () => {
+      const fieldBox = (await input.boundingBox())!;
+      const viewBox = (await view.boundingBox())!;
+      return Math.abs(fieldBox.x + fieldBox.width - viewBox.x - viewBox.width);
+    }).toBeLessThan(1);
+    await capture.getByRole("button", { name: "Preview", exact: true }).click();
+    await expect(capture.getByRole("region", { name: "Note preview", exact: true })).toBeVisible();
+    await capture.screenshot({ path: testInfo.outputPath("note-preview-controls.png") });
+    await capture.getByRole("button", { name: "Edit", exact: true }).click();
+    await expect(input).toHaveValue("A note to preview");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test(`capture detects its type and preserves the URL override at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto("/");
+    await openCaptureFromShortcut(page);
+    const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+    const input = capture.getByRole("textbox", { name: "Link, note, or image", exact: true });
+    const change = capture.getByRole("button", { name: "Change type", exact: true });
+    await expect(capture.getByRole("button", { name: /^(Link|Note)$/ })).toHaveCount(0);
+    await expect(change).toHaveCount(0);
+    await input.fill("An ordinary note");
+    await expect(capture.getByText("Saving as note", { exact: true })).toBeVisible();
+    await expect(change).toHaveCount(0);
+    const url = "https://example.com/reference";
+    await input.fill(url);
+    const label = capture.getByText("Saving as link", { exact: true });
+    await expect(label).toBeVisible();
+    const addBox = (await capture.getByRole("button", { name: "Add files", exact: true }).boundingBox())!;
+    const labelBox = (await label.boundingBox())!;
+    expect(Math.abs(addBox.y + addBox.height / 2 - labelBox.y - labelBox.height / 2)).toBeLessThan(2);
+    await change.click();
+    await expect(page.getByRole("menu", { name: "Change type", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu", { name: "Change type", exact: true })).toBeHidden();
+    await expect(capture).toBeVisible();
+    await capture.getByRole("textbox", { name: "Your note (optional)", exact: true }).fill("Keep this context");
+    await change.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("menuitemradio", { name: "Save as link", exact: true })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("menuitemradio", { name: "Save as link", exact: true })).toBeFocused();
+    await page.keyboard.press("End");
+    await expect(page.getByRole("menuitemradio", { name: "Save as note", exact: true })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(capture.getByText("Saving as note", { exact: true })).toBeVisible();
+    await expect(input).toHaveValue(url);
+    await expect(change).toBeFocused();
+    await change.click();
+    await page.getByRole("menuitemradio", { name: "Save as link", exact: true }).click();
+    await expect(capture.getByRole("textbox", { name: "Your note (optional)", exact: true })).toHaveValue("Keep this context");
+    await capture.screenshot({ path: testInfo.outputPath("detected-link.png") });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await capture.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(capture).toBeHidden();
+
+    await openCaptureFromShortcut(page);
+    await input.fill(url);
+    await capture.getByRole("textbox", { name: "Your note (optional)", exact: true }).fill("Keep this context");
+    await change.click();
+    await page.getByRole("menuitemradio", { name: "Save as note", exact: true }).click();
+    await capture.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(capture).toBeHidden();
+    await page.reload();
+    expect(await page.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((resolve) => { const r = indexedDB.open("keepall"); r.onsuccess = () => resolve(r.result); });
+      try { return await new Promise((resolve) => { const r = db.transaction("items").objectStore("items").getAll(); r.onsuccess = () => resolve(r.result.map((item) => ({ type: item.type, content: item.content }))); }); }
+      finally { db.close(); }
+    })).toEqual([{ type: "note", content: `${url}\n\nKeep this context` }]);
+    expect(errors).toEqual([]);
+  });
 }
 
 test("Save item and Alt+K open the capture flow from the side", async ({ page }, testInfo) => {
@@ -37,6 +178,7 @@ test("Save item and Alt+K open the capture flow from the side", async ({ page },
 
   await openCaptureFromShortcut(page);
   await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(capture).toBeHidden();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await openCaptureFromShortcut(page);
@@ -143,8 +285,6 @@ test("switching note format does not move collection or tag controls", async ({ 
     await page.setViewportSize({ width, height });
     await page.goto("/");
     await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
-    const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
-    if (await closeNavigation.isVisible()) await closeNavigation.click();
     await openCaptureFromShortcut(page);
     const capture = page.getByRole("dialog", { name: "Save to Keepall" });
     await capture.getByLabel("Link, note, or image").fill(text);
@@ -199,6 +339,7 @@ test("a Markdown note keeps its source and formatting after offline reload", asy
   await capture.getByRole("button", { name: "Preview" }).click();
   await expect(capture.getByRole("heading", { name: "Card idea" })).toBeVisible();
   await capture.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(capture).toBeHidden();
 
   await page.reload();
   await page.getByRole("link", { name: /Card idea.*Read note/ }).click();
@@ -269,7 +410,7 @@ test("a link card opens the website while its note opens a Keepall page", async 
   await card.getByRole("link", { name: /Read my note/ }).click();
   await expect(page).toHaveURL(/\/items\//);
   await expect(page.getByRole("heading", { name: "Try this layout" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Open website/ })).toHaveAttribute("href", "https://example.com/design-reference");
+  await expect(page.getByRole("link", { name: "Source link", exact: true })).toHaveAttribute("href", "https://example.com/design-reference");
   await page.screenshot({ path: testInfo.outputPath("link-note-page.png"), fullPage: true });
 
   await page.reload();
@@ -440,8 +581,6 @@ for (const width of [320, 1440]) {
   test(`unsaved capture dismissal retains draft through confirmation and discards at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    const navigation = page.getByRole("button", { name: "Close navigation", exact: true });
-    if (await navigation.isVisible()) await navigation.click();
     await openCaptureFromShortcut(page);
     const drawer = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
     const input = drawer.getByRole("textbox", { name: "Link, note, or image", exact: true });

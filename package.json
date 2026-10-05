@@ -2,6 +2,7 @@
   "name": "keepall",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "dev": "next dev --turbopack",
     "dev:agentation": "agentation-mcp server --port 4747",

@@ -5,7 +5,7 @@ import { LibraryItemMedia } from "./library-item-media";
 import { LibraryOrganizationLinkPreview } from "./library-organization-link-preview";
 import { ImageIcon, LinkIcon, NoteIcon, VideoIcon } from "./shell-icons";
 
-const itemIcons = { note: NoteIcon, image: ImageIcon, link: LinkIcon, video: VideoIcon };
+const itemIcons = { note: NoteIcon, image: ImageIcon, link: LinkIcon, video: VideoIcon, document: NoteIcon };
 
 export function LibraryTagArtwork({ previews }: { previews: Item[] }) {
   return (

@@ -2,6 +2,13 @@
 @import "./scroll-fade.css";
 @import "./public-site.css";
 
+@media (prefers-reduced-motion: reduce) {
+  .capture-image-layout {
+    --capture-swap-duration: 0ms;
+    --capture-offset-y: 0px;
+  }
+}
+
 /* Fixed palette values. Components use the semantic roles below. */
 :root {
   color-scheme: light dark;

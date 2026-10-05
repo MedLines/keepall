@@ -196,7 +196,16 @@ test("duplicate links and every import dialog share close, footer and backdrop b
       await writeFile(`${folder}/test.png`, png);
       await imports.locator('input[webkitdirectory]').setInputFiles(folder);
     }
-    const dialog = page.getByRole("dialog", { name: kind === "backup" ? "Import backup" : kind === "bookmarks" ? "Import browser bookmarks" : "Import image folder", exact: true });
+    if (kind === "images") {
+      const drawer = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+      await expect(drawer.getByLabel("1 image attached")).toBeVisible();
+      await expect(page.getByRole("dialog")).toHaveCount(1);
+      await expect(drawer.getByRole("button", { name: "Add files", exact: true })).toBeVisible();
+      await drawer.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(drawer).toBeHidden();
+      continue;
+    }
+    const dialog = page.getByRole("dialog", { name: kind === "backup" ? "Import backup" : "Import browser bookmarks", exact: true });
     await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeInViewport();
     await page.screenshot({ path: testInfo.outputPath(`import-${kind}.png`) });

@@ -41,6 +41,9 @@ export function itemActionLabel(item: Item): string {
       case "link":
         label = firstLine(item.previewTitle) || hostLabel(item.url) || "Link";
         break;
+      case "document":
+        label = item.sourceFileName || "Document";
+        break;
       case "video":
         label = "Video";
         break;

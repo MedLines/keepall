@@ -45,6 +45,7 @@ function searchableFields(item: Item, tagNames: readonly string[]): SearchField[
         { field: "sourceUrl", label: "Source", text: item.sourceUrl },
       ];
       break;
+    case "document":
     case "video":
       fields = [
         { field: "noteContent", label: "My note", text: item.noteContent ?? "" },

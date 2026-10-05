@@ -48,6 +48,8 @@ export function estimateLibraryGridItemHeight(
     return mediaHeight + 100 + estimatedLines(title, width, 2) * 24 + descriptionLines * 20;
   }
 
+  if (item.type === "document") return 112 + estimatedLines(item.title || item.sourceFileName, width, 2) * 24;
+
   const hasFooter = item.type === "video"
     ? Boolean(item.title.trim())
     : Boolean(item.title.trim() || item.caption.trim() || item.sourceUrl);

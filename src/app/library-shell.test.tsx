@@ -18,7 +18,7 @@ function props(overrides: Partial<ComponentProps<typeof LibraryShell>> = {}): Co
     collections: [],
     pinnedCollectionIds: [],
     tags: [],
-    sidebarCounts: { all: 0, unsorted: 0, byType: { link: 0, note: 0, image: 0, video: 0 }, byCollectionId: {}, byTagId: {} },
+    sidebarCounts: { all: 0, unsorted: 0, byType: { link: 0, note: 0, image: 0, video: 0, document: 0 }, byCollectionId: {}, byTagId: {} },
     dropTargetCollectionId: null,
     collectionManageError: null,
     dragError: null,
