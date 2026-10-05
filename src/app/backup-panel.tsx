@@ -181,7 +181,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       }
     } catch (caught) {
       if (mounted.current) setError(caught instanceof BackupValidationError ? caught.message :
-        mode === "merge" ? "Couldn't merge backup." : "Couldn't replace library.");
+        mode === "merge" ? "Couldn't merge backup. Your library wasn't changed. Try again." : "Couldn't replace library.");
     } finally {
       if (mounted.current) { setPrepared(null); setConfirmReplace(false); }
       finish();

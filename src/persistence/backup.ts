@@ -7,7 +7,7 @@ import {
 } from "@/domain/backup";
 import { base64ToBytes, bytesToBase64 } from "@/domain/backup-encoding";
 import { isIncomingNewer, unionIds } from "@/domain/backup-merge";
-import { buildAsset, sameContentHashMultiset } from "@/domain/asset";
+import { buildAsset, hashAssetBytes, sameContentHashMultiset, type CreateAssetInput } from "@/domain/asset";
 import { normalizeCollection } from "@/domain/collection";
 import { normalizeItem } from "@/domain/item";
 import type { DocumentAsset, DocumentItem } from "@/domain/document";
@@ -158,6 +158,10 @@ export type KeepallMergeSummary = {
   addedLinkIds: string[];
 };
 
+type MergeMedia = { items: VideoItem[]; assets: VideoAsset[]; thumbnails: Thumbnail[] };
+type MergeDocuments = { items: DocumentItem[]; assets: DocumentAsset[] };
+type PreparedMergeAsset = { sourceId: string; input: CreateAssetInput; thumbnail: Blob | null };
+
 /**
  * Merge a `.keepall` backup into the current library (no wipe).
  * Identity: notes by id, links by normalized URL, images by content hash.
@@ -166,10 +170,35 @@ export type KeepallMergeSummary = {
 export async function importKeepallBackupMerge(
   raw: unknown,
   binaryAssets?: Map<string, Uint8Array>,
-  media?: { items: VideoItem[]; assets: VideoAsset[]; thumbnails: Thumbnail[] },
-  documents?: { items: DocumentItem[]; assets: DocumentAsset[] },
+  media?: MergeMedia,
+  documents?: MergeDocuments,
 ): Promise<{ backup: KeepallBackup; summary: KeepallMergeSummary }> {
   const backup = parseKeepallBackup(raw);
+  const imageAssetIds = new Set(backup.items.filter((item) => item.type === "image").flatMap((item) => item.assetIds));
+  const thumbnails = new Map(media?.thumbnails.map((thumbnail) => [thumbnail.assetId, thumbnail.blob]));
+  const assets: PreparedMergeAsset[] = [];
+  // Decode images before opening the write transaction; browser APIs can otherwise commit it early.
+  for (const record of backup.assets) {
+    const bytes = binaryAssets?.get(record.id) ?? base64ToBytes(record.dataBase64);
+    assets.push({
+      sourceId: record.id,
+      input: { mimeType: record.mimeType, bytes, contentHash: record.contentHash || await hashAssetBytes(bytes) },
+      thumbnail: thumbnails.get(record.id) ?? (imageAssetIds.has(record.id) ? await imageThumbnail(bytes, record.mimeType) : null),
+    });
+  }
+  const db = getDb();
+  return db.transaction("rw",
+    [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.preferences],
+    async () => mergeValidatedBackup(backup, assets, media, documents),
+  );
+}
+
+async function mergeValidatedBackup(
+  backup: KeepallBackup,
+  assets: PreparedMergeAsset[],
+  media?: MergeMedia,
+  documents?: MergeDocuments,
+): Promise<{ backup: KeepallBackup; summary: KeepallMergeSummary }> {
   const db = getDb();
 
   const tagIdMap = new Map<string, string>();
@@ -196,18 +225,10 @@ export async function importKeepallBackupMerge(
   );
 
   const assetIdMap = new Map<string, string>();
-  for (const record of backup.assets) {
-    const local = await putAsset({
-      mimeType: record.mimeType,
-      bytes: binaryAssets?.get(record.id) ?? base64ToBytes(record.dataBase64),
-      contentHash: record.contentHash,
-    });
-    assetIdMap.set(record.id, local.id);
-    const storedThumbnail = media?.thumbnails.find((thumbnail) => thumbnail.assetId === record.id);
-    const blob = storedThumbnail?.blob ?? (backup.items.some((item) => item.type === "image" && item.assetIds.includes(record.id))
-      ? await imageThumbnail(binaryAssets?.get(record.id) ?? base64ToBytes(record.dataBase64), record.mimeType)
-      : null);
-    await putThumbnail(local.id, blob);
+  for (const asset of assets) {
+    const local = await putAsset(asset.input);
+    assetIdMap.set(asset.sourceId, local.id);
+    await putThumbnail(local.id, asset.thumbnail);
   }
 
   const remapTagIds = (ids: string[]) =>
