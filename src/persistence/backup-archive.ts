@@ -8,6 +8,7 @@ import { importKeepallBackupMerge, replaceValidatedBackup } from "./backup";
 import type { KeepallMergeSummary } from "./backup";
 import type { Thumbnail, VideoAsset } from "./db";
 import { readBackupSnapshot } from "./backup-snapshot";
+import { parseAutomaticBackupIdentity, type AutomaticBackupIdentity } from "@/domain/automatic-backup";
 
 const ARCHIVE_VERSION = 8;
 const UUID = "[0-9a-f-]{36}";
@@ -18,9 +19,9 @@ const thumbnailPath = new RegExp(`^thumbnails/(${UUID})\\.bin$`, "i");
 type ArchiveAsset = Omit<KeepallBackup["assets"][number], "dataBase64"> & { path: string };
 type ArchiveVideo = { id: string; mimeType: string; byteLength: number; createdAt: number; path: string };
 type ArchiveThumbnail = { assetId: string; mimeType: string; byteLength: number; path: string };
-type ArchiveManifest = Omit<KeepallBackup, "assets"> & { assets: ArchiveAsset[]; videos: ArchiveVideo[]; thumbnails: ArchiveThumbnail[] };
+type ArchiveManifest = Omit<KeepallBackup, "assets"> & { assets: ArchiveAsset[]; videos: ArchiveVideo[]; thumbnails: ArchiveThumbnail[]; automaticBackup?: AutomaticBackupIdentity };
 
-export async function exportKeepallArchive(exportedAt = Date.now()): Promise<Blob> {
+export async function exportKeepallArchive(exportedAt = Date.now(), automaticBackup?: AutomaticBackupIdentity): Promise<Blob> {
   const { items, tags, collections, assets, videos, thumbnails, preferences } = await readBackupSnapshot();
   const manifest: ArchiveManifest = {
     format: "keepall", version: ARCHIVE_VERSION, exportedAt,
@@ -35,6 +36,7 @@ export async function exportKeepallArchive(exportedAt = Date.now()): Promise<Blo
       assetId, mimeType: blob.type, byteLength: blob.size, path: `thumbnails/${assetId}.bin`,
     })),
     preferences,
+    automaticBackup: parseAutomaticBackupIdentity(automaticBackup),
   };
   const supportsBlobStream = typeof Blob.prototype.stream === "function";
   const writer = supportsBlobStream
@@ -64,6 +66,7 @@ async function readArchive(file: Blob): Promise<{
   binaryAssets: Map<string, Uint8Array>;
   videoAssets: VideoAsset[];
   thumbnails: Thumbnail[];
+  automaticBackup?: AutomaticBackupIdentity;
 }> {
   const reader = new ZipReader(new BlobReader(file));
   try {
@@ -206,10 +209,38 @@ async function readArchive(file: Blob): Promise<{
       if (bytes.byteLength !== record.byteLength) throw new BackupValidationError("Archive thumbnail is damaged");
       thumbnails.push({ assetId: record.assetId as string, blob: new Blob([new Uint8Array(bytes)], { type: record.mimeType as string }) });
     }
-    return { backup, binaryAssets, videoAssets, thumbnails };
+    return { backup, binaryAssets, videoAssets, thumbnails, automaticBackup: parseAutomaticBackupIdentity(candidate.automaticBackup) };
   } catch (error) {
     if (error instanceof BackupValidationError) throw error;
     throw new BackupValidationError("Could not read backup archive");
+  } finally {
+    await reader.close();
+  }
+}
+
+export async function validateKeepallArchive(file: Blob) {
+  const { backup, automaticBackup } = await readArchive(file);
+  return { exportedAt: backup.exportedAt, automaticBackup };
+}
+
+/** Read ownership metadata for files already verified when their completion record was written. */
+export async function readAutomaticBackupMetadata(file: Blob) {
+  const reader = new ZipReader(new BlobReader(file));
+  try {
+    const entries = await reader.getEntries();
+    const manifests = entries.filter((entry) => entry.filename === "manifest.json");
+    const manifest = manifests[0];
+    if (manifests.length !== 1 || !manifest || manifest.directory || manifest.uncompressedSize > 50 * 1024 * 1024) {
+      throw new BackupValidationError("Automatic backup manifest is missing or damaged");
+    }
+    const raw: unknown = JSON.parse(await manifest.getData(new TextWriter()));
+    if (!raw || typeof raw !== "object" || !("format" in raw) || raw.format !== "keepall" ||
+        !("version" in raw) || raw.version !== ARCHIVE_VERSION ||
+        !("exportedAt" in raw) || typeof raw.exportedAt !== "number" || !Number.isFinite(raw.exportedAt) ||
+        !("automaticBackup" in raw)) {
+      throw new BackupValidationError("Automatic backup metadata is invalid");
+    }
+    return { exportedAt: raw.exportedAt, automaticBackup: parseAutomaticBackupIdentity(raw.automaticBackup) };
   } finally {
     await reader.close();
   }
