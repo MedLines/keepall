@@ -342,7 +342,7 @@ test("a Markdown note keeps its source and formatting after offline reload", asy
   await expect(capture).toBeHidden();
 
   await page.reload();
-  await page.getByRole("link", { name: /Card idea.*Read note/ }).click();
+  await page.getByRole("link", { name: /Card idea/ }).click();
   await expect(page).toHaveURL(/\/items\//);
   await expect(page.getByRole("heading", { level: 1, name: "Card idea" })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Completed checklist item" })).toBeDisabled();
@@ -365,7 +365,7 @@ test("a long note scrolls to the end on its own page", async ({ page }) => {
   await page.getByLabel("Link, note, or image").fill(`# Long note\n\n${paragraphs.join("\n\n")}`);
   await page.getByRole("button", { name: "Markdown" }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await page.getByRole("link", { name: /Long note.*Read note/ }).click();
+  await page.getByRole("link", { name: /Long note/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Long note" })).toBeVisible();
 
   const scrollRegion = page.locator(".ui-scrollbar").first();
@@ -405,9 +405,9 @@ test("a link card opens the website while its note opens a Keepall page", async 
   await capture.getByRole("button", { name: "Save", exact: true }).click();
 
   const card = page.locator(".library-card").first();
-  await expect(card.getByRole("link", { name: /Read my note/ })).toBeVisible();
+  await expect(card.getByRole("link", { name: /Open notes for/ })).toBeVisible();
   await expect(card.locator(".library-card-media a")).toHaveAttribute("href", "https://example.com/design-reference");
-  await card.getByRole("link", { name: /Read my note/ }).click();
+  await card.getByRole("link", { name: /Open notes for/ }).click();
   await expect(page).toHaveURL(/\/items\//);
   await expect(page.getByRole("heading", { name: "Try this layout" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Source link", exact: true })).toHaveAttribute("href", "https://example.com/design-reference");
@@ -419,8 +419,8 @@ test("a link card opens the website while its note opens a Keepall page", async 
   await page.getByRole("button", { name: "List view", exact: true }).click();
   const row = page.locator(".library-list-row").first();
   await expect(row.getByRole("link", { name: /Open example.com/ }).first()).toHaveAttribute("href", "https://example.com/design-reference");
-  await expect(row.getByRole("link", { name: /Read my note/ })).toHaveAttribute("href", /\/items\//);
-  await row.getByRole("link", { name: /Read my note/ }).click();
+  await expect(row.getByRole("link", { name: /Open notes for/ })).toHaveAttribute("href", /\/items\//);
+  await row.getByRole("link", { name: /Open notes for/ }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("heading", { name: "Try this layout" })).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

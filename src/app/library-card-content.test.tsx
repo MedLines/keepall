@@ -30,29 +30,52 @@ describe("grid card content", () => {
     expect(screen.getByRole("heading", { name: "Image card redesign" })).toBeVisible();
     expect(screen.queryByText("Untitled")).toBeNull();
     expect(screen.getByText("The image should lead.")).toBeVisible();
-    expect(screen.queryByText(/More ideas/)).toBeNull();
+    expect(screen.getByText(/More ideas/)).toBeVisible();
     expect(screen.getByRole("link", { name: /Image card redesign/ })).toHaveAttribute("href", "/items/item?from=%2F");
     expect(screen.getByText(/Edited/)).toBeVisible();
   });
 
-  it("keeps link metadata local and labels the source with a glyph", () => {
+  it("keeps link metadata local and shows the source host", () => {
     const { container } = render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "", url: "https://example.com/components/footer", previewDescription: "A spacious footer." }} onOpen={vi.fn()} />);
-    expect(screen.getByRole("link").getAttribute("href")).toBe("https://example.com/components/footer");
-    expect(screen.getByRole("link").textContent).toContain("example.com/components/footer");
+    expect(screen.getByRole("link", { name: "example.com/components/footer" })).toHaveAttribute("href", "https://example.com/components/footer");
+    expect(screen.getByRole("link", { name: "example.com" })).toHaveAttribute("href", "https://example.com/components/footer");
     expect(screen.getByText("A spacious footer.")).toBeTruthy();
-    expect(container.querySelector("img")).toBeNull();
-    expect(container.querySelector("svg")).toBeTruthy();
+    expect(container.querySelector("img")).toHaveAttribute("src", "https://www.google.com/s2/favicons?domain=example.com&sz=32");
+    expect(container.querySelector("img")).toHaveAttribute("alt", "");
+  });
+
+  it("keeps a one-line note readable instead of replacing its excerpt with an empty state", () => {
+    const { container } = render(<LibraryCardContent item={{ ...base, type: "note", title: "", content: "Remember this idea" }} onOpen={vi.fn()} />);
+    expect(container.querySelector(".library-text-preview")).toHaveTextContent("Remember this idea");
+    expect(screen.queryByText("No text preview")).toBeNull();
+    expect(screen.getByRole("img", { name: "Note" })).toBeVisible();
   });
 
   it("keeps the link title external and opens its personal note in Keepall", () => {
     render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "Article", url: "https://example.com/article", noteContent: "Why I saved it" }} onOpen={vi.fn()} openHref="/items/item?from=%2F" />);
     expect(screen.getByRole("link", { name: "Article" })).toHaveAttribute("href", "https://example.com/article");
-    expect(screen.getByRole("link", { name: /Read my note/ })).toHaveAttribute("href", "/items/item?from=%2F");
+    expect(screen.getByRole("link", { name: /Open notes for/ })).toHaveAttribute("href", "/items/item?from=%2F");
   });
 
-  it("offers a note page for a link without a note", () => {
+  it("omits empty note and details controls for links", () => {
     render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "Article", url: "https://example.com/article" }} onOpen={vi.fn()} openHref="/items/item?from=%2F" />);
-    expect(screen.getByRole("link", { name: /Add a note/ })).toHaveAttribute("href", "/items/item?from=%2F");
+    expect(screen.queryByRole("link", { name: /Open details|Open notes/ })).toBeNull();
+    expect(screen.queryByText("Details")).toBeNull();
+  });
+
+  it("keeps an image source visible alongside its Markdown caption", () => {
+    render(<LibraryCardContent item={buildImage({ assetId: "a", sourceUrl: "https://example.com/gallery", caption: "**Why I saved it**", captionFormat: "markdown" })} onOpen={vi.fn()} openHref="/items/item" />);
+    expect(screen.getByRole("link", { name: "example.com" })).toHaveAttribute("href", "https://example.com/gallery");
+    expect(screen.getByRole("link", { name: /Open notes/ })).toHaveTextContent("Why I saved it");
+    expect(screen.getByRole("img", { name: "Markdown note" })).toBeVisible();
+  });
+
+  it("uses a Note glyph for plain personal notes and an MD glyph for Markdown", () => {
+    const { rerender } = render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "Article", url: "https://example.com", noteContent: "My thought" }} onOpen={vi.fn()} openHref="/items/item" />);
+    expect(screen.getByRole("img", { name: "Note" })).toBeVisible();
+    expect(screen.queryByRole("img", { name: "Text document" })).toBeNull();
+    rerender(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "Article", url: "https://example.com", noteContent: "**My thought**", noteFormat: "markdown" }} onOpen={vi.fn()} openHref="/items/item" />);
+    expect(screen.getByRole("img", { name: "Markdown note" })).toBeVisible();
   });
 
   it("places pinned status beside the card title", () => {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, afterEach, expect, test, vi } from "vitest";
 import { BackupFolderControls } from "./backup-folder-controls";
 import { BackupFolderError } from "@/persistence/backup-folder";
@@ -6,13 +6,13 @@ import type { BackupFolderHandle, BackupFolderSettings } from "@/persistence/bac
 
 const mocks = vi.hoisted(() => ({
   supportsFolderBackups: vi.fn(), chooseBackupFolder: vi.fn(), connectBackupFolder: vi.fn(),
-  saveFolderBackup: vi.fn(), disableBackupFolder: vi.fn(), observeBackupFolderSettings: vi.fn(),
+  saveFolderBackup: vi.fn(), disableBackupFolder: vi.fn(), observeBackupFolderStatus: vi.fn(),
 }));
 vi.mock("@/persistence/backup-settings", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/persistence/backup-settings")>(), ...mocks,
 }));
 
-let emit: (settings: BackupFolderSettings | undefined) => void;
+let emit: (settings: BackupFolderSettings | undefined, hasPendingChanges?: boolean) => void;
 let current: BackupFolderSettings | undefined;
 const directory = {
   name: "Keepall Backups", kind: "directory",
@@ -35,8 +35,8 @@ beforeEach(() => {
   directory.requestPermission = vi.fn().mockResolvedValue("granted");
   mocks.supportsFolderBackups.mockReturnValue(true);
   mocks.chooseBackupFolder.mockResolvedValue(directory);
-  mocks.observeBackupFolderSettings.mockImplementation((listener) => {
-    emit = (next) => { current = next; listener(next); };
+  mocks.observeBackupFolderStatus.mockImplementation((listener) => {
+    emit = (next, hasPendingChanges = false) => { current = next; listener({ settings: next, hasPendingChanges }); };
     queueMicrotask(() => emit(current));
     return () => {};
   });
@@ -121,4 +121,20 @@ test("unsupported browsers explain the manual export fallback", async () => {
   expect(screen.getByText(/Export backup above/i)).toBeVisible();
   expect(screen.queryByRole("button", { name: "Choose backup folder" })).not.toBeInTheDocument();
   expect(mocks.chooseBackupFolder).not.toHaveBeenCalled();
+});
+
+test("backup coverage follows edits and a completed backup without claiming failed saves are current", async () => {
+  current = settings();
+  render(<BackupFolderControls />);
+  expect(await screen.findByText("Up to date")).toBeVisible();
+  act(() => emit(current, true));
+  expect(await screen.findByText("Changes waiting for backup")).toBeVisible();
+  act(() => emit({ ...settings(), lastError: "Disk full" }, true));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Disk full");
+  expect(screen.getByText("Changes waiting for backup")).toBeVisible();
+  act(() => emit(settings(), false));
+  expect(await screen.findByText("Up to date")).toBeVisible();
+  act(() => emit({ ...settings(), enabled: false }, true));
+  await waitFor(() => expect(screen.queryByText("Backup coverage")).not.toBeInTheDocument());
+  expect(directory.requestPermission).not.toHaveBeenCalled();
 });

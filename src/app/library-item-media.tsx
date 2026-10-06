@@ -7,7 +7,8 @@ import type { LinkItem } from "@/domain/link";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { useState } from "react";
-import { ImageIcon, LinkIcon, NoteIcon, PdfIcon, VideoIcon } from "./shell-icons";
+import { ItemTypeIcon } from "./item-type-icon";
+import { PdfCardThumbnail } from "./pdf-card-thumbnail";
 
 type MediaVariant = "card" | "grid" | "inspect" | "viewer" | "preview";
 
@@ -39,6 +40,10 @@ export function LibraryItemMedia({
   const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl;
   const [brokenAssetId, setBrokenAssetId] = useState<string | null>(null);
   const imageSrc = brokenAssetId === assetIdForDisplay ? null : localObjectUrl;
+
+  if (item.type === "document" && item.format === "pdf") {
+    return <PdfCardThumbnail item={item} compact={compact} />;
+  }
 
   if (imageSrc && (item.type === "link" || item.type === "image" || item.type === "video")) {
     return (
@@ -143,12 +148,7 @@ function fallbackClassName(
 }
 
 function FallbackContent({ item, compact }: { item: Item; compact: boolean }) {
-  if (item.type === "link") {
-    return <LinkIcon className={compact ? "size-6" : "size-12"} />;
-  }
+  if (item.type === "link" || item.type === "document" || item.type === "note") return <ItemTypeIcon item={item} className={compact ? "size-6" : "size-10"} />;
   if (!compact) return cardInitial(item);
-  if (item.type === "document" && item.format === "pdf") return <PdfIcon className="size-6" />;
-  if (item.type === "note" || item.type === "document") return <NoteIcon className="size-6" />;
-  if (item.type === "video") return <VideoIcon className="size-6" />;
-  return <ImageIcon className="size-6" />;
+  return <ItemTypeIcon item={item} className="size-6" />;
 }

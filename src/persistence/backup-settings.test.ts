@@ -7,6 +7,7 @@ import {
   connectBackupFolder,
   disableBackupFolder,
   getBackupFolderSettings,
+  observeBackupFolderStatus,
   saveFolderBackup,
   type BackupFolderHandle,
 } from "./backup-settings";
@@ -115,6 +116,27 @@ test("connecting saves one verified backup and remembers the folder across reads
   expect(settings?.completed).toHaveLength(1);
   expect(writeAutomaticBackup).toHaveBeenCalledOnce();
   expect((await getBackupFolderSettings())?.completed).toEqual(settings?.completed);
+});
+
+test("backup coverage observes library edits and only clears them after a verified backup", async () => {
+  restoreStoredHandle();
+  await connectBackupFolder(handle());
+  const changes = vi.fn();
+  const errors = vi.fn();
+  const stop = observeBackupFolderStatus(changes, errors);
+  try {
+    await vi.waitFor(() => expect(changes).toHaveBeenLastCalledWith(expect.objectContaining({ hasPendingChanges: false })));
+    await getDb().items.add(buildNote({ content: "Not backed up yet" }));
+    await vi.waitFor(() => expect(changes).toHaveBeenLastCalledWith(expect.objectContaining({ hasPendingChanges: true })));
+    writeAutomaticBackup.mockRejectedValueOnce(new Error("Disk full"));
+    await expect(saveFolderBackup()).rejects.toThrow("Disk full");
+    await vi.waitFor(() => expect(changes).toHaveBeenLastCalledWith(expect.objectContaining({
+      hasPendingChanges: true, settings: expect.objectContaining({ lastError: expect.any(String) }),
+    })));
+    await saveFolderBackup();
+    await vi.waitFor(() => expect(changes).toHaveBeenLastCalledWith(expect.objectContaining({ hasPendingChanges: false })));
+    expect(errors).not.toHaveBeenCalled();
+  } finally { stop(); }
 });
 
 test("a failed first backup keeps the connection pending and never claims success", async () => {

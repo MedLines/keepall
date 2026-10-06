@@ -20,7 +20,8 @@ import { LibraryItemMedia } from "./library-item-media";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibrarySelectionControl } from "./library-selection-control";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
-import { DeleteIcon, ImagesIcon, MoreIcon, PlayIcon } from "./shell-icons";
+import { DeleteIcon, MoreIcon, PlayIcon } from "./shell-icons";
+import { ItemTypeBadge } from "./item-type-icon";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
 import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
@@ -181,7 +182,8 @@ export function LibraryItem({
     trashActions || searchQuery.trim() || item.title.trim() || item.caption.trim() || item.sourceUrl ||
     (pinVisible && pinned) || collections.length || tagNames.length || pendingDelete
   );
-  const hasMedia = item.type === "image" || item.type === "link" || item.type === "video";
+  const isPdf = item.type === "document" && item.format === "pdf";
+  const hasMedia = item.type === "image" || item.type === "link" || item.type === "video" || isPdf;
   const rowRef = useRef<HTMLLIElement>(null);
   const measureElement = placement?.measureElement;
   const setRowRef = useCallback((node: HTMLLIElement | null) => {
@@ -209,7 +211,7 @@ export function LibraryItem({
       className={
         isList
           ? "library-list-thumbnail relative shrink-0 overflow-hidden rounded-lg bg-bg-raised"
-          : `library-card-media squircle-panel relative ${hasGridFooter && (item.type === "link" || !openHref) ? "mb-3" : ""}`
+          : "library-card-media squircle-panel relative"
       }
     >
       {inspected ? (
@@ -274,15 +276,7 @@ export function LibraryItem({
           </span>
         </span>
       ) : null}
-      {!isList && item.type === "image" && item.assetIds.length > 1 && !inspected ? (
-        <span
-          className="library-card-media-chrome pointer-events-none absolute bottom-2 end-2 z-10 flex min-h-11 items-center gap-1.5 px-3 text-xs font-medium tabular-nums"
-          aria-label={`${item.assetIds.length} images`}
-        >
-          <ImagesIcon className="size-4" />
-          {item.assetIds.length}
-        </span>
-      ) : null}
+      {!isList && hasMedia && !inspected ? <ItemTypeBadge item={item} /> : null}
     </div>
   );
 
@@ -292,9 +286,9 @@ export function LibraryItem({
       aria-label={`Actions for ${actionLabel}`}
       data-item-actions={item.id}
       disabled={mutationBusy}
-      className={`library-card-actions absolute z-30 flex cursor-pointer items-center justify-center text-text-secondary hover:text-text-primary disabled:cursor-default ${isList ? "end-0 top-5 size-10 rounded-control hover:bg-bg-raised" : "library-card-media-chrome end-4 top-4 size-11"}`}
+      className={`library-card-actions absolute z-30 flex cursor-pointer items-center justify-center text-text-secondary hover:text-text-primary disabled:cursor-default ${isList ? "end-0 top-5 size-10 rounded-control hover:bg-bg-raised" : "library-card-media-chrome library-card-corner-control library-card-corner-end"}`}
     >
-      <MoreIcon />
+      <MoreIcon className="size-4" />
     </button>
   ) : null;
 
@@ -448,7 +442,7 @@ export function LibraryItem({
         className={
           isList
             ? "library-list-row group relative flex items-start gap-3 rounded-control-lg border-b border-border-edge px-3 py-4"
-            : "library-card squircle-panel group relative flex flex-col rounded-card p-card-inset"
+            : `library-card squircle-panel group relative flex flex-col rounded-card pt-[8px] pr-[8px] pl-[8px] ${hasGridFooter ? "pb-[2px]" : "pb-[8px]"}`
         }
       >
       {trigger}
@@ -461,7 +455,7 @@ export function LibraryItem({
         className={
           isList
             ? `library-list-select absolute start-1 top-5 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-edge ${editing || pendingDelete ? "hidden" : ""}`
-            : `library-card-media-chrome absolute start-4 top-4 z-20 flex size-11 items-center justify-center ${
+            : `library-card-media-chrome library-card-corner-control library-card-corner-start absolute z-20 flex items-center justify-center ${
                 !chromeVisible
                   ? "pointer-events-none opacity-0"
                   : checkboxVisible
@@ -499,7 +493,7 @@ export function LibraryItem({
             href={openHref}
             prefetch={false}
             aria-label={`Open ${title}`}
-            className={`block ${hasGridFooter ? "mb-5" : ""}`}
+            className="block"
           >
             {mediaSlot}
           </Link>
@@ -512,7 +506,7 @@ export function LibraryItem({
         className={
           isList
             ? `min-w-0 flex-1 ${pendingDelete ? "" : "library-list-body"}`
-            : item.type === "image" ? "px-2 pb-1" : hasMedia ? "px-4 pb-3 pt-3" : "px-4 pb-3 pt-4"
+            : `library-card-footer ${hasMedia ? "library-card-footer-with-media" : ""}`
         }
         style={{ pointerEvents: chromeVisible ? "auto" : "none" }}
       >

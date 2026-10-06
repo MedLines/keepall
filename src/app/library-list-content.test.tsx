@@ -24,8 +24,8 @@ test("list metadata shows two tags and expands the rest without navigation", () 
   const browse = vi.fn();
   const browseCollection = vi.fn();
   render(<LibraryListMetadata collections={[{ id: "c", name: "UI inspiration" }]} tags={tags} onBrowseCollection={browseCollection} onBrowseTag={browse} />);
-  expect(screen.getByLabelText("Collections")).toHaveTextContent("in UI inspiration");
-  fireEvent.click(screen.getByRole("button", { name: "in UI inspiration" }));
+  expect(screen.getByLabelText("Collections")).toHaveTextContent("UI inspiration");
+  fireEvent.click(screen.getByRole("button", { name: "UI inspiration" }));
   expect(browseCollection).toHaveBeenCalledWith("c");
   expect(screen.queryByRole("button", { name: "motion" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Show 2 more tags" }));

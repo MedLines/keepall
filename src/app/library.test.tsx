@@ -311,7 +311,7 @@ describe("Library", () => {
   test("ITEMS_CHANGED refresh keeps the grid without Loading", async () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
-    expect(await screen.findByText("A persisted note")).toBeInTheDocument();
+    expect(await screen.findByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
 
     let resolveNext!: (value: Item[]) => void;
     vi.mocked(listItems).mockImplementation(
@@ -324,7 +324,7 @@ describe("Library", () => {
     window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
 
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
-    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(typeof resolveNext).toBe("function");
@@ -334,7 +334,7 @@ describe("Library", () => {
       expect(listItems).toHaveBeenCalledTimes(2);
     });
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
-    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
   });
 
   test("clears an unknown URL tag only after tags finish loading", async () => {
@@ -363,7 +363,7 @@ describe("Library", () => {
     mockNavigation.replace("/?tag=t1");
     mockNavigation.replace.mockClear();
     render(<Library />);
-    await screen.findByText("A persisted note");
+    await screen.findByRole("listitem", { name: "A persisted note" });
     expect(mockNavigation.replace).not.toHaveBeenCalled();
 
     window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
@@ -484,11 +484,11 @@ describe("Library", () => {
     const captured = buildNote({ content: "Captured while away" }, { id: "n2", now: 2 });
     vi.mocked(listItems).mockResolvedValueOnce([note]).mockResolvedValue([note, captured]);
     render(<Library />);
-    expect(await screen.findByText("A persisted note")).toBeInTheDocument();
+    expect(await screen.findByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
 
     window.dispatchEvent(new Event("focus"));
 
-    expect(await screen.findByText("Captured while away")).toBeInTheDocument();
+    expect(await screen.findByRole("listitem", { name: "Captured while away" })).toBeInTheDocument();
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
   });
 
@@ -512,7 +512,7 @@ describe("Library", () => {
     expect(screen.getByRole("button", { name: /^Actions for / })).toBeInTheDocument();
     expect(screen.queryByText("Move this item to Trash?")).not.toBeInTheDocument();
     expect(deleteItem).not.toHaveBeenCalled();
-    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
   });
 
   test("confirm deletes the item", async () => {
@@ -542,7 +542,7 @@ describe("Library", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Couldn't move item to Trash.",
     );
-    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "A persisted note", hidden: true })).toBeInTheDocument();
   });
 
   test("does not save a note edit until Save note", async () => {
@@ -568,7 +568,7 @@ describe("Library", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
 
     expect(updateNote).not.toHaveBeenCalled();
-    expect(screen.getByText("A persisted note")).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
   });
 
   test("save note edit persists new content", async () => {
@@ -588,7 +588,7 @@ describe("Library", () => {
     await waitFor(() => {
       expect(updateNote).toHaveBeenCalledWith("n1", { content: "changed", format: "plain" });
     });
-    expect(await screen.findByText("changed")).toBeInTheDocument();
+    expect(await screen.findByRole("listitem", { name: "changed" })).toBeInTheDocument();
   });
 
   test("opens a Markdown note on its own page", async () => {
@@ -600,7 +600,7 @@ describe("Library", () => {
     vi.mocked(updateNote).mockResolvedValue(markdown);
     render(<Library />);
 
-    expect(await screen.findByRole("link", { name: /Card study.*Read note/ })).toHaveAttribute("href", "/items/n-md?from=%2F");
+    expect(await screen.findByRole("link", { name: /Card study/ })).toHaveAttribute("href", "/items/n-md?from=%2F");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -723,7 +723,7 @@ describe("Library", () => {
   test("offers a saved personal link note without replacing website description", async () => {
     vi.mocked(listItems).mockResolvedValue([{ ...link, noteContent: "## Why I saved this", noteFormat: "markdown", previewDescription: "Website description" }]);
     render(<Library />);
-    expect(await screen.findByRole("link", { name: /Read my note/ })).toHaveAttribute("href", expect.stringContaining("/items/l1"));
+    expect(await screen.findByRole("link", { name: /Open notes for/ })).toHaveAttribute("href", expect.stringContaining("/items/l1"));
     expect(screen.getByText("Website description")).toBeInTheDocument();
   });
 
@@ -755,7 +755,7 @@ describe("Library", () => {
     vi.mocked(listItems).mockResolvedValue([note, link]);
     render(<Library />);
 
-    expect(await screen.findByText("Note")).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: "Note" })).toBeInTheDocument();
     expect(screen.queryByText("Link")).not.toBeInTheDocument();
     expect(screen.getAllByText("A persisted note").length).toBeGreaterThan(0);
     expect(
@@ -959,7 +959,7 @@ describe("Library tags", () => {
     ]);
     render(<Library />);
 
-    await screen.findByText("A persisted note");
+    await screen.findByRole("listitem", { name: "A persisted note" });
     await clickItemAction("Organize");
 
     expect(
@@ -1015,7 +1015,7 @@ describe("Library tags", () => {
     vi.mocked(listTags).mockResolvedValue([tag]);
     render(<Library />);
 
-    await screen.findByText("A persisted note");
+    await screen.findByRole("listitem", { name: "A persisted note" });
     fireEvent.click(within(screen.getByRole("main")).getByRole("button", { name: "1 tag" }));
     fireEvent.click(
       within(screen.getByRole("main")).getByRole("button", {
@@ -1026,8 +1026,8 @@ describe("Library tags", () => {
     expect(mockNavigation.push).toHaveBeenCalledWith("/?tag=t1", {
       scroll: false,
     });
-    expect(screen.getByText("A persisted note")).toBeInTheDocument();
-    expect(screen.queryByText("other note")).not.toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
+    expect(screen.queryByRole("listitem", { name: "other note" })).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "inspiration" }),
     ).toBeInTheDocument();
@@ -1040,7 +1040,7 @@ describe("Library tags", () => {
     expect(mockNavigation.push).toHaveBeenCalledWith("/", {
       scroll: false,
     });
-    expect(screen.getByText("other note")).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "other note" })).toBeInTheDocument();
   });
 
   test("removes a tag from an item without deleting the tag library row", async () => {
@@ -1104,13 +1104,13 @@ describe("Library type filter", () => {
     ]);
     render(<Library />);
 
-    await screen.findByText("design note");
+    await screen.findByRole("listitem", { name: "design note" });
     pickTopMenu("Filter by type", "Links");
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?type=link", {
       scroll: false,
     });
-    expect(screen.queryByText("design note")).not.toBeInTheDocument();
+    expect(screen.queryByRole("listitem", { name: "design note" })).not.toBeInTheDocument();
     expect(screen.getByText("Design link")).toBeInTheDocument();
     expect(screen.getByText("Other link")).toBeInTheDocument();
 
@@ -1122,7 +1122,7 @@ describe("Library type filter", () => {
     });
     expect(screen.getByText("Design link")).toBeInTheDocument();
     expect(screen.queryByText("Other link")).not.toBeInTheDocument();
-    expect(screen.queryByText("design note")).not.toBeInTheDocument();
+    expect(screen.queryByRole("listitem", { name: "design note" })).not.toBeInTheDocument();
 
     pickTopMenu("Filter by type", "All types");
 
@@ -1182,8 +1182,8 @@ describe("Library collections", () => {
     vi.mocked(assignCollectionToItem).mockResolvedValue(tagged);
     render(<Library />);
 
-    await screen.findByText("A persisted note");
-    const noteCard = screen.getByText("A persisted note").closest("li")!;
+    await screen.findByRole("listitem", { name: "A persisted note" });
+    const noteCard = screen.getByRole("listitem", { name: "A persisted note" }).closest("li")!;
     await clickItemAction("Organize", noteCard);
     fireEvent.change(screen.getByLabelText("Move to collection"), {
       target: { value: "Reading" },
@@ -1205,8 +1205,8 @@ describe("Library collections", () => {
         .getByRole("button", { name: "Reading" }),
     );
 
-    expect(screen.getByText("A persisted note")).toBeInTheDocument();
-    expect(screen.queryByText("other note")).not.toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
+    expect(screen.queryByRole("listitem", { name: "other note" })).not.toBeInTheDocument();
   });
 
   test("renames and deletes the selected collection without deleting items", async () => {
@@ -1266,7 +1266,7 @@ describe("Library collections", () => {
       expect(deleteCollection).toHaveBeenCalledWith("c1", "unsorted");
     });
     expect(mockNavigation.push).toHaveBeenCalledWith("/", { scroll: false });
-    expect(await screen.findByText("A persisted note")).toBeInTheDocument();
+    expect(await screen.findByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
   });
 
   test("deletes a tag through a centered confirmation", async () => {
@@ -1299,16 +1299,16 @@ describe("Library collections", () => {
     ]);
     render(<Library />);
 
-    expect(await screen.findByText("A persisted note")).toBeInTheDocument();
-    expect(screen.getByText("captured fast")).toBeInTheDocument();
+    expect(await screen.findByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "captured fast" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Unsorted" }));
 
     expect(mockNavigation.push).toHaveBeenCalledWith("/?unsorted=1", {
       scroll: false,
     });
-    expect(screen.getByText("captured fast")).toBeInTheDocument();
-    expect(screen.queryByText("A persisted note")).not.toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "captured fast" })).toBeInTheDocument();
+    expect(screen.queryByRole("listitem", { name: "A persisted note" })).not.toBeInTheDocument();
   });
 });
 
@@ -1351,13 +1351,13 @@ describe("Library search", () => {
     ]);
     render(<Library />);
 
-    await screen.findByText("A persisted note about Design");
+    await screen.findByRole("listitem", { name: "A persisted note about Design" });
     fireEvent.change(screen.getByLabelText("Search"), {
       target: { value: "  DESIGN  " },
     });
 
     expect(screen.getByRole("heading", { name: "A persisted note about Design" })).toBeInTheDocument();
-    expect(screen.queryByText("grocery list")).not.toBeInTheDocument();
+    expect(screen.queryByRole("listitem", { name: "grocery list" })).not.toBeInTheDocument();
     expect(within(screen.getByRole("main")).queryByRole("link", { name: "API Docs" })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Search"), {
@@ -1365,7 +1365,7 @@ describe("Library search", () => {
     });
 
     expect(screen.getByRole("heading", { name: "A persisted note about Design" })).toBeInTheDocument();
-    expect(screen.queryByText("grocery list")).not.toBeInTheDocument();
+    expect(screen.queryByRole("listitem", { name: "grocery list" })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Search"), {
       target: { value: "example.com" },
@@ -1376,7 +1376,7 @@ describe("Library search", () => {
       "https://example.com/guide",
     );
     expect(
-      screen.queryByText("A persisted note about Design"),
+      screen.queryByRole("listitem", { name: "A persisted note about Design" }),
     ).not.toBeInTheDocument();
   });
 });
@@ -1420,7 +1420,7 @@ describe("Library view state", () => {
   test("offers best match during search and falls back to newest after clearing it", async () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
-    await screen.findByText("A persisted note");
+    await screen.findByRole("listitem", { name: "A persisted note" });
     const search = screen.getByLabelText("Search");
     fireEvent.change(search, { target: { value: "persisted" } });
     pickTopMenu("Sort library", "Best match");
@@ -1436,7 +1436,7 @@ describe("Library view state", () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
 
-    await screen.findByText("A persisted note");
+    await screen.findByRole("listitem", { name: "A persisted note" });
     fireEvent.change(screen.getByLabelText("Search"), {
       target: { value: "persisted" },
     });
@@ -1457,7 +1457,7 @@ describe("Library view state", () => {
     vi.mocked(listItems).mockResolvedValue([note, link]);
     render(<Library />);
 
-    await screen.findByText("A persisted note");
+    await screen.findByRole("listitem", { name: "A persisted note" });
     fireEvent.click(screen.getByRole("button", { name: "List view" }));
     expect(screen.getByRole("button", { name: "List view" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "false");
@@ -1501,7 +1501,7 @@ describe("Library view state", () => {
 
     render(<Library />);
 
-    await screen.findByText("one");
+    await screen.findByRole("listitem", { name: "one" });
     const [first, second] = screen.getAllByRole("checkbox");
     fireEvent.click(first);
     fireEvent.click(second);
@@ -1564,7 +1564,7 @@ describe("Library view state", () => {
 
     render(<Library />);
 
-    await screen.findByText("one");
+    await screen.findByRole("listitem", { name: "one" });
     expect(screen.queryByRole("button", { name: "Select all" })).not.toBeInTheDocument();
     const [first] = screen.getAllByRole("checkbox");
     fireEvent.click(first);
@@ -1591,7 +1591,7 @@ describe("Library view state", () => {
       return cleared;
     });
     render(<Library />);
-    await screen.findByText("A persisted note");
+    await screen.findByRole("listitem", { name: "A persisted note" });
     await clickItemAction("Organize");
     fireEvent.click(screen.getByRole("button", { name: "Unsorted" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Unsorted" })).toHaveAttribute("aria-pressed", "true"));
@@ -1610,7 +1610,7 @@ describe("Library view state", () => {
       return ids;
     });
     render(<Library />);
-    await screen.findByText("one");
+    await screen.findByRole("listitem", { name: "one" });
     for (const checkbox of screen.getAllByRole("checkbox")) fireEvent.click(checkbox);
     fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "one" } });
     const bulk = screen.getByRole("region", { name: "Bulk actions" });
@@ -1643,7 +1643,7 @@ describe("Library view state", () => {
     });
     mockNavigation.replace("/?trash=1");
     render(<Library />);
-    await screen.findByText("one");
+    await screen.findByRole("listitem", { name: "one" });
     for (const checkbox of screen.getAllByRole("checkbox")) fireEvent.click(checkbox);
     fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "one" } });
     const bulk = screen.getByRole("region", { name: "Bulk actions" });
@@ -1668,7 +1668,7 @@ describe("Library view state", () => {
     const two = buildNote({ content: "two" }, { id: "n2", now: 2 });
     vi.mocked(listItems).mockResolvedValue([one, two]);
     render(<Library />);
-    await screen.findByText("one");
+    await screen.findByRole("listitem", { name: "one" });
     for (const checkbox of screen.getAllByRole("checkbox")) fireEvent.click(checkbox);
     fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "one" } });
     const bulk = screen.getByRole("region", { name: "Bulk actions" });
@@ -1697,7 +1697,7 @@ describe("Library view state", () => {
     vi.mocked(listItems).mockResolvedValue([one, two]);
     vi.mocked(deleteItem).mockResolvedValue(undefined);
     render(<Library />);
-    await screen.findByText("one");
+    await screen.findByRole("listitem", { name: "one" });
     for (const checkbox of screen.getAllByRole("checkbox")) fireEvent.click(checkbox);
     fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "one" } });
     fireEvent.click(screen.getByRole("button", { name: "Selection actions: 2 selected" }));
@@ -1718,7 +1718,7 @@ describe("Library view state", () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
 
-    await screen.findByText("A persisted note");
+    await screen.findByRole("listitem", { name: "A persisted note" });
     const [checkbox] = screen.getAllByRole("checkbox");
     fireEvent.click(checkbox);
     expect(screen.getByRole("region", { name: "Bulk actions" })).toHaveTextContent("1 selected");
@@ -1745,7 +1745,7 @@ describe("Library view state", () => {
     });
 
     render(<Library />);
-    await screen.findByText("move me");
+    await screen.findByRole("listitem", { name: "move me" });
 
     const dataTransfer = {
       dropEffect: "none" as const,
@@ -1788,7 +1788,7 @@ describe("Library view state", () => {
     });
 
     render(<Library />);
-    await screen.findByText("one");
+    await screen.findByRole("listitem", { name: "one" });
 
     const dataTransfer = {
       dropEffect: "none" as const,
@@ -1831,7 +1831,7 @@ describe("Library view state", () => {
     mockNavigation.replace("/?collection=c1");
     render(<Library />);
 
-    await screen.findByText("pin me");
+    await screen.findByRole("listitem", { name: "pin me" });
     await clickItemAction("Pin");
 
     await waitFor(() => {
@@ -1845,7 +1845,7 @@ describe("Library view state", () => {
     vi.mocked(listItems).mockResolvedValue([newer, older]);
     render(<Library />);
 
-    await screen.findByText("newer note");
+    await screen.findByRole("listitem", { name: "newer note" });
     pickTopMenu("Sort library", "Oldest");
 
     const texts = screen
@@ -1925,7 +1925,7 @@ describe("Library inspect", () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     render(<Library />);
 
-    expect(await screen.findByRole("link", { name: /A persisted note.*Read note/ })).toHaveAttribute("href", "/items/n1?from=%2F");
+    expect(await screen.findByRole("link", { name: /A persisted note/ })).toHaveAttribute("href", "/items/n1?from=%2F");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 

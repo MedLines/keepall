@@ -51,6 +51,7 @@ async function seedGallery(page: Page) {
   });
   await page.goto("/items/gallery-test");
   await expect(page.getByRole("button", { name: "Scroll view" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Gallery view" }).getByRole("button")).toHaveText(["Slides", "Scroll"]);
 }
 
 async function readImage(page: Page, index: number, offset = 100) {
@@ -129,7 +130,7 @@ test("image details hold gallery controls and the viewer aligns its menu and ima
       await expect(menu.getByRole("menuitem", { name: "Replace current image" })).toBeVisible();
       await expect(menu.getByRole("menuitem", { name: "Remove current image" })).toBeVisible();
       await page.keyboard.press("ArrowRight");
-      await expect(page.getByLabel("Current image", { exact: true })).toHaveText("Image 1 of 10");
+      await expect(page.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 1 of 10");
       await page.screenshot({ path: testInfo.outputPath("gallery-image-actions.png") });
       await page.keyboard.press("Escape");
       await expect(imageMenu).toBeFocused();
@@ -138,11 +139,12 @@ test("image details hold gallery controls and the viewer aligns its menu and ima
     await expect(details.getByRole("button", { name: "Move item to Trash" })).toBeVisible();
     const organize = (await details.getByRole("button", { name: "Organize", exact: true }).boundingBox())!;
     const trash = (await details.getByRole("button", { name: "Move item to Trash" }).boundingBox())!;
-    const controlHeading = (await details.getByRole("heading", { name: "Gallery", exact: true }).boundingBox())!;
+    const viewToggle = (await details.getByRole("group", { name: "Gallery view", exact: true }).boundingBox())!;
     const saved = (await details.getByText("Saved", { exact: true }).boundingBox())!;
-    expect(controlHeading.y + controlHeading.height).toBeLessThan(saved.y);
+    expect(saved.y + saved.height).toBeLessThan(viewToggle.y);
     const edit = (await details.getByRole("button", { name: "Edit details" }).boundingBox())!;
-    expect(organize.y).toBeGreaterThan(edit.y + edit.height);
+    expect(organize.y + organize.height).toBeLessThan(viewToggle.y);
+    expect(edit.y).toBeGreaterThanOrEqual(viewToggle.y + viewToggle.height);
     expect(organize.x).toBeCloseTo(trash.x, 0);
     expect(organize.width).toBeCloseTo(trash.width, 0);
     expect(trash.y).toBeGreaterThan(organize.y + organize.height);
@@ -175,7 +177,7 @@ test("scroll gallery loads nearby images, preserves reading position, and works 
   await page.screenshot({ path: testInfo.outputPath("gallery-scroll-desktop.png") });
 
   await readImage(page, 2, 180);
-  await expect(page.getByLabel("Current image", { exact: true })).toHaveText("Image 3 of 10");
+  await expect(page.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 3 of 10");
   const scroller = page.getByTestId("item-page-scroll");
   const before = await scroller.evaluate(element => element.scrollTop);
   await page.getByRole("button", { name: "View image 3 full screen", exact: true }).click();
@@ -189,7 +191,7 @@ test("scroll gallery loads nearby images, preserves reading position, and works 
   await expect.poll(() => scroller.evaluate(element => element.scrollTop)).toBeCloseTo(before, 0);
   await context.setOffline(true);
   await readImage(page, 7);
-  await expect(page.getByLabel("Current image", { exact: true })).toHaveText("Image 8 of 10");
+  await expect(page.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 8 of 10");
   expect(errors).toEqual([]);
 });
 
@@ -209,11 +211,11 @@ test("adding and replacing images in scroll view keeps natural sizes and the aff
   const file = { name: "added.png", mimeType: "image/png", buffer: Buffer.from(bytes) };
   await page.getByLabel("Choose images to add").setInputFiles(file);
   await expect(page.getByRole("list", { name: "Images in scroll view" }).getByRole("listitem")).toHaveCount(11);
-  await expect(page.getByLabel("Current image", { exact: true })).toHaveText("Image 11 of 11");
+  await expect(page.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 11 of 11");
   await expect(page.locator('[data-gallery-index="10"] img')).toBeInViewport();
   await expect.poll(() => page.locator('[data-gallery-index="10"] img').evaluate(image => ({ width: image.clientWidth, height: image.clientHeight }))).toEqual({ width: 120, height: 180 });
   await page.getByLabel("Choose replacement image").setInputFiles({ ...file, buffer: await sharp(file.buffer).resize(180, 120).png().toBuffer() });
-  await expect(page.getByLabel("Current image", { exact: true })).toHaveText("Image 11 of 11");
+  await expect(page.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 11 of 11");
   await expect(page.locator('[data-gallery-index="10"] img')).toBeInViewport();
   await expect.poll(() => page.locator('[data-gallery-index="10"] img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(180);
   await expect.poll(() => page.locator('[data-gallery-index="10"] img').evaluate(image => ({ width: image.clientWidth, height: image.clientHeight }))).toEqual({ width: 180, height: 120 });
@@ -224,7 +226,7 @@ test("scroll gallery opens the chosen original, navigates full screen, and retur
   await seedGallery(page);
   await page.getByRole("button", { name: "Show image 4", exact: true }).click();
   await page.getByRole("button", { name: "Scroll view" }).click();
-  await expect(page.getByLabel("Current image", { exact: true })).toHaveText("Image 4 of 10");
+  await expect(page.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 4 of 10");
   await page.getByRole("button", { name: "View image 4 full screen", exact: true }).click();
   const viewer = page.getByRole("dialog", { name: "Focused image viewer" });
   await expect(viewer.getByLabel("Image 4 of 10", { exact: true })).toBeVisible();
@@ -295,7 +297,7 @@ test("scroll view stays usable at narrow widths and removes only the current ima
   await page.getByRole("button", { name: "Scroll view" }).focus();
   await page.keyboard.press("Enter");
   await readImage(page, 1, 30);
-  await expect(page.getByLabel("Current image", { exact: true })).toHaveText("Image 2 of 10");
+  await expect(page.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 2 of 10");
   await page.getByRole("button", { name: "Current image actions" }).click();
   await page.getByRole("menuitem", { name: "Remove current image" }).click();
   const confirmation = page.getByRole("dialog", { name: "Remove this image?" });

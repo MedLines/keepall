@@ -9,7 +9,10 @@ import { NoteContent } from "./note-content";
 import { DocumentContent } from "./document-content";
 import { getVideoBlob } from "@/persistence/videos";
 import { SegmentedControl } from "./segmented-control";
-import { ArrowLeftIcon, ArrowRightIcon, CloseIcon } from "./shell-icons";
+import { ArrowLeftIcon, ArrowRightIcon, CloseIcon, ExternalLinkIcon, LinkIcon, NoteIcon } from "./shell-icons";
+import { ItemTypeIcon } from "./item-type-icon";
+import { MediaViewerToolbar } from "./media-viewer-toolbar";
+import { linkCardHost } from "@/domain/card-display";
 
 type Props = {
   item: Item | null;
@@ -56,7 +59,13 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
         >
           {item ? <>
             <header className="flex shrink-0 items-center gap-4 px-5 py-4">
-              <PreviewTitle key={title} title={title} />
+              <span className="grid size-10 shrink-0 place-items-center rounded-control bg-bg-raised text-text-secondary">
+                <ItemTypeIcon item={item} className="size-6" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <PreviewTitle key={title} title={title} />
+                <p className="mt-1 truncate text-xs text-text-secondary">{item.type === "document" ? item.sourceFileName : item.type === "link" ? linkCardHost(item) : item.type === "image" ? `${item.assetIds.length} ${item.assetIds.length === 1 ? "image" : "images"}` : item.type === "video" ? "Local video" : item.format === "markdown" ? "Markdown" : "Plain text"}</p>
+              </div>
               <Dialog.Description className="sr-only">Quick preview. Arrows browse items. Enter opens the full item.</Dialog.Description>
               <Dialog.Close aria-label="Close preview" className="ui-control flex size-11 shrink-0 items-center justify-center"><CloseIcon /></Dialog.Close>
             </header>
@@ -115,7 +124,7 @@ function PreviewTitle({ title }: { title: string }) {
 
 function PreviewContent({ item, onGalleryStep }: { item: Item; onGalleryStep: () => void }) {
   if (item.type === "note") return <div data-preview-scroll tabIndex={0} className="ui-scrollbar scroll-fade flex h-full min-h-0 overflow-y-auto overscroll-contain px-5">
-    <NoteContent className="library-preview-document m-auto w-full max-w-[65ch] shrink-0 py-5" content={item.content} format={item.format ?? "plain"} />
+    <NoteContent className="library-preview-document mx-auto w-full max-w-[65ch] shrink-0 py-5" content={item.content} format={item.format ?? "plain"} />
   </div>;
   if (item.type === "image") return <ImagePreview item={item} onGalleryStep={onGalleryStep} />;
   if (item.type === "video") return <div className="flex h-full min-h-0 flex-col gap-4 px-5 pb-5">
@@ -126,15 +135,14 @@ function PreviewContent({ item, onGalleryStep }: { item: Item; onGalleryStep: ()
       <NoteContent className="library-preview-document mx-auto max-w-[65ch]" content={item.noteContent} format={item.noteFormat ?? "plain"} />
     </div> : null}
   </div>;
-  if (item.type === "document") return <div data-preview-scroll data-document-scroll tabIndex={0} className="ui-scrollbar flex h-full min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pb-5">
-    <p className="break-words text-sm text-text-secondary">{item.sourceFileName}</p>
-    <DocumentContent item={item} />
-    {item.noteContent ? <NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /> : null}
+  if (item.type === "document") return <div data-preview-scroll data-document-scroll tabIndex={0} className="ui-scrollbar h-full min-h-0 overflow-y-auto overscroll-contain px-5 pb-5">
+    <div className={item.format === "pdf" ? "min-w-0 pt-3" : "library-preview-document mx-auto max-w-[65ch] py-5"}><DocumentContent item={item} /></div>
+    {item.noteContent ? <section aria-label="Document notes" className="mx-auto mt-5 max-w-[65ch] border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
   </div>;
   const details = <div className="mx-auto flex w-full max-w-[65ch] flex-col gap-4">
-    <a href={item.url} target="_blank" rel="noreferrer" className="break-words text-sm text-text-secondary underline underline-offset-2">{item.url}</a>
+    <a href={item.url} target="_blank" rel="noreferrer" aria-label={`Open source: ${item.url}`} className="ui-control inline-flex min-h-11 max-w-full self-start items-center gap-2 px-3 text-sm text-text-secondary"><LinkIcon className="size-4" /><span className="truncate">{linkCardHost(item)}</span><ExternalLinkIcon className="size-4" /></a>
     {item.previewDescription ? <p className="whitespace-pre-wrap break-words text-text-secondary">{item.previewDescription}</p> : null}
-    {item.noteContent ? <NoteContent className="library-preview-document" content={item.noteContent} format={item.noteFormat ?? "plain"} /> : null}
+    {item.noteContent ? <section aria-label="Link notes" className="border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent className="library-preview-document" content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
   </div>;
   return item.previewAssetId ? <div className="flex h-full min-h-0 flex-col gap-4 px-5 pb-5">
     <div className="grid min-h-0 min-w-0 flex-1 place-items-center" data-preview-media>
@@ -147,22 +155,17 @@ function PreviewContent({ item, onGalleryStep }: { item: Item; onGalleryStep: ()
 function ImagePreview({ item, onGalleryStep }: { item: Extract<Item, { type: "image" }>; onGalleryStep: () => void }) {
   const [slide, setSlide] = useState(0);
   const [imageSizing, setImageSizing] = useState<"fit" | "scroll">("fit");
-  return <div className="flex h-full min-h-0 flex-col gap-4 px-5 pb-5">
+  return <div className="media-viewer-frame flex h-full min-h-0 flex-col gap-4 px-5 pb-5 pt-3">
+    <MediaViewerToolbar view={<SegmentedControl label="Image sizing" value={imageSizing} onChange={setImageSizing} className="w-40"
+      choices={[{ value: "fit", label: "Fit", ariaLabel: "Fit image" }, { value: "scroll", label: "Scroll", ariaLabel: "Scroll image" }]} />}
+      navigation={<div className="flex items-center justify-center gap-2">
+        <button type="button" className="ui-control flex size-11 shrink-0 items-center justify-center disabled:opacity-40" aria-label="Previous gallery image" title="Previous gallery image" disabled={slide === 0} onClick={() => { onGalleryStep(); setSlide(slide - 1); }}><ArrowLeftIcon className="size-4 rtl:rotate-180" /></button>
+        <span className="whitespace-nowrap text-sm tabular-nums text-text-secondary">Image {slide + 1} of {item.assetIds.length}</span>
+        <button type="button" className="ui-control flex size-11 shrink-0 items-center justify-center disabled:opacity-40" aria-label="Next gallery image" title="Next gallery image" disabled={slide >= item.assetIds.length - 1} onClick={() => { onGalleryStep(); setSlide(slide + 1); }}><ArrowRightIcon className="size-4 rtl:rotate-180" /></button>
+      </div>} />
     <div key={slide} className="ui-scrollbar min-h-0 min-w-0 flex-1" data-preview-media data-image-sizing={imageSizing}
       data-preview-scroll={imageSizing === "scroll" ? "" : undefined} tabIndex={imageSizing === "scroll" ? 0 : -1} role="region" aria-label="Image viewport">
       <LibraryItemMedia item={item} variant="preview" assetId={item.assetIds[slide]} />
-    </div>
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-    {item.assetIds.length > 1 ? <div className="mx-auto flex items-center justify-center gap-3">
-      <button type="button" className="ui-control flex size-11 shrink-0 items-center justify-center disabled:opacity-50" aria-label="Previous gallery image" title="Previous gallery image" disabled={slide === 0} onClick={() => { onGalleryStep(); setSlide(slide - 1); }}><ArrowLeftIcon className="size-4 rtl:rotate-180" /></button>
-      <span className="text-sm text-text-secondary">Image {slide + 1} of {item.assetIds.length}</span>
-      <button type="button" className="ui-control flex size-11 shrink-0 items-center justify-center disabled:opacity-50" aria-label="Next gallery image" title="Next gallery image" disabled={slide >= item.assetIds.length - 1} onClick={() => { onGalleryStep(); setSlide(slide + 1); }}><ArrowRightIcon className="size-4 rtl:rotate-180" /></button>
-    </div> : null}
-      <SegmentedControl label="Image sizing" value={imageSizing} onChange={setImageSizing} className="mx-auto min-w-36"
-        choices={[
-          { value: "fit", label: "Fit", ariaLabel: "Fit image" },
-          { value: "scroll", label: "Scroll", ariaLabel: "Scroll image" },
-        ]} />
     </div>
     {item.caption ? <div data-preview-scroll className="ui-scrollbar scroll-fade max-h-[35%] shrink-0 overflow-y-auto overscroll-contain" tabIndex={0} role="region" aria-label="Image notes">
       <NoteContent className="library-preview-document mx-auto max-w-[65ch]" content={item.caption} format={item.captionFormat ?? "plain"} />

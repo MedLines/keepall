@@ -5,11 +5,11 @@ import { BackupFolderError } from "@/persistence/backup-folder";
 import { BackupIcon, ClockIcon, EditIcon } from "../shell-icons";
 import {
   backupFailureMessage, chooseBackupFolder, connectBackupFolder, disableBackupFolder,
-  observeBackupFolderSettings, saveFolderBackup, supportsFolderBackups,
+  observeBackupFolderStatus, saveFolderBackup, supportsFolderBackups,
   type BackupFolderHandle, type BackupFolderSettings,
 } from "@/persistence/backup-settings";
 
-type View = { supported: boolean; settings?: BackupFolderSettings; permission: PermissionState };
+type View = { supported: boolean; settings?: BackupFolderSettings; permission: PermissionState; hasPendingChanges?: boolean };
 type Action = "choose" | "save" | "reconnect";
 
 function useBackupFolderView() {
@@ -20,6 +20,7 @@ function useBackupFolderView() {
     let mounted = true;
     let version = 0;
     let settings: BackupFolderSettings | undefined;
+    let hasPendingChanges = true;
     async function refresh() {
       const currentVersion = ++version;
       let permission: PermissionState = "prompt";
@@ -27,9 +28,9 @@ function useBackupFolderView() {
         try { permission = await settings.directory.queryPermission({ mode: "readwrite" }); }
         catch { permission = "denied"; }
       }
-      if (mounted && version === currentVersion) setView({ supported: supportsFolderBackups(), settings, permission });
+      if (mounted && version === currentVersion) setView({ supported: supportsFolderBackups(), settings, permission, hasPendingChanges });
     }
-    const stop = observeBackupFolderSettings((next) => { settings = next; void refresh(); }, () => {
+    const stop = observeBackupFolderStatus((next) => { settings = next.settings; hasPendingChanges = next.hasPendingChanges; void refresh(); }, () => {
       if (mounted) {
         setView({ supported: supportsFolderBackups(), permission: "prompt" });
         setError("Couldn't read the backup folder settings. Reload this page to try again.");
@@ -124,13 +125,15 @@ function statusLabel(settings: BackupFolderSettings | undefined, action: Action 
   return failed ? "Backup failed" : "Connected";
 }
 
-function FolderBackupDetails({ settings }: { settings: BackupFolderSettings }) {
+function FolderBackupDetails({ settings, hasPendingChanges }: { settings: BackupFolderSettings; hasPendingChanges?: boolean }) {
   const lastBackup = settings.completed.at(-1);
   return <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2" aria-live="polite">
     <div className="min-w-0"><dt className="text-xs text-text-secondary">Backup folder</dt>
       <dd className="mt-1 [overflow-wrap:anywhere] font-medium"><bdi>{settings.directory.name}</bdi></dd></div>
     <div><dt className="text-xs text-text-secondary">Last verified backup</dt>
       <dd className="mt-1 font-medium">{lastBackup ? <time dateTime={new Date(lastBackup.completedAt).toISOString()}>{new Date(lastBackup.completedAt).toLocaleString()}</time> : "No completed backup yet"}</dd></div>
+    {settings.enabled && lastBackup ? <div className="sm:col-span-2"><dt className="text-xs text-text-secondary">Backup coverage</dt>
+      <dd className="mt-1 flex items-center gap-2 font-medium">{hasPendingChanges ? <><EditIcon className="size-4 text-text-secondary" />Changes waiting for backup</> : <><BackupIcon className="size-4 text-text-secondary" />Up to date</>}</dd></div> : null}
   </dl>;
 }
 
@@ -168,7 +171,7 @@ function FolderBackupContent({ view, disabled, actions, status }: {
       Use a dedicated, empty <span className="font-medium">Keepall Backups</span> folder.
       Keepall gets read and write access to everything inside it. Your browser may remember access for future visits and app updates.
     </p>
-    {settings ? <FolderBackupDetails settings={settings} /> : null}
+    {settings ? <FolderBackupDetails settings={settings} hasPendingChanges={view.hasPendingChanges} /> : null}
     <FolderBackupButtons settings={settings} needsAccess={needsAccess} disabled={disabled} actions={actions} />
     {actions.action ? <progress className="mt-3 h-2 w-full accent-action-primary" aria-label={actions.action === "save" ? "Saving folder backup" : status} /> : null}
     <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-text-primary" aria-label="Folder backup schedule">

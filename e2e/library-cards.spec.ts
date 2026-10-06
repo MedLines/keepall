@@ -168,10 +168,12 @@ test("open link with a personal note can be organized", async ({ page }) => {
 test("saved link preview stays visible while its personal note is added", async ({ page }, testInfo) => {
   const card = page.locator(".library-card").filter({ hasText: "Footer reference" });
   await expect(card.locator(".library-card-media a")).toHaveAttribute("href", "https://example.com/footer");
-  await card.getByRole("link", { name: /Add a note/ }).click();
+  await card.focus();
+  await card.press("Space");
+  await page.getByRole("button", { name: "Open full item" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Footer reference" })).toBeVisible();
   await expect(page.getByText("A spacious footer for a portfolio.")).toBeVisible();
-  await expect(page.getByRole("link", { name: /Open source/ })).toHaveAttribute("href", "https://example.com/footer");
+  await expect(page.getByRole("link", { name: "https://example.com/footer", exact: true })).toHaveAttribute("href", "https://example.com/footer");
   await expect(page.locator("main img[src^='blob:']")).toBeVisible();
   await page.getByRole("button", { name: "Edit details" }).click();
   await page.getByRole("textbox", { name: "My note (optional)" }).fill("The spacing works well here.");
@@ -399,7 +401,7 @@ test("grid media has one clipping edge and keeps its inset across themes and wid
   await expect(media).toHaveCSS("border-radius", "64px");
   await expect(media).toHaveCSS("border-width", "8px");
   await expect(media).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(media.locator("img")).toHaveCSS("border-radius", "0px");
+  await expect(media.locator("img")).toHaveCSS("border-radius", "56px");
 
   for (const width of [1707, 1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -590,7 +592,7 @@ for (const view of ["Grid", "List"] as const) {
     await page.getByRole("button", { name: `${view} view`, exact: true }).click();
     const item = page.locator(view === "Grid" ? ".library-card" : ".library-list-row").filter({ hasText: "Customer support" });
     const collection = item.getByRole("button", {
-      name: view === "Grid" ? "UI inspiration" : "in UI inspiration",
+      name: "UI inspiration",
       exact: true,
     });
     await collection.click();
@@ -672,7 +674,7 @@ for (const view of ["Grid", "List"] as const) {
       await expect(tag).toBeVisible();
       await expect(listOverflow).toHaveCount(0);
       await page.setViewportSize({ width: 375, height: 700 });
-      await page.getByRole("button", { name: "Close sidebar" }).click({ position: { x: 300, y: 350 } });
+      await page.getByRole("button", { name: "Close navigation", exact: true }).click();
       await expect(listOverflow).toBeVisible();
       await expect(tag).toHaveCount(0);
       await listOverflow.click();
@@ -815,13 +817,13 @@ test("mixed cards preserve image proportions, readable notes and compact fallbac
   expect(bounds!.width / bounds!.height).toBeCloseTo(2.5, 1);
   const note = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Design notes" }) });
   await expect(note.locator("img")).toHaveCount(0);
-  await expect(note.getByRole("link", { name: "Read Design notes" })).toContainText("Let the image lead.");
+  await expect(note.getByRole("link", { name: /Design notes/ })).toContainText("Let the image lead.");
   const link = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "Footer reference" }) });
   await expect(link.locator('img[src^="blob:"]')).toBeVisible();
   await expect(link.getByText("A spacious footer for a portfolio.")).toBeVisible();
   const fallback = page.locator(".library-card").filter({ has: page.getByRole("heading", { name: "example.com/fallback" }) });
   await expect(fallback.locator("img")).toHaveCount(0);
-  await expect(fallback.locator(".library-card-media svg")).toBeVisible();
+  await expect(fallback.locator(".library-card-media > div svg")).toBeVisible();
   await expect(fallback).toHaveCSS("border-radius", "64px");
   const fallbackMedia = (await fallback.locator(".library-card-media").boundingBox())!;
   expect(fallbackMedia.width / fallbackMedia.height).toBeCloseTo(1.6, 1);
@@ -920,7 +922,7 @@ test("image edge overlay follows the media clip in both themes", async ({ page }
   await expect(image).toBeVisible();
   await expect(card).toHaveCSS("border-radius", "64px");
   await expect(card).toHaveCSS("padding", "8px");
-  await expect(image).toHaveCSS("border-radius", "0px");
+  await expect(image).toHaveCSS("border-radius", "56px");
   const media = card.locator(".library-card-media");
   for (const [theme, color] of [["light", "oklch(0 0 0 / 0.08)"], ["dark", "oklch(1 0 0 / 0.08)"]]) {
     if (await page.locator("html").getAttribute("data-theme") !== theme) {
@@ -964,7 +966,7 @@ test("card actions, tag disclosure, selection and collection context work", asyn
   await expect(note).toContainText("Updated note body");
   await note.hover();
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
-  await expect(note.getByRole("checkbox")).toHaveAttribute("aria-pressed", "true");
+  await expect(note.getByRole("checkbox")).toBeChecked();
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
   await page.getByLabel("UI inspiration", { exact: true }).click();
   await expect(note.getByRole("list", { name: "Collections" })).toHaveCount(0);
@@ -1139,6 +1141,7 @@ test("masonry places the next card below a shorter card, not a full row", async 
 
 test("masonry stays stable while a note modal is open and resizing", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("button", { name: "Collapse", exact: true }).click();
   const note = page.locator(".library-card").filter({ hasText: "Design notes" });
   await note.hover();
   await note.locator("button.library-card-actions").click();
@@ -1146,12 +1149,11 @@ test("masonry stays stable while a note modal is open and resizing", async ({ pa
   const editor = page.getByRole("dialog", { name: "Edit note" });
   await editor.getByLabel("Note content").fill("Keep this unsaved draft while resizing.");
   await expectCardsNotToOverlap(page);
-  await page.getByRole("button", { name: "Collapse", exact: true }).click();
   for (const width of [1024, 640, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await expect(editor.getByLabel("Note content")).toHaveValue("Keep this unsaved draft while resizing.");
     await expectCardsNotToOverlap(page);
-    expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await expect.poll(() => page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   }
   await editor.getByRole("button", { name: "Cancel edit" }).click();
   await expectCardsNotToOverlap(page);
@@ -1188,7 +1190,7 @@ test("list rows use open surfaces with thumbnails, excerpts and collection conte
   await expect(image).toHaveCSS("border-bottom-width", "1px");
   await expect(image.locator('img[src^="blob:"]')).toBeVisible();
   await expect(link.locator('img[src^="blob:"]')).toBeVisible();
-  await expect(note.getByRole("button", { name: "Open Design notes", exact: true })).toContainText("Let the image lead.");
+  await expect(note.locator(".library-list-body").getByRole("link", { name: "Open Design notes", exact: true })).toContainText("Let the image lead.");
   await expect(link).toContainText("A spacious footer for a portfolio.");
   await expect(note.getByLabel("Collections", { exact: true })).toContainText("UI inspiration");
   await expect(note.getByRole("button", { name: "minimal", exact: true })).toBeVisible();
@@ -1222,7 +1224,7 @@ test("list menus support editing, cancel-delete, selection and collection pinnin
   await expect(note.locator("button.library-card-actions")).toBeFocused();
   await page.keyboard.press("Escape");
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
-  await expect(note.getByRole("checkbox")).toHaveAttribute("aria-pressed", "true");
+  await expect(note.getByRole("checkbox")).toBeChecked();
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
   await page
     .getByRole("complementary", { name: "Sidebar" })
@@ -1309,8 +1311,6 @@ test("image page shares the rounder card and panel curves", async ({ page }, tes
     page.getByRole("button", { name: "Edit details" }),
     page.getByRole("button", { name: "Organize" }),
     page.getByRole("button", { name: "Move item to Trash" }),
-    details.getByRole("link", { name: "UI inspiration", exact: true }).locator("span"),
-    details.getByRole("link", { name: "minimal", exact: true }).locator("span"),
   ];
   for (const control of itemControls) {
     await expect(control).toHaveCSS("border-radius", "999px");
@@ -1369,26 +1369,26 @@ test("image counter and arrow keys stay in sync in both views", async ({ page },
   });
   await page.goto("/items/image");
   const gallery = page.getByRole("region", { name: "Image gallery" });
-  await expect(gallery.getByText("1 / 11")).toBeVisible();
+  await expect(gallery.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 1 of 11");
   await page.keyboard.press("ArrowRight");
-  await expect(gallery.getByText("2 / 11")).toBeVisible();
+  await expect(gallery.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 2 of 11");
   await page.screenshot({ path: testInfo.outputPath("image-counter-page.png") });
 
   await page.getByRole("button", { name: "View image full screen" }).click();
   const viewer = page.getByRole("dialog", { name: "Focused image viewer" });
-  await expect(viewer.getByText("2 / 11")).toBeVisible();
+  await expect(viewer.getByLabel("Image 2 of 11", { exact: true })).toBeVisible();
   const next = viewer.getByRole("button", { name: "Next full-screen image" });
   const previous = viewer.getByRole("button", { name: "Previous full-screen image" });
   const nextBox = (await next.boundingBox())!;
   expect(nextBox.width).toBeGreaterThanOrEqual(56);
   expect(nextBox.height).toBeGreaterThanOrEqual(56);
   await next.click();
-  await expect(viewer.getByText("3 / 11")).toBeVisible();
+  await expect(viewer.getByLabel("Image 3 of 11", { exact: true })).toBeVisible();
   await next.focus();
   await page.keyboard.press("ArrowLeft");
-  await expect(viewer.getByText("2 / 11")).toBeVisible();
+  await expect(viewer.getByLabel("Image 2 of 11", { exact: true })).toBeVisible();
   await previous.click();
-  await expect(viewer.getByText("1 / 11")).toBeVisible();
+  await expect(viewer.getByLabel("Image 1 of 11", { exact: true })).toBeVisible();
 
   const zoomIn = viewer.getByRole("button", { name: "Zoom in image" });
   await expect(zoomIn).toHaveCSS("cursor", "zoom-in");
@@ -1615,7 +1615,7 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
   }
   await page.screenshot({ path: testInfo.outputPath("image-item-page-organizer.png") });
   await organizer.getByRole("button", { name: "Remove tag minimal" }).click();
-  await expect(organizer.getByText("No tags added.")).toBeVisible();
+  await expect(organizer.getByRole("button", { name: "Remove tag minimal" })).toHaveCount(0);
   await organizer.getByRole("button", { name: "Done" }).click();
   await expect(organizer).toBeHidden();
 
@@ -1724,7 +1724,7 @@ test.describe("touch card controls", () => {
     const row = page.locator(".library-list-row").first();
     await expect(row.locator("button.library-card-actions")).toHaveCSS("opacity", "1");
     await row.locator("label").filter({ has: page.getByRole("checkbox") }).click();
-    await expect(row.getByRole("checkbox")).toHaveAttribute("aria-pressed", "true");
+    await expect(row.getByRole("checkbox")).toBeChecked();
     await row.locator("label").filter({ has: page.getByRole("checkbox") }).click();
     await row.locator("button.library-card-actions").tap();
     await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeInViewport();
@@ -1991,7 +1991,7 @@ for (const layout of ["Grid", "List"]) {
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await page.screenshot({ path: testInfo.outputPath(`${layout}-${theme}-search.png`) });
     }
-    await item.getByRole("link", { name: /Read my note/ }).focus();
+    await item.getByRole("link", { name: /Open notes for/ }).focus();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/items\/link/);
     await page.goBack();

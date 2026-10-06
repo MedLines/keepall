@@ -109,7 +109,7 @@ for (const source of ["capture", "files", "folder"] as const) {
       expect(await counts(page)).toMatchObject({ items: 4, assets: 1, documentAssets: 3, collections: 1, tags: 1 });
       await page.reload();
       await expect(page.locator("[data-item-id]")).toHaveCount(4);
-      await page.getByRole("link", { name: /first.md/ }).click();
+      await page.getByRole("link", { name: "Open first", exact: true }).click();
       await expect(page.getByRole("heading", { name: "First file", exact: true })).toBeVisible();
     }
   });

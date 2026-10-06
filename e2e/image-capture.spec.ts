@@ -401,7 +401,7 @@ test("read-only folder import scans nested files without triggering the upload c
   await expect(page).toHaveURL(/collection=/);
   await expect(page.getByRole("main", { name: "Read-only photos" }).getByRole("link", { name: "Open Image", exact: true })).toHaveCount(2);
   await expect(page.locator("[data-item-id]")).toHaveCount(3);
-  await page.getByRole("link", { name: /readme.md/ }).click();
+  await page.getByRole("link", { name: "Open readme", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Folder note", exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Folder note", exact: true })).toBeVisible();

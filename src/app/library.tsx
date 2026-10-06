@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -185,6 +186,13 @@ function libraryViewTitle(
   return "All items";
 }
 
+function subscribePanelPreference(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+const panelServerSnapshot = () => null;
+
 export function Library() {
   const router = useRouter();
   const pathname = usePathname();
@@ -193,7 +201,7 @@ export function Library() {
   /** Local view is the source of truth so folder clicks update the sidebar immediately. */
   const [view, setView] = useState(() => parseLibraryViewState(searchParams));
   const viewRef = useRef(view);
-  viewRef.current = view;
+  useLayoutEffect(() => { viewRef.current = view; }, [view]);
   /** Ignore stale Next.js URL updates from older router.push while clicking fast. */
   const ignoreUrlSyncRef = useRef(false);
   const lastWrittenSearchRef = useRef(urlSearchKey);
@@ -312,7 +320,8 @@ export function Library() {
   const [dragError, setDragError] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
   const [panelPreference, setPanelOpen] = useState<boolean | null>(null);
-  const panelOpen = panelPreference ?? true;
+  const storedPanelPreference = useSyncExternalStore(subscribePanelPreference, readShellPanelOpen, panelServerSnapshot);
+  const panelOpen = panelPreference ?? storedPanelPreference ?? true;
   const [previewEnrichProgress, setPreviewEnrichProgress] =
     useState<PreviewEnrichProgress>(null);
 
@@ -323,7 +332,8 @@ export function Library() {
   const [documentRevision, setDocumentRevision] = useState("initial");
   const prevBrowseScopeRef = useRef<string | null>(null);
   const pendingNavScopeLabelRef = useRef<string | null>(null);
-  const browseIndexesRef = useRef(buildLibraryBrowseIndexes([]));
+  const [liveBrowseIndexes, setLiveBrowseIndexes] = useState(() => buildLibraryBrowseIndexes([]));
+  const browseIndexesRef = useRef(liveBrowseIndexes);
   const [browseIndexEpoch, setBrowseIndexEpoch] = useState(0);
   const navigationGenerationRef = useRef(0);
   const [navigationGeneration, setNavigationGeneration] = useState(0);
@@ -332,10 +342,6 @@ export function Library() {
   );
   const confirmDeleteRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef<RestoreFocus | null>(null);
-
-  useLayoutEffect(() => {
-    setPanelOpen(readShellPanelOpen());
-  }, []);
 
   useEffect(() => {
     if (panelPreference !== null) writeShellPanelOpen(panelPreference);
@@ -362,7 +368,9 @@ export function Library() {
           getDocumentRevision(),
         ]);
         if (!cancelled) {
-          browseIndexesRef.current = buildLibraryBrowseIndexes(nextItems);
+          const nextIndexes = buildLibraryBrowseIndexes(nextItems);
+          browseIndexesRef.current = nextIndexes;
+          setLiveBrowseIndexes(nextIndexes);
           setBrowseIndexEpoch((epoch) => epoch + 1);
           setItems(nextItems);
           setTrashedItems(nextTrash);
@@ -597,7 +605,7 @@ export function Library() {
   const documentSearch = useDocumentSearch(browseItems, tags, view.collections || view.tags ? "" : searchQuery, documentRevision);
   const resultQuery = view.collections || view.tags ? searchQuery : documentSearch.query;
   const resultView = useMemo(() => ({ ...view, q: resultQuery }), [view, resultQuery]);
-  const browseIndexes = view.trash ? trashIndexes : browseIndexesRef.current;
+  const browseIndexes = view.trash ? trashIndexes : liveBrowseIndexes;
   const typeCountIndexes = useMemo(
     () => buildLibraryBrowseIndexes(browseItems),
     [browseItems],
@@ -644,7 +652,7 @@ export function Library() {
         browseIndexes,
         documentSearch.matches,
       ).length,
-    [browseItems, tags, resultView, collectionsById, browseIndexEpoch, documentSearch.matches],
+    [browseItems, tags, resultView, collectionsById, browseIndexes, browseIndexEpoch, documentSearch.matches],
   );
   const visibleItems = useMemo(
     () =>
@@ -656,7 +664,7 @@ export function Library() {
         browseIndexes,
         documentSearch.matches,
       ),
-    [browseItems, tags, resultView, collectionsById, browseIndexEpoch, documentSearch.matches],
+    [browseItems, tags, resultView, collectionsById, browseIndexes, browseIndexEpoch, documentSearch.matches],
   );
   const browseScopeKey = `${Boolean(view.tags)}|${Boolean(view.collections)}|${Boolean(view.trash)}|${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
   const selectionEntries = view.collections || view.tags
@@ -1874,7 +1882,7 @@ export function Library() {
         <LibraryShell
           panelOpen={panelOpen}
           previewOpen={previewOpen}
-          panelReady={panelPreference !== null}
+          panelReady={panelPreference !== null || storedPanelPreference !== null}
           onPanelOpenChange={setPanelOpen}
           browseCollectionId={browseCollectionId}
           browseUnsorted={browseUnsorted}

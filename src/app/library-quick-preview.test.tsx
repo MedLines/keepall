@@ -16,7 +16,7 @@ test("reads saved link notes safely and keeps source navigation explicit", async
   const actions = callbacks();
   render(<LibraryQuickPreview item={item} index={0} count={2} {...actions} />);
   expect(await screen.findByRole("heading", { name: "Context" })).toBeVisible();
-  expect(screen.getByRole("link", { name: item.url })).toHaveAttribute("href", item.url);
+  expect(screen.getByRole("link", { name: `Open source: ${item.url}` })).toHaveAttribute("href", item.url);
   expect(actions.onOpenItem).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Open full item" }));
   expect(actions.onOpenItem).toHaveBeenCalledWith(item);

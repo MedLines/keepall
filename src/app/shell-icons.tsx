@@ -20,7 +20,14 @@ import {
   ComputerIcon as Computer, WifiOff01Icon as WifiOff,
   Globe02Icon as Globe, Clock01Icon as Clock,
   Download01Icon as Download, Upload01Icon as Upload,
+  Txt01Icon as Txt01, ArrowUpRight01Icon as ArrowUpRight01,
 } from "@hugeicons/core-free-icons";
+
+// Same folded file outline as PDF and TXT; the installed icon set has no MD file glyph.
+const MarkdownFile: IconSvgElement = [Txt01[0], ["path", {
+  d: "M4 22V16L7 19.5L10 16V22M14 16H16C18.2 16 20 17.35 20 19C20 20.65 18.2 22 16 22H14V16Z",
+  stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", key: "md",
+}]];
 
 type IconProps = { className?: string; fill?: "none" | "currentColor" };
 
@@ -45,6 +52,9 @@ export function CollectionIcon(props: IconProps) { return <ShellIcon icon={Folde
 export function LinkIcon(props: IconProps) { return <ShellIcon icon={Link04} {...props} />; }
 export function NoteIcon(props: IconProps) { return <ShellIcon icon={Note01} {...props} />; }
 export function PdfIcon(props: IconProps) { return <ShellIcon icon={Pdf01} {...props} />; }
+export function TextFileIcon(props: IconProps) { return <ShellIcon icon={Txt01} {...props} />; }
+export function MarkdownFileIcon(props: IconProps) { return <ShellIcon icon={MarkdownFile} {...props} />; }
+export function ExternalLinkIcon(props: IconProps) { return <ShellIcon icon={ArrowUpRight01} {...props} />; }
 export function ImageIcon(props: IconProps) { return <ShellIcon icon={Image01} {...props} />; }
 export function ImagesIcon(props: IconProps) { return <ShellIcon icon={Images} {...props} />; }
 export function VideoIcon(props: IconProps) { return <ShellIcon icon={Video01} {...props} />; }

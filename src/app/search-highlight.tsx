@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from "react";
-import { findSearchExcerpt, findQueryTextMatches, type SearchExcerpt } from "@/domain/search";
+import { findSearchExcerpt, findQueryTextMatches, findTextMatches, parseSearchTerms, type SearchExcerpt } from "@/domain/search";
 import type { Item } from "@/domain/item";
 
 export function SearchHighlight({ text, query = "" }: { text: string; query?: string }) {
@@ -15,8 +15,8 @@ export function SearchHighlight({ text, query = "" }: { text: string; query?: st
   ))}{text.slice(ranges[ranges.length - 1].end)}</>;
 }
 
-function hasUnclippedMatch(content: HTMLElement): boolean {
-  return Array.from(content.querySelectorAll("mark.search-highlight")).some(mark => {
+function hasVisibleQueryMatches(content: HTMLElement, query: string): boolean {
+  const visibleMatches = Array.from(content.querySelectorAll("mark.search-highlight")).filter(mark => {
     const rects = Array.from(mark.getClientRects());
     if (!rects.length || !rects.some(rect => rect.width && rect.height)) return false;
     for (let parent = mark.parentElement; parent && parent !== content; parent = parent.parentElement) {
@@ -29,6 +29,8 @@ function hasUnclippedMatch(content: HTMLElement): boolean {
     }
     return true;
   });
+  const terms = parseSearchTerms(query);
+  return terms.length > 0 && terms.every(term => visibleMatches.some(mark => findTextMatches(mark.textContent ?? "", term, 1).length > 0));
 }
 
 export function SearchResult({ item, query = "", tagNames = [], excerpt, children }: {
@@ -47,7 +49,7 @@ export function SearchResult({ item, query = "", tagNames = [], excerpt, childre
     const excerpt = excerptRef.current;
     if (!content || !excerpt) return;
     // Size-dependent presentation only; update before paint without a second React render.
-    const measure = () => { excerpt.hidden = match?.label !== "File contents" && hasUnclippedMatch(content); };
+    const measure = () => { excerpt.hidden = match?.label !== "File contents" && hasVisibleQueryMatches(content, query); };
     measure();
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(measure);

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ClipboardEvent, type FormEvent, useEffect, useReducer, useRef, useState } from "react";
+import { type ClipboardEvent, type FormEvent, useEffect, useEffectEvent, useReducer, useRef, useState } from "react";
 import {
   captureReducer,
   initialCaptureState,
@@ -236,14 +236,23 @@ export function CaptureHost() {
     setBaseline({ input, images, collection: defaultCollectionNameRef.current });
   }
 
-  useEffect(() => {
-    function openCapture() {
+  const openCapture = useEffectEvent(() => {
+      if (state.status === "reading" || state.status === "open" || state.status === "saving") return;
       defaultCollectionNameRef.current = getCaptureCollectionName();
+      savedItemIdRef.current = null;
+      setSavedItemId(null);
+      setLinkConflict(null);
+      setDraftTagNames([]);
+      setTagInput("");
+      setDraftCollectionName(defaultCollectionNameRef.current);
+      setCollectionInput("");
       setCaptureSide(
         document.documentElement.dir === "rtl" ? "left" : "right",
       );
       dispatch({ type: "open" });
-    }
+  });
+
+  useEffect(() => {
 
     function onKeyDown(event: KeyboardEvent) {
       if (isCaptureOpenShortcut(event)) {
@@ -264,33 +273,26 @@ export function CaptureHost() {
     };
   }, []);
 
+  const receiveClipboard = useEffectEvent(({ image, text }: Awaited<ReturnType<typeof readClipboardImageAndText>>) => {
+    clipboardTextUntouchedRef.current = Boolean(text);
+    if (image) { void setDraftFromBlob(image, text, "reading"); return; }
+    establishBaseline(text);
+    dispatch({ type: "clipboard", text });
+  });
+
   useEffect(() => {
     if (state.status !== "reading") {
       return;
     }
 
-    savedItemIdRef.current = null;
-    setSavedItemId(null);
-    setLinkConflict(null);
-    setDraftTagNames([]);
-    setTagInput("");
-    setDraftCollectionName(defaultCollectionNameRef.current);
-    setCollectionInput("");
-
     let cancelled = false;
 
     void readClipboardImageAndText()
-      .then(({ image, text }) => {
+      .then(clipboard => {
         if (cancelled) {
           return;
         }
-        clipboardTextUntouchedRef.current = Boolean(text);
-        if (image) {
-          void setDraftFromBlob(image, text, "reading");
-          return;
-        }
-        establishBaseline(text);
-        dispatch({ type: "clipboard", text });
+        receiveClipboard(clipboard);
       })
       .catch(() => {
         if (!cancelled) {
