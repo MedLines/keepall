@@ -14,11 +14,11 @@ export function ItemTypeIcon({ item, className = "size-5" }: { item: Item; class
   return <Icon className={iconClassName} />;
 }
 
-/** Card identity: one colored glyph, bottom-end of the preview; only gallery counts add text. */
-export function ItemTypeBadge({ item }: { item: Item }) {
+/** One colored identity glyph; only gallery counts add text. */
+export function ItemTypeBadge({ item, variant = "card" }: { item: Item; variant?: "card" | "list" }) {
   const count = item.type === "image" && item.assetIds.length > 1 ? item.assetIds.length : null;
   const label = count ? `${count} images` : item.type === "note" && item.format === "markdown" ? "Markdown note" : typeLabels[item.type === "document" ? item.format : item.type];
-  return <span className="library-card-media-chrome library-item-type-badge pointer-events-none absolute z-10 flex h-8 min-w-8 items-center justify-center gap-1.5 px-2 text-xs font-medium tabular-nums" role="img" aria-label={label} title={label}>
-    {count}<ItemTypeIcon item={item} className="size-4" />
+  return <span className={variant === "list" ? "library-list-type-icon pointer-events-none inline-flex shrink-0 items-center gap-1 text-xs tabular-nums" : "library-card-media-chrome library-item-type-badge pointer-events-none absolute z-10 flex h-8 min-w-8 items-center justify-center gap-1.5 px-2 text-xs font-medium tabular-nums"} role="img" aria-label={label}>
+    {variant === "card" ? count : null}<ItemTypeIcon item={item} className="size-4" />
   </span>;
 }

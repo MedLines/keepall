@@ -2,9 +2,17 @@ import { fireEvent, render } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { buildLink } from "@/domain/link";
 import { LibraryItemMedia } from "./library-item-media";
+import { useAssetObjectUrl } from "./use-asset-object-url";
 
-vi.mock("./use-asset-object-url", () => ({ useAssetObjectUrl: () => null }));
+vi.mock("./use-asset-object-url", () => ({ useAssetObjectUrl: vi.fn(() => null) }));
 vi.mock("./use-thumbnail-object-url", () => ({ useThumbnailObjectUrl: () => null }));
+
+test("favicon-only list links do not load their OG image asset", () => {
+  const item = { ...buildLink({ url: "https://example.com" }), previewAssetId: "og-asset" };
+  const { container } = render(<LibraryItemMedia item={item} compact faviconOnly />);
+  expect(useAssetObjectUrl).toHaveBeenLastCalledWith(null, { enabled: true });
+  expect(container.querySelector("img")).toHaveAttribute("src", expect.stringContaining("domain=example.com"));
+});
 
 test("tries the site's favicon and a small favicon before showing the generic link icon", () => {
   const item = buildLink({ url: "https://www.youtube.com/@amrmohamed2608" });

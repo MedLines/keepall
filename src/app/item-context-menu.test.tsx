@@ -20,6 +20,46 @@ async function openTags() {
 }
 
 describe("ItemContextMenu", () => {
+  test("keeps selected tags first and preserves row focus when toggling", async () => {
+    setup({ tags: [{ id: "t2", name: "Reading" }, { id: "t1", name: "Design" }, { id: "t3", name: "Work" }] });
+    await openTags();
+    const order = () => screen.getAllByRole("menuitemcheckbox").map(row => row.textContent);
+    expect(order()).toEqual(["Design", "Reading", "Work"]);
+    const reading = screen.getByRole("menuitemcheckbox", { name: "Reading" });
+    reading.focus();
+    fireEvent.click(reading);
+    expect(order()).toEqual(["Reading", "Design", "Work"]);
+    expect(reading).toHaveFocus();
+    fireEvent.click(reading);
+    expect(order()).toEqual(["Design", "Reading", "Work"]);
+  });
+
+  test("updates the check immediately and rolls it back when saving fails", async () => {
+    const { rerender, props } = setup();
+    await openTags();
+    const row = screen.getByRole("menuitemcheckbox", { name: "Reading" });
+    fireEvent.click(row);
+    expect(row).toHaveAttribute("aria-checked", "true");
+    rerender(<ItemContextMenu {...props} busy>{() => <div>Saved item</div>}</ItemContextMenu>);
+    expect(row).toHaveAttribute("aria-checked", "true");
+    rerender(<ItemContextMenu {...props} tagError="Couldn't add tag.">{() => <div>Saved item</div>}</ItemContextMenu>);
+    await waitFor(() => expect(row).toHaveAttribute("aria-checked", "false"));
+  });
+
+  test("keeps tag rows visually stable and blocks duplicate writes while pending", async () => {
+    const { rerender, props, actions } = setup();
+    await openTags();
+    const row = screen.getByRole("menuitemcheckbox", { name: "Reading" });
+    fireEvent.click(row);
+    rerender(<ItemContextMenu {...props} busy>{() => <div>Saved item</div>}</ItemContextMenu>);
+    expect(screen.getByRole("menuitemcheckbox", { name: "Reading" })).toBe(row);
+    expect(row).not.toHaveAttribute("data-disabled");
+    expect(row).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(row);
+    expect(actions.onAddTag).toHaveBeenCalledOnce();
+    expect(screen.getByRole("textbox", { name: "Search tags" })).toBeVisible();
+  });
+
   test("searches existing tags and toggles their assignment without closing", async () => {
     const { actions } = setup();
     const search = await openTags();

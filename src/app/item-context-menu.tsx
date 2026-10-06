@@ -6,11 +6,13 @@ import { ContextMenu } from "@base-ui/react/context-menu";
 import { Menu } from "@base-ui/react/menu";
 import { useRef, useState, type ReactElement, type ReactNode, type RefObject } from "react";
 import { RowActionMenu } from "./row-action-menu";
+import { motion, useReducedMotion } from "motion/react";
+import { uiMotion } from "@/components/ui/motion-tokens";
 import { normalizeCollectionName } from "@/domain/collection";
 import { normalizeTagName } from "@/domain/tag";
 import {
   ArrowRightIcon, CollectionIcon, DeleteIcon, EditIcon, EyeIcon, HashIcon, LayersIcon, LinkIcon,
-  PinIcon, PlusIcon, RefreshIcon, SearchIcon, SelectionCheckedIcon,
+  PinIcon, PlusIcon, RefreshIcon, SearchIcon,
 } from "./shell-icons";
 
 type NamedEntry = { id: string; name: string };
@@ -46,7 +48,17 @@ type Props = {
   onOpen?: () => void;
 };
 
-const MENU_ITEM = "ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active data-[disabled]:opacity-50";
+const MENU_ITEM = "ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active";
+const ORGANIZATION_ITEM = `${MENU_ITEM} organization-choice rounded-control-md`;
+
+function SelectionMark({ checked }: { checked: boolean }) {
+  const reduceMotion = useReducedMotion();
+  return <motion.svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    initial={false} animate={{ opacity: checked ? 1 : 0 }}
+    transition={reduceMotion ? { duration: 0 } : checked ? uiMotion.fast : uiMotion.fast.exit}>
+    <path d="M6 12L10 16L18 8" />
+  </motion.svg>;
+}
 
 export function ItemContextMenu({
   children, trigger, title, openHref, tags, assignedTagIds, busy, disabled, tagError,
@@ -72,7 +84,7 @@ export function ItemContextMenu({
       menu={() => trashActions ? <>
         <Menu.Item className={MENU_ITEM} disabled={busy} onClick={() => openDialog(trashActions.onRestore)}><ArrowRightIcon className="size-4" /><span className="leading-none">Restore</span></Menu.Item>
         <Menu.Separator className="my-1 border-t border-border-edge" />
-        <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger data-[disabled]:opacity-50" disabled={busy} onClick={() => openDialog(trashActions.onDelete)}><DeleteIcon className="size-4" /><span className="leading-none">Delete permanently</span></Menu.Item>
+        <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger" disabled={busy} onClick={() => openDialog(trashActions.onDelete)}><DeleteIcon className="size-4" /><span className="leading-none">Delete permanently</span></Menu.Item>
       </> :
         <>
           {openHref ? (
@@ -83,7 +95,7 @@ export function ItemContextMenu({
               <Menu.Separator className="my-1 border-t border-border-edge" />
             </>
           ) : null}
-          {onPreview ? <Menu.Item className={MENU_ITEM} disabled={busy} onClick={() => openDialog(onPreview)}>
+          {onPreview ? <Menu.Item className={MENU_ITEM} onClick={() => openDialog(onPreview)}>
             <EyeIcon />Preview
           </Menu.Item> : null}
           {onFetchPreview ? <Menu.Item className={MENU_ITEM} disabled={busy || fetchingPreview} onClick={onFetchPreview}>
@@ -104,7 +116,7 @@ export function ItemContextMenu({
             <LayersIcon />Organize
           </ContextMenu.Item>
           <ContextMenu.Separator className="my-1 border-t border-border-edge" />
-          <ContextMenu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none hover:bg-bg-danger data-[highlighted]:bg-bg-danger data-[disabled]:opacity-50" disabled={busy} onClick={() => openDialog(onDelete)}>
+          <ContextMenu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none hover:bg-bg-danger data-[highlighted]:bg-bg-danger" disabled={busy} onClick={() => openDialog(onDelete)}>
             <DeleteIcon className="size-4" /><span className="leading-none">Move to Trash</span>
           </ContextMenu.Item>
         </>
@@ -126,6 +138,9 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
   onClear?: () => void;
 }) {
   const [query, setQuery] = useState("");
+  const [optimisticSelection, setOptimisticSelection] = useState<{ baseline: string; ids: string[] } | null>(null);
+  const assignmentKey = JSON.stringify(assignedIds);
+  const selectedIds = !error && optimisticSelection?.baseline === assignmentKey ? optimisticSelection.ids : assignedIds;
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const isTags = kind === "tags";
@@ -133,6 +148,7 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
   const name = isTags ? normalizeTagName(query) : normalizeCollectionName(query);
   const search = name.toLowerCase();
   const matches = entries.filter((entry) => entry.name.toLowerCase().includes(search));
+  if (isTags) matches.sort((a, b) => Number(selectedIds.includes(b.id)) - Number(selectedIds.includes(a.id)));
   const canCreate = Boolean(name) && !entries.some((entry) => entry.name.toLowerCase() === search);
 
   return (
@@ -173,17 +189,23 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
               {isTags ? matches.map((tag) => (
                 <Menu.CheckboxItem
                   key={tag.id}
-                  className={MENU_ITEM}
-                  checked={assignedIds.includes(tag.id)}
-                  disabled={busy}
+                  className={ORGANIZATION_ITEM}
+                  checked={selectedIds.includes(tag.id)}
+                  aria-disabled={busy || undefined}
                   closeOnClick={false}
-                  onCheckedChange={(checked) => checked ? onSelect(tag.name) : onRemove?.(tag.id)}
+                  onCheckedChange={(checked) => {
+                    if (busy) return;
+                    setOptimisticSelection({ baseline: assignmentKey, ids: checked ? [...selectedIds, tag.id] : selectedIds.filter(id => id !== tag.id) });
+                    if (checked) onSelect(tag.name); else onRemove?.(tag.id);
+                  }}
                 >
                   <span className="min-w-0 flex-1 truncate">{tag.name}</span>
-                  <Menu.CheckboxItemIndicator><SelectionCheckedIcon className="size-4" /></Menu.CheckboxItemIndicator>
+                  <SelectionMark checked={selectedIds.includes(tag.id)} />
                 </Menu.CheckboxItem>
               )) : (
-                <Menu.RadioGroup value={assignedIds[0] ?? ""} onValueChange={(id) => {
+                <Menu.RadioGroup value={selectedIds[0] ?? ""} onValueChange={(id) => {
+                  if (busy) return;
+                  setOptimisticSelection({ baseline: assignmentKey, ids: id ? [id] : [] });
                   if (!id) onClear?.();
                   else {
                     const entry = entries.find((entry) => entry.id === id);
@@ -191,21 +213,21 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
                   }
                 }}>
                   {"unsorted".includes(search) ? (
-                    <Menu.RadioItem value="" className={MENU_ITEM} disabled={busy} closeOnClick={false}>
+                    <Menu.RadioItem value="" className={ORGANIZATION_ITEM} aria-disabled={busy || undefined} closeOnClick={false}>
                       <span className="flex-1">Unsorted</span>
-                      <Menu.RadioItemIndicator><SelectionCheckedIcon className="size-4" /></Menu.RadioItemIndicator>
+                      <SelectionMark checked={selectedIds.length === 0} />
                     </Menu.RadioItem>
                   ) : null}
                   {matches.map((entry) => (
-                    <Menu.RadioItem key={entry.id} value={entry.id} className={MENU_ITEM} disabled={busy} closeOnClick={false}>
+                    <Menu.RadioItem key={entry.id} value={entry.id} className={ORGANIZATION_ITEM} aria-disabled={busy || undefined} closeOnClick={false}>
                       <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-                      <Menu.RadioItemIndicator><SelectionCheckedIcon className="size-4" /></Menu.RadioItemIndicator>
+                      <SelectionMark checked={selectedIds.includes(entry.id)} />
                     </Menu.RadioItem>
                   ))}
                 </Menu.RadioGroup>
               )}
               {canCreate ? (
-                <Menu.Item className={MENU_ITEM} disabled={busy} closeOnClick={false} onClick={() => onSelect(name)}>
+                <Menu.Item className={ORGANIZATION_ITEM} aria-disabled={busy || undefined} closeOnClick={false} onClick={() => { if (!busy) onSelect(name); }}>
                   <PlusIcon /><span className="min-w-0 truncate">Create “{name}”</span>
                 </Menu.Item>
               ) : null}

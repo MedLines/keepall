@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useId, useImperativeHandle, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
+import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import type { Item } from "@/domain/item";
-import type { LibraryLayout } from "@/domain/library-view";
+import type { LibraryLayout, LibraryListColumns } from "@/domain/library-view";
 import { LibraryVirtualItems } from "./library-virtual-items";
-import { LIBRARY_VIRTUALIZE_MIN } from "./library-scale";
+import { LIBRARY_VIRTUALIZE_MIN, listColumnCount } from "./library-scale";
 import { LibraryMasonry, type MasonryPlacement } from "./library-masonry";
 import { LibraryQuickPreview } from "./library-quick-preview";
 
@@ -15,6 +15,7 @@ type Props = {
   visibleItems: Item[];
   scopeKey: string;
   layout: LibraryLayout;
+  listColumns?: LibraryListColumns;
   scrollRef: RefObject<HTMLElement | null>;
   empty: ReactNode;
   renderItem: (item: Item, placement?: MasonryPlacement) => ReactNode;
@@ -30,10 +31,21 @@ const arrowStep: Record<string, number> = { ArrowLeft: -1, ArrowUp: -1, ArrowRig
 
 /** Both views window large libraries; keyboard order follows the filtered results. */
 export function LibraryMainGrid({
-  ref, visibleItems, scopeKey, layout, scrollRef, empty, renderItem,
+  ref, visibleItems, scopeKey, layout, listColumns = "auto", scrollRef, empty, renderItem,
   selectedIds, onSelectIds, onOpenItem, previewEnabled = true, keyboardDisabled = false, onPreviewOpenChange,
 }: Props) {
   const browseRef = useRef<HTMLDivElement>(null);
+  const [listColumnTotal, setListColumnTotal] = useState(1);
+  const columns = layout === "list" ? listColumns === "auto" ? listColumnTotal : Number(listColumns) : 1;
+  const arrowSteps: Record<string, number> = { ...arrowStep, ArrowUp: -columns, ArrowDown: columns };
+  useLayoutEffect(() => {
+    const node = browseRef.current;
+    if (!node || layout !== "list") return;
+    setListColumnTotal(listColumnCount(node.clientWidth));
+    const observer = new ResizeObserver(([entry]) => setListColumnTotal(listColumnCount(entry.contentRect.width)));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [layout]);
   const instructionsId = useId();
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [focusRequest, setFocusRequest] = useState<{ id: string } | null>(null);
@@ -103,9 +115,9 @@ export function LibraryMainGrid({
   const grid = visibleItems.length === 0 ? empty : layout === "grid" ? (
     <LibraryMasonry key={scopeKey} items={visibleItems} scopeKey={scopeKey} scrollRef={scrollRef} renderItem={renderItem} focusedIndex={focusedIndex} />
   ) : visibleItems.length >= LIBRARY_VIRTUALIZE_MIN ? (
-    <LibraryVirtualItems key={scopeKey} items={visibleItems} scrollRef={scrollRef} renderItem={renderItem} focusedIndex={focusedIndex} />
+    <LibraryVirtualItems key={scopeKey} items={visibleItems} scrollRef={scrollRef} renderItem={renderItem} focusedIndex={focusedIndex} columns={columns} />
   ) : (
-    <ul className="flex flex-col" aria-label="Library items">{visibleItems.map(item => renderItem(item))}</ul>
+    <ul className="library-list grid" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }} aria-label="Library items">{visibleItems.map(item => renderItem(item))}</ul>
   );
 
   return <div ref={browseRef} tabIndex={-1} aria-describedby={instructionsId}
@@ -123,7 +135,7 @@ export function LibraryMainGrid({
       if (!id || keyboardDisabled || event.defaultPrevented || event.nativeEvent.isComposing || event.altKey || event.ctrlKey || event.metaKey) return;
       const index = visibleItems.findIndex(item => item.id === id);
       if (index < 0) return;
-      const step = arrowStep[event.key];
+      const step = arrowSteps[event.key];
       if (step) {
         event.preventDefault();
         const nextIndex = Math.max(0, Math.min(visibleItems.length - 1, index + step));

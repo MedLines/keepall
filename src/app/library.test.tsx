@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { buildLink, LinkValidationError } from "@/domain/link";
 import { buildImage } from "@/domain/image";
 import { buildNote, NoteValidationError } from "@/domain/note";
@@ -36,6 +36,12 @@ import {
 } from "./library-drag";
 import type { Item } from "@/domain/item";
 import type { ReactNode } from "react";
+
+beforeEach(() => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(600);
+});
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 // jsdom has no layout. Masonry measurement and windowing are covered in e2e.
 vi.mock("./library-masonry", () => ({
@@ -936,6 +942,26 @@ describe("Library tags", () => {
     vi.mocked(assignCollectionToItem).mockReset();
   });
 
+  test("keeps Preview enabled and the tag menu mounted during assignment", async () => {
+    vi.mocked(getLibraryPreferences).mockResolvedValue({ id: "library", pinnedCollectionIds: [] });
+    const tag = { id: "t1", name: "inspiration", createdAt: 1 };
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(listTags).mockResolvedValue([tag]);
+    vi.mocked(createTag).mockResolvedValue(tag);
+    let finish!: (item: typeof note) => void;
+    vi.mocked(assignTagToItem).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    render(<Library />);
+    fireEvent.click((await screen.findAllByRole("button", { name: /^Actions for / }))[0]);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Tags" }));
+    const row = await screen.findByRole("menuitemcheckbox", { name: "inspiration" });
+    fireEvent.click(row);
+    await waitFor(() => expect(assignTagToItem).toHaveBeenCalledOnce());
+    expect(screen.getByRole("button", { name: /^Preview$/ })).toBeEnabled();
+    expect(screen.getByRole("menuitemcheckbox", { name: "inspiration" })).toBe(row);
+    expect(row).not.toHaveAttribute("data-disabled");
+    await act(async () => finish({ ...note, tagIds: [tag.id] }));
+  });
+
   test("scan face shows tag chips without empty-state copy", async () => {
     const tagged = { ...note, tagIds: ["t1"], updatedAt: 2 };
     const tag = { id: "t1", name: "inspiration", createdAt: 1 };
@@ -1482,6 +1508,26 @@ describe("Library view state", () => {
     expect(screen.getAllByText("A persisted note").length).toBeGreaterThan(0);
   });
 
+  test("the list column control sits before Preview and preserves its choice in navigation", async () => {
+    vi.mocked(listItems).mockResolvedValue([note, link]);
+    render(<Library />);
+    await screen.findByRole("listitem", { name: "A persisted note" });
+    expect(screen.queryByRole("combobox", { name: /^List columns:/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "List view" }));
+    const control = screen.getByRole("combobox", { name: "List columns: Auto" });
+    expect(control).toHaveClass("size-11");
+    expect(control.closest("header")?.querySelector("[title]")).toBeNull();
+    expect(control.previousElementSibling).toHaveAttribute("aria-label", "Library layout");
+    expect(control.compareDocumentPosition(screen.getByRole("button", { name: "Preview" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    pickTopMenu("List columns", "2 columns");
+    expect(mockNavigation.replace).toHaveBeenLastCalledWith("/?layout=list&columns=2", { scroll: false });
+    expect(screen.getByRole("list", { name: "Library items" }).style.gridTemplateColumns).toBe("repeat(2, minmax(0, 1fr))");
+    pickTopMenu("Filter by type", "Notes");
+    expect(mockNavigation.push).toHaveBeenLastCalledWith("/?type=note&layout=list&columns=2", { scroll: false });
+    pickTopMenu("List columns", "Auto");
+    expect(mockNavigation.replace).toHaveBeenLastCalledWith("/?type=note&layout=list", { scroll: false });
+  });
+
   test("bulk tag dialog applies tags and can remove every selected tag", async () => {
     const tagged = {
       ...buildNote({ content: "one" }, { id: "n1", now: 1 }),
@@ -1936,13 +1982,40 @@ describe("Library inspect", () => {
     mockNavigation.push.mockClear();
 
     render(<Library />);
-    expect(
-      await screen.findByRole("link", { name: "Open Image" }),
-    ).toHaveAttribute(
-      "href",
-      "/items/i1?from=%2F%3Flayout%3Dlist",
-    );
+    const imageLinks = await screen.findAllByRole("link", { name: "Open Image" });
+    expect(imageLinks).toHaveLength(2);
+    for (const link of imageLinks) expect(link).toHaveAttribute("href", "/items/i1?from=%2F%3Flayout%3Dlist");
+    const row = imageLinks[0].closest(".library-list-row");
+    expect(row?.querySelector(".library-list-thumbnail .library-item-type-badge")).toBeNull();
+    expect(row?.querySelector(".library-list-secondary .library-list-type-icon")).toHaveAttribute("aria-label", "Image");
     expect(screen.queryByRole("dialog", { name: "Image" })).not.toBeInTheDocument();
+  });
+
+  test("list rows remain connected and positioned after library rerenders and fast scroll jumps", async () => {
+    const height = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+      return this.hasAttribute("data-index") ? 64 : 600;
+    });
+    const width = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(1000);
+    try {
+      const items = Array.from({ length: 1000 }, (_, index) => buildNote({ title: `Scroll row ${index}`, content: "Saved text" }, { id: `scroll-${index}`, now: index + 1 }));
+      vi.mocked(listItems).mockResolvedValue(items);
+      vi.mocked(getLibraryPreferences).mockResolvedValue({ id: "library", pinnedCollectionIds: [] });
+      mockNavigation.push("/?layout=list");
+      const { container, rerender } = render(<Library />);
+      await waitFor(() => expect(container.querySelector("[data-index]"), container.querySelector("ul.library-list")?.outerHTML ?? "No library list").not.toBeNull());
+      const list = screen.getByRole("list", { name: "Library items" });
+      const viewport = list.closest<HTMLElement>('[data-slot="scroll-area-viewport"]')!;
+      rerender(<Library />);
+      for (const offset of [680 * 70, 680 * 90, 680 * 18, 680 * 40, 0]) {
+        act(() => { viewport.scrollTop = offset; viewport.dispatchEvent(new Event("scroll")); });
+        const rows = Array.from(container.querySelectorAll<HTMLElement>("[data-index]"));
+        expect(rows.some(row => {
+          const start = Number(row.style.transform.match(/, ([\d.]+)px,/)?.[1]);
+          return start < offset + 600 && start + 64 > offset;
+        })).toBe(true);
+        expect(rows.length).toBeLessThan(40);
+      }
+    } finally { height.mockRestore(); width.mockRestore(); }
   });
 
 });

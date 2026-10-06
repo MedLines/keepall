@@ -1041,7 +1041,7 @@ function FocusedImageViewer({
             <button
               ref={imageButtonRef}
               type="button"
-              className={`control-shape-none mx-auto block p-0 focus-visible:outline-2 focus-visible:outline-border-focus ${zoom ? "cursor-grab active:cursor-grabbing" : "w-fit max-w-full cursor-zoom-in"}`}
+              className={`control-shape-none mx-auto block p-0 focus-visible:outline-1 focus-visible:outline-border-focus ${zoom ? "cursor-grab active:cursor-grabbing" : "w-fit max-w-full cursor-zoom-in"}`}
               style={zoom ? { width: zoom.width } : undefined}
               aria-label={zoom ? "Zoom out image" : "Zoom in image"}
               aria-pressed={zoom !== null}

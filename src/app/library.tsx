@@ -328,7 +328,7 @@ export function Library() {
     useState<PreviewEnrichProgress>(null);
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
-  const mainScrollRef = useRef<HTMLElement>(null);
+  const mainScrollRef = useRef<HTMLDivElement>(null);
   const libraryGridRef = useRef<LibraryPreviewHandle>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [documentRevision, setDocumentRevision] = useState("initial");
@@ -580,6 +580,9 @@ export function Library() {
   });
   const mutationBusy =
     pendingMutation !== null || pendingCollectionPreferenceId !== null || trashActions.busy;
+  const previewBusy = pendingCollectionPreferenceId !== null || trashActions.busy || (
+    pendingMutation !== null && pendingMutation.op !== "assign-tag" && pendingMutation.op !== "unassign-tag" && pendingMutation.op !== "assign-collection"
+  );
   const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
   const collectionsById = useMemo(
     () => new Map(collections.map((collection) => [collection.id, collection])),
@@ -1791,8 +1794,10 @@ export function Library() {
         onSortChange={(sort) => updateView({ sort }, "push")}
         layout={browseLayout}
         onLayoutChange={(layout) => updateView({ layout }, "replace")}
+        listColumns={view.listColumns ?? "auto"}
+        onListColumnsChange={(listColumns) => updateView({ listColumns }, "replace")}
         onPreview={() => libraryGridRef.current?.openPreview()}
-        previewDisabled={mutationBusy || loadState !== "ready" || visibleItems.length === 0}
+        previewDisabled={previewBusy || loadState !== "ready" || visibleItems.length === 0}
         collectionsView={Boolean(view.collections)}
         tagsView={Boolean(view.tags)}
         typeFilter={browseType}
@@ -1946,7 +1951,7 @@ export function Library() {
         <div data-library-panel className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel">
         {topBar}
         <main className="flex min-h-0 min-w-0 flex-1 flex-col" aria-labelledby="library-heading" aria-busy={documentSearch.pending}>
-        <ScrollPanel className="min-h-0 min-w-0 flex-1" viewportRef={node => { mainScrollRef.current = node; }}
+        <ScrollPanel className="min-h-0 min-w-0 flex-1" viewportRef={mainScrollRef}
           viewportClassName="scroll-fade px-3 pb-6 sm:px-6 [--scroll-fade-edge-opacity:0.35]">
 
           {loadState === "loading" ? (
@@ -2007,10 +2012,11 @@ export function Library() {
                   scopeKey={browseScopeKey}
                   layout={browseLayout}
                   scrollRef={mainScrollRef}
+                  listColumns={view.listColumns ?? "auto"}
                   renderItem={renderLibraryItem}
                   selectedIds={selectedIds}
                   onSelectIds={setSelectedIds}
-                  keyboardDisabled={mutationBusy}
+                  keyboardDisabled={previewBusy}
                   previewEnabled={!view.trash}
                   onOpenItem={item => router.push(itemPageHref(item.id, libraryViewHref(pathname, mergeLibraryViewState(viewRef.current, { item: null, slide: 0 }))))}
                   empty={

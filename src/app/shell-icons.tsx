@@ -21,6 +21,7 @@ import {
   Globe02Icon as Globe, Clock01Icon as Clock,
   Download01Icon as Download, Upload01Icon as Upload,
   Txt01Icon as Txt01, ArrowUpRight01Icon as ArrowUpRight01,
+  LayoutThreeColumnIcon as LayoutThreeColumn,
 } from "@hugeicons/core-free-icons";
 
 // Same folded file outline as PDF and TXT; the installed icon set has no MD file glyph.
@@ -30,6 +31,8 @@ const MarkdownFile: IconSvgElement = [Txt01[0], ["path", {
 }]];
 
 type IconProps = { className?: string; fill?: "none" | "currentColor" };
+
+export function ColumnsIcon(props: IconProps) { return <ShellIcon icon={LayoutThreeColumn} {...props} />; }
 
 function ShellIcon({ icon, className = "", fill = "none" }: IconProps & { icon: IconSvgElement }) {
   return <HugeiconsIcon icon={icon} size={18} strokeWidth={1.5} fill={fill} className={`shrink-0 ${className}`} aria-hidden="true" />;

@@ -1242,7 +1242,7 @@ function CollapsibleSection({
         >
           {children}
           {onSeeAll ? <div className="library-sidebar-overview-footer shrink-0 px-3 pt-1">
-            <button type="button" aria-current={overviewActive ? "page" : undefined} onClick={onSeeAll} className={`flex min-h-8 w-full items-center gap-2 rounded-control-md px-3 text-xs font-medium outline-none hover:bg-bg-active focus-visible:outline-2 focus-visible:outline-border-focus ${overviewActive ? "bg-bg-selected text-text-primary" : "bg-bg-raised text-text-secondary"}`}>
+            <button type="button" aria-current={overviewActive ? "page" : undefined} onClick={onSeeAll} className={`flex min-h-8 w-full items-center gap-2 rounded-control-md px-3 text-xs font-medium outline-none hover:bg-bg-active focus-visible:outline-1 focus-visible:outline-border-focus ${overviewActive ? "bg-bg-selected text-text-primary" : "bg-bg-raised text-text-secondary"}`}>
               {overviewLabel === "All collections" ? <CollectionIcon className="size-3.5" /> : <HashIcon className="size-3.5" />}<span className="min-w-0 truncate">{overviewLabel}</span>
               <ArrowRightIcon className="ml-auto size-3.5" />
             </button>

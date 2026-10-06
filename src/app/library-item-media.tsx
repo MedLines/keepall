@@ -21,6 +21,8 @@ type Props = {
   assetId?: string | null;
   /** Smaller favicon for list-row thumbs. */
   compact?: boolean;
+  /** Dense link lists show identity without loading the OG asset. */
+  faviconOnly?: boolean;
   className?: string;
 };
 
@@ -30,10 +32,11 @@ export function LibraryItemMedia({
   variant = "card",
   assetId,
   compact = false,
+  faviconOnly = false,
   onImageLoad,
   className = "",
 }: Props) {
-  const assetIdForDisplay = resolveAssetId(item, assetId);
+  const assetIdForDisplay = faviconOnly && item.type === "link" ? null : resolveAssetId(item, assetId);
   const useThumbnail = ["card", "grid"].includes(variant) && (item.type === "image" || item.type === "video");
   const originalUrl = useAssetObjectUrl(assetIdForDisplay, { enabled: !useThumbnail });
   const thumbnailUrl = useThumbnailObjectUrl(useThumbnail ? assetIdForDisplay : null);

@@ -1,6 +1,7 @@
 "use client";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip } from "@base-ui/react/tooltip";
 
 import { SearchHighlight, SearchResult } from "./search-highlight";
 import type { SearchExcerpt } from "@/domain/search";
@@ -13,6 +14,7 @@ import { CloseIcon, CollectionIcon, HashIcon } from "./shell-icons";
 import { LibraryDocumentCard } from "./library-document-card";
 import { LibraryReadingCard } from "./library-reading-card";
 import { CardNote, CardPin, CardSource } from "./library-card-details";
+import { SHELL_TOOLTIP } from "./shell-styles";
 
 function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
   id: string;
@@ -26,8 +28,8 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
   return (
     <motion.div
       id={id}
-      className="ui-popover flex flex-col overflow-hidden absolute right-0 top-[calc(100%+8px)] z-40 max-h-[min(20rem,50dvh)] w-64 max-w-[calc(100vw-6rem)]"
-      style={{ transformOrigin: "top right", pointerEvents: isPresent ? "auto" : "none" }}
+      className="library-tag-popover ui-popover flex flex-col overflow-hidden absolute end-0 top-[calc(100%+8px)] z-40 max-h-[min(20rem,50dvh)] w-48 max-w-[calc(100vw-6rem)]"
+      style={{ pointerEvents: isPresent ? "auto" : "none" }}
       inert={!isPresent}
       aria-hidden={!isPresent}
       initial={reduceMotion ? false : { opacity: 0, scale: 0.95 }}
@@ -38,9 +40,9 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
       <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
       <ul aria-label="Tags" className="flex min-w-0 flex-col gap-1">
         {tags.map(tag => {
-          return <li key={tag.id} className="squircle-panel flex min-w-0 items-center rounded-control-sm hover:bg-bg-active focus-within:bg-bg-active">
-            <button type="button" title={tag.name} className="ui-menu-item min-w-0 flex-1 truncate text-start text-sm text-text-primary hover:bg-transparent" onClick={() => onBrowseTag(tag.id)}>{tag.name}</button>
-            <button type="button" title={`Remove ${tag.name}`} aria-label={`Remove tag ${tag.name}`} className="squircle-panel flex size-10 shrink-0 items-center justify-center rounded-control-sm text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => onRemoveTag(tag.id)}><CloseIcon /></button>
+          return <li key={tag.id} className="library-tag-row squircle-panel flex min-w-0 items-center rounded-control-sm hover:bg-bg-active focus-within:bg-bg-active">
+            <button type="button" className="ui-menu-item min-w-0 flex-1 truncate text-start text-sm text-text-primary hover:bg-transparent" onClick={() => onBrowseTag(tag.id)}>{tag.name}</button>
+            <button type="button" aria-label={`Remove tag ${tag.name}`} className="library-tag-remove squircle-panel flex size-7 shrink-0 items-center justify-center rounded-control-sm text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => onRemoveTag(tag.id)}><CloseIcon className="size-4" /></button>
           </li>;
         })}
       </ul>
@@ -76,8 +78,8 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
     <div className="library-card-copy">
       {title || pinned ? <TitleRow className={`library-card-title ${item.type === "link" && !hasLinkImage ? "library-card-title-fallback" : ""}`}>
         {pinned ? <CardPin /> : null}
-        {item.type === "link" ? <a href={item.url} target="_blank" rel="noopener noreferrer" title={title} className="library-card-title-action library-card-hit-area"><span><SearchHighlight text={title} query={query} /></span></a>
-          : readOnly ? <span className="min-w-0 flex-1 truncate"><SearchHighlight text={title} query={query} /></span> : title ? <button type="button" onClick={onOpen} title={title} className="library-card-title-action library-card-hit-area"><span><SearchHighlight text={title} query={query} /></span></button> : null}
+        {item.type === "link" ? <a href={item.url} target="_blank" rel="noopener noreferrer" className="library-card-title-action library-card-hit-area"><span><SearchHighlight text={title} query={query} /></span></a>
+          : readOnly ? <span className="min-w-0 flex-1 truncate"><SearchHighlight text={title} query={query} /></span> : title ? <button type="button" onClick={onOpen} className="library-card-title-action library-card-hit-area"><span><SearchHighlight text={title} query={query} /></span></button> : null}
       </TitleRow> : null}
       {item.type === "link" && item.previewDescription ? <p className={`library-card-description ${hasLinkImage ? "line-clamp-1" : "line-clamp-2"}`}><SearchHighlight text={item.previewDescription} query={query} /></p> : null}
       {item.type === "link" ? <CardSource url={item.url} query={query} /> : item.type === "image" && item.sourceUrl ? <CardSource url={item.sourceUrl} query={query} /> : null}
@@ -87,12 +89,13 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
   );
 }
 
-export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onBrowseTag, onRemoveTag }: {
+export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onBrowseTag, onRemoveTag, className = "" }: {
   collections: { id: string; name: string }[];
   tags: { id: string; name: string }[];
   onBrowseCollection: (id: string) => void;
   onBrowseTag: (id: string) => void;
   onRemoveTag: (id: string) => void;
+  className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const id = useId();
@@ -121,20 +124,33 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
 
   if (!collections.length && !tags.length) return null;
   return (
-    <div className="library-card-metadata text-xs text-text-secondary">
+    <div className={`library-card-metadata text-xs text-text-secondary ${className}`}>
       <div className="flex min-h-8 items-center justify-between gap-2">
         {collections.length ? <ul aria-label="Collections" className="min-w-0 flex-1">
-          {collections.map(collection => <li key={collection.id} className="min-w-0">
-            <button type="button" className="library-card-metadata-pill max-w-full rounded-full" title={collection.name} onClick={() => onBrowseCollection(collection.id)}>
+          {collections.map(collection => <li key={collection.id} className="min-w-0"><Tooltip.Root>
+            <Tooltip.Trigger type="button" delay={100} className="library-card-metadata-pill max-w-full rounded-full" aria-label={collection.name} aria-describedby={`${id}-collection-${collection.id}`} onClick={() => onBrowseCollection(collection.id)}>
               <CollectionIcon className="size-4 shrink-0" />
               <span className="truncate">{collection.name}</span>
-            </button>
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Positioner side="top" sideOffset={8} className="z-[100]">
+                <Tooltip.Popup id={`${id}-collection-${collection.id}`} role="tooltip" className={SHELL_TOOLTIP}>{collection.name}</Tooltip.Popup>
+              </Tooltip.Positioner>
+            </Tooltip.Portal>
+          </Tooltip.Root>
           </li>)}
         </ul> : <span />}
         {tags.length ? <div ref={rootRef} className="library-card-tag-control relative shrink-0">
-          <button ref={triggerRef} type="button" aria-expanded={expanded} aria-controls={id} className="library-card-metadata-pill rounded-full" onClick={() => {
+          <Tooltip.Root disabled={expanded}>
+          <Tooltip.Trigger ref={triggerRef} type="button" delay={100} closeDelay={100} aria-label={`${tags.length} ${tags.length === 1 ? "tag" : "tags"}`} aria-describedby={`${id}-tag-preview`} aria-expanded={expanded} aria-controls={id} className="library-card-metadata-pill rounded-full" onClick={() => {
             setExpanded(!expanded);
-          }}><HashIcon className="size-4" />{tags.length} {tags.length === 1 ? "tag" : "tags"}</button>
+          }}><HashIcon className="size-4" /><span>{tags.length}<span className="library-card-tag-label"> {tags.length === 1 ? "tag" : "tags"}</span></span></Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Positioner side="top" align="end" sideOffset={8} collisionPadding={8} className="z-[100]">
+              <Tooltip.Popup id={`${id}-tag-preview`} role="tooltip" className={`${SHELL_TOOLTIP} max-w-72 whitespace-normal [overflow-wrap:anywhere]`}>{tags.map(tag => tag.name).join(", ")}</Tooltip.Popup>
+            </Tooltip.Positioner>
+          </Tooltip.Portal>
+          </Tooltip.Root>
           <AnimatePresence>
             {expanded ? <TagPopover
               key="tags"

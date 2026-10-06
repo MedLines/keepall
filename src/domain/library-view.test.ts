@@ -25,6 +25,15 @@ const emptyView = {
   slide: 0,
 };
 
+test("list column choices survive reload, filtering and layout changes", () => {
+  const view = parseLibraryViewState(new URLSearchParams("layout=list&columns=3"));
+  expect(view.listColumns).toBe("3");
+  expect(parseLibraryViewState(libraryViewStateToSearchParams(view))).toEqual(view);
+  expect(mergeLibraryViewState(view, { type: "note", layout: "grid" }).listColumns).toBe("3");
+  expect(libraryViewStateToSearchParams(mergeLibraryViewState(view, { listColumns: "auto" })).has("columns")).toBe(false);
+  expect(parseLibraryViewState(new URLSearchParams("columns=99")).listColumns).toBeUndefined();
+});
+
 test("best match sort survives URL serialization and reload", () => {
   const view = parseLibraryViewState(new URLSearchParams("q=react+animation&sort=relevance"));
   expect(view.sort).toBe("relevance");

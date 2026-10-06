@@ -24,7 +24,7 @@ import { DeleteIcon, MoreIcon, PlayIcon } from "./shell-icons";
 import { ItemTypeBadge } from "./item-type-icon";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
-import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
+import { LibraryListContent } from "./library-list-content";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ItemContextMenu } from "./item-context-menu";
 import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
@@ -208,9 +208,10 @@ export function LibraryItem({
   /* Cover morphs; sizing on the motion node only (avoids double-box stretch). */
   const mediaSlot = (
     <div
+      data-kind={isList ? item.type : undefined}
       className={
         isList
-          ? "library-list-thumbnail relative shrink-0 overflow-hidden rounded-lg bg-bg-raised"
+          ? "library-list-thumbnail squircle-panel relative shrink-0 overflow-hidden bg-bg-reading"
           : "library-card-media squircle-panel relative"
       }
     >
@@ -227,7 +228,7 @@ export function LibraryItem({
               ? "size-full"
               : item.type === "link"
                 ? "w-full"
-                : trashActions ? "w-full" : "w-full cursor-pointer"
+                : trashActions ? "w-full" : "library-card-open w-full cursor-pointer"
           }
           onClick={
             trashActions || isList || item.type === "link" || openHref
@@ -254,6 +255,7 @@ export function LibraryItem({
             item={item}
             variant={isList ? "card" : "grid"}
             compact={isList}
+            faviconOnly={isList && item.type === "link"}
             onImageLoad={setImageRatio}
             className={isList ? "!aspect-auto h-full w-full object-cover" : ""}
           />
@@ -262,7 +264,7 @@ export function LibraryItem({
       {!isList && item.type === "link" && !inspected ? (
         <a
           aria-label={title}
-          className="absolute inset-0 z-[1]"
+          className="library-card-open absolute inset-0 z-[1]"
           draggable={false}
           href={item.url}
           rel="noreferrer"
@@ -286,7 +288,7 @@ export function LibraryItem({
       aria-label={`Actions for ${actionLabel}`}
       data-item-actions={item.id}
       disabled={mutationBusy}
-      className={`library-card-actions absolute z-30 flex cursor-pointer items-center justify-center text-text-secondary hover:text-text-primary disabled:cursor-default ${isList ? "end-0 top-5 size-10 rounded-control hover:bg-bg-raised" : "library-card-media-chrome library-card-corner-control library-card-corner-end"}`}
+      className={`library-card-actions absolute z-30 flex cursor-pointer items-center justify-center text-text-secondary hover:text-text-primary disabled:cursor-default ${isList ? "library-list-actions library-card-media-chrome" : "library-card-media-chrome library-card-corner-control library-card-corner-end"}`}
     >
       <MoreIcon className="size-4" />
     </button>
@@ -343,7 +345,7 @@ export function LibraryItem({
       aria-description="Arrow keys browse in result order. Shift and an arrow selects a range. Space previews. Enter opens the full item."
       aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Space Enter Shift+ArrowLeft Shift+ArrowRight Shift+ArrowUp Shift+ArrowDown"
       draggable={dragEnabled}
-      className={`library-item-root min-w-0 rounded-control-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-border-focus focus-within:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
+      className={`library-item-root min-w-0 focus-within:z-10 ${isList ? "@container library-list-item" : ""} ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
       onClickCapture={event => {
@@ -441,7 +443,7 @@ export function LibraryItem({
         data-selected={selected || undefined}
         className={
           isList
-            ? "library-list-row group relative flex items-start gap-3 rounded-control-lg border-b border-border-edge px-3 py-4"
+            ? "library-list-row squircle-panel group relative flex items-start gap-3"
             : `library-card squircle-panel group relative flex flex-col rounded-card pt-[8px] pr-[8px] pl-[8px] ${hasGridFooter ? "pb-[2px]" : "pb-[8px]"}`
         }
       >
@@ -454,7 +456,7 @@ export function LibraryItem({
         onToggle={onToggleSelect}
         className={
           isList
-            ? `library-list-select absolute start-1 top-5 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-edge ${editing || pendingDelete ? "hidden" : ""}`
+            ? `library-list-select library-card-media-chrome absolute z-20 flex items-center justify-center ${editing || pendingDelete ? "hidden" : ""}`
             : `library-card-media-chrome library-card-corner-control library-card-corner-start absolute z-20 flex items-center justify-center ${
                 !chromeVisible
                   ? "pointer-events-none opacity-0"
@@ -464,14 +466,14 @@ export function LibraryItem({
               }`
         }
       />
-      {isList ? trashActions ? <div className="shrink-0 rounded-lg">{mediaSlot}</div> : !pendingDelete ? (
+      {isList ? trashActions ? <div className="library-list-media-open shrink-0">{mediaSlot}</div> : !pendingDelete ? (
         item.type === "link" ? (
           <a
             href={item.url}
             target="_blank"
             rel="noreferrer"
             aria-label={`Open ${title}`}
-            className="shrink-0 rounded-lg"
+            className="library-list-media-open shrink-0"
           >
             {mediaSlot}
           </a>
@@ -480,12 +482,12 @@ export function LibraryItem({
             href={openHref}
             prefetch={false}
             aria-label={`Open ${title}`}
-            className="shrink-0 rounded-lg"
+            className="library-list-media-open shrink-0"
           >
             {mediaSlot}
           </Link>
         ) : (
-          <button type="button" onClick={onOpenInspect} aria-label={`Preview ${title}`} className="shrink-0 rounded-lg">{mediaSlot}</button>
+          <button type="button" onClick={onOpenInspect} aria-label={`Preview ${title}`} className="library-list-media-open shrink-0">{mediaSlot}</button>
         )
       ) : null : hasMedia ? (
         !trashActions && openHref && item.type !== "link" ? (
@@ -493,7 +495,7 @@ export function LibraryItem({
             href={openHref}
             prefetch={false}
             aria-label={`Open ${title}`}
-            className="block"
+            className="library-card-open block"
           >
             {mediaSlot}
           </Link>
@@ -527,7 +529,7 @@ export function LibraryItem({
             ) : <p className="text-sm font-medium">{title}</p>}
           </div>
         )}
-        {isList && !pendingDelete && !trashActions ? <LibraryListMetadata collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} /> : null}
+        {isList && !pendingDelete && !trashActions ? <LibraryCardMetadata className="library-list-metadata" collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} onRemoveTag={onRemoveTag} /> : null}
 
         {!isList && !pendingDelete && !trashActions ? (
           <LibraryCardMetadata

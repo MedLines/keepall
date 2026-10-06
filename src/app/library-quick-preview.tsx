@@ -72,7 +72,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
               <Dialog.Description className="sr-only">Quick preview. Arrows browse items. Enter opens the full item.</Dialog.Description>
               <Dialog.Close aria-label="Close preview" className="ui-control flex size-11 shrink-0 items-center justify-center"><CloseIcon /></Dialog.Close>
             </header>
-            <div key={item.id} className="min-h-0 flex-1 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus" tabIndex={0} role="region" aria-label="Preview content">
+            <div key={item.id} className="min-h-0 flex-1 overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus" tabIndex={0} role="region" aria-label="Preview content">
               <PreviewContent item={item} onGalleryStep={() => popupRef.current?.focus({ preventScroll: true })} />
             </div>
             <footer className="library-preview-footer shrink-0 border-t border-border-control px-5 py-3">
@@ -113,7 +113,7 @@ function PreviewTitle({ title }: { title: string }) {
   return <Dialog.Title className="min-w-0 flex-1 text-lg font-semibold text-text-primary">
     <Tooltip.Root disabled={!truncated}>
       <Tooltip.Trigger ref={(node: HTMLElement | null) => { titleRef.current = node; }} render={<span />} tabIndex={truncated ? 0 : -1} aria-describedby={truncated ? tooltipId : undefined} delay={350}
-        className="block truncate rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-border-focus">
+        className="block truncate rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-border-focus">
         {title}
       </Tooltip.Trigger>
       <Tooltip.Portal>

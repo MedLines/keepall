@@ -261,7 +261,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             {prepared.backup.counts.total === 0 ? <p className="mt-2 text-sm leading-5">This backup has no items. Replacing will remove your current library.</p> : null}
           </div>
           <details className="group">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-2 text-sm font-medium focus-visible:rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-2 text-sm font-medium focus-visible:rounded-lg focus-visible:outline-1 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
               Organization and media details <ChevronDownIcon className="group-open:rotate-180" />
             </summary>
             <div className="grid grid-cols-[48%_26%_26%] text-[13px] font-medium text-text-secondary" aria-hidden="true">

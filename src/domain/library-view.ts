@@ -7,6 +7,7 @@ export type LibraryTypeFilter = "link" | "note" | "image" | "video" | "document"
 
 /** How the library paints items; null/grid is default. */
 export type LibraryLayout = "grid" | "list";
+export type LibraryListColumns = "auto" | "1" | "2" | "3";
 
 export type LibraryViewState = {
   q: string;
@@ -25,6 +26,8 @@ export type LibraryViewState = {
   type: LibraryTypeFilter | null;
   /** grid (default) or list; omitted from URL when grid. */
   layout: LibraryLayout;
+  /** List column limit; omitted for automatic sizing. */
+  listColumns?: LibraryListColumns;
   sort: LibrarySort;
   /** Open library item id for inspect overlay; null when closed. */
   item: string | null;
@@ -58,6 +61,10 @@ export function parseLibraryLayout(value: string | null): LibraryLayout {
   return value === "list" ? "list" : "grid";
 }
 
+export function parseLibraryListColumns(value: string | null): LibraryListColumns {
+  return value === "1" || value === "2" || value === "3" ? value : "auto";
+}
+
 export function parseLibrarySlide(value: string | null): number {
   if (!value) {
     return 0;
@@ -81,6 +88,7 @@ export function parseLibraryViewState(
     : params.get("unsorted") === "1";
   const type = parseLibraryType(params.get("type"));
   const trash = params.get("trash") === "1";
+  const listColumns = parseLibraryListColumns(params.get("columns"));
 
   return {
     q: params.get("q") ?? "",
@@ -94,6 +102,7 @@ export function parseLibraryViewState(
     tag,
     type,
     layout: parseLibraryLayout(params.get("layout")),
+    ...(listColumns !== "auto" ? { listColumns } : {}),
     sort: parseLibrarySort(params.get("sort")),
     item,
     slide,
@@ -129,6 +138,10 @@ export function libraryViewStateToSearchParams(
 
   if (state.layout !== DEFAULT_LIBRARY_LAYOUT) {
     params.set("layout", state.layout);
+  }
+
+  if (state.listColumns && state.listColumns !== "auto") {
+    params.set("columns", state.listColumns);
   }
 
   if (state.sort !== DEFAULT_LIBRARY_SORT) {
@@ -228,6 +241,7 @@ export function mergeLibraryViewState(
     tag,
     type,
     layout: patch.layout !== undefined ? patch.layout : current.layout,
+    ...((patch.listColumns ?? current.listColumns) ? { listColumns: patch.listColumns ?? current.listColumns } : {}),
     sort: patch.sort !== undefined ? patch.sort : current.sort,
     item: patch.item !== undefined ? patch.item : current.item,
     slide: patch.slide !== undefined ? patch.slide : current.slide,

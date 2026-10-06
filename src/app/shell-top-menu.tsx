@@ -2,13 +2,15 @@
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select } from "@base-ui/react/select";
-import type { ReactNode } from "react";
+import { Tooltip } from "@base-ui/react/tooltip";
+import { useId, type ReactNode } from "react";
 import { MenuHoverList } from "@/components/ui/menu-hover-list";
 import { CheckIcon, ChevronDownIcon } from "./shell-icons";
 import {
   SHELL_TOP_BTN,
   SHELL_TOP_BTN_ACTIVE,
   SHELL_TOP_BTN_IDLE,
+  SHELL_TOOLTIP,
 } from "./shell-styles";
 
 type Option<T extends string> = {
@@ -25,6 +27,7 @@ type Props<T extends string> = {
   onChange: (value: T) => void;
   /** Trigger shows only the icon; dropdown options keep labels. */
   iconOnly?: boolean;
+  triggerIcon?: ReactNode;
   /** Emphasize trigger when a non-default value is active (e.g. type filter). */
   emphasized?: boolean;
   showCheckmark?: boolean;
@@ -37,14 +40,17 @@ export function ShellTopMenu<T extends string>({
   options,
   onChange,
   iconOnly = false,
+  triggerIcon,
   emphasized = false,
   showCheckmark = true,
   className = "",
 }: Props<T>) {
+  const tooltipId = useId();
   const activeOption =
     options.find((option) => option.value === value) ?? options[0];
 
   return (
+    <Tooltip.Root>
     <Select.Root<T>
       value={value}
       onValueChange={(nextValue) => {
@@ -52,11 +58,12 @@ export function ShellTopMenu<T extends string>({
       }}
     >
       <Select.Trigger
+        render={<Tooltip.Trigger delay={350} />}
         className={`${iconOnly ? `ui-control flex size-11 items-center justify-center rounded-control-lg ${emphasized ? "ui-selected" : ""}` : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`} ${className}`}
         aria-label={`${ariaLabel}: ${activeOption?.label ?? ""}`}
-        title={`${ariaLabel}: ${activeOption?.label ?? ""}`}
+        aria-describedby={tooltipId}
       >
-        {activeOption?.icon}
+        {triggerIcon ?? activeOption?.icon}
         {iconOnly ? (
           <span className="sr-only">{activeOption?.label}</span>
         ) : (
@@ -107,5 +114,11 @@ export function ShellTopMenu<T extends string>({
         </Select.Positioner>
       </Select.Portal>
     </Select.Root>
+    <Tooltip.Portal>
+      <Tooltip.Positioner side="bottom" sideOffset={8} collisionPadding={8} className="z-[100]">
+        <Tooltip.Popup id={tooltipId} role="tooltip" className={SHELL_TOOLTIP}>{ariaLabel}: {activeOption?.label}</Tooltip.Popup>
+      </Tooltip.Positioner>
+    </Tooltip.Portal>
+    </Tooltip.Root>
   );
 }

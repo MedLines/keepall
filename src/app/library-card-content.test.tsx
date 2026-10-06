@@ -1,10 +1,37 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
 import { EMPTY_LINK_PREVIEW } from "@/domain/link";
 import { buildImage } from "@/domain/image";
 
 const base = { id: "item", createdAt: 1, updatedAt: 1, tagIds: [], collectionIds: [] };
+
+it("folder pills show styled collection names and still open the collection", async () => {
+  const browse = vi.fn();
+  render(<LibraryCardMetadata collections={[{ id: "reading", name: "Reading references" }]} tags={[]} onBrowseCollection={browse} onBrowseTag={vi.fn()} onRemoveTag={vi.fn()} />);
+  const folder = screen.getByRole("button", { name: "Reading references" });
+  expect(folder).not.toHaveAttribute("title");
+  act(() => folder.focus());
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("Reading references");
+  fireEvent.click(folder);
+  expect(browse).toHaveBeenCalledExactlyOnceWith("reading");
+});
+
+it("tag pills preview tag names in a styled tooltip before opening the dropdown", async () => {
+  const tags = [{ id: "design", name: "Design" }, { id: "reading", name: "Reading" }];
+  const browse = vi.fn();
+  render(<LibraryCardMetadata collections={[]} tags={tags} onBrowseCollection={vi.fn()} onBrowseTag={browse} onRemoveTag={vi.fn()} />);
+  const pill = screen.getByRole("button", { name: "2 tags" });
+  expect(pill).not.toHaveAttribute("title");
+  act(() => pill.focus());
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("Design, Reading");
+  expect(screen.queryByRole("list", { name: "Tags" })).not.toBeInTheDocument();
+  fireEvent.click(pill);
+  expect(screen.getByRole("list", { name: "Tags" })).toBeVisible();
+  await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: "Design" }));
+  expect(browse).toHaveBeenCalledExactlyOnceWith("design");
+});
 
 describe("grid card content", () => {
   it("omits untitled image content without replacing it with a filename or placeholder", () => {
@@ -16,7 +43,7 @@ describe("grid card content", () => {
     render(<LibraryCardContent item={buildImage({ assetId: "a", caption: "Footer detail" })} pinned onOpen={vi.fn()} />);
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.getByText("Footer detail")).toBeVisible();
-    expect(screen.getByTitle("Pinned in this collection")).toBeVisible();
+    expect(screen.getByRole("img", { name: "Pinned in this collection" })).toBeVisible();
   });
 
   it("preserves a supplied title even if it resembles a filename", () => {
@@ -95,7 +122,7 @@ describe("grid card content", () => {
     );
 
     const title = screen.getByRole("button", { name: "Pinned reference" });
-    const status = screen.getByTitle("Pinned in this collection");
+    const status = screen.getByRole("img", { name: "Pinned in this collection" });
 
     expect(status.parentElement).toContainElement(title);
   });

@@ -54,7 +54,7 @@ function ScrollImage({ item, assetId, index, active, scrollRef, preserveScrollAn
       <div ref={ref} style={{ aspectRatio: dimensions ? dimensions.width / dimensions.height : 4 / 3 }} className="overflow-hidden rounded-sm bg-bg-media">
         <button
           type="button"
-          className="control-shape-none block size-full cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-border-focus"
+          className="control-shape-none block size-full cursor-zoom-in focus-visible:outline-1 focus-visible:-outline-offset-2 focus-visible:outline-border-focus"
           aria-label={`View image ${index + 1} full screen`}
           onClick={onOpen}
         >

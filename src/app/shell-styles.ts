@@ -95,6 +95,9 @@ export const SHELL_TOP_BTN_ACTIVE =
 export const SHELL_TOP_BTN_IDLE =
   "text-text-secondary";
 
+export const SHELL_TOOLTIP =
+  "rounded-control-sm border border-border-control bg-bg-surface px-2.5 py-1.5 text-xs font-medium text-text-primary shadow-menu transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0";
+
 /** Sidebar sits behind the inset content panel. */
 export const SHELL_ASIDE =
   "flex h-full max-h-full min-h-0 shrink-0 flex-col overflow-hidden bg-bg-shell";

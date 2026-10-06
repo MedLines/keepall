@@ -1,11 +1,14 @@
 import type { Item } from "@/domain/item";
+import type { LibraryListColumns } from "@/domain/library-view";
 
 /** Keep small libraries mounted; window larger libraries for folder navigation. */
 export const LIBRARY_VIRTUALIZE_MIN = 60;
 
 export const LIBRARY_GRID_MIN_COL_PX = 320;
 export const LIBRARY_GRID_GAP_PX = 20;
-export const LIBRARY_LIST_ROW_ESTIMATE_PX = 112;
+export const LIBRARY_LIST_ROW_ESTIMATE_PX = 64;
+export const LIBRARY_LIST_GAP_PX = 4;
+export const LIBRARY_LIST_MIN_COL_PX = 440;
 export const LIBRARY_GRID_ROW_ESTIMATE_PX = 320;
 
 export function gridColumnCount(containerWidth: number): number {
@@ -13,6 +16,12 @@ export function gridColumnCount(containerWidth: number): number {
     (containerWidth + LIBRARY_GRID_GAP_PX) /
     (LIBRARY_GRID_MIN_COL_PX + LIBRARY_GRID_GAP_PX),
   ));
+}
+
+export function listColumnCount(containerWidth: number, preference: LibraryListColumns = "auto"): number {
+  if (preference !== "auto") return Number(preference);
+  const available = Math.max(1, Math.floor((containerWidth + LIBRARY_LIST_GAP_PX) / (LIBRARY_LIST_MIN_COL_PX + LIBRARY_LIST_GAP_PX)));
+  return Math.min(available, 3);
 }
 
 function estimatedLines(text: string, columnWidth: number, maximum: number): number {

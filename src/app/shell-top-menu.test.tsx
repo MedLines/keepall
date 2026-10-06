@@ -8,6 +8,17 @@ const options = [
 ];
 
 describe("ShellTopMenu", () => {
+  test("shows a styled tooltip and keeps a trigger-only icon out of the dropdown rows", async () => {
+    render(<ShellTopMenu ariaLabel="List columns" value="all" options={options} onChange={vi.fn()} iconOnly triggerIcon={<span data-testid="columns-icon" />} />);
+    const trigger = screen.getByRole("combobox", { name: "List columns: All types" });
+    expect(trigger).not.toHaveAttribute("title");
+    expect(within(trigger).getByTestId("columns-icon")).toBeInTheDocument();
+    fireEvent.focus(trigger);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("List columns: All types");
+    fireEvent.click(trigger);
+    expect(within(screen.getByRole("listbox")).queryByTestId("columns-icon")).not.toBeInTheDocument();
+  });
+
   test("announces its purpose and selected value on the trigger", () => {
     render(
       <ShellTopMenu

@@ -65,7 +65,7 @@ export function PersistentStorageStatusLine({
             ? "Dismiss storage message"
             : "Dismiss storage warning"
         }
-        className="absolute end-0 top-0 flex size-10 items-center justify-center text-text-secondary transition-[color,scale] duration-150 ease-out hover:text-text-primary active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-border-focus motion-reduce:transition-colors motion-reduce:active:scale-100"
+        className="absolute end-0 top-0 flex size-10 items-center justify-center text-text-secondary transition-[color,scale] duration-150 ease-out hover:text-text-primary active:scale-[0.96] focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-border-focus motion-reduce:transition-colors motion-reduce:active:scale-100"
         onClick={() => {
           setDismissed(true);
           try {
