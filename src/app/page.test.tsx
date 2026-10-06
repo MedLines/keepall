@@ -12,5 +12,5 @@ test("renders the Keepall home link and library shell", async () => {
     "href",
     "/settings",
   );
-  expect(await screen.findByText("No items yet.")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "A place for what you want to keep" })).toBeInTheDocument();
 });
