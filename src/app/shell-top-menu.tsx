@@ -32,6 +32,7 @@ type Props<T extends string> = {
   emphasized?: boolean;
   showCheckmark?: boolean;
   className?: string;
+  disabled?: boolean;
 };
 
 export function ShellTopMenu<T extends string>({
@@ -44,6 +45,7 @@ export function ShellTopMenu<T extends string>({
   emphasized = false,
   showCheckmark = true,
   className = "",
+  disabled = false,
 }: Props<T>) {
   const tooltipId = useId();
   const activeOption =
@@ -52,6 +54,7 @@ export function ShellTopMenu<T extends string>({
   return (
     <Tooltip.Root>
     <Select.Root<T>
+      disabled={disabled}
       value={value}
       onValueChange={(nextValue) => {
         if (nextValue !== null) onChange(nextValue);
@@ -78,7 +81,7 @@ export function ShellTopMenu<T extends string>({
           sideOffset={8}
           collisionPadding={8}
           positionMethod="fixed"
-          className="z-50 data-[anchor-hidden]:invisible"
+          className="z-[70] data-[anchor-hidden]:invisible"
         >
           <Select.Popup className="shell-select-popup ui-menu-popup ui-popover flex flex-col overflow-hidden max-h-[min(24rem,var(--available-height))] min-w-[max(9rem,var(--anchor-width))] max-w-[calc(100vw-1rem)] outline-none">
             <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">

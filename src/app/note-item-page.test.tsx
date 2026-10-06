@@ -31,6 +31,14 @@ describe("NoteItemPage", () => {
     routerPush.mockReset();
   });
 
+  test("renders the library handoff while IndexedDB revalidation is pending", () => {
+    const item = buildNote({ content: "Ready before navigation" }, { id: "note-handoff", now: 1 });
+    vi.mocked(getItem).mockReturnValue(new Promise(() => {}));
+    render(<NoteItemPage itemId={item.id} returnHref="/" initialSnapshot={{ item, tags: [], collections: [], animate: true }} />);
+    expect(screen.queryByText(/Loading (item|image|note)/)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ready before navigation" })).toBeVisible();
+  });
+
   test("uses a short item label in Trash and organize when a saved title contains an article", async () => {
     const article = "Component Playground\n\n" + "A long article about components. ".repeat(100);
     vi.mocked(getItem).mockResolvedValue(buildNote({ title: article, content: article }, { id: "long-note" }));

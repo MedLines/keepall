@@ -9,8 +9,11 @@ import { NoteItemPage } from "./note-item-page";
 import { VideoItemPage } from "./video-item-page";
 import { DocumentItemPage } from "./document-item-page";
 
+import { readItemNavigation } from "./item-navigation-snapshot";
+
 export function ItemPageContent({ itemId, returnHref }: { itemId: string; returnHref: string }) {
-  const [type, setType] = useState<"loading" | "image" | "link" | "note" | "video" | "document" | "missing" | "error">("loading");
+  const [initialSnapshot] = useState(() => readItemNavigation(itemId));
+  const [type, setType] = useState<"loading" | "image" | "link" | "note" | "video" | "document" | "missing" | "error">(initialSnapshot?.item.type ?? "loading");
 
   useEffect(() => {
     let active = true;
@@ -32,11 +35,11 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
     };
   }, [itemId]);
 
-  if (type === "image") return <ImageItemPage itemId={itemId} returnHref={returnHref} />;
+  if (type === "image") return <ImageItemPage key={itemId} itemId={itemId} returnHref={returnHref} initialSnapshot={initialSnapshot} />;
   if (type === "link") return <LinkItemPage itemId={itemId} returnHref={returnHref} />;
-  if (type === "note") return <NoteItemPage itemId={itemId} returnHref={returnHref} />;
+  if (type === "note") return <NoteItemPage key={itemId} itemId={itemId} returnHref={returnHref} initialSnapshot={initialSnapshot} />;
   if (type === "video") return <VideoItemPage itemId={itemId} returnHref={returnHref} />;
-  if (type === "document") return <DocumentItemPage key={itemId} itemId={itemId} returnHref={returnHref} />;
+  if (type === "document") return <DocumentItemPage key={itemId} itemId={itemId} returnHref={returnHref} initialSnapshot={initialSnapshot} />;
   const message =
     type === "loading"
       ? "Loading item…"

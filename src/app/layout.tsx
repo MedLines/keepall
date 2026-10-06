@@ -5,6 +5,7 @@ import { AutomaticBackupRunner } from "./automatic-backup-runner";
 import { CaptureHost } from "./capture-host";
 import { DevToolsEntry } from "./dev-tools-entry";
 import { PwaProvider } from "./pwa-provider";
+import { ItemNavigationHistory } from "./item-route-viewer";
 import { THEME_INIT_SCRIPT } from "./theme-preference";
 import { SHELL_INIT_SCRIPT } from "./shell-styles";
 import { MotionProvider } from "@/components/ui/motion-provider";
@@ -30,7 +31,7 @@ export const viewport: Viewport = {
   themeColor: oklchToHex("oklch(0.210330931 0.005860382 285.885132689)"),
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children, viewer }: LayoutProps<"/">) {
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
@@ -40,7 +41,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="bg-bg-canvas text-text-primary antialiased" style={motionCssVariables}>
         <MotionProvider>
           <PwaProvider>
-            {children}
+            <ItemNavigationHistory />
+            <div id="route-content" className="contents">{children}</div>
+            {viewer}
             <CaptureHost />
             <AutomaticBackupRunner />
           </PwaProvider>

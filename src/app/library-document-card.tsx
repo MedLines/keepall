@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { ItemOpenLink } from "./item-open-link";
 import type { DocumentItem } from "@/domain/document";
 import { itemListTitle } from "@/domain/item";
 import { SearchHighlight } from "./search-highlight";
@@ -21,7 +21,7 @@ export function LibraryDocumentCard({ item, query, pinned, openHref, onOpen }: {
     return <div className="library-card-copy">
       <h2 className="library-card-title">
         {pinned ? <CardPin /> : null}
-        {item.deletedAt !== undefined ? <span className={titleClassName}>{titleContent}</span> : openHref ? <Link href={openHref} prefetch={false} className={titleClassName}>{titleContent}</Link>
+        {item.deletedAt !== undefined ? <span className={titleClassName}>{titleContent}</span> : openHref ? <ItemOpenLink href={openHref} className={titleClassName}>{titleContent}</ItemOpenLink>
           : <button type="button" onClick={onOpen} className={titleClassName}>{titleContent}</button>}
       </h2>
       {showFileName ? <p className="library-card-file" title={item.sourceFileName}><SearchHighlight text={item.sourceFileName} query={query} /></p> : null}

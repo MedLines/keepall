@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { acquireThumbnailObjectUrl } from "./asset-object-url-cache";
+import { acquireThumbnailObjectUrl, peekThumbnailObjectUrl } from "./asset-object-url-cache";
 
 export function useThumbnailObjectUrl(assetId: string | null): string | null {
-  const [result, setResult] = useState<{ id: string; url: string } | null>(null);
+  const [result, setResult] = useState<{ id: string; url: string } | null>(() => {
+    const url = typeof window !== "undefined" && assetId ? peekThumbnailObjectUrl(assetId) : null;
+    return url && assetId ? { id: assetId, url } : null;
+  });
   useEffect(() => {
     if (!assetId) return;
     let active = true;

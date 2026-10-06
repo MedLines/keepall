@@ -4,12 +4,24 @@ import { afterEach, expect, test, vi } from "vitest";
 import { createDocument, getDocumentOriginal } from "@/persistence/documents";
 import { getDb } from "@/persistence/db";
 import { getItem } from "@/persistence/items";
+import * as itemPersistence from "@/persistence/items";
+import * as documentPersistence from "@/persistence/documents";
 import { DocumentItemPage } from "./document-item-page";
 import { DocumentContent, DocumentText } from "./document-content";
 import { mockNavigation } from "../../vitest.setup";
 
 const bytes = new TextEncoder().encode("\uFEFF# Original heading\r\n\n- [x] Unicode café مرحبا\n");
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+test.each(["txt", "md"])("opens a %s file from its card snapshot while storage reads are pending", async extension => {
+  const item = await createDocument({ fileName: `snapshot.${extension}`, bytes: new TextEncoder().encode("Complete saved body"), title: "Snapshot document" });
+  vi.spyOn(itemPersistence, "getItem").mockReturnValue(new Promise(() => {}));
+  vi.spyOn(documentPersistence, "getDocumentOriginal").mockReturnValue(new Promise(() => {}));
+  render(<DocumentItemPage itemId={item.id} returnHref="/" initialSnapshot={{ item, tags: [], collections: [], animate: true, documentPreview: { text: "Already visible card text" } }} />);
+  expect(screen.getByRole("heading", { name: "Snapshot document" })).toBeVisible();
+  expect(screen.getByText("Already visible card text")).toBeVisible();
+  expect(screen.queryByText("Loading document…")).not.toBeInTheDocument();
+});
 
 test("edits title and personal notes while preserving the exact original download", async () => {
   const item = await createDocument({ fileName: "source.md", bytes });

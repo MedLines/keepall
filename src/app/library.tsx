@@ -1,5 +1,6 @@
 "use client";
 
+import { prepareItemNavigation } from "./item-navigation-snapshot";
 import { ScrollPanel } from "@/components/ui/scroll-panel";
 
 import {
@@ -214,6 +215,7 @@ export function Library() {
   const flushSoftReloadRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    if (pathname.startsWith("/items/")) return;
     if (urlSearchKey === lastWrittenSearchRef.current) {
       ignoreUrlSyncRef.current = false;
       return;
@@ -223,10 +225,11 @@ export function Library() {
       return;
     }
     setView(parseLibraryViewState(searchParams));
-  }, [urlSearchKey, searchParams]);
+  }, [urlSearchKey, searchParams, pathname]);
 
   useEffect(() => {
     function onPopState() {
+      if (window.location.pathname.startsWith("/items/")) return;
       ignoreUrlSyncRef.current = false;
       const params = new URLSearchParams(window.location.search);
       lastWrittenSearchRef.current = params.toString();
@@ -940,6 +943,7 @@ export function Library() {
   }
 
   function openInspect(item: Item) {
+    prepareItemNavigation({ item, tags, collections, animate: false });
     if (item.type === "image" || item.type === "note" || item.type === "video" || item.type === "document") {
       const returnView = mergeLibraryViewState(viewRef.current, {
         item: null,
@@ -1694,6 +1698,7 @@ export function Library() {
               )
             : undefined
         }
+        onPrepareOpen={animate => prepareItemNavigation({ item, tags, collections, animate })}
         onOpenInspect={() => openInspect(item)}
         onPreview={!view.trash ? () => libraryGridRef.current?.openPreview(item.id) : undefined}
         tagNames={resolveItemTags(item, tagsById)}
@@ -1888,7 +1893,7 @@ export function Library() {
       <div className="relative flex h-full min-h-0 overflow-hidden bg-bg-shell py-2.5 pr-2.5">
         <LibraryShell
           panelOpen={panelOpen}
-          previewOpen={previewOpen}
+          previewOpen={previewOpen || pathname.startsWith("/items/")}
           panelReady={panelPreference !== null || storedPanelPreference !== null}
           onPanelOpenChange={setPanelOpen}
           browseCollectionId={browseCollectionId}
@@ -2018,7 +2023,7 @@ export function Library() {
                   onSelectIds={setSelectedIds}
                   keyboardDisabled={previewBusy}
                   previewEnabled={!view.trash}
-                  onOpenItem={item => router.push(itemPageHref(item.id, libraryViewHref(pathname, mergeLibraryViewState(viewRef.current, { item: null, slide: 0 }))))}
+                  onOpenItem={item => openInspect(item)}
                   empty={
                     <LibraryEmptyState
                       kind={emptyStateKind}

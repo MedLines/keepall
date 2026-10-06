@@ -5,7 +5,7 @@ import {
   isLibraryNavigationStale,
   useLibraryNavigationGenerationRef,
 } from "./library-navigation";
-import { acquireAssetObjectUrl } from "./asset-object-url-cache";
+import { acquireAssetObjectUrl, peekAssetObjectUrl } from "./asset-object-url-cache";
 
 /**
  * Load a local asset Blob and expose a shared object URL for <img src>.
@@ -21,7 +21,10 @@ export function useAssetObjectUrl(
   const [resolved, setResolved] = useState<{
     assetId: string;
     url: string;
-  } | null>(null);
+  } | null>(() => {
+    const url = typeof window !== "undefined" && enabled && assetId ? peekAssetObjectUrl(assetId) : null;
+    return url && assetId ? { assetId, url } : null;
+  });
 
   useEffect(() => {
     if (!assetId || !enabled) {

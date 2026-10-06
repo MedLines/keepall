@@ -7,6 +7,7 @@ import type { LinkItem } from "@/domain/link";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { useState } from "react";
+import { ItemViewTransition } from "./item-view-transition";
 import { ItemTypeIcon } from "./item-type-icon";
 import { PdfCardThumbnail } from "./pdf-card-thumbnail";
 
@@ -24,6 +25,7 @@ type Props = {
   /** Dense link lists show identity without loading the OG asset. */
   faviconOnly?: boolean;
   className?: string;
+  sharedTransition?: boolean;
 };
 
 /** Renders link/image preview or note letter. No links; inspect owns outbound. */
@@ -35,12 +37,13 @@ export function LibraryItemMedia({
   faviconOnly = false,
   onImageLoad,
   className = "",
+  sharedTransition = true,
 }: Props) {
   const assetIdForDisplay = faviconOnly && item.type === "link" ? null : resolveAssetId(item, assetId);
   const useThumbnail = ["card", "grid"].includes(variant) && (item.type === "image" || item.type === "video");
   const originalUrl = useAssetObjectUrl(assetIdForDisplay, { enabled: !useThumbnail });
-  const thumbnailUrl = useThumbnailObjectUrl(useThumbnail ? assetIdForDisplay : null);
-  const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl;
+  const thumbnailUrl = useThumbnailObjectUrl(useThumbnail || item.type === "image" ? assetIdForDisplay : null);
+  const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl ?? (item.type === "image" ? thumbnailUrl : null);
   const [brokenAssetId, setBrokenAssetId] = useState<string | null>(null);
   const imageSrc = brokenAssetId === assetIdForDisplay ? null : localObjectUrl;
 
@@ -49,7 +52,7 @@ export function LibraryItemMedia({
   }
 
   if (imageSrc && (item.type === "link" || item.type === "image" || item.type === "video")) {
-    return (
+    const image = (
       // eslint-disable-next-line @next/next/no-img-element -- local object URLs + remote OG
       <img
         alt=""
@@ -64,6 +67,9 @@ export function LibraryItemMedia({
         }}
       />
     );
+    return sharedTransition && item.type === "image" && assetIdForDisplay && ["card", "grid", "inspect"].includes(variant)
+      ? <ItemViewTransition itemId={item.id} assetId={assetIdForDisplay} source={variant !== "inspect"}>{image}</ItemViewTransition>
+      : image;
   }
 
   if (item.type === "link") {
@@ -125,7 +131,7 @@ function imageClassName(
     return `media-outline mx-auto block h-auto w-auto max-w-full ${className}`;
   }
   if (variant === "inspect") {
-    return `media-outline media-squircle-inset mx-auto max-h-[min(78vh,56rem)] w-full object-contain ${className}`;
+    return `media-outline media-squircle-inset mx-auto block h-auto max-h-[min(78vh,56rem)] w-auto max-w-full object-contain ${className}`;
   }
   if (compact) {
     return `media-outline size-full rounded-[inherit] object-cover ${className}`;

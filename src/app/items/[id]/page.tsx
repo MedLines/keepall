@@ -19,5 +19,5 @@ async function ResolvedItemPage({
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const from = typeof query.from === "string" ? query.from : undefined;
-  return <ItemPageContent itemId={id} returnHref={safeLibraryReturnHref(from)} />;
+  return <ItemPageContent key={id} itemId={id} returnHref={safeLibraryReturnHref(from)} />;
 }

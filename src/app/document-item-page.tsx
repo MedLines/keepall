@@ -23,15 +23,19 @@ import { ITEM_DETAILS_CONTROL, ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { NoteContent } from "./note-content";
 import { DownloadIcon } from "./shell-icons";
+import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+import { ItemViewTransition } from "./item-view-transition";
 
 type State = { itemId: string } & (
   | { status: "loading" | "missing" | "error" }
   | { status: "ready"; item: DocumentItem; tags: Tag[]; collections: Collection[] }
 );
 
-export function DocumentItemPage({ itemId, returnHref }: { itemId: string; returnHref: string }) {
+export function DocumentItemPage({ itemId, returnHref, initialSnapshot }: { itemId: string; returnHref: string; initialSnapshot?: ItemNavigationSnapshot }) {
   const router = useRouter();
-  const [state, setState] = useState<State>({ itemId, status: "loading" });
+  const [state, setState] = useState<State>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "document"
+    ? { itemId, status: "ready", item: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
+    : { itemId, status: "loading" });
   const [editing, setEditing] = useState(false);
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -102,7 +106,9 @@ export function DocumentItemPage({ itemId, returnHref }: { itemId: string; retur
     <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`} viewportProps={{ "data-document-scroll": "", "data-testid": "item-page-scroll" }}>
       <div className={ITEM_PAGE_GRID}>
         <div className={`row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-4xl ${item.format === "pdf" ? "" : "lg:pt-6"}`}>
-          <article aria-label="Document content"><DocumentContent key={item.id} item={item} /></article>
+          <ItemViewTransition itemId={item.id} assetId={item.assetId} kind="document" source={false}>
+            <article aria-label="Document content"><DocumentContent key={`${item.id}:${item.assetId}`} item={item} initialPreview={initialSnapshot?.item.type === "document" && initialSnapshot.item.assetId === item.assetId ? initialSnapshot.documentPreview : undefined} /></article>
+          </ItemViewTransition>
           <section aria-label="Personal note" className="mt-9 border-t border-border-control pt-8">
             <h2 className="mb-4 text-lg font-semibold">My note</h2>
             {item.noteContent ? <NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /> : <button type="button" className="ui-control min-h-11 px-4 text-sm font-medium" disabled={busy} onClick={() => { setError(null); setEditing(true); }}>Add a personal note</button>}

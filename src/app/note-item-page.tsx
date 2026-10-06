@@ -37,6 +37,8 @@ import { PlusIcon } from "./shell-icons";
 import { ItemPageHeader } from "./item-page-header";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
 
+import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+
 type LoadState =
   | { status: "loading" | "missing" | "error" }
   | { status: "ready"; note: NoteItem; tags: Tag[]; collections: Collection[] };
@@ -44,12 +46,16 @@ type LoadState =
 export function NoteItemPage({
   itemId,
   returnHref,
+  initialSnapshot,
 }: {
   itemId: string;
   returnHref: string;
+  initialSnapshot?: ItemNavigationSnapshot;
 }) {
   const router = useRouter();
-  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [state, setState] = useState<LoadState>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "note"
+    ? { status: "ready", note: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
+    : { status: "loading" });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);

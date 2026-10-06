@@ -38,6 +38,7 @@ import { ItemLibraryDetails } from "./item-library-details";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
+import { ItemViewTransition } from "./item-view-transition";
 import { NoteContent } from "./note-content";
 import { VerticalImageGallery } from "./vertical-image-gallery";
 import { ItemPageHeader } from "./item-page-header";
@@ -64,9 +65,12 @@ type LoadState =
       collections: Collection[];
     };
 
+import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+
 type Props = {
   itemId: string;
   returnHref: string;
+  initialSnapshot?: ItemNavigationSnapshot;
 };
 
 const CONTROL =
@@ -74,9 +78,11 @@ const CONTROL =
 const MAX_VISIBLE_GALLERY_PREVIEWS = 15;
 type GalleryMode = "slides" | "scroll";
 
-export function ImageItemPage({ itemId, returnHref }: Props) {
+export function ImageItemPage({ itemId, returnHref, initialSnapshot }: Props) {
   const router = useRouter();
-  const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
+  const [loadState, setLoadState] = useState<LoadState>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "image"
+    ? { status: "ready", item: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
+    : { status: "loading" });
   const [slide, setSlide] = useState(0);
   const [galleryMode, setGalleryMode] = useState<GalleryMode>("slides");
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -712,6 +718,7 @@ function ImageWorkspace({
               </div>
               ) : null}
               {galleryMode === "slides" ? (
+              <ItemViewTransition itemId={item.id} assetId={currentAssetId ?? ""} source={false}>
               <div className="item-workspace-media relative isolate flex h-[var(--image-viewer-height)] items-center justify-center overflow-hidden rounded-card bg-bg-media">
                 <div className="pointer-events-none absolute inset-4 z-10 flex items-start justify-end">
                   <CurrentImageMenu
@@ -731,7 +738,8 @@ function ImageWorkspace({
                     item={item}
                     variant="inspect"
                     assetId={currentAssetId}
-                    className="max-h-[calc(100dvh-14rem)]"
+                    sharedTransition={false}
+                    className="!max-h-full"
                   />
                   <span className="ui-control pointer-events-none absolute bottom-3 right-3 flex size-11 items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">
                     <FullScreenIcon />
@@ -760,6 +768,7 @@ function ImageWorkspace({
                   </>
                 ) : null}
               </div>
+              </ItemViewTransition>
 
               ) : null}
               {galleryMode === "slides" ? (

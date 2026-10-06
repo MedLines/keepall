@@ -75,6 +75,14 @@ describe("ImageItemPage", () => {
     ]);
   });
 
+  test("renders the library handoff while IndexedDB revalidation is pending", () => {
+    const item = buildImageFromAssetIds({ assetIds: ["asset-handoff"] }, { id: "image-handoff", now: 1 });
+    vi.mocked(getItem).mockReturnValue(new Promise(() => {}));
+    render(<ImageItemPage itemId={item.id} returnHref="/" initialSnapshot={{ item, tags: [], collections: [], animate: true }} />);
+    expect(screen.queryByText(/Loading (item|image|note)/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("rendered-asset")).toHaveTextContent("asset-handoff");
+  });
+
   test("scroll view keeps gallery order and opens the chosen image in the focused viewer", async () => {
     const item = buildImageFromAssetIds({ assetIds: ["asset-1", "asset-2", "asset-3"] }, { id: "image-1", now: 1 });
     vi.mocked(getItem).mockResolvedValue(item);

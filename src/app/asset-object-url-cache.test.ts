@@ -14,6 +14,7 @@ import {
   acquireAssetObjectUrl,
   acquireThumbnailObjectUrl,
   clearAssetObjectUrlCache,
+  peekAssetObjectUrl,
 } from "./asset-object-url-cache";
 
 describe("asset object URL cache", () => {
@@ -30,6 +31,18 @@ describe("asset object URL cache", () => {
   afterEach(() => {
     clearAssetObjectUrlCache();
     vi.restoreAllMocks();
+  });
+
+  test("exposes a ready URL without starting a read and clears it on eviction", async () => {
+    expect(peekAssetObjectUrl("asset")).toBeNull();
+    expect(getAsset).not.toHaveBeenCalled();
+    const handle = acquireAssetObjectUrl("asset");
+    expect(peekAssetObjectUrl("asset")).toBeNull();
+    await handle.promise;
+    expect(peekAssetObjectUrl("asset")).toBe("blob:shared-asset");
+    handle.release();
+    clearAssetObjectUrlCache();
+    expect(peekAssetObjectUrl("asset")).toBeNull();
   });
 
   test("shares thumbnail URLs across mounts without reading originals", async () => {

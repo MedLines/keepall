@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { ItemOpenLink } from "./item-open-link";
+import { ItemViewTransition } from "./item-view-transition";
 import { cardSecondaryLine, noteCardText } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
 import type { SearchExcerpt } from "@/domain/search";
@@ -26,9 +27,11 @@ export function LibraryListContent({ item, pinned, onOpen, openHref, query = "",
       .some(name => name.toLocaleLowerCase() === title.toLocaleLowerCase()) ? item.sourceFileName
     : item.type === "image" && item.caption.trim() ? noteCardText({ content: item.caption.slice(0, 600), format: item.captionFormat })
     : "";
-  const text = <span className="library-list-title">
+  const titleText = <span className="library-list-title">
     <span className="truncate"><SearchHighlight text={title} query={query} /></span>
   </span>;
+  const text = item.type === "document" && item.format !== "pdf"
+    ? <ItemViewTransition itemId={item.id} assetId={item.assetId} kind="document" source>{titleText}</ItemViewTransition> : titleText;
   const openClass = "library-list-open min-w-0 flex-1 text-start";
   const hasNote = Boolean(personalNote?.content.trim());
   const galleryCount = item.type === "image" && item.assetIds.length > 1 ? item.assetIds.length : null;
@@ -37,7 +40,7 @@ export function LibraryListContent({ item, pinned, onOpen, openHref, query = "",
       {item.deletedAt !== undefined ? <div className={openClass}>{text}</div> : item.type === "link" ? (
         <a href={item.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${itemListTitle(item)}`} className={openClass}>{text}</a>
       ) : openHref ? (
-        <Link href={openHref} prefetch={false} aria-label={`Open ${itemListTitle(item)}`} className={openClass}>{text}</Link>
+        <ItemOpenLink href={openHref} aria-label={`Open ${itemListTitle(item)}`} className={openClass}>{text}</ItemOpenLink>
       ) : <button type="button" onClick={onOpen} aria-label={`Open ${itemListTitle(item)}`} className={openClass}>{text}</button>}
     </div>
     <div className="library-list-secondary">

@@ -74,7 +74,7 @@ export function PdfPage({ document, number, zoom, viewportSize }: { document: PD
   }, [document, number, zoom, width, attempt, key]);
 
   const error = rendered?.key === key && rendered.error;
-  return <div ref={frame} className="relative min-w-0">
+  return <div ref={frame} data-pdf-ready={rendered && !rendered.error ? number : undefined} className="relative min-w-0">
     {error ? <div role="alert" className="mb-3 text-sm text-text-danger">Couldn&apos;t display this page. Try another page or download the file. <button type="button" className="ui-control min-h-9 px-3" onClick={() => setAttempt(value => value + 1)}>Retry page</button></div> : null}
     <ScrollPanel orientation="both" className="max-w-full rounded-input border border-border-control bg-bg-raised" aria-busy={rendered?.key !== key}>
       <div ref={display} className="relative mx-auto w-fit bg-white" style={viewportSize} />

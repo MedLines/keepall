@@ -8,6 +8,7 @@ import {
 } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { itemActionLabel } from "@/domain/item-label";
 import { itemListTitle, type Item } from "@/domain/item";
 import type { LibraryLayout } from "@/domain/library-view";
@@ -17,6 +18,7 @@ import {
   useBrowseChromeVisible,
 } from "./item-media-layout";
 import { LibraryItemMedia } from "./library-item-media";
+import { prepareDocumentNavigationPreview } from "./item-navigation-snapshot";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibrarySelectionControl } from "./library-selection-control";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
@@ -74,6 +76,7 @@ export type LibraryItemProps = {
   inspected: boolean;
   openHref?: string;
   onOpenInspect: () => void;
+  onPrepareOpen?: (animate: boolean) => void;
   onPreview?: () => void;
   tagNames: { id: string; name: string }[];
   tagError: string | null;
@@ -122,6 +125,7 @@ export function LibraryItem({
   inspected,
   openHref,
   onOpenInspect,
+  onPrepareOpen,
   onPreview,
   tagNames,
   tagError,
@@ -166,6 +170,15 @@ export function LibraryItem({
   const [fetchingPreview, setFetchingPreview] = useState(false);
   const actionsRef = useRef<HTMLButtonElement>(null);
   const reduceMotion = useReducedMotion();
+  const router = useRouter();
+  const [prefetchOnIntent, setPrefetchOnIntent] = useState(false);
+  const prepareRoute = () => {
+    if (!selectionActive && !trashActions && openHref?.startsWith("/items/")) {
+      setPrefetchOnIntent(true);
+      if (item.type === "document") prepareDocumentNavigationPreview(item);
+      if (item.type === "note") router.prefetch(openHref);
+    }
+  };
 
   const checkboxVisible = selected || selectionActive;
   const availableTagSuggestions = tagSuggestions.filter(
@@ -348,7 +361,12 @@ export function LibraryItem({
       className={`library-item-root min-w-0 focus-within:z-10 ${isList ? "@container library-list-item" : ""} ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
+      onPointerEnter={prepareRoute}
+      onFocus={prepareRoute}
+      onTouchStart={prepareRoute}
       onClickCapture={event => {
+        const link = (event.target as HTMLElement).closest("a");
+        if (!selectionActive && link?.getAttribute("href")?.startsWith("/items/")) onPrepareOpen?.(event.detail > 0);
         if (!selectionActive || (event.target as HTMLElement).closest("label[data-visible], [data-item-actions]")) return;
         if (!event.currentTarget.contains(event.target as Node)) return;
         event.preventDefault();
@@ -480,7 +498,7 @@ export function LibraryItem({
         ) : openHref ? (
           <Link
             href={openHref}
-            prefetch={false}
+            prefetch={prefetchOnIntent}
             aria-label={`Open ${title}`}
             className="library-list-media-open shrink-0"
           >
@@ -493,7 +511,7 @@ export function LibraryItem({
         !trashActions && openHref && item.type !== "link" ? (
           <Link
             href={openHref}
-            prefetch={false}
+            prefetch={prefetchOnIntent}
             aria-label={`Open ${title}`}
             className="library-card-open block"
           >

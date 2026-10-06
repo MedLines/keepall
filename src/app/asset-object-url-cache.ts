@@ -101,3 +101,12 @@ export function clearAssetObjectUrlCache(): void {
     dispose(entry);
   }
 }
+
+/** Read already-loaded bytes without opening IndexedDB during render. */
+export function peekAssetObjectUrl(id: string): string | null {
+  return entries.get(`asset:${id}`)?.url ?? null;
+}
+
+export function peekThumbnailObjectUrl(id: string): string | null {
+  return entries.get(`thumbnail:${id}`)?.url ?? null;
+}
