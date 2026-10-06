@@ -5,14 +5,14 @@ const MEDIA_MIMES: Record<string, string> = {
   webp: "image/webp", avif: "image/avif", mp4: "video/mp4", webm: "video/webm",
 };
 
-export const CAPTURE_FILE_ACCEPT = "image/png,image/jpeg,image/gif,image/webp,image/avif,video/mp4,video/webm,.txt,.md";
+export const CAPTURE_FILE_ACCEPT = "image/png,image/jpeg,image/gif,image/webp,image/avif,video/mp4,video/webm,.txt,.md,.pdf";
 
 export function classifyCaptureFile(file: Pick<File, "name" | "type">): {
   kind: "image" | "video" | "document" | "unsupported"; mimeType: string;
 } {
   const extension = file.name.split(".").at(-1)?.toLowerCase() ?? "";
-  if (file.name.includes(".") && (extension === "txt" || extension === "md")) {
-    return { kind: "document", mimeType: extension === "md" ? "text/markdown" : "text/plain" };
+  if (file.name.includes(".") && (extension === "txt" || extension === "md" || extension === "pdf")) {
+    return { kind: "document", mimeType: extension === "pdf" ? "application/pdf" : extension === "md" ? "text/markdown" : "text/plain" };
   }
   const mimeType = file.type && file.type !== "application/octet-stream"
     ? file.type.split(";")[0].trim().toLowerCase() : MEDIA_MIMES[extension] ?? "";

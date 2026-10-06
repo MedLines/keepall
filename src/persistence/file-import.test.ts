@@ -82,7 +82,7 @@ test("mixed selections save images, videos and notes in their detected types and
   expect(await getDb().assets.count()).toBe(1);
   expect(await getDb().videoAssets.count()).toBe(1);
   expect(await getDb().documentAssets.count()).toBe(1);
-  expect(summary.results[3]).toMatchObject({ error: expect.stringContaining("PDF and HTML") });
+  expect(summary.results[3]).toMatchObject({ error: expect.stringContaining("HTML support") });
 });
 
 test("a video decoding failure preserves other files without saving an unusable video", async () => {

@@ -49,7 +49,8 @@ test("imported file contents produce highlighted results through filters, editin
   await capture.getByRole("textbox", { name: "Collection", exact: true }).press("Enter");
   await capture.getByRole("textbox", { name: "Tags", exact: true }).fill("Research");
   await capture.getByRole("textbox", { name: "Tags", exact: true }).press("Enter");
-  await capture.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(capture.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+  await capture.getByRole("button", { name: "Save", exact: true }).press("Enter");
   await expect(capture).toBeHidden();
   await expect(page.locator("[data-item-id]")).toHaveCount(2);
 
@@ -97,10 +98,12 @@ test("imported file contents produce highlighted results through filters, editin
   await page.getByRole("link", { name: "Open reference", exact: true }).last().click();
   await page.getByRole("button", { name: "Move document to Trash", exact: true }).click();
   await page.getByRole("dialog", { name: "Move this document to Trash?" }).getByRole("button", { name: "Move to Trash", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Move this document to Trash?" })).toBeHidden();
   await page.goto("/?trash=1&q=newkeyword");
   await expect(page.locator("[data-item-id]")).toHaveCount(1);
   await expect(page.locator(".search-excerpt mark")).toHaveText("Newkeyword");
   await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(page.locator("[data-item-id]")).toHaveCount(0);
   await page.goto("/?q=newkeyword");
   await expect(page.locator("[data-item-id]")).toHaveCount(1);
   await expect(page.locator("[data-item-id]")).toHaveAttribute("data-item-id", id!);
@@ -141,7 +144,15 @@ test("refining document searches keeps existing results mounted and in place", a
   await page.addInitScript(() => {
     const NativeWorker = window.Worker;
     const delayedEvents = new WeakSet<Event>();
+    const queries: string[] = [];
+    Object.defineProperty(window, "documentSearchQueries", { value: queries });
     window.Worker = class extends NativeWorker {
+      postMessage(message: unknown, options?: Transferable[] | StructuredSerializeOptions) {
+        const request = message as { query?: string; entries?: unknown[] };
+        if (request.query && request.entries?.length) queries.push(request.query);
+        if (Array.isArray(options)) super.postMessage(message, options);
+        else super.postMessage(message, options);
+      }
       constructor(...args: ConstructorParameters<typeof Worker>) {
         super(...args);
         this.addEventListener("message", event => {
@@ -156,19 +167,26 @@ test("refining document searches keeps existing results mounted and in place", a
     };
   });
   await seed(page, [
-    { id: "reference", title: "Reading material", text: "Unicorn animation examples" },
+    { id: "reference", title: "Unicorn reading material", text: "Unicorn animation examples" },
     { id: "replacement", title: "Another reference", text: "Replacement subject" },
   ]);
   const search = page.getByRole("searchbox", { name: "Search", exact: true });
   const result = page.locator('[data-item-id="reference"]');
-  await search.fill("unicorn");
+  await search.pressSequentially("unicorn", { delay: 25 });
+  await expect(page.getByText("Searching file contents…", { exact: true })).toBeVisible();
+  await expect(search).toHaveAccessibleName("Search");
+  expect(await page.locator('[data-item-id="replacement"]').count()).toBe(0);
+  const firstPendingBounds = await result.boundingBox();
+  expect(firstPendingBounds).not.toBeNull();
   await expect(page.locator("[data-item-id]")).toHaveCount(1);
   await expect(result.locator(".search-excerpt mark")).toHaveText("Unicorn");
   await expect(page.getByText("Searching file contents…", { exact: true })).toBeHidden();
+  expect(await page.evaluate(() => Reflect.get(window, "documentSearchQueries"))).toEqual(["unicorn"]);
   const originalNode = await result.elementHandle();
   expect(originalNode).not.toBeNull();
   const originalBounds = await result.boundingBox();
   expect(originalBounds).not.toBeNull();
+  expect(originalBounds!.y).toBeCloseTo(firstPendingBounds!.y, 0);
 
   await search.fill("unicorn animation");
   await expect(page.getByText("Searching file contents…", { exact: true })).toBeVisible();
@@ -180,11 +198,54 @@ test("refining document searches keeps existing results mounted and in place", a
   await expect(page.getByText("Searching file contents…", { exact: true })).toBeHidden();
   expect(await originalNode!.evaluate(node => node.isConnected)).toBe(true);
 
+  const queries = await page.evaluate(() => Reflect.get(window, "documentSearchQueries"));
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("keepall:items-changed"));
+    window.dispatchEvent(new Event("focus"));
+  });
+  // Covers the 150 ms soft reload and the delayed worker response window.
+  await page.waitForTimeout(1_100);
+  expect(await page.evaluate(() => Reflect.get(window, "documentSearchQueries"))).toEqual(queries);
+  expect(await page.locator('[data-item-id="replacement"]').count()).toBe(0);
+  expect(await originalNode!.evaluate(node => node.isConnected)).toBe(true);
+  expect((await result.boundingBox())!.y).toBeCloseTo(originalBounds!.y, 0);
+  await expect(page.getByText("Searching file contents…", { exact: true })).toBeHidden();
+
   await search.fill("replacement");
   await expect(page.locator('[data-item-id="replacement"]')).toBeVisible();
   await expect(result).toHaveCount(0);
   await expect(page.locator("[data-item-id]")).toHaveCount(1);
   await expect(page.locator(".search-excerpt mark")).toHaveText("Replacement");
+  // A restore can replace original bytes without changing any item metadata or IDs.
+  await page.evaluate(async () => {
+    const open = indexedDB.open("keepall");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      open.onsuccess = () => resolve(open.result);
+      open.onerror = () => reject(open.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(["documentAssets", "backupState"], "readwrite");
+        const bytes = new TextEncoder().encode("Replacement restored reference");
+        tx.objectStore("documentAssets").put({ id: "original-reference", bytes, byteLength: bytes.length, contentHash: "restored-reference", createdAt: 1 });
+        tx.objectStore("backupState").put({ id: "documents", revision: "restored" });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+    } finally { db.close(); }
+    window.dispatchEvent(new Event("keepall:items-changed"));
+  });
+  await expect(page.locator("[data-item-id]")).toHaveCount(2);
+  await expect(result.locator(".search-excerpt mark")).toHaveText("Replacement");
+  const clear = page.getByRole("button", { name: "Clear search", exact: true });
+  const bounds = (await clear.boundingBox())!;
+  expect(bounds.width).toBeGreaterThanOrEqual(44);
+  expect(bounds.height).toBeGreaterThanOrEqual(44);
+  await clear.click({ position: { x: 3, y: 3 } });
+  await expect(search).toHaveValue("");
+  await expect(search).toBeFocused();
+  await expect(page.locator("[data-item-id]")).toHaveCount(2);
 });
 
 test("missing originals leave title search usable and Retry search recovers restored text", async ({ page }) => {

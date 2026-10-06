@@ -5,6 +5,7 @@ import type { LibraryTypeFilter } from "@/domain/library-view";
 export type LibrarySidebarCounts = {
   all: number;
   unsorted: number;
+  pdfDocuments: number;
   byType: Record<LibraryTypeFilter, number>;
   byCollectionId: Record<string, number>;
   byTagId: Record<string, number>;
@@ -21,9 +22,11 @@ export function countSidebarItems(items: Item[]): LibrarySidebarCounts {
     document: 0,
   };
   let unsorted = 0;
+  let pdfDocuments = 0;
 
   for (const item of items) {
     byType[item.type] += 1;
+    if (item.type === "document" && item.format === "pdf") pdfDocuments++;
     if (item.collectionIds.length === 0) {
       unsorted += 1;
     }
@@ -38,6 +41,7 @@ export function countSidebarItems(items: Item[]): LibrarySidebarCounts {
   return {
     all: items.length,
     unsorted,
+    pdfDocuments,
     byType,
     byCollectionId,
     byTagId,

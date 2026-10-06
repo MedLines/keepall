@@ -7,7 +7,8 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { itemListTitle, type Item } from "@/domain/item";
 import { imageCardSecondary, linkCardHost, noteCardExcerpt } from "@/domain/card-display";
-import { CloseIcon, CollectionIcon, HashIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
+import { documentFormatLabel } from "@/domain/document";
+import { CloseIcon, CollectionIcon, HashIcon, LinkIcon, NoteIcon, PdfIcon, PinIcon } from "./shell-icons";
 
 function LinkSource({ host, query }: { host: string; query: string }) {
   return (
@@ -66,10 +67,10 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
     const body = <>
       <h2 className="break-words text-lg font-semibold leading-snug"><SearchHighlight text={itemListTitle(item)} query={query} /></h2>
       <p className="mt-2 break-all text-sm text-text-secondary"><SearchHighlight text={item.sourceFileName} query={query} /></p>
-      <span className="mt-4 block text-xs font-medium">Read note →</span>
+      <span className="mt-4 block text-xs font-medium">{item.format === "pdf" ? "Read PDF →" : "Read note →"}</span>
     </>;
     return wrap(<div className="min-w-0">
-      <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary"><NoteIcon className="size-4" />{item.format === "markdown" ? "Markdown note" : "Text note"}{pinned ? <PinIcon className="ms-auto size-4" /> : null}</div>
+      <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary">{item.format === "pdf" ? <PdfIcon className="size-4" /> : <NoteIcon className="size-4" />}{documentFormatLabel(item.format)}{pinned ? <PinIcon className="ms-auto size-4" /> : null}</div>
       {readOnly ? <h2 className="break-words text-lg font-semibold">{itemListTitle(item)}</h2> : openHref ? <Link href={openHref} prefetch={false} className="block min-w-0 rounded-control-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">{body}</Link> : <button type="button" className="block w-full min-w-0 rounded-control-sm text-left" onClick={onOpen}>{body}</button>}
     </div>);
   }

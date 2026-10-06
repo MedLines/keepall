@@ -2,7 +2,7 @@
 
 import { Select } from "@base-ui/react/select";
 import type { ReactNode } from "react";
-import { ChevronDownIcon } from "./shell-icons";
+import { CheckIcon, ChevronDownIcon } from "./shell-icons";
 import {
   SHELL_TOP_BTN,
   SHELL_TOP_BTN_ACTIVE,
@@ -25,6 +25,7 @@ type Props<T extends string> = {
   iconOnly?: boolean;
   /** Emphasize trigger when a non-default value is active (e.g. type filter). */
   emphasized?: boolean;
+  className?: string;
 };
 
 export function ShellTopMenu<T extends string>({
@@ -34,6 +35,7 @@ export function ShellTopMenu<T extends string>({
   onChange,
   iconOnly = false,
   emphasized = false,
+  className = "",
 }: Props<T>) {
   const activeOption =
     options.find((option) => option.value === value) ?? options[0];
@@ -44,10 +46,9 @@ export function ShellTopMenu<T extends string>({
       onValueChange={(nextValue) => {
         if (nextValue !== null) onChange(nextValue);
       }}
-      highlightItemOnHover={false}
     >
       <Select.Trigger
-        className={iconOnly ? `ui-control flex size-11 items-center justify-center rounded-control-lg ${emphasized ? "ui-selected" : ""}` : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`}
+        className={`${iconOnly ? `ui-control flex size-11 items-center justify-center rounded-control-lg ${emphasized ? "ui-selected" : ""}` : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`} ${className}`}
         aria-label={`${ariaLabel}: ${activeOption?.label ?? ""}`}
         title={`${ariaLabel}: ${activeOption?.label ?? ""}`}
       >
@@ -68,26 +69,29 @@ export function ShellTopMenu<T extends string>({
           positionMethod="fixed"
           className="z-50 data-[anchor-hidden]:invisible"
         >
-          <Select.Popup className="ui-popover ui-scrollbar max-h-[min(24rem,var(--available-height))] min-w-[11rem] max-w-[calc(100vw-1rem)] overflow-y-auto outline-none">
+          <Select.Popup className="shell-select-popup ui-popover ui-scrollbar max-h-[min(24rem,var(--available-height))] min-w-[max(9rem,var(--anchor-width))] max-w-[calc(100vw-1rem)] overflow-y-auto outline-none">
             <Select.List aria-label={ariaLabel} className="flex flex-col gap-1">
               {options.map((option) => (
                 <Select.Item
                   key={option.value}
                   value={option.value}
                   label={option.label}
-                  className={`ui-menu-item flex w-full items-center gap-2 text-left text-sm outline-none data-[highlighted]:bg-bg-active data-[highlighted]:ring-2 data-[highlighted]:ring-border-focus ${
+                  className={`shell-select-option ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active ${
                     option.value === value
-                      ? "ui-selected font-medium"
-                      : "text-text-primary"
+                      ? "font-medium"
+                      : ""
                   }`}
                 >
                   {option.icon}
-                  <Select.ItemText>{option.label}</Select.ItemText>
+                  <Select.ItemText className="flex-1 whitespace-nowrap">{option.label}</Select.ItemText>
                   {option.count !== undefined ? (
-                    <span className="ml-auto pl-3 text-xs tabular-nums text-text-secondary">
+                    <span className="pl-2 text-xs tabular-nums text-text-secondary">
                       {option.count}
                     </span>
                   ) : null}
+                  <span aria-hidden="true" className="inline-flex size-4 shrink-0 items-center justify-center">
+                    {option.value === value ? <CheckIcon className="size-4" /> : null}
+                  </span>
                 </Select.Item>
               ))}
             </Select.List>

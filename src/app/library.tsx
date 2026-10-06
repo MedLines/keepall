@@ -69,7 +69,7 @@ import {
 import { createTag, deleteTag, deleteTags, listTags } from "@/persistence/tags";
 import { updateVideoDetails } from "@/persistence/videos";
 import { DocumentValidationError } from "@/domain/document";
-import { updateDocument } from "@/persistence/documents";
+import { getDocumentRevision, updateDocument } from "@/persistence/documents";
 import {
   getLibraryPreferences,
   movePinnedCollectionBefore,
@@ -320,6 +320,7 @@ export function Library() {
   const mainScrollRef = useRef<HTMLElement>(null);
   const libraryGridRef = useRef<LibraryPreviewHandle>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [documentRevision, setDocumentRevision] = useState("initial");
   const prevBrowseScopeRef = useRef<string | null>(null);
   const pendingNavScopeLabelRef = useRef<string | null>(null);
   const browseIndexesRef = useRef(buildLibraryBrowseIndexes([]));
@@ -352,12 +353,13 @@ export function Library() {
       setError(null);
 
       try {
-        const [nextItems, nextTags, nextCollections, preferences, nextTrash] = await Promise.all([
+        const [nextItems, nextTags, nextCollections, preferences, nextTrash, nextDocumentRevision] = await Promise.all([
           listItems(),
           listTags(),
           listCollections(),
           getLibraryPreferences(),
           listTrashedItems(),
+          getDocumentRevision(),
         ]);
         if (!cancelled) {
           browseIndexesRef.current = buildLibraryBrowseIndexes(nextItems);
@@ -365,6 +367,7 @@ export function Library() {
           setItems(nextItems);
           setTrashedItems(nextTrash);
           setTags(nextTags);
+          setDocumentRevision(nextDocumentRevision);
           setCollections(nextCollections);
           const currentView = viewRef.current;
           const available = new Set((currentView.collections ? nextCollections
@@ -591,7 +594,7 @@ export function Library() {
   const searchQuery = view.q;
   const trashIndexes = useMemo(() => buildLibraryBrowseIndexes(trashedItems), [trashedItems]);
   const browseItems = view.trash ? trashedItems : items;
-  const documentSearch = useDocumentSearch(browseItems, tags, view.collections || view.tags ? "" : searchQuery);
+  const documentSearch = useDocumentSearch(browseItems, tags, view.collections || view.tags ? "" : searchQuery, documentRevision);
   const resultQuery = view.collections || view.tags ? searchQuery : documentSearch.query;
   const resultView = useMemo(() => ({ ...view, q: resultQuery }), [view, resultQuery]);
   const browseIndexes = view.trash ? trashIndexes : browseIndexesRef.current;
@@ -1771,6 +1774,7 @@ export function Library() {
         title={viewTitle}
         itemCount={view.collections || view.tags ? overviewCount : headerItemCount}
         searchQuery={searchQuery}
+        searchPending={documentSearch.pending}
         onSearchChange={(value) => updateView({ q: value })}
         searchPlaceholder={view.trash ? "Search Trash…" : browseCollection ? `Search in ${browseCollection.name}…` : browseUnsorted ? "Search Unsorted…" : "Search your library…"}
         sort={view.sort}
@@ -1945,7 +1949,6 @@ export function Library() {
             </p>
           ) : (
             <>
-              {documentSearch.enabled ? <p role="status" className={`mb-3 min-h-5 text-sm text-text-secondary transition-[visibility] duration-0 ${documentSearch.pending ? "visible delay-200" : "invisible"}`}>{documentSearch.pending ? "Searching file contents…" : ""}</p> : null}
               {documentSearch.error || documentSearch.unavailable > 0 ? <p role="status" className="mb-3 text-sm text-text-secondary">
                 {documentSearch.error ? "Couldn't search file contents. Titles, tags, and personal notes are still searchable." : `${documentSearch.unavailable} file${documentSearch.unavailable === 1 ? " couldn't" : "s couldn't"} be searched. Try again or restore missing files from a backup.`}
                 {" "}<button type="button" className="ui-control inline-flex min-h-8 items-center px-2 text-sm" onClick={documentSearch.retry}>Retry search</button>

@@ -1,7 +1,7 @@
 import { Blob as NodeBlob } from "node:buffer";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
-import { createTextDocument, getDocumentOriginal } from "@/persistence/documents";
+import { createDocument, getDocumentOriginal } from "@/persistence/documents";
 import { getDb } from "@/persistence/db";
 import { getItem } from "@/persistence/items";
 import { DocumentItemPage } from "./document-item-page";
@@ -12,7 +12,7 @@ const bytes = new TextEncoder().encode("\uFEFF# Original heading\r\n\n- [x] Unic
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 test("edits title and personal notes while preserving the exact original download", async () => {
-  const item = await createTextDocument({ fileName: "source.md", bytes });
+  const item = await createDocument({ fileName: "source.md", bytes });
   render(<DocumentItemPage itemId={item.id} returnHref="/?type=document" />);
   expect(await screen.findByRole("heading", { name: "Original heading" })).toBeVisible();
   expect(screen.getByRole("checkbox", { name: "Completed checklist item" })).toBeDisabled();
@@ -38,7 +38,7 @@ test("edits title and personal notes while preserving the exact original downloa
 });
 
 test("missing originals provide recovery controls and keep personal notes readable", async () => {
-  const item = await createTextDocument({ fileName: "lost.txt", bytes, noteContent: "Still saved" });
+  const item = await createDocument({ fileName: "lost.txt", bytes, noteContent: "Still saved" });
   await getDb().documentAssets.delete(item.assetId);
   render(<DocumentItemPage itemId={item.id} returnHref="/" />);
   expect(await screen.findByRole("alert")).toHaveTextContent("saved file is missing");
@@ -50,7 +50,7 @@ test("missing originals provide recovery controls and keep personal notes readab
 });
 
 test.each(["txt", "md"])("Edit loads a %s file's body, preserves canceled changes, and saves new text", async (extension) => {
-  const item = await createTextDocument({ fileName: `editable.${extension}`, bytes: new TextEncoder().encode("Original body") });
+  const item = await createDocument({ fileName: `editable.${extension}`, bytes: new TextEncoder().encode("Original body") });
   render(<DocumentItemPage itemId={item.id} returnHref="/" />);
   fireEvent.click(await screen.findByRole("button", { name: "Edit document" }));
   const label = extension === "md" ? "Markdown content" : "Text content";
@@ -73,7 +73,7 @@ test.each(["txt", "md"])("Edit loads a %s file's body, preserves canceled change
 });
 
 test("Trash uses confirmation, keeps the original, and returns to the current library scope", async () => {
-  const item = await createTextDocument({ fileName: "trash.txt", bytes });
+  const item = await createDocument({ fileName: "trash.txt", bytes });
   render(<DocumentItemPage itemId={item.id} returnHref="/?type=document" />);
   fireEvent.click(await screen.findByRole("button", { name: "Move document to Trash" }));
   expect(await getItem(item.id)).toBeDefined();
@@ -85,7 +85,7 @@ test("Trash uses confirmation, keeps the original, and returns to the current li
 });
 
 test("organizes a document through the existing collection drawer", async () => {
-  const item = await createTextDocument({ fileName: "organize.txt", bytes });
+  const item = await createDocument({ fileName: "organize.txt", bytes });
   render(<DocumentItemPage itemId={item.id} returnHref="/" />);
   fireEvent.click(await screen.findByRole("button", { name: "Organize" }));
   const organizer = await screen.findByRole("dialog", { name: /Organize organize/ });
@@ -103,8 +103,8 @@ test("large document previews are explicitly shortened and plain text remains li
 });
 
 test("quick-preview navigation discards a late read for the previous document", async () => {
-  const first = await createTextDocument({ fileName: "first.txt", bytes });
-  const second = await createTextDocument({ fileName: "second.txt", bytes: new TextEncoder().encode("Second body") });
+  const first = await createDocument({ fileName: "first.txt", bytes });
+  const second = await createDocument({ fileName: "second.txt", bytes: new TextEncoder().encode("Second body") });
   let finish!: (value: Awaited<ReturnType<typeof getDocumentOriginal>>) => void;
   const documentPersistence = await import("@/persistence/documents");
   vi.spyOn(documentPersistence, "getDocumentOriginal").mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));

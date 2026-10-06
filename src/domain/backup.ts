@@ -1,4 +1,4 @@
-import { documentFormat, DocumentValidationError } from "./document";
+import { documentFormat, DocumentValidationError, type DocumentFormat } from "./document";
 import { isHttpUrl } from "./classify";
 import type { Collection } from "./collection";
 import { coerceExclusiveCollectionIds } from "./collection";
@@ -577,7 +577,7 @@ function parseItem(
       throw new BackupValidationError(error instanceof Error ? error.message : "Invalid document");
     }
     return {
-      id: item.id, type: "document", format: item.format as "text" | "markdown", title: item.title,
+      id: item.id, type: "document", format: item.format as DocumentFormat, title: item.title,
       sourceFileName: item.sourceFileName as string, assetId: item.assetId as string, noteContent: item.noteContent as string,
       ...(item.noteFormat === "markdown" ? { noteFormat: "markdown" as const } : {}),
       tagIds: itemTagIds, collectionIds: itemCollectionIds, createdAt: item.createdAt, updatedAt: item.updatedAt,

@@ -111,7 +111,7 @@ function browseCandidatePool(
     return indexes.byTag.get(view.tag) ?? [];
   }
   if (view.type === "note") {
-    return [...(indexes.byType.get("note") ?? []), ...(indexes.byType.get("document") ?? [])];
+    return [...(indexes.byType.get("note") ?? []), ...(indexes.byType.get("document") ?? []).filter(item => item.type === "document" && item.format !== "pdf")];
   }
   if (view.type !== null) {
     return indexes.byType.get(view.type) ?? [];
@@ -137,7 +137,7 @@ export function filterAndSortLibraryItems(
 
   return sortLibraryItemsWithCollectionPins(
     pool.filter((item) => {
-      if (view.type !== null && item.type !== view.type && !(view.type === "note" && item.type === "document")) {
+      if (view.type !== null && item.type !== view.type && !(view.type === "note" && item.type === "document" && item.format !== "pdf")) {
         return false;
       }
       if (collectionId !== null && !itemInCollection(item, collectionId)) {

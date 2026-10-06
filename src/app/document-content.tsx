@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import type { DocumentItem } from "@/domain/document";
 import { NoteContent } from "./note-content";
 import { useDocumentText } from "./use-document-text";
 
 // Bound Markdown's DOM size; the original download always includes the entire file.
 const PREVIEW_CHARACTERS = 200_000;
+const PdfViewer = dynamic(() => import("./pdf-viewer").then(module => module.PdfViewer), { ssr: false, loading: () => <p role="status" className="text-text-secondary">Loading PDF…</p> });
 
 export function DocumentText({ text, format }: { text: string; format: DocumentItem["format"] }) {
   const limited = text.length > PREVIEW_CHARACTERS;
@@ -19,6 +21,10 @@ export function DocumentText({ text, format }: { text: string; format: DocumentI
 }
 
 export function DocumentContent({ item }: { item: DocumentItem }) {
+  return item.format === "pdf" ? <PdfViewer key={`${item.id}:${item.assetId}`} item={item} /> : <TextDocumentContent item={item} />;
+}
+
+function TextDocumentContent({ item }: { item: DocumentItem }) {
   const { state, retry } = useDocumentText(item);
   if (state.status === "loading") return <p role="status" className="text-text-secondary">Loading document…</p>;
   if (state.status === "ready") return <DocumentText text={state.text} format={item.format} />;

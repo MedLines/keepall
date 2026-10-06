@@ -32,6 +32,7 @@ const eslintConfig = defineConfig([
     "public/sw.js.map",
     "public/swe-worker*",
     "public/serwist*",
+    "public/pdfjs/**",
   ]),
 ]);
 

@@ -38,6 +38,55 @@ async function expectSameBounds(locator: Locator, before: NonNullable<Awaited<Re
   }).toPass({ timeout: 3000 });
 }
 
+test("full item action menus use the available viewport without unnecessary scrolling", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 917 });
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>(resolve => { const request = indexedDB.open("keepall"); request.onsuccess = () => resolve(request.result); });
+    const tx = db.transaction("items", "readwrite");
+    tx.objectStore("items").put({ id: "note", type: "link", title: "Menu reference", url: "https://example.test/reference", previewStatus: "ready", previewTitle: "Saved preview", previewRetry: "none", tagIds: [], collectionIds: ["c0"], createdAt: 1, updatedAt: 1 });
+    await new Promise<void>((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); });
+    db.close();
+  });
+  await page.goto("/?collection=c0");
+  await expect(page.getByRole("heading", { name: "Collection 00", exact: true })).toBeVisible();
+  const card = page.locator('[data-item-id="note"]');
+  await card.click({ button: "right", position: { x: 30, y: 35 } });
+  const popup = page.getByRole("menu", { name: "Actions for Menu reference", exact: true });
+  await expect(popup.getByRole("menuitem", { name: "Refresh preview", exact: true })).toBeVisible();
+  await expect(popup.getByRole("menuitem", { name: "Pin", exact: true })).toBeVisible();
+  await expect(popup.getByRole("menuitem", { name: "Move to Trash", exact: true })).toBeVisible();
+  expect(await popup.evaluate(node => {
+    const scroll = node.querySelector(".ui-scrollbar") ?? node;
+    return scroll.scrollHeight - scroll.clientHeight;
+  })).toBeLessThanOrEqual(1);
+  await expect(popup.getByRole("menuitem", { name: "Move to Trash", exact: true })).toBeInViewport({ ratio: 1 });
+  await expect(popup.locator(".ui-scrollbar")).toHaveCSS("scrollbar-gutter", "auto");
+  expect(await popup.getByRole("menuitem", { name: "Refresh preview", exact: true }).evaluate(node => {
+    const row = node.getBoundingClientRect();
+    const content = node.parentElement!.getBoundingClientRect();
+    return Math.abs(row.width - content.width);
+  })).toBeLessThanOrEqual(1);
+  await popup.screenshot({ path: testInfo.outputPath("item-actions-desktop.png") });
+  await page.keyboard.press("Escape");
+  await page.setViewportSize({ width: 900, height: 360 });
+  await card.click({ button: "right", position: { x: 30, y: 35 } });
+  const bounds = (await popup.boundingBox())!;
+  expect(bounds.y).toBeGreaterThanOrEqual(8);
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(352);
+  const scroll = popup.locator(".ui-scrollbar");
+  await expect(scroll).toHaveCount(1);
+  expect(await scroll.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+  expect(await scroll.evaluate(node => {
+    const parent = node.parentElement!.getBoundingClientRect();
+    const box = node.getBoundingClientRect();
+    return box.left > parent.left && box.right < parent.right && box.top > parent.top && box.bottom < parent.bottom;
+  })).toBe(true);
+  await page.keyboard.press("End");
+  await expect(popup.getByRole("menuitem", { name: "Move to Trash", exact: true })).toBeFocused();
+  await expect(popup.getByRole("menuitem", { name: "Move to Trash", exact: true })).toBeInViewport({ ratio: 1 });
+  await popup.screenshot({ path: testInfo.outputPath("item-actions-short-viewport.png") });
+});
+
 for (const kind of ["Tags", "Collections"] as const) {
   for (const entry of ["button", "context"] as const) {
     test(`${kind} ${entry} submenu stays anchored while filtering and scrolling`, async ({ page }, testInfo) => {
@@ -85,7 +134,7 @@ for (const viewport of [{ width: 320, height: 640 }, { width: 900, height: 480 }
     const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
     if (await closeNavigation.isVisible()) await closeNavigation.click();
     const card = page.locator('[data-item-id="note"]');
-    await card.click({ button: "right" });
+    await card.click({ button: "right", position: { x: 30, y: 35 } });
     await page.getByRole("menuitem", { name: "Collections", exact: true }).click();
     const popup = page.getByRole("menu", { name: "Collections", exact: true });
     await expect(popup.getByRole("textbox")).toBeFocused();

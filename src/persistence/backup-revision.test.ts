@@ -5,6 +5,32 @@ import { readBackupSnapshot } from "./backup-snapshot";
 
 async function revision() { return (await getDb().backupState.get("library"))?.revision; }
 
+test("document revisions change only with committed original writes, including mixed transactions", async () => {
+  const db = getDb();
+  const original = { id: "original", bytes: new TextEncoder().encode("Original"), byteLength: 8, contentHash: "original", createdAt: 1 };
+  await db.documentAssets.put(original);
+  const before = (await db.backupState.get("documents"))?.revision;
+  expect(before).toEqual(expect.any(String));
+  await db.items.add(buildNote({ content: "Unrelated" }));
+  await db.tags.put({ id: "tag", name: "Other", createdAt: 1 });
+  expect((await db.backupState.get("documents"))?.revision).toBe(before);
+  await db.transaction("rw", db.items, db.documentAssets, async () => {
+    await Promise.all([
+      db.documentAssets.put({ ...original, bytes: new TextEncoder().encode("Replaced"), contentHash: "replaced" }),
+      db.items.add(buildNote({ content: "Same transaction" })),
+    ]);
+  });
+  const replaced = (await db.backupState.get("documents"))?.revision;
+  expect(replaced).not.toBe(before);
+  await expect(db.transaction("rw", db.documentAssets, async () => {
+    await db.documentAssets.delete(original.id);
+    throw new Error("Rollback");
+  })).rejects.toThrow("Rollback");
+  expect((await db.backupState.get("documents"))?.revision).toBe(replaced);
+  await db.documentAssets.clear();
+  expect((await db.backupState.get("documents"))?.revision).not.toBe(replaced);
+});
+
 test("tracks committed adds, edits, bulk writes and clearing with the library transaction", async () => {
   const db = getDb();
   const note = buildNote({ content: "First" });

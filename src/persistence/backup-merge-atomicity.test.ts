@@ -13,7 +13,7 @@ import { exportKeepallArchive, importKeepallArchiveMerge } from "./backup-archiv
 import { readBackupSnapshot } from "./backup-snapshot";
 import { createCollection } from "./collections";
 import { getDb } from "./db";
-import { createTextDocument, getDocumentOriginal } from "./documents";
+import { createDocument, getDocumentOriginal } from "./documents";
 import { putLibraryPreferences } from "./library-preferences";
 import { createTag } from "./tags";
 
@@ -64,7 +64,7 @@ async function mergeFixture() {
     { assetId: videoId, blob: blob([9, 10], "image/webp") },
   ]);
   const originalBytes = new TextEncoder().encode("\uFEFFOriginal file\r\nمرحبا\n");
-  const document = await createTextDocument({ fileName: "original.md", bytes: originalBytes, noteContent: "Original personal note", ...organization });
+  const document = await createDocument({ fileName: "original.md", bytes: originalBytes, noteContent: "Original personal note", ...organization });
   await db.collections.put({ ...collection, pinnedItemIds: [note.id] });
   await putLibraryPreferences([collection.id]);
 

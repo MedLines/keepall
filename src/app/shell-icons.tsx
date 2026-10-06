@@ -6,13 +6,14 @@ import {
   Image01Icon as Image01, ImagesIcon as Images, InboxIcon as Inbox, Layers01Icon as Layers01,
   Link04Icon as Link04, ListViewIcon as ListView, MoreVerticalIcon as MoreVertical,
   Note01Icon as Note01, Search01Icon as Search01, SidebarLeft01Icon as SidebarLeft01,
+  Pdf01Icon as Pdf01,
   Sorting01Icon as Sorting01,
   Target02Icon as Target02,
   Moon02Icon as Moon02, Sun03Icon as Sun03, Tag01Icon as Tag01,
   Edit02Icon as Edit02, Delete02Icon as Delete02, PinIcon as Pin,
   ArrowLeft01Icon as ArrowLeft01, ArrowRight01Icon as ArrowRight01,
   FullScreenIcon as FullScreen, Video01Icon as Video01, PlayIcon as Play, PauseIcon as Pause, EyeIcon as Eye,
-  CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle,
+  CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle, Tick02Icon as Tick02,
   Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
   KeyboardIcon as Keyboard, TextFontIcon as TextFont, SourceCodeIcon as SourceCode,
   RefreshIcon as Refresh,
@@ -43,6 +44,7 @@ export function LibraryIcon(props: IconProps) { return <ShellIcon icon={AllBookm
 export function CollectionIcon(props: IconProps) { return <ShellIcon icon={Folder01} {...props} />; }
 export function LinkIcon(props: IconProps) { return <ShellIcon icon={Link04} {...props} />; }
 export function NoteIcon(props: IconProps) { return <ShellIcon icon={Note01} {...props} />; }
+export function PdfIcon(props: IconProps) { return <ShellIcon icon={Pdf01} {...props} />; }
 export function ImageIcon(props: IconProps) { return <ShellIcon icon={Image01} {...props} />; }
 export function ImagesIcon(props: IconProps) { return <ShellIcon icon={Images} {...props} />; }
 export function VideoIcon(props: IconProps) { return <ShellIcon icon={Video01} {...props} />; }
@@ -60,6 +62,7 @@ export function ListIcon(props: IconProps) { return <ShellIcon icon={ListView} {
 export function LayersIcon(props: IconProps) { return <ShellIcon icon={Layers01} {...props} />; }
 export function FilterIcon(props: IconProps) { return <ShellIcon icon={Filter} {...props} />; }
 export function ChevronDownIcon(props: IconProps) { return <ShellIcon icon={ArrowDown01} {...props} />; }
+export function CheckIcon(props: IconProps) { return <ShellIcon icon={Tick02} {...props} />; }
 export function SortDescIcon(props: IconProps) { return <ShellIcon icon={Sorting01} {...props} />; }
 export function SortAscIcon({ className = "", ...props }: IconProps) { return <ShellIcon icon={Sorting01} {...props} className={`-scale-y-100 ${className}`} />; }
 export function RelevanceIcon(props: IconProps) { return <ShellIcon icon={Target02} {...props} />; }

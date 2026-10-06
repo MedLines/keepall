@@ -6,6 +6,7 @@ import type { LibraryViewState } from "@/domain/library-view";
 import { parseLibraryViewState } from "@/domain/library-view";
 import type { Collection } from "@/domain/collection";
 import type { DocumentItem } from "@/domain/document";
+import { countSidebarItems } from "./library-sidebar-counts";
 import {
   buildLibraryBrowseIndexes,
   filterAndSortLibraryItems,
@@ -29,11 +30,14 @@ describe("library-browse-index", () => {
     const note = buildNote({ content: "Inline note" }, { id: "note", now: 1 });
     const text: DocumentItem = { id: "text", type: "document", format: "text", title: "Imported text", sourceFileName: "note.txt", assetId: "original", noteContent: "", tagIds: ["tag"], collectionIds: ["collection"], createdAt: 2, updatedAt: 2 };
     const markdown: DocumentItem = { ...text, id: "markdown", format: "markdown", sourceFileName: "note.md", createdAt: 3 };
-    const items = [note, text, markdown, buildLink({ url: "https://example.com" })];
+    const pdf: DocumentItem = { ...text, id: "pdf", format: "pdf", sourceFileName: "reference.pdf", createdAt: 4 };
+    const items = [note, text, markdown, pdf, buildLink({ url: "https://example.com" })];
     const indexes = buildLibraryBrowseIndexes(items);
     const view = parseLibraryViewState(new URLSearchParams("type=note"));
     expect(filterAndSortLibraryItems(items, [], view, new Map(), indexes).map((item) => item.id)).toEqual(["markdown", "text", "note"]);
     expect(filterAndSortLibraryItems(items, [], { ...view, collection: "collection", tag: "tag" }, new Map(), indexes).map((item) => item.id)).toEqual(["markdown", "text"]);
+    expect(filterAndSortLibraryItems(items, [], { ...view, type: "document" }, new Map(), indexes).map(item => item.id)).toEqual(["pdf", "markdown", "text"]);
+    expect(countSidebarItems(items)).toMatchObject({ pdfDocuments: 1, byType: { note: 1, document: 3 } });
   });
   const note = buildNote({ content: "n" }, { id: "n1", now: 1 });
   const link = {

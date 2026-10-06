@@ -250,6 +250,36 @@
   border-radius: 999px;
 }
 
+.shell-select-popup.ui-scrollbar {
+  --shell-select-inset: 0.5rem;
+  padding: var(--shell-select-inset);
+  corner-shape: round;
+  scrollbar-gutter: auto;
+}
+
+#library-search::-webkit-search-cancel-button {
+  display: none;
+}
+
+.shell-select-option {
+  border-radius: calc(var(--radius-panel) - var(--shell-select-inset) - 1px);
+  corner-shape: round;
+}
+
+.shell-select-option:hover:not([data-highlighted]) {
+  background: transparent;
+}
+
+.row-action-scroll.ui-scrollbar {
+  scrollbar-gutter: auto;
+}
+
+.row-action-scroll,
+.row-action-scroll .ui-menu-item {
+  border-radius: calc(var(--radius-panel) - 0.5rem - 1px);
+  corner-shape: round;
+}
+
 .bookmark-import-option {
   border-radius: var(--radius-control);
 }

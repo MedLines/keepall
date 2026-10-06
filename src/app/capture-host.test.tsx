@@ -9,7 +9,7 @@ import { createOrReuseImage, createOrReuseLink, createNote, createImage, findIma
 import { listTags } from "@/persistence/tags";
 import { getLibraryPreferences } from "@/persistence/library-preferences";
 import { importFiles } from "@/persistence/file-import";
-import { createTextDocument } from "@/persistence/documents";
+import { createDocument } from "@/persistence/documents";
 import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
@@ -49,7 +49,7 @@ vi.mock("@/persistence/library-preferences", () => ({
 }));
 
 vi.mock("@/persistence/file-import", () => ({ importFiles: vi.fn() }));
-vi.mock("@/persistence/documents", () => ({ createTextDocument: vi.fn() }));
+vi.mock("@/persistence/documents", () => ({ createDocument: vi.fn() }));
 
 vi.mock("./enrich-link-preview", () => ({
   enrichLinkPreview: vi.fn(),
@@ -111,7 +111,7 @@ describe("isCaptureOpenShortcut", () => {
 
 describe("CaptureHost", () => {
   beforeEach(() => {
-    vi.mocked(createTextDocument).mockReset();
+    vi.mocked(createDocument).mockReset();
     vi.mocked(createImage).mockReset();
     setCaptureCollectionName(null);
     vi.mocked(createNote).mockReset();
@@ -257,28 +257,28 @@ describe("CaptureHost", () => {
 
   test("loads one text file into the editor, saves its edited text, and closes the drawer", async () => {
     await openDraft("");
-    vi.mocked(createTextDocument).mockResolvedValue({ id: "doc" } as Awaited<ReturnType<typeof createTextDocument>>);
+    vi.mocked(createDocument).mockResolvedValue({ id: "doc" } as Awaited<ReturnType<typeof createDocument>>);
     pickVideo(new File(["Original text"], "note.txt"));
     const content = await screen.findByLabelText("Text content");
     expect(content).toHaveValue("Original text");
     expect(screen.queryByRole("dialog", { name: "Add files" })).toBeNull();
     fireEvent.change(content, { target: { value: "Edited text" } });
     fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
-    await waitFor(() => expect(createTextDocument).toHaveBeenCalledWith({ fileName: "note.txt", bytes: new TextEncoder().encode("Edited text") }));
+    await waitFor(() => expect(createDocument).toHaveBeenCalledWith({ fileName: "note.txt", bytes: new TextEncoder().encode("Edited text") }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Save to Keepall" })).toBeNull(), { timeout: 2000 });
   });
 
   test.each(["txt", "md"])("importing a %s file replaces untouched clipboard text and saves only the file", async (extension) => {
     vi.mocked(readClipboardImageAndText).mockResolvedValueOnce({ image: null, text: "Old clipboard text" });
-    vi.mocked(createTextDocument).mockResolvedValue({ id: "doc" } as Awaited<ReturnType<typeof createTextDocument>>);
+    vi.mocked(createDocument).mockResolvedValue({ id: "doc" } as Awaited<ReturnType<typeof createDocument>>);
     render(<CaptureHost />);
     fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
     await waitFor(() => expect(screen.getByLabelText("Link, note, or image")).toHaveValue("Old clipboard text"));
     pickVideo(new File(["File content"], `note.${extension}`));
     expect(await screen.findByLabelText(extension === "md" ? "Markdown content" : "Text content")).toHaveValue("File content");
     fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
-    await waitFor(() => expect(createTextDocument).toHaveBeenCalledOnce());
-    expect(new TextDecoder().decode(vi.mocked(createTextDocument).mock.calls[0][0].bytes)).toBe("File content");
+    await waitFor(() => expect(createDocument).toHaveBeenCalledOnce());
+    expect(new TextDecoder().decode(vi.mocked(createDocument).mock.calls[0][0].bytes)).toBe("File content");
   });
 
   test("importing a file preserves text the user edited, even if it matches the original clipboard", async () => {
@@ -338,19 +338,19 @@ describe("CaptureHost", () => {
     fireEvent.change(content, { target: { value: "# Edited caption" } });
     fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
     await waitFor(() => expect(createImage).toHaveBeenCalledWith(expect.objectContaining({ caption: "# Edited caption", captionFormat: "markdown", sourceUrl: undefined })));
-    expect(createTextDocument).not.toHaveBeenCalled();
+    expect(createDocument).not.toHaveBeenCalled();
     expect(createNote).not.toHaveBeenCalled();
   });
 
   test("a text file keeps its exact bytes when unchanged, including BOM and line endings", async () => {
     await openDraft("");
-    vi.mocked(createTextDocument).mockResolvedValue({ id: "doc" } as Awaited<ReturnType<typeof createTextDocument>>);
+    vi.mocked(createDocument).mockResolvedValue({ id: "doc" } as Awaited<ReturnType<typeof createDocument>>);
     const bytes = new TextEncoder().encode("\uFEFFLine one\r\nLine two\r\n");
     pickVideo(new File([bytes], "exact.txt"));
     expect(await screen.findByLabelText("Text content")).toHaveValue("Line one\nLine two\n");
     fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
-    await waitFor(() => expect(createTextDocument).toHaveBeenCalledOnce());
-    const saved = vi.mocked(createTextDocument).mock.calls[0][0];
+    await waitFor(() => expect(createDocument).toHaveBeenCalledOnce());
+    const saved = vi.mocked(createDocument).mock.calls[0][0];
     expect(saved.fileName).toBe("exact.txt");
     expect(Array.from(saved.bytes)).toEqual(Array.from(bytes));
   });
@@ -369,7 +369,7 @@ describe("CaptureHost", () => {
     expect(screen.queryByLabelText("1 image attached")).toBeNull();
     expect(importFiles).not.toHaveBeenCalled();
     expect(createImage).not.toHaveBeenCalled();
-    expect(createTextDocument).not.toHaveBeenCalled();
+    expect(createDocument).not.toHaveBeenCalled();
   });
 
   test("canceling during a file read prevents a late draft from appearing in the next drawer", async () => {

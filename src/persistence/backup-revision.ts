@@ -1,6 +1,6 @@
 import type Dexie from "dexie";
 
-export type BackupRevision = { id: "library"; revision: string };
+export type BackupRevision = { id: "library" | "documents"; revision: string };
 export const BACKUP_TABLES = ["items", "tags", "collections", "assets", "videoAssets", "thumbnails", "preferences", "documentAssets"];
 
 /** Keep the revision atomic with every exported write, including bulk deletes and restores. */
@@ -27,7 +27,10 @@ export function trackBackupRevision(db: Dexie) {
               if (count > result.numFailures) {
                 const changed = await state.mutate({
                   type: "put", trans: request.trans,
-                  values: [{ id: "library", revision: crypto.randomUUID() }],
+                  values: [
+                    { id: "library", revision: crypto.randomUUID() },
+                    ...(name === "documentAssets" ? [{ id: "documents", revision: crypto.randomUUID() }] : []),
+                  ],
                 });
                 if (changed.numFailures) {
                   request.trans.abort();

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { classifyCaptureFile } from "@/domain/capture-file";
 import type { FileImportResult } from "@/persistence/file-import";
-import { ImageIcon, NoteIcon, VideoIcon, UploadIcon, CloseIcon } from "./shell-icons";
+import { ImageIcon, NoteIcon, PdfIcon, VideoIcon, UploadIcon, CloseIcon } from "./shell-icons";
 
 type Props = { files: File[]; results: FileImportResult[]; disabled: boolean; onRemove: (index: number) => void };
 
@@ -11,7 +11,7 @@ function fileStatus(file: File, result: FileImportResult | undefined) {
   if (result?.status === "saved") return "Saved";
   if (result?.status === "failed") return result.error;
   const { kind } = classifyCaptureFile(file);
-  if (kind === "document") return /\.md$/i.test(file.name) ? "Markdown note" : "Text note";
+  if (kind === "document") return /\.pdf$/i.test(file.name) ? "PDF document" : /\.md$/i.test(file.name) ? "Markdown note" : "Text note";
   return { image: "Image", video: "Video", unsupported: "Unsupported file" }[kind];
 }
 
@@ -29,7 +29,7 @@ export function CaptureFileList({ files, results, disabled, onRemove }: Props) {
     <ul className="divide-y divide-border-control">
       {files.map((file, index) => {
         const { kind } = classifyCaptureFile(file);
-        const Icon = icons[kind];
+        const Icon = /\.pdf$/i.test(file.name) ? PdfIcon : icons[kind];
         const result = results[index];
         const url = previews.get(file);
         return <li key={index} className="flex items-center gap-3 py-2">

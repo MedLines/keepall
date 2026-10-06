@@ -126,7 +126,7 @@ function PreviewContent({ item, onGalleryStep }: { item: Item; onGalleryStep: ()
       <NoteContent className="library-preview-document mx-auto max-w-[65ch]" content={item.noteContent} format={item.noteFormat ?? "plain"} />
     </div> : null}
   </div>;
-  if (item.type === "document") return <div data-preview-scroll tabIndex={0} className="ui-scrollbar flex h-full min-h-0 flex-col gap-4 overflow-y-auto px-5 pb-5">
+  if (item.type === "document") return <div data-preview-scroll data-document-scroll tabIndex={0} className="ui-scrollbar flex h-full min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pb-5">
     <p className="break-words text-sm text-text-secondary">{item.sourceFileName}</p>
     <DocumentContent item={item} />
     {item.noteContent ? <NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /> : null}

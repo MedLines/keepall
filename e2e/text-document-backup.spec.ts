@@ -70,7 +70,7 @@ test("document originals survive native storage, ZIP export, replacement and rel
     const manifestEntry = entries.find((entry) => entry.filename === "manifest.json")!;
     if (manifestEntry.directory) throw new Error("Manifest cannot be a directory");
     const manifest = JSON.parse(await manifestEntry.getData(new TextWriter())) as { version: number; documents: { path: string }[] };
-    expect(manifest.version).toBe(9);
+    expect(manifest.version).toBe(10);
     expect(manifest.documents).toHaveLength(1);
     const original = entries.find((entry) => entry.filename === manifest.documents[0].path)!;
     if (original.directory) throw new Error("Original cannot be a directory");

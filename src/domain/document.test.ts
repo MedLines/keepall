@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { decodeTextDocument, documentFormat, MAX_TEXT_DOCUMENT_BYTES } from "./document";
+import { assertPdfBytes, decodeTextDocument, documentFormat, MAX_PDF_DOCUMENT_BYTES, MAX_TEXT_DOCUMENT_BYTES } from "./document";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 
@@ -20,4 +20,13 @@ test("rejects invalid UTF-8 and binary control characters instead of silently re
   expect(() => decodeTextDocument(new Uint8Array([0xff, 0xfe, 65, 0]))).toThrow(/UTF-8/);
   expect(() => decodeTextDocument(encode("MZ\u0000binary"))).toThrow(/binary/i);
   expect(() => decodeTextDocument(encode("abc\u0007def"))).toThrow(/binary/i);
+});
+
+test("recognizes PDFs and applies their own size and signature checks", () => {
+  expect(documentFormat("Reference.PDF", 20 * 1024 * 1024)).toBe("pdf");
+  expect(() => documentFormat("large.pdf", MAX_PDF_DOCUMENT_BYTES + 1)).toThrow(/50 MiB/);
+  expect(() => documentFormat("large.txt", MAX_TEXT_DOCUMENT_BYTES + 1)).toThrow(/10 MiB/);
+  expect(() => assertPdfBytes(encode("%PDF-1.7\ncontent\n%%EOF\n"))).not.toThrow();
+  expect(() => assertPdfBytes(encode("Not a PDF\n%%EOF"))).toThrow(/PDF/);
+  expect(() => assertPdfBytes(encode("%PDF-1.7\nunfinished"))).toThrow(/PDF/);
 });
