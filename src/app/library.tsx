@@ -64,6 +64,7 @@ import {
   clearCollectionsOnItems,
   assignTagToItem,
   deleteItem,
+  restoreItems,
   getItem,
   listItems,
   listTrashedItems,
@@ -280,7 +281,9 @@ export function Library() {
     "loading",
   );
   const [error, setError] = useState<string | null>(null);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [trashUndoItems, setTrashUndoItems] = useState<Item[]>([]);
+  const singleTrashPending = useRef(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
@@ -352,7 +355,6 @@ export function Library() {
   const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
     null,
   );
-  const confirmDeleteRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef<RestoreFocus | null>(null);
 
   useEffect(() => {
@@ -362,9 +364,12 @@ export function Library() {
   useEffect(() => {
     let cancelled = false;
     let softReloadTimer: number | null = null;
+    let requestGeneration = 0;
+    let hasLoaded = false;
 
     async function reload(options?: { soft?: boolean }) {
-      const soft = options?.soft === true;
+      const generation = ++requestGeneration;
+      const soft = options?.soft === true && hasLoaded;
       if (!soft) {
         setLoadState("loading");
       }
@@ -380,7 +385,8 @@ export function Library() {
           getDocumentRevision(),
         ]);
         await loadPreviewLayouts([...nextItems, ...nextTrash]).catch(() => {});
-        if (!cancelled) {
+        if (!cancelled && generation === requestGeneration) {
+          hasLoaded = true;
           const nextIndexes = buildLibraryBrowseIndexes(nextItems);
           browseIndexesRef.current = nextIndexes;
           setLiveBrowseIndexes(nextIndexes);
@@ -403,7 +409,7 @@ export function Library() {
           setError(null);
         }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && generation === requestGeneration) {
           setError("Couldn't load items.");
           if (!soft) {
             setLoadState("error");
@@ -511,7 +517,7 @@ export function Library() {
       window.removeEventListener("focus", scheduleSoftReload);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     void wakeLinkPreviewRetries();
@@ -546,11 +552,6 @@ export function Library() {
       return;
     }
 
-    if (pendingDeleteId) {
-      confirmDeleteRef.current?.focus();
-      return;
-    }
-
     const restore = restoreFocusRef.current;
     if (!restore) {
       return;
@@ -560,7 +561,7 @@ export function Library() {
       `button[data-item-actions="${restore.id}"]`,
     )?.focus();
     restoreFocusRef.current = null;
-  }, [editingId, pendingDeleteId, items]);
+  }, [editingId, items]);
 
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
@@ -736,7 +737,6 @@ export function Library() {
 
   const selectionActive = selectedIds.size > 0;
   const itemsById = new Map(items.map((item) => [item.id, item]));
-  const deleteItemTarget = pendingDeleteId ? itemsById.get(pendingDeleteId) ?? null : null;
   const deleteCollectionTarget = pendingCollectionDeleteId
     ? collections.find((entry) => entry.id === pendingCollectionDeleteId) ?? null
     : null;
@@ -946,7 +946,6 @@ export function Library() {
   function closeInspect() {
     updateView({ item: null, slide: 0 }, "push");
     clearEdit();
-    setPendingDeleteId(null);
     setGalleryError(null);
   }
 
@@ -967,13 +966,6 @@ export function Library() {
     updateView({ slide });
   }
 
-  function cancelDelete() {
-    if (pendingDeleteId) {
-      restoreFocusRef.current = { id: pendingDeleteId, action: "delete" };
-    }
-    setPendingDeleteId(null);
-  }
-
   function onEditSaveShortcut(
     event: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
     save: () => void,
@@ -986,26 +978,50 @@ export function Library() {
     }
   }
 
-  async function confirmDelete(id: string) {
-    if (pendingMutation) {
-      return;
-    }
-
+  async function moveItemToTrash(id: string) {
+    if (mutationBusy || singleTrashPending.current) return;
+    const item = itemsById.get(id);
+    if (!item) return;
+    singleTrashPending.current = true;
+    const focusedBefore = document.activeElement;
+    const startedNavigation = navigationGenerationRef.current;
     setPendingMutation({ op: "delete", id });
     setDeleteError(null);
 
     try {
       await deleteItem(id);
-      setPendingDeleteId(null);
       restoreFocusRef.current = null;
-      if (view.item === id) {
+      if (startedNavigation === navigationGenerationRef.current && viewRef.current.item === id) {
         updateView({ item: null, slide: 0 });
       }
-      libraryHeadingRef.current?.focus();
+      setTrashUndoItems(previous => [...previous.filter(entry => entry.id !== id), item].slice(-5));
+      setItems(previous => previous.filter(entry => entry.id !== id));
+      if (startedNavigation === navigationGenerationRef.current && (document.activeElement === focusedBefore || document.activeElement === document.body)) libraryHeadingRef.current?.focus();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
-      setDeleteError("Couldn't move item to Trash.");
+      setDeleteError("Couldn't move item to Trash. Try again using the item menu.");
     } finally {
+      singleTrashPending.current = false;
+      setPendingMutation(null);
+    }
+  }
+
+  async function undoTrash(id: string) {
+    if (mutationBusy || singleTrashPending.current) return;
+    singleTrashPending.current = true;
+    const focusedBefore = document.activeElement;
+    setPendingMutation({ op: "delete", id });
+    setDeleteError(null);
+    try {
+      const restored = await restoreItems([id]);
+      if (document.activeElement === focusedBefore) libraryHeadingRef.current?.focus();
+      setTrashUndoItems(previous => previous.filter(item => item.id !== id));
+      if (!restored.includes(id)) setDeleteError("This item is no longer in Trash. Check your library or restore a backup.");
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setDeleteError("Couldn't restore this item. Try Undo again or open Trash.");
+    } finally {
+      singleTrashPending.current = false;
       setPendingMutation(null);
     }
   }
@@ -1740,7 +1756,6 @@ export function Library() {
           void addCollectionToItem(item.id, name)
         }
         onStartEdit={() => {
-          setPendingDeleteId(null);
           setDeleteError(null);
           setEditError(null);
           setTagError(null);
@@ -1770,7 +1785,7 @@ export function Library() {
           setTagErrorItemId(null);
           setCollectionError(null);
           setCollectionErrorItemId(null);
-          setPendingDeleteId(item.id);
+          void moveItemToTrash(item.id);
         }}
         selected={selectedIds.has(item.id)}
         selectionActive={selectionActive}
@@ -1780,7 +1795,6 @@ export function Library() {
         dragEnabled={
           !view.trash && !mutationBusy &&
           editingId !== item.id &&
-          pendingDeleteId !== item.id &&
           inspectId !== item.id
         }
         isDragging={draggingIds.has(item.id)}
@@ -1977,7 +1991,8 @@ export function Library() {
           <BackupStatusNotice />
           {loadState === "error" ? (
             <p className="text-sm text-text-danger" role="alert">
-              {error ?? "Couldn't load items."}
+              {error ?? "Couldn't load items."} Try loading again.
+              {" "}<button type="button" className="ui-control inline-flex min-h-10 items-center px-4" onClick={() => setLoadAttempt(attempt => attempt + 1)}>Retry</button>
             </p>
           ) : (
             <LibraryLayoutTransition><LibraryStartupContent loading={loadState === "loading"} layout={browseLayout} columns={view.listColumns ?? "auto"}
@@ -1986,6 +2001,17 @@ export function Library() {
                 {documentSearch.error ? "Couldn't search file contents. Titles, tags, and personal notes are still searchable." : `${documentSearch.unavailable} file${documentSearch.unavailable === 1 ? " couldn't" : "s couldn't"} be searched. Try again or restore missing files from a backup.`}
                 {" "}<button type="button" className="ui-control inline-flex min-h-8 items-center px-2 text-sm" onClick={documentSearch.retry}>Retry search</button>
               </p> : null}
+              {trashUndoItems.map(item => (
+                <div key={item.id} className="mb-3 flex flex-wrap items-center gap-2 text-sm text-text-secondary">
+                  <p role="status">Moved “{itemActionLabel(item)}” to Trash.</p>
+                  <button type="button" className="ui-control inline-flex min-h-10 items-center px-4"
+                    aria-label={`Undo moving ${itemActionLabel(item)} to Trash`} disabled={mutationBusy}
+                    onClick={() => void undoTrash(item.id)}>Undo</button>
+                  <button type="button" className="ui-control inline-flex min-h-10 items-center px-4"
+                    aria-label={`Dismiss Trash notice for ${itemActionLabel(item)}`} disabled={mutationBusy}
+                    onClick={() => setTrashUndoItems(previous => previous.filter(entry => entry.id !== item.id))}>Dismiss</button>
+                </div>
+              ))}
               {trashActions.notice ? <p role="status" className="mb-3 text-sm text-text-secondary">{trashActions.notice}</p> : null}
               {trashActions.error ? <p role="alert" className="mb-3 text-sm text-text-danger">{trashActions.error}</p> : null}
               {deleteError ? (
@@ -2149,7 +2175,6 @@ export function Library() {
                     return;
                   }
                   const target = inspectedItem;
-                  setPendingDeleteId(null);
                   setDeleteError(null);
                   setEditError(null);
                   setTagError(null);
@@ -2182,7 +2207,7 @@ export function Library() {
                   setTagErrorItemId(null);
                   setCollectionError(null);
                   setCollectionErrorItemId(null);
-                  setPendingDeleteId(inspectedItem.id);
+                  void moveItemToTrash(inspectedItem.id);
                 }}
                 tagSuggestions={tagSuggestions}
                 collectionSuggestions={collectionSuggestions}
@@ -2219,22 +2244,6 @@ export function Library() {
         >
           {organizationDelete?.kind === "collections" ? <CollectionDeleteOptions value={collectionDeleteDestination} busy={pendingMutation?.op === "bulk-delete"} onChange={setCollectionDeleteDestination} /> : null}
         </ConfirmDialog>
-        <ConfirmDialog
-          open={deleteItemTarget !== null}
-          title="Move this item to Trash?"
-          description={deleteItemTarget ? `Move “${itemActionLabel(deleteItemTarget)}” to Trash? You can restore it later.` : ""}
-          confirmLabel="Move to Trash"
-          pendingLabel="Moving…"
-          busy={pendingMutation?.op === "delete"}
-          error={deleteError}
-          confirmRef={confirmDeleteRef}
-          onConfirm={() => {
-            if (deleteItemTarget) void confirmDelete(deleteItemTarget.id);
-          }}
-          onOpenChange={(open) => {
-            if (!open) cancelDelete();
-          }}
-        />
         <ConfirmDialog
           open={deleteCollectionTarget !== null}
           title="Delete collection?"

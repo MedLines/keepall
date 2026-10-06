@@ -498,43 +498,56 @@ describe("Library", () => {
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
   });
 
-  test("does not delete until confirm", async () => {
-    vi.mocked(listItems).mockResolvedValue([note]);
-    render(<Library />);
-
-    await clickItemAction("Move to Trash");
-
-    expect(screen.getByText("Move this item to Trash?")).toBeInTheDocument();
-    expect(deleteItem).not.toHaveBeenCalled();
-  });
-
-  test("cancel leaves the item and does not call deleteItem", async () => {
-    vi.mocked(listItems).mockResolvedValue([note]);
-    render(<Library />);
-
-    await clickItemAction("Move to Trash");
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(screen.getByRole("button", { name: /^Actions for / })).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByText("Move this item to Trash?")).not.toBeInTheDocument());
-    expect(deleteItem).not.toHaveBeenCalled();
-    expect(screen.getByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
-  });
-
-  test("confirm deletes the item", async () => {
-    vi.mocked(listItems)
-      .mockResolvedValueOnce([note])
-      .mockResolvedValue([]);
+  test("moves an item to Trash immediately and undo restores exactly that item", async () => {
+    vi.mocked(listItems).mockResolvedValueOnce([note]).mockResolvedValue([]);
     vi.mocked(deleteItem).mockResolvedValue(undefined);
+    vi.mocked(restoreItems).mockResolvedValue(["n1"]);
     render(<Library />);
-
     await clickItemAction("Move to Trash");
-    fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
+    await waitFor(() => expect(deleteItem).toHaveBeenCalledWith("n1"));
+    expect(screen.queryByText("Move this item to Trash?")).not.toBeInTheDocument();
+    const undo = await screen.findByRole("button", { name: /^Undo moving/ });
+    vi.mocked(listItems).mockResolvedValue([note]);
+    fireEvent.click(undo);
+    await waitFor(() => expect(restoreItems).toHaveBeenCalledWith(["n1"]));
+    expect(await screen.findByText("A persisted note")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Undo moving/ })).not.toBeInTheDocument();
+  });
 
-    await waitFor(() => {
-      expect(deleteItem).toHaveBeenCalledWith("n1");
-    });
-    expect(await screen.findByText("No items yet.")).toBeInTheDocument();
+  test("keeps Undo available when restoration fails", async () => {
+    vi.mocked(listItems).mockResolvedValueOnce([note]).mockResolvedValue([]);
+    vi.mocked(deleteItem).mockResolvedValue(undefined);
+    vi.mocked(restoreItems).mockRejectedValue(new Error("idb down"));
+    render(<Library />);
+    await clickItemAction("Move to Trash");
+    fireEvent.click(await screen.findByRole("button", { name: /^Undo moving/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Try Undo again or open Trash");
+    expect(screen.getByRole("button", { name: /^Undo moving/ })).toBeEnabled();
+  });
+
+  test("does not steal focus while a Trash write is pending", async () => {
+    let finish!: () => void;
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(deleteItem).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    render(<Library />);
+    await clickItemAction("Move to Trash");
+    const search = screen.getByRole("searchbox");
+    search.focus();
+    await act(async () => finish());
+    expect(search).toHaveFocus();
+    expect(deleteItem).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("button", { name: /^Undo moving/ })).toBeEnabled();
+  });
+
+  test("retries a failed library load without clearing the query", async () => {
+    mockNavigation.replace("/?q=persisted");
+    vi.mocked(listItems).mockRejectedValueOnce(new Error("idb down")).mockResolvedValue([note]);
+    render(<Library />);
+    fireEvent.click(await screen.findByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument());
+    expect(listItems).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("searchbox")).toHaveValue("persisted");
   });
 
   test("shows an alert when delete fails and keeps the item", async () => {
@@ -543,7 +556,6 @@ describe("Library", () => {
     render(<Library />);
 
     await clickItemAction("Move to Trash");
-    fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Couldn't move item to Trash.",
@@ -890,7 +902,7 @@ describe("Library focus management", () => {
     vi.mocked(assignCollectionToItem).mockReset();
   });
 
-  test("moves focus for edit, cancel, and delete confirmation", async () => {
+  test("moves focus for edit, cancel, and removed item", async () => {
     vi.mocked(listItems)
       .mockResolvedValueOnce([note])
       .mockResolvedValue([]);
@@ -904,18 +916,6 @@ describe("Library focus management", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /^Actions for / })).toHaveFocus());
 
     await clickItemAction("Move to Trash");
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Move to Trash" })).toHaveFocus();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /^Actions for / })).toHaveFocus();
-    });
-
-    await clickItemAction("Move to Trash");
-    fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
-
     await waitFor(() => {
       expect(deleteItem).toHaveBeenCalledWith("n1");
     });
