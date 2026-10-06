@@ -123,7 +123,7 @@ import { LibraryInspect } from "./library-inspect";
 import { type BulkPanel } from "./library-bulk-bar";
 import { LibraryTopBar } from "./library-top-bar";
 import { UnsortedReview } from "./unsorted-review";
-import { LibraryEmptyState, type LibraryEmptyStateKind } from "./library-empty-state";
+import { LibraryEmptyState, getEmptyStateKind, entireLibrarySearch } from "./library-empty-state";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
 import { isShellMobileViewport } from "./use-shell-mobile";
 import type { OrgNameSuggestion } from "./org-name-suggest";
@@ -139,17 +139,6 @@ import { itemPageHref } from "./item-page-navigation";
 import type { ImageDetailsDraft, LinkDetailsDraft, NoteDetailsDraft, VideoDetailsDraft, DocumentDetailsDraft } from "./item-edit-dialog";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
-
-function getEmptyStateKind(
-  view: LibraryViewState,
-  hasActiveSearch: boolean,
-): LibraryEmptyStateKind {
-  if (hasActiveSearch || view.type !== null || view.tag !== null) return "filtered";
-  if (view.trash) return "trash";
-  if (view.unsorted) return "unsorted";
-  if (view.collection !== null) return "collection";
-  return "library";
-}
 
 function getEmptyStateMessage(
   view: LibraryViewState,
@@ -688,7 +677,9 @@ export function Library() {
     ? visibleOverviewEntries.map(entry => entry.organization)
     : visibleItems;
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
-  const emptyStateKind = getEmptyStateKind(view, hasActiveSearch);
+  const emptyStateKind = getEmptyStateKind(view, hasActiveSearch, items.length + trashedItems.length);
+  const entireSearch = entireLibrarySearch(view);
+  const emptySearchScope = [view.trash ? "Trash" : browseCollection?.name ?? (browseUnsorted ? "Unsorted" : "the library"), browseTagName ? `tag “${browseTagName}”` : null, browseType ? `${browseType} items` : null].filter(Boolean).join(" · ");
   const emptyStateMessage = getEmptyStateMessage(view, hasActiveSearch, browseCollectionId);
   const allVisibleSelected =
     selectionEntries.length > 0 &&
@@ -833,6 +824,11 @@ export function Library() {
     document.getElementById("library-search")?.focus();
     updateView({ q: "", type: null, tag: null, item: null, slide: 0 }, "push");
   }, [updateView]);
+
+  const searchEntireLibrary = entireSearch ? () => {
+    document.getElementById("library-search")?.focus();
+    updateView(entireSearch, "push");
+  } : undefined;
 
   useLayoutEffect(() => {
     if (pendingNavScopeLabelRef.current !== null) {
@@ -2048,6 +2044,9 @@ export function Library() {
                 <LibraryEmptyState
                   kind={emptyStateKind}
                   message={emptyStateMessage}
+                  query={hasActiveSearch ? searchQuery : undefined}
+                  scope={emptySearchScope}
+                  onSearchEntireLibrary={searchEntireLibrary}
                   onClearFilters={clearFilters}
                 />
               ) : (
@@ -2069,6 +2068,9 @@ export function Library() {
                     <LibraryEmptyState
                       kind={emptyStateKind}
                       message={emptyStateMessage}
+                      query={hasActiveSearch ? searchQuery : undefined}
+                      scope={emptySearchScope}
+                      onSearchEntireLibrary={searchEntireLibrary}
                       onClearFilters={clearFilters}
                     />
                   }

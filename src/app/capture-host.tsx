@@ -255,7 +255,10 @@ export function CaptureHost() {
 
   useAppShortcuts({ capture: () => openCapture() });
 
-  const onOpenCapture = useEffectEvent(() => openCapture());
+  const onOpenCapture = useEffectEvent((event: Event) => {
+    openCapture();
+    if ((event as CustomEvent<{ bulkImport?: boolean }>).detail?.bulkImport) setBulkImportOpen(true);
+  });
   useEffect(() => {
     window.addEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
     return () => window.removeEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);

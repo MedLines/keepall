@@ -14,7 +14,7 @@ import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
 import { prepareLocalVideo } from "./prepare-local-video";
-import { openCaptureDialog, setCaptureCollectionName } from "./capture-events";
+import { openBulkImportDialog, openCaptureDialog, setCaptureCollectionName } from "./capture-events";
 
 vi.mock("@/persistence/items", () => ({
   createNote: vi.fn(),
@@ -385,6 +385,12 @@ describe("CaptureHost", () => {
     fireEvent.keyDown(window, { key: "k", code: "KeyK", altKey: true });
     expect(await screen.findByLabelText("Link, note, or image")).toHaveValue("");
     expect(screen.queryByLabelText("Text content")).toBeNull();
+  });
+
+  test("opens existing bulk import directly from the library entry action", async () => {
+    render(<CaptureHost />);
+    act(() => openBulkImportDialog());
+    expect(await screen.findByRole("dialog", { name: "Bulk import" })).toBeVisible();
   });
 
   test("the unified picker detects multiple text files without changing an existing capture", async () => {
