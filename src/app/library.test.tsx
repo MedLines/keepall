@@ -390,7 +390,7 @@ describe("Library", () => {
     mockNavigation.replace.mockClear();
     render(<Library />);
 
-    await screen.findByText("No matching items.");
+    await screen.findByRole("heading", { name: "No results for “no-match”" });
     const banner = screen.getByRole("banner");
     expect(within(banner).getByRole("button", { name: "Remove search filter: no-match" })).toBeInTheDocument();
     expect(within(banner).getByRole("button", { name: "Remove type filter: Notes" })).toBeInTheDocument();
@@ -422,6 +422,31 @@ describe("Library", () => {
       expect(params.has("type")).toBe(false);
       expect(params.has("item")).toBe(false);
     });
+  });
+
+  test("broadens a scoped empty search while preserving its query, layout and sort", async () => {
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(listCollections).mockResolvedValue([{ id: "c1", name: "Reading", createdAt: 1, pinnedItemIds: [] }]);
+    mockNavigation.replace("/?collection=c1&q=persisted&type=image&sort=oldest&layout=list");
+    mockNavigation.push.mockClear();
+    render(<Library />);
+    expect(await screen.findByRole("heading", { name: "No results for “persisted”" })).toBeVisible();
+    expect(screen.getByText("Searching Reading · image items")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Search entire library" }));
+    await waitFor(() => {
+      const params = new URLSearchParams(mockNavigation.push.mock.lastCall?.[0].split("?")[1]);
+      expect(params.get("q")).toBe("persisted");
+      expect(params.get("sort")).toBe("oldest");
+      expect(params.get("layout")).toBe("list");
+      expect(params.has("collection")).toBe(false);
+      expect(params.has("type")).toBe(false);
+      expect(params.has("tag")).toBe(false);
+      expect(params.has("unsorted")).toBe(false);
+    });
+    expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();
+    const results = await screen.findAllByRole("link", { name: "Open A persisted note" });
+    expect(results).toHaveLength(2);
+    expect(results[1]).toBeVisible();
   });
 
   test.each([
@@ -506,6 +531,7 @@ describe("Library", () => {
     await clickItemAction("Move to Trash");
     await waitFor(() => expect(deleteItem).toHaveBeenCalledWith("n1"));
     expect(screen.queryByText("Move this item to Trash?")).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "A place for what you want to keep" })).toBeInTheDocument();
     const undo = await screen.findByRole("button", { name: /^Undo moving/ });
     vi.mocked(listItems).mockResolvedValue([note]);
     fireEvent.click(undo);
@@ -919,7 +945,7 @@ describe("Library focus management", () => {
     await waitFor(() => {
       expect(deleteItem).toHaveBeenCalledWith("n1");
     });
-    expect(await screen.findByText("No items yet.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "A place for what you want to keep" })).toBeInTheDocument();
 
     expect(screen.getByRole("heading", { name: "All items" })).toHaveFocus();
   });
@@ -1958,7 +1984,7 @@ describe("Library inspect", () => {
   test("preview entry is disabled for empty results and absent from overview and Trash", async () => {
     vi.mocked(listItems).mockResolvedValue([]);
     render(<Library />);
-    await screen.findByText("No items yet.");
+    await screen.findByRole("heading", { name: "A place for what you want to keep" });
     expect(screen.getByRole("button", { name: "Preview" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "All collections" }));
     await waitFor(() => expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument());

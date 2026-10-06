@@ -33,7 +33,7 @@ type Props = {
 export function LibraryEmptyState({ kind, message, query, scope, onClearFilters, onSearchEntireLibrary }: Props) {
   const firstSave = kind === "first-save";
   const canSave = firstSave || kind === "library" || kind === "collection" || kind === "unsorted";
-  const description = firstSave ? "Keep links, notes, images, videos, and documents together. Save something you want to come back to, or bring in files and bookmarks you already have."
+  const description = firstSave ? "Save links, notes, images, videos, and documents in one place."
     : kind === "collection" ? "Save an item here, or move an existing item into this collection."
     : kind === "unsorted" ? "Items without a collection appear here. New saves stay here until you organize them."
     : kind === "trash" ? "Deleted items appear here until you restore them or empty the trash."
@@ -41,9 +41,9 @@ export function LibraryEmptyState({ kind, message, query, scope, onClearFilters,
     : "Save an item to add it to your library.";
   const title = firstSave ? "A place for what you want to keep" : query?.trim() ? `No results for “${query.trim()}”` : message;
   return (
-    <section className="mx-auto flex w-full max-w-xl flex-col items-center px-4 py-12 text-center sm:py-16">
+    <section className="mx-auto flex w-full max-w-xl flex-col items-center px-4 py-6 text-center sm:py-16">
       {canSave ? (
-        <div className="mb-6 w-44 max-w-full pointer-events-none" aria-hidden="true">
+        <div className="mb-6 w-24 max-w-full sm:w-44 pointer-events-none" aria-hidden="true">
           <LibraryFolderArtwork previews={[]} itemTypes={[]} />
         </div>
       ) : (
