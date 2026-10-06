@@ -58,6 +58,7 @@
   --color-bg-scrim: light-dark(oklch(0 0 0 / 0.149019608), oklch(0 0 0 / 0.4));
   --color-bg-overlay: oklch(0.140765334 0.004385904 285.82285136);
   --color-bg-media: oklch(0.2098857 0.00390174 286.058756954);
+  --color-bg-image-viewer: light-dark(var(--neutral-150), var(--neutral-900));
   --color-text-primary: light-dark(var(--neutral-850), var(--paper));
   --color-text-secondary: light-dark(var(--neutral-500), var(--neutral-400));
   --color-text-card-meta: light-dark(#626871, #9399a2);
@@ -107,6 +108,10 @@
   --shadow-edge: 0 0 0 1px light-dark(oklch(0 0 0 / 0.141176471), oklch(1 0 0 / 0.141176471));
   --shadow-menu: 0 4px 16px light-dark(oklch(0 0 0 / 0.058823529), oklch(0 0 0 / 0.250980392));
   --shadow-panel: 0 3px 12px oklch(0 0 0 / 0.070588235);
+  --shadow-image:
+    0 1px 2px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.24)),
+    0 4px 12px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.28)),
+    0 12px 24px -6px light-dark(oklch(0 0 0 / 0.18), oklch(0 0 0 / 0.4));
 }
 
 @layer components {
@@ -196,9 +201,14 @@
     background: linear-gradient(135deg in srgb, oklch(1 0 0 / 0.07), oklch(1 0 0 / 0.04));
   }
   .focused-image-backdrop {
-    background: oklch(0 0 0 / 0.76);
-    -webkit-backdrop-filter: blur(24px) saturate(0.5);
-    backdrop-filter: blur(24px) saturate(0.5);
+    background: light-dark(oklch(0 0 0 / 0.6), oklch(0 0 0 / 0.86));
+    -webkit-backdrop-filter: blur(36px) saturate(0.35);
+    backdrop-filter: blur(36px) saturate(0.35);
+  }
+  .focused-image-backdrop[data-zoomed="true"] {
+    background: oklch(0 0 0 / 0.92);
+    -webkit-backdrop-filter: blur(48px) saturate(0.25);
+    backdrop-filter: blur(48px) saturate(0.25);
   }
   .ui-native-dialog::backdrop {
     background: linear-gradient(135deg in srgb, oklch(0 0 0 / 0.14), oklch(0 0 0 / 0.09));
@@ -220,6 +230,9 @@
   .media-outline, .ka-page img:not(.keepall-logo-layer) {
     outline: 1px solid var(--color-border-media);
     outline-offset: -1px;
+  }
+  .media-elevated {
+    box-shadow: var(--shadow-image);
   }
   .media-squircle {
     border-radius: var(--radius-card);
@@ -380,6 +393,15 @@
 
 .item-workspace-media {
   border: var(--spacing-card-inset) solid transparent;
+}
+
+.image-viewer-trigger:focus-visible {
+  outline: none;
+}
+
+.image-viewer-canvas:has(> .image-viewer-trigger:focus-visible) {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: -3px;
 }
 
 .item-workspace-media::after {

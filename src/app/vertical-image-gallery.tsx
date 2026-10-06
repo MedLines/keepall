@@ -51,7 +51,7 @@ function ScrollImage({ item, assetId, index, active, scrollRef, preserveScrollAn
 
   return (
     <figure style={{ width: dimensions?.width }} className="mx-auto max-w-full">
-      <div ref={ref} style={{ aspectRatio: dimensions ? dimensions.width / dimensions.height : 4 / 3 }} className="overflow-hidden rounded-sm bg-bg-media">
+      <div ref={ref} style={{ aspectRatio: dimensions ? dimensions.width / dimensions.height : 4 / 3 }} className="bg-bg-image-viewer">
         <button
           type="button"
           className="control-shape-none block size-full cursor-zoom-in focus-visible:outline-1 focus-visible:-outline-offset-2 focus-visible:outline-border-focus"
