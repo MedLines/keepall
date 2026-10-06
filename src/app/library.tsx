@@ -6,6 +6,7 @@ import { loadPreviewLayouts } from "@/persistence/preview-layouts";
 import { LibraryStartupContent } from "./library-loading-content";
 import { LibraryLayoutTransition, transitionLibraryLayout } from "./item-view-transition";
 
+import { BackupStatusNotice } from "./backup-status-notice";
 import {
   type DragEvent,
   type KeyboardEvent,
@@ -1973,6 +1974,7 @@ export function Library() {
         <ScrollPanel className="min-h-0 min-w-0 flex-1" viewportRef={mainScrollRef}
           viewportClassName="scroll-fade px-3 pb-6 sm:px-6 [--scroll-fade-edge-opacity:0.35]">
 
+          <BackupStatusNotice />
           {loadState === "error" ? (
             <p className="text-sm text-text-danger" role="alert">
               {error ?? "Couldn't load items."}
