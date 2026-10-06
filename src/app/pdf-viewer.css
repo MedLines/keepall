@@ -1,0 +1,43 @@
+.library-quick-preview [data-pdf-toolbar] {
+  --color-bg-canvas: var(--color-bg-control);
+}
+
+.library-quick-preview [data-pdf-toolbar],
+.library-quick-preview [data-pdf-toolbar]::before {
+  background: var(--color-bg-control);
+}
+
+.keepall-pdf-text {
+  color-scheme: only light;
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.keepall-pdf-text :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+}
+.keepall-pdf-text > :not(.markedContent),
+.keepall-pdf-text .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.keepall-pdf-text .markedContent { display: contents; }
+.keepall-pdf-text ::selection { color: transparent; background: rgb(0 100 255 / 0.25); }

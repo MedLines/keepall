@@ -1,10 +1,11 @@
 import { expect, test } from "vitest";
-import { createTextDocument, updateDocument } from "./documents";
+import { createDocument, updateDocument } from "./documents";
 import { getDb } from "./db";
 import { createDocumentSearcher } from "./document-search";
+import { pdfFixture } from "../../test-support/pdf-fixture";
 
 test("searches entire originals, combines fields and caches repeated queries without changing storage", async () => {
-  const item = await createTextDocument({ fileName: "reference.md", title: "Design reference", noteContent: "Review later", bytes: new TextEncoder().encode("x".repeat(20_000) + "\nAnimation examples مرحبا café") });
+  const item = await createDocument({ fileName: "reference.md", title: "Design reference", noteContent: "Review later", bytes: new TextEncoder().encode("x".repeat(20_000) + "\nAnimation examples مرحبا café") });
   const revision = await getDb().backupState.get("library");
   let reads = 0;
   const search = createDocumentSearcher(async id => { reads++; return getDb().documentAssets.get(id); });
@@ -18,7 +19,7 @@ test("searches entire originals, combines fields and caches repeated queries wit
 });
 
 test("edited originals replace old searchable content and canceled searches return no result", async () => {
-  const item = await createTextDocument({ fileName: "plain.txt", bytes: new TextEncoder().encode("Old keyword") });
+  const item = await createDocument({ fileName: "plain.txt", bytes: new TextEncoder().encode("Old keyword") });
   const search = createDocumentSearcher();
   expect((await search({ id: 1, query: "old", entries: [{ item, tagNames: [] }] }))?.matches).toHaveLength(1);
   const edited = await updateDocument(item.id, { title: item.title, noteContent: "", content: "Replacement term" });
@@ -28,7 +29,7 @@ test("edited originals replace old searchable content and canceled searches retu
 });
 
 test("missing or unreadable files preserve metadata matches and report incomplete content search", async () => {
-  const item = await createTextDocument({ fileName: "reference.txt", title: "Findable title", bytes: new TextEncoder().encode("Body term") });
+  const item = await createDocument({ fileName: "reference.txt", title: "Findable title", bytes: new TextEncoder().encode("Body term") });
   const entries = [{ item, tagNames: [] }, { item: { ...item, id: "invalid", assetId: "invalid" }, tagNames: [] }];
   const search = createDocumentSearcher(async id => id === "invalid" ? { id, bytes: new Uint8Array([0xc3, 0x28]), byteLength: 2, contentHash: "", createdAt: 1 } : undefined);
   const result = await search({ id: 1, query: "findable", entries });
@@ -37,12 +38,25 @@ test("missing or unreadable files preserve metadata matches and report incomplet
 });
 
 test("a bounded cache evicts old originals without dropping search matches", async () => {
-  const item = await createTextDocument({ fileName: "one.txt", bytes: new TextEncoder().encode("First match") });
-  const second = await createTextDocument({ fileName: "two.txt", bytes: new TextEncoder().encode("Second match") });
+  const item = await createDocument({ fileName: "one.txt", bytes: new TextEncoder().encode("First match") });
+  const second = await createDocument({ fileName: "two.txt", bytes: new TextEncoder().encode("Second match") });
   let reads = 0;
   const search = createDocumentSearcher(async id => { reads++; return getDb().documentAssets.get(id); }, 30);
   const entries = [{ item, tagNames: [] }, { item: second, tagNames: [] }];
   expect((await search({ id: 1, query: "match", entries }))?.matches).toHaveLength(2);
   expect((await search({ id: 2, query: "match", entries }))?.matches).toHaveLength(2);
   expect(reads).toBe(4);
+});
+
+test("PDF text is searchable on later pages and rebuilds a missing text cache without changing backup state", async () => {
+  const item = await createDocument({ fileName: "reference.pdf", bytes: pdfFixture(["First page", "Unicorn animation café"]) });
+  const entries = [{ item, tagNames: [] }];
+  const revision = await getDb().backupState.get("library");
+  expect((await createDocumentSearcher()({ id: 1, query: "CAFÉ unicorn", entries }))?.matches).toEqual([
+    [item.id, expect.objectContaining({ excerpt: { label: "File contents", text: expect.stringContaining("Unicorn animation café") } })],
+  ]);
+  const original = (await getDb().documentAssets.get(item.assetId))!;
+  const search = createDocumentSearcher(async () => ({ ...original, pdfText: undefined }));
+  expect((await search({ id: 2, query: "CAFÉ", entries }))?.matches).toHaveLength(1);
+  expect(await getDb().backupState.get("library")).toEqual(revision);
 });

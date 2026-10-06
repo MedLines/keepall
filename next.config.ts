@@ -1,5 +1,17 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { version as pdfVersion } from "pdfjs-dist/package.json";
+
+const pdfAssetPath = join(process.cwd(), "public", "pdfjs", pdfVersion);
+const pdfPrecacheEntries = readdirSync(pdfAssetPath, { recursive: true, encoding: "utf8" })
+  .filter(file => /\.(mjs|js|bcmap|pfb|ttf|wasm)$/.test(file) && !file.includes("quickjs"))
+  .map(file => ({
+    url: `/pdfjs/${pdfVersion}/${file.replaceAll("\\", "/")}`,
+    revision: createHash("sha256").update(readFileSync(join(pdfAssetPath, file))).digest("hex"),
+  }));
 
 const withSerwist = withSerwistInit({
   swSrc: "src/app/sw.ts",
@@ -8,7 +20,7 @@ const withSerwist = withSerwistInit({
   // Registration is owned by SerwistProvider; keep inject from auto-reloading on "online".
   register: false,
   reloadOnOnline: false,
-  additionalPrecacheEntries: [{ url: "/~offline", revision: "keepall-offline-1" }],
+  additionalPrecacheEntries: [{ url: "/~offline", revision: "keepall-offline-1" }, ...pdfPrecacheEntries],
 });
 
 const nextConfig: NextConfig = {

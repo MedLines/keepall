@@ -21,7 +21,25 @@ class TestWorker {
 }
 
 beforeEach(() => { workers.length = 0; vi.stubGlobal("Worker", TestWorker); });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+
+async function request(worker = 0, call = 0) {
+  await waitFor(() => expect(workers[worker]?.postMessage.mock.calls.length ?? 0).toBeGreaterThan(call));
+  return workers[worker].postMessage.mock.calls[call][0];
+}
+
+test("unchanged document snapshots and unrelated tags do not restart a settled search", async () => {
+  const { result, rerender } = renderHook(({ documents, labels }) => useDocumentSearch(documents, labels, "keyword"), { initialProps: { documents: items, labels: tags } });
+  const initial = await request();
+  await act(async () => workers[0].reply(initial));
+  const settled = result.current.matches;
+  rerender({ documents: [{ ...item, tagIds: [], collectionIds: [] }], labels: [{ id: "unrelated", name: "Other", createdAt: 1 }] });
+  expect(result.current.pending).toBe(false);
+  expect(result.current.matches).toBe(settled);
+  expect(workers).toHaveLength(1);
+  expect(workers[0].terminate).not.toHaveBeenCalled();
+  expect(workers[0].postMessage).toHaveBeenCalledOnce();
+});
 
 test("loads no originals without a query, rejects stale results, and keeps its worker between queries", async () => {
   const { result, rerender, unmount } = renderHook(({ query }) => useDocumentSearch(items, tags, query), { initialProps: { query: "" } });
@@ -29,9 +47,11 @@ test("loads no originals without a query, rejects stale results, and keeps its w
   expect(result.current.pending).toBe(false);
   rerender({ query: "old" });
   expect(result.current.pending).toBe(true);
-  const oldRequest = workers[0].postMessage.mock.calls[0][0];
+  expect(result.current.query).toBe("old");
+  const oldRequest = await request();
   rerender({ query: "new" });
-  const newRequest = workers[0].postMessage.mock.calls[1][0];
+  expect(result.current.query).toBe("new");
+  const newRequest = await request(0, 1);
   await act(async () => workers[0].reply(oldRequest));
   expect(result.current.matches).toBeUndefined();
   await act(async () => workers[0].reply(newRequest));
@@ -44,21 +64,26 @@ test("loads no originals without a query, rejects stale results, and keeps its w
   expect(workers[0].terminate).toHaveBeenCalledOnce();
 });
 
-test("a new library snapshot resets cached originals, including backups that reuse asset IDs", async () => {
-  const { result, rerender } = renderHook(({ documents }) => useDocumentSearch(documents, tags, "keyword"), { initialProps: { documents: items } });
-  await act(async () => workers[0].reply(workers[0].postMessage.mock.calls[0][0]));
+test("original revisions reset cached bytes even when backups reuse all document metadata and IDs", async () => {
+  const { result, rerender } = renderHook(({ revision }) => useDocumentSearch(items, tags, "keyword", revision), { initialProps: { revision: "original" } });
+  const initial = await request();
+  await act(async () => workers[0].reply(initial));
   expect(result.current.matches?.size).toBe(1);
-  rerender({ documents: [{ ...item, updatedAt: 2 }] });
+  const settled = result.current.matches;
+  rerender({ revision: "restored" });
   expect(workers[0].terminate).toHaveBeenCalledOnce();
-  expect(workers).toHaveLength(2);
-  expect(result.current.matches).toBeUndefined();
-  await act(async () => workers[1].reply(workers[1].postMessage.mock.calls[0][0]));
+  expect(result.current.matches).toBe(settled);
+  expect(result.current.query).toBe("keyword");
+  expect(result.current.pending).toBe(true);
+  const restored = await request(1);
+  await act(async () => workers[1].reply(restored));
   expect(result.current.pending).toBe(false);
 });
 
 test("keeps settled results and their query together while the next document search is pending", async () => {
   const { result, rerender } = renderHook(({ query }) => useDocumentSearch(items, tags, query), { initialProps: { query: "animation" } });
-  await act(async () => workers[0].reply(workers[0].postMessage.mock.calls[0][0]));
+  const initial = await request();
+  await act(async () => workers[0].reply(initial));
   const settled = result.current.matches;
 
   rerender({ query: "animation examples" });
@@ -66,7 +91,8 @@ test("keeps settled results and their query together while the next document sea
   expect(result.current.matches).toBe(settled);
   expect(result.current.query).toBe("animation");
 
-  await act(async () => workers[0].reply(workers[0].postMessage.mock.calls[1][0]));
+  const next = await request(0, 1);
+  await act(async () => workers[0].reply(next));
   expect(result.current.pending).toBe(false);
   expect(result.current.query).toBe("animation examples");
   expect(result.current.matches?.get(item.id)?.excerpt?.text).toBe("animation examples");
@@ -77,19 +103,47 @@ test("keeps settled results and their query together while the next document sea
   expect(result.current.matches).toBeUndefined();
   rerender({ query: "another subject" });
   expect(result.current.pending).toBe(true);
-  expect(result.current.query).toBe("");
+  expect(result.current.query).toBe("another subject");
   expect(result.current.matches).toBeUndefined();
 });
 
 test("search failure and unavailable files can be retried without hiding metadata results", async () => {
   const { result } = renderHook(() => useDocumentSearch(items, tags, "keyword"));
+  await request();
   await act(async () => workers[0].onerror?.({ preventDefault: vi.fn() } as unknown as ErrorEvent));
   expect(result.current.error).toBe(true);
   expect(result.current.matches).toBeUndefined();
   act(() => result.current.retry());
-  await waitFor(() => expect(workers).toHaveLength(2));
+  const retried = await request(1);
   expect(result.current.error).toBe(false);
-  await act(async () => workers[1].reply(workers[1].postMessage.mock.calls[0][0], 1));
+  await act(async () => workers[1].reply(retried, 1));
   expect(result.current.unavailable).toBe(1);
   expect(result.current.matches?.size).toBe(1);
+});
+
+test("rapid typing searches only the final query", async () => {
+  vi.useFakeTimers();
+  const { rerender } = renderHook(({ query }) => useDocumentSearch(items, tags, query), { initialProps: { query: "" } });
+  rerender({ query: "ani" });
+  rerender({ query: "animation" });
+  rerender({ query: "animation examples" });
+  expect(workers).toHaveLength(0);
+  await act(async () => vi.advanceTimersByTimeAsync(150));
+  expect(workers).toHaveLength(1);
+  expect(workers[0].postMessage).toHaveBeenCalledOnce();
+  expect(workers[0].postMessage.mock.calls[0][0].query).toBe("animation examples");
+});
+
+test("editing searchable document metadata refreshes results while reusing cached originals", async () => {
+  const { result, rerender } = renderHook(({ documents }) => useDocumentSearch(documents, tags, "keyword"), { initialProps: { documents: items } });
+  const initial = await request();
+  await act(async () => workers[0].reply(initial));
+  rerender({ documents: [{ ...item, title: "Changed title" }] });
+  expect(result.current.pending).toBe(true);
+  const updated = await request(0, 1);
+  expect(updated.entries[0].item.title).toBe("Changed title");
+  expect(workers).toHaveLength(1);
+  expect(workers[0].terminate).not.toHaveBeenCalled();
+  await act(async () => workers[0].reply(updated));
+  expect(result.current.pending).toBe(false);
 });

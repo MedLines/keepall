@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { pdfFixture } from "../test-support/pdf-fixture";
 
 test.use({ serviceWorkers: "block" });
 
@@ -85,6 +86,7 @@ for (const source of ["capture", "files", "folder"] as const) {
       { name: "image.png", mimeType: "image/png", buffer: await readFile("public/icons/icon-192.png") },
       { name: "first.md", mimeType: "", buffer: Buffer.from("# First file") },
       { name: "second.txt", mimeType: "", buffer: Buffer.from("Second file") },
+      { name: "reference.pdf", mimeType: "", buffer: Buffer.from(pdfFixture(["PDF reference text"])) },
     ];
     const folder = testInfo.outputPath("Mixed folder");
     if (source === "folder") { await mkdir(folder, { recursive: true }); for (const file of files) await writeFile(join(folder, file.name), file.buffer); }
@@ -95,7 +97,7 @@ for (const source of ["capture", "files", "folder"] as const) {
       const chooser = page.waitForEvent("filechooser");
       await parent.getByRole("button", { name: source === "capture" ? "Add files" : source === "folder" ? "Import folder" : "Import files", exact: true }).click();
       await (await chooser).setFiles(source === "folder" ? folder : files);
-      await expect(capture.getByRole("region", { name: "Selected files" })).toContainText("3 files · Separate items");
+      await expect(capture.getByRole("region", { name: "Selected files" })).toContainText("4 files · Separate items");
       await expect(page.getByRole("dialog")).toHaveCount(1);
       await expect(capture.getByRole("radio")).toHaveCount(0);
       await capture.getByRole("button", { name: "Unsorted", exact: true }).click();
@@ -104,9 +106,9 @@ for (const source of ["capture", "files", "folder"] as const) {
       await capture.getByRole("button", { name: cancel ? "Cancel" : "Save", exact: true }).click();
       await expect(capture).toBeHidden();
       if (cancel) { expect(Object.values(await counts(page))).toEqual([0, 0, 0, 0, 0, 0, 0]); continue; }
-      expect(await counts(page)).toMatchObject({ items: 3, assets: 1, documentAssets: 2, collections: 1, tags: 1 });
+      expect(await counts(page)).toMatchObject({ items: 4, assets: 1, documentAssets: 3, collections: 1, tags: 1 });
       await page.reload();
-      await expect(page.locator("[data-item-id]")).toHaveCount(3);
+      await expect(page.locator("[data-item-id]")).toHaveCount(4);
       await page.getByRole("link", { name: /first.md/ }).click();
       await expect(page.getByRole("heading", { name: "First file", exact: true })).toBeVisible();
     }

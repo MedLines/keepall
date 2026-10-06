@@ -8,6 +8,7 @@ import {
   FilterIcon,
   LinkIcon,
   NoteIcon,
+  PdfIcon,
   VideoIcon,
 } from "./shell-icons";
 import { ShellTopMenu } from "./shell-top-menu";
@@ -62,8 +63,9 @@ export function LibraryTypeFilterMenu({
       value: "note",
       label: "Notes",
       icon: <NoteIcon />,
-      count: count(counts.byType.note + counts.byType.document),
+      count: count(counts.byType.note + counts.byType.document - counts.pdfDocuments),
     },
+    { value: "document", label: "Documents", icon: <PdfIcon />, count: count(counts.byType.document) },
   ];
 
   return (

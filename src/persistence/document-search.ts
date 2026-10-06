@@ -1,6 +1,7 @@
 import { decodeTextDocument, type DocumentAsset, type DocumentItem } from "@/domain/document";
 import { findSearchExcerpt, parseSearchTerms, searchRelevanceScore, type DocumentSearchMatch } from "@/domain/search";
 import { getDb } from "./db";
+import { readPdfText } from "./pdf-document";
 
 export type DocumentSearchRequest = {
   id: number;
@@ -22,19 +23,20 @@ export function createDocumentSearcher(
   const cache = new Map<string, string>();
   let usedBytes = 0;
 
-  async function textFor(assetId: string) {
-    const cached = cache.get(assetId);
+  async function textFor(item: DocumentItem) {
+    const key = `${item.format === "pdf" ? "pdf" : "text"}:${item.assetId}`;
+    const cached = cache.get(key);
     if (cached !== undefined) {
-      cache.delete(assetId);
-      cache.set(assetId, cached);
+      cache.delete(key);
+      cache.set(key, cached);
       return cached;
     }
-    const original = await readOriginal(assetId);
+    const original = await readOriginal(item.assetId);
     if (!original) throw new Error("Missing document original");
     // A newer query may have populated this original while the read was pending.
-    const shared = cache.get(assetId);
+    const shared = cache.get(key);
     if (shared !== undefined) return shared;
-    const text = decodeTextDocument(original.bytes);
+    const text = item.format === "pdf" ? original.pdfText ?? await readPdfText(original.bytes) : decodeTextDocument(original.bytes);
     const size = text.length * 2;
     if (size <= cacheBytes) {
       while (usedBytes + size > cacheBytes && cache.size) {
@@ -42,7 +44,7 @@ export function createDocumentSearcher(
         usedBytes -= cache.get(oldest)!.length * 2;
         cache.delete(oldest);
       }
-      cache.set(assetId, text);
+      cache.set(key, text);
       usedBytes += size;
     }
     return text;
@@ -56,7 +58,7 @@ export function createDocumentSearcher(
       if (!isCurrent()) return null;
       const { item, tagNames } = request.entries[index];
       let text = "";
-      try { text = await textFor(item.assetId); }
+      try { text = await textFor(item); }
       catch { response.unavailable++; }
       if (!isCurrent()) return null;
       const score = searchRelevanceScore(item, terms, tagNames, text);

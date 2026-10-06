@@ -3,14 +3,20 @@ import { resolveItemCollectionIds } from "./collections";
 import { decodeTextDocument, documentFormat, DocumentValidationError, type DocumentAsset, type DocumentItem } from "@/domain/document";
 import { getDb } from "./db";
 import { resolveItemTagIds } from "./tags";
+import { readPdfText } from "./pdf-document";
 
-export async function createTextDocument(input: {
+export async function getDocumentRevision(): Promise<string> {
+  return (await getDb().backupState.get("documents"))?.revision ?? "initial";
+}
+
+export async function createDocument(input: {
   fileName: string; bytes: Uint8Array; title?: string; noteContent?: string;
   tagIds?: string[]; collectionIds?: string[]; collectionName?: string; tagNames?: readonly string[];
 }): Promise<DocumentItem> {
   const format = documentFormat(input.fileName, input.bytes.byteLength);
   const bytes = new Uint8Array(input.bytes);
-  decodeTextDocument(bytes);
+  const pdfText = format === "pdf" ? await readPdfText(bytes) : undefined;
+  if (format !== "pdf") decodeTextDocument(bytes);
   const contentHash = await hashAssetBytes(bytes);
   const now = Date.now();
   const db = getDb();
@@ -21,12 +27,12 @@ export async function createTextDocument(input: {
     for (const id of collectionIds) if (!await db.collections.get(id)) throw new Error("The selected collection no longer exists.");
     let original = await db.documentAssets.where("contentHash").equals(contentHash).first();
     if (!original) {
-      original = { id: crypto.randomUUID(), bytes, byteLength: bytes.byteLength, contentHash, createdAt: now };
+      original = { id: crypto.randomUUID(), bytes, byteLength: bytes.byteLength, contentHash, createdAt: now, ...(pdfText !== undefined ? { pdfText } : {}) };
       await db.documentAssets.add(original);
     }
     const item: DocumentItem = {
       id: crypto.randomUUID(), type: "document", format, assetId: original.id,
-      sourceFileName: input.fileName, title: input.title?.trim() || input.fileName.replace(/\.(txt|md)$/i, "") || input.fileName,
+      sourceFileName: input.fileName, title: input.title?.trim() || input.fileName.replace(/\.(txt|md|pdf)$/i, "") || input.fileName,
       noteContent: input.noteContent?.trim() ?? "", tagIds, collectionIds, createdAt: now, updatedAt: now,
     };
     await db.items.add(item);
@@ -47,6 +53,7 @@ export async function updateDocument(id: string, input: { title: string; noteCon
   if (input.content !== undefined) {
     const snapshot = await db.items.get(id);
     if (snapshot?.type !== "document" || snapshot.deletedAt !== undefined) throw new DocumentValidationError("This document is no longer available.");
+    if (snapshot.format === "pdf") throw new DocumentValidationError("The PDF file stays unchanged. Edit its title or personal note instead.");
     expectedAssetId ??= snapshot.assetId;
     const original = await db.documentAssets.get(snapshot.assetId);
     if (!original) throw new DocumentValidationError("The saved file is missing. Restore it from a backup before editing.");

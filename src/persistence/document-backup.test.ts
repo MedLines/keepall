@@ -1,14 +1,30 @@
 import { Blob as NodeBlob } from "node:buffer";
 import { expect, test, vi } from "vitest";
 import { BlobReader, TextReader, TextWriter, Uint8ArrayWriter, ZipReader, ZipWriter } from "@zip.js/zip.js";
-import { createTextDocument, getDocumentOriginal, updateDocument } from "./documents";
+import { createDocument, getDocumentOriginal, updateDocument } from "./documents";
 import { getDb, deleteKeepallDatabase } from "./db";
 import { exportKeepallArchive, importKeepallArchiveReplace, importKeepallArchiveMerge, validateKeepallArchive, readAutomaticBackupMetadata } from "./backup-archive";
 import { exportKeepallBackup, countCurrentLibrary } from "./backup";
 import { buildNote } from "@/domain/note";
+import { pdfFixture } from "../../test-support/pdf-fixture";
 
 const bytes = new TextEncoder().encode("\uFEFF# Exact original\r\nمرحبا café\n");
 async function readable(blob: Blob) { return new NodeBlob([new Uint8Array(await blob.arrayBuffer())]) as unknown as Blob; }
+
+test("PDF ZIP replace and merge preserve exact files and rebuild searchable text", async () => {
+  const bytes = pdfFixture(["First page", "Searchable unicorn café"]);
+  const item = await createDocument({ fileName: "reference.pdf", bytes, noteContent: "My note" });
+  const archive = await readable(await exportKeepallArchive());
+  await deleteKeepallDatabase();
+  await importKeepallArchiveReplace(archive);
+  expect(await getDb().items.get(item.id)).toMatchObject({ format: "pdf", noteContent: "My note" });
+  const restored = (await getDocumentOriginal(item.id))!;
+  expect(Array.from(restored.bytes)).toEqual(Array.from(bytes));
+  expect(restored.pdfText).toContain("Searchable unicorn café");
+  await deleteKeepallDatabase();
+  await importKeepallArchiveMerge(archive);
+  expect(Array.from((await getDocumentOriginal(item.id))!.bytes)).toEqual(Array.from(bytes));
+});
 
 async function modifiedArchive(original: Blob, change: (manifest: Record<string, unknown>, entries: Map<string, Uint8Array>) => void) {
   const reader = new ZipReader(new BlobReader(await readable(original)));
@@ -30,7 +46,7 @@ test("ZIP replacement round-trips documents, exact originals, personal notes, or
   const db = getDb();
   await db.tags.add({ id: "tag", name: "Reference", createdAt: 1 });
   await db.collections.add({ id: "collection", name: "Reading", createdAt: 1, pinnedItemIds: [] });
-  const document = await createTextDocument({ fileName: "source.md", bytes, noteContent: "My personal note", tagIds: ["tag"], collectionIds: ["collection"] });
+  const document = await createDocument({ fileName: "source.md", bytes, noteContent: "My personal note", tagIds: ["tag"], collectionIds: ["collection"] });
   await db.items.update(document.id, { deletedAt: 2 });
   const archive = await readable(await exportKeepallArchive());
   await deleteKeepallDatabase();
@@ -42,7 +58,7 @@ test("ZIP replacement round-trips documents, exact originals, personal notes, or
 });
 
 test("merge reuses original bytes and keeps newer personal notes and organization", async () => {
-  const original = await createTextDocument({ fileName: "source.md", bytes });
+  const original = await createDocument({ fileName: "source.md", bytes });
   const archive = await readable(await exportKeepallArchive());
   await getDb().tags.add({ id: "local-tag", name: "Local", createdAt: 1 });
   await getDb().items.update(original.id, { tagIds: ["local-tag"], updatedAt: Date.now() + 10_000 });
@@ -51,7 +67,7 @@ test("merge reuses original bytes and keeps newer personal notes and organizatio
   await importKeepallArchiveMerge(archive);
   expect(await getDb().items.get(original.id)).toMatchObject({ title: "Local title", noteContent: "Local note", tagIds: ["local-tag"] });
   expect(await getDb().documentAssets.count()).toBe(1);
-  const second = await createTextDocument({ fileName: "second.txt", bytes });
+  const second = await createDocument({ fileName: "second.txt", bytes });
   const next = await readable(await exportKeepallArchive());
   await deleteKeepallDatabase();
   await importKeepallArchiveMerge(next);
@@ -60,7 +76,7 @@ test("merge reuses original bytes and keeps newer personal notes and organizatio
 });
 
 test.each(["missing", "corrupt", "future", "wrong format"])("invalid %s document archives fail before replacement changes any data", async (failure) => {
-  await createTextDocument({ fileName: "source.md", bytes });
+  await createDocument({ fileName: "source.md", bytes });
   const original = await exportKeepallArchive();
   const broken = await modifiedArchive(original, (manifest, files) => {
     const records = manifest.documents as { path: string }[];
@@ -76,7 +92,7 @@ test.each(["missing", "corrupt", "future", "wrong format"])("invalid %s document
 });
 
 test("replacement quota errors roll back document originals and existing library data", async () => {
-  const item = await createTextDocument({ fileName: "source.md", bytes });
+  const item = await createDocument({ fileName: "source.md", bytes });
   const archive = await readable(await exportKeepallArchive());
   const sentinel = buildNote({ content: "Current" });
   await getDb().items.add(sentinel);
@@ -87,7 +103,7 @@ test("replacement quota errors roll back document originals and existing library
 });
 
 test("export refuses a document with a missing original instead of emitting a broken recovery copy", async () => {
-  const item = await createTextDocument({ fileName: "source.md", bytes });
+  const item = await createDocument({ fileName: "source.md", bytes });
   await getDb().documentAssets.delete(item.assetId);
   await expect(exportKeepallArchive()).rejects.toThrow(/original/i);
 });
@@ -108,7 +124,7 @@ test.each([6, 8])("version %s ZIP archives remain readable after documents are i
 });
 
 test("empty text originals round-trip without losing their document record", async () => {
-  const document = await createTextDocument({ fileName: "empty.txt", bytes: new Uint8Array() });
+  const document = await createDocument({ fileName: "empty.txt", bytes: new Uint8Array() });
   const archive = await readable(await exportKeepallArchive());
   await deleteKeepallDatabase();
   await importKeepallArchiveReplace(archive);
@@ -118,7 +134,7 @@ test("empty text originals round-trip without losing their document record", asy
 });
 
 test("file edits advance the backup revision and restore their updated text", async () => {
-  const item = await createTextDocument({ fileName: "edited.md", bytes });
+  const item = await createDocument({ fileName: "edited.md", bytes });
   const revision = (await getDb().backupState.get("library"))?.revision;
   await updateDocument(item.id, { title: item.title, noteContent: "Personal note", content: "# Updated file\nمرحبا" });
   expect((await getDb().backupState.get("library"))?.revision).not.toBe(revision);
@@ -130,7 +146,7 @@ test("file edits advance the backup revision and restore their updated text", as
 });
 
 test("document integrity validation detects changed bytes even when the file size matches", async () => {
-  await createTextDocument({ fileName: "source.md", bytes });
+  await createDocument({ fileName: "source.md", bytes });
   const archive = await modifiedArchive(await exportKeepallArchive(), (manifest, files) => {
     const [{ path }] = manifest.documents as { path: string }[];
     const altered = new Uint8Array(files.get(path)!);
@@ -141,11 +157,11 @@ test("document integrity validation detects changed bytes even when the file siz
 });
 
 test("a failed document merge rolls back all document records and originals in that batch", async () => {
-  await createTextDocument({ fileName: "first.txt", bytes });
-  await createTextDocument({ fileName: "second.txt", bytes: new TextEncoder().encode("Other original") });
+  await createDocument({ fileName: "first.txt", bytes });
+  await createDocument({ fileName: "second.txt", bytes: new TextEncoder().encode("Other original") });
   const archive = await readable(await exportKeepallArchive());
   await deleteKeepallDatabase();
-  const local = await createTextDocument({ fileName: "local.txt", bytes: new TextEncoder().encode("Keep this") });
+  const local = await createDocument({ fileName: "local.txt", bytes: new TextEncoder().encode("Keep this") });
   const put = getDb().items.put.bind(getDb().items);
   vi.spyOn(getDb().items, "put").mockImplementationOnce(put).mockRejectedValueOnce(new DOMException("Quota", "QuotaExceededError"));
   await expect(importKeepallArchiveMerge(archive)).rejects.toThrow("Quota");
@@ -155,9 +171,9 @@ test("a failed document merge rolls back all document records and originals in t
 });
 
 test("a newer document merge preserves an original still shared by another document", async () => {
-  const first = await createTextDocument({ fileName: "first.md", bytes });
-  const shared = await createTextDocument({ fileName: "shared.txt", bytes });
-  const replacement = await createTextDocument({ fileName: "replacement.txt", bytes: new TextEncoder().encode("Updated original") });
+  const first = await createDocument({ fileName: "first.md", bytes });
+  const shared = await createDocument({ fileName: "shared.txt", bytes });
+  const replacement = await createDocument({ fileName: "replacement.txt", bytes: new TextEncoder().encode("Updated original") });
   const archive = await modifiedArchive(await exportKeepallArchive(), (manifest) => {
     const item = (manifest.items as typeof first[]).find((item) => item.id === first.id)!;
     item.assetId = replacement.assetId;

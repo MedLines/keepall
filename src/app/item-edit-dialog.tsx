@@ -31,8 +31,8 @@ export type VideoDetailsDraft = {
 
 export type DocumentDetailsDraft = {
   title: string;
-  content: string;
-  expectedAssetId: string;
+  content?: string;
+  expectedAssetId?: string;
   noteContent: string;
   noteFormat: "plain" | "markdown";
 };
@@ -79,7 +79,7 @@ function MediaItemEditDialog({
   onSave,
   onOpenChange,
 }: CommonProps & {
-  media: "image" | "video" | "link";
+  media: "image" | "video" | "link" | "document";
   initialTitle: string;
   initialNotes: string;
   initialFormat: "plain" | "markdown";
@@ -98,11 +98,12 @@ function MediaItemEditDialog({
     <ModalDialog
       open={open} busy={busy} onOpenChange={onOpenChange} size="editor"
       onDismiss={dismissal.requestDismiss} onFocusCapture={dismissal.rememberFocus}
-      title={`Edit ${media} details`}
+      title={media === "document" ? "Edit document" : `Edit ${media} details`}
       description={media === "image"
         ? "Change the title, notes, or source. Gallery images stay unchanged."
         : media === "video"
           ? "Change the title or notes. The video file stays unchanged."
+          : media === "document" ? "Change the title or your personal note. The PDF file stays unchanged."
           : "Change the URL, title, or your note."}
       onSubmit={() => onSave({ title, notes, format, sourceUrl })}
       footer={<>
@@ -215,6 +216,8 @@ export function DocumentItemEditDialog({ item, onSave, ...props }: CommonProps &
   item: DocumentItem;
   onSave: (draft: DocumentDetailsDraft) => void;
 }) {
+  if (item.format === "pdf") return <MediaItemEditDialog {...props} media="document" initialTitle={item.title} initialNotes={item.noteContent} initialFormat={item.noteFormat ?? "plain"} initialSourceUrl=""
+    onSave={({ title, notes, format }) => onSave({ title, noteContent: notes, noteFormat: format })} />;
   return <DocumentEditDialog {...props} item={item} onSave={onSave} />;
 }
 

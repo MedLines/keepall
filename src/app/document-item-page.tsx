@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { DocumentValidationError, type DocumentItem } from "@/domain/document";
+import { documentMimeType, DocumentValidationError, type DocumentItem } from "@/domain/document";
 import type { Collection } from "@/domain/collection";
 import type { Tag } from "@/domain/tag";
 import { resolveItemCollections, resolveItemTags, type Item } from "@/domain/item";
@@ -74,7 +74,7 @@ export function DocumentItemPage({ itemId, returnHref }: { itemId: string; retur
     void mutate("download", async () => {
       const original = await getDocumentOriginal(item.id);
       if (!original) throw new Error("Missing original");
-      const blob = new Blob([new Uint8Array(original.bytes)], { type: item.format === "markdown" ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8" });
+      const blob = new Blob([new Uint8Array(original.bytes)], { type: documentMimeType(item.format) });
       const url = URL.createObjectURL(blob);
       try {
         const anchor = document.createElement("a");
@@ -96,18 +96,17 @@ export function DocumentItemPage({ itemId, returnHref }: { itemId: string; retur
   const itemCollections = resolveItemCollections(item, new Map(collections.map((collection) => [collection.id, collection])));
   const busy = operation !== null;
   return <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
-    <ItemPageHeader returnHref={returnHref} title={item.title} />
-    <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
+    <ItemPageHeader returnHref={returnHref} title={item.title} titleAsHeading />
+    <main data-document-scroll className={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`} data-testid="item-page-scroll">
       <div className={ITEM_PAGE_GRID}>
-        <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-4xl lg:pt-6">
-          <h1 className="break-words text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{item.title}</h1>
-          <article aria-label="Document content" className="mt-9 border-t border-border-control pt-8"><DocumentContent key={item.id} item={item} /></article>
+        <div className={`row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-4xl ${item.format === "pdf" ? "" : "lg:pt-6"}`}>
+          <article aria-label="Document content"><DocumentContent key={item.id} item={item} /></article>
           <section aria-label="Personal note" className="mt-9 border-t border-border-control pt-8">
             <h2 className="mb-4 text-lg font-semibold">My note</h2>
             {item.noteContent ? <NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /> : <button type="button" className="ui-control min-h-11 px-4 text-sm font-medium" disabled={busy} onClick={() => { setError(null); setEditing(true); }}>Add a personal note</button>}
           </section>
         </div>
-        <ItemLibraryDetails label="Document details" summary={{ label: "Format", value: item.format === "markdown" ? "Markdown" : "Plain text" }}
+        <ItemLibraryDetails label="Document details" summary={{ label: "Format", value: item.format === "pdf" ? "PDF" : item.format === "markdown" ? "Markdown" : "Plain text" }}
           collections={itemCollections} tags={itemTags} createdAt={item.createdAt} updatedAt={item.updatedAt} sourceFileName={item.sourceFileName}
           className={ITEM_DETAILS_POSITION} disabled={busy} editDisabled={editing} editLabel="Edit document" deleteLabel="Move document to Trash"
           onEdit={() => { setError(null); setEditing(true); }} onOrganize={() => { setError(null); setOrganizerSide(document.documentElement.dir === "rtl" ? "left" : "right"); setOrganizerOpen(true); }} onDelete={() => { setError(null); setDeleteOpen(true); }}

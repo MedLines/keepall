@@ -39,6 +39,7 @@ type Props = {
   onEmptyTrash?: () => void;
   itemCount: number;
   searchQuery: string;
+  searchPending?: boolean;
   onSearchChange: (value: string) => void;
   sort: LibrarySort;
   onSortChange: (sort: LibrarySort) => void;
@@ -71,7 +72,7 @@ function LibraryBulkActions({ bulk, selection }: { bulk: LibraryBulkBarProps | u
 }
 
 export function LibraryTopBar({
-  headingRef, title, itemCount, searchQuery, onSearchChange,
+  headingRef, title, itemCount, searchQuery, searchPending = false, onSearchChange,
   sort, onSortChange, layout, onLayoutChange, onPreview, previewDisabled = false, panelOpen, onPanelOpenChange,
   typeFilter, typeCounts, onTypeFilterChange, tagFilterName,
   searchPlaceholder, typeFilterName, onClearSearchFilter, onClearTypeFilter,
@@ -101,11 +102,15 @@ export function LibraryTopBar({
           >
             <ShellPanelIcon open={panelOpen} />
           </button>
-          <label className="relative block min-w-[140px] flex-1 sm:max-w-[250px]" htmlFor="library-search">
-            <span className="sr-only">Search</span>
-            <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-secondary" />
+          <div className="relative min-w-[140px] flex-1 sm:max-w-[250px]">
+            <label className="sr-only" htmlFor="library-search">Search</label>
+            <span role="status" className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-secondary">
+              <SearchIcon className={`size-4 transition-[visibility] duration-0 ${searchPending ? "invisible delay-200" : "visible"}`} />
+              <span aria-hidden="true" className={`absolute inset-0 size-4 rounded-full border-2 border-current border-t-transparent transition-[visibility] duration-0 ${searchPending ? "visible delay-200 animate-spin motion-reduce:animate-none" : "invisible"}`} />
+              <span className="sr-only">{searchPending ? "Searching file contents…" : ""}</span>
+            </span>
             <input
-              className="ui-field h-10 w-full pl-10 pr-3 text-sm"
+              className="ui-field h-10 w-full pl-10 pr-11 text-sm"
               id="library-search"
               type="search"
               title={collectionsView || tagsView ? undefined : 'Search words in any order. Use "quotes" for an exact phrase.'}
@@ -113,7 +118,12 @@ export function LibraryTopBar({
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
             />
-          </label>
+            {searchQuery ? <button type="button" aria-label="Clear search" title="Clear search"
+              className="control-shape-none group absolute right-0 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-none text-text-secondary focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-border-focus"
+              onClick={() => clearWithSearchFocus(() => onSearchChange(""))}>
+              <span className="flex size-7 items-center justify-center rounded-full group-hover:bg-bg-raised group-hover:text-text-primary"><CloseIcon className="size-4" /></span>
+            </button> : null}
+          </div>
           <div className="flex shrink-0 items-center gap-2">
             {!collectionsView && !tagsView ? <LibraryTypeFilterMenu
               value={typeFilter}

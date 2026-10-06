@@ -12,7 +12,7 @@ import type { Thumbnail, VideoAsset } from "./db";
 import { readBackupSnapshot } from "./backup-snapshot";
 import { parseAutomaticBackupIdentity, type AutomaticBackupIdentity } from "@/domain/automatic-backup";
 
-const ARCHIVE_VERSION = 9;
+const ARCHIVE_VERSION = 10;
 const UUID = "[0-9a-f-]{36}";
 const assetPath = new RegExp(`^assets/(${UUID})\\.bin$`, "i");
 const videoPath = new RegExp(`^videos/(${UUID})\\.bin$`, "i");
@@ -97,7 +97,7 @@ async function readArchive(file: Blob): Promise<{
       throw new BackupValidationError("Archive manifest must be an object");
     }
     const candidate = raw as Record<string, unknown>;
-    if (candidate.format !== "keepall" || ![6, 8, ARCHIVE_VERSION].includes(candidate.version as number) ||
+    if (candidate.format !== "keepall" || ![6, 8, 9, ARCHIVE_VERSION].includes(candidate.version as number) ||
         !Array.isArray(candidate.assets) || !Array.isArray(candidate.videos) ||
         !Array.isArray(candidate.thumbnails) || !Array.isArray(candidate.items)) {
       throw new BackupValidationError("Unsupported archive format");
@@ -105,7 +105,7 @@ async function readArchive(file: Blob): Promise<{
     const assets = candidate.assets as Record<string, unknown>[];
     const videos = candidate.videos as Record<string, unknown>[];
     const thumbnailRecords = candidate.thumbnails as Record<string, unknown>[];
-    const documents = parseArchiveDocuments(candidate.documents, candidate.version === ARCHIVE_VERSION);
+    const documents = parseArchiveDocuments(candidate.documents, candidate.version === 9 || candidate.version === ARCHIVE_VERSION);
     const paths = new Set<string>(documents.map((record) => record.path));
     for (const record of assets) {
       if (!record || typeof record.id !== "string" || typeof record.path !== "string" ||
@@ -178,6 +178,9 @@ async function readArchive(file: Blob): Promise<{
       })),
     }, new Set(documents.map((record) => record.id)));
     const documentRefs = new Set(backup.items.filter((item) => item.type === "document").map((item) => item.assetId));
+    if (candidate.version !== ARCHIVE_VERSION && backup.items.some(item => item.type === "document" && item.format === "pdf")) {
+      throw new BackupValidationError("This archive version does not support PDFs.");
+    }
     if (documentRefs.size !== documents.length) throw new BackupValidationError("Archive has an unreferenced document original.");
     const validTagIds = new Set(backup.tags.map((tag) => tag.id));
     const validCollectionIds = new Set(backup.collections.map((collection) => collection.id));
@@ -203,7 +206,7 @@ async function readArchive(file: Blob): Promise<{
       const entry = byName.get(path);
       if (!entry || entry.directory || entry.uncompressedSize !== size) throw new BackupValidationError("Document original is missing or damaged.");
       return entry.getData(new Uint8ArrayWriter());
-    });
+    }, backup.items.filter((item): item is DocumentItem => item.type === "document"));
     const videoAssets: VideoAsset[] = [];
     for (const record of videos) {
       const entry = byName.get(record.path as string);
@@ -254,7 +257,7 @@ export async function readAutomaticBackupMetadata(file: Blob) {
     }
     const raw: unknown = JSON.parse(await manifest.getData(new TextWriter()));
     if (!raw || typeof raw !== "object" || !("format" in raw) || raw.format !== "keepall" ||
-        !("version" in raw) || ![8, ARCHIVE_VERSION].includes(raw.version as number) ||
+        !("version" in raw) || ![8, 9, ARCHIVE_VERSION].includes(raw.version as number) ||
         !("exportedAt" in raw) || typeof raw.exportedAt !== "number" || !Number.isFinite(raw.exportedAt) ||
         !("automaticBackup" in raw)) {
       throw new BackupValidationError("Automatic backup metadata is invalid");

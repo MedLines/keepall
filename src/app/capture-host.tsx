@@ -21,7 +21,7 @@ import {
 import { LinkValidationError } from "@/domain/link";
 import { NoteValidationError } from "@/domain/note";
 import { decodeTextDocument, documentFormat, DocumentValidationError } from "@/domain/document";
-import { createTextDocument } from "@/persistence/documents";
+import { createDocument } from "@/persistence/documents";
 import { VideoValidationError } from "@/domain/video";
 import { createVideo } from "@/persistence/videos";
 import { prepareLocalVideo } from "./prepare-local-video";
@@ -546,7 +546,7 @@ export function CaptureHost() {
         if (!imageLayoutRequired) setImageLayout(null);
         setImageLayoutRequired(true);
       }
-    } else if (!bulk && selected.length === 1 && classifyCaptureFile(selected[0]).kind === "document" && !videoDraft && !hasFileBatch) {
+    } else if (!bulk && selected.length === 1 && classifyCaptureFile(selected[0]).kind === "document" && !/\.pdf$/i.test(selected[0].name) && !videoDraft && !hasFileBatch) {
       await addTextFile(selected[0]);
     } else if (!bulk && selected.length === 1 && classifyCaptureFile(selected[0]).kind === "video" && !savingImage && !videoDraft && !hasFileBatch) {
       await onPickVideo(selected[0]);
@@ -827,7 +827,7 @@ export function CaptureHost() {
           const format = noteFormat === "markdown" ? "markdown" : "text";
           const fileName = documentFormat(documentDraft.fileName, 0) === format ? documentDraft.fileName : documentDraft.fileName.replace(/\.(txt|md)$/i, format === "markdown" ? ".md" : ".txt");
           const bytes = state.input === documentDraft.text ? documentDraft.bytes : new TextEncoder().encode(state.input);
-          itemId = (await createTextDocument({ fileName, bytes })).id;
+          itemId = (await createDocument({ fileName, bytes })).id;
         } else {
           const resolved = resolveCapture(state.input, state.override);
           if (!resolved.ok) {

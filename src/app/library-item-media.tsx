@@ -7,7 +7,7 @@ import type { LinkItem } from "@/domain/link";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { useState } from "react";
-import { ImageIcon, LinkIcon, NoteIcon, VideoIcon } from "./shell-icons";
+import { ImageIcon, LinkIcon, NoteIcon, PdfIcon, VideoIcon } from "./shell-icons";
 
 type MediaVariant = "card" | "grid" | "inspect" | "viewer" | "preview";
 
@@ -147,6 +147,7 @@ function FallbackContent({ item, compact }: { item: Item; compact: boolean }) {
     return <LinkIcon className={compact ? "size-6" : "size-12"} />;
   }
   if (!compact) return cardInitial(item);
+  if (item.type === "document" && item.format === "pdf") return <PdfIcon className="size-6" />;
   if (item.type === "note" || item.type === "document") return <NoteIcon className="size-6" />;
   if (item.type === "video") return <VideoIcon className="size-6" />;
   return <ImageIcon className="size-6" />;
