@@ -713,7 +713,7 @@ function ImageWorkspace({
               </div>
               ) : null}
               {galleryMode === "slides" ? (
-              <div className="item-workspace-media relative isolate flex h-[var(--image-viewer-height)] items-center justify-center overflow-hidden rounded-card bg-bg-media">
+              <div className="item-workspace-media image-viewer-canvas relative isolate flex h-[var(--image-viewer-height)] items-center justify-center overflow-hidden rounded-card bg-bg-image-viewer">
                 <div className="pointer-events-none absolute inset-4 z-10 flex items-start justify-end">
                   <CurrentImageMenu
                     busy={galleryMutation !== null}
@@ -724,15 +724,14 @@ function ImageWorkspace({
                 </div>
                 <button
                   type="button"
-                  className="control-shape-none group relative flex size-full min-h-0 items-center justify-center overflow-hidden"
+                  className="control-shape-none image-viewer-trigger group relative flex size-full min-h-0 min-w-0 items-center justify-center overflow-hidden p-3 sm:p-5"
                   aria-label="View image full screen"
                   onClick={() => onViewerOpenChange(true)}
                 >
                   <LibraryItemMedia
                     item={item}
-                    variant="inspect"
+                    variant="canvas"
                     assetId={currentAssetId}
-                    className="max-h-[calc(100dvh-14rem)]"
                   />
                   <span className="ui-control pointer-events-none absolute bottom-3 right-3 flex size-11 items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">
                     <FullScreenIcon />
@@ -911,7 +910,7 @@ function GalleryControls({
   );
 
   return (
-    <nav className="flex min-w-0 items-center gap-3" aria-label="Image slides">
+    <nav className="flex h-14 min-w-0 shrink-0 items-center gap-3" aria-label="Image slides">
       {slideCount > 1 ? <div className="ui-scrollbar-hidden scroll-fade-x flex min-w-0 flex-1 items-center justify-start gap-1 overflow-x-auto p-1 sm:gap-2">
         {visibleSlides.map((index) => (
           <button
@@ -1019,7 +1018,7 @@ function FocusedImageViewer({
       }}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop className="focused-image-backdrop fixed inset-0 z-[90]" />
+        <Dialog.Backdrop className="focused-image-backdrop fixed inset-0 z-[90]" data-zoomed={zoom !== null} />
         <Dialog.Viewport
           ref={viewportRef}
           className="ui-scrollbar fixed inset-0 z-[90] overflow-auto p-2 sm:p-5"
@@ -1073,7 +1072,7 @@ function FocusedImageViewer({
               }}
               onPointerCancel={() => { drag.current = null; }}
             >
-              <LibraryItemMedia item={item} variant="viewer" assetId={assetId} className={zoom ? "!w-full" : ""} />
+              <LibraryItemMedia item={item} variant="viewer" assetId={assetId} className={zoom ? "!w-full" : "max-h-[calc(100dvh-5rem)] object-contain"} />
             </button>
             <Dialog.Close className={`${CONTROL} fixed right-3 top-3 z-10 bg-bg-surface/95 backdrop-blur-sm`} aria-label="Close full-screen image">
               <CloseIcon />

@@ -9,11 +9,11 @@ import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { useState } from "react";
 import { ImageIcon, LinkIcon, NoteIcon, PdfIcon, VideoIcon } from "./shell-icons";
 
-type MediaVariant = "card" | "grid" | "inspect" | "viewer" | "preview";
+type MediaVariant = "card" | "grid" | "inspect" | "canvas" | "viewer" | "preview";
 
 type Props = {
   item: Item;
-  /** Grid preserves proportions, cards crop, inspect fits, viewer keeps natural height, and preview contains without upscaling. */
+  /** Grid preserves proportions, cards crop, inspect fits, canvas fits without upscaling, viewer keeps natural height, and preview contains without upscaling. */
   variant?: MediaVariant;
   onImageLoad?: (ratio: number, dimensions: { width: number; height: number }) => void;
   /** Inspect gallery: show this asset instead of the cover. */
@@ -114,7 +114,10 @@ function imageClassName(
     return `media-outline block h-auto w-auto max-h-full max-w-full rounded-input object-contain ${className}`;
   }
   if (variant === "viewer") {
-    return `media-outline mx-auto block h-auto w-auto max-w-full ${className}`;
+    return `media-outline media-elevated mx-auto block h-auto w-auto max-w-full ${className}`;
+  }
+  if (variant === "canvas") {
+    return `media-outline media-elevated block h-auto w-auto max-h-full max-w-full rounded-none object-contain ${className}`;
   }
   if (variant === "inspect") {
     return `media-outline media-squircle-inset mx-auto max-h-[min(78vh,56rem)] w-full object-contain ${className}`;
@@ -133,7 +136,10 @@ function fallbackClassName(
   if (variant === "preview") {
     return `flex size-full min-h-0 items-center justify-center rounded-input bg-bg-media text-5xl font-semibold text-text-on-media ${className}`;
   }
-  if (variant === "inspect" || variant === "viewer") {
+  if (variant === "canvas" || variant === "viewer") {
+    return `flex min-h-48 items-center justify-center bg-bg-image-viewer text-5xl font-semibold text-text-primary ${className}`;
+  }
+  if (variant === "inspect") {
     return `flex min-h-48 items-center justify-center bg-bg-media text-5xl font-semibold text-text-on-media ${className}`;
   }
   if (compact) {
