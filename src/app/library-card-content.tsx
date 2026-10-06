@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { SearchHighlight, SearchResult } from "./search-highlight";
 import type { SearchExcerpt } from "@/domain/search";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
@@ -24,7 +26,7 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
   return (
     <motion.div
       id={id}
-      className="ui-popover ui-scrollbar absolute right-0 top-[calc(100%+8px)] z-40 max-h-[min(20rem,50dvh)] w-64 max-w-[calc(100vw-6rem)] overflow-y-auto"
+      className="ui-popover flex flex-col overflow-hidden absolute right-0 top-[calc(100%+8px)] z-40 max-h-[min(20rem,50dvh)] w-64 max-w-[calc(100vw-6rem)]"
       style={{ transformOrigin: "top right", pointerEvents: isPresent ? "auto" : "none" }}
       inert={!isPresent}
       aria-hidden={!isPresent}
@@ -33,6 +35,7 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
       exit={reduceMotion ? undefined : { opacity: 0, scale: 0.95, transition: { duration: 0.1, ease: [0.2, 0, 0, 1] } }}
       transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.2, 0, 0, 1] }}
     >
+      <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
       <ul aria-label="Tags" className="flex min-w-0 flex-col gap-1">
         {tags.map(tag => {
           return <li key={tag.id} className="squircle-panel flex min-w-0 items-center rounded-control-sm hover:bg-bg-active focus-within:bg-bg-active">
@@ -41,6 +44,7 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
           </li>;
         })}
       </ul>
+      </ScrollArea>
     </motion.div>
   );
 }

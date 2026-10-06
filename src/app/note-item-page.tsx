@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -260,7 +262,7 @@ export function NoteItemPage({
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
       <ItemPageHeader returnHref={returnHref} title={title} />
 
-      <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
+      <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
         <div className={ITEM_PAGE_GRID}>
           <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-4xl lg:pt-6">
             <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-4xl">
@@ -298,7 +300,7 @@ export function NoteItemPage({
             }
           />
         </div>
-      </main>
+      </ScrollPanel>
 
       {editing ? <NoteItemEditDialog
         key={itemId} item={note} open busy={saving} error={editError}

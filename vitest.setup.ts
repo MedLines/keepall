@@ -98,6 +98,11 @@ if (typeof URL.revokeObjectURL !== "function") {
   URL.revokeObjectURL = vi.fn();
 }
 
+// jsdom has no Web Animations API; Base UI checks it when scroll content resizes.
+if (typeof Element.prototype.getAnimations !== "function") {
+  Element.prototype.getAnimations = () => [];
+}
+
 if (typeof window.matchMedia !== "function") {
   window.matchMedia = (query: string) => ({
     matches: query.includes("prefers-reduced-motion"),

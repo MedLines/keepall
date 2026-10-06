@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import { ContextMenu } from "@base-ui/react/context-menu";
 import { Menu } from "@base-ui/react/menu";
 import { useRef, useState, type ReactElement, type ReactNode, type RefObject } from "react";
@@ -143,7 +145,7 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
       </Menu.SubmenuTrigger>
       <Menu.Portal>
         <Menu.Positioner className="z-[61] data-[anchor-hidden]:invisible" align="start" sideOffset={4} alignOffset={-4} collisionPadding={8} positionMethod="fixed">
-          <Menu.Popup aria-label={label} className="ui-popover flex h-[min(20rem,var(--available-height))] w-64 max-w-[calc(100vw-1rem)] flex-col overflow-hidden outline-none">
+          <Menu.Popup aria-label={label} className="ui-menu-popup ui-popover flex max-h-[min(20rem,var(--available-height))] w-64 max-w-[calc(100vw-1rem)] flex-col overflow-hidden outline-none">
             <div className="flex shrink-0 items-center gap-2 border-b border-border-edge px-3 pb-2 pt-1">
               <SearchIcon className="size-4 text-text-secondary" />
               <input
@@ -167,7 +169,7 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
                 }}
               />
             </div>
-            <div ref={resultsRef} className="ui-scrollbar min-h-0 flex-1 overflow-y-auto pt-1">
+            <ScrollPanel viewportRef={resultsRef} className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1 pt-1">
               {isTags ? matches.map((tag) => (
                 <Menu.CheckboxItem
                   key={tag.id}
@@ -208,7 +210,7 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
                 </Menu.Item>
               ) : null}
               {isTags && !matches.length && !canCreate ? <p className="px-3 py-3 text-sm text-text-secondary">Type a name to create your first tag.</p> : null}
-            </div>
+            </ScrollPanel>
             {error ? <p role="alert" className="px-3 py-2 text-sm text-text-danger">{error}</p> : null}
           </Menu.Popup>
         </Menu.Positioner>

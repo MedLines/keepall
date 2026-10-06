@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollTextarea } from "@/components/ui/scroll-textarea";
+
 import { useState } from "react";
 import type { DocumentItem } from "@/domain/document";
 import { ModalDialog } from "@/components/ui/modal-dialog";
@@ -56,14 +58,14 @@ function LoadedDocumentEditor({ item, initialContent, open, busy, error, onOpenC
           <button type="button" className={BUTTON} disabled={busy} aria-pressed={preview} onClick={() => setPreview(!preview)}>{preview ? "Edit text" : "Preview"}</button>
         </div>
         {preview ? <section aria-label="File preview" className="rounded-input border border-border-control p-4"><DocumentText text={content} format={item.format} /></section>
-          : <textarea id="document-edit-content" className="ui-field min-h-64 resize-y px-3 py-3 text-sm" value={content} disabled={busy} onChange={(event) => setContent(event.target.value)} />}
+          : <ScrollTextarea id="document-edit-content" className="ui-field min-h-64 resize-y px-3 py-3 text-sm" value={content} disabled={busy} onChange={(event) => setContent(event.target.value)} />}
       </div>
       <details className="rounded-input border border-border-control p-4" open={Boolean(item.noteContent)}>
         <summary className="cursor-pointer text-sm font-medium">Personal note (optional)</summary>
         <div className="mt-4 grid gap-3">
           <NoteFormatControl format={noteFormat} disabled={busy} onChange={setNoteFormat} />
           <label className="grid gap-2 text-sm font-medium">My note (optional)
-            <textarea className="ui-field min-h-24 resize-y px-3 py-2 font-normal" value={notes} disabled={busy} onChange={(event) => setNotes(event.target.value)} />
+            <ScrollTextarea className="ui-field min-h-24 resize-y px-3 py-2 font-normal" value={notes} disabled={busy} onChange={(event) => setNotes(event.target.value)} />
           </label>
         </div>
       </details>

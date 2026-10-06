@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import { Dialog } from "@base-ui/react/dialog";
 import { Menu } from "@base-ui/react/menu";
 import Link from "next/link";
@@ -666,12 +668,9 @@ function ImageWorkspace({
       <div className="flex size-full flex-col">
         <ItemPageHeader returnHref={returnHref} title={title || "Image item"} sourceUrl={item.sourceUrl} titleAsHeading />
 
-        <main
-          ref={scrollRef}
-          onScroll={rememberReadingPosition}
-          className={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`}
-          data-testid="item-page-scroll"
-        >
+        <ScrollPanel role="main" className="min-h-0 flex-1" viewportRef={node => { scrollRef.current = node; }}
+          viewportClassName={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`}
+          viewportProps={{ onScroll: rememberReadingPosition, "data-testid": "item-page-scroll" }}>
           <div className={`${ITEM_PAGE_GRID} [--image-viewer-height:max(24rem,min(76dvh,54rem))]`}>
                 <input
                   ref={addInputRef}
@@ -825,7 +824,7 @@ function ImageWorkspace({
               }
             />
           </div>
-        </main>
+        </ScrollPanel>
       </div>
 
       <FocusedImageViewer
@@ -855,7 +854,7 @@ function CurrentImageMenu({ busy, canRemove, onReplace, onRemove }: {
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
-          <Menu.Popup aria-label="Current image actions" className="ui-popover w-56 max-w-[calc(100vw-1rem)] outline-none" finalFocus={() => openingDialog.current ? false : true}>
+          <Menu.Popup aria-label="Current image actions" className="ui-menu-popup ui-popover w-56 max-w-[calc(100vw-1rem)] outline-none" finalFocus={() => openingDialog.current ? false : true}>
             <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active data-[disabled]:opacity-50" disabled={busy} onClick={onReplace}>
               <ImageIcon />Replace current image
             </Menu.Item>
@@ -1021,10 +1020,10 @@ function FocusedImageViewer({
       <Dialog.Portal>
         <Dialog.Backdrop className="focused-image-backdrop fixed inset-0 z-[90]" />
         <Dialog.Viewport
-          ref={viewportRef}
-          className="ui-scrollbar fixed inset-0 z-[90] overflow-auto p-2 sm:p-5"
-          data-testid="focused-image-scroll"
+          className="fixed inset-0 z-[90] overflow-hidden"
         >
+          <ScrollPanel orientation="both" className="size-full" viewportRef={node => { viewportRef.current = node; }}
+            viewportClassName="p-2 sm:p-5" contentClassName="min-h-full" viewportProps={{ "data-testid": "focused-image-scroll" }}>
           <Dialog.Popup
             className={`relative mx-auto grid min-h-full place-items-center outline-none ${zoom ? "w-max min-w-full" : "w-full max-w-[100rem]"}`}
             onKeyDownCapture={(event) => {
@@ -1097,6 +1096,7 @@ function FocusedImageViewer({
               {currentSlide + 1} / {slideCount}
             </p>
           </Dialog.Popup>
+          </ScrollPanel>
         </Dialog.Viewport>
       </Dialog.Portal>
     </Dialog.Root>

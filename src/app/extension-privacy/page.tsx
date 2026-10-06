@@ -1,3 +1,4 @@
+import { ScrollPanel } from "@/components/ui/scroll-panel";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeftIcon, LogoIcon } from "../shell-icons";
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ExtensionPrivacyPage() {
   return (
-    <main className="ui-scrollbar h-dvh overflow-y-auto bg-bg-shell p-2.5">
+    <ScrollPanel role="main" className="h-dvh bg-bg-shell" viewportClassName="p-2.5" contentClassName="!grid min-h-full">
       <div className="library-panel min-h-full bg-bg-canvas px-5 py-5 sm:px-8 sm:py-7">
         <header className="mx-auto flex w-full max-w-4xl items-center">
           <Link href="/" aria-label="Keepall home" className="keepall-logo-link flex min-h-11 items-center rounded-control-lg px-2 text-text-primary">
@@ -53,6 +54,6 @@ export default function ExtensionPrivacyPage() {
           </div>
         </article>
       </div>
-    </main>
+    </ScrollPanel>
   );
 }

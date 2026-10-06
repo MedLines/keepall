@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -186,7 +188,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
       <ItemPageHeader returnHref={returnHref} title={title} sourceUrl={link.url} />
 
-      <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
+      <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
         <div className={ITEM_PAGE_GRID}>
           <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
             <div className="squircle-panel overflow-hidden rounded-panel border border-border-control bg-bg-surface">
@@ -236,7 +238,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
             }}
           />
         </div>
-      </main>
+      </ScrollPanel>
 
       {editing ? <LinkItemEditDialog item={link} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}
       <ConfirmDialog open={deleteOpen} title="Move this link to Trash?" description={`Move “${itemActionLabel(link)}” to Trash? You can restore it later.`} confirmLabel="Move to Trash" pendingLabel="Moving…" busy={itemMutation === "delete"} error={deleteError} onConfirm={() => void confirmDelete()} onOpenChange={(open) => {

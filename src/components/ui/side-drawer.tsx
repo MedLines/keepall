@@ -40,14 +40,14 @@ export function SideDrawer({
       swipeDirection={side}
     >
       <Drawer.Portal>
-        <Drawer.Backdrop className="ui-backdrop fixed inset-0 z-[70] opacity-100 transition-opacity duration-200 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
+        <Drawer.Backdrop className="ui-backdrop fixed inset-0 z-[70]" />
         <Drawer.Viewport
           className={`fixed inset-0 z-[70] flex overflow-hidden ${
             fromRight ? "justify-end" : "justify-start"
           }`}
         >
           <Drawer.Popup
-            className={`flex h-dvh ${widthClassName} flex-col overflow-hidden border-border-control bg-bg-canvas text-text-primary shadow-menu transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
+            className={`ui-drawer-popup flex h-dvh ${widthClassName} flex-col overflow-hidden border-border-control bg-bg-canvas text-text-primary shadow-menu ${
               fromRight
                 ? "border-l data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full"
                 : "border-r data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full"

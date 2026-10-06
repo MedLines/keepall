@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -125,7 +127,7 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
 
   return <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
     <ItemPageHeader returnHref={returnHref} title={item.title} />
-    <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
+    <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
       <div className={ITEM_PAGE_GRID}>
         <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
           <h1 className="mb-5 break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{item.title}</h1>
@@ -152,7 +154,7 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
           onDelete={() => { setActionError(null); setDeleteOpen(true); }}
         />
       </div>
-    </main>
+    </ScrollPanel>
     {editing ? <VideoItemEditDialog item={item} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}
     <ItemOrganizerDrawer open={organizerOpen} onOpenChange={setOrganizerOpen} side="right" itemTitle={itemActionLabel(item)}
       tags={tags} collections={collections} tagSuggestions={currentState.tags.map((tag) => ({ id: tag.id, name: tag.name }))}

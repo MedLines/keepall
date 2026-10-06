@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import { ShellTopMenu } from "./shell-top-menu";
 
@@ -49,7 +49,7 @@ describe("ShellTopMenu", () => {
     ).toHaveAttribute("aria-selected", "false");
   });
 
-  test("passes the selected option value to its caller", () => {
+  test("passes the selected option value to its caller", async () => {
     const onChange = vi.fn();
     render(
       <ShellTopMenu
@@ -69,7 +69,7 @@ describe("ShellTopMenu", () => {
     fireEvent.click(option, { detail: 1 });
 
     expect(onChange).toHaveBeenCalledExactlyOnceWith("image");
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
   });
 
   test("keeps an icon-only trigger named with its selected value", () => {
@@ -88,5 +88,18 @@ describe("ShellTopMenu", () => {
       name: "Filter by type: Images",
     });
     expect(trigger).toHaveClass("ui-selected");
+  });
+
+  test("keeps keyboard selection working with the shared hover highlight", async () => {
+    const onChange = vi.fn();
+    render(<ShellTopMenu ariaLabel="Filter by type" value="all" options={options} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("combobox"));
+    const first = screen.getByRole("option", { name: "All types 12" });
+    first.focus();
+    fireEvent.keyDown(first, { key: "ArrowDown" });
+    const next = screen.getByRole("option", { name: "Images 4" });
+    await waitFor(() => expect(next).toHaveFocus());
+    fireEvent.keyDown(next, { key: "Enter" });
+    expect(onChange).toHaveBeenCalledExactlyOnceWith("image");
   });
 });

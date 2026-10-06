@@ -1,5 +1,9 @@
 "use client";
 
+import { ScrollTextarea } from "@/components/ui/scroll-textarea";
+
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { type ClipboardEvent, type FormEvent, useEffect, useEffectEvent, useReducer, useRef, useState } from "react";
 import {
   captureReducer,
@@ -76,8 +80,8 @@ import { DocumentText } from "./document-content";
 
 
 const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-8 px-3 text-xs disabled:opacity-60`;
-const CAPTURE_PREVIEW_CLASS = "ui-scrollbar max-h-36 overflow-y-auto overscroll-contain rounded-input border border-border-control bg-bg-control p-4";
-const FILE_PREVIEW_CLASS = "shrink-0 rounded-input border border-border-control bg-bg-control p-4";
+const CAPTURE_PREVIEW_CLASS = "flex min-h-0 max-h-36 shrink-0 flex-col rounded-input border border-border-control bg-bg-control";
+const FILE_PREVIEW_CLASS = "flex min-h-0 shrink-0 flex-col rounded-input border border-border-control bg-bg-control";
 
 /** Alt+K (Windows/Linux) and Option+K (macOS). Option is altKey; code stays KeyK even when Option remaps the character. */
 export function isCaptureOpenShortcut(event: KeyboardEvent): boolean {
@@ -950,10 +954,12 @@ export function CaptureHost() {
           }
         }}
       >
-        <div
-          className="scroll-fade flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-6 pb-5 pt-3 [scrollbar-gutter:stable]"
+        <ScrollArea
+          className="min-h-0 flex-1"
+          viewportClassName="scroll-fade overscroll-contain"
           data-testid="capture-scroll-region"
         >
+        <div className="flex flex-col gap-4 px-6 pb-5 pt-3">
         {documentReading ? <p role="status" className="text-sm text-text-secondary">Reading text file…</p> : null}
         {importSavedCount > 0 ? <p role="status" className="text-sm text-text-secondary">{importSavedCount} files saved. Your draft is still here.</p> : null}
         {documentDraft ? <div className="flex items-start gap-3 rounded-input border border-border-control bg-bg-raised p-3">
@@ -1067,7 +1073,7 @@ export function CaptureHost() {
                 ? documentDraft ? "Text beneath images" : "Optional source URL or caption"
                 : documentDraft ? noteFormat === "markdown" ? "Markdown content" : "Text content" : "Link, note, or image"}
             </label>
-            <textarea
+            <ScrollTextarea
               ref={inputRef}
               className={`ui-field w-full rounded-input px-4 py-3 text-sm disabled:opacity-60 ${
                 videoDraft ? "min-h-11" : documentDraft ? "min-h-48" : savingImage ? "min-h-16" : kind === "link" ? "min-h-11" : "min-h-24"
@@ -1088,21 +1094,21 @@ export function CaptureHost() {
           </div>
         ) : null}
         {kind === "note" && !savingImage && !videoDraft && !hasFileBatch && previewKind === "note" ? (
-          <section aria-label="Note preview" className={documentDraft ? FILE_PREVIEW_CLASS : CAPTURE_PREVIEW_CLASS}>
+          <ScrollArea role="region" aria-label="Note preview" className={documentDraft ? FILE_PREVIEW_CLASS : CAPTURE_PREVIEW_CLASS} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4">
             {documentDraft ? <DocumentText text={state.input} format={noteFormat === "markdown" ? "markdown" : "text"} /> : <NoteContent content={state.input} format={noteFormat} />}
-          </section>
+          </ScrollArea>
         ) : null}
         {savingImage && !imageLayoutRequired && !hasFileBatch && previewKind === "image" ? (
-          <section aria-label="Image note preview" className={documentDraft ? FILE_PREVIEW_CLASS : CAPTURE_PREVIEW_CLASS}>
+          <ScrollArea role="region" aria-label="Image note preview" className={documentDraft ? FILE_PREVIEW_CLASS : CAPTURE_PREVIEW_CLASS} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4">
             {documentDraft ? <DocumentText text={state.input} format={noteFormat === "markdown" ? "markdown" : "text"} /> : <NoteContent content={state.input} format={noteFormat} />}
-          </section>
+          </ScrollArea>
         ) : null}
         {videoDraft && !hasFileBatch ? (
           <div className="flex flex-col gap-3">
             {previewKind === "video" ? <span className="text-sm font-medium text-text-primary">Notes (optional)</span> : <label className="text-sm font-medium text-text-primary" htmlFor="capture-video-note">Notes (optional)</label>}
             <NoteEditorControls format={noteFormat} preview={previewKind === "video"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "video" : null)} />
-            {previewKind !== "video" ? <textarea id="capture-video-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm" placeholder="Add a note about this video" value={videoNoteDraft} disabled={composeLocked} onChange={(event) => setVideoNoteDraft(event.target.value)} /> : null}
-            {previewKind === "video" ? <section aria-label="Video note preview" className={CAPTURE_PREVIEW_CLASS}><NoteContent content={videoNoteDraft} format={noteFormat} /></section> : null}
+            {previewKind !== "video" ? <ScrollTextarea id="capture-video-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm" placeholder="Add a note about this video" value={videoNoteDraft} disabled={composeLocked} onChange={(event) => setVideoNoteDraft(event.target.value)} /> : null}
+            {previewKind === "video" ? <ScrollArea role="region" aria-label="Video note preview" className={CAPTURE_PREVIEW_CLASS} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4"><NoteContent content={videoNoteDraft} format={noteFormat} /></ScrollArea> : null}
           </div>
         ) : null}
         {kind === "link" && !savingImage && !videoDraft && !hasFileBatch ? (
@@ -1116,11 +1122,11 @@ export function CaptureHost() {
               <NoteEditorControls format={noteFormat} preview={previewKind === "link"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "link" : null)} />
             </div>
             {previewKind === "link" ? (
-              <section aria-label="Personal note preview" className={`${CAPTURE_PREVIEW_CLASS} h-28`}>
+              <ScrollArea role="region" aria-label="Personal note preview" className={`${CAPTURE_PREVIEW_CLASS} h-28`} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4">
                 <NoteContent content={linkNoteDraft} format={noteFormat} />
-              </section>
+              </ScrollArea>
             ) : (
-              <textarea id="capture-link-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm" placeholder="Why are you saving this link?" value={linkNoteDraft} disabled={composeLocked} onChange={(event) => {
+              <ScrollTextarea id="capture-link-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm" placeholder="Why are you saving this link?" value={linkNoteDraft} disabled={composeLocked} onChange={(event) => {
                 setLinkNoteDraft(event.target.value);
                 if (!event.target.value.trim()) setPreviewKind(null);
               }} />
@@ -1197,6 +1203,7 @@ export function CaptureHost() {
           </p>
         ) : null}
         </div>
+        </ScrollArea>
         <div
           className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border-control bg-bg-canvas px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5"
           data-testid="capture-footer"

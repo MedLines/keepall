@@ -1024,7 +1024,7 @@ describe("CaptureHost", () => {
     Object.defineProperty(file, "webkitRelativePath", { value: "Holiday/photo.png" });
     fireEvent.change(bulk.querySelector('input[webkitdirectory]')!, { target: { files: [file] } });
     await screen.findByLabelText("1 image attached");
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(1));
     expect(screen.getByRole("button", { name: "Holiday" })).toHaveAttribute("aria-pressed", "true");
     expect(importFiles).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Remove all images" }));

@@ -1,5 +1,8 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollTextarea } from "@/components/ui/scroll-textarea";
+
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useDirtyDismissal } from "./use-dirty-dismissal";
@@ -145,11 +148,12 @@ function MediaItemEditDialog({
           <NoteEditorControls format={format} preview={preview} disabled={busy} onFormatChange={setFormat} onPreviewChange={setPreview} />
         </div>
         {preview ? (
-          <section aria-label="Notes preview" className="ui-field ui-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-3 text-text-primary [scrollbar-gutter:stable]">
+          <ScrollArea role="region" aria-label="Notes preview" className="ui-field min-h-0 flex-1" viewportClassName="scroll-fade">
+          <div className="px-3 py-3 text-text-primary">
             <NoteContent content={notes} format={format} />
-          </section>
+          </div></ScrollArea>
         ) : (
-          <textarea
+          <ScrollTextarea
             id="item-edit-notes"
             className="ui-field ui-scrollbar min-h-0 w-full flex-1 resize-none overflow-y-auto px-3 py-3 text-base font-normal leading-7 [scrollbar-gutter:stable]"
             value={notes}

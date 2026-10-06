@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import { useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask, TextLayer } from "pdfjs-dist";
 import "./pdf-viewer.css";
@@ -74,9 +76,9 @@ export function PdfPage({ document, number, zoom, viewportSize }: { document: PD
   const error = rendered?.key === key && rendered.error;
   return <div ref={frame} className="relative min-w-0">
     {error ? <div role="alert" className="mb-3 text-sm text-text-danger">Couldn&apos;t display this page. Try another page or download the file. <button type="button" className="ui-control min-h-9 px-3" onClick={() => setAttempt(value => value + 1)}>Retry page</button></div> : null}
-    <div className="ui-scrollbar max-w-full overflow-auto rounded-input border border-border-control bg-bg-raised" aria-busy={rendered?.key !== key}>
+    <ScrollPanel orientation="both" className="max-w-full rounded-input border border-border-control bg-bg-raised" aria-busy={rendered?.key !== key}>
       <div ref={display} className="relative mx-auto w-fit bg-white" style={viewportSize} />
-    </div>
+    </ScrollPanel>
     <div ref={staging} aria-hidden="true" inert className="pointer-events-none invisible absolute inset-0 overflow-hidden" />
   </div>;
 }

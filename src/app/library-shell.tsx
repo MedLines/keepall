@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ScrollPanel } from "@/components/ui/scroll-panel";
 import { Dialog } from "@base-ui/react/dialog";
 import { Menu } from "@base-ui/react/menu";
 import { RowActionMenu } from "./row-action-menu";
@@ -247,7 +248,7 @@ export function LibraryShell({
       <nav
           data-sidebar-nav
           aria-label="Sidebar navigation"
-          className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-[18px] ${contentExpanded ? SHELL_NAV_GUTTER : "px-2"}`}
+          className={`library-sidebar-navigation grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-[18px] ${contentExpanded ? SHELL_NAV_GUTTER : "px-2"}`}
         >
           <div className={`flex min-h-0 flex-col gap-1 ${contentExpanded ? "overflow-hidden" : "scroll-fade overflow-y-auto overscroll-contain"}`}>
             <div className={`flex shrink-0 flex-col gap-1 ${contentExpanded ? "library-sidebar-primary-nav overflow-hidden" : ""}`}>
@@ -445,11 +446,13 @@ export function LibraryShell({
           className="library-sidebar-desktop relative z-50 h-full max-h-full min-h-0 shrink-0 overflow-visible"
         >
           <div
-            className={`${SHELL_ASIDE} library-sidebar-panel absolute inset-y-0 left-0 z-10 shadow-menu`}
+            className="library-sidebar-panel absolute inset-y-0 left-0 z-10"
             data-sidebar-panel
             data-state={expanded ? "open" : "closed"}
           >
-            {sidebarBody(true, false)}
+            <div className={`${SHELL_ASIDE} library-sidebar-content`}>
+              {sidebarBody(true, false)}
+            </div>
           </div>
           <SidebarResizeHandle expanded={expanded} onExpandedChange={onPanelOpenChange} />
         </aside>
@@ -838,15 +841,16 @@ function SidebarSectionScroll({ activeId, filter, itemCount, children }: {
   }, [activeId, filter, itemCount, revealSelected]);
 
   return (
-    <div
-      ref={scrollRef}
-      className="library-sidebar-section-scroll scroll-fade min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
+    <ScrollPanel
+      viewportRef={scrollRef}
+      className="library-sidebar-section-scroll min-h-0 flex-1"
+      viewportClassName="scroll-fade overscroll-contain"
       onClick={(event) => {
         if ((event.target as Element).closest('[aria-current="page"]')) revealSelected();
       }}
     >
-      {children}
-    </div>
+      <div className="pr-1">{children}</div>
+    </ScrollPanel>
   );
 }
 
@@ -1206,7 +1210,7 @@ function CollapsibleSection({
   }, [rail]);
 
   return (
-    <div className={`${open ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} pt-4`}>
+    <div className={`library-sidebar-section ${open ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} pt-4`}>
       <div className="mb-1 flex h-10 shrink-0 items-center">
         <button
           type="button"
@@ -1214,6 +1218,7 @@ function CollapsibleSection({
           aria-label={rail?.label ?? title}
           title={rail?.label}
           aria-current={rail?.active ? "page" : undefined}
+          data-sidebar-section-toggle
           className={`squircle-panel flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-control-md px-3 text-left text-text-primary hover:bg-bg-raised ${rail?.active ? SHELL_NAV_ITEM_ACTIVE : ""}`}
           aria-expanded={rail ? false : open}
           onClick={() => rail ? rail.onExpand() : onOpenChange(!open)}

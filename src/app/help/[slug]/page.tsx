@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeftIcon, ArrowRightIcon } from "../../shell-icons";
 import { getGuide, guides } from "../guides";
 import { GuideFigure } from "../guide-visual";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollPanel } from "@/components/ui/scroll-panel";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -23,7 +25,18 @@ export default async function GuidePage({ params }: Props) {
   const next = guides[(guides.indexOf(guide) + 1) % guides.length];
   return <>
     <div className="kh-guide-layout">
-      <aside className="kh-sidebar"><Link href="/help" className="kh-back"><ArrowLeftIcon />All guides</Link><nav aria-label="On this page"><p className="kh-eyebrow">In this guide</p><ol>{guide.sections.map((section, index) => <li key={section.id}><a href={`#${section.id}`}><span>{String(index + 1).padStart(2, "0")}</span>{section.title}</a></li>)}</ol></nav><Link href="/help" className="kh-all-guides">Browse all guides <ArrowRightIcon /></Link></aside>
+      <aside className="kh-sidebar">
+        <ScrollPanel className="kh-sidebar-scroll" viewportClassName="kh-sidebar-viewport scroll-fade">
+          <Link href="/help" className="kh-back"><ArrowLeftIcon />All guides</Link>
+          <nav aria-label="On this page">
+            <p className="kh-eyebrow">In this guide</p>
+            <ScrollArea orientation="horizontal" className="kh-section-scroll" viewportClassName="scroll-fade-x">
+              <ol>{guide.sections.map((section, index) => <li key={section.id}><a href={`#${section.id}`}><span>{String(index + 1).padStart(2, "0")}</span>{section.title}</a></li>)}</ol>
+            </ScrollArea>
+          </nav>
+          <Link href="/help" className="kh-all-guides">Browse all guides <ArrowRightIcon /></Link>
+        </ScrollPanel>
+      </aside>
       <article className="kh-article">
         <header className="kh-article-heading"><span className="ka-pill">{guide.category}</span><span className="kh-read-time">{guide.minutes}</span><h1>{guide.title}</h1><p>{guide.summary}</p></header>
         <div className="kh-article-body">{guide.sections.map((section, index) => <section key={section.id} id={section.id} aria-labelledby={`${section.id}-title`}>

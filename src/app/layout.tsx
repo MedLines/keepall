@@ -7,6 +7,8 @@ import { DevToolsEntry } from "./dev-tools-entry";
 import { PwaProvider } from "./pwa-provider";
 import { THEME_INIT_SCRIPT } from "./theme-preference";
 import { SHELL_INIT_SCRIPT } from "./shell-styles";
+import { MotionProvider } from "@/components/ui/motion-provider";
+import { motionCssVariables } from "@/components/ui/motion-tokens";
 import "@fontsource-variable/inter";
 import "./globals.css";
 
@@ -35,14 +37,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: SHELL_INIT_SCRIPT }} />
       </head>
-      <body className="bg-bg-canvas text-text-primary antialiased">
-        <PwaProvider>
-          {children}
-          <CaptureHost />
-          <AutomaticBackupRunner />
-        </PwaProvider>
-        {process.env.NODE_ENV === "development" ? <DevToolsEntry /> : null}
-        <Analytics />
+      <body className="bg-bg-canvas text-text-primary antialiased" style={motionCssVariables}>
+        <MotionProvider>
+          <PwaProvider>
+            {children}
+            <CaptureHost />
+            <AutomaticBackupRunner />
+          </PwaProvider>
+          {process.env.NODE_ENV === "development" ? <DevToolsEntry /> : null}
+          <Analytics />
+        </MotionProvider>
       </body>
     </html>
   );

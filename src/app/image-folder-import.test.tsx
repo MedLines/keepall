@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { mockNavigation } from "../../vitest.setup";
 import { buildCollection } from "@/domain/collection";
@@ -40,7 +40,7 @@ test("Open folder navigates to the imported collection using its id", async () =
   fireEvent.click(within(complete).getByRole("button", { name: "Open folder" }));
   await screen.findByRole("status");
   expect(mockNavigation.push).toHaveBeenCalledWith("/?collection=photos%20%26%20trips");
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
 });
 
 test("a blank collection offers Open Unsorted", async () => {

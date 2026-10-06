@@ -1,5 +1,8 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import { Dialog } from "@base-ui/react/dialog";
 import { Tooltip } from "@base-ui/react/tooltip";
 import { useEffect, useId, useRef, useState } from "react";
@@ -32,7 +35,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
       <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[80]" />
       <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
         <Dialog.Popup ref={popupRef} finalFocus={returnFocus} initialFocus={popupRef}
-          className="library-quick-preview ui-popover flex h-[min(48rem,calc(100dvh-2rem))] w-full max-w-4xl flex-col overflow-hidden p-0 outline-none"
+          className="library-quick-preview confirm-dialog-popup ui-popover flex h-[min(48rem,calc(100dvh-2rem))] w-full max-w-4xl flex-col overflow-hidden p-0 outline-none"
           onKeyDown={event => {
             if (event.defaultPrevented || event.nativeEvent.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
             if (event.key === "Escape") {
@@ -115,7 +118,7 @@ function PreviewTitle({ title }: { title: string }) {
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Positioner side="bottom" align="start" sideOffset={8} collisionPadding={16} className="z-[90]">
-          <Tooltip.Popup id={tooltipId} role="tooltip" className="ui-popover max-h-[min(16rem,40dvh)] max-w-[min(32rem,calc(100vw-2rem))] overflow-y-auto whitespace-pre-wrap break-words px-3 py-2 text-sm font-normal">{title}</Tooltip.Popup>
+          <Tooltip.Popup id={tooltipId} role="tooltip" className="ui-popover flex max-h-[min(16rem,40dvh)] max-w-[min(32rem,calc(100vw-2rem))] flex-col overflow-hidden px-3 py-2 text-sm font-normal"><ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1 whitespace-pre-wrap break-words">{title}</ScrollArea></Tooltip.Popup>
         </Tooltip.Positioner>
       </Tooltip.Portal>
     </Tooltip.Root>
@@ -123,22 +126,22 @@ function PreviewTitle({ title }: { title: string }) {
 }
 
 function PreviewContent({ item, onGalleryStep }: { item: Item; onGalleryStep: () => void }) {
-  if (item.type === "note") return <div data-preview-scroll tabIndex={0} className="ui-scrollbar scroll-fade flex h-full min-h-0 overflow-y-auto overscroll-contain px-5">
+  if (item.type === "note") return <ScrollPanel className="h-full min-h-0" viewportClassName="scroll-fade overscroll-contain px-5" contentClassName="!flex min-h-full" viewportProps={{ "data-preview-scroll": "", tabIndex: 0 }}>
     <NoteContent className="library-preview-document mx-auto w-full max-w-[65ch] shrink-0 py-5" content={item.content} format={item.format ?? "plain"} />
-  </div>;
+  </ScrollPanel>;
   if (item.type === "image") return <ImagePreview item={item} onGalleryStep={onGalleryStep} />;
   if (item.type === "video") return <div className="flex h-full min-h-0 flex-col gap-4 px-5 pb-5">
     <div className="grid min-h-0 min-w-0 flex-1 place-items-center" data-preview-media>
       <PreviewVideo key={item.assetId} assetId={item.assetId} title={previewTitle(item)} />
     </div>
-    {item.noteContent ? <div data-preview-scroll className="ui-scrollbar scroll-fade max-h-[35%] shrink-0 overflow-y-auto overscroll-contain" tabIndex={0} role="region" aria-label="Video notes">
+    {item.noteContent ? <ScrollPanel className="flex max-h-[35%] shrink-0 flex-col" viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain" viewportProps={{ "data-preview-scroll": "", tabIndex: 0, role: "region", "aria-label": "Video notes" }}>
       <NoteContent className="library-preview-document mx-auto max-w-[65ch]" content={item.noteContent} format={item.noteFormat ?? "plain"} />
-    </div> : null}
+    </ScrollPanel> : null}
   </div>;
-  if (item.type === "document") return <div data-preview-scroll data-document-scroll tabIndex={0} className="ui-scrollbar h-full min-h-0 overflow-y-auto overscroll-contain px-5 pb-5">
+  if (item.type === "document") return <ScrollPanel className="h-full min-h-0" viewportClassName="overscroll-contain px-5 pb-5" viewportProps={{ "data-preview-scroll": "", "data-document-scroll": "", tabIndex: 0 }}>
     <div className={item.format === "pdf" ? "min-w-0 pt-3" : "library-preview-document mx-auto max-w-[65ch] py-5"}><DocumentContent item={item} /></div>
     {item.noteContent ? <section aria-label="Document notes" className="mx-auto mt-5 max-w-[65ch] border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
-  </div>;
+  </ScrollPanel>;
   const details = <div className="mx-auto flex w-full max-w-[65ch] flex-col gap-4">
     <a href={item.url} target="_blank" rel="noreferrer" aria-label={`Open source: ${item.url}`} className="ui-control inline-flex min-h-11 max-w-full self-start items-center gap-2 px-3 text-sm text-text-secondary"><LinkIcon className="size-4" /><span className="truncate">{linkCardHost(item)}</span><ExternalLinkIcon className="size-4" /></a>
     {item.previewDescription ? <p className="whitespace-pre-wrap break-words text-text-secondary">{item.previewDescription}</p> : null}
@@ -148,8 +151,8 @@ function PreviewContent({ item, onGalleryStep }: { item: Item; onGalleryStep: ()
     <div className="grid min-h-0 min-w-0 flex-1 place-items-center" data-preview-media>
       <LibraryItemMedia item={item} variant="preview" />
     </div>
-    <div data-preview-scroll className="ui-scrollbar scroll-fade max-h-[35%] shrink-0 overflow-y-auto overscroll-contain" tabIndex={0} role="region" aria-label="Link details">{details}</div>
-  </div> : <div data-preview-scroll tabIndex={0} className="ui-scrollbar scroll-fade flex h-full min-h-0 overflow-y-auto overscroll-contain px-5"><div className="m-auto w-full shrink-0 py-5">{details}</div></div>;
+    <ScrollPanel className="flex max-h-[35%] shrink-0 flex-col" viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain" viewportProps={{ "data-preview-scroll": "", tabIndex: 0, role: "region", "aria-label": "Link details" }}>{details}</ScrollPanel>
+  </div> : <ScrollPanel className="h-full min-h-0" viewportClassName="scroll-fade overscroll-contain px-5" contentClassName="!flex min-h-full" viewportProps={{ "data-preview-scroll": "", tabIndex: 0 }}><div className="m-auto w-full shrink-0 py-5">{details}</div></ScrollPanel>;
 }
 
 function ImagePreview({ item, onGalleryStep }: { item: Extract<Item, { type: "image" }>; onGalleryStep: () => void }) {
@@ -163,13 +166,13 @@ function ImagePreview({ item, onGalleryStep }: { item: Extract<Item, { type: "im
         <span className="whitespace-nowrap text-sm tabular-nums text-text-secondary">Image {slide + 1} of {item.assetIds.length}</span>
         <button type="button" className="ui-control flex size-11 shrink-0 items-center justify-center disabled:opacity-40" aria-label="Next gallery image" title="Next gallery image" disabled={slide >= item.assetIds.length - 1} onClick={() => { onGalleryStep(); setSlide(slide + 1); }}><ArrowRightIcon className="size-4 rtl:rotate-180" /></button>
       </div>} />
-    <div key={slide} className="ui-scrollbar min-h-0 min-w-0 flex-1" data-preview-media data-image-sizing={imageSizing}
-      data-preview-scroll={imageSizing === "scroll" ? "" : undefined} tabIndex={imageSizing === "scroll" ? 0 : -1} role="region" aria-label="Image viewport">
+    <ScrollPanel key={slide} orientation="both" className="min-h-0 min-w-0 flex-1"
+      viewportProps={{ "data-preview-media": "", "data-image-sizing": imageSizing, "data-preview-scroll": imageSizing === "scroll" ? "" : undefined, tabIndex: imageSizing === "scroll" ? 0 : -1, role: "region", "aria-label": "Image viewport" }}>
       <LibraryItemMedia item={item} variant="preview" assetId={item.assetIds[slide]} />
-    </div>
-    {item.caption ? <div data-preview-scroll className="ui-scrollbar scroll-fade max-h-[35%] shrink-0 overflow-y-auto overscroll-contain" tabIndex={0} role="region" aria-label="Image notes">
+    </ScrollPanel>
+    {item.caption ? <ScrollPanel className="flex max-h-[35%] shrink-0 flex-col" viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain" viewportProps={{ "data-preview-scroll": "", tabIndex: 0, role: "region", "aria-label": "Image notes" }}>
       <NoteContent className="library-preview-document mx-auto max-w-[65ch]" content={item.caption} format={item.captionFormat ?? "plain"} />
-    </div> : null}
+    </ScrollPanel> : null}
   </div>;
 }
 

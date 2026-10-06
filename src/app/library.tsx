@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import {
   type DragEvent,
   type KeyboardEvent,
@@ -1943,12 +1945,10 @@ export function Library() {
 
         <div data-library-panel className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel">
         {topBar}
-        <main
-          ref={mainScrollRef}
-          className="scroll-fade min-h-0 min-w-0 flex-1 overflow-auto px-3 pb-6 sm:px-6 [--scroll-fade-edge-opacity:0.35]"
-          aria-labelledby="library-heading"
-          aria-busy={documentSearch.pending}
-        >
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col" aria-labelledby="library-heading" aria-busy={documentSearch.pending}>
+        <ScrollPanel className="min-h-0 min-w-0 flex-1" viewportRef={node => { mainScrollRef.current = node; }}
+          viewportClassName="scroll-fade px-3 pb-6 sm:px-6 [--scroll-fade-edge-opacity:0.35]">
+
           {loadState === "loading" ? (
             <p className="text-sm text-text-secondary">Loading…</p>
           ) : loadState === "error" ? (
@@ -2024,6 +2024,7 @@ export function Library() {
               )}
             </>
           )}
+        </ScrollPanel>
         </main>
         <LibraryInspect
                 item={inspectedItem}

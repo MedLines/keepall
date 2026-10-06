@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -97,7 +99,7 @@ export function DocumentItemPage({ itemId, returnHref }: { itemId: string; retur
   const busy = operation !== null;
   return <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
     <ItemPageHeader returnHref={returnHref} title={item.title} titleAsHeading />
-    <main data-document-scroll className={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`} data-testid="item-page-scroll">
+    <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`} viewportProps={{ "data-document-scroll": "", "data-testid": "item-page-scroll" }}>
       <div className={ITEM_PAGE_GRID}>
         <div className={`row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-4xl ${item.format === "pdf" ? "" : "lg:pt-6"}`}>
           <article aria-label="Document content"><DocumentContent key={item.id} item={item} /></article>
@@ -116,7 +118,7 @@ export function DocumentItemPage({ itemId, returnHref }: { itemId: string; retur
           </>}
         />
       </div>
-    </main>
+    </ScrollPanel>
     {editing ? <DocumentItemEditDialog key={item.id} item={item} open busy={busy} error={error?.message ?? null} onOpenChange={setEditing}
       onSave={(draft) => void mutate("save", async () => { applyItem(await updateDocument(item.id, draft)); setEditing(false); })} /> : null}
     <ItemOrganizerDrawer open={organizerOpen} onOpenChange={setOrganizerOpen} side={organizerSide} itemTitle={item.title}

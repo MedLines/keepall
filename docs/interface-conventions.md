@@ -29,3 +29,24 @@ Place the collection and tag pill edges 16px from the outer card, 6px outward fr
 Notes, MD, and TXT share `LibraryReadingCard`. Place the title and file metadata or edit date below the reading inset. Use the reading surface so the inset is dark in dark mode and light in light mode. Short excerpts shrink to their content with a 96px minimum inset; long excerpts cap at 216px. Reserve the bottom space for the type badge. Excerpts use 13px text, 14px semibold Markdown headings, and a bottom fade over the final 48px. Cards have no nested text scrollbar or content-height measurement in JavaScript.
 
 Markdown frontmatter is quiet, bounded plain metadata in the preview. The original document stays intact. Preview links, images, HTML, and inputs cannot become active content. Search highlighting still applies to body and metadata. TXT identifies imported `.txt` files; plain written notes use Note and Markdown notes use MD.
+
+## Popup motion and text fields
+
+Use `uiMotion` for interaction timing and its derived CSS variables for CSS transitions. Menus use the fast tier, drawers the moderate tier, and dialogs the slow tier; dismissals use the paired, quicker exit. Popup transforms follow the resolved side after collision handling. Keep the existing cover morph and icon-swap timings separate.
+
+The root `MotionProvider` respects the system's reduced-motion setting. CSS popups keep their opacity fade but drop scaling and sliding; drawers appear in place. Standalone motion components must also guard their exit transforms.
+
+Top-bar selects use `MenuHoverList` for one moving highlight that follows Base UI's existing pointer and keyboard target. Measure layout offsets only when that target or the list changes, batch measurements into one animation frame, and animate only the highlight's transform. Keep the existing row fill until a usable measurement exists.
+
+Searchable collection and tag menus use natural content height with a viewport cap; scroll only when their results exceed it. Small text inputs, textareas, and native selects use 16px text on touch devices while retaining desktop sizing.
+
+## Scrolling panels
+
+Use the registry `ScrollArea` for capture and organizer drawer bodies, organization browsing, and shared dialog content. Constrain the outer box, put `scroll-fade` on `viewportClassName`, and put padding on its content. Keep headers and action footers outside the scrolling box. Compose the installed component without editing it.
+
+Desktop thumbs widen from 4px to 6px on hover inside a 10px track. The overlay tint follows Keepall's `data-theme`, and touch uses native overflow. Scroll areas do not reserve a scrollbar gutter; fades stay on the viewport so the track remains usable. The registry component's forwarded ref targets its outer box. Use `ScrollPanel` when a virtualizer, reading-position handler, or image viewer needs a real viewport ref or viewport attributes. Keep `data-document-scroll` on that viewport so PDF page jumps and sticky controls use the correct scroller. `ScrollTextarea` composes the same track around a native textarea viewport, preserving labels, selection, caret scrolling, and keyboard shortcuts.
+
+
+About and Help retain window scrolling for scroll-driven scenes, sticky navigation, and article anchors. Their native window scrollbar uses the same overlay tint ramp; its dark color follows the public page rather than the library's theme preference. Help guide contents use the shared vertical track on desktop and horizontal track on narrow screens. Decorative screenshots and demo crops remain non-scrolling.
+
+Desktop sidebar rows use 36px height and 12px section spacing; mobile keeps its larger targets. The resize hairline is hidden at rest and stops short of rounded corners, fading at both ends. Click or Enter toggles the existing icon rail. Drag width follows the pointer without a spring; collapse previews use moderate motion and normal toggles use slow motion. Reduced motion applies widths immediately. Freeze only the library viewport during resizing and motion, leaving the top toolbar responsive. Escape and pointer cancellation restore the previous width without saving a drag preview.

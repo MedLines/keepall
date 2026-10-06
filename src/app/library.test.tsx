@@ -510,7 +510,7 @@ describe("Library", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(screen.getByRole("button", { name: /^Actions for / })).toBeInTheDocument();
-    expect(screen.queryByText("Move this item to Trash?")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Move this item to Trash?")).not.toBeInTheDocument());
     expect(deleteItem).not.toHaveBeenCalled();
     expect(screen.getByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
   });

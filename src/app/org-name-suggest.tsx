@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 import {
   type CSSProperties,
   type FormEvent,
@@ -192,10 +194,7 @@ export function OrgNameSuggest({
           />
           {suggestionsVisible && suggestionPosition
             ? createPortal(
-            <div
-              className="ui-popover ui-scrollbar scroll-fade fixed z-[100] overflow-y-auto py-1"
-              style={suggestionPosition}
-            >
+            <ScrollArea className="ui-popover fixed z-[100] py-1" viewportClassName="scroll-fade" style={suggestionPosition}>
               <ul
                 id={listboxId}
                 role="listbox"
@@ -219,7 +218,7 @@ export function OrgNameSuggest({
                   </li>
                 ))}
               </ul>
-            </div>,
+            </ScrollArea>,
             document.body,
           )
             : null}

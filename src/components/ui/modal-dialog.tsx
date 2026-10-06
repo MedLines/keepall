@@ -2,6 +2,7 @@
 
 import { Dialog } from "@base-ui/react/dialog";
 import type { FocusEventHandler, ReactNode } from "react";
+import { ScrollArea } from "./scroll-area";
 import { CloseIcon } from "@/app/shell-icons";
 
 export function ModalDialog({
@@ -22,7 +23,11 @@ export function ModalDialog({
   onFocusCapture?: FocusEventHandler<HTMLElement>;
 }) {
   const content = <>
-    {children ? <div className="ui-scrollbar scroll-fade flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 sm:px-6">{children}</div> : null}
+    {children ? (
+      <ScrollArea className="flex min-h-0 flex-1 flex-col" viewportClassName="scroll-fade min-h-0 flex-1">
+        <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">{children}</div>
+      </ScrollArea>
+    ) : null}
     <footer className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border-control px-5 py-4 sm:px-6">{footer}</footer>
   </>;
   return (
@@ -37,7 +42,7 @@ export function ModalDialog({
       <Dialog.Portal>
         <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[80]" />
         <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
-          <Dialog.Popup onFocusCapture={onFocusCapture} className={`ui-popover flex w-full flex-col overflow-hidden p-0 outline-none ${size === "editor" ? "h-[min(44rem,calc(100dvh-2rem))] max-w-[42rem]" : "max-h-[calc(100dvh-2rem)] max-w-[30rem]"}`}>
+          <Dialog.Popup onFocusCapture={onFocusCapture} className={`confirm-dialog-popup ui-popover flex w-full flex-col overflow-hidden p-0 outline-none ${size === "editor" ? "h-[min(44rem,calc(100dvh-2rem))] max-w-[42rem]" : "max-h-[calc(100dvh-2rem)] max-w-[30rem]"}`}>
             <header className="flex shrink-0 items-start gap-4 border-b border-border-control px-5 py-5 sm:px-6">
               <div className="min-w-0 flex-1">
                 <Dialog.Title className="[overflow-wrap:anywhere] text-xl font-semibold text-text-primary">{title}</Dialog.Title>

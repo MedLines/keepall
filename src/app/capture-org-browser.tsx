@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog } from "@base-ui/react/dialog";
 import { useMemo, useState } from "react";
 import { CloseIcon, SearchIcon } from "./shell-icons";
@@ -66,7 +67,7 @@ export function CaptureOrgBrowser({
       <Dialog.Portal>
         <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[80]" />
         <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
-          <Dialog.Popup className="ui-popover flex h-[min(80dvh,36rem)] w-full max-w-[28rem] flex-col overflow-hidden p-0 outline-none">
+          <Dialog.Popup className="confirm-dialog-popup ui-popover flex h-[min(80dvh,36rem)] w-full max-w-[28rem] flex-col overflow-hidden p-0 outline-none">
             <header className="flex shrink-0 items-start gap-4 border-b border-border-control px-5 py-4">
               <div className="min-w-0 flex-1">
                 <Dialog.Title className="text-lg font-semibold text-text-primary">
@@ -98,7 +99,8 @@ export function CaptureOrgBrowser({
                 />
               </label>
             </div>
-            <div className="ui-scrollbar scroll-fade min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+            <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
+            <div className="px-3 pb-3">
               {filtered.length > 0 ? (
                 <ul className="flex flex-col gap-1" aria-label={title}>
                   {filtered.map((entry) => {
@@ -132,6 +134,7 @@ export function CaptureOrgBrowser({
                 </p>
               )}
             </div>
+            </ScrollArea>
           </Dialog.Popup>
         </Dialog.Viewport>
       </Dialog.Portal>

@@ -1,5 +1,8 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollTextarea } from "@/components/ui/scroll-textarea";
+
 import { useEffect, useId, useRef } from "react";
 import {
   AnimatePresence,
@@ -12,6 +15,7 @@ import { clampImageSlideIndex } from "@/domain/image";
 import { itemListTitle, type Item } from "@/domain/item";
 import { linkCanManualPreviewFetch } from "@/domain/preview-enrich";
 import { itemMediaLayoutId } from "@/domain/library-view";
+import { uiMotion } from "@/components/ui/motion-tokens";
 import { LibraryItemMedia } from "./library-item-media";
 import { ItemTagChips } from "./item-tag-chips";
 import type { PendingMutation } from "./library-item";
@@ -222,11 +226,8 @@ export function LibraryInspect({
             className="absolute inset-0 bg-bg-overlay/40"
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.12 } }}
-            transition={{
-              duration: 0.2,
-              ease: [0.25, 0.46, 0.45, 0.94],
-            }}
+            exit={{ opacity: 0, transition: uiMotion.slow.exit }}
+            transition={uiMotion.slow}
             onClick={onClose}
           />
           <motion.div
@@ -235,18 +236,15 @@ export function LibraryInspect({
             className="relative z-10 flex max-h-[min(96vh,64rem)] w-full max-w-4xl flex-col overflow-hidden bg-bg-surface shadow-[0_0_0_1px_oklch(0_0_0_/_0.06),0_16px_40px_oklch(0_0_0_/_0.18)] outline-none sm:rounded-2xl"
             style={{ borderRadius: 16 }}
             initial={
-              reduceMotion ? false : { opacity: 0, scale: 0.95 }
+              reduceMotion ? false : { opacity: 0, scale: 0.97 }
             }
             animate={{ opacity: 1, scale: 1 }}
             exit={{
               opacity: 0,
-              scale: 0.95,
-              transition: { duration: 0.12 },
+              scale: reduceMotion ? 1 : 0.97,
+              transition: uiMotion.slow.exit,
             }}
-            transition={{
-              duration: 0.2,
-              ease: [0.23, 1, 0.32, 1],
-            }}
+            transition={uiMotion.slow}
           >
             <div className="relative shrink-0 bg-bg-media">
               <motion.div
@@ -299,7 +297,7 @@ export function LibraryInspect({
               </button>
             </div>
 
-            <div className="scroll-fade min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade px-5 py-4">
               <h2 id={titleId} className={item.type === "image" && !item.title.trim() ? "sr-only" : "text-balance text-xl font-semibold"}>
                 {item.type === "image" && !item.title.trim() ? title : item.type === "link" ? (
                   <a
@@ -582,7 +580,7 @@ export function LibraryInspect({
                 </>
               ) : null}
 
-            </div>
+            </ScrollArea>
           </motion.div>
         </motion.div>
       ) : null}
@@ -664,7 +662,7 @@ function EditLink({
       <label className="text-sm font-medium" htmlFor={`inspect-edit-link-note-${itemId}`}>
         My note (optional)
       </label>
-      <textarea
+      <ScrollTextarea
         className="ui-field min-h-40 resize-y px-3 py-2 text-sm"
         id={`inspect-edit-link-note-${itemId}`}
         value={linkNoteDraft}
@@ -764,7 +762,7 @@ function EditImage({
       >
         Caption
       </label>
-      <textarea
+      <ScrollTextarea
         className="min-h-20 rounded-md border border-border-edge bg-bg-surface px-3 py-2 disabled:opacity-60"
         id={`inspect-edit-image-caption-${itemId}`}
         ref={setFirstEditField}

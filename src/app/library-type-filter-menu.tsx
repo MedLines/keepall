@@ -72,6 +72,7 @@ export function LibraryTypeFilterMenu({
     <ShellTopMenu
       ariaLabel="Filter by type"
       iconOnly
+      showCheckmark={false}
       emphasized={value !== null}
       value={value ?? "all"}
       options={options}

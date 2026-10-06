@@ -1,7 +1,9 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select } from "@base-ui/react/select";
 import type { ReactNode } from "react";
+import { MenuHoverList } from "@/components/ui/menu-hover-list";
 import { CheckIcon, ChevronDownIcon } from "./shell-icons";
 import {
   SHELL_TOP_BTN,
@@ -25,6 +27,7 @@ type Props<T extends string> = {
   iconOnly?: boolean;
   /** Emphasize trigger when a non-default value is active (e.g. type filter). */
   emphasized?: boolean;
+  showCheckmark?: boolean;
   className?: string;
 };
 
@@ -35,6 +38,7 @@ export function ShellTopMenu<T extends string>({
   onChange,
   iconOnly = false,
   emphasized = false,
+  showCheckmark = true,
   className = "",
 }: Props<T>) {
   const activeOption =
@@ -69,32 +73,36 @@ export function ShellTopMenu<T extends string>({
           positionMethod="fixed"
           className="z-50 data-[anchor-hidden]:invisible"
         >
-          <Select.Popup className="shell-select-popup ui-popover ui-scrollbar max-h-[min(24rem,var(--available-height))] min-w-[max(9rem,var(--anchor-width))] max-w-[calc(100vw-1rem)] overflow-y-auto outline-none">
-            <Select.List aria-label={ariaLabel} className="flex flex-col gap-1">
-              {options.map((option) => (
-                <Select.Item
-                  key={option.value}
-                  value={option.value}
-                  label={option.label}
-                  className={`shell-select-option ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active ${
-                    option.value === value
-                      ? "font-medium"
-                      : ""
-                  }`}
-                >
-                  {option.icon}
-                  <Select.ItemText className="flex-1 whitespace-nowrap">{option.label}</Select.ItemText>
-                  {option.count !== undefined ? (
-                    <span className="pl-2 text-xs tabular-nums text-text-secondary">
-                      {option.count}
-                    </span>
-                  ) : null}
-                  <span aria-hidden="true" className="inline-flex size-4 shrink-0 items-center justify-center">
-                    {option.value === value ? <CheckIcon className="size-4" /> : null}
-                  </span>
-                </Select.Item>
-              ))}
+          <Select.Popup className="shell-select-popup ui-menu-popup ui-popover flex flex-col overflow-hidden max-h-[min(24rem,var(--available-height))] min-w-[max(9rem,var(--anchor-width))] max-w-[calc(100vw-1rem)] outline-none">
+            <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
+            <Select.List aria-label={ariaLabel}>
+              <MenuHoverList>
+                {options.map((option) => (
+                  <Select.Item
+                    key={option.value}
+                    value={option.value}
+                    label={option.label}
+                    className={`shell-select-option ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active ${
+                      option.value === value
+                        ? "font-medium"
+                        : ""
+                    }`}
+                  >
+                    {option.icon}
+                    <Select.ItemText className="flex-1 whitespace-nowrap">{option.label}</Select.ItemText>
+                    {option.count !== undefined ? (
+                      <span className="pl-2 text-xs tabular-nums text-text-secondary">
+                        {option.count}
+                      </span>
+                    ) : null}
+                    {showCheckmark ? <span aria-hidden="true" className="inline-flex size-4 shrink-0 items-center justify-center">
+                      {option.value === value ? <CheckIcon className="size-4" /> : null}
+                    </span> : null}
+                  </Select.Item>
+                ))}
+              </MenuHoverList>
             </Select.List>
+            </ScrollArea>
           </Select.Popup>
         </Select.Positioner>
       </Select.Portal>
