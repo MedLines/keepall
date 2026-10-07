@@ -1,10 +1,9 @@
 import {
   saveLinkPreviewResult,
-  setLinkPreviewAssetId,
+  saveLinkPreviewImage,
   setLinkPreviewPending,
   setLinkPreviewRetry,
 } from "@/persistence/items";
-import { putAsset } from "@/persistence/assets";
 import { isPreviewEnrichPaused } from "./preview-enrich-pause";
 import { dispatchEnrichItemsChanged } from "@/app/items-events";
 
@@ -24,11 +23,12 @@ function notifyLibraryChanged(linkId: string): void {
 
 async function storeLocalPreviewImage(
   linkId: string,
+  url: string,
   imageUrl: string,
   signal?: AbortSignal,
 ): Promise<void> {
   if (!imageUrl.trim()) {
-    await setLinkPreviewRetry(linkId, null);
+    await setLinkPreviewRetry(linkId, null, url);
     return;
   }
 
@@ -44,7 +44,7 @@ async function storeLocalPreviewImage(
     if (wasAborted(signal, error)) {
       return;
     }
-    await setLinkPreviewRetry(linkId, "network");
+    await setLinkPreviewRetry(linkId, "network", url);
     notifyLibraryChanged(linkId);
     return;
   }
@@ -53,7 +53,7 @@ async function storeLocalPreviewImage(
   if (!response.ok) {
     const retry =
       response.status === 413 || response.status === 400 ? "none" : "network";
-    await setLinkPreviewRetry(linkId, retry);
+    await setLinkPreviewRetry(linkId, retry, url);
     notifyLibraryChanged(linkId);
     return;
   }
@@ -63,16 +63,17 @@ async function storeLocalPreviewImage(
     "application/octet-stream";
   const blob = await response.blob();
   if (blob.size === 0) {
-    await setLinkPreviewRetry(linkId, "none");
+    await setLinkPreviewRetry(linkId, "none", url);
     notifyLibraryChanged(linkId);
     return;
   }
 
-  const asset = await putAsset({
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  if (signal?.aborted) return;
+  await saveLinkPreviewImage(linkId, url, {
     mimeType,
-    bytes: new Uint8Array(await blob.arrayBuffer()),
+    bytes,
   });
-  await setLinkPreviewAssetId(linkId, asset.id);
   notifyLibraryChanged(linkId);
 }
 
@@ -100,7 +101,7 @@ export async function enrichLinkPreview(
       return;
     }
 
-    await setLinkPreviewPending(linkId);
+    await setLinkPreviewPending(linkId, url);
     // No ITEMS_CHANGED here — pending is invisible on cards that already show
     // favicon/letter; notifying forced listItems() on every queued job.
 
@@ -119,7 +120,7 @@ export async function enrichLinkPreview(
       await saveLinkPreviewResult(linkId, {
         status: "failed",
         retry: "network",
-      });
+      }, url);
       notifyLibraryChanged(linkId);
       return;
     }
@@ -132,7 +133,7 @@ export async function enrichLinkPreview(
       await saveLinkPreviewResult(linkId, {
         status: "failed",
         retry: response.status === 400 ? "none" : "network",
-      });
+      }, url);
       notifyLibraryChanged(linkId);
       return;
     }
@@ -150,17 +151,17 @@ export async function enrichLinkPreview(
       title: typeof body.title === "string" ? body.title : "",
       description: typeof body.description === "string" ? body.description : "",
       imageUrl,
-    });
+    }, url);
     notifyLibraryChanged(linkId);
 
     try {
-      await storeLocalPreviewImage(linkId, imageUrl, signal);
+      await storeLocalPreviewImage(linkId, url, imageUrl, signal);
     } catch (error) {
       if (wasAborted(signal, error)) {
         return;
       }
       try {
-        await setLinkPreviewRetry(linkId, "network");
+        await setLinkPreviewRetry(linkId, "network", url);
         notifyLibraryChanged(linkId);
       } catch {
         // Link may have been deleted while enrichment ran.
@@ -174,7 +175,7 @@ export async function enrichLinkPreview(
       await saveLinkPreviewResult(linkId, {
         status: "failed",
         retry: "network",
-      });
+      }, url);
       notifyLibraryChanged(linkId);
     } catch {
       // Link may have been deleted while enrichment ran.
