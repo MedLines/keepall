@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { readItemNavigation } from "./item-navigation-snapshot";
+import { ItemPreviewTransition } from "./item-view-transition";
 
 /** Subscribe before Next's history listener so it cannot commit the return eagerly. */
 export function ItemNavigationHistory() {
@@ -26,11 +28,13 @@ export function ItemNavigationHistory() {
 }
 
 /** Render in the route commit so shared images exist when React captures the new view. */
-export function ItemRouteViewer({ children }: { children: ReactNode }) {
+export function ItemRouteViewer({ itemId, children }: { itemId: string; children: ReactNode }) {
   const router = useRouter();
   const viewerRef = useRef<HTMLDivElement>(null);
+  const snapshot = readItemNavigation(itemId);
+  const fade = snapshot?.animate && !snapshot.fromPreview && snapshot.item.type !== "image" && snapshot.item.type !== "document";
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const background = document.getElementById("route-content");
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const wasInert = background?.inert ?? false;
@@ -45,8 +49,8 @@ export function ItemRouteViewer({ children }: { children: ReactNode }) {
     };
   }, [router]);
 
-  return <div ref={viewerRef} data-item-route-viewer role="dialog" aria-modal="true" aria-label="Full item view" tabIndex={-1}
-    className="fixed inset-0 z-[60] overflow-hidden bg-bg-canvas outline-none"
+  return <ItemPreviewTransition itemId={itemId}><div ref={viewerRef} data-item-route-viewer role="dialog" aria-modal="true" aria-label="Full item view" tabIndex={-1}
+    className={`fixed inset-0 z-[60] overflow-hidden bg-bg-canvas outline-none${fade ? " item-viewer-enter" : ""}`}
     onKeyDown={event => {
       if ((event.target as HTMLElement).closest('[role="dialog"]') !== event.currentTarget) return;
       if (event.defaultPrevented) return;
@@ -64,5 +68,5 @@ export function ItemRouteViewer({ children }: { children: ReactNode }) {
       }
     }}>
     {children}
-  </div>;
+  </div></ItemPreviewTransition>;
 }

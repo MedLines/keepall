@@ -82,7 +82,8 @@ export function ImageItemPage({ itemId, returnHref, initialSnapshot }: Props) {
   const [loadState, setLoadState] = useState<LoadState>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "image"
     ? { status: "ready", item: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
     : { status: "loading" });
-  const [slide, setSlide] = useState(0);
+  const [slide, setSlide] = useState(() => initialSnapshot?.item.type === "image" && initialSnapshot.previewImageAssetId
+    ? Math.max(0, initialSnapshot.item.assetIds.indexOf(initialSnapshot.previewImageAssetId)) : 0);
   const [galleryMode, setGalleryMode] = useState<GalleryMode>("slides");
   const [viewerOpen, setViewerOpen] = useState(false);
   const [galleryMutation, setGalleryMutation] = useState<

@@ -19,7 +19,7 @@ test("reads saved link notes safely and keeps source navigation explicit", async
   expect(screen.getByRole("link", { name: `Open source: ${item.url}` })).toHaveAttribute("href", item.url);
   expect(actions.onOpenItem).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Open full item" }));
-  expect(actions.onOpenItem).toHaveBeenCalledWith(item);
+  expect(actions.onOpenItem).toHaveBeenCalledWith(item, false);
 });
 
 test("loads the local video, preserves native playback keys, and releases its object URL on item change", async () => {

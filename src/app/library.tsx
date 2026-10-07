@@ -945,17 +945,13 @@ export function Library() {
     setGalleryError(null);
   }
 
-  function openInspect(item: Item) {
-    prepareItemNavigation({ item, tags, collections, animate: false });
-    if (item.type === "image" || item.type === "note" || item.type === "video" || item.type === "document") {
-      const returnView = mergeLibraryViewState(viewRef.current, {
-        item: null,
-        slide: 0,
-      });
-      router.push(itemPageHref(item.id, libraryViewHref(pathname, returnView)));
-      return;
-    }
-    updateView({ item: item.id, slide: 0 }, "push");
+  function openInspect(item: Item, animate = false, fromPreview = false) {
+    prepareItemNavigation({ item, tags, collections, animate, fromPreview });
+    const returnView = mergeLibraryViewState(viewRef.current, {
+      item: null,
+      slide: 0,
+    });
+    router.push(itemPageHref(item.id, libraryViewHref(pathname, returnView)));
   }
 
   function setInspectSlide(slide: number) {
@@ -1722,7 +1718,7 @@ export function Library() {
         }
         onPrepareOpen={animate => prepareItemNavigation({ item, tags, collections, animate })}
         onOpenInspect={() => openInspect(item)}
-        onPreview={!view.trash ? () => libraryGridRef.current?.openPreview(item.id) : undefined}
+        onPreview={!view.trash ? animate => libraryGridRef.current?.openPreview(item.id, animate) : undefined}
         tagNames={resolveItemTags(item, tagsById)}
         tagError={tagErrorItemId === item.id ? tagError : null}
         collections={
@@ -2064,8 +2060,9 @@ export function Library() {
                   selectedIds={selectedIds}
                   onSelectIds={setSelectedIds}
                   keyboardDisabled={previewBusy}
+                  suspendCardTransitions={reviewOpen}
                   previewEnabled={!view.trash}
-                  onOpenItem={item => openInspect(item)}
+                  onOpenItem={openInspect}
                   empty={
                     <LibraryEmptyState
                       kind={emptyStateKind}

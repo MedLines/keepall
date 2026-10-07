@@ -29,6 +29,16 @@ describe("LinkItemPage", () => {
     vi.mocked(listCollections).mockResolvedValue([]);
   });
 
+  test("opens the loaded link and its note while persistence refresh is still pending", () => {
+    const link = buildLink({ url: "https://example.com/article", title: "Loaded link", noteContent: "Already loaded note" }, { id: "loaded-link", now: 1 });
+    vi.mocked(getItem).mockReturnValue(new Promise(() => {}));
+    render(<LinkItemPage itemId={link.id} returnHref="/" initialSnapshot={{ item: link, tags: [], collections: [], animate: true, fromPreview: true }} />);
+    expect(screen.getByRole("heading", { level: 1, name: "Loaded link" })).toBeVisible();
+    expect(screen.getByText("Already loaded note")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Edit details" })).toBeEnabled();
+    expect(screen.queryByText("Loading item…")).toBeNull();
+  });
+
   test("organizes an open link without changing its website or personal note", async () => {
     const link = {
       ...buildLink({ url: "https://example.com/article", noteContent: "My notes" }, { id: "l-org", now: 1 }),

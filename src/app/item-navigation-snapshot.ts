@@ -24,12 +24,18 @@ export type ItemNavigationSnapshot = {
   tags: Tag[];
   collections: Collection[];
   animate: boolean;
+  fromPreview?: boolean;
+  previewImageAssetId?: string;
   documentPreview?: { text?: string; pdfImage?: string };
 };
 
 let handoff: { snapshot: ItemNavigationSnapshot; expiresAt: number } | null = null;
 
 export function prepareItemNavigation(snapshot: ItemNavigationSnapshot): void {
+  if (snapshot.fromPreview && snapshot.item.type === "image" && typeof document !== "undefined") {
+    const assetId = document.querySelector(".library-quick-preview img[data-preview-image-asset]")?.getAttribute("data-preview-image-asset");
+    if (assetId && snapshot.item.assetIds.includes(assetId)) snapshot = { ...snapshot, previewImageAssetId: assetId };
+  }
   if (snapshot.item.type === "document" && typeof document !== "undefined") {
     const card = Array.from(document.querySelectorAll<HTMLElement>("[data-item-id]")).find(node => node.dataset.itemId === snapshot.item.id);
     const prepared = documentPreviews.get(previewKey(snapshot.item));

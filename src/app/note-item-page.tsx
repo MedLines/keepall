@@ -1,6 +1,7 @@
 "use client";
 
 import { ScrollPanel } from "@/components/ui/scroll-panel";
+import { ItemPreviewContentTransition } from "./item-view-transition";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -275,7 +276,9 @@ export function NoteItemPage({
               {title}
             </h1>
             <article className="mt-9 border-t border-border-control pt-8">
+              <ItemPreviewContentTransition itemId={itemId}>
               <NoteContent content={noteReadingBody(note)} format={note.format === "markdown" ? "markdown" : "plain"} headingStart={2} />
+              </ItemPreviewContentTransition>
             </article>
           </div>
 

@@ -34,19 +34,23 @@ import { LinkItemEditDialog, type LinkDetailsDraft } from "./item-edit-dialog";
 import { LinkIcon } from "./shell-icons";
 import { ItemPageHeader } from "./item-page-header";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
+import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+import { ItemPreviewContentTransition } from "./item-view-transition";
 
 type LoadState =
   | { status: "loading" | "missing" | "error" }
   | { status: "ready"; link: LinkItem; tags: Tag[]; collections: Collection[] };
 
-export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHref: string }) {
+export function LinkItemPage({ itemId, returnHref, initialSnapshot }: { itemId: string; returnHref: string; initialSnapshot?: ItemNavigationSnapshot }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [itemMutation, setItemMutation] = useState<"save" | "delete" | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [state, setState] = useState<LoadState>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "link"
+    ? { status: "ready", link: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
+    : { status: "loading" });
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
   const [organizeMutation, setOrganizeMutation] = useState<"tag" | "collection" | null>(null);
@@ -187,11 +191,12 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
   }
 
   return (
-    <div className="item-startup-content flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+    <div className={`${initialSnapshot ? "" : "item-startup-content"} flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary`}>
       <ItemPageHeader returnHref={returnHref} title={title} sourceUrl={link.url} />
 
       <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
         <div className={ITEM_PAGE_GRID}>
+          <ItemPreviewContentTransition itemId={itemId}>
           <div className="row-start-1 min-w-0 lg:col-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
             {!link.article ? <div className="squircle-panel overflow-hidden rounded-panel border border-border-control bg-bg-surface">
               {link.previewAssetId ? <LibraryItemMedia item={link} variant="card" className="max-h-96 w-full" /> : null}
@@ -214,6 +219,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
               )}
             </section>
           </div>
+          </ItemPreviewContentTransition>
 
           <ItemLibraryDetails
             label="Link details"
@@ -224,7 +230,6 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
             updatedAt={link.updatedAt}
             className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2`}
             disabled={busy}
-            editDisabled={editing}
             deleteLabel="Move link to Trash"
             onEdit={() => {
               setEditError(null);

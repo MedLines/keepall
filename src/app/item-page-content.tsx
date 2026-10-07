@@ -42,9 +42,9 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
   }, [itemId, loadAttempt]);
 
   if (type === "image") return <ImageItemPage key={itemId} itemId={itemId} returnHref={returnHref} initialSnapshot={initialSnapshot} />;
-  if (type === "link") return <LinkItemPage itemId={itemId} returnHref={returnHref} />;
+  if (type === "link") return <LinkItemPage key={itemId} itemId={itemId} returnHref={returnHref} initialSnapshot={initialSnapshot} />;
   if (type === "note") return <NoteItemPage key={itemId} itemId={itemId} returnHref={returnHref} initialSnapshot={initialSnapshot} />;
-  if (type === "video") return <VideoItemPage itemId={itemId} returnHref={returnHref} />;
+  if (type === "video") return <VideoItemPage key={itemId} itemId={itemId} returnHref={returnHref} initialSnapshot={initialSnapshot} />;
   if (type === "document") return <DocumentItemPage key={itemId} itemId={itemId} returnHref={returnHref} initialSnapshot={initialSnapshot} />;
   if (type === "loading") return <ItemPageLoading returnHref={returnHref} />;
   const message =

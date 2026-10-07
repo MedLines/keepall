@@ -25,6 +25,8 @@ import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { VideoIcon } from "./shell-icons";
 import { ItemPageHeader } from "./item-page-header";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
+import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+import { ItemPreviewContentTransition } from "./item-view-transition";
 
 type VideoState =
   | { itemId: string; status: "loading" | "missing" | "error" }
@@ -48,9 +50,11 @@ function VideoPlayback({ title, poster, media, onRetry, onError }: { title: stri
   </div>;
 }
 
-export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHref: string }) {
+export function VideoItemPage({ itemId, returnHref, initialSnapshot }: { itemId: string; returnHref: string; initialSnapshot?: ItemNavigationSnapshot }) {
   const router = useRouter();
-  const [state, setState] = useState<VideoState>({ itemId, status: "loading" });
+  const [state, setState] = useState<VideoState>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "video"
+    ? { itemId, status: "ready", item: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
+    : { itemId, status: "loading" });
   const [media, setMedia] = useState<MediaState>({ key: "", status: "loading" });
   const [retry, setRetry] = useState(0);
   const [editing, setEditing] = useState(false);
@@ -127,13 +131,13 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
     finally { setBusy(false); }
   };
 
-  return <div className="item-startup-content flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+  return <div className={`${initialSnapshot ? "" : "item-startup-content"} flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary`}>
     <ItemPageHeader returnHref={returnHref} title={item.title} />
     <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
       <div className={ITEM_PAGE_GRID}>
         <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
           <h1 className="mb-5 break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{item.title}</h1>
-          <VideoPlayback title={item.title} poster={poster} media={currentMedia} onRetry={() => setRetry((value) => value + 1)} onError={() => setMedia((current) => current.key === mediaKey ? { key: mediaKey, status: "unsupported" } : current)} />
+          <ItemPreviewContentTransition itemId={item.id}><VideoPlayback title={item.title} poster={poster} media={currentMedia} onRetry={() => setRetry((value) => value + 1)} onError={() => setMedia((current) => current.key === mediaKey ? { key: mediaKey, status: "unsupported" } : current)} /></ItemPreviewContentTransition>
           {item.noteContent?.trim() ? <article aria-labelledby="video-notes-heading" className="mt-10 border-t border-border-control pt-7">
             <h2 id="video-notes-heading" className="text-xl font-semibold">Notes</h2>
             <NoteContent content={item.noteContent} format={item.noteFormat === "markdown" ? "markdown" : "plain"} className="mt-5 text-text-primary" />

@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
+import { startTransition, useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import type { Item } from "@/domain/item";
 import type { LibraryLayout, LibraryListColumns } from "@/domain/library-view";
 import { LibraryVirtualItems } from "./library-virtual-items";
 import { LIBRARY_VIRTUALIZE_MIN, listColumnCount } from "./library-scale";
 import { LibraryMasonry, type MasonryPlacement } from "./library-masonry";
 import { LibraryQuickPreview } from "./library-quick-preview";
+import { ItemPreviewSourceContext, transitionItemPreview } from "./item-view-transition";
 import { shortcutLabel } from "@/domain/keyboard-shortcuts";
 import { useAppShortcuts } from "./use-app-shortcuts";
 
-export type LibraryPreviewHandle = { openPreview: (itemId?: string) => void };
+export type LibraryPreviewHandle = { openPreview: (itemId?: string, animate?: boolean) => void };
 
 type Props = {
   ref?: Ref<LibraryPreviewHandle>;
@@ -23,9 +24,10 @@ type Props = {
   renderItem: (item: Item, placement?: MasonryPlacement) => ReactNode;
   selectedIds: ReadonlySet<string>;
   onSelectIds: (ids: Set<string>) => void;
-  onOpenItem: (item: Item) => void;
+  onOpenItem: (item: Item, animate?: boolean, fromPreview?: boolean) => void;
   previewEnabled?: boolean;
   keyboardDisabled?: boolean;
+  suspendCardTransitions?: boolean;
   onPreviewOpenChange?: (open: boolean) => void;
 };
 
@@ -34,7 +36,7 @@ const arrowStep: Record<string, number> = { ArrowLeft: -1, ArrowUp: -1, ArrowRig
 /** Both views window large libraries; keyboard order follows the filtered results. */
 export function LibraryMainGrid({
   ref, visibleItems, scopeKey, layout, listColumns = "auto", scrollRef, empty, renderItem,
-  selectedIds, onSelectIds, onOpenItem, previewEnabled = true, keyboardDisabled = false, onPreviewOpenChange,
+  selectedIds, onSelectIds, onOpenItem, previewEnabled = true, keyboardDisabled = false, suspendCardTransitions = false, onPreviewOpenChange,
 }: Props) {
   const browseRef = useRef<HTMLDivElement>(null);
   const [listColumnTotal, setListColumnTotal] = useState(1);
@@ -52,6 +54,8 @@ export function LibraryMainGrid({
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [focusRequest, setFocusRequest] = useState<{ id: string } | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [handoffActive, setHandoffActive] = useState(false);
+  const [sharedOpening, setSharedOpening] = useState(false);
   const rangeRef = useRef<{ anchor: string; base: ReadonlySet<string> } | null>(null);
   const focusedIndex = visibleItems.findIndex(item => item.id === focusedId);
   const previewIndex = visibleItems.findIndex(item => item.id === previewId);
@@ -63,18 +67,26 @@ export function LibraryMainGrid({
       const item = visibleItems.find(item => item.id === focusedId) ?? visibleItems[0];
       if (!item) return;
       setFocusedId(item.id);
+      setHandoffActive(false);
+      setSharedOpening(false);
       setPreviewId(item.id);
     },
   }, previewEnabled && !keyboardDisabled && visibleItems.length > 0);
 
   useImperativeHandle(ref, () => ({
-    openPreview(itemId) {
+    openPreview(itemId, animate = true) {
       if (!previewEnabled || keyboardDisabled) return;
       const item = visibleItems.find(item => item.id === (itemId ?? focusedId))
         ?? (itemId === undefined ? visibleItems[0] : undefined);
       if (!item) return;
-      setFocusedId(item.id);
-      setPreviewId(item.id);
+      const open = (shared = false) => {
+        setFocusedId(item.id);
+        setHandoffActive(false);
+        setSharedOpening(shared);
+        setPreviewId(item.id);
+      };
+      if (animate) transitionItemPreview(item, open);
+      else open();
     },
   }), [focusedId, visibleItems, previewEnabled, keyboardDisabled]);
 
@@ -121,6 +133,15 @@ export function LibraryMainGrid({
     if (previewItem) requestFocus(previewItem.id);
   }
 
+  function openPreviewItem(item: Item, animate = false) {
+    // Keep Preview visible until the destination and portal removal commit together.
+    startTransition(() => {
+      setPreviewId(null);
+      setHandoffActive(true);
+      onOpenItem(item, animate, true);
+    });
+  }
+
   const grid = visibleItems.length === 0 ? empty : layout === "grid" ? (
     <LibraryMasonry key={scopeKey} items={visibleItems} scopeKey={scopeKey} scrollRef={scrollRef} renderItem={renderItem} focusedIndex={focusedIndex} />
   ) : visibleItems.length >= LIBRARY_VIRTUALIZE_MIN ? (
@@ -129,7 +150,7 @@ export function LibraryMainGrid({
     <ul className="library-list grid" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }} aria-label="Library items">{visibleItems.map(item => renderItem(item))}</ul>
   );
 
-  return <div ref={browseRef} tabIndex={-1} aria-describedby={instructionsId}
+  return <ItemPreviewSourceContext.Provider value={suspendCardTransitions ? "*" : previewId}><div ref={browseRef} tabIndex={-1} aria-describedby={instructionsId}
     onFocusCapture={event => {
       const node = event.target as HTMLElement;
       if (node.dataset.itemId) {
@@ -166,8 +187,8 @@ export function LibraryMainGrid({
   >
     <p id={instructionsId} className="sr-only">Arrow keys browse items in result order. Shift and an arrow selects a range.{previewEnabled ? ` ${shortcutLabel(shortcuts.preview)} previews. Enter opens the full item.` : ""}</p>
     {grid}
-    <LibraryQuickPreview item={previewItem} index={previewIndex} count={visibleItems.length}
-      onClose={closePreview} onOpenItem={onOpenItem}
+    {!handoffActive ? <LibraryQuickPreview item={previewItem} index={previewIndex} count={visibleItems.length} sharedOpening={sharedOpening}
+      onClose={closePreview} onOpenItem={openPreviewItem}
       returnFocus={() => Array.from(browseRef.current?.querySelectorAll<HTMLElement>("[data-item-id]") ?? [])
         .find(node => node.dataset.itemId === focusedId) ?? browseRef.current}
       onMove={step => {
@@ -176,6 +197,6 @@ export function LibraryMainGrid({
         setFocusedId(next.id);
         setPreviewId(next.id);
       }}
-    />
-  </div>;
+    /> : null}
+  </div></ItemPreviewSourceContext.Provider>;
 }

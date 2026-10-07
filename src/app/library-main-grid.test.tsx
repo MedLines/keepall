@@ -124,6 +124,21 @@ describe("Library keyboard browsing", () => {
     await waitFor(() => expect(screen.getByRole("listitem", { name: "Beta" })).toHaveFocus());
   });
 
+  for (const entry of ["button", "Enter"]) {
+    test(`opening the full item with ${entry} dismisses preview and forwards the selected item`, async () => {
+      const { alpha, open } = setup();
+      act(() => alpha.focus());
+      fireEvent.keyDown(alpha, { key: " ", code: "Space" });
+      const dialog = await screen.findByRole("dialog", { name: "Alpha" });
+      fireEvent.keyDown(dialog, { key: "ArrowRight" });
+      await screen.findByRole("dialog", { name: "Beta" });
+      if (entry === "button") fireEvent.click(screen.getByRole("button", { name: "Open full item" }), { detail: 1 });
+      else fireEvent.keyDown(dialog, { key: "Enter" });
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(open).toHaveBeenCalledWith(notes[1], entry === "button", true);
+    });
+  }
+
   test("extends and contracts a range while preserving an unrelated selection", async () => {
     const { alpha, select } = setup(new Set(["hidden"]));
     alpha.focus();

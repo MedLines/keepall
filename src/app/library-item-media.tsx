@@ -59,6 +59,7 @@ export function LibraryItemMedia({
     const image = (
       <LibraryThumbnailImage
         animate={variant === "grid" || variant === "card"}
+        data-preview-image-asset={variant === "preview" && item.type === "image" ? assetIdForDisplay : undefined}
         alt=""
         className={imageClassName(variant, compact, className)}
         src={imageSrc}
@@ -77,8 +78,8 @@ export function LibraryItemMedia({
         }}
       />
     );
-    return sharedTransition && item.type === "image" && assetIdForDisplay && ["card", "grid", "inspect"].includes(variant)
-      ? <ItemViewTransition itemId={item.id} assetId={assetIdForDisplay} source={variant !== "inspect"}>{image}</ItemViewTransition>
+    return sharedTransition && item.type === "image" && assetIdForDisplay && ["card", "grid", "inspect", "preview"].includes(variant)
+      ? <ItemViewTransition itemId={item.id} assetId={assetIdForDisplay} source={variant !== "inspect"} preview={variant === "preview"}>{image}</ItemViewTransition>
       : image;
   }
 

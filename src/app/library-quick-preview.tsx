@@ -17,6 +17,7 @@ import { ItemTypeIcon } from "./item-type-icon";
 import { MediaViewerToolbar } from "./media-viewer-toolbar";
 import { linkCardHost } from "@/domain/card-display";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
+import { ItemPreviewContentTransition, ItemPreviewTransition, ItemViewTransition } from "./item-view-transition";
 
 type Props = {
   item: Item | null;
@@ -26,21 +27,30 @@ type Props = {
   onClose: () => void;
   onOpenItem: (item: Item, animate?: boolean) => void;
   returnFocus: () => HTMLElement | null;
+  sharedOpening?: boolean;
   review?: { footer: ReactNode; organization: ReactNode; emptyState: ReactNode; progress: ReactNode; busy: boolean };
 };
 
-export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpenItem, returnFocus, review }: Props) {
+export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpenItem, returnFocus, sharedOpening = false, review }: Props) {
   const popupRef = useRef<HTMLDivElement>(null);
+  const openingFullItem = useRef(false);
   const title = item ? previewTitle(item) : "";
   const reviewing = review !== undefined;
   const progress = review ? review.progress : <p role="status" aria-live="polite" className="rounded-full border border-border-edge bg-transparent px-2.5 py-1 text-center text-xs tabular-nums text-text-secondary"><span className="sr-only">{title}. </span>{index + 1} of {count}</p>;
   useEffect(() => { if (reviewing) popupRef.current?.focus({ preventScroll: true }); }, [reviewing, item?.id]);
+  useEffect(() => { if (item) openingFullItem.current = false; }, [item]);
+  function openFullItem(animate = false) {
+    if (!item || review?.busy) return;
+    openingFullItem.current = true;
+    onOpenItem(item, animate);
+  }
   return <Dialog.Root open={item !== null || review !== undefined} onOpenChange={open => { if (!open) onClose(); }}>
     <Dialog.Portal>
-
+      <ItemPreviewTransition itemId={item?.id ?? "review-complete"} source>
       <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
         <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-0" />
-        <Dialog.Popup ref={popupRef} finalFocus={returnFocus} initialFocus={popupRef}
+        <Dialog.Popup ref={popupRef} finalFocus={() => openingFullItem.current ? false : returnFocus()} initialFocus={popupRef}
+          data-shared-opening={sharedOpening ? "" : undefined}
           className="library-quick-preview confirm-dialog-popup ui-popover relative z-[1] flex h-[min(48rem,calc(100dvh-2rem))] w-full max-w-4xl flex-col gap-4 overflow-hidden p-4 outline-none"
           onKeyDown={event => {
             if (review?.busy || event.defaultPrevented || event.nativeEvent.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
@@ -63,7 +73,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
               onClose();
             } else if (target === event.currentTarget && event.key === "Enter" && item) {
               event.preventDefault();
-              onOpenItem(item);
+              openFullItem();
             }
           }}
         >
@@ -91,7 +101,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
               <div className="library-preview-navigation flex items-center gap-2">
                 <button type="button" className="ui-control inline-flex min-h-11 shrink-0 items-center justify-center gap-2 ps-2 pe-3 text-sm disabled:opacity-50" aria-label="Previous item" title="Previous item" disabled={index <= 0} onClick={() => onMove(-1)}><ArrowLeftIcon className="size-4 rtl:rotate-180" />Back</button>
               </div>
-              <div className="library-preview-confirm"><button type="button" className="ui-control ui-primary inline-flex min-h-11 items-center justify-center gap-2 ps-2 pe-3 text-sm font-medium" onClick={() => onOpenItem(item)}><FullScreenIcon className="size-4" />Open full item</button></div>
+              <div className="library-preview-confirm"><button type="button" className="ui-control ui-primary inline-flex min-h-11 items-center justify-center gap-2 ps-2 pe-3 text-sm font-medium" onClick={event => openFullItem(event.detail > 0)}><FullScreenIcon className="size-4" />Open full item</button></div>
               <div className="library-preview-next"><button type="button" className="ui-control inline-flex min-h-11 shrink-0 items-center justify-center gap-2 ps-3 pe-2 text-sm disabled:opacity-50" aria-label="Next item" title="Next item" disabled={index >= count - 1} onClick={() => onMove(1)}>Next<ArrowRightIcon className="size-4 rtl:rotate-180" /></button></div>
               </>}
             </footer>
@@ -109,7 +119,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
           </> : null}
         </Dialog.Popup>
       </Dialog.Viewport>
-
+      </ItemPreviewTransition>
     </Dialog.Portal>
   </Dialog.Root>;
 }
@@ -151,28 +161,28 @@ function PreviewTitle({ title }: { title: string }) {
 
 function PreviewContent({ item, onGalleryStep, reviewing }: { item: Item; onGalleryStep: () => void; reviewing: boolean }) {
   if (item.type === "note") return <ScrollPanel className="h-full min-h-0" viewportClassName="scroll-fade overscroll-contain px-4" contentClassName="!flex min-h-full" viewportProps={{ "data-preview-scroll": "", tabIndex: 0 }}>
-
+    <ItemPreviewContentTransition itemId={item.id} source>
     <NoteContent className={`library-preview-document w-full shrink-0 pb-4 ${reviewing ? "" : "mx-auto max-w-[65ch]"}`} content={item.content} format={item.format ?? "plain"} />
-
+    </ItemPreviewContentTransition>
   </ScrollPanel>;
   if (item.type === "image") return <ImagePreview item={item} onGalleryStep={onGalleryStep} />;
   if (item.type === "video") return <div className="flex h-full min-h-0 flex-col gap-4 px-4 pb-4">
     <div className="grid min-h-0 min-w-0 flex-1 place-items-center" data-preview-media>
-      <PreviewVideo key={item.assetId} assetId={item.assetId} title={previewTitle(item)} />
+      <ItemPreviewContentTransition itemId={item.id} source><PreviewVideo key={item.assetId} assetId={item.assetId} title={previewTitle(item)} /></ItemPreviewContentTransition>
     </div>
     {item.noteContent ? <ScrollPanel className="flex max-h-[35%] shrink-0 flex-col" viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain" viewportProps={{ "data-preview-scroll": "", tabIndex: 0, role: "region", "aria-label": "Video notes" }}>
       <NoteContent className="library-preview-document mx-auto max-w-[65ch]" content={item.noteContent} format={item.noteFormat ?? "plain"} />
     </ScrollPanel> : null}
   </div>;
   if (item.type === "document") return <ScrollPanel className="h-full min-h-0" viewportClassName="overscroll-contain px-4 pb-4" viewportProps={{ "data-preview-scroll": "", "data-document-scroll": "", tabIndex: 0 }}>
-    <div className={item.format === "pdf" ? "min-w-0" : "library-preview-document mx-auto max-w-[65ch]"}><DocumentContent item={item} /></div>
+    <ItemViewTransition itemId={item.id} assetId={item.assetId} kind="document" source preview><div className={item.format === "pdf" ? "min-w-0" : "library-preview-document mx-auto max-w-[65ch]"}><DocumentContent item={item} /></div></ItemViewTransition>
     {item.noteContent ? <section aria-label="Document notes" className="mx-auto mt-5 max-w-[65ch] border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
   </ScrollPanel>;
-  const details = <div className={`flex w-full flex-col gap-4 ${reviewing ? "" : "mx-auto max-w-[65ch]"}`}>
+  const details = <ItemPreviewContentTransition itemId={item.id} source><div className={`flex w-full flex-col gap-4 ${reviewing ? "" : "mx-auto max-w-[65ch]"}`}>
     <a href={item.url} target="_blank" rel="noreferrer" aria-label={`Open source: ${item.url}`} className="ui-control inline-flex min-h-11 max-w-full self-start items-center gap-2 px-3 text-sm text-text-secondary"><LinkIcon className="size-4" /><span className="truncate">{linkCardHost(item)}</span><ExternalLinkIcon className="size-4" /></a>
     {item.previewDescription ? <p className="whitespace-pre-wrap break-words text-text-secondary">{item.previewDescription}</p> : null}
     {item.noteContent ? <section aria-label="Link notes" className="border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent className="library-preview-document" content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
-  </div>;
+  </div></ItemPreviewContentTransition>;
   return item.previewAssetId ? <div className="flex h-full min-h-0 flex-col gap-4 px-4 pb-4">
     <div className="grid min-h-0 min-w-0 flex-1 place-items-center" data-preview-media>
       <LibraryItemMedia item={item} variant="preview" />

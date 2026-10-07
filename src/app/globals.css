@@ -166,6 +166,7 @@
     transform: scale(0.97);
   }
   .confirm-dialog-popup[data-ending-style] { transition-duration: var(--motion-slow-exit); }
+  .library-quick-preview[data-shared-opening][data-starting-style] { opacity: 1; transform: none; }
   .ui-menu-popup {
     --popup-slide-y: 4px;
     --popup-slide-x: 0px;
@@ -1243,12 +1244,28 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
 ::view-transition-new(root),
 ::view-transition-group(root) { animation: none; }
 ::view-transition { pointer-events: none; }
+::view-transition-group(.item-preview-frame) { animation: none; z-index: 90; }
+::view-transition-old(.item-preview-frame) { animation: library-layout-hide 120ms cubic-bezier(0.19, 1, 0.22, 1) both; }
+::view-transition-new(.item-preview-frame) { animation: library-content-reveal 240ms cubic-bezier(0.19, 1, 0.22, 1) both; }
+::view-transition-group(.item-preview-content) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+  z-index: 100;
+}
+::view-transition-old(.item-preview-content) { animation: none; opacity: 0; }
+::view-transition-new(.item-preview-content) { animation: none; opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(.item-preview-content) { animation: none; }
+  ::view-transition-old(.item-preview-content), ::view-transition-old(.item-preview-frame) { animation: none; opacity: 0; }
+  ::view-transition-new(.item-preview-content), ::view-transition-new(.item-preview-frame) { animation: item-image-fade 100ms cubic-bezier(0.19, 1, 0.22, 1) both; }
+}
 ::view-transition-group(.library-layout-crossfade) { animation: none; }
 ::view-transition-old(.library-layout-crossfade) { animation: library-layout-hide var(--motion-moderate-enter) cubic-bezier(0.2, 0, 0, 1) both; }
 ::view-transition-new(.library-layout-crossfade) { animation: library-content-reveal var(--motion-moderate-enter) cubic-bezier(0.2, 0, 0, 1) both; }
+.item-viewer-enter { animation: library-content-reveal var(--motion-moderate-enter) cubic-bezier(0.2, 0, 0, 1) both; }
 @keyframes library-layout-hide { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(.library-layout-crossfade), ::view-transition-new(.library-layout-crossfade) { animation: none; }
+  ::view-transition-old(.library-layout-crossfade), ::view-transition-new(.library-layout-crossfade), .item-viewer-enter { animation: none; }
 }
 ::view-transition-group(.item-image-morph) {
   animation-duration: 200ms;

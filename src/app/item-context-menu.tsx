@@ -36,7 +36,7 @@ type Props = {
   tagError: string | null;
   onAddTag: (name: string) => void;
   onRemoveTag: (id: string) => void;
-  onPreview?: () => void;
+  onPreview?: (animate?: boolean) => void;
   onFetchPreview?: () => void;
   fetchingPreview?: boolean;
   hasPreview?: boolean;
@@ -104,7 +104,7 @@ export function ItemContextMenu({
               <Menu.Separator className="my-1 border-t border-border-edge" />
             </>
           ) : null}
-          {onPreview ? <Menu.Item className={MENU_ITEM} onClick={() => openDialog(onPreview)}>
+          {onPreview ? <Menu.Item className={MENU_ITEM} onClick={event => openDialog(() => onPreview(event.detail > 0))}>
             <EyeIcon />Preview
           </Menu.Item> : null}
           {onFetchPreview ? <Menu.Item className={MENU_ITEM} disabled={busy || fetchingPreview} onClick={onFetchPreview}>

@@ -77,7 +77,7 @@ export type LibraryItemProps = {
   openHref?: string;
   onOpenInspect: () => void;
   onPrepareOpen?: (animate: boolean) => void;
-  onPreview?: () => void;
+  onPreview?: (animate?: boolean) => void;
   tagNames: { id: string; name: string }[];
   tagError: string | null;
   collections: { id: string; name: string }[];

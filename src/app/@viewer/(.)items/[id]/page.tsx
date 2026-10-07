@@ -8,5 +8,5 @@ export default async function ItemViewerPage({ params, searchParams }: {
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const returnHref = safeLibraryReturnHref(typeof query.from === "string" ? query.from : undefined);
-  return <ItemRouteViewer><ItemPageContent key={id} itemId={id} returnHref={returnHref} /></ItemRouteViewer>;
+  return <ItemRouteViewer itemId={id}><ItemPageContent key={id} itemId={id} returnHref={returnHref} /></ItemRouteViewer>;
 }
