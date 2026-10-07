@@ -10,6 +10,20 @@ const emptyFields: ContactFields = {
 };
 const sendError = "We couldn't confirm your message was sent. Your draft is still here. Try again later or copy it for GitHub.";
 
+function submissionError(response: Response, result: unknown): string {
+  if (response.status === 429) {
+    const seconds = Number(response.headers.get("Retry-After"));
+    const minutes = Number.isInteger(seconds) && seconds >= 1 && seconds <= 3600 ? Math.ceil(seconds / 60) : null;
+    const retry = minutes ? `Please try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.` : "Please try again later.";
+    return `You can send up to 3 messages per hour. ${retry} Your draft is still here.`;
+  }
+  if (!!result && typeof result === "object" && "recorded" in result && result.recorded === true) {
+    return "Your message was recorded, but we couldn't confirm the email notification. Please wait before sending it again. Your draft is still here.";
+  }
+  if (response.status === 503) return "Sending is temporarily unavailable. Your draft is still here. Please try again later.";
+  return response.status === 400 || response.status === 413 ? "Check your fields and keep your message within the character limits." : sendError;
+}
+
 export function ContactForm() {
   const [fields, setFields] = useState(emptyFields);
   const [availability, setAvailability] = useState<"checking" | "ready" | "unavailable">("checking");
@@ -50,14 +64,13 @@ export function ContactForm() {
     try {
       const response = await fetch("/api/contact", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(fields), signal: AbortSignal.timeout(12000),
+        body: JSON.stringify(fields), signal: AbortSignal.timeout(25000),
       });
       const result: unknown = await response.json();
       if (response.ok && !!result && typeof result === "object" && "accepted" in result && result.accepted === true) {
         setStatus("success");
       } else {
-        if (response.status === 503) setAvailability("unavailable");
-        setError(response.status === 400 || response.status === 413 ? "Check your fields and keep your message within the character limits." : sendError);
+        setError(submissionError(response, result));
         setStatus("error");
       }
     } catch {
@@ -104,7 +117,7 @@ export function ContactForm() {
           <div className="kc-pair"><div className="kc-field"><label htmlFor="contact-expected">Expected result</label><textarea id="contact-expected" name="expected" value={fields.expected} rows={3} maxLength={contactLimits.expected} onChange={event => updateField("expected", event.target.value)} /></div><div className="kc-field"><label htmlFor="contact-actual">Actual result</label><textarea id="contact-actual" name="actual" value={fields.actual} rows={3} maxLength={contactLimits.actual} onChange={event => updateField("actual", event.target.value)} /></div></div>
         </fieldset>}
         <div className="kc-trap" aria-hidden="true"><label htmlFor="contact-website">Leave this field empty</label><input id="contact-website" name="website" value={fields.website} maxLength={contactLimits.website} autoComplete="off" tabIndex={-1} onChange={event => updateField("website", event.target.value)} /></div>
-        <p id="contact-privacy" className="kc-hint">Sending shares these fields with Keepall support through Resend. Your library is never attached. Please leave out private links, notes, and backups. <Link href="/privacy">Privacy details</Link>.</p>
+        <p id="contact-privacy" className="kc-hint">Up to 3 messages per hour. Sending stores these fields with Keepall support until manually deleted and sends an email notification through Resend. Your library is never attached. Please leave out private links, notes, and backups. <Link href="/privacy">Privacy details</Link>.</p>
         <button className="ka-button kc-send" type="submit" disabled={availability !== "ready" || status === "pending" || status === "success"}>{status === "pending" ? "Sending…" : status === "success" ? "Message submitted" : "Send message"}<ArrowRightIcon /></button>
       </fieldset>
       {status === "success" && <p className="kc-result" role="status">Your message was submitted. We&apos;ll reply to the email you provided.</p>}

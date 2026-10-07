@@ -32,4 +32,5 @@ export async function sendContactEmail(fields: ContactFields, config: ContactEma
   if (!result || typeof result !== "object" || !("id" in result) || typeof result.id !== "string" || !result.id) {
     throw new Error("Contact delivery failed");
   }
+  return result.id;
 }

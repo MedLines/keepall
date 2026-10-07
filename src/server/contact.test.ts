@@ -3,17 +3,29 @@ import { GET, POST } from "@/app/api/contact/route";
 
 vi.mock("server-only", () => ({}));
 
+const store = vi.hoisted(() => ({ reserve: vi.fn(), record: vi.fn() }));
+vi.mock("@/server/contact-store", async importOriginal => ({
+  ...await importOriginal<typeof import("@/server/contact-store")>(),
+  reserveContactMessage: store.reserve,
+  recordContactDelivery: store.record,
+}));
+
 const input = { name: "Ada", email: "ada@example.com", topic: "bug", message: "Cannot export my backup", browser: "Firefox on Linux", steps: "Open Settings", expected: "A downloaded file", actual: "An error", website: "" };
 const transport = vi.fn();
 
 function request(body: unknown = input, origin = "https://keepall.app") {
-  return new Request("https://keepall.app/api/contact", { method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify(body) });
+  return new Request("https://keepall.app/api/contact", { method: "POST", headers: { origin, "content-type": "application/json", "x-vercel-forwarded-for": "192.0.2.4" }, body: JSON.stringify(body) });
 }
 
 beforeEach(() => {
   vi.unstubAllEnvs();
   vi.stubGlobal("fetch", transport);
   transport.mockReset();
+  store.reserve.mockReset().mockResolvedValue({ allowed: true, id: "record-id" });
+  store.record.mockReset().mockResolvedValue(undefined);
+  vi.stubEnv("VERCEL", "1");
+  vi.stubEnv("DATABASE_URL", "postgresql://user:password@db.example/test");
+  vi.stubEnv("CONTACT_RATE_LIMIT_SECRET", "a-test-secret-with-more-than-32-characters");
   vi.stubEnv("RESEND_API_KEY", "test-key");
   vi.stubEnv("CONTACT_FROM_EMAIL", "contact@example.com");
   vi.stubEnv("CONTACT_TO_EMAIL", "support@example.com");
@@ -117,4 +129,62 @@ test("transport timeout uses an abort signal and returns a safe failure", async 
   const response = await POST(request());
   expect(response.status).toBe(502);
   expect(await response.json()).not.toHaveProperty("accepted");
+});
+
+test("missing database or limiter secret disables submission", async () => {
+  vi.stubEnv("DATABASE_URL", "");
+  expect(await (await GET()).json()).toEqual({ available: false });
+  expect((await POST(request())).status).toBe(503);
+  expect(store.reserve).not.toHaveBeenCalled();
+  expect(transport).not.toHaveBeenCalled();
+});
+
+test("rate limit returns retry information without sending mail", async () => {
+  store.reserve.mockResolvedValue({ allowed: false, retryAfter: 153 });
+  const response = await POST(request());
+  expect(response.status).toBe(429);
+  expect(response.headers.get("Retry-After")).toBe("153");
+  expect(await response.json()).toMatchObject({ retryAfter: 153 });
+  expect(transport).not.toHaveBeenCalled();
+  expect(store.record).not.toHaveBeenCalled();
+});
+
+test("database failure cannot send unrecorded mail", async () => {
+  store.reserve.mockRejectedValue(new Error("private connection details"));
+  const response = await POST(request());
+  expect(response.status).toBe(503);
+  expect(await response.text()).not.toContain("private connection");
+  expect(transport).not.toHaveBeenCalled();
+});
+
+test("untrusted identity fails closed even with a caller-provided forwarded IP", async () => {
+  const message = request();
+  message.headers.delete("x-vercel-forwarded-for");
+  message.headers.set("x-forwarded-for", "192.0.2.5");
+  expect((await POST(message)).status).toBe(503);
+  expect(store.reserve).not.toHaveBeenCalled();
+  expect(transport).not.toHaveBeenCalled();
+});
+
+test("record is saved before mail and provider acceptance is recorded", async () => {
+  transport.mockImplementation(() => {
+    expect(store.reserve).toHaveBeenCalledTimes(1);
+    return Response.json({ id: "resend-id" });
+  });
+  expect((await POST(request())).status).toBe(200);
+  expect(store.record).toHaveBeenCalledWith("record-id", "accepted", "resend-id", expect.any(Object));
+});
+
+test("provider failure leaves a support record and an unconfirmed notification", async () => {
+  transport.mockRejectedValue(new Error("timeout"));
+  const response = await POST(request());
+  expect(response.status).toBe(502);
+  expect(await response.json()).toMatchObject({ recorded: true });
+  expect(store.record).toHaveBeenCalledWith("record-id", "unconfirmed", null, expect.any(Object));
+});
+
+test("status-update failure does not lose an existing record or hide accepted mail", async () => {
+  transport.mockResolvedValue(Response.json({ id: "resend-id" }));
+  store.record.mockRejectedValue(new Error("database unavailable"));
+  expect((await POST(request())).status).toBe(200);
 });

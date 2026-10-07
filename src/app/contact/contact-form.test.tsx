@@ -82,3 +82,42 @@ test("long reports remain available in full when they cannot fit a GitHub URL", 
   expect(screen.getByText(/too long for a GitHub link/)).toBeInTheDocument();
   expect((screen.getByLabelText("Report to copy") as HTMLTextAreaElement).value).toContain(message);
 });
+
+ test("rate limit gives a safe retry time and preserves the draft", async () => {
+  transport.mockResolvedValueOnce(Response.json({ available: true }));
+  transport.mockResolvedValueOnce(Response.json({ error: "private details" }, { status: 429, headers: { "Retry-After": "153" } }));
+  render(<ContactForm />);
+  await waitFor(() => expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled());
+  fillMessage();
+  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Please try again in 3 minutes");
+  expect(screen.getByLabelText("Message")).toHaveValue("Export fails");
+  expect(screen.queryByText(/private details/)).not.toBeInTheDocument();
+});
+
+test("recorded message with uncertain email is explained without claiming submission", async () => {
+  transport.mockResolvedValueOnce(Response.json({ available: true }));
+  transport.mockResolvedValueOnce(Response.json({ recorded: true }, { status: 502 }));
+  render(<ContactForm />);
+  await waitFor(() => expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled());
+  fillMessage();
+  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Your message was recorded");
+  expect(screen.getByLabelText("Message")).toHaveValue("Export fails");
+  expect(screen.queryByText(/Your message was submitted/)).not.toBeInTheDocument();
+});
+
+test("temporary database failure preserves a retryable draft", async () => {
+  transport.mockResolvedValueOnce(Response.json({ available: true }));
+  transport.mockResolvedValueOnce(Response.json({}, { status: 503 }));
+  transport.mockResolvedValueOnce(Response.json({ accepted: true }));
+  render(<ContactForm />);
+  await waitFor(() => expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled());
+  fillMessage();
+  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Sending is temporarily unavailable");
+  expect(screen.getByLabelText("Message")).toHaveValue("Export fails");
+  expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+  await screen.findByText(/Your message was submitted/);
+});

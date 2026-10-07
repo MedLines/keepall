@@ -1,4 +1,6 @@
 import { getContactEmailConfig, sendContactEmail } from "@/server/contact-email";
+import { contactIdentity } from "@/server/contact-identity";
+import { getContactStoreConfig, reserveContactMessage, recordContactDelivery } from "@/server/contact-store";
 import { parseContactInput } from "@/server/contact-input";
 
 export const runtime = "nodejs";
@@ -41,13 +43,14 @@ async function readContactBody(request: Request): Promise<unknown> {
 }
 
 export async function GET() {
-  return Response.json({ available: getContactEmailConfig() !== null }, { headers });
+  return Response.json({ available: getContactEmailConfig() !== null && getContactStoreConfig() !== null }, { headers });
 }
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return Response.json({ error: "Send your message from the Keepall contact page." }, { status: 403, headers });
   const config = getContactEmailConfig();
-  if (!config) return Response.json({ error: "Email sending isn't available yet. Copy your message or report it on GitHub." }, { status: 503, headers });
+  const storeConfig = getContactStoreConfig();
+  if (!config || !storeConfig) return Response.json({ error: "Email sending isn't available yet. Copy your message or report it on GitHub." }, { status: 503, headers });
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
     return Response.json({ error: "Send a JSON contact message." }, { status: 415, headers });
   }
@@ -58,10 +61,26 @@ export async function POST(request: Request) {
   }
   const fields = parseContactInput(input);
   if (!fields) return Response.json({ error: "Check your name, email, topic, and message, then try again." }, { status: 400, headers });
-  try {
-    await sendContactEmail(fields, config);
-    return Response.json({ accepted: true }, { headers });
-  } catch {
-    return Response.json({ error: "We couldn't confirm your message was sent. Your draft is still here. Try again later or copy it for GitHub." }, { status: 502, headers });
+  const identity = contactIdentity(request, fields.email, storeConfig.hashSecret);
+  if (!identity) return Response.json({ error: "Sending is temporarily unavailable. Your draft is still here." }, { status: 503, headers });
+  let reservation;
+  try { reservation = await reserveContactMessage(fields, identity, storeConfig); }
+  catch {
+    return Response.json({ error: "Sending is temporarily unavailable. Your draft is still here." }, { status: 503, headers });
   }
+  if (!reservation.allowed) {
+    return Response.json({ error: "You can send up to 3 messages per hour. Please try again later.", retryAfter: reservation.retryAfter }, { status: 429, headers: { ...headers, "Retry-After": String(reservation.retryAfter) } });
+  }
+  let providerId: string;
+  try { providerId = await sendContactEmail(fields, config); }
+  catch {
+    await recordContactDelivery(reservation.id, "unconfirmed", null, storeConfig).catch(() => {
+      console.error("Contact notification status could not be updated");
+    });
+    return Response.json({ recorded: true, error: "Your message was recorded, but we couldn't confirm the email notification. Your draft is still here." }, { status: 502, headers });
+  }
+  await recordContactDelivery(reservation.id, "accepted", providerId, storeConfig).catch(() => {
+    console.error("Contact notification status could not be updated");
+  });
+  return Response.json({ accepted: true }, { headers });
 }

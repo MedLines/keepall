@@ -81,7 +81,8 @@ export default function PrivacyPage() {
       <section id="contact" aria-labelledby="contact-title">
         <h2 id="contact-title">Contact messages</h2>
         <p>The <Link href="/contact">Contact form</Link> lets you write a support request, report a bug, or suggest an improvement. When email delivery is available and you choose Send message, your name, reply email, topic, message, and any bug details you enter go to Keepall&apos;s server, Resend, and the support inbox so we can respond.</p>
-        <p>The form does not attach your library, saved files, or browser data. Keepall does not store contact messages in an app database. Delivered messages remain with the email provider and support inbox. Leave out sensitive library content and never include a backup file.</p>
+        <p>The form does not attach your library, saved files, or browser data. Keepall stores the submitted fields, submission time, and email-notification status in its support database until manually deleted. Email notifications also remain with the email provider and support inbox under their own retention policies. Leave out sensitive library content and never include a backup file.</p>
+        <p>To limit unwanted submissions, Keepall allows up to three messages per hour per email and network address. The limiter stores secret-key hashes of the email and network address, rather than raw network addresses. Inactive limiter records older than two days are cleaned up when a notification status is saved; cleanup waits if there are no new submissions. Hosting providers may separately log request addresses.</p>
         <p>If email delivery is unavailable, the form tells you before submission. Copy report puts the text on your clipboard. Opening the GitHub fallback sends the report details to GitHub to prepare an issue and leaves out your name and email. You decide whether to post it publicly. GitHub issues are public.</p>
       </section>
     </WebsitePage>
