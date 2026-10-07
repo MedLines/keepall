@@ -1,9 +1,10 @@
 import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
-import { MAX_ARTICLE_TEXT_CHARACTERS, articleContentText, parseSavedArticle, type SavedArticle } from "@/domain/article";
+import { MAX_ARTICLE_TEXT_CHARACTERS, articleContentText, parseSavedArticle, type CapturedArticle, type SavedArticle } from "@/domain/article";
 import { extractArticleContent } from "./article-content";
 import { parsePreviewCandidateUrl, PreviewUrlBlockedError } from "./preview-ssrf";
 import { fetchPublicArticlePage } from "./article-http";
+import { captureArticleImages } from "./article-image";
 
 export const MAX_ARTICLE_HTML_BYTES = 2 * 1024 * 1024;
 export const ARTICLE_TIMEOUT_MS = 15_000;
@@ -85,8 +86,9 @@ async function captureResponse(response: Response, sourceUrl: string): Promise<S
   return extractArticleHtml(await readHtml(response), sourceUrl);
 }
 
-export async function fetchArticle(rawUrl: string, options?: { fetchImpl?: typeof fetch; assertUrl?: (url: string) => Promise<URL> }): Promise<SavedArticle> {
+export async function fetchArticle(rawUrl: string, options?: { fetchImpl?: typeof fetch; assertUrl?: (url: string) => Promise<URL> }): Promise<CapturedArticle> {
   const controller = new AbortController();
+  const deadline = Date.now() + ARTICLE_TIMEOUT_MS;
   const timer = setTimeout(() => controller.abort(), ARTICLE_TIMEOUT_MS);
   const fetchImpl = options?.fetchImpl ?? ((url, init) => fetchPublicArticlePage(String(url), init!.signal as AbortSignal));
   let current = rawUrl;
@@ -101,7 +103,10 @@ export async function fetchArticle(rawUrl: string, options?: { fetchImpl?: typeo
         current = new URL(location, allowed).href;
         continue;
       }
-      return await captureResponse(response, allowed.href);
+      const article = await captureResponse(response, allowed.href);
+      controller.signal.throwIfAborted();
+      const images = await captureArticleImages(article.content, { ...options, signal: controller.signal, deadline });
+      return images.length ? { ...article, images } : article;
     }
     throw new ArticleCaptureError("The website redirected too many times. Open the original page.");
   } catch (error) {

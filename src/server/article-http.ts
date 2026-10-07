@@ -17,7 +17,7 @@ export async function resolveArticleAddress(raw: string, resolveDns: typeof look
 }
 
 /** Pin the socket's lookup to an approved address; DNS cannot change between validation and connect. */
-export async function fetchPublicArticlePage(raw: string, signal: AbortSignal): Promise<Response> {
+export async function fetchPublicArticlePage(raw: string, signal: AbortSignal, accept = "text/html,application/xhtml+xml"): Promise<Response> {
   let abort: (() => void) | undefined;
   const resolved = await Promise.race([
     resolveArticleAddress(raw),
@@ -33,7 +33,7 @@ export async function fetchPublicArticlePage(raw: string, signal: AbortSignal): 
     const options: RequestOptions & { autoSelectFamily: boolean } = {
       method: "GET", signal, agent: false, autoSelectFamily: false,
       lookup: (_hostname, _options, callback) => callback(null, address.address, address.family),
-      headers: { Accept: "text/html,application/xhtml+xml", "Accept-Encoding": "identity", "User-Agent": "KeepallReader/1.0" },
+      headers: { Accept: accept, "Accept-Encoding": "identity", "User-Agent": "KeepallReader/1.0" },
     };
     const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(url, options, response => {
       const headers = new Headers();

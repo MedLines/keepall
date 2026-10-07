@@ -1,10 +1,26 @@
 import { expect, test, vi } from "vitest";
+import sharp from "sharp";
+import { articleImages, parseCapturedArticle } from "@/domain/article";
 import { extractArticleHtml, fetchArticle, ArticleCaptureError, MAX_ARTICLE_HTML_BYTES } from "./article-fetch";
 import { PreviewUrlBlockedError } from "./preview-ssrf";
 
 const paragraphs = Array.from({ length: 6 }, (_, i) => `<p>Section ${i}: Narwhals travel through Arctic waters, and scientists study their migration routes. This detailed report explains the evidence, the fieldwork, and why these observations matter for their habitat.</p>`).join("");
 const html = `<html><head><title>Ocean reporting</title><meta name="author" content="Ada Writer"></head><body><nav>Home Subscribe Account</nav><article><h1>Ocean reporting</h1>${paragraphs}<script>globalThis.articleScriptRan = true</script><img src="http://localhost/private" onerror="alert(1)"></article><footer>All rights reserved</footer></body></html>`;
 const assertUrl = vi.fn(async (url: string) => new URL(url));
+
+test("captures readable inline charts as WebP payloads alongside article text", async () => {
+  const chart = await sharp({ create: { width: 500, height: 300, channels: 3, background: "#407baa" } }).png().toBuffer();
+  const articleHtml = html.replace("</article>", '<figure><img src="/chart.png" alt="Query throughput chart"><figcaption>Query throughput over time.</figcaption></figure></article>');
+  const fetchImpl = vi.fn(async (url: string | URL | Request) => String(url).endsWith("chart.png")
+    ? new Response(chart, { headers: { "content-type": "image/png" } })
+    : new Response(articleHtml, { headers: { "content-type": "text/html" } }));
+  const result = await fetchArticle("https://example.com/report", { fetchImpl, assertUrl });
+  expect(result.text).toContain("Section 5:");
+  expect(articleImages(result.content)).toHaveLength(1);
+  expect(result.images).toHaveLength(1);
+  expect(result.images?.[0]).toMatchObject({ sourceUrl: "https://example.com/chart.png", mimeType: "image/webp" });
+  expect(parseCapturedArticle(result)).toEqual(result);
+});
 
 test("extracts actual article paragraphs and author without navigation, HTML or scripts", () => {
   const result = extractArticleHtml(html, "https://example.com/report", 100);
@@ -101,4 +117,22 @@ test("retains images inside enlargement buttons without keeping interactive mark
   expect(JSON.stringify(article.content)).toContain('"alt":"Throughput chart"');
   expect(JSON.stringify(article.content)).toContain("Observed throughput");
   expect(JSON.stringify(article.content)).not.toMatch(/onclick|onerror|button|Enlarge chart/);
+});
+
+test("the article deadline also bounds images and keeps readable text when they stall", async () => {
+  vi.useFakeTimers();
+  try {
+    const articleHtml = html.replace("</article>", '<figure><img src="/slow.png" alt="Slow chart"></figure></article>');
+    const fetchImpl = vi.fn((url: string | URL | Request, init?: RequestInit) => String(url).endsWith("slow.png")
+      ? new Promise<Response>((_resolve, reject) => { init!.signal!.addEventListener("abort", () => reject(new Error("Deadline")), { once: true }); })
+      : Promise.resolve(new Response(articleHtml, { headers: { "content-type": "text/html" } })));
+    const pending = fetchArticle("https://example.com/report", { fetchImpl, assertUrl });
+    await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+    expect(fetchImpl.mock.calls[0][1]?.signal).toBe(fetchImpl.mock.calls[1][1]?.signal);
+    await vi.advanceTimersByTimeAsync(15_000);
+    const result = await pending;
+    expect(result.text).toContain("Section 5:");
+    expect(result.images).toBeUndefined();
+    expect(articleImages(result.content)).toHaveLength(1);
+  } finally { vi.useRealTimers(); }
 });
