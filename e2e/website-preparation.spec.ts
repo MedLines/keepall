@@ -4,6 +4,7 @@ import sharp from "sharp";
 const publicRoutes = [
   "/about", "/help", "/contact", "/changelog", "/privacy", "/blog",
   "/blog/design-reference-library", "/blog/browser-bookmarks",
+  "/help/search", "/help/documents", "/help/preview", "/help/notes",
 ];
 const informationLinks = [
   ["Contact", "/contact"], ["Changelog", "/changelog"], ["Privacy", "/privacy"],
@@ -323,4 +324,36 @@ test("titles, descriptions and share images are usable on every public route", a
     expect(dimensions.width).toBe(1200);
     expect(dimensions.height).toBe(630);
   }
+});
+
+ test("new About sections show working captures and preserve the three-card stack", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/about");
+  await expect(page.locator(".ka-stack .ka-feature-card")).toHaveCount(3);
+  for (const id of ["reading", "image-tools"]) {
+    const section = page.locator(`#${id}`);
+    await section.scrollIntoViewIfNeeded();
+    await expect(section).toBeVisible();
+    for (const image of await section.locator("img").all()) {
+      await image.scrollIntoViewIfNeeded();
+      await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+    }
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("Contact rate limit keeps the draft and displays Retry-After", async ({ page }) => {
+  await page.route("**/api/contact", route => route.fulfill(route.request().method() === "GET"
+    ? { json: { available: true } }
+    : { status: 429, headers: { "Retry-After": "153" }, json: { retryAfter: 153 } }));
+  await page.goto("/contact");
+  const submit = page.getByRole("button", { name: "Send message" });
+  await expect(submit).toBeEnabled();
+  await page.getByLabel("Name", { exact: true }).fill("Preview tester");
+  await page.getByLabel("Email", { exact: true }).fill("preview@example.com");
+  await page.getByLabel("Message", { exact: true }).fill("My draft stays here.");
+  await submit.click();
+  await expect(page.getByRole("alert")).toContainText("Please try again in 3 minutes");
+  await expect(page.getByLabel("Message", { exact: true })).toHaveValue("My draft stays here.");
 });

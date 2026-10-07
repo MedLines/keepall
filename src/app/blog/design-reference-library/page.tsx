@@ -5,7 +5,7 @@ import collectionsOverviewImage from "../../../../public/marketing/app-collectio
 import collectionImage from "../../../../public/marketing/app-collection.webp";
 import saveItemImage from "../../../../public/marketing/app-save-item.webp";
 import tagsImage from "../../../../public/marketing/app-tags.webp";
-import searchImage from "../../../../public/marketing/app-search.webp";
+import searchImage from "../../../../public/marketing/app-design-search.webp";
 import { WebsitePage } from "../../website-page";
 import { websiteOpenGraphImage, websiteTwitterImage } from "../../website-metadata";
 
@@ -89,7 +89,7 @@ export default function DesignReferenceArticle() {
           <figcaption>Searching quiet spaces finds notes in different collections. The highlighted words show why each result matches.</figcaption>
         </figure>
         <p>Write down which detail you want to try in your own project. This is a good moment to stop collecting and test an idea. The reference has done its job when it helps you make a decision.</p>
-        <p>Use the type filter beside search to narrow the result, or choose a collection or tag in the sidebar. Open the sort control and choose Best match while searching to put title matches first. See <Link href="/help/collections-and-tags#search">search and filters</Link> for the details.</p>
+        <p>Use the type filter beside search to narrow the result, or choose a collection or tag in the sidebar. Open the sort control and choose Best match while searching to put title matches first. See <Link href="/help/search#words">search and filters</Link> for the details.</p>
       </section>
       <section id="backup">
         <h2>Keep a copy of the work</h2>

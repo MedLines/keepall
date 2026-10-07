@@ -1,8 +1,8 @@
 # About and Help feature coverage
 
-Audited on 2026-10-07 against website branch `afbb180` and app main `7effa37`. Their shared app base is `9e62f9e`; the later main commit changes collection-card styling, not feature behavior. This is an implementation plan. No About or Help page changes have been made by this audit.
+Audited on 2026-10-07 against website branch `afbb180` and app main `7effa37`. Their shared app base is `9e62f9e`; the later main commit changes collection-card styling, not feature behavior. Implemented on `feature/website-feature-coverage` in the isolated preview worktree. The original checkout remains unchanged. About, Help, capture assets, and Contact records were implemented in separate worktrees.
 
-## Coverage today
+## Coverage at audit
 
 Help already describes most requested capabilities. Several are buried inside broader guides, while About omits them or gives them too little explanation. Four new focused guides would make these features easier to find without duplicating all existing instructions.
 
@@ -76,4 +76,21 @@ Keep About and Help implementation in separate worktrees branched from the isola
 
 ## Contact activation
 
-The form and sending endpoint already exist. They need `RESEND_API_KEY`, `CONTACT_FROM_EMAIL`, and `CONTACT_TO_EMAIL` in the server environment. No database is used or required. See [Contact email setup](contact-email.md) for sender verification, local restart/hosted redeployment, testing restrictions, public rate limiting, and receipt/reply checks. `.env.example` now lists all three optional variables as empty values; no credentials were configured and no email was sent during this audit.
+Contact now records submissions in Neon Postgres before notifying the support inbox through Resend. It requires `DATABASE_URL`, `CONTACT_RATE_LIMIT_SECRET`, `RESEND_API_KEY`, `CONTACT_FROM_EMAIL`, and `CONTACT_TO_EMAIL`. Apply `db/contact.sql` first. Messages remain until manually deleted; the separate database limiter allows three submissions per rolling hour per email and trusted network identity. See [Contact setup](contact-email.md) for activation, SQL record review/deletion, failure semantics, and abuse controls. No hosted database was provisioned and no live email was sent.
+
+## Where to review the implementation
+
+The dev preview runs at `http://localhost:3115` from `/tmp/keepall-website-preparation`, checked out on `feature/website-feature-coverage`.
+
+- `/about`: existing Library and Search demos now show documents, image text, and local video.
+- `/about#reading`: saved article, PDF, and Markdown reader section.
+- `/about#image-tools`: palette, color search, and English screenshot recognition.
+- `/about#collection`: updated organization/import/privacy/backup copy; offline FAQ near the bottom.
+- `/help`: grouped guide index, feature-specific thumbnails, and direct Palette, Read text, and Videos links.
+- `/help/search`, `/help/documents`, `/help/preview`, `/help/notes`: new focused guides.
+- `/help/images-and-videos#palette` and `#image-text`: expanded image analysis instructions and limits.
+- `/help/collections-and-tags`, `/help/getting-started`, `/help/saved-articles`, `/help/offline`, `/help/storage-and-backups`: corrected actions and linked explanations.
+- `/contact`: retention disclosure, three-per-hour message, safe retry/failure states, and existing matching controls. Sending remains disabled until credentials/schema are configured.
+- `/privacy#contact`: record storage, manual retention, rate-limiter hashes, and cleanup explanation.
+
+The earlier Contact navigation/button fixes, blog thumbnails, changelog entries, and public-page footer remain in this branch. Press kit remains parked.

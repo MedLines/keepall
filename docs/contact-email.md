@@ -57,7 +57,7 @@ The same-origin check uses the existing reverse-proxy convention (`x-forwarded-h
 ## Verification
 
 ```sh
-pnpm exec vitest run src/server/contact.test.ts src/server/contact-identity.test.ts src/server/contact-store.test.ts src/app/contact/contact-form.test.tsx
+pnpm exec vitest run src/server/contact.test.ts src/server/contact-identity.test.ts src/server/contact-store.test.ts src/server/contact-input.test.ts src/app/contact/contact-form.test.tsx
 pnpm typecheck
 pnpm exec eslint src/app/contact src/app/api/contact src/server/contact*.ts scripts/test-contact-postgres.mjs
 

@@ -1,1 +1,1 @@
-Keepall, a personal library for links, notes, images, and videos, with a view of the app.
+Keepall, a personal library for links, notes, images, videos, and documents, with a view of the app.
