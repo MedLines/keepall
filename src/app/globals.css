@@ -101,7 +101,6 @@
   --radius-input: 1rem;
   --radius-panel: 1.25rem;
   --radius-library-panel: 2rem;
-  --radius-card: 4rem;
   --spacing-card-inset: 0.5rem;
   --corner-shape-panel: squircle;
   --corner-shape-control: superellipse(1.5);
@@ -112,6 +111,11 @@
     0 1px 2px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.24)),
     0 4px 12px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.28)),
     0 12px 24px -6px light-dark(oklch(0 0 0 / 0.18), oklch(0 0 0 / 0.4));
+}
+
+/* Keep this token dynamic so rounded-card and inset media share the fallback. */
+@theme {
+  --radius-card: 1.5rem;
 }
 
 @layer components {
@@ -284,6 +288,9 @@
 }
 
 @supports (corner-shape: squircle) {
+  :root {
+    --radius-card: 4rem;
+  }
   .library-panel, .library-card, .library-card-media, .item-workspace-media {
     corner-shape: var(--corner-shape-panel);
   }
@@ -389,6 +396,12 @@
 
 .library-panel {
   border-radius: var(--radius-library-panel);
+}
+
+@supports not (corner-shape: squircle) {
+  .library-panel {
+    border-radius: var(--radius-card);
+  }
 }
 
 .item-workspace-media {

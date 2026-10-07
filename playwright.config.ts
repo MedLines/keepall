@@ -15,6 +15,11 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "firefox",
+      testMatch: "**/library-corners.spec.ts",
+      use: { ...devices["Desktop Firefox"] },
+    },
   ],
   webServer: {
     command: "pnpm exec next start --port 3100",
