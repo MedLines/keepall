@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import type { BookmarksHtmlCollectionPolicy } from "@/domain/bookmarks-html";
 import { BookmarksHtmlParseError, formatSkippedBookmarksLog, importBookmarksHtmlMerge, type BookmarksHtmlImportSummary } from "@/persistence/bookmarks-html-import";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
+import { abortable } from "@/lib/abortable";
 
 function downloadTextFile(filename: string, text: string) {
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
@@ -20,13 +21,18 @@ type Operation = "read-bookmarks" | "import-bookmarks";
 type Props = {
   buttonClassName: string;
   label?: string;
+  description?: string;
   disabled?: boolean;
   onBusyChange: (busy: boolean) => void;
 };
 
-export function BookmarksImport({ buttonClassName, label = "Import bookmarks", disabled = false, onBusyChange }: Props) {
+export function BookmarksImport({ buttonClassName, label = "Import bookmarks", description, disabled = false, onBusyChange }: Props) {
+  const descriptionId = useId();
   const bookmarksFileInputRef = useRef<HTMLInputElement>(null);
   const operationRef = useRef<Operation | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [operation, setOperation] = useState<Operation | null>(null);
   const [pendingBookmarksHtml, setPendingBookmarksHtml] = useState<string | null>(null);
   const [collectionPolicy, setCollectionPolicy] = useState<BookmarksHtmlCollectionPolicy>("unsorted-only");
@@ -42,11 +48,22 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
     if (operationRef.current) return false;
     operationRef.current = next;
     setOperation(next);
+    abortRef.current = new AbortController();
+    setCancelling(false);
+    setProgress(null);
     return true;
   }
   function finish() {
     operationRef.current = null;
+    abortRef.current = null;
     setOperation(null);
+    setCancelling(false);
+    setProgress(null);
+  }
+  function cancelRunningImport() {
+    if (!abortRef.current || abortRef.current.signal.aborted) return;
+    setCancelling(true);
+    abortRef.current.abort();
   }
 
   async function onBookmarksFileChange(fileList: FileList | null) {
@@ -56,15 +73,17 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
     }
 
     if (!start("read-bookmarks")) return;
+    const signal = abortRef.current!.signal;
     setError(null);
     setStatus(null);
     setLastBookmarksSummary(null);
 
     try {
-      setPendingBookmarksHtml(await file.text());
+      setPendingBookmarksHtml(await abortable(file.text(), signal));
       setCollectionPolicy("unsorted-only");
     } catch {
-      setError("Couldn't read bookmarks file.");
+      if (signal.aborted) setStatus("Bookmarks reading canceled.");
+      else setError("Couldn't read bookmarks file.");
     } finally {
       finish();
       if (bookmarksFileInputRef.current) {
@@ -88,16 +107,17 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
 
     const html = pendingBookmarksHtml;
     if (!start("import-bookmarks")) return;
+    const signal = abortRef.current!.signal;
     setError(null);
     setStatus(null);
 
     try {
-      const summary = await importBookmarksHtmlMerge(html, { collectionPolicy });
+      const summary = await importBookmarksHtmlMerge(html, { collectionPolicy, signal, onProgress: (done, total) => setProgress({ done, total }) });
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
       dispatchPreviewWelcome(summary.addedLinkIds);
       setLastBookmarksSummary(summary);
       setStatus(
-        `Bookmarks: ${summary.added} added, ${summary.merged} merged, ${summary.skipped} skipped.`,
+        `${summary.cancelled ? "Bookmark import canceled. Completed bookmarks are kept." : "Bookmarks:"} ${summary.added} added, ${summary.merged} merged, ${summary.skipped} skipped.`,
       );
       setPendingBookmarksHtml(null);
     } catch (caught) {
@@ -145,10 +165,10 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
         <button
           className={dialogButtonClass}
           type="button"
-          disabled={busy}
-          onClick={cancelBookmarksImport}
+          disabled={cancelling}
+          onClick={busy ? cancelRunningImport : cancelBookmarksImport}
         >
-          Cancel
+          {busy ? cancelling ? "Canceling…" : "Cancel import" : "Cancel"}
         </button>
         <button
           className={`${dialogButtonClass} ui-primary`}
@@ -161,7 +181,11 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
       </>}
     >
 
-    <p role="status" aria-live="polite">{operation === "import-bookmarks" ? "Importing bookmarks…" : ""}</p>
+    {operation === "import-bookmarks" ? <div className="space-y-2">
+      <p role="status" aria-live="polite">{cancelling ? "Canceling import… Finishing the current bookmark." : "Importing bookmarks…"}{progress ? ` ${progress.done} of ${progress.total} bookmarks processed.` : ""}</p>
+      <progress aria-label="Bookmark import progress" value={progress?.done} max={progress?.total || undefined} className="h-2 w-full accent-action-primary" />
+      <p className="text-xs leading-relaxed text-text-secondary">Cancel stops before the next bookmark. Completed bookmarks stay in your library.</p>
+    </div> : null}
 
     <fieldset className="flex flex-col gap-2 border-0 p-0">
       <legend className="text-sm font-medium text-text-primary">
@@ -228,9 +252,10 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
 
   return (
     <div className="min-w-0">
-      <button className={buttonClassName} type="button" disabled={disabled || busy} onClick={() => bookmarksFileInputRef.current?.click()}>
+      <button className={buttonClassName} type="button" aria-describedby={description ? descriptionId : undefined} disabled={disabled || busy} onClick={() => bookmarksFileInputRef.current?.click()}>
         {label}
       </button>
+      {description ? <p id={descriptionId} className="mt-2 text-xs leading-relaxed text-text-secondary">{description}</p> : null}
       {bookmarksFileInput}
       {bookmarksDialog}
       {operation || status ? (
@@ -239,6 +264,8 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
         </p>
       ) : null}
       {operation ? <progress aria-label="Bookmark import progress" className="mt-2 h-2 w-full accent-action-primary" /> : null}
+      {operation === "read-bookmarks" ? <button className={`${dialogButtonClass} mt-2`} type="button" disabled={cancelling}
+        onClick={cancelRunningImport}>{cancelling ? "Canceling…" : "Cancel reading"}</button> : null}
       {lastBookmarksSummary && lastBookmarksSummary.skippedRows.length > 0 ? (
         <button className="mt-2 text-left text-sm font-medium text-text-primary underline" type="button" onClick={onDownloadSkippedLog}>
           Download skipped links (.txt)

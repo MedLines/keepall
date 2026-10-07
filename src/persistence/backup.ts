@@ -28,6 +28,8 @@ import {
 } from "./library-preferences";
 import { createTag } from "./tags";
 import { readBackupSnapshot } from "./backup-snapshot";
+import { abortable } from "@/lib/abortable";
+import { cancellableWrite } from "./cancellable-write";
 
 export async function countCurrentLibrary(): Promise<BackupCounts> {
   const db = getDb();
@@ -82,7 +84,9 @@ export async function replaceValidatedBackup(
   thumbnails: Thumbnail[] = [],
   documents: DocumentAsset[] = [],
   onProgress?: (progress: BackupImportProgress) => void,
+  signal?: AbortSignal,
 ): Promise<KeepallBackup> {
+  signal?.throwIfAborted();
   const db = getDb();
 
   const restoredAssets = backup.assets.map((record) =>
@@ -102,17 +106,19 @@ export async function replaceValidatedBackup(
   let preparedAssets = 0;
   onProgress?.({ phase: "preparing-media", completed: 0, total: restoredAssets.length });
   for (const asset of restoredAssets) {
+    signal?.throwIfAborted();
     if (imageAssetIds.has(asset.id) && !existingThumbnailIds.has(asset.id)) {
-      const blob = await imageThumbnail(asset.bytes, asset.mimeType);
+      const blob = await abortable(imageThumbnail(asset.bytes, asset.mimeType), signal);
       if (blob) generatedThumbnails.push({ assetId: asset.id, blob });
     }
     onProgress?.({ phase: "preparing-media", completed: ++preparedAssets, total: restoredAssets.length });
   }
 
   onProgress?.({ phase: "saving-library" });
-  await db.transaction(
-    "rw",
+  await cancellableWrite(
+    db,
     [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.preferences, db.previewLayouts],
+    signal,
     async () => {
       await Promise.all([
         db.items.clear(),
@@ -184,7 +190,9 @@ export async function importKeepallBackupMerge(
   media?: MergeMedia,
   documents?: MergeDocuments,
   onProgress?: (progress: BackupImportProgress) => void,
+  signal?: AbortSignal,
 ): Promise<{ backup: KeepallBackup; summary: KeepallMergeSummary }> {
+  signal?.throwIfAborted();
   const backup = parseKeepallBackup(raw);
   const imageAssetIds = new Set(backup.items.filter((item) => item.type === "image").flatMap((item) => item.assetIds));
   const thumbnails = new Map(media?.thumbnails.map((thumbnail) => [thumbnail.assetId, thumbnail.blob]));
@@ -192,18 +200,20 @@ export async function importKeepallBackupMerge(
   onProgress?.({ phase: "preparing-media", completed: 0, total: backup.assets.length });
   // Decode images before opening the write transaction; browser APIs can otherwise commit it early.
   for (const record of backup.assets) {
+    signal?.throwIfAborted();
     const bytes = binaryAssets?.get(record.id) ?? base64ToBytes(record.dataBase64);
     assets.push({
       sourceId: record.id,
-      input: { mimeType: record.mimeType, bytes, contentHash: record.contentHash || await hashAssetBytes(bytes) },
-      thumbnail: thumbnails.get(record.id) ?? (imageAssetIds.has(record.id) ? await imageThumbnail(bytes, record.mimeType) : null),
+      input: { mimeType: record.mimeType, bytes, contentHash: record.contentHash || await abortable(hashAssetBytes(bytes), signal) },
+      thumbnail: thumbnails.get(record.id) ?? (imageAssetIds.has(record.id) ? await abortable(imageThumbnail(bytes, record.mimeType), signal) : null),
     });
     onProgress?.({ phase: "preparing-media", completed: assets.length, total: backup.assets.length });
   }
   const db = getDb();
   onProgress?.({ phase: "saving-library" });
-  return db.transaction("rw",
+  return cancellableWrite(db,
     [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.preferences],
+    signal,
     async () => mergeValidatedBackup(backup, assets, media, documents, onProgress),
   );
 }

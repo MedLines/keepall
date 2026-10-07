@@ -205,6 +205,9 @@ export function CaptureHost() {
   const [imageLayout, setImageLayout] = useState<"gallery" | "separate" | null>(null);
   const [fileResults, setFileResults] = useState<FileImportResult[]>([]);
   const [fileProgress, setFileProgress] = useState<CaptureImportProgress | null>(null);
+  const importAbortRef = useRef<AbortController | null>(null);
+  const [importCancelling, setImportCancelling] = useState(false);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
   const [fileQuotaWarning, setFileQuotaWarning] = useState<string | null>(null);
   const [importSavedCount, setImportSavedCount] = useState(0);
   const saveInFlightRef = useRef(false);
@@ -391,6 +394,10 @@ export function CaptureHost() {
   }
 
   function resetSession() {
+    importAbortRef.current?.abort();
+    importAbortRef.current = null;
+    setImportCancelling(false);
+    setImportNotice(null);
     clipboardTextUntouchedRef.current = false;
     setBulkImportOpen(false);
     setBulkImagesPreparing(false);
@@ -549,11 +556,13 @@ export function CaptureHost() {
         ? new File([file], file.name, { type: mimeType }) : file;
     });
     if (!selected.length) return;
+    setImportNotice(null);
     if (selected.every((file) => classifyCaptureFile(file).kind === "image") && !videoDraft && !hasFileBatch) {
+      const generation = imageReadGenerationRef.current;
       if (bulk) setBulkImagesPreparing(true);
       let added;
       try { added = await setDraftFromFiles(selected, state.input, state.status); }
-      finally { if (bulk) setBulkImagesPreparing(false); }
+      finally { if (bulk && generation === imageReadGenerationRef.current) setBulkImagesPreparing(false); }
       if (added && (selected.length > 1 || imageDrafts.length > 0)) {
         if (!imageLayoutRequired) setImageLayout(null);
         setImageLayoutRequired(true);
@@ -646,6 +655,10 @@ export function CaptureHost() {
   async function saveSeparateFiles(files: File[], org: CaptureOrgDrafts) {
     if (saveInFlightRef.current) return;
     saveInFlightRef.current = true;
+    const controller = new AbortController();
+    importAbortRef.current = controller;
+    setImportCancelling(false);
+    setImportNotice(null);
     dispatch({ type: "save" });
     const previous = fileResults;
     const indexes = files.map((_, index) => index).filter((index) => previous[index]?.status !== "saved");
@@ -657,21 +670,26 @@ export function CaptureHost() {
     try {
       const summary = await importFiles(pending, {
         prepareVideo: prepareLocalVideo, collectionName: org.collectionName ?? undefined, tagNames: org.tagNames,
+        signal: controller.signal,
         onStage: (stage, fileName) => setFileProgress({ stage, fileName, done: savedCount + failedCount, total: pending.length, saved: savedCount, failed: failedCount }),
         onProgress: (done, result) => {
           completed[indexes[done - 1]] = result;
           if (result.status === "saved") savedCount += 1;
-          else failedCount += 1;
+          else if (result.status === "failed") failedCount += 1;
           setFileProgress({ stage: "saving", fileName: result.fileName, done, total: pending.length, saved: savedCount, failed: failedCount });
           if (done % 8 === 0 || done === pending.length) setFileResults([...completed]);
         },
       });
       summary.results.forEach((result, index) => { completed[indexes[index]] = result; });
-      setFileResults(completed);
-      const saved = completed.filter((result) => result.status === "saved").length;
-      const failed = completed.length - saved;
+      const results = summary.cancelled ? files.map((file, index): FileImportResult => completed[index] ?? { fileName: file.name, status: "cancelled" }) : completed;
+      setFileResults(results);
+      const saved = results.filter((result) => result.status === "saved").length;
+      const failed = results.filter((result) => result.status === "failed").length;
       if (saved) window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-      if (failed) dispatch({ type: "failed", message: `${saved} saved, ${failed} failed. Retry saves only the failed files.` });
+      if (summary.cancelled) {
+        setImportNotice(`Import canceled. ${saved} saved, ${failed} failed, ${results.filter(result => result.status === "cancelled").length} not imported. Continue imports only the remaining files.`);
+        dispatch({ type: "batchSaved" });
+      } else if (failed) dispatch({ type: "failed", message: `${saved} saved, ${failed} failed. Retry saves only the failed files.` });
       else {
         const keepDraft = Boolean(imageDrafts.length && hasFileBatch || videoDraft || documentDraft || state.input.trim() && !clipboardTextUntouchedRef.current);
         setFileDrafts(null);
@@ -685,7 +703,21 @@ export function CaptureHost() {
       if (completed.some((result) => result?.status === "saved")) window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
       setFileResults(files.map((file, index) => completed[index] ?? { fileName: file.name, status: "failed", error: "Import stopped. Retry this file." }));
       dispatch({ type: "failed", message: "Import stopped. Retry saves only the failed files." });
-    } finally { saveInFlightRef.current = false; setFileProgress(null); }
+    } finally { saveInFlightRef.current = false; importAbortRef.current = null; setImportCancelling(false); setFileProgress(null); }
+  }
+
+  function cancelCaptureImport() {
+    if (bulkImagesPreparing) {
+      imageReadGenerationRef.current += 1;
+      imageUploadInFlightRef.current = false;
+      setImageUpload(null);
+      setBulkImagesPreparing(false);
+      setImportNotice("Image selection canceled. No images from this selection were added.");
+      return;
+    }
+    if (!importAbortRef.current || importAbortRef.current.signal.aborted) return;
+    setImportCancelling(true);
+    importAbortRef.current.abort();
   }
 
   async function persistCapture(options?: {
@@ -818,6 +850,8 @@ export function CaptureHost() {
     saveInFlightRef.current = true;
     dispatch({ type: "save" });
     setLinkConflict(null);
+    const galleryController = atomicGallery ? new AbortController() : null;
+    if (galleryController) { importAbortRef.current = galleryController; setImportCancelling(false); setImportNotice(null); }
 
     try {
       let itemId = savedItemIdRef.current;
@@ -839,7 +873,7 @@ export function CaptureHost() {
             ...(fields.caption && noteFormat === "markdown" ? { captionFormat: "markdown" as const } : {}),
           };
           // A file's text belongs to this item, even if its images were saved before.
-          const image = atomicGallery ? await createImage({ ...input, collectionName: org.collectionName ?? undefined, tagNames: org.tagNames }) : documentDraft ? await createImage(input) : (await createOrReuseImage(input)).image;
+          const image = atomicGallery ? await createImage({ ...input, collectionName: org.collectionName ?? undefined, tagNames: org.tagNames, signal: galleryController!.signal }) : documentDraft ? await createImage(input) : (await createOrReuseImage(input)).image;
           itemId = image.id;
         } else if (documentDraft) {
           const format = noteFormat === "markdown" ? "markdown" : "text";
@@ -891,6 +925,11 @@ export function CaptureHost() {
 
       dispatch({ type: "saved" });
     } catch (caught) {
+      if (galleryController?.signal.aborted && !savedItemIdRef.current) {
+        setImportNotice("Gallery import canceled. No items were saved.");
+        dispatch({ type: "batchSaved" });
+        return;
+      }
       if (savedItemIdRef.current) {
         dispatch({
           type: "failed",
@@ -911,6 +950,7 @@ export function CaptureHost() {
       }
     } finally {
       saveInFlightRef.current = false;
+      if (galleryController) { importAbortRef.current = null; setImportCancelling(false); }
     }
   }
 
@@ -1060,8 +1100,8 @@ export function CaptureHost() {
         ) : null}
         {hasFileBatch && !fileProgress ? <CaptureFileList files={fileDrafts!} results={fileResults} disabled={composeLocked}
           onRemove={(index) => { setFileDrafts((files) => files && files.length > 1 ? files.filter((_, position) => position !== index) : null); }} /> : null}
-        {!hasFileBatch && fileResults.some((result) => result.status === "failed") ? <ul aria-label="Failed files" className="space-y-2 text-xs text-text-danger">
-          {fileResults.map((result, index) => result.status === "failed" ? <li key={index}>{result.fileName}: {result.error}</li> : null)}
+        {!hasFileBatch && fileResults.some((result) => result.status !== "saved") ? <ul aria-label="Files not imported" className="space-y-2 text-xs text-text-secondary">
+          {fileResults.map((result, index) => result.status !== "saved" ? <li key={index}>{result.fileName}: {result.status === "failed" ? result.error : "Not imported"}</li> : null)}
         </ul> : null}
         {fileQuotaWarning ? <p role="status" className="text-sm text-text-warning">{fileQuotaWarning}</p> : null}
         {savingImage && imageLayoutRequired && !hasFileBatch ? <CaptureImageLayout mode={imageLayout} disabled={composeLocked}
@@ -1213,6 +1253,7 @@ export function CaptureHost() {
             {state.error}
           </p>
         ) : null}
+        {importNotice ? <p role="status" className="text-sm text-text-secondary">{importNotice}</p> : null}
         </div>
         </ScrollArea>
         <div
@@ -1254,7 +1295,7 @@ export function CaptureHost() {
               imageUploadError !== null
             }
           >
-            {state.status === "saving" ? "Saving…" : fileResults.some((result) => result.status === "failed") ? "Retry failed files" : "Save"}
+            {state.status === "saving" ? "Saving…" : fileResults.some((result) => result.status === "cancelled") ? "Continue import" : fileResults.some((result) => result.status === "failed") ? "Retry failed files" : "Save"}
           </button>
           {state.status === "saved" ? (
             <p className="text-xs text-text-secondary">Saved.</p>
@@ -1263,7 +1304,7 @@ export function CaptureHost() {
           )}
         </div>
       </form>
-      <CaptureImportProgressDialog progress={fileProgress ?? (bulkImagesPreparing && imageUpload
+      <CaptureImportProgressDialog onCancel={cancelCaptureImport} cancelling={importCancelling} progress={fileProgress ?? (bulkImagesPreparing && imageUpload
         ? { stage: "preparing-images", done: imageUpload.completed, total: imageUpload.total, fileName: imageUpload.fileName, saved: 0, failed: 0 }
         : state.status === "saving" && imageLayoutRequired && imageLayout === "gallery" && !hasFileBatch
           ? { stage: "saving-gallery", done: 0, total: imageDrafts.length, saved: 0, failed: 0 } : null)} />
@@ -1272,7 +1313,7 @@ export function CaptureHost() {
           open={bulkImportOpen}
           onOpenChange={setBulkImportOpen}
           title="Bulk import"
-          description="Import separate items from files, a folder, or browser bookmarks."
+          description="Add files, import a folder, or bring in browser bookmarks."
           busy={folderImportBusy || bookmarksImportBusy}
           footer={(
             <button
@@ -1285,25 +1326,28 @@ export function CaptureHost() {
             </button>
           )}
         >
-          <BulkFileImport
-            onSelect={(files, collectionName, quotaWarning) => {
-              setBulkImportOpen(false);
-              setDraftCollectionName(collectionName.trim() || null);
-              setCollectionInput("");
-              setFileQuotaWarning(quotaWarning);
-              void stageFiles(files, true);
-            }}
-            buttonClassName="ui-control min-h-11 w-full px-4 text-left text-sm font-medium disabled:opacity-60"
-            disabled={composeLocked}
-            defaultCollectionName={draftCollectionName ?? collectionInput.trim()}
-            onBusyChange={setFolderImportBusy}
-          />
-          <BookmarksImport
-            buttonClassName="ui-control min-h-11 w-full px-4 text-left text-sm font-medium disabled:opacity-60"
-            label="Import bookmarks HTML"
-            disabled={composeLocked}
-            onBusyChange={setBookmarksImportBusy}
-          />
+          <div className="space-y-3">
+            <BulkFileImport
+              onSelect={(files, collectionName, quotaWarning) => {
+                setBulkImportOpen(false);
+                setDraftCollectionName(collectionName.trim() || null);
+                setCollectionInput("");
+                setFileQuotaWarning(quotaWarning);
+                void stageFiles(files, true);
+              }}
+              buttonClassName="ui-control min-h-11 w-full px-4 text-left text-sm font-medium disabled:opacity-60"
+              disabled={composeLocked}
+              defaultCollectionName={draftCollectionName ?? collectionInput.trim()}
+              onBusyChange={setFolderImportBusy}
+            />
+            <BookmarksImport
+              buttonClassName="ui-control min-h-11 w-full px-4 text-left text-sm font-medium disabled:opacity-60"
+              label="Import browser bookmarks"
+              description="Choose the bookmarks HTML file exported from your browser."
+              disabled={composeLocked}
+              onBusyChange={setBookmarksImportBusy}
+            />
+          </div>
         </ModalDialog>
       ) : null}
       <ConfirmDialog {...dismissal.confirmationProps} />

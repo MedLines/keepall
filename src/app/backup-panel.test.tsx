@@ -68,6 +68,31 @@ test("invalid files show an alert and never offer restore actions", async () => 
   expect(replace).not.toHaveBeenCalled();
 });
 
+test.each(["merge", "replace"] as const)("canceling a running %s waits for rollback and reports an unchanged library", async (mode) => {
+  const action = mode === "merge" ? merge : replace;
+  let finishRollback!: () => void;
+  action.mockImplementation((_report, signal: AbortSignal) => new Promise((_resolve, reject) => {
+    signal.addEventListener("abort", () => { finishRollback = () => reject(signal.reason); }, { once: true });
+  }));
+  const { container } = render(<BackupPanel />);
+  chooseFile(container);
+  const review = await screen.findByRole("dialog", { name: "Import backup" });
+  if (mode === "replace") {
+    fireEvent.click(within(review).getByRole("button", { name: "Replace library" }));
+    fireEvent.click(within(await screen.findByRole("dialog", { name: "Replace library?" })).getByRole("button", { name: "Confirm replacement" }));
+  } else fireEvent.click(within(review).getByRole("button", { name: "Merge" }));
+  const dialog = screen.getByRole("dialog", { name: mode === "merge" ? "Merging backup" : "Restoring library" });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel import" }));
+  expect(dialog).toBeVisible();
+  expect(within(dialog).getByRole("button", { name: "Canceling…" })).toBeDisabled();
+  fireEvent.keyDown(dialog, { key: "Escape" });
+  expect(dialog).toBeVisible();
+  await act(async () => finishRollback());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: /Merging backup|Restoring library/ })).toBeNull());
+  expect(screen.getByRole("status")).toHaveTextContent("Backup import canceled. Your library wasn't changed.");
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
 test("failed merges explain that the library is unchanged and allow another attempt", async () => {
   merge.mockRejectedValueOnce(new DOMException("Storage full", "QuotaExceededError"));
   const { container } = render(<BackupPanel />);
@@ -92,7 +117,7 @@ test("restore shows pending state and blocks a second operation until completion
   const confirm = await screen.findByRole("dialog", { name: "Replace library?" });
   fireEvent.click(within(confirm).getByRole("button", { name: "Confirm replacement" }));
   expect(within(confirm).getByRole("button", { name: "Restoring library…" })).toBeDisabled();
-  expect(within(confirm).getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(within(confirm).getByRole("button", { name: "Cancel import" })).toBeEnabled();
   expect(replace).toHaveBeenCalledOnce();
   finish([]);
   await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Library replaced from backup"));
@@ -132,7 +157,7 @@ test.each(["merge", "replace"] as const)("%s displays live progress inside its d
   expect(within(dialog).getByRole("progressbar")).toBeVisible();
   expect(dialog).toHaveTextContent("Keep this tab open");
   expect(within(dialog).getByRole("button", { name: "Close" })).toBeDisabled();
-  expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(within(dialog).getByRole("button", { name: "Cancel import" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "Close backup", hidden: true })).toBeDisabled();
   fireEvent.keyDown(dialog, { key: "Escape" });
   expect(dialog).toBeVisible();

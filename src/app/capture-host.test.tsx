@@ -162,6 +162,26 @@ describe("CaptureHost", () => {
     expect(screen.getByLabelText("Link, note, or image")).toHaveValue("");
   });
 
+  test("canceling a running file import keeps saved results and offers to continue only remaining files", async () => {
+    await openDraft("");
+    const files = [new File(["First"], "first.txt"), new File(["Second"], "second.txt")];
+    fireEvent.change(screen.getByLabelText("Choose files"), { target: { files } });
+    await screen.findByRole("region", { name: "Selected files" });
+    vi.mocked(importFiles).mockImplementationOnce((_files, options) => {
+      const result = { fileName: "first.txt", status: "saved" as const, itemId: "first" };
+      options.onProgress?.(1, result);
+      return new Promise(resolve => options.signal!.addEventListener("abort", () => resolve({ results: [result], cancelled: true }), { once: true }));
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    const progress = await screen.findByRole("dialog", { name: "Importing files" });
+    fireEvent.click(within(progress).getByRole("button", { name: "Cancel import" }));
+    expect(await screen.findByText(/Import canceled\. 1 saved, 0 failed, 1 not imported/)).toBeVisible();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Importing files" })).toBeNull());
+    vi.mocked(importFiles).mockResolvedValueOnce({ results: [{ fileName: "second.txt", status: "saved", itemId: "second" }] });
+    fireEvent.click(screen.getByRole("button", { name: "Continue import" }));
+    await waitFor(() => expect(importFiles).toHaveBeenLastCalledWith([files[1]], expect.anything()));
+  });
+
   for (const opener of ["shortcut", "button"] as const) {
     test(`defaults ${opener} capture to the active folder and allows overriding it`, async () => {
       vi.mocked(listCollections).mockResolvedValue([
@@ -439,6 +459,43 @@ describe("CaptureHost", () => {
     expect(within(saving).getByRole("button", { name: "Close" })).toBeDisabled();
     await act(async () => write.resolve(buildImageFromAssetIds({ assetIds: ["one", "two"] }, { id: "gallery", now: 1 })));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Importing files" })).toBeNull());
+  });
+
+  test("canceling image preparation preserves the draft and ignores a late read", async () => {
+    await openDraft("Keep this draft");
+    fireEvent.click(screen.getByRole("button", { name: "Bulk import" }));
+    const bulk = await screen.findByRole("dialog", { name: "Bulk import" });
+    const bytes = deferred<ArrayBuffer>();
+    const image = new File([new Uint8Array([1])], "pending.png", { type: "image/png" });
+    vi.spyOn(image, "arrayBuffer").mockReturnValue(bytes.promise);
+    fireEvent.change(bulk.querySelector('input[data-bulk-files]')!, { target: { files: [image] } });
+    const progress = await screen.findByRole("dialog", { name: "Importing files" });
+    fireEvent.click(within(progress).getByRole("button", { name: "Cancel import" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Importing files" })).toBeNull());
+    expect(screen.getByLabelText("Link, note, or image")).toHaveValue("Keep this draft");
+    await act(async () => bytes.resolve(new Uint8Array([1]).buffer));
+    expect(screen.queryByLabelText("1 image attached")).toBeNull();
+    expect(createImage).not.toHaveBeenCalled();
+  });
+
+  test("canceling a gallery waits for rollback, keeps its draft and reports no saved items", async () => {
+    await openDraft("");
+    fireEvent.change(screen.getByLabelText("Choose files"), { target: { files: [
+      new File([new Uint8Array([1])], "one.png", { type: "image/png" }),
+      new File([new Uint8Array([2])], "two.png", { type: "image/png" }),
+    ] } });
+    await screen.findByLabelText("2 images attached");
+    fireEvent.click(screen.getByRole("radio", { name: /One image item/ }));
+    vi.mocked(createImage).mockImplementation(input => new Promise((_resolve, reject) => {
+      input.signal!.addEventListener("abort", () => reject(input.signal!.reason), { once: true });
+    }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    const progress = await screen.findByRole("dialog", { name: "Importing files" });
+    fireEvent.click(within(progress).getByRole("button", { name: "Cancel import" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Importing files" })).toBeNull());
+    expect(screen.getByText("Gallery import canceled. No items were saved.")).toBeVisible();
+    expect(screen.getByLabelText("2 images attached")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
   });
 
   test("the unified picker detects multiple text files without changing an existing capture", async () => {
@@ -1019,6 +1076,7 @@ describe("CaptureHost", () => {
         sourceUrl: undefined,
         caption: undefined,
         collectionName: undefined, tagNames: [],
+        signal: expect.any(AbortSignal),
       });
     });
     expect(applyItemOrg).not.toHaveBeenCalled();
@@ -1090,7 +1148,7 @@ describe("CaptureHost", () => {
     const drawer = screen.getByRole("dialog", { name: "Save to Keepall" });
     fireEvent.click(screen.getByRole("button", { name: "Bulk import" }));
     const bulk = await screen.findByRole("dialog", { name: "Bulk import" });
-    expect(within(bulk).getByRole("button", { name: "Import bookmarks HTML" })).toBeEnabled();
+    expect(within(bulk).getByRole("button", { name: "Import browser bookmarks" })).toBeEnabled();
     const file = new File(["<DL></DL>"], "bookmarks.html", { type: "text/html" });
     Object.defineProperty(file, "text", { value: async () => "<DL></DL>" });
     fireEvent.change(bulk.querySelector('input[accept*="text/html"]')!, { target: { files: [file] } });

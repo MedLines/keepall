@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CAPTURE_FILE_ACCEPT, classifyCaptureFile } from "@/domain/capture-file";
 import { readImageDirectory as readDirectory, type ImageDirectoryPicker } from "./read-image-directory";
 import { storageQuotaWarningForImport } from "./storage-quota-warning";
+import { abortable } from "@/lib/abortable";
 
 type Props = {
   buttonClassName: string;
@@ -16,6 +17,8 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
   const filesInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const readingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const [reading, setReading] = useState<{ name: string; count: number; currentName: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -26,13 +29,15 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
     return () => onBusyChange(false);
   }, [locked, onBusyChange]);
 
-  async function prepare(files: File[], folderName?: string) {
+  async function prepare(files: File[], folderName: string | undefined, signal: AbortSignal) {
+    signal.throwIfAborted();
     if (!files.length) {
       setStatus("This folder is empty. Choose a folder containing files.");
       return;
     }
     const total = files.reduce((sum, file) => classifyCaptureFile(file).kind === "unsupported" ? sum : sum + file.size, 0);
-    const quotaWarning = await storageQuotaWarningForImport(total);
+    const quotaWarning = await abortable(storageQuotaWarningForImport(total), signal);
+    signal.throwIfAborted();
     const collectionName = defaultCollectionName || folderName || "";
     onSelect(files, collectionName, quotaWarning);
   }
@@ -45,20 +50,26 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
     }
     if (readingRef.current) return;
     readingRef.current = true;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setCancelling(false);
     setError(null);
     setStatus(null);
     setReading({ name: "the selected folder", count: 0, currentName: "" });
     try {
-      const directory = await picker.call(window, { mode: "read", id: "keepall-import-folder" });
+      const directory = await abortable(picker.call(window, { mode: "read", id: "keepall-import-folder" }), controller.signal);
       setReading({ name: directory.name, count: 0, currentName: "" });
-      const files = await readDirectory(directory, (count, currentName) => setReading({ name: directory.name, count, currentName }));
-      await prepare(files, directory.name);
+      const files = await abortable(readDirectory(directory, (count, currentName) => setReading({ name: directory.name, count, currentName }), controller.signal), controller.signal);
+      await prepare(files, directory.name, controller.signal);
     } catch (caught) {
-      if (!(caught instanceof DOMException && caught.name === "AbortError")) {
+      if (controller.signal.aborted) setStatus("Folder reading canceled. No files were added.");
+      else if (!(caught instanceof DOMException && caught.name === "AbortError")) {
         setError("Couldn't read the folder. Select it again to retry.");
       }
     } finally {
       readingRef.current = false;
+      abortRef.current = null;
+      setCancelling(false);
       setReading(null);
     }
   }
@@ -66,17 +77,23 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
   async function onFiles(files: FileList | null, folder: boolean) {
     if (!files?.length || readingRef.current) return;
     readingRef.current = true;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setCancelling(false);
     setError(null);
     setStatus(null);
     setReading({ name: folder ? "the selected folder" : "the selected files", count: files.length, currentName: "" });
     try {
       const selected = Array.from(files);
       const folderName = folder ? selected[0].webkitRelativePath?.split("/")[0] || "Imported files" : undefined;
-      await prepare(selected, folderName);
+      await prepare(selected, folderName, controller.signal);
     } catch {
-      setError("Couldn't read the selected files. Select them again to retry.");
+      if (controller.signal.aborted) setStatus("File selection canceled. No files were added.");
+      else setError("Couldn't read the selected files. Select them again to retry.");
     } finally {
       readingRef.current = false;
+      abortRef.current = null;
+      setCancelling(false);
       setReading(null);
     }
   }
@@ -99,6 +116,8 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
         <p role="status" className="mt-2 text-sm text-text-secondary">
           Reading {reading.name}… {reading.count} {reading.count === 1 ? "file" : "files"} found{reading.currentName ? ` · ${reading.currentName}` : ""}
         </p>
+        <button type="button" className="ui-control mt-2 min-h-10 px-4 text-sm font-medium disabled:opacity-60" disabled={cancelling}
+          onClick={() => { setCancelling(true); abortRef.current?.abort(); }}>{cancelling ? "Canceling…" : "Cancel reading"}</button>
       </div> : null}
       {error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : null}
       {!locked && status ? <p role="status" className="text-sm text-text-secondary">{status}</p> : null}

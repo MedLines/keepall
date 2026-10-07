@@ -184,7 +184,7 @@ for (const mode of ["merge", "replace"] as const) {
     const dialog = page.getByRole("dialog", { name: mode === "merge" ? "Merging backup" : "Restoring library", exact: true });
     await expect(dialog.getByRole("progressbar")).toBeVisible();
     await expect(dialog).toContainText("Keep this tab open");
-    await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "Cancel import", exact: true })).toBeEnabled();
     await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
     await expect(dialog).toContainText("Saving library");
     await page.mouse.click(8, 8);

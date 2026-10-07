@@ -186,7 +186,7 @@ test("drawer image controls remove individual photos and clear all attachments",
     await bulkButton.click();
     const bulk = page.getByRole("dialog", { name: "Bulk import", exact: true });
     await expect(bulk.getByRole("button", { name: "Import folder" })).toBeVisible();
-    await expect(bulk.getByRole("button", { name: "Import bookmarks HTML" })).toBeVisible();
+    await expect(bulk.getByRole("button", { name: "Import browser bookmarks" })).toBeVisible();
     const bulkModalBox = (await bulk.boundingBox())!;
     expect(bulkModalBox.x + bulkModalBox.width / 2).toBeCloseTo(width / 2, 0);
     await page.screenshot({ path: testInfo.outputPath(`bulk-import-${width}.png`) });
@@ -295,7 +295,7 @@ for (const width of [320, 1024]) {
     await page.getByLabel("Link, note, or image").fill("Unfinished note");
     await page.getByRole("button", { name: "Bulk import", exact: true }).click();
     const chooser = page.waitForEvent("filechooser");
-    await page.getByRole("button", { name: "Import bookmarks HTML", exact: true }).click();
+    await page.getByRole("button", { name: "Import browser bookmarks", exact: true }).click();
     await (await chooser).setFiles({
       name: "bookmarks.html",
       mimeType: "text/html",

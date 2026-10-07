@@ -190,7 +190,7 @@ export const guides: Guide[] = [
       {
         id: "bookmarks", title: "Import browser bookmarks",
         paragraphs: ["Start with an HTML bookmark export from your browser. A Keepall backup uses a different format."],
-        steps: ["Use your browser's bookmark manager to export bookmarks as an HTML file.", "Open Save item, or use its assigned app shortcut, then choose Bulk import and Import bookmarks HTML. Select the exported file.", "Review how bookmark folders will be used for collections, then confirm the import and read the result."],
+        steps: ["Use your browser's bookmark manager to export bookmarks as an HTML file.", "Open Save item, or use its assigned app shortcut, then choose Bulk import and Import browser bookmarks. Select the exported file.", "Review how bookmark folders will be used for collections, then confirm the import and read the result."],
       },
       {
         id: "images", title: "Import files or a folder",

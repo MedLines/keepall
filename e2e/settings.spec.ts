@@ -97,7 +97,7 @@ test("recovery links open backup settings and bulk import opens from capture", a
   await page.goto("/");
   await page.getByRole("button", { name: "Save your first item", exact: true }).click();
   await page.getByRole("button", { name: "Bulk import", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Bulk import", exact: true }).getByRole("button", { name: "Import bookmarks HTML", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Bulk import", exact: true }).getByRole("button", { name: "Import browser bookmarks", exact: true })).toBeVisible();
 });
 
 test("settings labels and keyboard navigation work on narrow screens in both themes", async ({ page }, testInfo) => {

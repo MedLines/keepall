@@ -12,7 +12,9 @@ export type CaptureImportProgress = {
   failed: number;
 };
 
-export function CaptureImportProgressDialog({ progress }: { progress: CaptureImportProgress | null }) {
+export function CaptureImportProgressDialog({ progress, onCancel, cancelling }: {
+  progress: CaptureImportProgress | null; onCancel: () => void; cancelling: boolean;
+}) {
   const label = progress ? {
     reading: "Reading file…",
     "preparing-video": "Preparing video…",
@@ -25,12 +27,12 @@ export function CaptureImportProgressDialog({ progress }: { progress: CaptureImp
   return <ModalDialog open={progress !== null} busy title="Importing files"
     description={gallery ? "Saving these images together as one library item." : preparing ? "Reading images before you choose how to save them." : "Saving each file as a separate library item."}
     onOpenChange={() => {}}
-    footer={<button type="button" disabled className="ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60">Importing…</button>}>
+    footer={<button type="button" onClick={onCancel} disabled={cancelling} className="ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60">{cancelling ? "Canceling…" : "Cancel import"}</button>}>
     {progress ? <div className="space-y-3">
       <div role="status" aria-live="polite" aria-atomic="true" className="space-y-2 text-sm text-text-primary">
         <p className="flex items-center gap-2 font-medium">
           <span aria-hidden="true" className="size-4 shrink-0 rounded-full border-2 border-border-control border-t-text-primary motion-safe:animate-spin" />
-          {label}
+          {cancelling ? "Canceling import…" : label}
         </p>
         <p className="tabular-nums">{gallery ? `${progress.total} images in this gallery` : `${progress.done} of ${progress.total} files processed`}</p>
         {progress.fileName ? <p className="[overflow-wrap:anywhere] text-text-secondary"><bdi>{progress.fileName}</bdi></p> : null}
@@ -39,6 +41,7 @@ export function CaptureImportProgressDialog({ progress }: { progress: CaptureImp
       <progress aria-label={label} value={gallery ? undefined : progress.done} max={progress.total}
         className="h-2 w-full accent-action-primary" />
       <p className="text-sm leading-6 text-text-secondary">Keep this tab open until the import finishes. Large files can take a while.</p>
+      <p className="text-sm leading-6 text-text-secondary">{gallery ? "Canceling leaves this gallery unsaved." : preparing ? "Cancel to stop adding images from this selection." : "Cancel stops this import. Files already saved stay in your library."}</p>
     </div> : null}
   </ModalDialog>;
 }

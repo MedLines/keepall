@@ -10,6 +10,7 @@ type Props = { files: File[]; results: FileImportResult[]; disabled: boolean; on
 function fileStatus(file: File, result: FileImportResult | undefined) {
   if (result?.status === "saved") return "Saved";
   if (result?.status === "failed") return result.error;
+  if (result?.status === "cancelled") return "Not imported";
   const { kind } = classifyCaptureFile(file);
   if (kind === "document") return /\.pdf$/i.test(file.name) ? "PDF document" : /\.md$/i.test(file.name) ? "Markdown note" : "Text note";
   return { image: "Image", video: "Video", unsupported: "Unsupported file" }[kind];

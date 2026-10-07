@@ -15,6 +15,8 @@ type ConfirmDialogProps = {
   returnFocusRef?: RefObject<HTMLElement | null>;
   pendingLabel?: string;
   busy?: boolean;
+  onCancelWhileBusy?: () => void;
+  cancelPending?: boolean;
   error?: string | null;
   confirmRef?: RefObject<HTMLButtonElement | null>;
   onConfirm: () => void;
@@ -32,6 +34,8 @@ export function ConfirmDialog({
   returnFocusRef,
   pendingLabel = "Working…",
   busy = false,
+  onCancelWhileBusy,
+  cancelPending = false,
   error = null,
   confirmRef,
   onConfirm,
@@ -78,9 +82,12 @@ export function ConfirmDialog({
               {children}
               {error ? <p className="text-sm text-text-danger" role="alert">{error}</p> : null}
               <div className="flex flex-wrap justify-end gap-2">
-                <Dialog.Close ref={cancelRef} className="ui-control min-h-10 px-4 text-sm font-medium" disabled={busy}>
+                {busy && onCancelWhileBusy ? <button type="button" onClick={onCancelWhileBusy} disabled={cancelPending}
+                  className="ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60">
+                  {cancelPending ? "Canceling…" : cancelLabel}
+                </button> : <Dialog.Close ref={cancelRef} className="ui-control min-h-10 px-4 text-sm font-medium" disabled={busy}>
                   {cancelLabel}
-                </Dialog.Close>
+                </Dialog.Close>}
                 <button
                   ref={confirmRef}
                   className="ui-control min-h-10 border-border-danger bg-bg-danger px-4 text-sm font-medium text-text-danger disabled:opacity-60"

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { createLink } from "./items";
 import { listCollections } from "./collections";
 import { listTags } from "./tags";
-import { deleteKeepallDatabase } from "./db";
+import { deleteKeepallDatabase, getDb } from "./db";
 import { importBookmarksHtmlMerge } from "./bookmarks-html-import";
 
 const SAMPLE = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
@@ -17,6 +17,18 @@ const SAMPLE = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 describe("importBookmarksHtmlMerge", () => {
   beforeEach(async () => {
     await deleteKeepallDatabase();
+  });
+
+  test("canceling keeps completed bookmarks with their organization and stops remaining rows", async () => {
+    const controller = new AbortController();
+    const summary = await importBookmarksHtmlMerge(SAMPLE, {
+      collectionPolicy: "keep", signal: controller.signal,
+      onProgress: done => { if (done === 1) controller.abort(); },
+    });
+    expect(summary).toMatchObject({ added: 1, merged: 0, skipped: 0, cancelled: true });
+    expect((await getDb().items.toArray()).map(item => item.type === "link" ? item.url : "")).toEqual(["https://new.example/"]);
+    expect(await getDb().collections.count()).toBe(0);
+    expect(await getDb().tags.count()).toBe(0);
   });
 
   test("adds new links with leaf collection and tags", async () => {

@@ -484,6 +484,25 @@ describe("backup persistence", () => {
   });
 });
 
+test.each(["merge", "replace"] as const)("canceling %s rolls back all writes, including Trash, preferences and organization", async (mode) => {
+  const original = await createNote({ content: "Keep this original" });
+  const tag = await createTag({ name: "Original tag" });
+  const collection = await createCollection({ name: "Original folder" });
+  await getDb().items.update(original.id, { deletedAt: 3, tagIds: [tag.id], collectionIds: [collection.id] });
+  await getDb().preferences.put({ id: "library", pinnedCollectionIds: [collection.id] });
+  const before = await Promise.all(getDb().tables.map(table => table.toArray()));
+  const incomingTag = buildTag({ name: "Incoming tag" }, { id: "incoming-tag", now: 2 });
+  const incomingCollection = buildCollection({ name: "Incoming folder" }, { id: "incoming-folder", now: 2 });
+  const items = Array.from({ length: 105 }, (_, index) => ({ ...buildNote({ content: `Incoming ${index}` }, { id: `cancel-${index}`, now: 2 }), tagIds: [incomingTag.id], collectionIds: [incomingCollection.id] }));
+  const backup = buildKeepallBackup({ items, tags: [incomingTag], collections: [incomingCollection], assets: [], exportedAt: 3 });
+  const prepared = await prepareBackupFile(new File([JSON.stringify(backup)], "cancel.json"));
+  const controller = new AbortController();
+  await expect(prepared[mode]((progress) => {
+    if ((progress.phase === "merging-items" || progress.phase === "restoring-items") && (progress.completed ?? 0) > 0) controller.abort();
+  }, controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+  expect(await Promise.all(getDb().tables.map(table => table.toArray()))).toEqual(before);
+});
+
 test.each(["merge", "replace"] as const)("prepared %s reports item progress before the transaction commits", async (mode) => {
   const items = Array.from({ length: 205 }, (_, index) => buildNote({ content: `Imported ${index}` }, { id: `incoming-${index}`, now: 2 }));
   const backup = buildKeepallBackup({ items, tags: [], collections: [] });

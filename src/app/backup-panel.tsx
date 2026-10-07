@@ -12,6 +12,7 @@ import { BackupValidationError, type BackupCounts, type BackupImportProgress } f
 import { exportKeepallArchive, prepareBackupFile, type PreparedBackup } from "@/persistence/backup-archive";
 import { countCurrentLibrary } from "@/persistence/backup";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
+import { abortable } from "@/lib/abortable";
 import { BackupIcon, ChevronDownIcon, CloseIcon, CollectionIcon, DownloadIcon, HashIcon, ImageIcon, ImagesIcon, LinkIcon, NoteIcon, UploadIcon, VideoIcon } from "./shell-icons";
 
 type ImportMode = "merge" | "replace";
@@ -30,7 +31,7 @@ function formatFileSize(bytes: number) {
   return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: value < 10 ? 1 : 0 }).format(value)} ${unit}`;
 }
 
-function ImportProgress({ progress }: { progress: BackupImportProgress | null }) {
+function ImportProgress({ progress, cancelling }: { progress: BackupImportProgress | null; cancelling: boolean }) {
   const phase = progress?.phase ?? "preparing-media";
   const label = {
     "preparing-media": "Preparing media…",
@@ -45,13 +46,14 @@ function ImportProgress({ progress }: { progress: BackupImportProgress | null })
     <div role="status" aria-live="polite" aria-atomic="true" className="text-sm font-medium text-text-primary">
       <p className="flex items-center gap-2">
         <span aria-hidden="true" className="size-4 shrink-0 rounded-full border-2 border-border-control border-t-text-primary motion-safe:animate-spin" />
-        {label}
+        {cancelling ? "Canceling import…" : label}
       </p>
       {total > 0 ? <p className="mt-1 tabular-nums text-text-secondary">{completed} of {total} {unit} processed</p> : null}
     </div>
     <progress aria-label={label} value={total > 0 ? completed : undefined} max={total > 0 ? total : undefined}
       className="h-2 w-full accent-action-primary" />
     <p className="text-sm leading-6 text-text-secondary">Keep this tab open until the import finishes. Large backups can take a while.</p>
+    <p className="text-sm leading-6 text-text-secondary">{cancelling ? "Rolling back this import. Your current library will be kept." : "Canceling rolls back this import and keeps your current library."}</p>
   </div>;
 }
 
@@ -86,11 +88,13 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const [prepared, setPrepared] = useState<{ backup: PreparedBackup; current: BackupCounts } | null>(null);
   const [confirmReplace, setConfirmReplace] = useState(false);
   const operationRef = useRef<Operation | null>(null);
+  const importAbortRef = useRef<AbortController | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const readVersion = useRef(0);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; readVersion.current += 1; };
+    return () => { mounted.current = false; readVersion.current += 1; importAbortRef.current?.abort(); };
   }, []);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +113,13 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   }
   function finish() {
     operationRef.current = null;
-    if (mounted.current) setOperation(null);
+    importAbortRef.current = null;
+    if (mounted.current) { setOperation(null); setCancelling(false); }
+  }
+  function cancelRunningImport() {
+    if (!importAbortRef.current || importAbortRef.current.signal.aborted) return;
+    setCancelling(true);
+    importAbortRef.current.abort();
   }
   function reportImportProgress(progress: BackupImportProgress) {
     if (mounted.current) setImportProgress(progress);
@@ -144,18 +154,21 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     const file = fileList?.[0];
     if (!file || !start("read-backup")) return;
     const version = ++readVersion.current;
+    const controller = new AbortController();
+    importAbortRef.current = controller;
     setPrepared(null);
     setConfirmReplace(false);
     setError(null);
     setStatus(null);
     try {
-      const backup = await prepareBackupFile(file);
+      const backup = await prepareBackupFile(file, controller.signal);
       if (!mounted.current || version !== readVersion.current) return;
-      const current = await countCurrentLibrary();
+      const current = await abortable(countCurrentLibrary(), controller.signal);
       if (mounted.current && version === readVersion.current) setPrepared({ backup, current });
     } catch (caught) {
       if (mounted.current && version === readVersion.current) {
-        setError(caught instanceof BackupValidationError
+        if (controller.signal.aborted) setStatus("Backup reading canceled. Your library wasn't changed.");
+        else setError(caught instanceof BackupValidationError
           ? `${caught.message}. Choose another Keepall backup.`
           : "Couldn't read backup file. Try again or choose another file.");
       }
@@ -193,27 +206,32 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   async function runImport(mode: ImportMode) {
     if (!prepared || !start("restore")) return;
     const selected = prepared.backup;
+    const controller = new AbortController();
+    importAbortRef.current = controller;
     setImportMode(mode);
     setImportProgress(null);
     setError(null);
     setStatus(null);
     try {
       if (mode === "merge") {
-        const summary = await selected.merge(reportImportProgress);
+        const summary = await selected.merge(reportImportProgress, controller.signal);
         if (!mounted.current) return;
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
         dispatchPreviewWelcome(summary.addedLinkIds);
         setStatus(`Merged: ${summary.added} added, ${summary.updated} updated, ${summary.unchanged} unchanged.`);
       } else {
-        const linkIds = await selected.replace(reportImportProgress);
+        const linkIds = await selected.replace(reportImportProgress, controller.signal);
         if (!mounted.current) return;
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
         dispatchPreviewWelcome(linkIds);
         setStatus("Library replaced from backup.");
       }
     } catch (caught) {
-      if (mounted.current) setError(caught instanceof BackupValidationError ? caught.message :
-        mode === "merge" ? "Couldn't merge backup. Your library wasn't changed. Try again." : "Couldn't replace library. Your library wasn't changed. Try again.");
+      if (mounted.current) {
+        if (controller.signal.aborted) setStatus("Backup import canceled. Your library wasn't changed.");
+        else setError(caught instanceof BackupValidationError ? caught.message :
+          mode === "merge" ? "Couldn't merge backup. Your library wasn't changed. Try again." : "Couldn't replace library. Your library wasn't changed. Try again.");
+      }
     } finally {
       if (mounted.current) { setPrepared(null); setConfirmReplace(false); setImportProgress(null); }
       finish();
@@ -235,7 +253,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const dialogButtonClass =
     "ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60";
   const restoring = operation === "restore";
-  const operationLabel = restoring && importMode === "merge" ? "Merging backup…" : operation ? operationLabels[operation] : null;
+  const operationLabel = cancelling ? "Canceling import…" : restoring && importMode === "merge" ? "Merging backup…" : operation ? operationLabels[operation] : null;
 
   const choiceDialog = (
     <>
@@ -244,14 +262,15 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         description={restoring ? `Merging ${prepared?.backup.counts.total ?? 0} items from ${prepared?.backup.name ?? "backup"}.` : "Compare this backup with your library."}
         onOpenChange={(open) => { if (!open) cancelImportChoice(); }}
         footer={<>
-          <button className={dialogButtonClass} type="button" disabled={busy} onClick={cancelImportChoice}>Cancel</button>
+          <button className={dialogButtonClass} type="button" disabled={restoring ? cancelling : busy}
+            onClick={restoring ? cancelRunningImport : cancelImportChoice}>{restoring ? cancelling ? "Canceling…" : "Cancel import" : "Cancel"}</button>
           <button className={`${dialogButtonClass} border-border-danger bg-bg-danger text-text-danger`}
             type="button" disabled={busy} onClick={() => void reviewReplacement()}>Replace library</button>
           <button className={`${dialogButtonClass} ui-primary`} type="button" disabled={busy}
             onClick={() => void runImport("merge")}>{restoring ? "Merging backup…" : "Merge"}</button>
         </>}
       >
-        {restoring ? <ImportProgress progress={importProgress} /> : prepared ? <div className="space-y-4 text-sm text-text-primary" aria-busy={busy}>
+        {restoring ? <ImportProgress progress={importProgress} cancelling={cancelling} /> : prepared ? <div className="space-y-4 text-sm text-text-primary" aria-busy={busy}>
           <div className="flex min-w-0 items-start gap-3">
             <BackupIcon className="mt-0.5 text-text-secondary" />
             <div className="min-w-0 flex-1">
@@ -319,10 +338,11 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         open={prepared !== null && confirmReplace} title={restoring ? "Restoring library" : "Replace library?"}
         description={restoring ? `Restoring ${prepared?.backup.counts.total ?? 0} items from ${prepared?.backup.name ?? "backup"}.` : prepared ? `Replace the current ${countText(prepared.current)} with ${countText(prepared.backup.counts)} from ${prepared.backup.name}? This removes the current library and cannot be undone.` : ""}
         confirmLabel="Confirm replacement" pendingLabel="Restoring library…" busy={busy}
+        cancelLabel={restoring ? "Cancel import" : "Cancel"} onCancelWhileBusy={cancelRunningImport} cancelPending={cancelling}
         onConfirm={() => void runImport("replace")}
         onOpenChange={(open) => { if (!open && !operationRef.current) setConfirmReplace(false); }}
       >
-        {restoring ? <ImportProgress progress={importProgress} /> : null}
+        {restoring ? <ImportProgress progress={importProgress} cancelling={cancelling} /> : null}
       </ConfirmDialog>
     </>
   );
@@ -393,6 +413,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     <>
       {(operation || status) ? <p className="mt-2 text-sm text-text-primary">{operationLabel ?? status}</p> : null}
       {operation ? <progress aria-label={operationLabel ?? undefined} className="mt-2 h-2 w-full accent-action-primary" /> : null}
+      {operation === "read-backup" && prepared === null ? <button className={`mt-2 ${dialogButtonClass}`} type="button" disabled={cancelling}
+        onClick={cancelRunningImport}>{cancelling ? "Canceling…" : "Cancel reading"}</button> : null}
       {error ? (
         <p
           className={

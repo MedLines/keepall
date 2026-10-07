@@ -63,3 +63,20 @@ test("canceling the directory picker releases the drawer without a selection or 
   expect(onSelect).not.toHaveBeenCalled();
   await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(false));
 });
+
+test("canceling a folder scan releases controls and a late file cannot stage a selection", async () => {
+  let release!: (file: File) => void;
+  const pending = new Promise<File>(resolve => { release = resolve; });
+  const directory: ReadableImageDirectory = { kind: "directory", name: "Pending folder", async *values() {
+    yield { kind: "file", name: "pending.txt", getFile: () => pending };
+  } };
+  vi.stubGlobal("showDirectoryPicker", vi.fn().mockResolvedValue(directory));
+  const { onBusyChange, onSelect } = renderImport();
+  fireEvent.click(screen.getByRole("button", { name: "Import folder" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Cancel reading" }));
+  expect(await screen.findByText("Folder reading canceled. No files were added.")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Import folder" })).toBeEnabled();
+  await act(async () => release(files[0]));
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(onBusyChange).toHaveBeenLastCalledWith(false);
+});
