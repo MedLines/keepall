@@ -94,3 +94,15 @@ The dev preview runs at `http://localhost:3115` from `/tmp/keepall-website-prepa
 - `/privacy#contact`: record storage, manual retention, rate-limiter hashes, and cleanup explanation.
 
 The earlier Contact navigation/button fixes, blog thumbnails, changelog entries, and public-page footer remain in this branch. Press kit remains parked.
+
+
+## Verification completed
+
+- Production build and full typecheck passed. Full lint passed with zero errors and the existing 109 warnings; the changed Contact and website files have no new lint warnings.
+- All 40 website checks passed in Chromium and Firefox. The first integrated run passed 36; the four remaining checks passed after fixing test selectors that included hidden logo layers and Next's separate route-announcement alert. Expected console output from the deliberately mocked Contact 429 is allowed only in that scenario and only for the Contact endpoint.
+- About's separate 16-case matrix passed at 320, 390, 768, and 1707 pixels with normal and reduced motion. Three sticky cards, four gallery tabs, keyboard focus, manual playback, image loading, and no horizontal overflow were verified.
+- Help routes passed browser checks at those widths; all 50 original anchors and 79 rendered Help links resolve.
+- All 72 Contact route, identity, storage, Zod-input, and form tests passed. Independent review verified server bounds and resolved the transient-503 retry issue.
+- A disposable local PostgreSQL instance verified three-per-hour limits, twenty simultaneous attempts sharing each identity combination, rolling expiry, failed-insert rollback, denied requests without storage growth, manual deletion without quota reset, and retention of year-old messages during limiter cleanup. The instance was stopped afterward.
+- Capture fixtures use actual PDF text extraction, real local video, real palette extraction, and genuine English OCR. New screenshots and refreshed MP4/WebM recordings load and decode.
+- The original checkout remains untouched by this task. No hosted database, Resend credentials, deployment, or live delivery test was performed. Activation and inbox receipt/reply checks remain required.

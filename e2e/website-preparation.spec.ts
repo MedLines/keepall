@@ -10,8 +10,9 @@ const informationLinks = [
   ["Contact", "/contact"], ["Changelog", "/changelog"], ["Privacy", "/privacy"],
 ] as const;
 
-const test = base.extend<{ browserErrors: string[] }>({
-  browserErrors: [async ({ page }, use) => {
+const test = base.extend<{ browserErrors: string[]; expectedContactRateLimit: boolean }>({
+  expectedContactRateLimit: [false, { option: true }],
+  browserErrors: [async ({ page, expectedContactRateLimit }, use) => {
     const errors: string[] = [];
     // Vercel provides this script on deployment; a local Next server has no endpoint.
     await page.route("**/_vercel/insights/script.js", route => route.fulfill({
@@ -20,7 +21,11 @@ const test = base.extend<{ browserErrors: string[] }>({
     }));
     page.on("pageerror", error => errors.push(error.message));
     page.on("console", message => {
-      if (message.type() === "error") errors.push(message.text());
+      if (message.type() !== "error") return;
+      const expectedRejection = expectedContactRateLimit
+        && message.location().url.endsWith("/api/contact")
+        && message.text() === "Failed to load resource: the server responded with a status of 429 (Too Many Requests)";
+      if (!expectedRejection) errors.push(message.text());
     });
     await use(errors);
     expect(errors, "browser errors").toEqual([]);
@@ -178,7 +183,8 @@ test("Contact validates required fields and confirms only accepted submission", 
 
 test("every Help guide has a loaded preview image", async ({ page }) => {
   await page.goto("/help");
-  const previews = page.locator(".kh-guide-thumbnail img");
+  const previews = page.locator(".kh-guide-thumbnail > img");
+  await expect(page.locator('.kh-guide-row[href="/help/install-keepall"] .kh-install-compact')).toBeVisible();
   expect(await previews.count()).toBeGreaterThan(0);
   for (const preview of await previews.all()) {
     await preview.scrollIntoViewIfNeeded();
@@ -343,17 +349,20 @@ test("titles, descriptions and share images are usable on every public route", a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("Contact rate limit keeps the draft and displays Retry-After", async ({ page }) => {
-  await page.route("**/api/contact", route => route.fulfill(route.request().method() === "GET"
-    ? { json: { available: true } }
-    : { status: 429, headers: { "Retry-After": "153" }, json: { retryAfter: 153 } }));
-  await page.goto("/contact");
-  const submit = page.getByRole("button", { name: "Send message" });
-  await expect(submit).toBeEnabled();
-  await page.getByLabel("Name", { exact: true }).fill("Preview tester");
-  await page.getByLabel("Email", { exact: true }).fill("preview@example.com");
-  await page.getByLabel("Message", { exact: true }).fill("My draft stays here.");
-  await submit.click();
-  await expect(page.getByRole("alert")).toContainText("Please try again in 3 minutes");
-  await expect(page.getByLabel("Message", { exact: true })).toHaveValue("My draft stays here.");
+test.describe("Contact rate limit", () => {
+  test.use({ expectedContactRateLimit: true });
+  test("keeps the draft and displays Retry-After", async ({ page }) => {
+    await page.route("**/api/contact", route => route.fulfill(route.request().method() === "GET"
+      ? { json: { available: true } }
+      : { status: 429, headers: { "Retry-After": "153" }, json: { retryAfter: 153 } }));
+    await page.goto("/contact");
+    const submit = page.getByRole("button", { name: "Send message" });
+    await expect(submit).toBeEnabled();
+    await page.getByLabel("Name", { exact: true }).fill("Preview tester");
+    await page.getByLabel("Email", { exact: true }).fill("preview@example.com");
+    await page.getByLabel("Message", { exact: true }).fill("My draft stays here.");
+    await submit.click();
+    await expect(page.getByRole("form", { name: "Contact Keepall" }).getByRole("alert")).toContainText("Please try again in 3 minutes");
+    await expect(page.getByLabel("Message", { exact: true })).toHaveValue("My draft stays here.");
+  });
 });
