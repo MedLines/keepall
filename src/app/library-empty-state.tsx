@@ -9,12 +9,12 @@ import "./library-empty-state.css";
 
 export type LibraryEmptyStateKind = "library" | "collection" | "unsorted" | "trash" | "filtered" | "first-save";
 
-export function getEmptyStateKind(view: LibraryViewState, hasActiveSearch: boolean, libraryCount: number): LibraryEmptyStateKind {
+export function getEmptyStateKind(view: LibraryViewState, hasActiveSearch: boolean, activeLibraryCount: number): LibraryEmptyStateKind {
   if (hasActiveSearch || view.type !== null || view.tag !== null) return "filtered";
   if (view.trash) return "trash";
   if (view.unsorted) return "unsorted";
   if (view.collection !== null) return "collection";
-  return libraryCount === 0 ? "first-save" : "library";
+  return activeLibraryCount === 0 ? "first-save" : "library";
 }
 
 export function entireLibrarySearch(view: LibraryViewState): Partial<LibraryViewState> | null {
@@ -64,7 +64,7 @@ export function LibraryEmptyState({ kind, message, query, scope, onClearFilters,
         </> : null}
       </div>
       {firstSave ? <div className="mt-3 flex max-w-full flex-wrap items-center justify-center gap-x-4 text-xs text-text-secondary">
-        <Link className="inline-flex min-h-10 items-center underline underline-offset-4" href="/settings#backup-heading">Import an existing library</Link>
+        <Link className="inline-flex min-h-10 items-center underline underline-offset-4" href="/settings#backup-heading">Import backup</Link>
         <Link className="inline-flex min-h-10 items-center underline underline-offset-4" href="/help/getting-started">Getting started</Link>
       </div> : null}
     </section>

@@ -170,6 +170,15 @@ describe("Library", () => {
     vi.mocked(movePinnedCollectionBefore).mockReset();
   });
 
+  test("an empty active library offers both imports even when Trash contains items", async () => {
+    vi.mocked(listItems).mockResolvedValue([]);
+    vi.mocked(listTrashedItems).mockResolvedValueOnce([{ ...buildNote({ content: "Deleted note" }, { id: "trash-only", now: 1 }), deletedAt: 2 }]);
+    render(<Library />);
+    expect(await screen.findByRole("heading", { name: "Start your library" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Import items" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Import backup" })).toHaveAttribute("href", "/settings#backup-heading");
+  });
+
   test("opens a newly imported collection before the delayed library refresh", async () => {
     vi.mocked(listItems).mockResolvedValue([]);
     render(<Library />);

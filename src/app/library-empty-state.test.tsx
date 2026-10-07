@@ -9,7 +9,7 @@ describe("LibraryEmptyState", () => {
     render(<LibraryEmptyState kind="first-save" message="No items yet." onClearFilters={vi.fn()} />);
     expect(screen.getByRole("heading", { name: "Start your library" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Import items" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Import an existing library" })).toHaveAttribute("href", "/settings#backup-heading");
+    expect(screen.getByRole("link", { name: "Import backup" })).toHaveAttribute("href", "/settings#backup-heading");
     expect(screen.getByRole("link", { name: "Getting started" })).toHaveAttribute("href", "/help/getting-started");
     expect(screen.getByRole("button", { name: "Save first item" })).toBeVisible();
   });
@@ -45,7 +45,7 @@ describe("LibraryEmptyState", () => {
 const baseView: LibraryViewState = { q: "", collection: null, unsorted: false, tag: null, type: null, layout: DEFAULT_LIBRARY_LAYOUT, sort: DEFAULT_LIBRARY_SORT, item: null, slide: 0 };
 
 describe("empty state scope", () => {
-  test("shows first-save only for an entirely empty unfiltered library", () => {
+  test("shows first-save only for an empty active unfiltered library", () => {
     expect(getEmptyStateKind(baseView, false, 0)).toBe("first-save");
     expect(getEmptyStateKind(baseView, false, 1)).toBe("library");
     expect(getEmptyStateKind({ ...baseView, collection: "work" }, false, 0)).toBe("collection");
