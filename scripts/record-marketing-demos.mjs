@@ -63,7 +63,24 @@ try {
   await record("library-demo", async () => {
     await click(page.getByRole("button", { name: "List view", exact: true }));
     await click(page.getByRole("button", { name: "Grid view", exact: true }));
+    await click(page.locator(".library-card").filter({ hasText: "Sunday studio" }).first(), { button: "right" });
+    await click(page.getByRole("menuitem", { name: "Preview", exact: true }));
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await rest(1400);
+    await click(page.getByRole("button", { name: "Next item", exact: true }));
+    await expect(page.getByRole("heading", { name: "Make room to think", exact: true })).toBeVisible();
+    await rest(1400);
+    await click(page.getByRole("button", { name: "Next item", exact: true }));
+    await page.waitForFunction(() => document.querySelector("video")?.readyState >= 2);
+    await page.locator("video").evaluate(video => video.play());
+    await rest(2400);
+    await click(page.getByRole("button", { name: "Open full item", exact: true }));
+    await expect(page).toHaveURL(/items\/sample-video/);
+    await rest(1500);
   });
+  await page.goto(origin);
+  await page.locator(".library-card").first().waitFor();
+  await page.addStyleTag({ content: "nextjs-portal, [data-agentation-root], [data-interface-kit], #interface-kit-root { display:none !important; }" });
   await record("collections-demo", async () => {
     await click(sidebar.getByRole("button", { name: "Design Inspiration", exact: true }));
     await expect(page.locator("#library-heading")).toHaveText("Design Inspiration");
@@ -75,9 +92,11 @@ try {
   await record("search-demo", async () => {
     const search = page.getByRole("searchbox");
     await click(search);
-    await search.pressSequentially("quiet spaces", { delay: 110 });
-    await expect(page.locator(".library-card")).toHaveCount(4);
-    await rest(1400);
+    await search.pressSequentially("field notes", { delay: 110 });
+    await expect(page.locator(".library-card")).toHaveCount(6);
+    await rest(2400);
+    await expect(page.locator(".library-card").filter({ hasText: "Sunday studio" })).toHaveCount(1);
+    await expect(page.locator(".library-card").filter({ hasText: "Reading room checklist" })).toHaveCount(1);
   });
   await page.getByRole("searchbox").fill("");
   await record("tags-demo", async () => {

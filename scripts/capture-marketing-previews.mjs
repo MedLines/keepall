@@ -6,6 +6,7 @@ import { seedMarketingLibrary } from "./marketing-fixture.mjs";
 // Capture the real application in a disposable browser, using only sample data.
 // Run against a local server: node scripts/capture-marketing-previews.mjs [origin]
 const origin = localCaptureOrigin(process.argv[2]);
+const selected = process.argv[3]?.split(",");
 const output = new URL("../public/marketing/", import.meta.url);
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch();
@@ -19,7 +20,7 @@ try {
   await seedMarketingLibrary(page);
 
   const settle = () => settleCapture(page);
-  const capture = (name, locator) => capturePreview(page, new URL(name, output), locator);
+  const capture = (name, locator) => !selected || selected.includes(name) ? capturePreview(page, new URL(name, output), locator) : Promise.resolve();
   await page.reload();
   await page.locator(".library-card").first().waitFor();
   await settle();
@@ -33,9 +34,9 @@ try {
   await expect(page.locator(".library-card")).toHaveCount(9);
   await capture("app-collection.webp");
   await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "All items", exact: true }).click();
-  await page.getByRole("searchbox").fill("quiet spaces");
-  await expect(page.locator(".library-card")).toHaveCount(4);
-  await expect(page.getByRole("searchbox")).toHaveValue("quiet spaces");
+  await page.getByRole("searchbox").fill("field notes");
+  await expect(page.locator(".library-card")).toHaveCount(6);
+  await expect(page.getByRole("searchbox")).toHaveValue("field notes");
   await settle();
   await capture("app-search.webp");
   await page.setViewportSize({ width: 1000, height: 780 });
