@@ -47,7 +47,7 @@ export function SearchDemo() {
               <button type="button" className="ka-search-demo-open" onClick={() => setOpened(item.id)} aria-label={`Preview ${item.title}`}><ItemTypeBadge item={item} variant="list" /><span><SearchHighlight text={item.title} query={query} /></span></button>
             </SearchResult>
           </li>)}</ul>
-          {!results.length && <p className="ka-search-demo-empty">No matches. Try "layout" or "colors".</p>}
+          {!results.length && <p className="ka-search-demo-empty">No matches. Try layout or colors.</p>}
         </>}
       </motion.div>
     </AnimatePresence>
