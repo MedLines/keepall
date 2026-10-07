@@ -43,15 +43,14 @@ Group the existing Help rows under **Start saving**, **Read and explore**, **Org
 
 ## About structure
 
-Preserve the hero, personal-library statement, four-tab walkthrough gallery, three-card sticky stack, installation section, and closing treatment.
+Preserve the hero, four-tab walkthrough gallery, installation section, and closing treatment. The 2026-10-08 revision replaces the old sticky stack and repeated feature sections with eight bento cards.
 
-- Enrich the existing library walkthrough with Preview and a local video; enrich Search with file-content and recognized screenshot-text results. Keep four tabs rather than adding a tab for every command.
-- Add a reading section after the existing feature stack: a real full article reader, PDF page controls, and a Markdown document. Explain saving readable articles and bringing local files into the library. Link to saved-articles and documents.
-- Add an image-tools section using the existing card surfaces and spacing: a real image with Palette and Screenshot text cards, plus a color-search example. Use the app's action name Read text and explain English screenshot recognition in ordinary language.
-- Add Unsorted review to existing organization copy. Expand the import tile to supported files and folders. Mention automatic folder backups in the local-library card with the browser-support qualification and existing Help link.
-- Update the offline FAQ: saving a link preserves its address; Save for offline keeps a readable article copy. Cached Keepall can read locally saved articles, notes, media and documents. Opening the original website and fetching new content still require a connection.
+- The gallery shows Library, Collections, Tags, and Search. Demos use current preview, local video, file-search, and recognized-text results.
+- Reader cards show saved articles, complete PDF pages, and imported Markdown. Image tools show real palettes and recognized English text.
+- Capture retains its manual demo. Search and Preview, import, and local storage cards link to detailed Help procedures.
+- The offline FAQ distinguishes saved addresses from saved article text. Cached Keepall can read local content; original websites and new requests need the internet.
 
-`src/app/about/scroll-scenes.tsx` currently assumes exactly three sticky cards through its progress math. Place the new sections outside that stack. Expanding the stack requires generalizing that math and verifying scroll and reduced-motion behavior. Gallery labels, panel arrays, posters, and MP4/WebM sources must stay aligned.
+The `reading`, `image-tools`, `extension`, and `your-library` anchors remain available. Screenshot frames contain the whole image with padding. Gallery labels, panels, posters, and recordings remain aligned.
 
 ## New visual evidence
 
@@ -69,7 +68,7 @@ Use real app output, sample content, and the existing capture scripts. Preserve 
 1. Correct stale action names and inaccurate limits; update existing About wording and metadata.
 2. Add focused Help guides, topic entry points, and crosslinks without breaking old anchors.
 3. Extend sample fixtures and capture current UI for each new feature claim.
-4. Add the two About sections and refresh existing demos using those assets.
+4. Combine feature coverage into the About bento and refresh demos using current assets.
 5. Verify the actual actions described, image/video loading, anchors, metadata, keyboard use, reduced motion, and layouts at 320, 390, 768, and 1707 pixels. Build and typecheck, then run the website suite in Chromium and Firefox.
 
 Keep About and Help implementation in separate worktrees branched from the isolated website branch, with the shared visual capture work integrated before final browser verification. Do not change app behavior to match documentation.
@@ -83,9 +82,9 @@ Contact now records submissions in Neon Postgres before notifying the support in
 The dev preview runs at `http://localhost:3115` from `/tmp/keepall-website-preparation`, checked out on `feature/website-feature-coverage`.
 
 - `/about`: existing Library and Search demos now show documents, image text, and local video.
-- `/about#reading`: saved article, PDF, and Markdown reader section.
+- `/about#reading`: saved article card, with PDF and Markdown cards beside it.
 - `/about#image-tools`: palette, color search, and English screenshot recognition.
-- `/about#collection`: updated organization/import/privacy/backup copy; offline FAQ near the bottom.
+- `/about#collection`: four-tab gallery. Import and backup information now appears in the bento; the offline FAQ is near the bottom.
 - `/help`: grouped guide index, feature-specific thumbnails, and direct Palette, Read text, and Videos links.
 - `/help/search`, `/help/documents`, `/help/preview`, `/help/notes`: new focused guides.
 - `/help/images-and-videos#palette` and `#image-text`: expanded image analysis instructions and limits.
@@ -100,9 +99,46 @@ The earlier Contact navigation/button fixes, blog thumbnails, changelog entries,
 
 - Production build and full typecheck passed. Full lint passed with zero errors and the existing 109 warnings; the changed Contact and website files have no new lint warnings.
 - All 40 website checks passed in Chromium and Firefox. The first integrated run passed 36; the four remaining checks passed after fixing test selectors that included hidden logo layers and Next's separate route-announcement alert. Expected console output from the deliberately mocked Contact 429 is allowed only in that scenario and only for the Contact endpoint.
-- About's separate 16-case matrix passed at 320, 390, 768, and 1707 pixels with normal and reduced motion. Three sticky cards, four gallery tabs, keyboard focus, manual playback, image loading, and no horizontal overflow were verified.
+- The earlier About matrix verified the original three-card layout. The latest 16-case Chromium/Firefox matrix verifies eight bento cards, four gallery tabs, keyboard focus, manual playback, contained images, and no overflow at 320, 390, 768, and 1707 pixels in both motion modes.
 - Help routes passed browser checks at those widths; all 50 original anchors and 79 rendered Help links resolve.
 - All 72 Contact route, identity, storage, Zod-input, and form tests passed. Independent review verified server bounds and resolved the transient-503 retry issue.
 - A disposable local PostgreSQL instance verified three-per-hour limits, twenty simultaneous attempts sharing each identity combination, rolling expiry, failed-insert rollback, denied requests without storage growth, manual deletion without quota reset, and retention of year-old messages during limiter cleanup. The instance was stopped afterward.
 - Capture fixtures use actual PDF text extraction, real local video, real palette extraction, and genuine English OCR. New screenshots and refreshed MP4/WebM recordings load and decode.
 - The original checkout remains untouched by this task. No hosted database, Resend credentials, deployment, or live delivery test was performed. Activation and inbox receipt/reply checks remain required.
+
+## Copy and layout revision, 2026-10-08
+
+About now uses eight bento cards instead of the sticky feature stack and separate reading/tool sections. The cards cover articles, PDFs, notes and text files, image analysis, Capture, search and preview, import, and backups. Existing section anchors remain available. Screenshots show their full content inside padded frames; the PDF and Markdown detail assets were recaptured with native background around the reader. Hero and gallery screenshots also fit their phone frames.
+
+Both original Blog articles were edited for direct wording. Two additional workflows are available:
+
+- `/blog/project-research`: saved articles, PDFs, Markdown, project notes, search, and backups.
+- `/blog/searchable-screenshots`: English image text recognition, palettes, color queries, and backups.
+
+All 13 Help guides, containing 68 sections, were reviewed and rewritten. Procedures use short commands and numbered steps. Descriptions separate controls, results, and limits. Body text is 16px with 1.6 line height and a capped measure; image captions are 13px. Existing guide URLs and section anchors are preserved.
+
+The writing follows the sentence-length and procedure rules in [ASD-STE100 Issue 9](https://www.asd-ste100.org/assets/files/ASD-STE100_ISSUE9.pdf). A source audit checks procedural sentences at 20 words or fewer, descriptive sentences at 25 words or fewer, and paragraphs at six sentences or fewer. This is a plain-language application of the rules, not a certified dictionary-compliance review. Product control names and technical terms remain explicit.
+
+Independent review checked the copy against app source and corrected three existing documentation errors: Clear filters also removes the tag filter; Search entire library removes type limits; a previously selected collection takes priority over a folder's name during import. The folder-backup procedure now names Choose backup folder.
+
+Review the revised feature cards at `/about#reading`, `/about#image-tools`, `/about#extension`, and `/about#your-library`. Review the complete Help index at `/help` and all four article links at `/blog`.
+
+### Writing and typography review
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| MEDIUM | `src/app/help/guides.ts:53`, `src/app/help/focused-guides.ts:14` | Multi-action paragraphs and incomplete filter explanations | Short descriptions, numbered procedures, source-checked controls | Reduces reading effort and preserves accurate actions. |
+| MEDIUM | `src/app/about/feature-bento.tsx:16`, `src/app/about/landing.css:316` | Repeated feature sections and cropped readers | Eight feature cards with contained images and 16–24px frames | Makes the current features easier to scan and keeps content inside the frame. |
+| LOW | `src/app/blog/design-reference-library/page.tsx:32`, `src/app/blog/browser-bookmarks/page.tsx:30` | Repeated framing and long introductions | Direct workflow copy and two new use cases | Gives each article a concrete task. |
+| LOW | `src/app/help/help.css:72` | 15px body text and 12px image captions | 16px body text, 13px captions, 1.6 body line height | Improves reading on phone and desktop layouts. |
+
+Approve the reviewed writing and typography changes. Sentence-length checks, source-backed feature review, and separate agent browser matrices passed. Integrated build and browser results are recorded below.
+
+### Final integrated verification
+
+- Final production build and typecheck passed. Full lint has zero errors and the same 109 existing warnings.
+- The 46-scenario Chromium/Firefox suite passed 43 scenarios on its first run. Three bento assertions measured decorative borders as image pixels; the assertions now measure the content box. All four bento scenarios passed after rebuilding, including the added anchor visibility checks. All 46 scenarios have passed their relevant final checks.
+- About review anchors now use the same 108px scroll offset as other website sections. Live checks verified all four headings below the floating header at 390px and 1707px.
+- Live dev checks on port 3115 verified About, both new articles, Search Help, and image-text Help: HTTP 200, loaded visible images, no page errors, and no horizontal overflow at 390px.
+- Independent source review approved About, all four Blog articles, and all 13 Help guides after the factual corrections above. The Help source audit passed all 68 sections, 261 steps, and 678 sentences under the checked sentence/paragraph limits.
+- The original checkout remains clean. The integrated preview worktree is committed on `feature/website-feature-coverage`. Contact readiness remains false until the documented Neon and Resend setup is supplied.

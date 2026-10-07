@@ -4,6 +4,7 @@ import sharp from "sharp";
 const publicRoutes = [
   "/about", "/help", "/contact", "/changelog", "/privacy", "/blog",
   "/blog/design-reference-library", "/blog/browser-bookmarks",
+  "/blog/project-research", "/blog/searchable-screenshots",
   "/help/search", "/help/documents", "/help/preview", "/help/notes",
 ];
 const informationLinks = [
@@ -239,13 +240,13 @@ test("Settings and the library expose the public information links", async ({ pa
 test("blog articles are linked, show actual screenshots, and link to valid Help anchors", async ({ page, request }, testInfo) => {
   await page.goto("/blog");
   const thumbnails = page.locator(".kb-post-thumbnail img");
-  await expect(thumbnails).toHaveCount(2);
+  await expect(thumbnails).toHaveCount(4);
   for (const thumbnail of await thumbnails.all()) {
     await thumbnail.scrollIntoViewIfNeeded();
     await expect.poll(() => thumbnail.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   }
   const helpAnchors = new Set<string>();
-  for (const slug of ["design-reference-library", "browser-bookmarks"]) {
+  for (const slug of ["design-reference-library", "browser-bookmarks", "project-research", "searchable-screenshots"]) {
     const link = page.locator(`.kb-post-list a[href="/blog/${slug}"]`);
     await expect(link).toHaveCount(1);
     await link.click();
@@ -332,22 +333,80 @@ test("titles, descriptions and share images are usable on every public route", a
   }
 });
 
- test("new About sections show working captures and preserve the three-card stack", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/about");
-  await expect(page.locator(".ka-stack .ka-feature-card")).toHaveCount(3);
-  for (const id of ["reading", "image-tools"]) {
-    const section = page.locator(`#${id}`);
-    await section.scrollIntoViewIfNeeded();
-    await expect(section).toBeVisible();
-    for (const image of await section.locator("img").all()) {
+for (const width of [390, 1707]) {
+  test(`About bento contains complete captures with space at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/about");
+    await expect(page.locator(".ka-bento-card")).toHaveCount(8);
+    for (const id of ["reading", "image-tools", "extension", "your-library"]) {
+      const card = page.locator(`#${id}`);
+      await expect(card).toHaveCount(1);
+      await card.evaluate(element => element.scrollIntoView({ block: "start" }));
+      const headerBottom = (await page.locator(".ka-header").boundingBox())!.y + (await page.locator(".ka-header").boundingBox())!.height;
+      expect((await card.locator("h3").boundingBox())!.y).toBeGreaterThan(headerBottom);
+    }
+    for (const figure of await page.locator(".ka-bento-media").all()) {
+      const image = figure.locator("img");
       await image.scrollIntoViewIfNeeded();
       await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+      const layout = await image.evaluate(element => {
+        const image = element as HTMLImageElement;
+        const frame = image.parentElement!.getBoundingClientRect();
+        const bounds = image.getBoundingClientRect();
+        const style = getComputedStyle(image);
+        const contentWidth = bounds.width - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
+        const contentHeight = bounds.height - parseFloat(style.borderTopWidth) - parseFloat(style.borderBottomWidth);
+        return {
+          fit: getComputedStyle(image).objectFit,
+          left: bounds.left - frame.left,
+          right: frame.right - bounds.right,
+          top: bounds.top - frame.top,
+          ratio: contentWidth / contentHeight,
+          sourceRatio: image.naturalWidth / image.naturalHeight,
+        };
+      });
+      expect(layout.fit).toBe("contain");
+      expect(layout.left).toBeGreaterThanOrEqual(16);
+      expect(layout.right).toBeGreaterThanOrEqual(16);
+      expect(layout.top).toBeGreaterThanOrEqual(16);
+      expect(layout.ratio).toBeCloseTo(layout.sourceRatio, 2);
+      await expect(figure.locator("figcaption")).toHaveCSS("font-size", "13px");
     }
-  }
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-});
+    for (const paragraph of await page.locator(".ka-bento-copy > p").all()) {
+      await expect(paragraph).toHaveCSS("font-size", "16px");
+      await expect(paragraph).toHaveCSS("line-height", "25.6px");
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
+for (const width of [320, 1440]) {
+  test(`Help guides keep readable procedures and working section links at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/help");
+    const routes = await page.locator(".kh-guide-row").evaluateAll(links => links.map(link => link.getAttribute("href")!));
+    expect(routes).toHaveLength(13);
+    for (const route of routes) {
+      const response = await page.goto(route);
+      expect(response!.status(), route).toBe(200);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      await expect(page.locator(".kh-steps:not(:has(li))")).toHaveCount(0);
+      for (const paragraph of await page.locator(".kh-article-body section > p:not(.kh-note)").all()) {
+        await expect(paragraph).toHaveCSS("font-size", "16px");
+        await expect(paragraph).toHaveCSS("line-height", "25.6px");
+      }
+      for (const step of await page.locator(".kh-steps li").all()) {
+        await expect(step).toHaveCSS("font-size", "16px");
+      }
+      for (const id of await page.locator('.kh-sidebar a[href^="#"]').evaluateAll(links => links.map(link => link.getAttribute("href")!.slice(1)))) {
+        await expect(page.locator(`[id="${id}"]`)).toHaveCount(1);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true);
+    }
+  });
+}
 
 test.describe("Contact rate limit", () => {
   test.use({ expectedContactRateLimit: true });

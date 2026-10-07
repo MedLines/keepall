@@ -40,7 +40,7 @@
 .ka-page :where(h1,h2,h3) { font-weight: 450; text-wrap: balance; letter-spacing: -.035em; }
 .ka-page :where(.ka-lede, .ka-section-heading > p, .ka-platforms p, .ka-install-note) { text-wrap: pretty; }
 .ka-page :where(a,button,summary):focus-visible { outline: 2px solid var(--ka-accent); outline-offset: 5px; }
-.ka-page :where(section[id],div[id]) { scroll-margin-top: 108px; }
+.ka-page :where(section[id], div[id], article[id]) { scroll-margin-top: 108px; }
 .ka-page svg { flex-shrink: 0; }
 .ka-wrap { width: min(1080px, calc(100% - 64px)); margin-inline: auto; }
 .ka-skip { position: fixed; top: 10px; left: 16px; z-index: 40; padding: 12px 20px; background: var(--ka-text); color: var(--ka-bg); transform: translateY(-200%); }
