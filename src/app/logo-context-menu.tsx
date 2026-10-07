@@ -14,6 +14,9 @@ export function LogoContextMenu({ children }: { children: ReactElement }) {
             {[
               ["/about", "About"],
               ["/help", "Help"],
+              ["/contact", "Contact"],
+              ["/changelog", "Changelog"],
+              ["/privacy", "Privacy"],
             ].map(([href, label]) => (
               <ContextMenu.LinkItem
                 key={href}

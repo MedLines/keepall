@@ -79,6 +79,8 @@
 .ka-header nav a { padding-block: 12px; }
 .ka-header-open { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 8px 12px 8px 16px; border: 1px solid oklch(1 0 0 / 0.094117647); border-radius: 40px; background: oklch(1 0 0 / 0.047058824); font-size: var(--ka-type-caption); }
 .ka-header-open svg { width: 14px; height: 14px; }
+.ka-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.ka-header-open { white-space: nowrap; }
 .ka-button { display: inline-flex; align-items: center; justify-content: center; gap: 20px; min-height: 48px; padding: 12px 16px 12px 24px; border: 1px solid oklch(1 0 0 / 0.666666667); border-radius: 40px; background: oklch(0.937076862 0.006771308 53.4431889); color: oklch(0.199825291 0.008446803 307.992444023); font-size: var(--ka-type-control); font-weight: 500; line-height: 1.4; box-shadow: inset 0 1px 0 oklch(1 0 0); transition: background 180ms ease, transform 180ms var(--ka-ease); }
 .ka-button svg { width: 16px; height: 16px; }
 .ka-button-small { min-height: 44px; padding: 10px 14px; gap: 16px; }
@@ -285,6 +287,8 @@
 .ka-closing .ka-fine-print { margin-top: 18px; }
 .ka-footer { overflow: hidden; }
 .ka-footer-top { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 48px 0 20px; border-top: 1px solid var(--ka-line); }
+.ka-footer-top > nav { flex: 1; justify-content: flex-end; }
+.ka-footer-top > nav a { padding-block: 8px; }
 .ka-footer nav { display: flex; flex-wrap: wrap; gap: 30px; font-size: 12px; color: var(--ka-muted); }
 .ka-footer-elastic { position: relative; isolation: isolate; overflow: clip; }
 .ka-footer-wordmark-clip { position: absolute; inset: auto 0 0; height: 29vw; overflow: hidden; pointer-events: none; }
@@ -444,6 +448,13 @@
   .ka-card-copy h2 { margin-top: 32px; }
   .ka-card-scene { padding: 20px; }
 }
+@media (max-width: 980px) {
+  .ka-header nav { gap: 20px; }
+  .ka-header nav a:nth-child(2), .ka-header nav a:nth-child(3) { display: none; }
+}
+@media (max-width: 700px) {
+  .ka-header nav { display: none; }
+}
 @media (max-width: 800px) {
   .ka-wrap { width: calc(100% - 40px); }
   .ka-header-floating { width: calc(100% - 40px); }
@@ -488,6 +499,7 @@
   .ka-header-floating .ka-header-open { padding-inline: 12px 8px; }
   .ka-brand { font-size: 22px; }
   .ka-header nav { display: none; }
+  .ka-header-brand-name, .ka-header-app-name { display: none; }
   .ka-header-open { font-size: 11px; padding: 8px 8px 8px 12px; }
   .ka-hero { padding-top: 0; padding-bottom: 70px; }
   .ka-hero .ka-pill { font-size: 11px; }
@@ -546,6 +558,7 @@
   .ka-questions summary { font-size: 13px; line-height: 1.5; }
   .ka-closing h2 { font-size: 34px; }
   .ka-footer-top { align-items: flex-start; padding-top: 30px; }
+  .ka-footer-top > nav { justify-content: flex-start; }
   .ka-footer nav { flex-direction: column; gap: 18px; font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) {
