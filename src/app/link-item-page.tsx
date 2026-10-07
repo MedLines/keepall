@@ -1,5 +1,6 @@
 "use client";
 
+import { ArticleReader } from "./article-reader";
 import { ScrollPanel } from "@/components/ui/scroll-panel";
 
 import Link from "next/link";
@@ -77,12 +78,12 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
 
   const busy = organizeMutation !== null || itemMutation !== null;
   const link = state.link;
-  const title = link.title.trim() || link.previewTitle.trim() || link.url;
+  const title = link.title.trim() || link.article?.title || link.previewTitle.trim() || link.url;
   const itemTags = resolveItemTags(link, new Map(state.tags.map((tag) => [tag.id, tag])));
   const itemCollections = resolveItemCollections(link, new Map(state.collections.map((collection) => [collection.id, collection])));
 
   function applyLinkUpdate(updated: LinkItem, extra?: { tag?: Tag; collection?: Collection }) {
-    setState((current) => current.status === "ready" ? {
+    setState((current) => current.status === "ready" && current.link.id === updated.id ? {
       ...current,
       link: updated,
       tags: extra?.tag && !current.tags.some((tag) => tag.id === extra.tag?.id)
@@ -201,6 +202,8 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
                 <a href={link.url} target="_blank" rel="noopener noreferrer" className="mt-4 block break-all text-sm text-text-secondary underline underline-offset-2 hover:text-text-primary">{link.url}</a>
               </div>
             </div>
+
+            <ArticleReader key={`${link.id}:${link.url}`} link={link} disabled={busy} onSaved={applyLinkUpdate} />
 
             <section aria-labelledby="personal-note-heading" className="mt-10 border-t border-border-control pt-7">
               <h2 id="personal-note-heading" className="text-xl font-semibold">My note</h2>
