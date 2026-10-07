@@ -34,7 +34,7 @@ export async function seedMarketingLibrary(page) {
       }
       const base = { updatedAt: createdAt, tagIds: ["inspiration"], caption: "", sourceUrl: "" };
       const order = [2, 0, 3, 1, 7, 4, 6, 5, 8];
-      order.forEach((assetIndex, index) => tx.objectStore("items").put({ ...base, id: `design-${index}`, type: "image", title: "", assetIds: [assets[assetIndex].id], collectionIds: ["design"], createdAt: createdAt - index * 1000 }));
+      order.forEach((assetIndex, index) => tx.objectStore("items").put({ ...base, id: `design-${index}`, type: "image", title: "", tagIds: index === 0 ? ["inspiration", "favorites"] : ["inspiration"], assetIds: [assets[assetIndex].id], collectionIds: ["design"], createdAt: createdAt - index * 1000 }));
       [1, 0, 4].forEach((assetIndex, index) => tx.objectStore("items").put({ ...base, id: `space-${index}`, type: "image", title: ["A little room to think", "Afternoon light", "Space to breathe"][index], caption: "Quiet spaces for another day.", assetIds: [assets[assetIndex].id], collectionIds: ["spaces"], createdAt: createdAt - (index + 10) * 1000 }));
       tx.objectStore("items").put({ ...base, id: "sample-note", type: "note", title: "A slower Sunday", content: "A few quiet spaces to return to.\n\nMake room for good books, afternoon light, and a little time to think.", collectionIds: ["weekend"], createdAt: createdAt - 14000 });
       tx.oncomplete = resolve;

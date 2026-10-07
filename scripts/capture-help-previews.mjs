@@ -1,32 +1,71 @@
-import { chromium } from "@playwright/test";
-import sharp from "sharp";
+import { chromium, expect } from "@playwright/test";
 import { seedMarketingLibrary } from "./marketing-fixture.mjs";
+import { prepareCaptureContext, capturePreview, localCaptureOrigin } from "./preview-capture.mjs";
 
-const origin = process.argv[2] ?? "http://localhost:3001";
-if (!["localhost", "127.0.0.1"].includes(new URL(origin).hostname)) throw new Error("Use a local server for help captures.");
+// Every capture uses an isolated sample library. No personal browser data is read.
+const origin = localCaptureOrigin(process.argv[2]);
 const browser = await chromium.launch();
 try {
-  const context = await browser.newContext({ viewport: { width: 1100, height: 860 }, deviceScaleFactor: 2, colorScheme: "dark", reducedMotion: "reduce", serviceWorkers: "block" });
-  await context.addInitScript(() => localStorage.setItem("keepall.storage-status-dismissed", "true"));
+  const context = await prepareCaptureContext(browser);
   const page = await context.newPage();
+  // Keep imported sample links as titles and URLs, without fetching remote sites.
+  await context.route("**/api/preview", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ title: "", description: "", imageUrl: "" }) }));
+  const capture = (name, locator = page) => capturePreview(page, new URL(`../public/help/${name}.webp`, import.meta.url), locator);
+  const marketing = (name, locator = page) => capturePreview(page, new URL(`../public/marketing/${name}.webp`, import.meta.url), locator);
   await page.goto(origin);
-  await page.getByText("No items yet.", { exact: true }).waitFor();
+  await page.locator("#library-heading").waitFor();
+  await page.waitForFunction(async () => (await indexedDB.databases()).some(database => database.name === "keepall"));
   await seedMarketingLibrary(page);
   await page.reload();
   await page.locator(".library-card").first().waitFor();
-  async function capture(name, locator) {
-    await page.evaluate(() => document.fonts.ready);
-    await page.addStyleTag({ content: "nextjs-portal, [data-agentation-root], [data-interface-kit], #interface-kit-root { display: none !important; }" });
-    await locator.scrollIntoViewIfNeeded();
-    await sharp(await locator.screenshot({ animations: "disabled" })).webp({ quality: 88 }).toFile(new URL(`../public/help/${name}.webp`, import.meta.url).pathname);
-    console.log(`Captured ${name}`);
-  }
+  await page.setViewportSize({ width: 1440, height: 1100 });
   await page.getByRole("button", { name: "Save item", exact: true }).click();
-  await capture("save-panel", page.getByRole("dialog", { name: "Save to Keepall" }));
-  await page.goto(`${origin}/settings`);
-  await capture("import-settings", page.getByRole("region", { name: "Import", exact: true }));
-  await capture("backup-settings", page.getByRole("region", { name: "Backup", exact: true }));
+  const drawer = page.getByRole("dialog", { name: "Save to Keepall" });
+  await capture("save-panel", drawer);
+  await drawer.getByRole("textbox", { name: "Link, note, or image", exact: true }).fill("https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout");
+  await drawer.getByRole("textbox", { name: "Your note (optional)", exact: true }).fill("Try the generous spacing and narrow text column for the portfolio case study.");
+  await drawer.getByRole("button", { name: "Design Inspiration", exact: true }).click();
+  await drawer.getByRole("button", { name: "favorites", exact: true }).click();
+  await drawer.getByRole("textbox", { name: "Link, note, or image", exact: true }).scrollIntoViewIfNeeded();
+  await marketing("app-save-item", drawer);
+  await drawer.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.setViewportSize({ width: 1440, height: 860 });
+  await page.getByRole("button", { name: "Save item", exact: true }).click();
+  await drawer.getByRole("button", { name: "Bulk import", exact: true }).click();
+  const bulk = page.getByRole("dialog", { name: "Bulk import", exact: true });
+  await capture("import-settings", bulk);
+  await capture("bulk-import", bulk);
+  const chooser = page.waitForEvent("filechooser");
+  await bulk.getByRole("button", { name: "Import browser bookmarks", exact: true }).click();
+  await (await chooser).setFiles(new URL("./browser-bookmarks-fixture.html", import.meta.url).pathname);
+  const review = page.getByRole("dialog", { name: "Import browser bookmarks", exact: true });
+  await review.waitFor();
+  await capture("bookmark-import", review);
+  await review.getByRole("button", { name: "Import bookmarks", exact: true }).click();
+  await expect(bulk.getByRole("status")).toContainText("5 added, 0 merged, 0 skipped");
+  await capture("bookmark-result", bulk);
+  await bulk.getByRole("button", { name: "Close", exact: true }).click();
+  await drawer.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Weeknight recipes", exact: true }).click();
+  await expect(page.locator(".library-card")).toHaveCount(3);
+  await expect(page.getByText(/Fetching link previews/)).toHaveCount(0);
+  await page.mouse.move(1400, 820);
+  await marketing("app-bookmarks");
+  await page.locator(".library-card").filter({ hasText: "Red lentil & chickpea soup" }).click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  const edit = page.getByRole("dialog", { name: "Edit link details", exact: true });
+  await edit.getByRole("textbox", { name: "My note (optional)", exact: true }).fill("Quick pantry dinner. Keep red lentils and chickpeas on hand for a busy weeknight.");
+  await marketing("app-bookmark-note", edit);
+  await edit.getByRole("button", { name: "Save changes", exact: true }).click();
+  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "All items", exact: true }).click();
+  await page.getByRole("searchbox").fill("pantry dinner");
+  await expect(page.locator(".library-card")).toHaveCount(1);
+  await marketing("app-bookmark-search");
+  await page.goto(`${origin}/settings#storage`);
+  await page.getByRole("tab", { name: "Storage & backups", exact: true }).click();
+  await page.getByRole("region", { name: "Storage", exact: true }).waitFor();
   await capture("storage-settings", page.getByRole("region", { name: "Storage", exact: true }));
+  await capture("backup-settings", page.getByRole("region", { name: "Backup", exact: true }));
 } finally {
   await browser.close();
 }

@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import bookmarkImportImage from "../../../../public/help/bookmark-import.webp";
+import bookmarkResultImage from "../../../../public/help/bookmark-result.webp";
+import bookmarksImage from "../../../../public/marketing/app-bookmarks.webp";
+import bookmarkNoteImage from "../../../../public/marketing/app-bookmark-note.webp";
+import bookmarkSearchImage from "../../../../public/marketing/app-bookmark-search.webp";
 import { WebsitePage } from "../../website-page";
 import { websiteOpenGraphImage, websiteTwitterImage } from "../../website-metadata";
 
@@ -44,19 +49,28 @@ export default function BrowserBookmarksArticle() {
           <li>Open Keepall in the browser profile where you want to keep this library.</li>
           <li>Choose Save item, then Bulk import and Import browser bookmarks.</li>
           <li>Select the HTML export from your browser.</li>
-          <li>Review how the bookmark folders will be used for collections, then confirm the import.</li>
-          <li>Read the import result before you continue.</li>
+          <li>Choose how browser folders update collections when a link already exists, then choose Import bookmarks.</li>
+          <li>Read the added, merged, and skipped totals in Bulk import, then choose Done.</li>
         </ol>
         <p>The <Link href="/help/import#bookmarks">bookmark import guide</Link> covers these steps. A browser bookmark export and a Keepall backup are different files. Use the bookmark import option for the HTML export.</p>
+        <figure className="kb-figure kb-figure-compact">
+          <Image src={bookmarkImportImage} width={960} height={1116} sizes="(max-width: 580px) calc(100vw - 64px), 480px" alt="Import browser bookmarks dialog with Browser folder to Unsorted only, Keep Keepall collections, and Browser folders win choices" />
+          <figcaption>The default files links from Unsorted using the browser folder. Already filed links keep their Keepall collection.</figcaption>
+        </figure>
+        <p>Browser tags are added with every option. New links use their browser folder as a collection. The choice above controls existing links.</p>
+        <figure className="kb-figure kb-figure-compact">
+          <Image src={bookmarkResultImage} width={960} height={848} sizes="(max-width: 580px) calc(100vw - 64px), 480px" alt="Bulk import showing Bookmarks: 5 added, 0 merged, 0 skipped after importing the sample HTML export" />
+          <figcaption>This sample export added five links. Read your own result before closing the dialog.</figcaption>
+        </figure>
         <p>This is a one-time import. Later changes in your browser&apos;s bookmark manager do not automatically update your Keepall library.</p>
       </section>
       <section id="check">
         <h2>Check a familiar folder</h2>
-        <p>Pick a folder you know well and open its collection. Check a few titles, then open a saved link and use Open source to confirm the address takes you where you expect. If something looks wrong, go back to the import result and keep the original file while you investigate.</p>
-        <p>Choose All items to see the wider library, or choose a collection in the sidebar to focus on one group. The example below is a captured Keepall library, rather than a bookmark import result. It shows how collections sit beside the full library.</p>
+        <p>Pick a folder you know well and open its collection. Check a few titles, then use its source address to confirm the link takes you where you expect. Keep the original file while you investigate anything that looks wrong.</p>
+        <p>Choose All items to see the wider library, or choose a collection in the sidebar to focus on one group. The example below is the Weeknight recipes collection created by the HTML import above. Its three links keep their exported titles and source addresses.</p>
         <figure className="kb-figure">
-          <Image src="/marketing/app-library.webp" width={2880} height={1720} sizes="(max-width: 824px) calc(100vw - 64px), 760px" alt="Keepall's All items grid with Design Inspiration, Quiet spaces, and Weekend projects collections visible in the sidebar" />
-          <figcaption>A real Keepall library. All items shows the full set of saves; the sidebar collections let you focus on a smaller group.</figcaption>
+          <Image src={bookmarksImage} width={2880} height={1720} sizes="(max-width: 824px) calc(100vw - 64px), 760px" alt="Weeknight recipes collection showing the three recipe links imported from the sample browser bookmark export" />
+          <figcaption>A browser folder becomes a Keepall collection. These imported links are shown without website previews.</figcaption>
         </figure>
         <p>A saved web address still points to its original website. Importing it does not preserve the whole site or guarantee the page will remain available. Keep a note of the information you need when a particular link matters.</p>
       </section>
@@ -71,10 +85,14 @@ export default function BrowserBookmarksArticle() {
         <h2>Give search something to find</h2>
         <p>Old page titles do not always match what you remember. Add a personal note with the words you would use to look for the link. For a recipe, that might be &quot;quick lentil dinner, works with pantry ingredients.&quot; For a tutorial, write the problem it helped you solve.</p>
         <p>Try searching those words before reorganizing more items. Keepall searches titles, tags, notes, and source addresses. You can narrow the results by collection, tag, or item type. If an expected save is missing, clear those filters and try again.</p>
-        <p>The captured search below shows why personal notes help. The words &quot;quiet spaces&quot; find image notes and a standalone note, even though their titles use other words and the items belong to different collections.</p>
+        <p>Open an item&apos;s three-dot menu and choose Edit to add your note, then choose Save changes. In this example, the imported lentil soup link has the note &quot;Quick pantry dinner.&quot; Searching &quot;pantry dinner&quot; finds it even though those words are absent from its title.</p>
+        <figure className="kb-figure kb-figure-compact">
+          <Image src={bookmarkNoteImage} width={1344} height={1408} sizes="(max-width: 580px) calc(100vw - 64px), 480px" alt="Edit link details dialog with the imported lentil soup title and a note beginning Quick pantry dinner" />
+          <figcaption>Edit keeps your personal note separate from the bookmark title. Choose Save changes when ready.</figcaption>
+        </figure>
         <figure className="kb-figure">
-          <Image src="/marketing/app-search.webp" width={2880} height={1720} sizes="(max-width: 824px) calc(100vw - 64px), 760px" alt="Keepall showing four results for quiet spaces with matches highlighted in notes across Quiet spaces and Weekend projects collections" />
-          <figcaption>The phrase appears in saved notes. You can find a remembered idea without remembering the original title.</figcaption>
+          <Image src={bookmarkSearchImage} width={2880} height={1720} sizes="(max-width: 824px) calc(100vw - 64px), 760px" alt="Keepall searching all items for pantry dinner and finding the imported lentil soup link through its saved personal note" />
+          <figcaption>The highlighted words come from the note added to this imported bookmark.</figcaption>
         </figure>
         <p>Use the <Link href="/help/collections-and-tags#search">search guide</Link> when you need to refine a result. When a save is hard to find, add the missing context once you open it. That small edit improves the next visit.</p>
       </section>

@@ -19,7 +19,8 @@ try {
   await context.route("https://www.google.com/s2/favicons**", route => route.abort());
   const setup = await context.newPage();
   await setup.goto(origin);
-  await setup.getByText("No items yet.", { exact: true }).waitFor();
+  await setup.locator("#library-heading").waitFor();
+  await setup.waitForFunction(async () => (await indexedDB.databases()).some(database => database.name === "keepall"));
   await seedMarketingLibrary(setup);
   await setup.close();
   const started = Date.now();
@@ -83,7 +84,8 @@ try {
     await click(page.locator(".library-card").first(), { button: "right" });
     await click(page.getByRole("menuitem", { name: "Tags", exact: true }));
     const favorite = page.getByRole("menuitemcheckbox", { name: "favorites", exact: true });
-    await click(favorite);
+    if (await favorite.getAttribute("aria-checked") === "true") await favorite.click();
+    await favorite.click();
     await expect(favorite).toHaveAttribute("aria-checked", "true");
     await click(page.locator("#library-heading"));
     await click(sidebar.getByRole("button", { name: "Tag favorites", exact: true }));

@@ -20,3 +20,6 @@
   .kb-post-list h2 { font-size: 25px; }
   .kb-post-list > li { padding-block: 28px; }
 }
+
+.kb-figure-compact { max-width: 480px; margin-inline: auto; }
+.kb-figure-drawer { max-width: 400px; margin-inline: auto; }
