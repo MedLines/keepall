@@ -28,6 +28,52 @@
   background: radial-gradient(ellipse, light-dark(oklch(0 0 0 / 0.1), oklch(0 0 0 / 0.25)), transparent 70%);
 }
 
+.library-empty-light {
+  position: absolute;
+  z-index: -1;
+  inset: auto -10% 72%;
+  height: 7.5rem;
+  pointer-events: none;
+}
+
+.library-empty-light::before,
+.library-empty-light::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 100% 0, 68% 100%, 32% 100%);
+  background: linear-gradient(to top, light-dark(oklch(1 0 0 / 0.72), oklch(1 0 0 / 0.15)), light-dark(oklch(1 0 0 / 0.25), oklch(1 0 0 / 0.055)) 45%, transparent 95%);
+  filter: blur(3px);
+}
+
+.library-empty-light::after {
+  inset: 15% 17% 0;
+  clip-path: polygon(0 0, 100% 0, 73% 100%, 27% 100%);
+  background: linear-gradient(to top, light-dark(oklch(1 0 0 / 0.55), oklch(1 0 0 / 0.09)), transparent 90%);
+  filter: blur(1px);
+}
+
+.library-empty-dust {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 35% 14%, light-dark(oklch(0.65 0 0 / 0.3), oklch(1 0 0 / 0.3)) 0 0.6px, transparent 1px),
+    radial-gradient(circle at 64% 30%, light-dark(oklch(0.65 0 0 / 0.3), oklch(1 0 0 / 0.3)) 0 0.7px, transparent 1px),
+    radial-gradient(circle at 44% 51%, light-dark(oklch(0.65 0 0 / 0.3), oklch(1 0 0 / 0.3)) 0 0.6px, transparent 1px),
+    radial-gradient(circle at 57% 66%, light-dark(oklch(0.65 0 0 / 0.3), oklch(1 0 0 / 0.3)) 0 0.7px, transparent 1px);
+}
+
+.library-empty-folder .collection-folder-previews::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 18% 12% auto;
+  height: 20%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, light-dark(oklch(1 0 0 / 0.7), oklch(1 0 0 / 0.5)), transparent 70%);
+  filter: blur(4px);
+}
+
 .library-empty-folder :is(.collection-folder-front, .collection-folder-front-surface, .collection-folder-gradient-top, .collection-folder-gradient-middle, .collection-folder-gradient-bottom) {
   transition: none;
 }
