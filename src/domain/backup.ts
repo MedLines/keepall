@@ -1,5 +1,5 @@
 import { validateShortcuts, type KeyboardShortcuts } from "./keyboard-shortcuts";
-import { parseSavedArticle } from "./article";
+import { articleAssetIds, parseSavedArticle } from "./article";
 import { documentFormat, DocumentValidationError, type DocumentFormat } from "./document";
 import { isHttpUrl } from "./classify";
 import type { Collection } from "./collection";
@@ -515,6 +515,7 @@ function parseItem(
     let article;
     try { article = item.article === undefined ? undefined : parseSavedArticle(item.article); }
     catch { throw new BackupValidationError(`Link at index ${index} has an invalid saved article`); }
+    if (articleAssetIds(article).some(id => !assetIds.has(id))) throw new BackupValidationError(`Link at index ${index} has a missing article image`);
     const preview = coerceLinkPreviewFields(item as Partial<LinkItem>);
     const previewAssetId =
       preview.previewAssetId && assetIds.has(preview.previewAssetId)

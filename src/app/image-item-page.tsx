@@ -3,7 +3,6 @@
 import { ScrollPanel } from "@/components/ui/scroll-panel";
 
 import { Dialog } from "@base-ui/react/dialog";
-import { Menu } from "@base-ui/react/menu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -42,6 +41,7 @@ import { ItemViewTransition } from "./item-view-transition";
 import { NoteContent } from "./note-content";
 import { VerticalImageGallery } from "./vertical-image-gallery";
 import { ImageToolsPanel } from "./image-tools-panel";
+import { CurrentImageMenu } from "./image-actions-menu";
 import { ItemPageHeader } from "./item-page-header";
 import { ItemPageLoading } from "./library-loading-content";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
@@ -49,11 +49,8 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   CloseIcon,
-  DeleteIcon,
   FullScreenIcon,
   PlusIcon,
-  ImageIcon,
-  MoreIcon,
 } from "./shell-icons";
 
 type LoadState =
@@ -153,7 +150,7 @@ export function ImageItemPage({ itemId, returnHref, initialSnapshot }: Props) {
         (event.key !== "ArrowLeft" && event.key !== "ArrowRight") ||
         event.altKey || event.ctrlKey || event.metaKey ||
         (event.target instanceof Element &&
-          event.target.closest("input, textarea, select, [contenteditable='true'], [role='menu']"))
+          event.target.closest("input, textarea, select, [contenteditable='true'], [role='menu'], [data-image-tools]"))
       ) return;
 
       event.preventDefault();
@@ -195,11 +192,11 @@ export function ImageItemPage({ itemId, returnHref, initialSnapshot }: Props) {
     }
   }
 
-  async function replaceImage(file: File) {
+  async function replaceImage(file: File, index = slide) {
     if (loadState.status !== "ready" || galleryMutation) {
       return;
     }
-    const currentSlide = clampImageSlideIndex(loadState.item.assetIds, slide);
+    const currentSlide = clampImageSlideIndex(loadState.item.assetIds, index);
     setGalleryMutation("replace");
     setGalleryError(null);
     try {
@@ -424,7 +421,7 @@ export function ImageItemPage({ itemId, returnHref, initialSnapshot }: Props) {
         galleryError={galleryError}
         actionBusy={actionMutation !== null || galleryMutation !== null}
         onAddImages={(files) => void addImages(files)}
-        onReplaceImage={(file) => void replaceImage(file)}
+        onReplaceImage={(file, index) => void replaceImage(file, index)}
         onRemoveImage={() => {
           setRemoveImageError(null);
           setRemoveImageOpen(true);
@@ -587,7 +584,7 @@ function ImageWorkspace({
   galleryError: string | null;
   actionBusy: boolean;
   onAddImages: (files: File[]) => void;
-  onReplaceImage: (file: File) => void;
+  onReplaceImage: (file: File, index: number) => void;
   onRemoveImage: () => void;
   onEdit: () => void;
   onOrganize: () => void;
@@ -595,6 +592,7 @@ function ImageWorkspace({
 }) {
   const addInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const replacementIndex = useRef<number | null>(null);
   const scrollRef = useRef<HTMLElement>(null);
   const galleryListRef = useRef<HTMLOListElement>(null);
   const readingPosition = useRef<{ assetId: string; offset: number } | null>(null);
@@ -704,32 +702,22 @@ function ImageWorkspace({
                   aria-label="Choose replacement image"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
-                    if (file) onReplaceImage(file);
+                    if (file) onReplaceImage(file, replacementIndex.current ?? currentSlide);
+                    replacementIndex.current = null;
                     event.target.value = "";
                   }}
                 />
-            <div className="min-w-0 row-start-2 lg:col-start-1 lg:row-start-1">
-            <section className="relative flex min-w-0 flex-col gap-3" aria-label="Image gallery">
-              {galleryMode === "scroll" ? (
-              <div className="sticky top-0 z-10 -mb-3 h-0 self-end">
-                <div className="absolute right-4 top-4">
-                  <CurrentImageMenu
-                    busy={galleryMutation !== null}
-                    canRemove={item.assetIds.length > 1}
-                    onReplace={() => replaceInputRef.current?.click()}
-                    onRemove={onRemoveImage}
-                  />
-                </div>
-              </div>
-              ) : null}
-              {galleryMode === "slides" ? (
+            <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+            <section className="relative row-start-1 flex min-w-0 flex-col gap-3" aria-label="Image gallery">
+              {galleryMode === "slides" && currentAssetId ? (
+              <ImageToolsPanel key={currentAssetId} item={item} assetId={currentAssetId} slide={currentSlide} disabled={actionBusy}>
               <ItemViewTransition itemId={item.id} assetId={currentAssetId ?? ""} source={false}>
               <div className="item-workspace-media image-viewer-canvas relative isolate flex h-[var(--image-viewer-height)] items-center justify-center overflow-hidden rounded-card bg-bg-image-viewer">
                 <div className="pointer-events-none absolute inset-4 z-10 flex items-start justify-end">
                   <CurrentImageMenu
                     busy={galleryMutation !== null}
                     canRemove={item.assetIds.length > 1}
-                    onReplace={() => replaceInputRef.current?.click()}
+                    onReplace={() => { replacementIndex.current = currentSlide; replaceInputRef.current?.click(); }}
                     onRemove={onRemoveImage}
                   />
                 </div>
@@ -774,17 +762,20 @@ function ImageWorkspace({
               </div>
               </ItemViewTransition>
 
-              ) : null}
-              {galleryMode === "slides" ? (
                 <GalleryControls
                   item={item}
                   currentSlide={currentSlide}
                   onSlideChange={onSlideChange}
                 />
+              </ImageToolsPanel>
               ) : null}
-              <VerticalImageGallery
+              {galleryMode === "scroll" ? <VerticalImageGallery
                 item={item}
-                active={galleryMode === "scroll"}
+                active
+                busy={galleryMutation !== null}
+                toolsDisabled={actionBusy}
+                onReplace={index => { replacementIndex.current = index; onSlideChange(index); replaceInputRef.current?.click(); }}
+                onRemove={index => { onSlideChange(index); onRemoveImage(); }}
                 listRef={galleryListRef}
                 scrollRef={scrollRef}
                 preserveScrollAnchor={preserveScrollAnchor}
@@ -793,7 +784,7 @@ function ImageWorkspace({
                   onSlideChange(index);
                   onViewerOpenChange(true);
                 }}
-              />
+              /> : null}
               {galleryMode === "scroll" ? (
                 <div className="sticky bottom-0 z-10 flex justify-end bg-bg-canvas py-3">
                   <ImageCount current={currentSlide + 1} total={item.assetIds.length} />
@@ -801,8 +792,6 @@ function ImageWorkspace({
               ) : null}
               {galleryError ? <p className="text-sm text-text-danger" role="alert">{galleryError}</p> : null}
             </section>
-
-            {currentAssetId ? <ImageToolsPanel key={currentAssetId} item={item} assetId={currentAssetId} slide={currentSlide} disabled={actionBusy} /> : null}
 
             {item.caption ? (
               <article
@@ -826,7 +815,7 @@ function ImageWorkspace({
               createdAt={item.createdAt}
               updatedAt={item.updatedAt}
               sourceFileName={item.sourceFileName}
-              className={`${ITEM_DETAILS_POSITION} lg:min-h-[var(--image-viewer-height)]`}
+              className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2 lg:min-h-[var(--image-viewer-height)]`}
               disabled={actionBusy}
               onOrganize={onOrganize}
               onEdit={onEdit}
@@ -852,39 +841,6 @@ function ImageWorkspace({
         onSlideChange={onSlideChange}
       />
     </div>
-  );
-}
-
-function CurrentImageMenu({ busy, canRemove, onReplace, onRemove }: {
-  busy: boolean;
-  canRemove: boolean;
-  onReplace: () => void;
-  onRemove: () => void;
-}) {
-  const openingDialog = useRef(false);
-  return (
-    <Menu.Root modal={false} onOpenChange={(open) => { if (open) openingDialog.current = false; }}>
-      <Menu.Trigger className="ui-control pointer-events-auto flex size-11 items-center justify-center bg-bg-surface disabled:opacity-60" aria-label="Current image actions" title="Current image actions" disabled={busy}>
-        <MoreIcon />
-      </Menu.Trigger>
-      <Menu.Portal>
-        <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
-          <Menu.Popup aria-label="Current image actions" className="ui-menu-popup ui-popover w-56 max-w-[calc(100vw-1rem)] outline-none" finalFocus={() => openingDialog.current ? false : true}>
-            <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active data-[disabled]:opacity-50" disabled={busy} onClick={onReplace}>
-              <ImageIcon />Replace current image
-            </Menu.Item>
-            {canRemove ? (
-              <>
-                <Menu.Separator className="my-1 border-t border-border-edge" />
-                <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger data-[disabled]:opacity-50" disabled={busy} onClick={() => { openingDialog.current = true; onRemove(); }}>
-                  <DeleteIcon />Remove current image
-                </Menu.Item>
-              </>
-            ) : null}
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
   );
 }
 

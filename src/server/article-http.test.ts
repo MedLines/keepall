@@ -52,3 +52,17 @@ test("a stalled DNS lookup aborts with the global capture signal", async () => {
   controller.abort(new Error("Capture timed out"));
   await expect(pending).rejects.toThrow("Capture timed out");
 });
+
+test("uses an explicit image Accept header while retaining pinned DNS", async () => {
+  resolveDns.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
+  httpsRequest.mockImplementation((_url, options, onResponse) => {
+    expect(options.headers.Accept).toBe("image/webp,image/png,image/jpeg");
+    const pinned = vi.fn();
+    options.lookup("example.com", {}, pinned);
+    expect(pinned).toHaveBeenCalledWith(null, "93.184.216.34", 4);
+    onResponse(Object.assign(Readable.from([Buffer.from("image bytes")]), { statusCode: 200, headers: { "content-type": "image/webp" } }));
+    return Object.assign(new EventEmitter(), { end: vi.fn() });
+  });
+  const result = await fetchPublicArticlePage("https://example.com/chart.webp", new AbortController().signal, "image/webp,image/png,image/jpeg");
+  expect(await result.text()).toBe("image bytes");
+});

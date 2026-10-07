@@ -192,8 +192,8 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
 
       <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
         <div className={ITEM_PAGE_GRID}>
-          <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
-            <div className="squircle-panel overflow-hidden rounded-panel border border-border-control bg-bg-surface">
+          <div className="row-start-1 min-w-0 lg:col-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
+            {!link.article ? <div className="squircle-panel overflow-hidden rounded-panel border border-border-control bg-bg-surface">
               {link.previewAssetId ? <LibraryItemMedia item={link} variant="card" className="max-h-96 w-full" /> : null}
               <div className="px-5 pb-6 pt-5 sm:px-7">
                 <div className="flex min-w-0 items-center gap-2 text-sm text-text-secondary"><LinkIcon className="size-4" />{linkCardHost(link)}</div>
@@ -201,11 +201,11 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
                 {link.previewDescription ? <p className="mt-3 text-sm leading-relaxed text-text-secondary">{link.previewDescription}</p> : null}
                 <a href={link.url} target="_blank" rel="noopener noreferrer" className="mt-4 block break-all text-sm text-text-secondary underline underline-offset-2 hover:text-text-primary">{link.url}</a>
               </div>
-            </div>
+            </div> : null}
 
             <ArticleReader key={`${link.id}:${link.url}`} link={link} disabled={busy} onSaved={applyLinkUpdate} />
 
-            <section aria-labelledby="personal-note-heading" className="mt-10 border-t border-border-control pt-7">
+            <section aria-labelledby="personal-note-heading" className={`mt-10 border-t border-border-control pt-7 ${link.article ? "mx-auto max-w-[46rem] px-2 sm:px-7" : ""}`}>
               <h2 id="personal-note-heading" className="text-xl font-semibold">My note</h2>
               {link.noteContent?.trim() ? (
                 <article className="mt-6"><NoteContent content={link.noteContent} format={link.noteFormat === "markdown" ? "markdown" : "plain"} headingStart={2} /></article>
@@ -222,7 +222,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
             tags={itemTags}
             createdAt={link.createdAt}
             updatedAt={link.updatedAt}
-            className={ITEM_DETAILS_POSITION}
+            className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2`}
             disabled={busy}
             editDisabled={editing}
             deleteLabel="Move link to Trash"

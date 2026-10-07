@@ -14,6 +14,7 @@ type Props = {
   className?: string;
   controls?: ReactNode;
   mediaAction?: ReactNode;
+  children?: ReactNode;
   onEdit: () => void;
   onOrganize: () => void;
   onDelete: () => void;
@@ -37,7 +38,7 @@ function DateRow({ label, value }: { label: string; value: number }) {
 
 export function ItemLibraryDetails({
   label, summary, collections, tags, createdAt, updatedAt, sourceFileName,
-  controls, mediaAction, onEdit, onOrganize, onDelete,
+  controls, mediaAction, children, onEdit, onOrganize, onDelete,
   disabled = false, editDisabled = false, editLabel = "Edit details",
   deleteLabel = "Move item to Trash", className = "",
 }: Props) {
@@ -83,6 +84,7 @@ export function ItemLibraryDetails({
           </button>
         </div>
       </div>
+      {children}
       <div className="mt-auto grid shrink-0 gap-2 border-t border-border-control pt-3">
         <button className={`${ITEM_DETAILS_CONTROL} whitespace-nowrap text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger`} type="button" aria-label={deleteLabel} disabled={disabled} onClick={onDelete}>
           <DeleteIcon className="size-4" />Move to Trash

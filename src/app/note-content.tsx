@@ -3,7 +3,7 @@
 import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { parseNoteImageLine } from "@/domain/note";
-import { useAssetObjectUrl } from "./use-asset-object-url";
+import { LocalAssetImage as LocalNoteImage } from "./local-asset-image";
 
 type Props = {
   content: string;
@@ -14,21 +14,6 @@ type Props = {
   allowLocalImages?: boolean;
 };
 
-function LocalNoteImage({ assetId, alt, pendingImageUrls }: {
-  assetId: string;
-  alt: string;
-  pendingImageUrls?: ReadonlyMap<string, string>;
-}) {
-  const pendingUrl = pendingImageUrls?.get(assetId);
-  const savedUrl = useAssetObjectUrl(pendingUrl ? null : assetId);
-  const url = pendingUrl ?? savedUrl;
-
-  if (!url) {
-    return <span role="img" aria-label={alt || "Image"} className="text-sm text-text-secondary">Loading image…</span>;
-  }
-  // eslint-disable-next-line @next/next/no-img-element -- local IndexedDB object URL
-  return <img src={url} alt={alt || "Image"} className="media-outline my-5 block h-auto max-h-[48rem] max-w-full rounded-input object-contain" />;
-}
 
 function PlainNoteContent({ content, className, pendingImageUrls }: {
   content: string;

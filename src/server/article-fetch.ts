@@ -1,8 +1,10 @@
-import { Readability, isProbablyReaderable } from "@mozilla/readability";
+import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
-import { MAX_ARTICLE_TEXT_CHARACTERS, type SavedArticle } from "@/domain/article";
+import { MAX_ARTICLE_TEXT_CHARACTERS, articleContentText, parseSavedArticle, type CapturedArticle, type SavedArticle } from "@/domain/article";
+import { extractArticleContent } from "./article-content";
 import { parsePreviewCandidateUrl, PreviewUrlBlockedError } from "./preview-ssrf";
 import { fetchPublicArticlePage } from "./article-http";
+import { captureArticleImages } from "./article-image";
 
 export const MAX_ARTICLE_HTML_BYTES = 2 * 1024 * 1024;
 export const ARTICLE_TIMEOUT_MS = 15_000;
@@ -12,29 +14,43 @@ export class ArticleCaptureError extends Error {
   constructor(message: string) { super(message); this.name = "ArticleCaptureError"; }
 }
 
+function articleHeading(document: Document): string | undefined {
+  const editorial = document.querySelector("article h1, main h1");
+  const headings = document.querySelectorAll("body h1");
+  const heading = editorial ?? (headings.length === 1 ? headings[0] : undefined);
+  if (!heading || heading.closest('[hidden], [aria-hidden="true"]')) return;
+  const text = heading.textContent?.replace(/\s+/g, " ").trim();
+  if (!text || text.length > 500) return;
+  const normalized = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  return editorial || normalized(document.title).includes(normalized(text)) ? text : undefined;
+}
+
 export function extractArticleHtml(html: string, sourceUrl: string, capturedAt = Date.now()): SavedArticle {
   // JSDOM defaults keep script execution and all resource loading disabled.
   const dom = new JSDOM(html, { url: sourceUrl });
   try {
     const document = dom.window.document;
-    if (!isProbablyReaderable(document) || document.getElementsByTagName("*").length > 20_000) {
+    const headingTitle = articleHeading(document);
+    if (document.getElementsByTagName("*").length > 20_000) {
       throw new ArticleCaptureError("No readable article was found. The page may need a login, or its text may load only in a browser.");
+    }
+    // Preserve article images wrapped in enlargement controls before Readability removes buttons.
+    for (const button of document.querySelectorAll("button")) {
+      const images = Array.from(button.querySelectorAll("img"));
+      if (images.length) button.replaceWith(...images);
     }
     const result = new Readability(document, {
       maxElemsToParse: 20_000, charThreshold: 200,
-      serializer: node => {
-        const element = node as Element;
-        for (const unsafe of element.querySelectorAll("script,style,noscript,iframe,svg,canvas")) unsafe.remove();
-        for (const br of element.querySelectorAll("br")) br.replaceWith("\n");
-        for (const block of element.querySelectorAll("p,h1,h2,h3,h4,h5,h6,li,blockquote,pre,tr")) block.append("\n\n");
-        return element.textContent ?? "";
-      },
+      serializer: node => extractArticleContent(node, sourceUrl),
     }).parse();
-    const text = (result?.content ?? "").split("\n").map(line => line.replace(/[\t\r ]+/g, " ").trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    const content = result?.content ?? [];
+    const text = articleContentText(content);
     if (!result || text.length < 200) throw new ArticleCaptureError("No readable article was found. Open the original page or try again later.");
     if (text.length > MAX_ARTICLE_TEXT_CHARACTERS) throw new ArticleCaptureError("This article is too long to save. Save a text document instead.");
-    return { title: (result.title?.trim() || new URL(sourceUrl).hostname).slice(0, 500), text, sourceUrl, capturedAt,
-      ...(result.byline?.trim() ? { author: result.byline.trim().slice(0, 500) } : {}) };
+    return parseSavedArticle({ title: (headingTitle || result.title?.trim() || new URL(sourceUrl).hostname).slice(0, 500), text, content, sourceUrl, capturedAt,
+      ...(result.byline?.trim() ? { author: result.byline.trim().slice(0, 500) } : {}),
+      ...(result.siteName?.trim() ? { siteName: result.siteName.trim().slice(0, 500) } : {}),
+      ...(result.publishedTime && result.publishedTime.length <= 128 && Number.isFinite(Date.parse(result.publishedTime)) ? { publishedAt: result.publishedTime } : {}) });
   } catch (error) {
     if (error instanceof ArticleCaptureError) throw error;
     throw new ArticleCaptureError("Couldn't extract readable text from this page. Open the original or try again later.");
@@ -70,8 +86,9 @@ async function captureResponse(response: Response, sourceUrl: string): Promise<S
   return extractArticleHtml(await readHtml(response), sourceUrl);
 }
 
-export async function fetchArticle(rawUrl: string, options?: { fetchImpl?: typeof fetch; assertUrl?: (url: string) => Promise<URL> }): Promise<SavedArticle> {
+export async function fetchArticle(rawUrl: string, options?: { fetchImpl?: typeof fetch; assertUrl?: (url: string) => Promise<URL> }): Promise<CapturedArticle> {
   const controller = new AbortController();
+  const deadline = Date.now() + ARTICLE_TIMEOUT_MS;
   const timer = setTimeout(() => controller.abort(), ARTICLE_TIMEOUT_MS);
   const fetchImpl = options?.fetchImpl ?? ((url, init) => fetchPublicArticlePage(String(url), init!.signal as AbortSignal));
   let current = rawUrl;
@@ -86,7 +103,10 @@ export async function fetchArticle(rawUrl: string, options?: { fetchImpl?: typeo
         current = new URL(location, allowed).href;
         continue;
       }
-      return await captureResponse(response, allowed.href);
+      const article = await captureResponse(response, allowed.href);
+      controller.signal.throwIfAborted();
+      const images = await captureArticleImages(article.content, { ...options, signal: controller.signal, deadline });
+      return images.length ? { ...article, images } : article;
     }
     throw new ArticleCaptureError("The website redirected too many times. Open the original page.");
   } catch (error) {

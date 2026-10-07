@@ -13,6 +13,20 @@ describe("image analysis", () => {
     expect(matchesPaletteColor(["#FE0101"], "blue")).toBe(false);
     expect(matchesPaletteColor(["#FE0101"], "chartreuse-ish")).toBe(false);
   });
+  it("includes nearby shades beyond the old RGB radius without matching unrelated hues", () => {
+    for (const shade of ["#CC3333", "#B83D3D", "#FF8080"]) {
+      expect(matchesPaletteColor([shade], "#FF0000"), shade).toBe(true);
+      expect(matchesPaletteColor(["#FF0000"], shade), shade).toBe(true);
+    }
+    for (const unrelated of ["#00FF00", "#0000FF", "#FFFFFF", "#000000"]) {
+      expect(matchesPaletteColor([unrelated], "#FF0000"), unrelated).toBe(false);
+    }
+  });
+  it("uses the same nearby-color range for library search across gallery slides", () => {
+    const image = { ...buildImage({ assetId: "a" }), assetIds: ["a", "b"], analysis: [{ assetId: "b", palette: ["#B83D3D"] }] };
+    expect(matchesSearchQuery(image, "color:#FF0000")).toBe(true);
+    expect(matchesSearchQuery(image, "color:#0000FF")).toBe(false);
+  });
   it("searches OCR across slides and composes colors with literal text", () => {
     const image = { ...buildImage({ assetId: "a", title: "Receipt" }), assetIds: ["a", "b"], analysis: [{ assetId: "b", palette: ["#FF0000"], ocr: { text: "Invoice 4823", confidence: 91, language: "eng" as const, extractedAt: 100 } }] };
     expect(matchesSearchQuery(image, "color:red invoice")).toBe(true);

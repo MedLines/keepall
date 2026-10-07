@@ -81,6 +81,23 @@ export function paletteColorFamily(hex: string): string {
 }
 export function matchesPaletteColor(palette: readonly string[], query: string): boolean {
   const color = query.toLowerCase();
-  return HEX.test(color) ? palette.some(hex => distance(rgb(hex), rgb(color)) <= 70)
-    : palette.some(hex => paletteColorFamily(hex) === color);
+  if (!HEX.test(color)) return palette.some(hex => paletteColorFamily(hex) === color);
+  const target = oklab(color);
+  return palette.some(hex => distance(oklab(hex), target) <= 0.18);
+}
+
+/** OKLab makes the search radius follow perceived color rather than RGB channel steps. */
+function oklab(hex: string): number[] {
+  const [r, g, b] = rgb(hex).map(channel => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
 }

@@ -14,9 +14,10 @@ import { acquireAssetObjectUrl, peekAssetObjectUrl } from "./asset-object-url-ca
  */
 export function useAssetObjectUrl(
   assetId: string | null,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; onUnavailable?: () => void },
 ): string | null {
   const enabled = options?.enabled !== false;
+  const onUnavailable = options?.onUnavailable;
   const navigationGenerationRef = useLibraryNavigationGenerationRef();
   const [resolved, setResolved] = useState<{
     assetId: string;
@@ -38,12 +39,12 @@ export function useAssetObjectUrl(
     void handle.promise.then((url) => {
       if (
         cancelled ||
-        !url ||
         (navigationGenerationRef !== null &&
           isLibraryNavigationStale(navigationGenerationRef, capturedGeneration))
       ) {
         return;
       }
+      if (!url) { onUnavailable?.(); return; }
       setResolved({ assetId, url });
     });
 
@@ -51,7 +52,7 @@ export function useAssetObjectUrl(
       cancelled = true;
       handle.release();
     };
-  }, [assetId, enabled, navigationGenerationRef]);
+  }, [assetId, enabled, navigationGenerationRef, onUnavailable]);
 
   return enabled && resolved?.assetId === assetId ? resolved.url : null;
 }

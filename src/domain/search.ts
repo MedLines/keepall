@@ -68,6 +68,7 @@ function searchableFields(item: Item, tagNames: readonly string[], documentText 
         { field: "content", label: "Saved article", text: item.article?.text ?? "" },
         { field: "title", label: "Article title", text: item.article?.title ?? "" },
         { field: "content", label: "Author", text: item.article?.author ?? "" },
+        { field: "content", label: "Article site", text: item.article?.siteName ?? "" },
         { field: "sourceUrl", label: "Article source", text: item.article?.sourceUrl ?? "" },
         { field: "previewTitle", label: "Preview title", text: item.previewTitle },
         { field: "previewDescription", label: "Preview", text: item.previewDescription },

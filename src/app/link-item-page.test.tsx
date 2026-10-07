@@ -93,6 +93,19 @@ describe("LinkItemPage", () => {
     expect(await screen.findByTestId("link-preview")).toBeVisible();
   });
 
+  test("a saved article has one reading title and retains independent notes and shared item controls", async () => {
+    const article = { title: "Cool URIs don't change", text: "Persistent identifiers make references useful.", sourceUrl: "https://example.com/article", author: "Tim Writer", capturedAt: 100 };
+    vi.mocked(getItem).mockResolvedValue({ ...buildLink({ url: article.sourceUrl, noteContent: "My own research", title: "Reading reference" }, { id: "reader", now: 1 }), article, previewTitle: "Duplicate page title", previewAssetId: "preview-image" });
+    render(<LinkItemPage itemId="reader" returnHref="/" />);
+    expect(await screen.findByRole("heading", { level: 1, name: article.title })).toBeVisible();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.queryByTestId("link-preview")).toBeNull();
+    expect(screen.getByRole("heading", { name: "My note" })).toBeVisible();
+    expect(screen.getByText("My own research")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Edit details" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Source link" })).toHaveAttribute("href", article.sourceUrl);
+  });
+
   test("updates the preview when enrichment finishes after the page opens", async () => {
     const link = buildLink({ url: "https://example.com/article", noteContent: "My note" }, { id: "l4", now: 1 });
     vi.mocked(getItem).mockResolvedValueOnce(link).mockResolvedValue({ ...link, previewTitle: "Fetched title", previewDescription: "Fetched summary" });
