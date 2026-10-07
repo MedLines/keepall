@@ -17,7 +17,7 @@ import {
   Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
   KeyboardIcon as Keyboard, TextFontIcon as TextFont, SourceCodeIcon as SourceCode,
   RefreshIcon as Refresh,
-  ColorsIcon as Colors, Copy01Icon as Copy01,
+  ColorsIcon as Colors, Copy01Icon as Copy01, ScanTextIcon as ScanText,
   ComputerIcon as Computer, WifiOff01Icon as WifiOff,
   Globe02Icon as Globe, Clock01Icon as Clock,
   Download01Icon as Download, Upload01Icon as Upload,
@@ -89,6 +89,7 @@ export function EyeIcon(props: IconProps) { return <ShellIcon icon={Eye} {...pro
 export function RefreshIcon(props: IconProps) { return <ShellIcon icon={Refresh} {...props} />; }
 export function PaletteIcon(props: IconProps) { return <ShellIcon icon={Colors} {...props} />; }
 export function CopyIcon(props: IconProps) { return <ShellIcon icon={Copy01} {...props} />; }
+export function OcrIcon(props: IconProps) { return <ShellIcon icon={ScanText} {...props} />; }
 export function DeviceIcon(props: IconProps) { return <ShellIcon icon={Computer} {...props} />; }
 export function OfflineIcon(props: IconProps) { return <ShellIcon icon={WifiOff} {...props} />; }
 export function InternetIcon(props: IconProps) { return <ShellIcon icon={Globe} {...props} />; }

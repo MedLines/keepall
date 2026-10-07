@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import sharp from "sharp";
 
 test.use({ serviceWorkers: "block" });
@@ -6,6 +6,19 @@ test.use({ serviceWorkers: "block" });
 async function chooseImageTool(page: Page, name: string, menuLabel = "Current image actions") {
   await page.getByRole("button", { name: menuLabel, exact: true }).click();
   await page.getByRole("menuitem", { name, exact: true }).click();
+}
+
+async function expectPaletteFillsCard(tools: Locator) {
+  const layout = await tools.getByRole("list", { name: "Image colors" }).evaluate(list => {
+    const swatches = Array.from(list.querySelectorAll("button"), button => button.getBoundingClientRect());
+    const gap = Number.parseFloat(getComputedStyle(list).gap);
+    const firstRow = swatches.filter(rect => Math.abs(rect.top - swatches[0].top) < 1);
+    return { row: list.getBoundingClientRect().width, widths: swatches.map(rect => rect.width), heights: swatches.map(rect => rect.height), total: firstRow.reduce((width, rect) => width + rect.width, 0) + gap * (firstRow.length - 1) };
+  });
+  expect(Math.max(...layout.widths) - Math.min(...layout.widths)).toBeLessThan(1);
+  expect(Math.abs(layout.total - layout.row)).toBeLessThan(1);
+  expect(Math.min(...layout.widths)).toBeGreaterThanOrEqual(44);
+  expect(layout.heights.every(height => Math.abs(height - 68) < 1)).toBe(true);
 }
 
 test("extracts local palettes and real screenshot text with cancellation, retry, and searchable gallery results", async ({ page, context, baseURL }, testInfo) => {
@@ -25,12 +38,26 @@ test("extracts local palettes and real screenshot text with cancellation, retry,
   await chooseImageTool(page, "Extract palette");
   const redSwatch = tools.getByRole("button", { name: "Copy color #FF0000", exact: true });
   await expect(redSwatch).toBeVisible();
-  await expect(redSwatch).toHaveText("");
+  await expect(redSwatch).toHaveText("#FF0000");
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await redSwatch.click();
   await expect(redSwatch.locator("[data-copy-feedback]")).toHaveAttribute("data-copied", "true");
-  await expect(tools.getByRole("link", { name: "Find similar colors" })).toHaveAttribute("href", /color%3A%23FF0000/);
-  await expect(tools.getByRole("link")).toHaveCount(1);
+  await expect(tools.getByRole("link")).toHaveCount(0);
+  await page.evaluate(() => navigator.clipboard.writeText("Keep clipboard"));
+  await redSwatch.click({ button: "right" });
+  const colorMenu = page.getByRole("menu", { name: "Color #FF0000", exact: true });
+  await expect(colorMenu).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Keep clipboard");
+  await expect(colorMenu.getByRole("menuitem", { name: "Search library for nearby colors" })).toHaveAttribute("href", /color%3A%23FF0000/);
+  await colorMenu.getByRole("menuitem", { name: "Copy color", exact: true }).click();
+  await expect(colorMenu).toBeHidden();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("#FF0000");
+  await redSwatch.focus();
+  await redSwatch.press("Shift+F10");
+  await expect(colorMenu).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(colorMenu).toBeHidden();
+  await expectPaletteFillsCard(tools);
   await expect(tools.locator("p").filter({ hasText: /Copied/ })).toHaveCount(0);
 
   await context.route("**/ocr/7.0.0/recognize.js", route => route.abort());
@@ -54,6 +81,11 @@ test("extracts local palettes and real screenshot text with cancellation, retry,
   await expect(copyText).toHaveText("");
   const paletteToggle = tools.getByRole("button", { name: "Palette", exact: true });
   const textToggle = tools.getByRole("button", { name: "Screenshot text", exact: true });
+  const copyBounds = await copyText.boundingBox();
+  const textCollapseBounds = await textToggle.boundingBox();
+  const paletteCollapseBounds = await paletteToggle.boundingBox();
+  expect(copyBounds!.x + copyBounds!.width).toBeLessThan(textCollapseBounds!.x);
+  expect(Math.abs(paletteCollapseBounds!.x - textCollapseBounds!.x)).toBeLessThan(1);
   await paletteToggle.click();
   await expect(paletteToggle).toHaveAttribute("aria-expanded", "false");
   await expect(redSwatch).toBeHidden();
@@ -69,10 +101,12 @@ test("extracts local palettes and real screenshot text with cancellation, retry,
   await expect(tools.getByRole("region", { name: "Extracted text from image 1" })).toContainText(/Invoice 4823/);
   await page.screenshot({ path: testInfo.outputPath("image-tools-desktop.png"), fullPage: false });
   await page.setViewportSize({ width: 390, height: 844 });
+  await expectPaletteFillsCard(tools);
   await tools.getByRole("heading", { name: "Palette" }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath("image-tools-mobile.png"), fullPage: false });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.setViewportSize({ width: 320, height: 740 });
+  await expectPaletteFillsCard(tools);
   await tools.getByRole("heading", { name: "Palette" }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath("image-tools-small-mobile.png"), fullPage: false });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -93,6 +127,10 @@ test("extracts local palettes and real screenshot text with cancellation, retry,
   await chooseImageTool(page, "Refresh palette", "Image 2 actions");
   await expect(scrollGallery.getByRole("region", { name: "Image 2 tools" }).getByRole("status")).toContainText("Palette saved");
   await page.screenshot({ path: testInfo.outputPath("image-tools-scroll-gallery.png"), fullPage: false });
+  await scrollGallery.getByRole("button", { name: "Copy color #0000FF", exact: true }).click({ button: "right" });
+  await page.getByRole("menu", { name: "Color #0000FF", exact: true }).getByRole("menuitem", { name: "Search library for nearby colors" }).click();
+  await expect(page).toHaveURL(/\?q=color%3A%230000FF$/);
+  await expect(page.getByRole("link", { name: "Open Receipt screenshot", exact: true })).toBeVisible();
   await page.goto("/?q=color%3Ared%204823");
   await expect(page.getByRole("link", { name: "Open Receipt screenshot", exact: true })).toBeVisible();
   await page.goto("/?q=color%3Ablue%204823");

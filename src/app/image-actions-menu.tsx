@@ -3,7 +3,7 @@
 import { Menu } from "@base-ui/react/menu";
 import { useRef } from "react";
 import { useImageToolActions } from "./image-tools-panel";
-import { CloseIcon, DeleteIcon, ImageIcon, MoreIcon, PaletteIcon, PlainTextIcon, RefreshIcon } from "./shell-icons";
+import { CloseIcon, DeleteIcon, ImageIcon, MoreIcon, OcrIcon, PaletteIcon, RefreshIcon } from "./shell-icons";
 
 export function CurrentImageMenu({ busy, canRemove, onReplace, onRemove, label = "Current image actions" }: {
   busy: boolean;
@@ -26,7 +26,7 @@ export function CurrentImageMenu({ busy, canRemove, onReplace, onRemove, label =
               <PaletteIcon />{tools.paletteLabel}
             </Menu.Item>
             <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active data-[disabled]:opacity-50" disabled={busy || tools.disabled} title="English · first use needs a connection" onClick={tools.onReadText}>
-              <PlainTextIcon />{tools.textLabel}
+              <OcrIcon />{tools.textLabel}
             </Menu.Item>
             {tools.retryLabel ? <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active data-[disabled]:opacity-50" disabled={busy || tools.disabled} onClick={tools.onRetry}>
               <RefreshIcon />{tools.retryLabel}

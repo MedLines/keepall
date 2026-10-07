@@ -39,7 +39,8 @@ describe("image tools", () => {
     if (!saved || saved.type !== "image") throw new Error("Missing saved image");
     view.rerender(<Tools item={saved} assetId="a" slide={0} />);
     expect(screen.getByRole("button", { name: "Copy color #FF0000" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Find similar colors" })).toHaveAttribute("href", "/?q=color%3A%23FF0000");
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Copy color #FF0000" }));
+    expect(await screen.findByRole("menuitem", { name: "Search library for nearby colors" })).toHaveAttribute("href", "/?q=color%3A%23FF0000");
   });
   it("cancels pending OCR and releases controls without saving text", async () => {
     const item = buildImage({ assetId: "a" }, { id: "image" });
@@ -63,7 +64,7 @@ describe("image tools", () => {
     const item = { ...buildImage({ assetId: "a" }), analysis: [{ assetId: "a", palette: ["#345D4C"] }] };
     render(<Tools item={item} assetId="a" slide={0} />);
     const swatch = screen.getByRole("button", { name: "Copy color #345D4C" });
-    expect(swatch).toHaveTextContent("");
+    expect(swatch).toHaveTextContent("#345D4C");
     expect(swatch.querySelectorAll("svg")).toHaveLength(2);
     fireEvent.click(swatch);
     expect(writeText).toHaveBeenCalledWith("#345D4C");
@@ -77,16 +78,51 @@ describe("image tools", () => {
     expect(swatch.querySelector("[data-copy-feedback]")).toHaveAttribute("data-copied", "false");
   });
 
-  it("searches the selected swatch with one contextual action", async () => {
-    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+  it("opens actions for the right-clicked color without copying until Copy is selected", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
     const item = { ...buildImage({ assetId: "a" }), analysis: [{ assetId: "a", palette: ["#FF0000", "#0000FF"] }] };
     render(<Tools item={item} assetId="a" slide={0} />);
-    expect(screen.getAllByRole("link")).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Copy color #FF0000" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "Copy color #0000FF" }));
-    expect(screen.getByRole("button", { name: "Copy color #0000FF" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Copy color #FF0000" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("link", { name: "Find similar colors" })).toHaveAttribute("href", "/?q=color%3A%230000FF");
+    expect(screen.queryByRole("link")).toBeNull();
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Copy color #0000FF" }), { clientX: 100, clientY: 100 });
+    const blueMenu = await screen.findByRole("menu", { name: "Color #0000FF" });
+    expect(blueMenu).toBeVisible();
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.getByRole("menuitem", { name: "Search library for nearby colors" })).toHaveAttribute("href", "/?q=color%3A%230000FF");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Copy color" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledExactlyOnceWith("#0000FF"));
+    await waitFor(() => expect(!blueMenu.isConnected || blueMenu.hasAttribute("data-closed")).toBe(true));
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Copy color #FF0000" }));
+    const redMenu = await screen.findByRole("menu", { name: "Color #FF0000" });
+    expect(redMenu.querySelector("a")).toHaveAttribute("href", "/?q=color%3A%23FF0000");
+  });
+
+  it.each([{ key: "ContextMenu" }, { key: "F10", shiftKey: true }])("opens swatch actions from the keyboard: $key", async keys => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const item = { ...buildImage({ assetId: "a" }), analysis: [{ assetId: "a", palette: ["#345D4C"] }] };
+    render(<Tools item={item} assetId="a" slide={0} />);
+    const swatch = screen.getByRole("button", { name: "Copy color #345D4C" });
+    swatch.focus();
+    fireEvent.keyDown(swatch, keys);
+    expect(await screen.findByRole("menu", { name: "Color #345D4C" })).toBeVisible();
+    expect(screen.getByRole("menuitem", { name: "Search library for nearby colors" })).toHaveAttribute("href", "/?q=color%3A%23345D4C");
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it("keeps the text copy action before the final collapse control", () => {
+    const item = { ...buildImage({ assetId: "a" }), analysis: [{ assetId: "a", palette: ["#FF0000"], ocr: { text: "Invoice 4823", confidence: 81, language: "eng" as const, extractedAt: 1 } }] };
+    render(<Tools item={item} assetId="a" slide={0} />);
+    const copy = screen.getByRole("button", { name: "Copy text" });
+    const collapse = screen.getByRole("button", { name: "Screenshot text" });
+    expect(copy.parentElement?.lastElementChild).toBe(collapse);
+    expect(copy.nextElementSibling).toBe(collapse);
+    expect(collapse).toHaveAttribute("title", "Collapse Screenshot text");
+    fireEvent.click(copy);
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(collapse);
+    expect(collapse).toHaveAttribute("title", "Expand Screenshot text");
+    expect(screen.getByRole("button", { name: "Palette" }).parentElement?.lastElementChild).toBe(screen.getByRole("button", { name: "Palette" }));
   });
 
   it("hides and restores palette and text independently without changing saved results", () => {
