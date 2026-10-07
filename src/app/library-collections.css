@@ -79,7 +79,7 @@
   opacity: 0;
   transition: opacity 260ms ease-out;
 }
-.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)) .collection-folder-back::after { opacity: 1; }
+:is(.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)), .library-empty-illustration:hover) .collection-folder-back::after { opacity: 1; }
 
 
 .collection-folder-previews {
@@ -128,7 +128,7 @@
   left: 10%;
 }
 
-.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)) .collection-folder-preview {
+:is(.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)), .library-empty-illustration:hover) .collection-folder-preview {
   transform: translate(var(--preview-shift), var(--preview-lift)) rotate(var(--preview-turn));
 }
 
@@ -184,12 +184,12 @@
 .organization-list .collection-folder-type { width: 16px; height: 16px; }
 .organization-list .collection-folder-type svg { width: 10px; height: 10px; }
 
-.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)) .collection-folder-front {
+:is(.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)), .library-empty-illustration:hover) .collection-folder-front {
   transform: perspective(1200px) rotateX(-38deg) translateY(8px);
 }
 
 .collection-folder-front-surface { stroke-width: 1; stroke: light-dark(oklch(0.782603716 0 0), oklch(0.390420843 0 0)); transition: stroke 260ms cubic-bezier(0.2, 0.75, 0.25, 1); }
-.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)) .collection-folder-front-surface { stroke: light-dark(oklch(1 0 0 / 0.701960784), oklch(0.558968556 0 0 / 0.4)); }
+:is(.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)), .library-empty-illustration:hover) .collection-folder-front-surface { stroke: light-dark(oklch(1 0 0 / 0.701960784), oklch(0.558968556 0 0 / 0.4)); }
 
 .collection-folder-gradient-top,
 .collection-folder-gradient-middle,
@@ -198,9 +198,9 @@
 .collection-folder-gradient-middle { stop-color: light-dark(oklch(0.882238324 0 0), oklch(0.336799176 0 0)); }
 .collection-folder-gradient-bottom { stop-color: light-dark(oklch(0.851419341 0 0), oklch(0.31713601 0 0)); }
 
-.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)) .collection-folder-gradient-top { stop-color: light-dark(oklch(0.909746827 0 0), oklch(0.390420843 0 0)); stop-opacity: 0.86; }
-.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)) .collection-folder-gradient-middle { stop-color: light-dark(oklch(0.798372379 0 0), oklch(0.356179255 0 0)); stop-opacity: 0.97; }
-.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)) .collection-folder-gradient-bottom { stop-color: light-dark(oklch(0.699260733 0 0), oklch(0.328969281 0 0)); }
+:is(.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)), .library-empty-illustration:hover) .collection-folder-gradient-top { stop-color: light-dark(oklch(0.909746827 0 0), oklch(0.390420843 0 0)); stop-opacity: 0.86; }
+:is(.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)), .library-empty-illustration:hover) .collection-folder-gradient-middle { stop-color: light-dark(oklch(0.798372379 0 0), oklch(0.356179255 0 0)); stop-opacity: 0.97; }
+:is(.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)), .library-empty-illustration:hover) .collection-folder-gradient-bottom { stop-color: light-dark(oklch(0.699260733 0 0), oklch(0.328969281 0 0)); }
 
 .collection-folder-name {
   display: -webkit-box;
@@ -233,10 +233,10 @@
   .collection-folder-gradient-middle,
   .collection-folder-gradient-bottom,
   .collection-folder-preview { transition: none; }
-  .organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)) .collection-folder-front {
+  :is(.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)), .library-empty-illustration:hover) .collection-folder-front {
     transform: none;
   }
-  .organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)) .collection-folder-preview {
+  :is(.organization-card[data-kind="collections"]:is(:hover, :has(> .collection-folder:focus-visible)), .library-empty-illustration:hover) .collection-folder-preview {
     transform: translateY(var(--preview-peek)) rotate(var(--preview-turn));
   }
 }
