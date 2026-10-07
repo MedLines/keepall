@@ -21,24 +21,31 @@ export function shortcutLabel(shortcut: string): string {
   return shortcut.replace(/Key([A-Z])/g, "$1").replace(/Digit(\d)/g, "$1").replace("Slash", "/").replace("Meta", "Cmd").replace("Alt", "Alt/Option");
 }
 
+export class ShortcutValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ShortcutValidationError";
+  }
+}
+
 function assertShortcut(shortcut: unknown): asserts shortcut is string {
   if (typeof shortcut === "string" && /^Alt\+(Key[DEFBHTV]|Digit[0-9])$/.test(shortcut)) {
-    throw new Error(`${shortcutLabel(shortcut)} is reserved by browsers. Choose another shortcut.`);
+    throw new ShortcutValidationError(`${shortcutLabel(shortcut)} is reserved by browsers. Choose another shortcut.`);
   }
   if (typeof shortcut !== "string" || (shortcut !== "Slash" && !/^Alt\+(Shift\+)?(Key[A-Z]|Digit[0-9]|Slash)$/.test(shortcut))) {
-    throw new Error("Use Alt/Option with a letter or number, optionally Shift, or / without modifiers. Browser and text editing shortcuts are reserved.");
+    throw new ShortcutValidationError("Use Alt/Option with a letter or number, optionally Shift, or / without modifiers. Browser and text editing shortcuts are reserved.");
   }
 }
 
 export function validateShortcuts(raw: unknown): KeyboardShortcuts {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Invalid app shortcuts");
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new ShortcutValidationError("Invalid app shortcuts");
   const candidate = raw as Record<string, unknown>;
   const result = { ...DEFAULT_SHORTCUTS };
   const assigned = new Set<string>();
   for (const action of SHORTCUT_ACTIONS) {
     const shortcut = candidate[action];
     assertShortcut(shortcut);
-    if (assigned.has(shortcut)) throw new Error(`${shortcutLabel(shortcut)} is already assigned to another action.`);
+    if (assigned.has(shortcut)) throw new ShortcutValidationError(`${shortcutLabel(shortcut)} is already assigned to another action.`);
     assigned.add(shortcut);
     result[action] = shortcut;
   }

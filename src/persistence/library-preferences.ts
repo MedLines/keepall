@@ -1,4 +1,4 @@
-import { validateShortcuts, type KeyboardShortcuts } from "@/domain/keyboard-shortcuts";
+import { assignShortcut, DEFAULT_SHORTCUTS, validateShortcuts, type KeyboardShortcuts, type ShortcutAction } from "@/domain/keyboard-shortcuts";
 import {
   buildLibraryPreferences,
   movePinnedCollection,
@@ -67,5 +67,15 @@ export async function putKeyboardShortcuts(keyboardShortcuts: KeyboardShortcuts)
   await db.transaction("rw", db.preferences, async () => {
     const current = await db.preferences.get("library");
     await db.preferences.put({ ...buildLibraryPreferences(current?.pinnedCollectionIds), keyboardShortcuts: shortcuts });
+  });
+}
+
+export async function putKeyboardShortcut(action: ShortcutAction, shortcut: string): Promise<KeyboardShortcuts> {
+  const db = getDb();
+  return db.transaction("rw", db.preferences, async () => {
+    const current = await db.preferences.get("library");
+    const next = assignShortcut(current?.keyboardShortcuts ?? DEFAULT_SHORTCUTS, action, shortcut);
+    await db.preferences.put({ ...buildLibraryPreferences(current?.pinnedCollectionIds), keyboardShortcuts: next });
+    return next;
   });
 }
