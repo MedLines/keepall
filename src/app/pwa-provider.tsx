@@ -10,6 +10,7 @@ import { NonCanonicalOriginWarning } from "./non-canonical-origin-warning";
 import { OfflineBanner } from "./offline-banner";
 import { PersistentStorageStatusLine } from "./persistent-storage-status";
 import { PwaUpdateBanner } from "./pwa-update-banner";
+import { isWebsitePathname } from "./website-routes";
 
 const serwistDisabled = process.env.NODE_ENV !== "production";
 
@@ -20,7 +21,7 @@ const serwistDisabled = process.env.NODE_ENV !== "production";
  */
 export function PwaProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const publicPage = pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/");
+  const publicPage = isWebsitePathname(pathname);
   const [updateReady, setUpdateReady] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(
     null,

@@ -31,6 +31,6 @@ export default function HelpPage() {
     <section className="kh-guides" aria-labelledby="guides-title"><div className="kh-list-heading"><h2 id="guides-title">Explore the guides</h2><span>{guides.length} guides · Step-by-step instructions</span></div>
       {guides.map((guide, index) => <Link key={guide.slug} href={`/help/${guide.slug}`} className="kh-guide-row"><span className="kh-guide-number">{String(index + 1).padStart(2, "0")}</span><div className="kh-guide-copy"><span className="kh-eyebrow">{guide.category} · {guide.minutes}</span><h3>{guide.title}</h3><p>{guide.summary}</p></div><div className="kh-guide-thumbnail"><Image src={thumbnails[guide.slug]} alt="" width={240} height={144} sizes="140px" /></div><ArrowRightIcon /></Link>)}
     </section>
-    <aside className="kh-contact"><div><span className="ka-pill">Still need help?</span><h2>Tell us what went wrong.</h2><p>Include your browser and what you expected to happen.<br />You’ll need a GitHub account to report an issue.</p></div><a href="https://github.com/MedLines/keepall/issues" target="_blank" rel="noreferrer" className="ka-button">Report a problem <ArrowRightIcon /></a></aside>
+    <aside className="kh-contact"><div><span className="ka-pill">Still need help?</span><h2>Tell us what went wrong.</h2><p>Include your browser, the steps you took, and what happened.<br />Visit Contact for reporting instructions.</p></div><Link href="/contact" className="ka-button">Contact <ArrowRightIcon /></Link></aside>
   </>;
 }
