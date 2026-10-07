@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { TextWriter, Uint8ArrayReader, ZipReader } from "@zip.js/zip.js";
+import { articleContentText, type ArticleNode } from "../src/domain/article";
 
 test.use({ serviceWorkers: "allow" });
 
@@ -8,7 +9,7 @@ test("article capture retries, persists, reads offline, searches and restores fr
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const open = indexedDB.open("keepall");
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -23,7 +24,14 @@ test("article capture retries, persists, reads offline, searches and restores fr
       });
     } finally { db.close(); }
   });
-  const article = { title: "Ocean reporting", text: "The elusive narwhal migrates through Arctic waters.\n\n<script>alert(1)</script>\n\nAn independent report about migration.", sourceUrl: "https://example.com/report", author: "Ada Writer", capturedAt: 1_791_331_200_000 };
+  const content: ArticleNode[] = [
+    { tag: "h2", children: [{ text: "Migration evidence" }] },
+    { tag: "p", children: [{ text: "The elusive narwhal migrates through Arctic waters." }] },
+    { tag: "p", children: [{ text: "<script>alert(1)</script>" }] },
+    { tag: "ul", children: [{ tag: "li", children: [{ text: "An independent report about migration." }] }] },
+    { tag: "p", children: [{ tag: "a", href: "https://example.com/reference", children: [{ text: "Read the references" }] }] },
+  ];
+  const article = { title: "Ocean reporting", text: articleContentText(content), content, sourceUrl: "https://example.com/report", author: "Ada Writer", siteName: "Ocean Journal", publishedAt: "2026-09-30", capturedAt: 1_791_331_200_000 };
   let attempts = 0;
   await page.route("**/api/article", async route => {
     attempts++;
@@ -36,10 +44,16 @@ test("article capture retries, persists, reads offline, searches and restores fr
   await page.getByRole("button", { name: "Retry saving article", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Article saved for offline reading." })).toBeVisible();
   await expect(page.getByRole("article", { name: "Article text" })).toContainText("elusive narwhal");
+  await expect(page.getByRole("heading", { level: 1, name: article.title })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 2, name: "Migration evidence" })).toBeVisible();
+  await expect(page.getByRole("article", { name: "Article text" }).getByRole("listitem")).toHaveText("An independent report about migration.");
+  await expect(page.getByRole("link", { name: "Read the references" })).toHaveAttribute("href", "https://example.com/reference");
   await expect(page.getByRole("link", { name: "Open original", exact: true })).toHaveAttribute("href", article.sourceUrl);
   await page.reload();
   await expect(page.getByRole("article", { name: "Article text" })).toContainText("<script>alert(1)</script>");
   expect(attempts).toBe(2);
+  await page.unroute("**/api/article");
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
     if (!navigator.serviceWorker.controller) await new Promise<void>(resolve => navigator.serviceWorker.addEventListener("controllerchange", () => resolve(), { once: true }));
@@ -47,9 +61,17 @@ test("article capture retries, persists, reads offline, searches and restores fr
   // Refresh once under the worker so the item route joins its page cache.
   await page.reload();
   await expect(page.getByRole("article", { name: "Article text" })).toContainText("elusive narwhal");
+  await expect.poll(() => page.evaluate(async () => {
+    for (const name of await caches.keys()) {
+      const cache = await caches.open(name);
+      if (await cache.match(location.href)) return true;
+    }
+    return false;
+  })).toBe(true);
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole("article", { name: "Article text" })).toContainText("migration");
+  await expect(page.getByRole("heading", { name: "Migration evidence" })).toBeVisible();
   await expect(page.getByText("My independent personal note", { exact: true })).toBeVisible();
   await context.setOffline(false);
   await page.setViewportSize({ width: 390, height: 844 });

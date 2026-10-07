@@ -3,8 +3,11 @@ import { expect, test, vi } from "vitest";
 import { buildLink } from "@/domain/link";
 import { ArticleReader } from "./article-reader";
 import { saveLinkArticle } from "@/persistence/articles";
+import { articleContentText, type ArticleNode } from "@/domain/article";
+import { useAssetObjectUrl } from "./use-asset-object-url";
 
 vi.mock("@/persistence/articles", () => ({ saveLinkArticle: vi.fn() }));
+vi.mock("./use-asset-object-url", () => ({ useAssetObjectUrl: vi.fn(() => null) }));
 const article = { title: "Offline reporting", text: "First paragraph.\n\n<script>alert(1)</script>\n\nLast paragraph.", sourceUrl: "https://example.com/story", capturedAt: 100, author: "Ada Writer" };
 
 test("renders escaped saved text, metadata, original and notes independently without fetching", () => {
@@ -58,5 +61,52 @@ test("switching the keyed reader aborts old capture before it can update the nex
   expect(onSaved).not.toHaveBeenCalled();
   expect(saveLinkArticle).not.toHaveBeenCalled();
   expect(screen.getByRole("button", { name: "Save article" })).toBeEnabled();
+  vi.unstubAllGlobals();
+});
+
+test("renders saved structure with native headings, lists, emphasis, quotes, code and safe links", () => {
+  const content: ArticleNode[] = [
+    { tag: "h2", children: [{ text: "Migration evidence" }] },
+    { tag: "p", children: [{ text: "A " }, { tag: "strong", children: [{ text: "careful" }] }, { text: " study." }] },
+    { tag: "ol", start: 3, children: [{ tag: "li", children: [{ text: "Observe routes" }] }] },
+    { tag: "blockquote", children: [{ tag: "p", children: [{ text: "Keep the evidence." }] }] },
+    { tag: "pre", children: [{ tag: "code", children: [{ text: "const route = 'Arctic';\n  observe(route);" }] }] },
+    { tag: "p", children: [{ tag: "a", href: "https://example.com/reference", children: [{ text: "Read references" }] }] },
+  ];
+  const link = { ...buildLink({ url: article.sourceUrl }), article: { ...article, text: articleContentText(content), content, siteName: "Ocean Journal", publishedAt: "2026-09-30" } };
+  const { container } = render(<ArticleReader link={link} onSaved={vi.fn()} />);
+  expect(screen.getByRole("heading", { level: 1, name: article.title })).toBeVisible();
+  expect(screen.getByRole("heading", { level: 2, name: "Migration evidence" })).toBeVisible();
+  expect(screen.getByRole("list")).toHaveAttribute("start", "3");
+  expect(container.querySelector("strong")).toHaveTextContent("careful");
+  expect(container.querySelector("blockquote")).toHaveTextContent("Keep the evidence.");
+  expect(container.querySelector("pre code")?.textContent).toBe("const route = 'Arctic';\n  observe(route);");
+  expect(screen.getByRole("link", { name: "Read references" })).toHaveAttribute("rel", "noopener noreferrer");
+  expect(screen.getByText("Ocean Journal")).toBeVisible();
+  expect(container.querySelector('time[datetime="2026-09-30"]')).not.toBeNull();
+  expect(container.querySelector("img,iframe,script")).toBeNull();
+});
+
+test("legacy plain text is split into readable paragraphs and invalid local structure falls back safely", () => {
+  const link = { ...buildLink({ url: article.sourceUrl }), article };
+  const { container, rerender } = render(<ArticleReader link={link} onSaved={vi.fn()} />);
+  expect(container.querySelectorAll('article[aria-label="Article text"] p')).toHaveLength(3);
+  rerender(<ArticleReader link={{ ...link, article: { ...article, content: [{ tag: "script", children: [{ text: "alert(1)" }] }] } as unknown as typeof article }} onSaved={vi.fn()} />);
+  expect(container.querySelector("script")).toBeNull();
+  expect(screen.getByRole("article", { name: "Article text" })).toHaveTextContent("First paragraph.");
+});
+
+test("retains an already saved preview using a local Blob URL without a remote fallback", () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  const link = { ...buildLink({ url: article.sourceUrl }), article, previewAssetId: "saved-cover" };
+  vi.mocked(useAssetObjectUrl).mockReturnValue("blob:https://keepall.test/local-cover");
+  const { container, rerender } = render(<ArticleReader link={link} onSaved={vi.fn()} />);
+  expect(container.querySelector("img")).toHaveAttribute("src", "blob:https://keepall.test/local-cover");
+  expect(useAssetObjectUrl).toHaveBeenCalledWith("saved-cover");
+  vi.mocked(useAssetObjectUrl).mockReturnValue(null);
+  rerender(<ArticleReader link={link} onSaved={vi.fn()} />);
+  expect(container.querySelector("img")).toBeNull();
+  expect(fetch).not.toHaveBeenCalled();
   vi.unstubAllGlobals();
 });
