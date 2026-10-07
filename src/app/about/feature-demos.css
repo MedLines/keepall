@@ -110,3 +110,6 @@
   .kd-pdf .media-viewer-counter-label { display: none; }
 }
 .kd-note-editor > [role="group"] { width: min(100%, 240px); }
+.kd-image-text .library-panel h2 { font-size: 14px; line-height: 1.4; letter-spacing: 0; }
+.kd-image-text [role="region"] { color-scheme: light; }
+.kd-image-text [role="region"] p { color: #302a25; }
