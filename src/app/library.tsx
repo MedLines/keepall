@@ -980,6 +980,8 @@ export function Library() {
     if (!item) return;
     singleTrashPending.current = true;
     const focusedBefore = document.activeElement;
+    const actionMenu = focusedBefore instanceof HTMLElement ? focusedBefore.closest('[role="menu"], .row-action-popup') : null;
+    const itemActions = Array.from(document.querySelectorAll<HTMLButtonElement>("button[data-item-actions]")).find(button => button.dataset.itemActions === id);
     const startedNavigation = navigationGenerationRef.current;
     setPendingMutation({ op: "delete", id });
     setDeleteError(null);
@@ -992,7 +994,7 @@ export function Library() {
       }
       setTrashUndoItems(previous => [...previous.filter(entry => entry.id !== id), item].slice(-5));
       setItems(previous => previous.filter(entry => entry.id !== id));
-      if (startedNavigation === navigationGenerationRef.current && (document.activeElement === focusedBefore || document.activeElement === document.body)) libraryHeadingRef.current?.focus();
+      if (startedNavigation === navigationGenerationRef.current && (document.activeElement === focusedBefore || document.activeElement === itemActions || actionMenu?.contains(document.activeElement) || document.activeElement === document.body)) libraryHeadingRef.current?.focus();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
       setDeleteError("Couldn't move item to Trash. Try again using the item menu.");

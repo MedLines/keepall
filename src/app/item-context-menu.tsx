@@ -67,6 +67,7 @@ export function ItemContextMenu({
   onFetchPreview, fetchingPreview = false, hasPreview = false,
 }: Props) {
   const openingDialog = useRef(false);
+  const movingToTrash = useRef(false);
 
   function openDialog(action: () => void) {
     openingDialog.current = true;
@@ -79,8 +80,16 @@ export function ItemContextMenu({
       trigger={trigger}
       disabled={disabled}
       triggerRef={triggerRef}
-      onOpen={() => { openingDialog.current = false; onOpen?.(); }}
-      finalFocus={() => openingDialog.current ? false : triggerRef.current ?? true}
+      onOpen={() => { openingDialog.current = false; movingToTrash.current = false; onOpen?.(); }}
+      finalFocus={() => {
+        if (openingDialog.current) return false;
+        const trigger = triggerRef.current;
+        const focused = document.activeElement;
+        if (movingToTrash.current && focused instanceof HTMLElement && focused !== document.body &&
+          focused !== trigger && focused.id !== "library-heading" && !focused.closest(".row-action-popup")) return false;
+        if (trigger?.isConnected) return trigger;
+        return document.getElementById("library-heading") ?? true;
+      }}
       menu={() => trashActions ? <>
         <Menu.Item className={MENU_ITEM} disabled={busy} onClick={() => openDialog(trashActions.onRestore)}><ArrowRightIcon className="size-4" /><span className="leading-none">Restore</span></Menu.Item>
         <Menu.Separator className="my-1 border-t border-border-edge" />
@@ -116,7 +125,7 @@ export function ItemContextMenu({
             <LayersIcon />Organize
           </ContextMenu.Item>
           <ContextMenu.Separator className="my-1 border-t border-border-edge" />
-          <ContextMenu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none hover:bg-bg-danger data-[highlighted]:bg-bg-danger" disabled={busy} onClick={() => openDialog(onDelete)}>
+          <ContextMenu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none hover:bg-bg-danger data-[highlighted]:bg-bg-danger" disabled={busy} onClick={() => { movingToTrash.current = true; onDelete(); }}>
             <DeleteIcon className="size-4" /><span className="leading-none">Move to Trash</span>
           </ContextMenu.Item>
         </>

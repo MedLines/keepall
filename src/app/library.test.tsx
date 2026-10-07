@@ -524,10 +524,11 @@ describe("Library", () => {
   });
 
   test("moves an item to Trash immediately and undo restores exactly that item", async () => {
-    vi.mocked(listItems).mockResolvedValueOnce([note]).mockResolvedValue([]);
-    vi.mocked(deleteItem).mockResolvedValue(undefined);
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(deleteItem).mockImplementation(async () => { vi.mocked(listItems).mockResolvedValue([]); });
     vi.mocked(restoreItems).mockResolvedValue(["n1"]);
     render(<Library />);
+    await screen.findByRole("listitem", { name: "A persisted note" });
     await clickItemAction("Move to Trash");
     await waitFor(() => expect(deleteItem).toHaveBeenCalledWith("n1"));
     expect(screen.queryByText("Move this item to Trash?")).not.toBeInTheDocument();
@@ -541,10 +542,11 @@ describe("Library", () => {
   });
 
   test("keeps Undo available when restoration fails", async () => {
-    vi.mocked(listItems).mockResolvedValueOnce([note]).mockResolvedValue([]);
-    vi.mocked(deleteItem).mockResolvedValue(undefined);
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(deleteItem).mockImplementation(async () => { vi.mocked(listItems).mockResolvedValue([]); });
     vi.mocked(restoreItems).mockRejectedValue(new Error("idb down"));
     render(<Library />);
+    await screen.findByRole("listitem", { name: "A persisted note" });
     await clickItemAction("Move to Trash");
     fireEvent.click(await screen.findByRole("button", { name: /^Undo moving/ }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Try Undo again or open Trash");
@@ -930,7 +932,7 @@ describe("Library focus management", () => {
 
   test("moves focus for edit, cancel, and removed item", async () => {
     vi.mocked(listItems).mockResolvedValue([note]);
-    vi.mocked(deleteItem).mockResolvedValue(undefined);
+    vi.mocked(deleteItem).mockImplementation(async () => { vi.mocked(listItems).mockResolvedValue([]); });
     render(<Library />);
 
     await clickItemAction("Edit");
@@ -939,7 +941,6 @@ describe("Library focus management", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
     await waitFor(() => expect(screen.getByRole("button", { name: /^Actions for / })).toHaveFocus());
 
-    vi.mocked(listItems).mockResolvedValue([]);
     await clickItemAction("Move to Trash");
     await waitFor(() => {
       expect(deleteItem).toHaveBeenCalledWith("n1");
