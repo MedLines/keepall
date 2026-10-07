@@ -231,9 +231,15 @@ test("Settings and the library expose the public information links", async ({ pa
 
 test("blog articles are linked, show actual screenshots, and link to valid Help anchors", async ({ page, request }, testInfo) => {
   await page.goto("/blog");
+  const thumbnails = page.locator(".kb-post-thumbnail img");
+  await expect(thumbnails).toHaveCount(2);
+  for (const thumbnail of await thumbnails.all()) {
+    await thumbnail.scrollIntoViewIfNeeded();
+    await expect.poll(() => thumbnail.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  }
   const helpAnchors = new Set<string>();
   for (const slug of ["design-reference-library", "browser-bookmarks"]) {
-    const link = page.locator(`main h2 a[href="/blog/${slug}"]`);
+    const link = page.locator(`.kb-post-list a[href="/blog/${slug}"]`);
     await expect(link).toHaveCount(1);
     await link.click();
     await expect(page).toHaveURL(new RegExp(`/blog/${slug}$`));
