@@ -18,7 +18,7 @@ test("bulk selection hands mixed files to the drawer without opening a review mo
   fireEvent.change(container.querySelector('input[data-bulk-files]')!, { target: { files } });
   await waitFor(() => expect(onSelect).toHaveBeenCalledWith(files, "Reading", null));
   expect(screen.queryByRole("dialog")).toBeNull();
-  expect(onBusyChange).toHaveBeenLastCalledWith(false);
+  await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(false));
 });
 
 test("folder upload defaults to the folder collection and preserves every selected file", async () => {
@@ -51,7 +51,7 @@ test("read-only directory picker scans nested mixed files and locks controls whi
   expect(upload).not.toHaveBeenCalled();
   await act(async () => release(files[1]));
   await waitFor(() => expect(onSelect).toHaveBeenCalledWith(files, "Picked library", null));
-  expect(onBusyChange).toHaveBeenLastCalledWith(false);
+  await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(false));
 });
 
 test("canceling the directory picker releases the drawer without a selection or error", async () => {
@@ -61,5 +61,5 @@ test("canceling the directory picker releases the drawer without a selection or 
   await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   expect(onSelect).not.toHaveBeenCalled();
-  expect(onBusyChange).toHaveBeenLastCalledWith(false);
+  await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(false));
 });
