@@ -126,7 +126,10 @@ function ShortcutRecorder({ action, shortcuts, busy, onSave, onCancel }: {
     }
   }
 
-  return <div className="mt-3 space-y-3">
+  return <div className="mt-3 space-y-3" onKeyDown={event => {
+    if (event.key !== "Escape" || busy) return;
+    event.preventDefault(); event.stopPropagation(); onCancel();
+  }}>
     <p id={instructionsId} className="text-xs leading-5 text-text-secondary">Press Alt/Option with a letter, optionally Shift. Numbers need Alt/Option+Shift. You can also use /.</p>
     <input ref={input} className="ui-field min-h-11 w-full px-3 text-sm" aria-label={`New shortcut for ${SHORTCUT_LABELS[action]}`} aria-describedby={`${instructionsId}${error ? ` ${errorId}` : ""}`} aria-invalid={error ? true : undefined} placeholder="Press a shortcut" readOnly disabled={busy} value={candidate ? shortcutLabel(candidate) : ""} onKeyDown={record} />
     {error ? <p id={errorId} role="alert" className="text-xs leading-5 text-text-danger">{error}</p> : null}

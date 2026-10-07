@@ -34,10 +34,15 @@ test("records a shortcut only after Change and saves it explicitly", async () =>
 
 test("Cancel and Escape discard recorded keys and restore Change focus", async () => {
   render(<KeyboardShortcutsSettings />);
-  for (const cancel of ["button", "Escape"]) {
+  for (const cancel of ["button", "Escape", "Escape from Save", "Escape from Cancel"]) {
     const recorder = await startRecording("Save item");
     fireEvent.keyDown(recorder, { code: "KeyJ", key: "j", altKey: true });
     if (cancel === "button") fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    else if (cancel === "Escape from Save" || cancel === "Escape from Cancel") {
+      const button = screen.getByRole("button", { name: cancel === "Escape from Save" ? "Save shortcut" : "Cancel" });
+      button.focus();
+      fireEvent.keyDown(button, { code: "Escape", key: "Escape" });
+    }
     else fireEvent.keyDown(recorder, { code: "Escape", key: "Escape" });
     expect(binding("Save item", "Alt/Option+K")).toBeVisible();
     expect(screen.getByRole("button", { name: "Change Save item shortcut" })).toHaveFocus();
