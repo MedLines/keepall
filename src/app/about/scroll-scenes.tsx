@@ -4,9 +4,9 @@ import { useRef, useState, useSyncExternalStore, type CSSProperties, type ReactN
 import { ArrowLeftIcon, ArrowRightIcon, PlayIcon } from "../shell-icons";
 import { RecordedDemo } from "./recorded-demo";
 import { HeroFlightLayer, useHeroFlight } from "./hero-flight";
-import { motion, useScroll, useTransform } from "motion/react";
+import { motion, useScroll, useTransform, type MotionValue } from "motion/react";
 
-const SCENE = { landscapeTravel: 220 };
+const SCENE = { landscapeTravel: 220, stackTop: 108, stackStep: 24, cardBottom: 786 };
 
 function subscribeReducedMotion(onChange: () => void) {
   const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -68,4 +68,19 @@ export function FeatureGallery({ panels }: { panels: ReactNode[] }) {
     </div>
     <div className="ka-gallery-foot"><span>0{selected + 1} / 0{views.length}</span><p role="status">{views[selected].caption}</p><div><button type="button" aria-label="Previous feature" onClick={() => selectView((selected + views.length - 1) % views.length)}><ArrowLeftIcon className="size-5" /></button><button type="button" aria-label="Next feature" onClick={() => selectView((selected + 1) % views.length)}><ArrowRightIcon className="size-5" /></button></div></div>
   </div>;
+}
+
+function StackCard({ children, index, progress }: { children: ReactNode; index: number; progress: MotionValue<number> }) {
+  const reduceMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionPreference, () => false);
+  const scale = useTransform(progress, [index / 3, 1], [1, 1 - (2 - index) * .05]);
+  // Match each sticky offset with its remaining stack depth so all three edges
+  // stay separated when the cards reach their container's bottom boundary.
+  const position = { "--stack-top": `${SCENE.stackTop + index * SCENE.stackStep}px`, "--stack-gap": `${(2 - index) * SCENE.stackStep}px` } as CSSProperties;
+  return <div className="ka-stack-card" style={position}><motion.div className="ka-stack-surface" style={{ scale: reduceMotion ? 1 : scale }}>{children}</motion.div></div>;
+}
+
+export function FeatureStack({ children }: { children: ReactNode[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: [`start ${SCENE.stackTop}px`, `end ${SCENE.cardBottom}px`] });
+  return <div ref={ref} className="ka-stack">{children.map((child, index) => <StackCard key={index} index={index} progress={scrollYProgress}>{child}</StackCard>)}</div>;
 }
