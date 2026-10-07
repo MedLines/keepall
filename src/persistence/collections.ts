@@ -95,7 +95,7 @@ export async function deleteCollections(collectionIds: string[], destination: Co
         ...item,
         collectionIds: item.collectionIds.filter(id => !removed.has(id)),
         ...(destination === "trash" && item.deletedAt === undefined ? { deletedAt: now } : {}),
-        updatedAt: now,
+        updatedAt: Math.max(now, item.updatedAt + 1),
       };
       await db.items.put(next);
     }

@@ -56,7 +56,7 @@ export async function deleteTags(tagIds: string[]): Promise<void> {
       const next: Item = {
         ...item,
         tagIds: item.tagIds.filter(id => !removed.has(id)),
-        updatedAt: now,
+        updatedAt: Math.max(now, item.updatedAt + 1),
       };
       await db.items.put(next);
     }
