@@ -254,6 +254,9 @@ describe("ImageItemPage", () => {
     render(<ImageItemPage itemId="image-1" returnHref="/" />);
     const gallery = await screen.findByRole("region", { name: "Image gallery" });
 
+    fireEvent.keyDown(screen.getByRole("button", { name: "Read text" }), { key: "ArrowRight" });
+    expect(screen.getByLabelText("Current image")).toHaveTextContent("Image 1 of 3");
+
     fireEvent.keyDown(document, { key: "ArrowRight" });
     expect(screen.getByLabelText("Current image")).toHaveTextContent("Image 2 of 3");
     expect(within(gallery).getAllByTestId("rendered-asset")[0]).toHaveTextContent("asset-2");

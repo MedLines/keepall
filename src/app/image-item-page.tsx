@@ -153,7 +153,7 @@ export function ImageItemPage({ itemId, returnHref, initialSnapshot }: Props) {
         (event.key !== "ArrowLeft" && event.key !== "ArrowRight") ||
         event.altKey || event.ctrlKey || event.metaKey ||
         (event.target instanceof Element &&
-          event.target.closest("input, textarea, select, [contenteditable='true'], [role='menu']"))
+          event.target.closest("input, textarea, select, [contenteditable='true'], [role='menu'], [data-image-tools]"))
       ) return;
 
       event.preventDefault();
@@ -708,8 +708,8 @@ function ImageWorkspace({
                     event.target.value = "";
                   }}
                 />
-            <div className="min-w-0 row-start-2 lg:col-start-1 lg:row-start-1">
-            <section className="relative flex min-w-0 flex-col gap-3" aria-label="Image gallery">
+            <div className="contents min-w-0 lg:col-start-1 lg:row-start-1 lg:block">
+            <section className="relative row-start-1 flex min-w-0 flex-col gap-3" aria-label="Image gallery">
               {galleryMode === "scroll" ? (
               <div className="sticky top-0 z-10 -mb-3 h-0 self-end">
                 <div className="absolute right-4 top-4">
@@ -802,11 +802,9 @@ function ImageWorkspace({
               {galleryError ? <p className="text-sm text-text-danger" role="alert">{galleryError}</p> : null}
             </section>
 
-            {currentAssetId ? <ImageToolsPanel key={currentAssetId} item={item} assetId={currentAssetId} slide={currentSlide} disabled={actionBusy} /> : null}
-
             {item.caption ? (
               <article
-                className="mt-8 w-full border-t border-border-control pb-20 pt-8 sm:mt-10 sm:pb-24 sm:pt-10"
+                className="row-start-3 mt-8 w-full border-t border-border-control pb-20 pt-8 sm:mt-10 sm:pb-24 sm:pt-10"
                 aria-labelledby="image-notes-heading"
               >
                 <h2 id="image-notes-heading" className="text-2xl font-semibold leading-tight text-text-primary">
@@ -826,7 +824,7 @@ function ImageWorkspace({
               createdAt={item.createdAt}
               updatedAt={item.updatedAt}
               sourceFileName={item.sourceFileName}
-              className={`${ITEM_DETAILS_POSITION} lg:min-h-[var(--image-viewer-height)]`}
+              className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2 lg:min-h-[var(--image-viewer-height)]`}
               disabled={actionBusy}
               onOrganize={onOrganize}
               onEdit={onEdit}
@@ -837,7 +835,9 @@ function ImageWorkspace({
                   <span>{galleryMutation === "add" ? "Adding…" : "Add images"}</span>
                 </button>
               }
-            />
+            >
+              {currentAssetId ? <ImageToolsPanel key={currentAssetId} item={item} assetId={currentAssetId} slide={currentSlide} disabled={actionBusy} /> : null}
+            </ItemLibraryDetails>
           </div>
         </ScrollPanel>
       </div>
