@@ -45,7 +45,6 @@ export function LibraryEmptyState({ kind, message, query, scope, onClearFilters,
     <section className="library-empty-state">
       {canSave ? (
         <div className="library-empty-illustration" aria-hidden="true">
-          <span className="library-empty-glow" />
           <LibraryFolderArtwork previews={[]} itemTypes={[]} emptyState />
         </div>
       ) : (
