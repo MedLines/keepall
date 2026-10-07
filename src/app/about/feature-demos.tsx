@@ -3,6 +3,9 @@
 import Image from "next/image";
 import { Tooltip } from "@base-ui/react/tooltip";
 import { useCallback, useRef, useState } from "react";
+import type { NoteItem } from "@/domain/note";
+import type { ImageItem } from "@/domain/image";
+import { LibraryCardContent } from "../library-card-content";
 import type { SavedArticle } from "@/domain/article";
 import { ArticleContent } from "../article-content";
 import { CaptureFileList } from "../capture-file-list";
@@ -36,13 +39,13 @@ export function ReadingDemo() {
   const [portalContainer, attachDemo] = useDemoPortal();
   const [kind, setKind] = useState<"article" | "pdf">("article");
   return <div className="kd-demo kd-reading" ref={attachDemo} data-feature-demo="reading">
-    <div className="kd-reading-paper" key={kind}>
+    <div className="kd-reading-content squircle-panel" key={kind}>
       {kind === "article" ? <>
         <Image className="kd-reading-photo" src="/marketing/reading-corner.webp" width={720} height={480} alt="Sunlight falling across a chair and books by the window" sizes="(max-width: 700px) 90vw, 680px" />
-        <div className="kd-article-copy"><span className="kd-paper-label">SUNDAY STUDIO · SAVED ARTICLE</span><ArticleContent article={sampleArticle} /></div>
+        <div className="kd-article-copy"><span className="kd-source-label">SUNDAY STUDIO · SAVED ARTICLE</span><ArticleContent article={sampleArticle} /></div>
       </> : <SamplePdf portalContainer={portalContainer} />}
     </div>
-    <div className="kd-reading-actions"><span><PdfIcon /> field-notes.pdf</span><button type="button" className="kd-button" onClick={() => setKind(value => value === "article" ? "pdf" : "article")}>{kind === "article" ? "Open PDF" : "Back to article"}<ArrowRightIcon /></button></div>
+    <div className="kd-reading-actions"><span><PdfIcon /> field-notes.pdf</span><button type="button" className="ka-button ka-button-small kd-button" onClick={() => setKind(value => value === "article" ? "pdf" : "article")}>{kind === "article" ? "Open PDF" : "Back to article"}<ArrowRightIcon /></button></div>
   </div>;
 }
 
@@ -50,8 +53,8 @@ export function NotesDemo() {
   const [editing, setEditing] = useState(false);
   const [format, setFormat] = useState<"plain" | "markdown">("markdown");
   const [content, setContent] = useState(sampleNote);
-  return <div className="kd-demo kd-notes" data-feature-demo="notes">
-    <div className="kd-note-heading"><span><NoteIcon /> sunday.md</span><button type="button" className="kd-button" onClick={() => setEditing(value => !value)}>{editing ? "Preview" : "Edit"}</button></div>
+  return <div className="kd-demo kd-notes squircle-panel" data-feature-demo="notes">
+    <div className="kd-note-heading"><span><NoteIcon /> sunday.md</span><button type="button" className="ka-button ka-button-small kd-button" onClick={() => setEditing(value => !value)}>{editing ? "Preview" : "Edit"}</button></div>
     {editing ? <div className="kd-note-editor"><NoteFormatControl format={format} onChange={setFormat} /><textarea aria-label="Edit sample note" value={content} onChange={event => setContent(event.target.value)} spellCheck={false} /></div>
       : <div className="kd-note-body"><NoteContent content={content} format={format} allowLocalImages={false} /></div>}
   </div>;
@@ -73,7 +76,7 @@ export function ImageToolsDemo() {
     {showText ? <div className="kd-image-text"><ScreenshotTextSection ocr={sampleText} slide={0} copied={copied === "ocr"} onCopy={(value, key) => void copy(value, key)} /></div>
       : <><Image className="kd-sample-image" src="/marketing/demos/field-notes.svg" width={240} height={72} alt="Field notes. Make room to think. Leave the afternoon open." unoptimized />
         <Tooltip.Provider delay={250}><ul className="kd-swatches" aria-label="Image colors">{sampleColors.map(hex => <li key={hex}><PaletteSwatch hex={hex} copied={copied === hex} onCopy={() => void copy(hex, hex)} allowLibrarySearch={false} portalContainer={portalContainer} /></li>)}</ul></Tooltip.Provider></>}
-    <div className="kd-image-actions"><span className="kd-caption">{showText ? "From this image" : "Pick a color"}</span><button type="button" className="kd-button" onClick={() => setShowText(value => !value)}>{showText ? "Back to image" : "Show text"}<ArrowRightIcon /></button></div>
+    <div className="kd-image-actions"><span className="kd-caption">{showText ? "From this image" : "Pick a color"}</span><button type="button" className="ka-button ka-button-small kd-button" onClick={() => setShowText(value => !value)}>{showText ? "Back to image" : "Show text"}<ArrowRightIcon /></button></div>
     <span className="kd-live" role="status">{status}</span>
   </div>;
 }
@@ -93,14 +96,22 @@ export function VideoDemo() {
   </div>;
 }
 
+const previewNote: NoteItem = { id: "demo-preview-note", type: "note", title: "a-little-pause.md", content: "# A little pause\n\nA book by the window.\n\nLeave the afternoon open.", format: "markdown", tagIds: [], collectionIds: [], createdAt: 1791453600000, updatedAt: 1791453600000 };
+const previewImage: ImageItem = { id: "demo-preview-image", type: "image", title: "Reading corner", sourceFileName: "reading-corner.webp", assetIds: [], sourceUrl: "", caption: "", tagIds: [], collectionIds: [], createdAt: 0, updatedAt: 0 };
+
 export function PreviewDemo() {
   const [index, setIndex] = useState(0);
+  const [opened, setOpened] = useState(false);
+  function move() { setIndex(value => (value + 1) % 2); setOpened(false); }
   return <div className="kd-demo kd-preview" data-feature-demo="preview">
-    <div className="kd-preview-stack"><div className="kd-preview-content" key={index}>
-      {index === 0 ? <ItemMediaFrame className="kd-preview-media"><Image src="/marketing/reading-corner.webp" width={480} height={320} alt="A sunlit reading corner" sizes="(max-width: 700px) 80vw, 300px" /></ItemMediaFrame>
-        : <div className="kd-preview-note"><NoteContent content={"# A little pause\n\nA book by the window.\n\nLeave the afternoon open."} format="markdown" allowLocalImages={false} /></div>}
-    </div></div>
-    <div className="kd-preview-controls"><button type="button" className="kd-button" aria-label="Previous sample preview" onClick={() => setIndex(value => (value + 1) % 2)}><ArrowLeftIcon /></button><span className="kd-caption" role="status">{index === 0 ? "reading-corner.webp" : "a-little-pause.md"}</span><button type="button" className="kd-button" aria-label="Next sample preview" onClick={() => setIndex(value => (value + 1) % 2)}><ArrowRightIcon /></button></div>
+    <div className="kd-preview-content" key={`${index}-${opened}`}>
+      {opened ? <div className={index === 0 ? "kd-preview-open-image" : "kd-preview-note"}>{index === 0 ? <ItemMediaFrame className="kd-preview-media"><Image src="/marketing/reading-corner.webp" width={480} height={320} alt="A sunlit reading corner" sizes="(max-width: 700px) 80vw, 300px" /></ItemMediaFrame> : <NoteContent content={previewNote.content} format="markdown" allowLocalImages={false} />}<button type="button" className="ka-button ka-button-small kd-button" onClick={() => setOpened(false)}>Back to card</button></div>
+        : <div className="library-card squircle-panel relative flex flex-col rounded-card p-[8px]">
+          {index === 0 && <div className="library-card-media"><ItemMediaFrame className="kd-preview-media"><Image src="/marketing/reading-corner.webp" width={480} height={320} alt="A sunlit reading corner" sizes="(max-width: 700px) 80vw, 300px" /></ItemMediaFrame></div>}
+          <div className={`library-card-footer ${index === 0 ? "library-card-footer-with-media" : "kd-preview-note-card"}`}><LibraryCardContent item={index === 0 ? previewImage : previewNote} onOpen={() => setOpened(true)} /></div>
+        </div>}
+    </div>
+    <div className="kd-preview-controls"><button type="button" className="ka-button ka-button-small kd-button" aria-label="Previous sample preview" onClick={move}><ArrowLeftIcon /></button><span className="kd-caption" role="status">{index === 0 ? "reading-corner.webp" : "a-little-pause.md"}</span><button type="button" className="ka-button ka-button-small kd-button" aria-label="Next sample preview" onClick={move}><ArrowRightIcon /></button></div>
   </div>;
 }
 
@@ -112,9 +123,9 @@ export function ImportDemo() {
   const [files, setFiles] = useState<File[]>(sampleFiles);
   const [status, setStatus] = useState("");
   return <div className="kd-demo kd-import" data-feature-demo="import">
-    <div className="kd-file-paper">{files.length ? <CaptureFileList files={files} results={[]} disabled={false} onRemove={index => { setFiles(current => current.filter((_, fileIndex) => fileIndex !== index)); setStatus("Sample file removed."); }} />
+    <div className="kd-file-list squircle-panel">{files.length ? <CaptureFileList files={files} results={[]} disabled={false} onRemove={index => { setFiles(current => current.filter((_, fileIndex) => fileIndex !== index)); setStatus("Sample file removed."); }} />
       : <p className="kd-import-empty">The queue is clear. Reset to try again.</p>}</div>
-    <button type="button" className="kd-button kd-import-reset" onClick={() => { setFiles(sampleFiles()); setStatus("Sample queue reset."); }}>Reset sample files <ArrowRightIcon /></button>
+    <button type="button" className="ka-button ka-button-small kd-button kd-import-reset" onClick={() => { setFiles(sampleFiles()); setStatus("Sample queue reset."); }}>Reset sample files <ArrowRightIcon /></button>
     <span className="kd-live" role="status">{status}</span>
   </div>;
 }

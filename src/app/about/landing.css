@@ -388,13 +388,14 @@
 /* Complementary features: one reader, two side panels, three smaller vignettes. */
 .ka-bento-section { padding-top: 110px; }
 .ka-bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: minmax(310px, auto) minmax(310px, auto) minmax(340px, auto); gap: 18px; }
-.ka-bento-card { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--ka-line); border-radius: 24px; background: var(--ka-surface-body); }
-.ka-bento-reading { grid-column: 1 / span 4; grid-row: 1 / span 2; background: #302c29; }
-.ka-bento-images { grid-column: 5 / span 2; grid-row: 1; background: #342f2b; }
-.ka-bento-notes { grid-column: 5 / span 2; grid-row: 2; background: #322b2e; }
+.ka-bento-card { position: relative; isolation: isolate; display: flex; flex-direction: column; min-width: 0; padding: 7px; border: 1px solid var(--ka-edge); border-radius: 24px; background: var(--ka-surface-rim); box-shadow: inset 0 1px 0 oklch(1 0 0 / .078431373), 0 12px 32px oklch(0 0 0 / .14); }
+.ka-bento-card::before { content: ""; position: absolute; z-index: -1; inset: 7px; border: 1px solid oklch(1 0 0 / .090196078); border-radius: 16px; background: var(--ka-surface-texture), var(--ka-surface-body); pointer-events: none; }
+.ka-bento-reading { grid-column: 1 / span 4; grid-row: 1 / span 2; }
+.ka-bento-images { grid-column: 5 / span 2; grid-row: 1; }
+.ka-bento-notes { grid-column: 5 / span 2; grid-row: 2; }
 .ka-bento-video { grid-column: 1 / span 2; grid-row: 3; }
-.ka-bento-preview { grid-column: 3 / span 2; grid-row: 3; background: #302d2a; }
-.ka-bento-import { grid-column: 5 / span 2; grid-row: 3; background: #2d302b; }
+.ka-bento-preview { grid-column: 3 / span 2; grid-row: 3; }
+.ka-bento-import { grid-column: 5 / span 2; grid-row: 3; }
 .ka-bento-copy { padding: 24px 24px 16px; }
 .ka-bento-copy h3 { font-size: 20px; line-height: 1.3; letter-spacing: -.02em; text-wrap: balance; }
 .ka-bento-copy h3 a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; }
