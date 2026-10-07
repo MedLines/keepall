@@ -1542,7 +1542,7 @@ describe("Library view state", () => {
     fireEvent.click(screen.getByRole("button", { name: "List view" }));
     const control = screen.getByRole("combobox", { name: "List columns: Auto" });
     expect(control).toHaveClass("size-11");
-    expect(control.closest("header")?.querySelector("[title]")).toBeNull();
+    expect(control).not.toHaveAttribute("title");
     expect(control.previousElementSibling).toHaveAttribute("aria-label", "Library layout");
     expect(control.compareDocumentPosition(screen.getByRole("button", { name: "Preview" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     pickTopMenu("List columns", "2 columns");
