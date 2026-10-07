@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon, ArrowRightIcon } from "../../shell-icons";
-import { getGuide, guides } from "../guides";
+import { getGuide, guideGroups, guides } from "../guides";
 import { GuideFigure } from "../guide-visual";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScrollPanel } from "@/components/ui/scroll-panel";
@@ -22,7 +22,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GuidePage({ params }: Props) {
   const guide = getGuide((await params).slug);
   if (!guide) notFound();
-  const next = guides[(guides.indexOf(guide) + 1) % guides.length];
+  const guideOrder = guideGroups.flatMap(group => group.slugs);
+  const next = getGuide(guideOrder[(guideOrder.indexOf(guide.slug) + 1) % guideOrder.length])!;
   return <>
     <div className="kh-guide-layout">
       <aside className="kh-sidebar">
