@@ -127,6 +127,8 @@ test("image details hold gallery controls and the viewer aligns its menu and ima
     if (width === 1707) {
       await imageMenu.click();
       const menu = page.getByRole("menu", { name: "Current image actions" });
+      await expect(menu.getByRole("menuitem", { name: "Extract palette" })).toBeVisible();
+      await expect(menu.getByRole("menuitem", { name: "Read text", exact: true })).toBeVisible();
       await expect(menu.getByRole("menuitem", { name: "Replace current image" })).toBeVisible();
       await expect(menu.getByRole("menuitem", { name: "Remove current image" })).toBeVisible();
       await page.keyboard.press("ArrowRight");
@@ -298,7 +300,7 @@ test("scroll view stays usable at narrow widths and removes only the current ima
   await page.keyboard.press("Enter");
   await readImage(page, 1, 30);
   await expect(page.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 2 of 10");
-  await page.getByRole("button", { name: "Current image actions" }).click();
+  await page.getByRole("button", { name: "Image 2 actions", exact: true }).click();
   await page.getByRole("menuitem", { name: "Remove current image" }).click();
   const confirmation = page.getByRole("dialog", { name: "Remove this image?" });
   await expect(confirmation).toContainText("Remove image 2");

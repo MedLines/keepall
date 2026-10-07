@@ -89,7 +89,7 @@ describe("ImageItemPage", () => {
     render(<ImageItemPage itemId="image-1" returnHref="/" />);
     fireEvent.click(await screen.findByRole("button", { name: "Scroll view" }));
     const gallery = screen.getByRole("list", { name: "Images in scroll view" });
-    expect(within(gallery).getAllByRole("button").map(button => button.getAttribute("aria-label"))).toEqual([
+    expect(within(gallery).getAllByRole("button", { name: /View image .* full screen/ }).map(button => button.getAttribute("aria-label"))).toEqual([
       "View image 1 full screen", "View image 2 full screen", "View image 3 full screen",
     ]);
     fireEvent.click(within(gallery).getByRole("button", { name: "View image 2 full screen" }));
@@ -99,6 +99,31 @@ describe("ImageItemPage", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Slides view" }));
     expect(screen.getByRole("button", { name: "Show image 2" })).toHaveAttribute("aria-current", "true");
+  });
+
+  test("keeps each image's analysis commands in its menu and results below the image before notes", async () => {
+    const item = { ...buildImageFromAssetIds({ assetIds: ["asset-1", "asset-2"], caption: "My image notes" }, { id: "image-1", now: 1 }),
+      analysis: [{ assetId: "asset-1", palette: ["#FF0000"], ocr: { text: "Invoice 4823", confidence: 93, language: "eng" as const, extractedAt: 1 } }] };
+    vi.mocked(getItem).mockResolvedValue(item);
+    render(<ImageItemPage itemId="image-1" returnHref="/" />);
+    const results = await screen.findByRole("region", { name: "Image 1 tools" });
+    const details = screen.getByRole("complementary", { name: "Image details" });
+    expect(details).not.toContainElement(results);
+    expect(screen.getByRole("region", { name: "Image gallery" })).toContainElement(results);
+    expect(results.compareDocumentPosition(screen.getByRole("article", { name: "Notes" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(results).queryByRole("button", { name: /Extract palette|Refresh palette|Read text/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Current image actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Refresh palette" })).toBeVisible();
+    expect(screen.getByRole("menuitem", { name: "Read text again" })).toBeVisible();
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "Scroll view" }));
+    const gallery = screen.getByRole("list", { name: "Images in scroll view" });
+    expect(within(gallery).getByRole("button", { name: "Image 1 actions" })).toBeVisible();
+    fireEvent.click(within(gallery).getByRole("button", { name: "Image 2 actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Extract palette" })).toBeVisible();
+    expect(screen.getByRole("menuitem", { name: "Read text" })).toBeVisible();
+    expect(within(gallery).getByRole("region", { name: "Extracted text from image 1" })).toHaveTextContent("Invoice 4823");
+    expect(within(gallery).queryByRole("region", { name: "Extracted text from image 2" })).toBeNull();
   });
 
   test("scroll view does not hijack horizontal arrow keys and can return to slide navigation", async () => {
@@ -254,8 +279,10 @@ describe("ImageItemPage", () => {
     render(<ImageItemPage itemId="image-1" returnHref="/" />);
     const gallery = await screen.findByRole("region", { name: "Image gallery" });
 
-    fireEvent.keyDown(screen.getByRole("button", { name: "Read text" }), { key: "ArrowRight" });
+    fireEvent.click(screen.getByRole("button", { name: "Current image actions" }));
+    fireEvent.keyDown(await screen.findByRole("menuitem", { name: "Read text" }), { key: "ArrowRight" });
     expect(screen.getByLabelText("Current image")).toHaveTextContent("Image 1 of 3");
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
 
     fireEvent.keyDown(document, { key: "ArrowRight" });
     expect(screen.getByLabelText("Current image")).toHaveTextContent("Image 2 of 3");
