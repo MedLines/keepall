@@ -5,7 +5,7 @@ import { ScrollPanel } from "@/components/ui/scroll-panel";
 
 import { Dialog } from "@base-ui/react/dialog";
 import { Tooltip } from "@base-ui/react/tooltip";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { itemListTitle, type Item } from "@/domain/item";
 import { LibraryItemMedia } from "./library-item-media";
 import { NoteContent } from "./note-content";
@@ -26,19 +26,22 @@ type Props = {
   onClose: () => void;
   onOpenItem: (item: Item) => void;
   returnFocus: () => HTMLElement | null;
+  review?: { footer: ReactNode; emptyState: ReactNode; busy: boolean };
 };
 
-export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpenItem, returnFocus }: Props) {
+export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpenItem, returnFocus, review }: Props) {
   const popupRef = useRef<HTMLDivElement>(null);
   const title = item ? previewTitle(item) : "";
-  return <Dialog.Root open={item !== null} onOpenChange={open => { if (!open) onClose(); }}>
+  const reviewing = review !== undefined;
+  useEffect(() => { if (reviewing) popupRef.current?.focus({ preventScroll: true }); }, [reviewing, item?.id]);
+  return <Dialog.Root open={item !== null || review !== undefined} onOpenChange={open => { if (!open) onClose(); }}>
     <Dialog.Portal>
       <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[80]" />
       <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
         <Dialog.Popup ref={popupRef} finalFocus={returnFocus} initialFocus={popupRef}
           className="library-quick-preview confirm-dialog-popup ui-popover flex h-[min(48rem,calc(100dvh-2rem))] w-full max-w-4xl flex-col overflow-hidden p-0 outline-none"
           onKeyDown={event => {
-            if (event.defaultPrevented || event.nativeEvent.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+            if (review?.busy || event.defaultPrevented || event.nativeEvent.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
             if (event.key === "Escape") {
               event.preventDefault();
               event.stopPropagation();
@@ -68,22 +71,32 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
               </span>
               <div className="min-w-0 flex-1">
                 <PreviewTitle key={title} title={title} />
-                <p className="mt-1 truncate text-xs text-text-secondary">{item.type === "document" ? item.sourceFileName : item.type === "link" ? linkCardHost(item) : item.type === "image" ? `${item.assetIds.length} ${item.assetIds.length === 1 ? "image" : "images"}` : item.type === "video" ? "Local video" : item.format === "markdown" ? "Markdown" : "Plain text"}</p>
+                <p className="mt-1 truncate text-xs text-text-secondary">{review ? "Unsorted review · " : ""}{item.type === "document" ? item.sourceFileName : item.type === "link" ? linkCardHost(item) : item.type === "image" ? `${item.assetIds.length} ${item.assetIds.length === 1 ? "image" : "images"}` : item.type === "video" ? "Local video" : item.format === "markdown" ? "Markdown" : "Plain text"}</p>
               </div>
-              <Dialog.Description className="sr-only">Quick preview. Arrows browse items. Enter opens the full item.</Dialog.Description>
-              <Dialog.Close aria-label="Close preview" className="ui-control flex size-11 shrink-0 items-center justify-center"><CloseIcon /></Dialog.Close>
+              <Dialog.Description className="sr-only">{review ? "Unsorted review. Tab moves between collection, tag, Skip, Delete, and Undo actions. Escape closes review." : "Quick preview. Arrows browse items. Enter opens the full item."}</Dialog.Description>
+              <Dialog.Close disabled={review?.busy} aria-label="Close preview" className="ui-control flex size-11 shrink-0 items-center justify-center"><CloseIcon /></Dialog.Close>
             </header>
             <div key={item.id} className="min-h-0 flex-1 overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus" tabIndex={0} role="region" aria-label="Preview content">
               <PreviewContent item={item} onGalleryStep={() => popupRef.current?.focus({ preventScroll: true })} />
             </div>
-            <footer className="library-preview-footer shrink-0 border-t border-border-control px-5 py-3">
+            <footer className={`${review ? "max-h-[55%] overflow-y-auto" : "library-preview-footer"} shrink-0 border-t border-border-control px-5 py-3`}>
+              {review ? review.footer : <>
               <div className="library-preview-navigation flex items-center gap-2">
                 <button type="button" className="ui-control flex size-11 shrink-0 items-center justify-center disabled:opacity-50" aria-label="Previous item" title="Previous item" disabled={index <= 0} onClick={() => onMove(-1)}><ArrowLeftIcon className="size-4 rtl:rotate-180" /></button>
                 <span role="status" aria-live="polite" className="whitespace-nowrap text-sm tabular-nums text-text-secondary"><span className="sr-only">{title}. </span>{index + 1} of {count}</span>
                 <button type="button" className="ui-control flex size-11 shrink-0 items-center justify-center disabled:opacity-50" aria-label="Next item" title="Next item" disabled={index >= count - 1} onClick={() => onMove(1)}><ArrowRightIcon className="size-4 rtl:rotate-180" /></button>
               </div>
               <button type="button" className="ui-control min-h-11 px-3 text-sm" onClick={() => onOpenItem(item)}>Open full item</button>
+              </>}
             </footer>
+          </> : review ? <>
+            <header className="flex shrink-0 items-center justify-between gap-4 px-5 py-4">
+              <Dialog.Title className="text-lg font-semibold">Unsorted review</Dialog.Title>
+              <Dialog.Close disabled={review.busy} aria-label="Close preview" className="ui-control flex size-11 items-center justify-center"><CloseIcon /></Dialog.Close>
+            </header>
+            <Dialog.Description className="sr-only">Unsorted review. Undo returns to the previous review action.</Dialog.Description>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{review.emptyState}</div>
+            <footer className="max-h-[55%] shrink-0 overflow-y-auto border-t border-border-control px-5 py-3">{review.footer}</footer>
           </> : null}
         </Dialog.Popup>
       </Dialog.Viewport>
