@@ -6,7 +6,7 @@ import type { Collection } from "@/domain/collection";
 import type { Tag } from "@/domain/tag";
 import { createCollection } from "@/persistence/collections";
 import { createTag } from "@/persistence/tags";
-import { applyUnsortedReviewAction, undoUnsortedReviewAction, type UnsortedReviewAction, type UnsortedReviewUndo } from "@/persistence/unsorted-review";
+import { applyUnsortedReviewAction, undoUnsortedReviewAction, rebaseUnsortedReviewUndo, type UnsortedReviewAction, type UnsortedReviewUndo } from "@/persistence/unsorted-review";
 import { LibraryQuickPreview } from "./library-quick-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 
@@ -40,7 +40,7 @@ export function UnsortedReview({ items, collections, tags, onClose, onOpenItem, 
     inFlight.current = true; setBusy(true); setError(null);
     try {
       const result = await applyUnsortedReviewAction(item.id, await action());
-      if (result.undo) setHistory(previous => [...previous, { index, undo: result.undo, notice: message }]);
+      if (result.undo) setHistory(previous => [...previous.map(entry => ({ ...entry, undo: entry.undo ? rebaseUnsortedReviewUndo(entry.undo, result) : null })), { index, undo: result.undo, notice: message }]);
       setNotice(result.undo ? message : "This tag is already on the item.");
       setTagName("");
       if (advance) { setIndex(index + 1); setCollectionName(""); }
@@ -58,8 +58,8 @@ export function UnsortedReview({ items, collections, tags, onClose, onOpenItem, 
     if (!previous || inFlight.current) return;
     inFlight.current = true; setBusy(true); setError(null);
     try {
-      if (previous.undo) await undoUnsortedReviewAction(previous.undo);
-      setHistory(entries => entries.slice(0, -1));
+      const result = previous.undo ? await undoUnsortedReviewAction(previous.undo) : null;
+      setHistory(entries => entries.slice(0, -1).map(entry => ({ ...entry, undo: entry.undo && result ? rebaseUnsortedReviewUndo(entry.undo, result) : entry.undo })));
       setIndex(previous.index); setCollectionName(""); setTagName("");
       setNotice("Undone. Returned to the same review position.");
       notifyChanged();
