@@ -30,7 +30,11 @@ export function GeneralSettings() {
         <li className="flex items-start gap-3"><InternetIcon className={iconClass} /><span>Only the page address is sent to the preview service.</span></li>
         <li className="flex items-start gap-3"><NoteIcon className={iconClass} /><span>Notes, collections, and tags stay on this device.</span></li>
       </ul>
-      <SettingsLink href="/help/storage-and-backups#previews">How link previews work</SettingsLink>
+      <p className={paragraphClass}>Saving or updating an article also sends its page address to Keepall&apos;s server. Website icons may load from Google&apos;s favicon service or the original website.</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <SettingsLink href="/help/storage-and-backups#previews">How link previews work</SettingsLink>
+        <SettingsLink href="/privacy">Privacy and network requests</SettingsLink>
+      </div>
     </section>
   </>;
 }
@@ -44,7 +48,7 @@ export function StorageSettings() {
         <div className="flex items-start gap-3">
           <DeviceIcon className={iconClass} />
           <div><dt className="font-medium text-text-primary">Where saves live</dt>
-            <dd className="mt-1 leading-5 text-text-secondary">This browser only. Other profiles and devices have separate libraries.</dd></div>
+            <dd className="mt-1 leading-5 text-text-secondary">This browser and site address only. Other profiles and devices have separate libraries.</dd></div>
         </div>
         <div className="flex items-start gap-3">
           <OfflineIcon className={iconClass} />
@@ -54,7 +58,7 @@ export function StorageSettings() {
         <div className="flex items-start gap-3">
           <InternetIcon className={iconClass} />
           <div><dt className="font-medium text-text-primary">Needs the internet</dt>
-            <dd className="mt-1 leading-5 text-text-secondary">Original websites, new previews, and web image downloads.</dd></div>
+            <dd className="mt-1 leading-5 text-text-secondary">Original websites, new previews, article capture and updates, and web image downloads.</dd></div>
         </div>
         <div className="flex items-start gap-3">
           <BackupIcon className={iconClass} />
