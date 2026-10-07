@@ -65,6 +65,10 @@ function searchableFields(item: Item, tagNames: readonly string[], documentText 
     case "link":
       fields = [
         { field: "noteContent", label: "My note", text: item.noteContent ?? "" },
+        { field: "content", label: "Saved article", text: item.article?.text ?? "" },
+        { field: "title", label: "Article title", text: item.article?.title ?? "" },
+        { field: "content", label: "Author", text: item.article?.author ?? "" },
+        { field: "sourceUrl", label: "Article source", text: item.article?.sourceUrl ?? "" },
         { field: "previewTitle", label: "Preview title", text: item.previewTitle },
         { field: "previewDescription", label: "Preview", text: item.previewDescription },
         { field: "url", label: "Source", text: item.url },

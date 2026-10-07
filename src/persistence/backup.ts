@@ -442,7 +442,7 @@ async function mergeValidatedBackup(
         ? {
             ...incoming,
             id: local.id,
-            url: local.url,
+            url: normalizeLinkUrl(local.url) === urlKey ? local.url : incoming.url,
             tagIds: org.tagIds,
             collectionIds: org.collectionIds,
             previewAssetId: remapAssetId(incoming.previewAssetId),
