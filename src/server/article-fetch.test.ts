@@ -93,3 +93,12 @@ test("one timeout bounds slow requests across the entire capture", async () => {
     await result;
   } finally { vi.useRealTimers(); }
 });
+
+test("retains images inside enlargement buttons without keeping interactive markup", () => {
+  const illustrated = html.replace(paragraphs, `${paragraphs}<figure><button aria-haspopup="dialog" onclick="alert(1)"><picture><img src="/chart.png" alt="Throughput chart" width="1960" height="878" onerror="alert(2)"></picture>Enlarge chart</button><figcaption>Observed throughput</figcaption></figure>`);
+  const article = extractArticleHtml(illustrated, "https://example.com/story");
+  expect(JSON.stringify(article.content)).toContain('"src":"https://example.com/chart.png"');
+  expect(JSON.stringify(article.content)).toContain('"alt":"Throughput chart"');
+  expect(JSON.stringify(article.content)).toContain("Observed throughput");
+  expect(JSON.stringify(article.content)).not.toMatch(/onclick|onerror|button|Enlarge chart/);
+});

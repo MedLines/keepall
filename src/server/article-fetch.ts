@@ -33,6 +33,11 @@ export function extractArticleHtml(html: string, sourceUrl: string, capturedAt =
     if (document.getElementsByTagName("*").length > 20_000) {
       throw new ArticleCaptureError("No readable article was found. The page may need a login, or its text may load only in a browser.");
     }
+    // Preserve article images wrapped in enlargement controls before Readability removes buttons.
+    for (const button of document.querySelectorAll("button")) {
+      const images = Array.from(button.querySelectorAll("img"));
+      if (images.length) button.replaceWith(...images);
+    }
     const result = new Readability(document, {
       maxElemsToParse: 20_000, charThreshold: 200,
       serializer: node => extractArticleContent(node, sourceUrl),
