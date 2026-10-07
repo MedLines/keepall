@@ -124,9 +124,14 @@ test("Contact has an inset Topic arrow and matching report actions", async ({ pa
   for (const action of [copy, github]) await expect(action).toHaveClass(/ka-button/);
   const appearance = async (element: typeof copy) => element.evaluate(button => {
     const style = getComputedStyle(button);
-    return { radius: style.borderRadius, background: style.backgroundImage, height: button.getBoundingClientRect().height, margin: style.marginTop };
+    return { radius: style.borderRadius, corner: style.getPropertyValue("corner-shape"), background: style.backgroundImage, height: button.getBoundingClientRect().height, margin: style.marginTop };
   });
   expect(await appearance(copy)).toEqual(await appearance(github));
+  for (const control of [copy, github, page.getByRole("button", { name: "Send message" }), page.locator(".ka-header-open")]) {
+    await expect(control).toHaveCSS("border-radius", "999px");
+    const corner = await control.evaluate(element => getComputedStyle(element).getPropertyValue("corner-shape"));
+    if (corner) expect(corner).toBe("round");
+  }
 });
 
 test("Contact keeps unsent bug reports available without email setup", async ({ page, context, browserName }) => {
@@ -334,50 +339,77 @@ test("titles, descriptions and share images are usable on every public route", a
 });
 
 for (const width of [390, 1707]) {
-  test(`About bento contains complete captures with space at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 900 });
+  test(`About preserves the stack and keeps six compact visual tiles readable at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 825 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/about");
-    await expect(page.locator(".ka-bento-card")).toHaveCount(8);
+    await expect(page.locator(".ka-stack .ka-feature-card")).toHaveCount(3);
+    await expect(page.locator(".ka-bento-card")).toHaveCount(6);
+    await expect(page.locator(".ka-gallery-tabs button")).toHaveCount(4);
     for (const id of ["reading", "image-tools", "extension", "your-library"]) {
       const card = page.locator(`#${id}`);
       await expect(card).toHaveCount(1);
       await card.evaluate(element => element.scrollIntoView({ block: "start" }));
-      const headerBottom = (await page.locator(".ka-header").boundingBox())!.y + (await page.locator(".ka-header").boundingBox())!.height;
-      expect((await card.locator("h3").boundingBox())!.y).toBeGreaterThan(headerBottom);
+      const header = (await page.locator(".ka-header").boundingBox())!;
+      expect((await card.locator("h3").boundingBox())!.y).toBeGreaterThan(header.y + header.height);
     }
-    for (const figure of await page.locator(".ka-bento-media").all()) {
-      const image = figure.locator("img");
-      await image.scrollIntoViewIfNeeded();
-      await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-      const layout = await image.evaluate(element => {
-        const image = element as HTMLImageElement;
-        const frame = image.parentElement!.getBoundingClientRect();
-        const bounds = image.getBoundingClientRect();
-        const style = getComputedStyle(image);
-        const contentWidth = bounds.width - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
-        const contentHeight = bounds.height - parseFloat(style.borderTopWidth) - parseFloat(style.borderBottomWidth);
-        return {
-          fit: getComputedStyle(image).objectFit,
-          left: bounds.left - frame.left,
-          right: frame.right - bounds.right,
-          top: bounds.top - frame.top,
-          ratio: contentWidth / contentHeight,
-          sourceRatio: image.naturalWidth / image.naturalHeight,
-        };
-      });
-      expect(layout.fit).toBe("contain");
-      expect(layout.left).toBeGreaterThanOrEqual(16);
-      expect(layout.right).toBeGreaterThanOrEqual(16);
-      expect(layout.top).toBeGreaterThanOrEqual(16);
-      expect(layout.ratio).toBeCloseTo(layout.sourceRatio, 2);
-      await expect(figure.locator("figcaption")).toHaveCSS("font-size", "13px");
-    }
-    for (const paragraph of await page.locator(".ka-bento-copy > p").all()) {
-      await expect(paragraph).toHaveCSS("font-size", "16px");
-      await expect(paragraph).toHaveCSS("line-height", "25.6px");
+    for (const tile of await page.locator(".ka-bento-card").all()) {
+      await tile.scrollIntoViewIfNeeded();
+      const bounds = (await tile.boundingBox())!;
+      if (width === 1707) expect(bounds.height).toBeLessThanOrEqual(280);
+      for (const text of await tile.locator(".ka-bento-copy > *").all()) {
+        const box = (await text.boundingBox())!;
+        expect(box.x - bounds.x).toBeGreaterThanOrEqual(20);
+        expect(bounds.x + bounds.width - box.x - box.width).toBeGreaterThanOrEqual(20);
+        expect(box.y + box.height).toBeLessThan(bounds.y + bounds.height);
+      }
+      for (const image of await tile.locator("img").all()) {
+        await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+        if (await image.evaluate(element => element.parentElement!.classList.contains("ka-bento-visual"))) {
+          await expect(image).toHaveCSS("object-fit", "contain");
+        }
+      }
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
+for (const width of [390, 1707]) {
+  test(`Blog articles keep their section navigation accessible at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 825 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    for (const slug of ["design-reference-library", "browser-bookmarks", "project-research", "searchable-screenshots"]) {
+      await page.goto(`/blog/${slug}`);
+      const sidebar = page.locator(".kb-sidebar");
+      const article = page.locator(".kb-editorial-article");
+      const contents = page.getByRole("navigation", { name: "In this article", exact: true });
+      if (width === 390) {
+        await expect(contents).toHaveCount(0);
+        await page.locator(".kb-mobile-contents summary").click();
+        await expect(contents).toBeVisible();
+        expect((await sidebar.boundingBox())!.y).toBeLessThan((await article.boundingBox())!.y);
+      } else {
+        await expect(contents).toBeVisible();
+        const side = (await sidebar.boundingBox())!;
+        expect(side.x + side.width).toBeLessThan((await article.boundingBox())!.x);
+        await page.evaluate(() => window.scrollTo(0, 600));
+        expect((await sidebar.boundingBox())!.y).toBeCloseTo(112, 0);
+      }
+      const links = contents.locator('a[href^="#"]');
+      expect(await links.count()).toBeGreaterThan(0);
+      for (const hash of await links.evaluateAll(elements => elements.map(element => element.getAttribute("href")!.slice(1)))) {
+        await expect(page.locator(`[id="${hash}"]`)).toHaveCount(1);
+      }
+      await links.last().click();
+      const target = page.locator((await links.last().getAttribute("href"))!);
+      const header = (await page.locator(".ka-header").boundingBox())!;
+      expect((await target.boundingBox())!.y).toBeGreaterThanOrEqual(header.y + header.height);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+    await page.goto("/blog/searchable-screenshots#palette");
+    await expect(page.locator("#palette h2")).toBeInViewport();
+    const header = (await page.locator(".ka-header").boundingBox())!;
+    expect((await page.locator("#palette").boundingBox())!.y).toBeGreaterThanOrEqual(header.y + header.height);
   });
 }
 

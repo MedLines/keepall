@@ -1,6 +1,6 @@
 # About and Help feature coverage
 
-Audited on 2026-10-07 against website branch `afbb180` and app main `7effa37`. Their shared app base is `9e62f9e`; the later main commit changes collection-card styling, not feature behavior. Implemented on `feature/website-feature-coverage` in the isolated preview worktree. The original checkout remains unchanged. About, Help, capture assets, and Contact records were implemented in separate worktrees.
+Audited on 2026-10-07 against website branch `afbb180` and app main `7effa37`. Their shared app base is `9e62f9e`; the later main commit changes collection-card styling, not feature behavior. Implemented on `feature/website-feature-coverage` using isolated task worktrees. The main project checkout is now on that branch at the user's request. About, Help, capture assets, and Contact records were implemented in separate worktrees.
 
 ## Coverage at audit
 
@@ -43,10 +43,10 @@ Group the existing Help rows under **Start saving**, **Read and explore**, **Org
 
 ## About structure
 
-Preserve the hero, four-tab walkthrough gallery, installation section, and closing treatment. The 2026-10-08 revision replaces the old sticky stack and repeated feature sections with eight bento cards.
+Preserve the hero, four-tab walkthrough gallery, installation section, and closing treatment. The latest 2026-10-08 revision restores the original three stacked cards for Capture, organization/search, and local storage/backups. Six small visual tiles cover complementary features.
 
 - The gallery shows Library, Collections, Tags, and Search. Demos use current preview, local video, file-search, and recognized-text results.
-- Reader cards show saved articles, complete PDF pages, and imported Markdown. Image tools show real palettes and recognized English text.
+- Compact tiles cover article/PDF reading, Markdown and text notes, palette/OCR, local video, Preview, and file/folder import. Real app snippets end at complete component or text boundaries and sit inside padded frames.
 - Capture retains its manual demo. Search and Preview, import, and local storage cards link to detailed Help procedures.
 - The offline FAQ distinguishes saved addresses from saved article text. Cached Keepall can read local content; original websites and new requests need the internet.
 
@@ -68,7 +68,7 @@ Use real app output, sample content, and the existing capture scripts. Preserve 
 1. Correct stale action names and inaccurate limits; update existing About wording and metadata.
 2. Add focused Help guides, topic entry points, and crosslinks without breaking old anchors.
 3. Extend sample fixtures and capture current UI for each new feature claim.
-4. Combine feature coverage into the About bento and refresh demos using current assets.
+4. Restore the three-card About stack, add six compact feature tiles, and refresh demos using current assets.
 5. Verify the actual actions described, image/video loading, anchors, metadata, keyboard use, reduced motion, and layouts at 320, 390, 768, and 1707 pixels. Build and typecheck, then run the website suite in Chromium and Firefox.
 
 Keep About and Help implementation in separate worktrees branched from the isolated website branch, with the shared visual capture work integrated before final browser verification. Do not change app behavior to match documentation.
@@ -79,12 +79,13 @@ Contact now records submissions in Neon Postgres before notifying the support in
 
 ## Where to review the implementation
 
-The dev preview runs at `http://localhost:3115` from `/tmp/keepall-website-preparation`, checked out on `feature/website-feature-coverage`.
+The user's dev server runs at `http://localhost:3116` from `/home/med/projects/personal/bookmark-project/keepall`, checked out on `feature/website-feature-coverage`.
 
 - `/about`: existing Library and Search demos now show documents, image text, and local video.
-- `/about#reading`: saved article card, with PDF and Markdown cards beside it.
+- `/about#reading`: six compact feature tiles, starting with articles and PDFs.
 - `/about#image-tools`: palette, color search, and English screenshot recognition.
-- `/about#collection`: four-tab gallery. Import and backup information now appears in the bento; the offline FAQ is near the bottom.
+- `/about#collection`: four-tab gallery. The three stacked cards cover Capture, organization/search, and local storage/backups; the offline FAQ is near the bottom.
+- All four `/blog/*` articles: sticky left navigation on desktop and collapsible navigation above the article on phones. Article styling differs from Help.
 - `/help`: grouped guide index, feature-specific thumbnails, and direct Palette, Read text, and Videos links.
 - `/help/search`, `/help/documents`, `/help/preview`, `/help/notes`: new focused guides.
 - `/help/images-and-videos#palette` and `#image-text`: expanded image analysis instructions and limits.
@@ -95,20 +96,20 @@ The dev preview runs at `http://localhost:3115` from `/tmp/keepall-website-prepa
 The earlier Contact navigation/button fixes, blog thumbnails, changelog entries, and public-page footer remain in this branch. Press kit remains parked.
 
 
-## Verification completed
+## Earlier feature and Contact verification
 
 - Production build and full typecheck passed. Full lint passed with zero errors and the existing 109 warnings; the changed Contact and website files have no new lint warnings.
 - All 40 website checks passed in Chromium and Firefox. The first integrated run passed 36; the four remaining checks passed after fixing test selectors that included hidden logo layers and Next's separate route-announcement alert. Expected console output from the deliberately mocked Contact 429 is allowed only in that scenario and only for the Contact endpoint.
-- The earlier About matrix verified the original three-card layout. The latest 16-case Chromium/Firefox matrix verifies eight bento cards, four gallery tabs, keyboard focus, manual playback, contained images, and no overflow at 320, 390, 768, and 1707 pixels in both motion modes.
+- Before the latest layout feedback, a 16-case Chromium/Firefox matrix verified the previous eight-card layout, four gallery tabs, keyboard focus, manual playback, contained images, and no overflow at 320, 390, 768, and 1707 pixels in both motion modes.
 - Help routes passed browser checks at those widths; all 50 original anchors and 79 rendered Help links resolve.
 - All 72 Contact route, identity, storage, Zod-input, and form tests passed. Independent review verified server bounds and resolved the transient-503 retry issue.
 - A disposable local PostgreSQL instance verified three-per-hour limits, twenty simultaneous attempts sharing each identity combination, rolling expiry, failed-insert rollback, denied requests without storage growth, manual deletion without quota reset, and retention of year-old messages during limiter cleanup. The instance was stopped afterward.
 - Capture fixtures use actual PDF text extraction, real local video, real palette extraction, and genuine English OCR. New screenshots and refreshed MP4/WebM recordings load and decode.
-- The original checkout remains untouched by this task. No hosted database, Resend credentials, deployment, or live delivery test was performed. Activation and inbox receipt/reply checks remain required.
+- The main project checkout was switched to the website feature branch at the user's request. No hosted database, Resend credentials, deployment, or live delivery test was performed. Activation and inbox receipt/reply checks remain required.
 
 ## Copy and layout revision, 2026-10-08
 
-About now uses eight bento cards instead of the sticky feature stack and separate reading/tool sections. The cards cover articles, PDFs, notes and text files, image analysis, Capture, search and preview, import, and backups. Existing section anchors remain available. Screenshots show their full content inside padded frames; the PDF and Markdown detail assets were recaptured with native background around the reader. Hero and gallery screenshots also fit their phone frames.
+About restores the three stacked cards and adds six small feature tiles. The stack covers Capture, organization/search, and local storage/backups. The tiles cover article/PDF reading, notes and text files, image analysis, local video, Preview, and import. Existing section anchors remain available. Screenshots show their full content inside padded frames; the PDF and Markdown detail assets were recaptured with native background around the reader. Hero and gallery screenshots also fit their phone frames.
 
 Both original Blog articles were edited for direct wording. Two additional workflows are available:
 
@@ -128,17 +129,39 @@ Review the revised feature cards at `/about#reading`, `/about#image-tools`, `/ab
 | Severity | Location | Before | After | Why |
 | --- | --- | --- | --- | --- |
 | MEDIUM | `src/app/help/guides.ts:53`, `src/app/help/focused-guides.ts:14` | Multi-action paragraphs and incomplete filter explanations | Short descriptions, numbered procedures, source-checked controls | Reduces reading effort and preserves accurate actions. |
-| MEDIUM | `src/app/about/feature-bento.tsx:16`, `src/app/about/landing.css:316` | Repeated feature sections and cropped readers | Eight feature cards with contained images and 16–24px frames | Makes the current features easier to scan and keeps content inside the frame. |
+| MEDIUM | `src/app/about/feature-bento.tsx`, `src/app/about/landing.css` | Eight oversized feature cards | Original three-card stack plus six compact tiles with padded app snippets | Restores the requested layout and keeps each additional feature brief. |
 | LOW | `src/app/blog/design-reference-library/page.tsx:32`, `src/app/blog/browser-bookmarks/page.tsx:30` | Repeated framing and long introductions | Direct workflow copy and two new use cases | Gives each article a concrete task. |
 | LOW | `src/app/help/help.css:72` | 15px body text and 12px image captions | 16px body text, 13px captions, 1.6 body line height | Improves reading on phone and desktop layouts. |
 
 Approve the reviewed writing and typography changes. Sentence-length checks, source-backed feature review, and separate agent browser matrices passed. Integrated build and browser results are recorded below.
 
-### Final integrated verification
+### Previous integrated verification (before the compact-layout feedback)
 
 - Final production build and typecheck passed. Full lint has zero errors and the same 109 existing warnings.
 - The 46-scenario Chromium/Firefox suite passed 43 scenarios on its first run. Three bento assertions measured decorative borders as image pixels; the assertions now measure the content box. All four bento scenarios passed after rebuilding, including the added anchor visibility checks. All 46 scenarios have passed their relevant final checks.
 - About review anchors now use the same 108px scroll offset as other website sections. Live checks verified all four headings below the floating header at 390px and 1707px.
-- Live dev checks on port 3115 verified About, both new articles, Search Help, and image-text Help: HTTP 200, loaded visible images, no page errors, and no horizontal overflow at 390px.
+- Previous live dev checks on port 3115 verified About, both new articles, Search Help, and image-text Help: HTTP 200, loaded visible images, no page errors, and no horizontal overflow at 390px.
 - Independent source review approved About, all four Blog articles, and all 13 Help guides after the factual corrections above. The Help source audit passed all 68 sections, 261 steps, and 678 sentences under the checked sentence/paragraph limits.
-- The original checkout remains clean. The integrated preview worktree is committed on `feature/website-feature-coverage`. Contact readiness remains false until the documented Neon and Resend setup is supplied.
+- The earlier preview worktree is committed; the user now reviews `feature/website-feature-coverage` from the main checkout on port 3116. Contact readiness remains false until the documented Neon and Resend setup is supplied.
+
+## Stack, sidebar, and button revision, 2026-10-08
+
+The latest feedback is implemented on the main review branch and visible at `http://localhost:3116`.
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| MEDIUM | `src/app/blog/blog-article.tsx`, `src/app/blog/blog.css` | Article contents interrupted the reading column | Sticky 232px left sidebar, article on the right, and a collapsed mobile contents list | Keeps section navigation available while reading; the unnumbered textured panel and editorial headings distinguish Blog from Help. |
+| MEDIUM | `src/app/about/page.tsx`, `src/app/about/feature-bento.tsx` | Eight large cards replaced the familiar stack | Three stacked cards plus six compact visual tiles | Preserves the requested layout and gives each additional feature one short sentence. |
+| MEDIUM | `src/app/about/details/` | Search and OCR captures ended through content | Complete search result, complete recognized-text block, and inset reader/media snippets | Keeps screenshot text away from cropped edges. |
+| LOW | `src/app/marketing-controls.css` | Native buttons inherited app squircle corners while links remained round | Website buttons and button links use round corners with matching pill radii | Gives Contact and website actions consistent shapes while preserving the requested icon padding. |
+
+Approve the reviewed layout and typography. Long-form Blog and Help text remains 16px; compact tile descriptions use 14px with 1.5 line height, short sentences, and padded frames. Wide desktop tiles measure 276px tall. Wrapped text grows naturally at narrower widths instead of being clipped.
+
+Independent Chromium review covered all four articles at seven widths from 320–1707px, all twenty desktop contents links, four mobile contents links, keyboard focus, and twelve About viewport/motion combinations. Desktop sidebars stay at 112px below the floating header; phone contents remain in normal flow. The About stack retains its original sticky motion on suitable desktops and becomes static on phones and with reduced motion. No clipping, missing images, horizontal overflow, or page errors were found. Website button shapes passed separate Chromium and Firefox checks at 390px and 1707px, with app corner styles preserved.
+
+### Integrated verification for this revision
+
+- Production build, full typecheck, changed-file lint, and diff whitespace checks passed.
+- All 50 production website scenarios passed in Chromium and Firefox. This includes the three-card/six-tile structure, 280px wide-desktop tile ceiling, text insets, loaded images, all four Blog sidebars, mobile contents, direct palette anchors, matching native/link button shapes, keyboard use, public links, Help procedures, metadata, and Contact draft/rate-limit states.
+- A long repeated-context Blog development run intermittently reported a webpack `app/layout.js` eval error. Independent live review on the user server and the full production suite had no page errors; no unrelated app behavior was changed to address the unconfirmed development-run symptom.
+- The user checkout remains on `feature/website-feature-coverage`; its dev server stays available at `http://localhost:3116`. Task worktrees and their commits remain isolated. Contact sending still requires the database schema and documented environment variables; no live credentials or delivery test were supplied.
