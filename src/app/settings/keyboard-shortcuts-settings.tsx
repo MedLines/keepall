@@ -4,10 +4,24 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { ShortcutValidationError, DEFAULT_SHORTCUTS, SHORTCUT_ACTIONS, SHORTCUT_LABELS, assignShortcut, shortcutFromEvent, shortcutLabel, type KeyboardShortcuts, type ShortcutAction } from "@/domain/keyboard-shortcuts";
 import { getLibraryPreferences, putKeyboardShortcut, putKeyboardShortcuts } from "@/persistence/library-preferences";
+import { ModalDialog } from "@/components/ui/modal-dialog";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
 import { SHORTCUTS_CHANGED_EVENT } from "../use-app-shortcuts";
 
 const CONTROL = "ui-control inline-flex min-h-11 items-center justify-center gap-2 px-3 text-sm font-medium disabled:opacity-50";
+const MODIFIER_KEYS = ["Alt", "Control", "Meta", "Shift"];
+
+function hasModifiers(event: KeyboardEvent<HTMLElement>) {
+  return event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
+}
+
+function modifierLabel(event: KeyboardEvent<HTMLElement>) {
+  return shortcutLabel([event.ctrlKey && "Ctrl", event.metaKey && "Meta", event.altKey && "Alt", event.shiftKey && "Shift"].filter(Boolean).join("+"));
+}
+
+function isButtonActivation(event: KeyboardEvent<HTMLElement>) {
+  return !hasModifiers(event) && ["Enter", " "].includes(event.key) && (event.target as HTMLElement).closest("button");
+}
 
 export function KeyboardShortcutsSettings() {
   const [shortcuts, setShortcuts] = useState<KeyboardShortcuts>(DEFAULT_SHORTCUTS);
@@ -76,67 +90,88 @@ export function KeyboardShortcutsSettings() {
       <h2 id="keyboard-shortcuts-heading" className="text-lg font-semibold text-text-primary">App shortcuts</h2>
       <button type="button" disabled={!ready || busy || editing !== null} className={CONTROL} onClick={() => void save(async () => { await putKeyboardShortcuts(DEFAULT_SHORTCUTS); return { ...DEFAULT_SHORTCUTS }; }, "Shortcuts reset to defaults.")}>Reset to defaults</button>
     </div>
-    <p className="mt-2 text-sm leading-6 text-text-secondary">Choose Change, press the keys together, then Save. Shortcuts pause while typing or using a dialog.</p>
+    <p className="mt-2 text-sm leading-6 text-text-secondary">Choose Change, press the keys together, then confirm. Shortcuts pause while typing or using a dialog.</p>
     <div className="mt-4 divide-y divide-border-control">
       {SHORTCUT_ACTIONS.map(action => (
-        <div key={action} role="group" aria-label={`Shortcut for ${SHORTCUT_LABELS[action]}`} className="py-3 first:pt-0 last:pb-0" data-shortcut-recording={editing === action ? "" : undefined}>
+        <div key={action} role="group" aria-label={`Shortcut for ${SHORTCUT_LABELS[action]}`} className="py-3 first:pt-0 last:pb-0">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-text-primary">{SHORTCUT_LABELS[action]}</p>
             <div className="flex flex-wrap items-center gap-2">
               <kbd className="min-w-28 text-center text-sm font-normal text-text-secondary">{shortcutLabel(shortcuts[action])}</kbd>
-              {editing !== action ? <button ref={node => { if (node) changeButtons.current[action] = node; }} type="button" className={CONTROL} aria-label={`Change ${SHORTCUT_LABELS[action]} shortcut`} disabled={!ready || busy || editing !== null} onClick={() => { setEditing(action); setError(null); setNotice(""); }}>Change</button> : null}
+              <button ref={node => { if (node) changeButtons.current[action] = node; }} type="button" className={CONTROL} aria-label={`Change ${SHORTCUT_LABELS[action]} shortcut`} disabled={!ready || busy || editing !== null} onClick={() => { setEditing(action); setError(null); setNotice(""); }}>Change</button>
             </div>
           </div>
-          {editing === action ? <ShortcutRecorder action={action} shortcuts={shortcuts} busy={busy} onSave={candidate => void saveShortcut(action, candidate)} onCancel={() => { setError(null); setNotice("Change cancelled."); finishEditing(action); }} /> : null}
         </div>
       ))}
     </div>
-    {error ? <p role="alert" className="mt-3 text-sm text-text-danger">{error}</p> : null}
+    {editing ? <ShortcutRecorder action={editing} shortcuts={shortcuts} busy={busy} saveError={error} onSave={candidate => void saveShortcut(editing, candidate)} onCancel={() => { setError(null); setNotice("Change cancelled."); finishEditing(editing); }} /> : null}
+    {error && !editing ? <p role="alert" className="mt-3 text-sm text-text-danger">{error}</p> : null}
     {notice ? <p role="status" className="mt-3 text-sm text-text-secondary">{notice}</p> : null}
     <p className="mt-4 text-xs leading-5 text-text-secondary">These shortcuts work inside Keepall and are included in library backups. The Chrome capture extension has its own shortcut. <Link href="/help/chrome-capture" className="underline underline-offset-4">Change the Chrome extension shortcut</Link>.</p>
   </section>;
 }
 
-function ShortcutRecorder({ action, shortcuts, busy, onSave, onCancel }: {
+function ShortcutRecorder({ action, shortcuts, busy, saveError, onSave, onCancel }: {
   action: ShortcutAction;
   shortcuts: KeyboardShortcuts;
   busy: boolean;
+  saveError: string | null;
   onSave: (candidate: string) => void;
   onCancel: () => void;
 }) {
   const [candidate, setCandidate] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [attempted, setAttempted] = useState("");
+  const [liveModifiers, setLiveModifiers] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const inputId = useId();
   const instructionsId = useId();
   const errorId = useId();
-  useEffect(() => { input.current?.focus(); }, []);
+  const error = validationError ?? saveError;
+  const canConfirm = candidate !== null && liveModifiers === null && !busy;
 
-  function record(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.repeat || event.nativeEvent.isComposing || event.key === "Tab" || ["Alt", "Control", "Meta", "Shift"].includes(event.key)) return;
+  function record(event: KeyboardEvent<HTMLElement>) {
+    if (busy || event.repeat || event.nativeEvent.isComposing || event.key === "Tab" || event.key === "Escape") return;
+    if (isButtonActivation(event)) return;
     event.preventDefault(); event.stopPropagation();
-    if (event.key === "Escape") { onCancel(); return; }
-    if (event.key === "Enter" && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && candidate) { onSave(candidate); return; }
+    if (MODIFIER_KEYS.includes(event.key)) {
+      setLiveModifiers(modifierLabel(event));
+      return;
+    }
+    if (event.key === "Enter" && !hasModifiers(event)) { if (canConfirm && candidate) onSave(candidate); return; }
+    const next = shortcutFromEvent(event);
+    setAttempted(shortcutLabel(next)); setLiveModifiers(null);
     try {
-      const next = shortcutFromEvent(event);
       assignShortcut(shortcuts, action, next);
-      setCandidate(next); setError(null);
+      setCandidate(next); setValidationError(null);
     } catch (caught) {
       setCandidate(null);
-      setError(caught instanceof ShortcutValidationError ? caught.message : "Couldn't record this shortcut. Try again.");
+      setValidationError(caught instanceof ShortcutValidationError ? caught.message : "Couldn't record this shortcut. Try again.");
     }
   }
 
-  return <div className="mt-3 space-y-3" onKeyDown={event => {
-    if (event.key !== "Escape" || busy) return;
-    event.preventDefault(); event.stopPropagation(); onCancel();
-  }}>
-    <p id={instructionsId} className="text-xs leading-5 text-text-secondary">Press Alt/Option with a letter, optionally Shift. Numbers need Alt/Option+Shift. You can also use /.</p>
-    <input ref={input} className="ui-field min-h-11 w-full px-3 text-sm" aria-label={`New shortcut for ${SHORTCUT_LABELS[action]}`} aria-describedby={`${instructionsId}${error ? ` ${errorId}` : ""}`} aria-invalid={error ? true : undefined} placeholder="Press a shortcut" readOnly disabled={busy} value={candidate ? shortcutLabel(candidate) : ""} onKeyDown={record} />
-    {error ? <p id={errorId} role="alert" className="text-xs leading-5 text-text-danger">{error}</p> : null}
-    <div className="flex flex-wrap items-center gap-2">
-      <button type="button" className={CONTROL} disabled={!candidate || busy} onClick={() => { if (candidate) onSave(candidate); }}>{busy ? "Saving…" : "Save shortcut"}</button>
+  return <ModalDialog open busy={busy} initialFocus={input}
+    title={`Change ${SHORTCUT_LABELS[action]} shortcut`}
+    description="Press the keys together. Review the new shortcut, then confirm."
+    closeLabel="Cancel shortcut change"
+    onOpenChange={open => { if (!open) onCancel(); }}
+    onKeyDown={record}
+    onKeyUp={event => { if (liveModifiers !== null) setLiveModifiers(modifierLabel(event) || null); }}
+    footer={<>
       <button type="button" className={CONTROL} disabled={busy} onClick={onCancel}>Cancel</button>
-      <span className="text-xs text-text-secondary">{candidate ? "Enter to save · Esc to cancel" : "Esc to cancel"}</span>
+      <button type="button" className={`${CONTROL} bg-bg-active text-text-primary`} disabled={!canConfirm} onClick={() => { if (canConfirm && candidate) onSave(candidate); }}>{busy ? "Saving…" : "Confirm shortcut"}</button>
+    </>}
+  >
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-text-primary">Current shortcut</p>
+      <kbd className="block text-sm font-normal text-text-secondary">{shortcutLabel(shortcuts[action])}</kbd>
     </div>
-  </div>;
+    <div className="space-y-2" data-shortcut-recording="">
+      <label htmlFor={inputId} className="block text-sm font-medium text-text-primary">New shortcut</label>
+      <input id={inputId} ref={input} className="ui-field min-h-12 w-full px-3 text-base" aria-label={`New shortcut for ${SHORTCUT_LABELS[action]}`} aria-describedby={`${instructionsId}${error ? ` ${errorId}` : ""}`} aria-invalid={error ? true : undefined} placeholder="Press a shortcut" readOnly disabled={busy} value={liveModifiers ?? attempted} />
+      <p id={instructionsId} className="text-xs leading-5 text-text-secondary">Press Alt/Option with a letter, optionally Shift. Numbers need Alt/Option+Shift. You can also use /.</p>
+      {error ? <p id={errorId} role="alert" className="text-sm leading-5 text-text-danger">{error}</p> : null}
+      <p className="text-xs text-text-secondary">{canConfirm ? "Enter to confirm · Esc to cancel" : "Esc to cancel"}</p>
+    </div>
+  </ModalDialog>;
 }
