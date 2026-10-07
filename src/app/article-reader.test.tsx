@@ -41,6 +41,17 @@ test("failed capture leaves saved text available and lets the user retry", async
   vi.unstubAllGlobals();
 });
 
+test("an empty server error explains service failure and preserves the saved copy", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+  const link = { ...buildLink({ url: article.sourceUrl }), article };
+  render(<ArticleReader link={link} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Update saved article" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("The article service is unavailable.");
+  expect(screen.getByRole("article", { name: "Article text" })).toHaveTextContent("First paragraph.");
+  expect(screen.getByRole("button", { name: "Retry saving article" })).toBeEnabled();
+  vi.unstubAllGlobals();
+});
+
 test("switching the keyed reader aborts old capture before it can update the next item", async () => {
   let resolve!: (response: Response) => void;
   let signal!: AbortSignal;

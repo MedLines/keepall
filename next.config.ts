@@ -24,6 +24,7 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["jsdom-reader"],
   // Serwist adds webpack config; Next 16 Turbopack needs an explicit turbopack key
   // (even empty) so `next dev` does not abort.
   turbopack: {},

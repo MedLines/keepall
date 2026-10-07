@@ -6,6 +6,58 @@ import { articleContentText, type ArticleNode } from "../src/domain/article";
 
 test.use({ serviceWorkers: "allow" });
 
+test("right-click article capture retries, prevents duplicate requests and persists the saved copy", async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
+  await page.evaluate(async () => {
+    const open = indexedDB.open("keepall");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      open.onsuccess = () => resolve(open.result); open.onerror = () => reject(open.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction("items", "readwrite");
+        tx.objectStore("items").put({ id: "context-article", type: "link", title: "Reading from the menu", url: "https://example.com/report", noteContent: "My independent note", tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 1 });
+        tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error);
+      });
+    } finally { db.close(); }
+  });
+  let attempts = 0;
+  let finishCapture!: () => void;
+  const captureReady = new Promise<void>(resolve => { finishCapture = resolve; });
+  const article = { title: "Offline reporting", text: "An article saved directly from the library menu.", sourceUrl: "https://example.com/report", capturedAt: Date.now() };
+  await page.route("**/api/article", async route => {
+    attempts++;
+    expect(route.request().postDataJSON()).toEqual({ url: article.sourceUrl });
+    if (attempts === 1) { await route.fulfill({ status: 500, body: "" }); return; }
+    await captureReady;
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(article) });
+  });
+  await page.reload();
+  const row = page.locator('[data-item-id="context-article"]');
+  await row.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Save article for offline reading", exact: true }).click();
+  await expect(row.getByRole("alert")).toContainText("The article service is unavailable.");
+  await row.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Save article for offline reading", exact: true }).click();
+  await expect(row.getByRole("status")).toHaveText("Saving article…");
+  await row.click({ button: "right" });
+  await expect(page.getByRole("menuitem", { name: "Saving article…", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  finishCapture();
+  await expect(row.getByRole("status")).toHaveText("Article saved for offline reading.");
+  await row.getByRole("button", { name: "Actions for Reading from the menu", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Update saved article", exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("article-context-menu.png"), animations: "disabled" });
+  await page.goto("/items/context-article");
+  await expect(page.getByRole("article", { name: "Article text" })).toHaveText(article.text);
+  await expect(page.getByText("My independent note", { exact: true })).toBeVisible();
+  expect(attempts).toBe(2);
+  expect(errors).toEqual([]);
+});
+
 test("article capture retries, persists, reads offline, searches and restores from backup", async ({ page, context }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));

@@ -11,7 +11,7 @@ import { uiMotion } from "@/components/ui/motion-tokens";
 import { normalizeCollectionName } from "@/domain/collection";
 import { normalizeTagName } from "@/domain/tag";
 import {
-  ArrowRightIcon, CheckIcon, CollectionIcon, DeleteIcon, EditIcon, EyeIcon, HashIcon, LayersIcon, LinkIcon,
+  ArrowRightIcon, CheckIcon, CollectionIcon, DeleteIcon, DownloadIcon, EditIcon, EyeIcon, HashIcon, LayersIcon, LinkIcon,
   PinIcon, PlusIcon, RefreshIcon, SearchIcon,
 } from "./shell-icons";
 
@@ -40,6 +40,9 @@ type Props = {
   onFetchPreview?: () => void;
   fetchingPreview?: boolean;
   hasPreview?: boolean;
+  onSaveArticle?: () => void;
+  savingArticle?: boolean;
+  hasArticle?: boolean;
   onEdit: () => void;
   onOrganize: () => void;
   onDelete: () => void;
@@ -65,6 +68,7 @@ export function ItemContextMenu({
   onAddTag, onRemoveTag, onPreview, onEdit, onOrganize, onDelete, onTogglePin, pinned, onOpen,
   collections, assignedCollectionIds, collectionError, onMoveToCollection, onClearCollection, triggerRef, trashActions,
   onFetchPreview, fetchingPreview = false, hasPreview = false,
+  onSaveArticle, savingArticle = false, hasArticle = false,
 }: Props) {
   const openingDialog = useRef(false);
   const movingToTrash = useRef(false);
@@ -109,6 +113,9 @@ export function ItemContextMenu({
           </Menu.Item> : null}
           {onFetchPreview ? <Menu.Item className={MENU_ITEM} disabled={busy || fetchingPreview} onClick={onFetchPreview}>
             <RefreshIcon />{fetchingPreview ? "Fetching preview…" : hasPreview ? "Refresh preview" : "Fetch preview"}
+          </Menu.Item> : null}
+          {onSaveArticle ? <Menu.Item className={MENU_ITEM} disabled={busy || savingArticle} onClick={onSaveArticle}>
+            <DownloadIcon />{savingArticle ? "Saving article…" : hasArticle ? "Update saved article" : "Save article for offline reading"}
           </Menu.Item> : null}
           <OrganizationMenu kind="tags" entries={tags} assignedIds={assignedTagIds} busy={busy} error={tagError} onSelect={onAddTag} onRemove={onRemoveTag} />
           <OrganizationMenu kind="collections" entries={collections} assignedIds={assignedCollectionIds} busy={busy} error={collectionError} onSelect={onMoveToCollection} onClear={onClearCollection} />

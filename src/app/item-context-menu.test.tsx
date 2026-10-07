@@ -160,3 +160,23 @@ describe("ItemContextMenu", () => {
     expect(props.onMoveToCollection).toHaveBeenCalledWith("Projects");
   });
 });
+
+test("saves a link for offline reading from its right-click menu", async () => {
+  const onSaveArticle = vi.fn();
+  setup({ onSaveArticle });
+  fireEvent.contextMenu(screen.getByText("Saved item"), { clientX: 100, clientY: 100 });
+  fireEvent.click(await screen.findByRole("menuitem", { name: "Save article for offline reading" }));
+  expect(onSaveArticle).toHaveBeenCalledOnce();
+});
+
+test("shows an update action for saved articles and disables captures in progress", async () => {
+  const onSaveArticle = vi.fn();
+  const { rerender, props } = setup({ onSaveArticle, hasArticle: true });
+  fireEvent.contextMenu(screen.getByText("Saved item"), { clientX: 100, clientY: 100 });
+  expect(await screen.findByRole("menuitem", { name: "Update saved article" })).toBeVisible();
+  rerender(<ItemContextMenu {...props} savingArticle>{() => <div>Saved item</div>}</ItemContextMenu>);
+  const saving = screen.getByRole("menuitem", { name: "Saving article…" });
+  expect(saving).toHaveAttribute("aria-disabled", "true");
+  fireEvent.click(saving);
+  expect(onSaveArticle).not.toHaveBeenCalled();
+});

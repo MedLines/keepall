@@ -104,6 +104,8 @@ The standard browser tests serve the production app on port `3100`. The PWA upda
 
 Keepall needs a Next.js deployment with a Node.js runtime for link-preview routes. Use `pnpm build` as the build command and `pnpm start` when running your own Node server.
 
+Article capture uses JSDOM 26.1.0 through the `jsdom-reader` package alias because newer releases load ES modules through CommonJS `require()`, which can fail in Vercel's function loader before the route starts. Browser tests use the current JSDOM release separately. Before upgrading the article parser, run `pnpm exec vitest run src/server/article-runtime.test.ts`. This test loads the parser and extracts an article with CommonJS-to-ESM loading disabled.
+
 Set `NEXT_PUBLIC_KEEPALL_ORIGIN` before building to the exact public origin people will use, including `www` if applicable:
 
 ```dotenv

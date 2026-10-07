@@ -1,5 +1,5 @@
 import { Readability } from "@mozilla/readability";
-import { JSDOM } from "jsdom";
+import { JSDOM } from "jsdom-reader";
 import { MAX_ARTICLE_TEXT_CHARACTERS, articleContentText, parseSavedArticle, type CapturedArticle, type SavedArticle } from "@/domain/article";
 import { extractArticleContent } from "./article-content";
 import { parsePreviewCandidateUrl, PreviewUrlBlockedError } from "./preview-ssrf";
@@ -25,6 +25,18 @@ function articleHeading(document: Document): string | undefined {
   return editorial || normalized(document.title).includes(normalized(text)) ? text : undefined;
 }
 
+function removeDuplicateThemeImages(document: Document) {
+  // Keep the default illustration when a site supplies mutually exclusive theme variants.
+  for (const image of document.querySelectorAll("img")) {
+    if (!image.classList.contains("dark:hidden") || !image.getAttribute("alt")) continue;
+    for (const sibling of Array.from(image.parentElement?.children ?? [])) {
+      if (sibling.tagName === "IMG" && sibling.classList.contains("hidden") &&
+        ["dark:block", "dark:inline", "dark:inline-block"].some(name => sibling.classList.contains(name)) &&
+        sibling.getAttribute("alt") === image.getAttribute("alt")) sibling.remove();
+    }
+  }
+}
+
 export function extractArticleHtml(html: string, sourceUrl: string, capturedAt = Date.now()): SavedArticle {
   // JSDOM defaults keep script execution and all resource loading disabled.
   const dom = new JSDOM(html, { url: sourceUrl });
@@ -39,6 +51,7 @@ export function extractArticleHtml(html: string, sourceUrl: string, capturedAt =
       const images = Array.from(button.querySelectorAll("img"));
       if (images.length) button.replaceWith(...images);
     }
+    removeDuplicateThemeImages(document);
     const result = new Readability(document, {
       maxElemsToParse: 20_000, charThreshold: 200,
       serializer: node => extractArticleContent(node, sourceUrl),

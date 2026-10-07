@@ -30,6 +30,8 @@ import type { MasonryPlacement } from "./library-masonry";
 import { LibraryListContent } from "./library-list-content";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ItemContextMenu } from "./item-context-menu";
+import { useArticleCapture } from "./use-article-capture";
+import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
 import {
   ImageItemEditDialog,
@@ -169,6 +171,8 @@ export function LibraryItem({
   const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
   const [imageRatio, setImageRatio] = useState(1.6);
   const [fetchingPreview, setFetchingPreview] = useState(false);
+  const articleCapture = useArticleCapture(item.type === "link" && !trashActions ? item : null,
+    () => window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT)), mutationBusy);
   const [videoHovered, setVideoHovered] = useState(false);
   const stopVideoPreview = useCallback(() => setVideoHovered(false), []);
   const actionsRef = useRef<HTMLButtonElement>(null);
@@ -343,6 +347,9 @@ export function LibraryItem({
       } : undefined}
       fetchingPreview={fetchingPreview || (item.type === "link" && item.previewStatus === "pending")}
       hasPreview={item.type === "link" && (item.previewStatus === "ready" || Boolean(item.previewTitle || item.previewDescription || item.previewAssetId))}
+      onSaveArticle={item.type === "link" && !trashActions ? () => void articleCapture.capture() : undefined}
+      savingArticle={articleCapture.saving}
+      hasArticle={item.type === "link" && Boolean(item.article)}
       onEdit={onStartEdit}
       onDelete={onStartDelete}
       onTogglePin={pinVisible ? onTogglePin : undefined}
@@ -574,6 +581,10 @@ export function LibraryItem({
         </> : null}
       </motion.div>
       </div>
+      {articleCapture.saving || articleCapture.saved ? <p role="status" className="mt-2 text-xs text-text-secondary">
+        {articleCapture.saving ? "Saving article…" : "Article saved for offline reading."}
+      </p> : null}
+      {articleCapture.error ? <p role="alert" className="mt-2 text-xs text-text-danger">{articleCapture.error}</p> : null}
     </li>}
     </ItemContextMenu>
   );
