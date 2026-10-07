@@ -1,3 +1,4 @@
+import { validateShortcuts, type KeyboardShortcuts } from "./keyboard-shortcuts";
 import { documentFormat, DocumentValidationError, type DocumentFormat } from "./document";
 import { isHttpUrl } from "./classify";
 import type { Collection } from "./collection";
@@ -34,6 +35,7 @@ export type KeepallBackup = {
   assets: BackupAssetRecord[];
   preferences: {
     pinnedCollectionIds: string[];
+    keyboardShortcuts?: KeyboardShortcuts;
   };
 };
 
@@ -88,7 +90,7 @@ export function buildKeepallBackup(input: {
   tags: Tag[];
   collections: Collection[];
   assets?: BackupAssetRecord[];
-  preferences?: { pinnedCollectionIds: string[] };
+  preferences?: KeepallBackup["preferences"];
   exportedAt?: number;
 }): KeepallBackup {
   return {
@@ -228,7 +230,12 @@ function parseBackupPreferences(
     );
   }
 
-  return { pinnedCollectionIds: normalizePinnedCollectionIds(ids) };
+  const shortcuts = (raw as Record<string, unknown>).keyboardShortcuts;
+  try {
+    return { pinnedCollectionIds: normalizePinnedCollectionIds(ids), ...(shortcuts === undefined ? {} : { keyboardShortcuts: validateShortcuts(shortcuts) }) };
+  } catch (error) {
+    throw new BackupValidationError(error instanceof Error ? error.message : "Invalid app shortcuts");
+  }
 }
 
 function assertUniqueIds(ids: string[], label: string) {

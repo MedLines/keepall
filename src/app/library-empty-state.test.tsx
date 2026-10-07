@@ -7,7 +7,8 @@ describe("LibraryEmptyState", () => {
   test("offers a first save in a new library", () => {
     render(<LibraryEmptyState kind="library" message="No items yet." onClearFilters={vi.fn()} />);
     expect(screen.getByText("No items yet.")).toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Import an existing library" })).toHaveAttribute("href", "/settings#backup-heading");
+    expect(screen.getByRole("link", { name: "Getting started" })).toHaveAttribute("href", "/help/getting-started");
     expect(screen.getByRole("button", { name: "Save your first item" })).toBeVisible();
   });
 

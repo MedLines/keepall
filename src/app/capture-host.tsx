@@ -1,5 +1,7 @@
 "use client";
 
+import { DEFAULT_SHORTCUTS, shortcutMatches } from "@/domain/keyboard-shortcuts";
+import { useAppShortcuts } from "./use-app-shortcuts";
 import { ScrollTextarea } from "@/components/ui/scroll-textarea";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -85,12 +87,7 @@ const FILE_PREVIEW_CLASS = "flex min-h-0 shrink-0 flex-col rounded-input border 
 
 /** Alt+K (Windows/Linux) and Option+K (macOS). Option is altKey; code stays KeyK even when Option remaps the character. */
 export function isCaptureOpenShortcut(event: KeyboardEvent): boolean {
-  return (
-    event.altKey &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    event.code === "KeyK"
-  );
+  return shortcutMatches(event, DEFAULT_SHORTCUTS.capture);
 }
 
 type ImageDraft = {
@@ -240,7 +237,7 @@ export function CaptureHost() {
     setBaseline({ input, images, collection: defaultCollectionNameRef.current });
   }
 
-  const openCapture = useEffectEvent(() => {
+  function openCapture() {
       if (state.status === "reading" || state.status === "open" || state.status === "saving") return;
       defaultCollectionNameRef.current = getCaptureCollectionName();
       savedItemIdRef.current = null;
@@ -254,27 +251,14 @@ export function CaptureHost() {
         document.documentElement.dir === "rtl" ? "left" : "right",
       );
       dispatch({ type: "open" });
-  });
+  }
 
+  useAppShortcuts({ capture: () => openCapture() });
+
+  const onOpenCapture = useEffectEvent(() => openCapture());
   useEffect(() => {
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (isCaptureOpenShortcut(event)) {
-        event.preventDefault();
-        openCapture();
-      }
-    }
-
-    function onOpenCapture() {
-      openCapture();
-    }
-
-    window.addEventListener("keydown", onKeyDown);
     window.addEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
-    };
+    return () => window.removeEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
   }, []);
 
   const receiveClipboard = useEffectEvent(({ image, text }: Awaited<ReturnType<typeof readClipboardImageAndText>>) => {

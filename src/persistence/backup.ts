@@ -144,7 +144,7 @@ export async function replaceValidatedBackup(
       }
       await db.preferences.put({
         id: "library",
-        pinnedCollectionIds: backup.preferences.pinnedCollectionIds,
+        ...backup.preferences,
       });
     },
   );

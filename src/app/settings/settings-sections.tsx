@@ -1,3 +1,4 @@
+import { KeyboardShortcutsSettings } from "./keyboard-shortcuts-settings";
 import { BackupPanel } from "../backup-panel";
 import { BackupIcon, DeviceIcon, GridIcon, InternetIcon, NoteIcon, OfflineIcon } from "../shell-icons";
 import { ThemeControl } from "../theme-control";
@@ -21,6 +22,7 @@ export function GeneralSettings() {
         <ThemeControl />
       </div>
     </section>
+    <KeyboardShortcutsSettings />
     <section className={sectionClass} aria-labelledby="network-heading">
       <h2 id="network-heading" className={headingClass}>Link previews</h2>
       <p className={paragraphClass}>Fetch titles and images while online. Links save even without a preview.</p>

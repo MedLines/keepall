@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { openCaptureDialog } from "./capture-events";
 
 export type LibraryEmptyStateKind = "library" | "collection" | "unsorted" | "trash" | "filtered";
@@ -19,6 +20,8 @@ export function LibraryEmptyState({ kind, message, onClearFilters }: Props) {
           <button type="button" className="ui-control ui-primary h-10 px-4 text-sm font-medium" onClick={openCaptureDialog}>
             Save your first item
           </button>
+          <Link className="ui-control inline-flex min-h-10 items-center px-4 text-sm" href="/settings#backup-heading">Import an existing library</Link>
+          <Link className="inline-flex min-h-10 items-center px-2 text-sm text-text-secondary underline underline-offset-4" href="/help/getting-started">Getting started</Link>
         </div>
       ) : null}
       {kind === "collection" || kind === "unsorted" ? (

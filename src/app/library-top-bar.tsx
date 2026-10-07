@@ -8,6 +8,8 @@ import type {
   LibrarySort,
   LibraryTypeFilter,
 } from "@/domain/library-view";
+import { useAppShortcuts } from "./use-app-shortcuts";
+import { shortcutLabel } from "@/domain/keyboard-shortcuts";
 import { openCaptureDialog } from "./capture-events";
 import {
   LibraryBulkPanels,
@@ -85,6 +87,11 @@ export function LibraryTopBar({
   onClearTagFilter, onClearFilters, bulk, selection, collectionsView = false, tagsView = false, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
 }: Props) {
   const tooltipId = useId();
+  const shortcuts = useAppShortcuts({
+    search: () => document.getElementById("library-search")?.focus(),
+    toggleLayout: () => onLayoutChange(layout === "grid" ? "list" : "grid"),
+    preview: () => { if (!previewDisabled && !trash && !collectionsView && !tagsView) onPreview?.(); },
+  });
   const hasSearchFilter = searchQuery.trim().length > 0;
   const canSortByRelevance = hasSearchFilter && !collectionsView && !tagsView;
   const hasFilters = hasSearchFilter || typeFilterName !== null || tagFilterName !== null;
@@ -126,6 +133,7 @@ export function LibraryTopBar({
             </span>
             <input
               className="ui-field h-10 w-full pl-10 pr-11 text-sm"
+              title={`Focus search: ${shortcutLabel(shortcuts.search)}`}
               id="library-search"
               type="search"
               aria-description={collectionsView || tagsView ? undefined : 'Search words in any order. Use "quotes" for an exact phrase.'}
@@ -133,6 +141,7 @@ export function LibraryTopBar({
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
             />
+            {!searchQuery ? <kbd aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 max-w-[40%] -translate-y-1/2 truncate text-[10px] text-text-secondary">{shortcutLabel(shortcuts.search)}</kbd> : null}
             {searchQuery ? <button type="button" aria-label="Clear search"
               className="control-shape-none group absolute right-0 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-none text-text-secondary focus-visible:outline-1 focus-visible:-outline-offset-4 focus-visible:outline-border-focus"
               onClick={() => clearWithSearchFocus(() => onSearchChange(""))}>
@@ -157,7 +166,7 @@ export function LibraryTopBar({
               ]}
               onChange={onSortChange}
             />
-            <div className="library-layout-switch icon-segmented-switch squircle-panel relative isolate flex h-11 rounded-control-lg bg-bg-raised p-0.5" role="group" aria-label="Library layout" data-layout={layout} data-selected={layout === "list" ? "end" : "start"}>
+            <div className="library-layout-switch icon-segmented-switch squircle-panel relative isolate flex h-11 rounded-control-lg bg-bg-raised p-0.5" role="group" title={`Toggle layout: ${shortcutLabel(shortcuts.toggleLayout)}`} aria-label="Library layout" data-layout={layout} data-selected={layout === "list" ? "end" : "start"}>
               <span aria-hidden="true" className="library-layout-thumb icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[42px] rounded-control-sm" />
               {([
                 { value: "grid", label: "Grid view", icon: <GridIcon /> },
@@ -177,7 +186,7 @@ export function LibraryTopBar({
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
                   <Tooltip.Positioner side="bottom" sideOffset={8} className="z-[100]">
-                    <Tooltip.Popup id={`${tooltipId}-${option.value}`} role="tooltip" className={SHELL_TOOLTIP}>{option.label}</Tooltip.Popup>
+                    <Tooltip.Popup id={`${tooltipId}-${option.value}`} role="tooltip" className={SHELL_TOOLTIP}>{option.label} · {shortcutLabel(shortcuts.toggleLayout)}</Tooltip.Popup>
                   </Tooltip.Positioner>
                 </Tooltip.Portal>
                 </Tooltip.Root>
@@ -207,7 +216,7 @@ export function LibraryTopBar({
             </Tooltip.Trigger>
               <Tooltip.Portal>
                 <Tooltip.Positioner side="bottom" sideOffset={8} className="z-[100]">
-                  <Tooltip.Popup id={`${tooltipId}-preview`} role="tooltip" className={SHELL_TOOLTIP}>Preview current results</Tooltip.Popup>
+                  <Tooltip.Popup id={`${tooltipId}-preview`} role="tooltip" className={SHELL_TOOLTIP}>Preview current results · {shortcutLabel(shortcuts.preview)}</Tooltip.Popup>
                 </Tooltip.Positioner>
               </Tooltip.Portal>
             </Tooltip.Root> : null}
@@ -218,10 +227,11 @@ export function LibraryTopBar({
           {trash ? <button type="button" disabled={trashEmptyDisabled} onClick={onEmptyTrash} className="ui-control inline-flex h-11 items-center justify-center gap-2 px-4 text-sm text-text-danger disabled:opacity-50"><DeleteIcon className="size-4" /><span className="leading-none">Empty Trash</span></button> : <button
             type="button"
             className="ui-control ui-primary inline-flex h-11 shrink-0 items-center gap-2 rounded-control-lg ps-3 pe-4 text-sm font-medium"
+            title={`Save item: ${shortcutLabel(shortcuts.capture)}`}
             onClick={() => openCaptureDialog()}
           >
             <PlusIcon />
-            Save item
+            Save item <kbd className="hidden text-[10px] opacity-75 @min-[64rem]/toolbar:inline">{shortcutLabel(shortcuts.capture)}</kbd>
           </button>}
         </div>
       </div>

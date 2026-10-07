@@ -1,3 +1,4 @@
+import { validateShortcuts, type KeyboardShortcuts } from "@/domain/keyboard-shortcuts";
 import {
   buildLibraryPreferences,
   movePinnedCollection,
@@ -10,19 +11,22 @@ import { getDb } from "./db";
 
 export async function getLibraryPreferences(): Promise<LibraryPreferences> {
   const saved = await getDb().preferences.get("library");
-  return buildLibraryPreferences(saved?.pinnedCollectionIds);
+  return buildLibraryPreferences(saved?.pinnedCollectionIds, saved?.keyboardShortcuts);
 }
 
 export async function putLibraryPreferences(
   pinnedCollectionIds: string[],
 ): Promise<LibraryPreferences> {
   const db = getDb();
-  const collectionIds = await db.collections.toCollection().primaryKeys();
-  const preferences = buildLibraryPreferences(
-    normalizePinnedCollectionIds(pinnedCollectionIds, collectionIds),
-  );
-  await db.preferences.put(preferences);
-  return preferences;
+  return db.transaction("rw", db.collections, db.preferences, async () => {
+    const collectionIds = await db.collections.toCollection().primaryKeys();
+    const saved = await db.preferences.get("library");
+    const preferences = buildLibraryPreferences(
+      normalizePinnedCollectionIds(pinnedCollectionIds, collectionIds), saved?.keyboardShortcuts,
+    );
+    await db.preferences.put(preferences);
+    return preferences;
+  });
 }
 
 export async function pinCollection(
@@ -55,4 +59,13 @@ export async function movePinnedCollectionBefore(
   return putLibraryPreferences(
     movePinnedCollection(current.pinnedCollectionIds, sourceId, targetId),
   );
+}
+
+export async function putKeyboardShortcuts(keyboardShortcuts: KeyboardShortcuts): Promise<void> {
+  const shortcuts = validateShortcuts(keyboardShortcuts);
+  const db = getDb();
+  await db.transaction("rw", db.preferences, async () => {
+    const current = await db.preferences.get("library");
+    await db.preferences.put({ ...buildLibraryPreferences(current?.pinnedCollectionIds), keyboardShortcuts: shortcuts });
+  });
 }
