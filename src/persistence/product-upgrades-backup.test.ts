@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import { buildAsset, hashAssetBytes } from "@/domain/asset";
 import { buildImage } from "@/domain/image";
 import { DEFAULT_SHORTCUTS } from "@/domain/keyboard-shortcuts";
+import { articleContentText, type ArticleNode } from "@/domain/article";
 import { matchesSearchQuery } from "@/domain/search";
 import { saveLinkArticle } from "./articles";
 import { exportKeepallArchive, importKeepallArchiveMerge, importKeepallArchiveReplace } from "./backup-archive";
@@ -16,7 +17,8 @@ test.each(["replace", "merge"] as const)("ZIP %s preserves articles, image analy
   const shortcuts = { ...DEFAULT_SHORTCUTS, capture: "Alt+KeyJ" };
   await putKeyboardShortcuts(shortcuts);
   const link = await createLink({ url: "https://example.com/story", noteContent: "Keep this context" });
-  const article = { title: "Saved research", text: "Narwhal migration research", sourceUrl: link.url, author: "A. Writer", capturedAt: 100 };
+  const content: ArticleNode[] = [{ tag: "h2", children: [{ text: "Narwhal migration research" }] }, { tag: "ul", children: [{ tag: "li", children: [{ tag: "a", href: "https://example.com/reference", children: [{ text: "Review evidence" }] }] }] }];
+  const article = { title: "Saved research", text: articleContentText(content), content, sourceUrl: link.url, author: "A. Writer", siteName: "Ocean Journal", publishedAt: "2026-09-30", capturedAt: 100 };
   await saveLinkArticle(link.id, link.url, article);
   const asset = buildAsset({ bytes: new Uint8Array([1, 2, 3]), mimeType: "image/png" });
   const localAssetId = crypto.randomUUID();

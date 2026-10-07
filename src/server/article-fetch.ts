@@ -1,6 +1,7 @@
-import { Readability, isProbablyReaderable } from "@mozilla/readability";
+import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
-import { MAX_ARTICLE_TEXT_CHARACTERS, type SavedArticle } from "@/domain/article";
+import { MAX_ARTICLE_TEXT_CHARACTERS, articleContentText, parseSavedArticle, type SavedArticle } from "@/domain/article";
+import { extractArticleContent } from "./article-content";
 import { parsePreviewCandidateUrl, PreviewUrlBlockedError } from "./preview-ssrf";
 import { fetchPublicArticlePage } from "./article-http";
 
@@ -12,29 +13,38 @@ export class ArticleCaptureError extends Error {
   constructor(message: string) { super(message); this.name = "ArticleCaptureError"; }
 }
 
+function articleHeading(document: Document): string | undefined {
+  const editorial = document.querySelector("article h1, main h1");
+  const headings = document.querySelectorAll("body h1");
+  const heading = editorial ?? (headings.length === 1 ? headings[0] : undefined);
+  if (!heading || heading.closest('[hidden], [aria-hidden="true"]')) return;
+  const text = heading.textContent?.replace(/\s+/g, " ").trim();
+  if (!text || text.length > 500) return;
+  const normalized = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  return editorial || normalized(document.title).includes(normalized(text)) ? text : undefined;
+}
+
 export function extractArticleHtml(html: string, sourceUrl: string, capturedAt = Date.now()): SavedArticle {
   // JSDOM defaults keep script execution and all resource loading disabled.
   const dom = new JSDOM(html, { url: sourceUrl });
   try {
     const document = dom.window.document;
-    if (!isProbablyReaderable(document) || document.getElementsByTagName("*").length > 20_000) {
+    const headingTitle = articleHeading(document);
+    if (document.getElementsByTagName("*").length > 20_000) {
       throw new ArticleCaptureError("No readable article was found. The page may need a login, or its text may load only in a browser.");
     }
     const result = new Readability(document, {
       maxElemsToParse: 20_000, charThreshold: 200,
-      serializer: node => {
-        const element = node as Element;
-        for (const unsafe of element.querySelectorAll("script,style,noscript,iframe,svg,canvas")) unsafe.remove();
-        for (const br of element.querySelectorAll("br")) br.replaceWith("\n");
-        for (const block of element.querySelectorAll("p,h1,h2,h3,h4,h5,h6,li,blockquote,pre,tr")) block.append("\n\n");
-        return element.textContent ?? "";
-      },
+      serializer: node => extractArticleContent(node, sourceUrl),
     }).parse();
-    const text = (result?.content ?? "").split("\n").map(line => line.replace(/[\t\r ]+/g, " ").trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    const content = result?.content ?? [];
+    const text = articleContentText(content);
     if (!result || text.length < 200) throw new ArticleCaptureError("No readable article was found. Open the original page or try again later.");
     if (text.length > MAX_ARTICLE_TEXT_CHARACTERS) throw new ArticleCaptureError("This article is too long to save. Save a text document instead.");
-    return { title: (result.title?.trim() || new URL(sourceUrl).hostname).slice(0, 500), text, sourceUrl, capturedAt,
-      ...(result.byline?.trim() ? { author: result.byline.trim().slice(0, 500) } : {}) };
+    return parseSavedArticle({ title: (headingTitle || result.title?.trim() || new URL(sourceUrl).hostname).slice(0, 500), text, content, sourceUrl, capturedAt,
+      ...(result.byline?.trim() ? { author: result.byline.trim().slice(0, 500) } : {}),
+      ...(result.siteName?.trim() ? { siteName: result.siteName.trim().slice(0, 500) } : {}),
+      ...(result.publishedTime && result.publishedTime.length <= 128 && Number.isFinite(Date.parse(result.publishedTime)) ? { publishedAt: result.publishedTime } : {}) });
   } catch (error) {
     if (error instanceof ArticleCaptureError) throw error;
     throw new ArticleCaptureError("Couldn't extract readable text from this page. Open the original or try again later.");
