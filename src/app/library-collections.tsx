@@ -19,7 +19,7 @@ export function LibraryFolderArtwork({ previews, itemTypes, emptyState = false }
             <LibraryOrganizationPreview item={item} />
           </span>
         ))}
-        {emptyState ? ["center", "left", "right"].map(position => <span key={position} className="collection-folder-preview library-empty-sheet" data-position={position} />) : null}
+        {emptyState ? [["center", "404"], ["left", "Not"], ["right", "Found"]].map(([position, label]) => <span key={position} className="collection-folder-preview library-empty-sheet" data-position={position}><span className="library-empty-sheet-label">{label}</span></span>) : null}
       </span>
       {emptyState ? <span className="library-empty-light"><span className="library-empty-dust" /></span> : null}
       <FolderFront itemTypes={itemTypes} />
