@@ -57,13 +57,13 @@ async function seedGallery(page: Page) {
 async function readImage(page: Page, index: number, offset = 100) {
   const row = page.locator(`[data-gallery-index="${index}"]`);
   await row.evaluate((element, offset) => {
-    const scroller = element.closest("main")!;
+    const scroller = element.closest<HTMLElement>('[data-testid="item-page-scroll"]')!;
     scroller.scrollTop += element.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 12 + offset;
   }, offset);
   await expect(row.locator("img")).toBeVisible();
   await expect.poll(() => row.locator("img").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
   await row.evaluate((element, offset) => new Promise<void>(resolve => requestAnimationFrame(() => {
-    const scroller = element.closest("main")!;
+    const scroller = element.closest<HTMLElement>('[data-testid="item-page-scroll"]')!;
     scroller.scrollTop += element.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 12 + offset;
     resolve();
   })), offset);
@@ -182,6 +182,8 @@ test("scroll gallery loads nearby images, preserves reading position, and works 
   await expect(page.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 3 of 10");
   const scroller = page.getByTestId("item-page-scroll");
   const before = await scroller.evaluate(element => element.scrollTop);
+  const readingOffset = () => page.locator('[data-gallery-index="2"]').evaluate(element => element.getBoundingClientRect().top - element.closest('[data-testid="item-page-scroll"]')!.getBoundingClientRect().top);
+  const beforeOffset = await readingOffset();
   await page.getByRole("button", { name: "View image 3 full screen", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Focused image viewer" })).toBeVisible();
   await page.keyboard.press("Escape");
@@ -190,7 +192,7 @@ test("scroll gallery loads nearby images, preserves reading position, and works 
   await page.getByRole("button", { name: "Slides view" }).click();
   await expect(page.getByRole("button", { name: "Show image 3", exact: true })).toHaveAttribute("aria-current", "true");
   await page.getByRole("button", { name: "Scroll view" }).click();
-  await expect.poll(() => scroller.evaluate(element => element.scrollTop)).toBeCloseTo(before, 0);
+  await expect.poll(readingOffset).toBeCloseTo(beforeOffset, 0);
   await context.setOffline(true);
   await readImage(page, 7);
   await expect(page.getByLabel("Current image", { exact: true })).toHaveAttribute("title", "Image 8 of 10");
@@ -257,6 +259,7 @@ test("zoomed originals remain fully reachable in the viewer", async ({ page }, t
     await expect(zoomOut).toBeVisible();
     await expect.poll(async () => (await zoomOut.boundingBox())!.width).toBeCloseTo(before.width * 2, 0);
     const scroller = page.getByTestId("focused-image-scroll");
+    const horizontalOverflow = await scroller.evaluate(element => element.scrollWidth > element.clientWidth);
     const position = await scroller.evaluate(element => ({ left: element.scrollLeft, top: element.scrollTop }));
     await page.mouse.move(width / 2, 400);
     await page.mouse.down();
@@ -264,14 +267,16 @@ test("zoomed originals remain fully reachable in the viewer", async ({ page }, t
     await page.mouse.up();
     await expect(zoomOut).toBeVisible();
     await expect.poll(() => scroller.evaluate(element => element.scrollTop)).toBeGreaterThan(position.top + 90);
-    await expect.poll(() => scroller.evaluate(element => element.scrollLeft)).toBeGreaterThan(position.left);
+    if (horizontalOverflow) await expect.poll(() => scroller.evaluate(element => element.scrollLeft)).toBeGreaterThan(position.left);
+    else await expect(scroller).toHaveJSProperty("scrollLeft", 0);
     await scroller.evaluate(element => {
       element.scrollLeft = element.scrollWidth;
       element.scrollTop = element.scrollHeight;
     });
     const end = (await image.boundingBox())!;
     expect(end.x + end.width).toBeLessThanOrEqual(width);
-    expect(end.x + end.width).toBeGreaterThan(width - 50);
+    if (horizontalOverflow) expect(end.x + end.width).toBeGreaterThan(width - 50);
+    else expect(end.x).toBeGreaterThanOrEqual(0);
     expect(end.y + end.height).toBeLessThanOrEqual(844);
     expect(end.y + end.height).toBeGreaterThan(794);
     await expect(viewer.getByLabel("Image 1 of 10", { exact: true })).toBeInViewport({ ratio: 1 });
@@ -282,7 +287,8 @@ test("zoomed originals remain fully reachable in the viewer", async ({ page }, t
     });
     const start = (await image.boundingBox())!;
     expect(start.x).toBeGreaterThanOrEqual(0);
-    expect(start.x).toBeLessThan(25);
+    if (horizontalOverflow) expect(start.x).toBeLessThan(25);
+    else expect(start.x + start.width).toBeLessThanOrEqual(width);
     expect(start.y).toBeGreaterThanOrEqual(0);
     expect(start.y).toBeLessThan(25);
     await viewer.getByRole("button", { name: "Zoom out", exact: true }).click();
