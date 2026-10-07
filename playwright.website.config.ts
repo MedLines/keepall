@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = process.env.WEBSITE_TEST_PORT ?? "3114";
+const baseURL = `http://localhost:${port}`;
+
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "website-preparation.spec.ts",
@@ -8,7 +11,7 @@ export default defineConfig({
   retries: 0,
   workers: 2,
   use: {
-    baseURL: "http://localhost:3114",
+    baseURL,
     serviceWorkers: "block",
     trace: "retain-on-failure",
   },
@@ -17,9 +20,9 @@ export default defineConfig({
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
   ],
   webServer: {
-    command: "pnpm exec next start --port 3114",
-    url: "http://localhost:3114/about",
-    reuseExistingServer: false,
+    command: `pnpm exec next start --port ${port}`,
+    url: `${baseURL}/about`,
+    reuseExistingServer: process.env.WEBSITE_TEST_REUSE_SERVER === "1",
     timeout: 120_000,
   },
 });

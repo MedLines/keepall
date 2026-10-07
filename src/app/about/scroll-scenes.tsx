@@ -5,7 +5,7 @@ import { oklchToHex } from "@/color-format.mjs";
 import { ArrowLeftIcon, ArrowRightIcon, PlayIcon } from "../shell-icons";
 import { RecordedDemo } from "./recorded-demo";
 import { HeroFlightLayer, useHeroFlight } from "./hero-flight";
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
+import { motion, useScroll, useTransform, type MotionValue } from "motion/react";
 
 // Scroll storyboard:
 // Statement crosses the viewport → each phrase brightens in reading order.
@@ -56,7 +56,7 @@ export function HeroScene({ children, preview }: { children: ReactNode; preview:
 const phrases = ["A link that sends you somewhere.", "An image that stays with you.", "A thought you don’t want to lose.", "Keep them close.", "See where they take you."];
 
 function RevealedPhrase({ text, index, progress }: { text: string; index: number; progress: MotionValue<number> }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionPreference, () => false);
   const color = useTransform(progress, [index / phrases.length, (index + 1) / phrases.length], [oklchToHex("oklch(0.562593681 0.005813544 325.653702919)"), oklchToHex("oklch(0.951883059 0.00761396 61.450898715)")]);
   return <motion.span style={{ color: reduceMotion ? "oklch(0.951883059 0.00761396 61.450898715)" : color }}>{text}{" "}</motion.span>;
 }
@@ -89,7 +89,7 @@ export function FeatureGallery({ panels }: { panels: ReactNode[] }) {
 }
 
 function StackCard({ children, index, progress }: { children: ReactNode; index: number; progress: MotionValue<number> }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionPreference, () => false);
   const scale = useTransform(progress, [index / 3, 1], [1, 1 - (2 - index) * .05]);
   // Match each sticky offset with its remaining stack depth so all three edges
   // stay separated when the cards reach their container's bottom boundary.

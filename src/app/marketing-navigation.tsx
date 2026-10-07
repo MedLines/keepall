@@ -5,8 +5,8 @@ import { CHROME_EXTENSION_URL } from "./help/guides";
 export function MarketingHeader({ help = false, floating = false }: { help?: boolean; floating?: boolean }) {
   return <header className={`ka-header${floating ? " ka-header-floating" : ""}`}><div className="ka-wrap ka-header-inner">
     <Link href="/about" className="ka-brand keepall-logo-link" aria-label="Keepall home"><LogoIcon className="size-8" /><span className="ka-header-brand-name">keepall</span></Link>
-    <nav aria-label="Main navigation"><Link href="/about#collection">Features</Link><Link href="/about#extension">Extension</Link><Link href="/about#install">Install</Link><Link href="/help" aria-current={help ? "page" : undefined}>Help</Link><Link href="/blog">Blog</Link></nav>
-    <div className="ka-header-actions"><Link href="/contact" className="ka-header-open ka-header-contact">Contact</Link><Link href="/" className="ka-header-open" aria-label="Open Keepall">Open <span className="ka-header-app-name">Keepall</span> <ArrowRightIcon /></Link></div>
+    <nav aria-label="Main navigation"><Link href="/about#collection">Features</Link><Link href="/about#extension">Extension</Link><Link href="/about#install">Install</Link><Link href="/help" aria-current={help ? "page" : undefined}>Help</Link><Link href="/blog">Blog</Link><Link href="/contact">Contact</Link></nav>
+    <div className="ka-header-actions"><Link href="/" className="ka-header-open" aria-label="Open Keepall">Open <span className="ka-header-app-name">Keepall</span> <ArrowRightIcon /></Link></div>
   </div></header>;
 }
 

@@ -11,10 +11,6 @@ type Props = {
 export function ShellPanelIcon({ open, className }: Props) {
   const reduceMotion = useReducedMotion();
 
-  if (reduceMotion) {
-    return <PanelIcon className={className} />;
-  }
-
   return (
     <span className={`relative block size-5 shrink-0 ${className ?? ""}`}>
       <motion.span
@@ -24,7 +20,7 @@ export function ShellPanelIcon({ open, className }: Props) {
           scale: open ? 1 : 0.25,
           filter: open ? "blur(0px)" : "blur(4px)",
         }}
-        transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+        transition={reduceMotion ? { duration: 0 } : { type: "spring", duration: 0.3, bounce: 0 }}
         className="absolute inset-0 flex items-center justify-center"
         aria-hidden={!open}
       >
@@ -37,7 +33,7 @@ export function ShellPanelIcon({ open, className }: Props) {
           scale: open ? 0.25 : 1,
           filter: open ? "blur(4px)" : "blur(0px)",
         }}
-        transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+        transition={reduceMotion ? { duration: 0 } : { type: "spring", duration: 0.3, bounce: 0 }}
         className="absolute inset-0 flex items-center justify-center"
         aria-hidden={open}
       >

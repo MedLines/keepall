@@ -34,6 +34,9 @@ for (const width of [320, 390, 580, 768, 1024, 1440]) {
     const header = page.locator(".ka-header");
     const contact = header.getByRole("link", { name: "Contact", exact: true });
     await expect(contact).toBeInViewport();
+    await expect(header.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Contact", exact: true })).toBeVisible();
+    await expect(contact).not.toHaveClass(/ka-header-open|ka-button/);
+    await expect(contact).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
     const headerBox = await header.boundingBox();
     expect(headerBox).not.toBeNull();
     for (const link of await header.getByRole("link").all()) {
@@ -59,6 +62,19 @@ for (const width of [320, 390, 580, 768, 1024, 1440]) {
     await page.screenshot({ path: testInfo.outputPath(`contact-${width}.png`), fullPage: true });
   });
 }
+
+test("text-only website buttons have balanced padding", async ({ page }) => {
+  for (const route of publicRoutes) {
+    await page.goto(route);
+    for (const button of await page.locator('main .ka-button:not(:has(svg))').all()) {
+      const padding = await button.evaluate(element => {
+        const style = getComputedStyle(element);
+        return { left: style.paddingLeft, right: style.paddingRight };
+      });
+      expect(padding.left, `${route}: ${await button.textContent()}`).toBe(padding.right);
+    }
+  }
+});
 
 for (const width of [320, 1440]) {
   test(`public pages scroll to their footer without overflow at ${width}px`, async ({ page }, testInfo) => {

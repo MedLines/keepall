@@ -32,7 +32,7 @@
 .kh-contact { display: flex; justify-content: space-between; align-items: center; gap: 36px; padding: 64px 0; margin: 60px 0 30px; border-top: 1px solid var(--kh-line); }
 .kh-contact h2 { font-size: 32px; margin-top: 24px; }
 .kh-contact p { font-size: 14px; color: var(--kh-muted); line-height: 1.7; margin-top: 16px; }
-.kh-contact .ka-button { flex-shrink: 0; gap: 10px; padding-inline: 24px 16px; }
+.kh-contact .ka-button { flex-shrink: 0; gap: 10px; }
 .kh-footer { padding-bottom: 44px; flex-wrap: wrap; }
 .kh-footer nav { display: flex; flex-wrap: wrap; gap: 24px; font-size: 12px; color: var(--kh-muted); }
 .kh-footer > span { color: var(--kh-muted); font-size: 12px; }
@@ -74,7 +74,7 @@
 .kh-figure figcaption { font-size: 12px; line-height: 1.75; margin-top: 12px; color: var(--kh-muted); }
 .kh-figure figcaption span { white-space: nowrap; }
 .kh-video video { max-height: 530px; }
-.kh-article-action { margin-top: 20px; gap: 10px; padding-inline: 24px 16px; }
+.kh-article-action { margin-top: 20px; gap: 10px; }
 .kh-next-guide { display: flex; justify-content: space-between; align-items: center; gap: 24px; border-top: 1px solid var(--kh-line); padding-top: 28px; margin-top: 56px; }
 .kh-next-guide strong { display: block; font-size: 22px; font-weight: 450; letter-spacing: -.03em; margin-top: 10px; }
 .kh-install-visual { background: oklch(0.204626531 0 0); padding: 28px; border-radius: 16px; overflow: hidden; }
