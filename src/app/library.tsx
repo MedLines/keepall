@@ -120,6 +120,7 @@ import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
 import { type BulkPanel } from "./library-bulk-bar";
 import { LibraryTopBar } from "./library-top-bar";
+import { UnsortedReview } from "./unsorted-review";
 import { LibraryEmptyState, type LibraryEmptyStateKind } from "./library-empty-state";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
 import { isShellMobileViewport } from "./use-shell-mobile";
@@ -337,6 +338,8 @@ export function Library() {
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const libraryGridRef = useRef<LibraryPreviewHandle>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const reviewButtonRef = useRef<HTMLButtonElement>(null);
   const [documentRevision, setDocumentRevision] = useState("initial");
   const prevBrowseScopeRef = useRef<string | null>(null);
   const pendingNavScopeLabelRef = useRef<string | null>(null);
@@ -1899,7 +1902,7 @@ export function Library() {
       <div className="relative flex h-full min-h-0 overflow-hidden bg-bg-shell py-2.5 pr-2.5">
         <LibraryShell
           panelOpen={panelOpen}
-          previewOpen={previewOpen || pathname.startsWith("/items/")}
+          previewOpen={reviewOpen || previewOpen || pathname.startsWith("/items/")}
           panelReady={panelPreference !== null || storedPanelPreference !== null}
           onPanelOpenChange={setPanelOpen}
           browseCollectionId={browseCollectionId}
@@ -1961,6 +1964,11 @@ export function Library() {
 
         <div data-library-panel className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel">
         {topBar}
+        {browseUnsorted && !view.trash && !view.collections && !view.tags ? <div className="px-3 pb-4 sm:px-6">
+          <button ref={reviewButtonRef} type="button" aria-haspopup="dialog" disabled={loadState !== "ready" || mutationBusy || previewOpen || items.every(item => item.collectionIds.length > 0)} className="ui-control min-h-11 px-4 text-sm disabled:opacity-50" onClick={() => setReviewOpen(true)}>Review Unsorted</button>
+          <p className="mt-2 text-xs text-text-secondary">Review all items without a collection, one at a time.</p>
+        </div> : null}
+        {reviewOpen ? <UnsortedReview items={items} collections={collections} tags={tags} onClose={() => setReviewOpen(false)} onOpenItem={openInspect} returnFocus={() => reviewButtonRef.current ?? libraryHeadingRef.current} /> : null}
         <main className="flex min-h-0 min-w-0 flex-1 flex-col" aria-labelledby="library-heading" aria-busy={loadState === "loading" || documentSearch.pending}>
         <ScrollPanel className="min-h-0 min-w-0 flex-1" viewportRef={mainScrollRef}
           viewportClassName="scroll-fade px-3 pb-6 sm:px-6 [--scroll-fade-edge-opacity:0.35]">

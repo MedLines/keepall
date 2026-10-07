@@ -133,7 +133,7 @@ export function LibraryTopBar({
             </span>
             <input
               className="ui-field h-10 w-full pl-10 pr-11 text-sm"
-              title={`Focus search: ${shortcutLabel(shortcuts.search)}`}
+              aria-keyshortcuts={shortcuts.search.replace(/Key|Digit/g, "").replace("Slash", "/")}
               id="library-search"
               type="search"
               aria-description={collectionsView || tagsView ? undefined : 'Search words in any order. Use "quotes" for an exact phrase.'}
@@ -166,7 +166,7 @@ export function LibraryTopBar({
               ]}
               onChange={onSortChange}
             />
-            <div className="library-layout-switch icon-segmented-switch squircle-panel relative isolate flex h-11 rounded-control-lg bg-bg-raised p-0.5" role="group" title={`Toggle layout: ${shortcutLabel(shortcuts.toggleLayout)}`} aria-label="Library layout" data-layout={layout} data-selected={layout === "list" ? "end" : "start"}>
+            <div className="library-layout-switch icon-segmented-switch squircle-panel relative isolate flex h-11 rounded-control-lg bg-bg-raised p-0.5" role="group" aria-keyshortcuts={shortcuts.toggleLayout.replace(/Key|Digit/g, "").replace("Slash", "/")} aria-label="Library layout" data-layout={layout} data-selected={layout === "list" ? "end" : "start"}>
               <span aria-hidden="true" className="library-layout-thumb icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[42px] rounded-control-sm" />
               {([
                 { value: "grid", label: "Grid view", icon: <GridIcon /> },
@@ -207,7 +207,7 @@ export function LibraryTopBar({
             /> : null}
             {!trash && !collectionsView && !tagsView && onPreview ? <Tooltip.Root><Tooltip.Trigger
               render={<button type="button" disabled={previewDisabled} />}
-              type="button" aria-label="Preview" delay={350} aria-haspopup="dialog"
+              type="button" aria-keyshortcuts={shortcuts.preview.replace(/Key|Digit/g, "").replace("Slash", "/")} aria-label="Preview" delay={350} aria-haspopup="dialog"
               aria-describedby={`${tooltipId}-preview`}
               className="ui-control inline-flex h-11 shrink-0 items-center justify-center gap-2 px-3 text-sm disabled:opacity-50"
               disabled={previewDisabled} onClick={onPreview}
@@ -224,15 +224,18 @@ export function LibraryTopBar({
         </div>
         <div className="flex w-full shrink-0 items-center justify-end gap-3 @min-[44rem]/toolbar:w-auto">
           <ThemeControl compact />
-          {trash ? <button type="button" disabled={trashEmptyDisabled} onClick={onEmptyTrash} className="ui-control inline-flex h-11 items-center justify-center gap-2 px-4 text-sm text-text-danger disabled:opacity-50"><DeleteIcon className="size-4" /><span className="leading-none">Empty Trash</span></button> : <button
+          {trash ? <button type="button" disabled={trashEmptyDisabled} onClick={onEmptyTrash} className="ui-control inline-flex h-11 items-center justify-center gap-2 px-4 text-sm text-text-danger disabled:opacity-50"><DeleteIcon className="size-4" /><span className="leading-none">Empty Trash</span></button> : <Tooltip.Root><Tooltip.Trigger
+            render={<button type="button" />}
             type="button"
+            aria-keyshortcuts={shortcuts.capture.replace(/Key|Digit/g, "").replace("Slash", "/")}
             className="ui-control ui-primary inline-flex h-11 shrink-0 items-center gap-2 rounded-control-lg ps-3 pe-4 text-sm font-medium"
-            title={`Save item: ${shortcutLabel(shortcuts.capture)}`}
             onClick={() => openCaptureDialog()}
           >
             <PlusIcon />
-            Save item <kbd className="hidden text-[10px] opacity-75 @min-[64rem]/toolbar:inline">{shortcutLabel(shortcuts.capture)}</kbd>
-          </button>}
+            Save item <kbd aria-hidden="true" className="hidden text-[10px] opacity-75 @min-[64rem]/toolbar:inline">{shortcutLabel(shortcuts.capture)}</kbd>
+          </Tooltip.Trigger>
+            <Tooltip.Portal><Tooltip.Positioner side="bottom" sideOffset={8} className="z-[100]"><Tooltip.Popup role="tooltip" className={SHELL_TOOLTIP}>Save item · {shortcutLabel(shortcuts.capture)}</Tooltip.Popup></Tooltip.Positioner></Tooltip.Portal>
+          </Tooltip.Root>}
         </div>
       </div>
 

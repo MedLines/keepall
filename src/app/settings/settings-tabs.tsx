@@ -14,7 +14,7 @@ const sections = [
 type Section = typeof sections[number]["value"];
 
 const hashSections: Record<string, Section> = {
-  general: "general", "appearance-heading": "general", "network-heading": "general",
+  general: "general", "appearance-heading": "general", "network-heading": "general", "keyboard-shortcuts-heading": "general",
   storage: "storage", "storage-heading": "storage", "backup-heading": "storage", "import-heading": "storage",
   installation: "installation", "installation-heading": "installation",
 };
