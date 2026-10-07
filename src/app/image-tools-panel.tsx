@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { Tooltip } from "@base-ui/react/tooltip";
+import { motion, useReducedMotion } from "motion/react";
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ScrollPanel } from "@/components/ui/scroll-panel";
 import type { ImageItem } from "@/domain/image";
-import { paletteColorFamily, type ImageAnalysis } from "@/domain/image-analysis";
+import type { ImageAnalysis } from "@/domain/image-analysis";
 import { saveImageAnalysis } from "@/persistence/image-analysis";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { ITEM_DETAILS_CONTROL } from "./item-page-styles";
-import { CheckIcon, CloseIcon, CopyIcon, PaletteIcon, PlainTextIcon, SearchIcon } from "./shell-icons";
+import { CheckIcon, ChevronDownIcon, CloseIcon, CopyIcon, PaletteIcon, PlainTextIcon } from "./shell-icons";
+import { SHELL_TOOLTIP } from "./shell-styles";
 import styles from "./image-tools-panel.module.css";
 
 type Tool = "palette" | "ocr";
@@ -42,10 +45,15 @@ export function ImageToolsPanel({ item, assetId, slide, disabled = false, childr
   const [error, setError] = useState<{ kind: Tool | null; message: string } | null>(null);
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState("");
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const controller = useRef<AbortController | null>(null);
   const analysis = item.analysis?.find(entry => entry.assetId === assetId);
 
-  useEffect(() => () => { controller.current?.abort(); }, []);
+  useEffect(() => () => {
+    controller.current?.abort();
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+  }, []);
 
   async function run(kind: Tool) {
     if (controller.current || disabled) return;
@@ -72,11 +80,13 @@ export function ImageToolsPanel({ item, assetId, slide, disabled = false, childr
     }
   }
 
-  async function copy(value: string) {
+  async function copy(value: string, key: string) {
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(value);
-      setMessage(`Copied ${value.length < 20 ? value : "text"}`);
+      setCopied(key);
+      setCopyStatus(key === "ocr" ? "Text copied" : `${value} copied`);
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(null), 1800);
       setError(null);
     } catch {
       setError({ kind: null, message: "Couldn't copy. Select the text and copy it manually." });
@@ -96,7 +106,8 @@ export function ImageToolsPanel({ item, assetId, slide, disabled = false, childr
   };
   return <ImageToolsContext.Provider value={actions}>
     {children}
-    <ImageResults analysis={analysis} slide={slide} job={job} error={error} message={message} copied={copied} onCopy={value => void copy(value)} onCancel={actions.onCancel} />
+    <ImageResults analysis={analysis} slide={slide} job={job} error={error} message={message} copied={copied} onCopy={(value, key) => void copy(value, key)} onCancel={actions.onCancel} />
+    <span role="status" className="sr-only">{copyStatus}</span>
   </ImageToolsContext.Provider>;
 }
 
@@ -107,13 +118,13 @@ function ImageResults({ analysis, slide, job, error, message, copied, onCopy, on
   error: { kind: Tool | null; message: string } | null;
   message: string;
   copied: string | null;
-  onCopy: (value: string) => void;
+  onCopy: (value: string, key: string) => void;
   onCancel: () => void;
 }) {
   if (!analysis?.palette && !analysis?.ocr && !job && !error && !message) return null;
-  return <section data-image-tools aria-label={`Image ${slide + 1} tools`} className="mt-4 min-w-0 space-y-5">
+  return <section data-image-tools aria-label={`Image ${slide + 1} tools`} className="mt-4 min-w-0 space-y-3">
     {analysis?.palette ? <PaletteSection palette={analysis.palette} copied={copied} onCopy={onCopy} /> : null}
-    {analysis?.ocr ? <ScreenshotTextSection ocr={analysis.ocr} slide={slide} onCopy={onCopy} /> : null}
+    {analysis?.ocr ? <ScreenshotTextSection ocr={analysis.ocr} slide={slide} copied={copied === "ocr"} onCopy={onCopy} /> : null}
     {job ? <AnalysisProgress job={job} onCancel={onCancel} /> : null}
     {error ? <p role="alert" className="text-sm leading-6 text-text-danger">{error.message}</p> : null}
     {message ? <p role="status" className="text-xs text-text-secondary">{message}</p> : null}
@@ -129,43 +140,76 @@ function swatchTextColor(hex: string) {
   return blackContrast >= whiteContrast ? "#000000" : "#FFFFFF";
 }
 
-function PaletteSection({ palette, copied, onCopy }: {
-  palette: string[];
-  copied: string | null;
-  onCopy: (value: string) => void;
+function ResultSection({ title, icon, action, children }: {
+  title: string; icon: ReactNode; action?: ReactNode; children: ReactNode;
 }) {
-  return <div className="space-y-2">
-    <h2 className="flex items-center gap-2 text-sm font-semibold text-text-primary"><PaletteIcon className="size-4" />Palette</h2>
-    {palette.length ? <>
-      <ul className={styles.palette} aria-label="Image colors">
-        {palette.map(hex => <li key={hex} className="flex items-center gap-1">
-          <button type="button" className={`ui-control ${styles.swatch}`} style={{ backgroundColor: hex, color: swatchTextColor(hex) }} aria-label={`Copy color ${hex}`} title={`Copy ${hex}`} onClick={() => onCopy(hex)}>
-            <span className="text-xs font-medium tabular-nums">{hex}</span>
-            {copied === hex ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
-          </button>
-          <Link href={`/?q=${encodeURIComponent(`color:${hex}`)}`} aria-label={`Find similar ${paletteColorFamily(hex)} images`} title={`Find colors near ${hex}`} className="ui-control flex size-11 items-center justify-center text-text-secondary hover:text-text-primary"><SearchIcon className="size-4" /></Link>
-        </li>)}
-      </ul>
-      <p className="text-xs text-text-secondary">Click a color to copy. Search includes nearby shades.</p>
-    </> : <p className="text-sm text-text-secondary">No opaque colors found.</p>}
+  const [expanded, setExpanded] = useState(true);
+  const contentId = useId();
+  return <div className="library-panel squircle-panel min-w-0 rounded-panel border border-border-control bg-bg-surface p-4 sm:p-5">
+    <div className="flex items-center gap-2">
+      <h2 className="min-w-0 flex-1">
+        <button type="button" aria-expanded={expanded} aria-controls={contentId} onClick={() => setExpanded(value => !value)} className={styles.sectionToggle}>
+          {icon}<span className="flex-1 text-left">{title}</span>
+          <ChevronDownIcon className={`size-4 ${expanded ? "" : "-rotate-90"}`} />
+        </button>
+      </h2>
+      {action}
+    </div>
+    <div id={contentId} hidden={!expanded} className="space-y-3 pt-2">{children}</div>
   </div>;
 }
 
-function ScreenshotTextSection({ ocr, slide, onCopy }: {
+function CopyFeedback({ copied }: { copied: boolean }) {
+  const reduceMotion = useReducedMotion();
+  const transition = reduceMotion ? { duration: 0 } : { type: "spring" as const, duration: 0.3, bounce: 0 };
+  const visible = { opacity: 1, scale: 1, filter: "blur(0px)" };
+  const hidden = { opacity: 0, scale: reduceMotion ? 1 : 0.25, filter: reduceMotion ? "blur(0px)" : "blur(4px)" };
+  return <span aria-hidden="true" data-copy-feedback data-copied={copied} className="relative block size-4">
+    <motion.span data-copy-icon="copy" initial={false} animate={copied ? hidden : visible} transition={transition} className="absolute inset-0"><CopyIcon className="size-4" /></motion.span>
+    <motion.span data-copy-icon="check" initial={false} animate={copied ? visible : hidden} transition={transition} className="absolute inset-0"><CheckIcon className="size-4" /></motion.span>
+  </span>;
+}
+
+function PaletteSection({ palette, copied, onCopy }: {
+  palette: string[];
+  copied: string | null;
+  onCopy: (value: string, key: string) => void;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const selectedColor = selected && palette.includes(selected) ? selected : palette[0];
+  return <ResultSection title="Palette" icon={<PaletteIcon className="size-4" />}>
+    {palette.length ? <>
+      <Tooltip.Provider delay={250}>
+        <ScrollPanel orientation="horizontal" viewportClassName="px-1.5 py-2" contentClassName="w-max">
+        <ul className={styles.palette} aria-label="Image colors">
+          {palette.map(hex => <li key={hex}>
+            <Tooltip.Root>
+              <Tooltip.Trigger type="button" className={`ui-control ${styles.swatch}`} style={{ backgroundColor: hex, color: swatchTextColor(hex) }} aria-label={`Copy color ${hex}`} aria-pressed={selectedColor === hex} data-selected={selectedColor === hex} onClick={() => { setSelected(hex); onCopy(hex, hex); }}>
+                <span className={styles.swatchFeedback} data-copied={copied === hex}><CopyFeedback copied={copied === hex} /></span>
+              </Tooltip.Trigger>
+              <Tooltip.Portal><Tooltip.Positioner side="top" sideOffset={8} className="z-[100]"><Tooltip.Popup className={SHELL_TOOLTIP}>{hex}</Tooltip.Popup></Tooltip.Positioner></Tooltip.Portal>
+            </Tooltip.Root>
+          </li>)}
+        </ul>
+        </ScrollPanel>
+      </Tooltip.Provider>
+      <Link href={`/?q=${encodeURIComponent(`color:${selectedColor}`)}`} title={`Find colors near ${selectedColor}`} className="inline-flex min-h-11 items-center text-xs text-text-secondary underline decoration-border-control underline-offset-4 hover:text-text-primary">Find similar colors</Link>
+    </> : <p className="text-sm text-text-secondary">No opaque colors found.</p>}
+  </ResultSection>;
+}
+
+function ScreenshotTextSection({ ocr, slide, copied, onCopy }: {
   ocr: NonNullable<ImageAnalysis["ocr"]>;
   slide: number;
-  onCopy: (value: string) => void;
+  copied: boolean;
+  onCopy: (value: string, key: string) => void;
 }) {
-  return <div className="space-y-2">
-    <div className="flex items-center justify-between gap-2">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-text-primary"><PlainTextIcon className="size-4" />Screenshot text</h2>
-      {ocr.text ? <button type="button" className="ui-control flex size-11 items-center justify-center" aria-label="Copy text" title="Copy text" onClick={() => onCopy(ocr.text)}><CopyIcon className="size-4" /></button> : null}
-    </div>
+  return <ResultSection title="Screenshot text" icon={<PlainTextIcon className="size-4" />} action={ocr.text ? <button type="button" className="ui-control flex size-11 items-center justify-center" aria-label="Copy text" title="Copy text" onClick={() => onCopy(ocr.text, "ocr")}><CopyFeedback copied={copied} /></button> : null}>
     <p className="text-xs text-text-secondary" title="Recognized text may contain mistakes.">English · {Math.round(ocr.confidence)}% confidence</p>
     {ocr.text ? <ScrollPanel role="region" aria-label={`Extracted text from image ${slide + 1}`} className={styles.text} viewportClassName="max-h-64 px-4 py-3" viewportProps={{ tabIndex: 0 }}>
       <p className="select-text whitespace-pre-wrap break-words text-sm leading-6 text-text-primary [overflow-wrap:anywhere]">{ocr.text}</p>
     </ScrollPanel> : <p className="text-sm text-text-secondary">No text found. Try a sharper image or a closer crop.</p>}
-  </div>;
+  </ResultSection>;
 }
 
 function AnalysisProgress({ job, onCancel }: { job: Job; onCancel: () => void }) {

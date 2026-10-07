@@ -1,17 +1,18 @@
 .palette {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .swatch {
   display: inline-flex;
-  min-height: 44px;
+  width: 44px;
+  height: 108px;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   border-radius: 999px;
-  padding: 0 10px;
+  padding: 0;
+  border: 6px solid var(--color-bg-canvas);
+  outline: 1px solid var(--color-border-control);
   box-shadow: inset 0 0 0 1px light-dark(oklch(0 0 0 / 0.1), oklch(1 0 0 / 0.16));
 }
 
@@ -19,9 +20,44 @@
   box-shadow: inset 0 0 0 2px light-dark(oklch(0 0 0 / 0.25), oklch(1 0 0 / 0.35));
 }
 
+.swatch[data-selected="true"],
 .swatch:focus-visible {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 3px;
+}
+
+.swatchFeedback {
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.swatch:hover .swatchFeedback,
+.swatch:focus-visible .swatchFeedback,
+.swatchFeedback[data-copied="true"] {
+  opacity: 1;
+}
+
+.sectionToggle {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-control-sm);
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.sectionToggle:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swatchFeedback {
+    transition: none;
+  }
 }
 
 .text {
