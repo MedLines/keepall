@@ -204,7 +204,7 @@ test("batch restore preserves every item field and media with one timestamp, ign
     expect(await restoreItems([note.id, link.id, image.id, video.id, note.id, "missing", active.id])).toEqual([note.id, link.id, image.id, video.id]);
   } finally { clock.mockRestore(); }
   for (const row of before) {
-    const expected = { ...row!, updatedAt: 999 };
+    const expected = { ...row!, updatedAt: Math.max(999, ...before.map(item => item!.updatedAt + 1)) };
     delete expected.deletedAt;
     expect(await getDb().items.get(row!.id)).toEqual(expected);
   }

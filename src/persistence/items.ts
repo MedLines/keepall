@@ -96,21 +96,20 @@ export async function createOrReuseLink(
   return { link, created: true };
 }
 
+async function mutateItem(id: string, edit: (current: Item) => Item): Promise<Item> {
+  const db = getDb();
+  return db.transaction("rw", db.items, async () => {
+    const row = await db.items.get(id);
+    if (!row || row.deletedAt !== undefined) throw new Error("Item not found");
+    const current = normalizeItem(row);
+    const next = { ...edit(current), updatedAt: Math.max(Date.now(), current.updatedAt + 1) };
+    await db.items.put(next);
+    return next;
+  });
+}
+
 export async function clearCollectionOnItem(itemId: string): Promise<Item> {
-  const existing = await getDb().items.get(itemId);
-
-  if (!existing || existing.deletedAt !== undefined) {
-    throw new Error("Item not found");
-  }
-
-  const current = normalizeItem(existing);
-  const next = {
-    ...current,
-    collectionIds: [] as string[],
-    updatedAt: Date.now(),
-  };
-  await putActiveItem(next);
-  return next;
+  return mutateItem(itemId, current => ({ ...current, collectionIds: [], updatedAt: Date.now() }));
 }
 
 export async function clearCollectionsOnItems(itemIds: string[]): Promise<string[]> {
@@ -124,7 +123,7 @@ export async function clearCollectionsOnItems(itemIds: string[]): Promise<string
       if (!row || row.deletedAt !== undefined) continue;
       const current = normalizeItem(row);
       if (current.collectionIds.length === 0) continue;
-      await db.items.put({ ...current, collectionIds: [], updatedAt });
+      await db.items.put({ ...current, collectionIds: [], updatedAt: Math.max(updatedAt, current.updatedAt + 1) });
       changedIds.push(id);
     }
     return changedIds;
@@ -135,12 +134,6 @@ export async function setItemTagIds(
   itemId: string,
   tagIds: string[],
 ): Promise<Item> {
-  const existing = await getDb().items.get(itemId);
-
-  if (!existing || existing.deletedAt !== undefined) {
-    throw new Error("Item not found");
-  }
-
   const unique: string[] = [];
   const seen = new Set<string>();
   for (const id of tagIds) {
@@ -151,14 +144,7 @@ export async function setItemTagIds(
     unique.push(id);
   }
 
-  const current = normalizeItem(existing);
-  const next = {
-    ...current,
-    tagIds: unique,
-    updatedAt: Date.now(),
-  };
-  await putActiveItem(next);
-  return next;
+  return mutateItem(itemId, current => ({ ...current, tagIds: unique, updatedAt: Date.now() }));
 }
 
 /** Replace all tags on an item with the given names (create/reuse tag rows). */
@@ -354,7 +340,7 @@ export async function deleteItem(id: string): Promise<void> {
   const now = Date.now();
   await getDb().items.where("id").equals(id)
     .filter((item) => item.deletedAt === undefined)
-    .modify({ deletedAt: now, updatedAt: now });
+    .modify(item => { item.deletedAt = now; item.updatedAt = Math.max(now, item.updatedAt + 1); });
 }
 
 export async function listTrashedItems(): Promise<Item[]> {
@@ -374,7 +360,7 @@ export async function restoreItems(ids: string[]): Promise<string[]> {
   return db.transaction("rw", db.items, async () => {
     const rows = await db.items.bulkGet(requestedIds);
     const items = rows.filter((item): item is Item => item !== undefined && item.deletedAt !== undefined);
-    const now = Date.now();
+    const now = items.reduce((timestamp, item) => Math.max(timestamp, item.updatedAt + 1), Date.now());
     for (const item of items) {
       delete item.deletedAt;
       item.updatedAt = now;
@@ -478,7 +464,7 @@ export async function saveNoteWithImages(
     for (const assetId of noteImageAssetIds(content)) {
       if (!await db.assets.get(assetId)) throw new Error("Note image is missing");
     }
-    const next = applyNoteEdit(previous, { ...input, content });
+    const next = { ...applyNoteEdit(previous, { ...input, content }), updatedAt: Math.max(Date.now(), previous.updatedAt + 1) };
     await putActiveItem(next);
     const nextAssetIds = new Set(noteImageAssetIds(next.content));
     await deleteUnreferencedAssets(noteImageAssetIds(previous.content)
@@ -487,38 +473,54 @@ export async function saveNoteWithImages(
   });
 }
 
+/** Read and apply only this operation's fields while holding the item write lock. */
+async function mutateLink(
+  id: string,
+  edit: (current: LinkItem) => LinkItem,
+  expectedUrl?: string,
+): Promise<LinkItem> {
+  const db = getDb();
+  return db.transaction("rw", db.items, db.assets, db.thumbnails, async () => {
+    const row = await db.items.get(id);
+    if (!row || row.deletedAt !== undefined || row.type !== "link") throw new Error("Link not found");
+    if (expectedUrl !== undefined && row.url !== expectedUrl) throw new LinkPreviewStaleError();
+    const current = normalizeItem(row);
+    const next = { ...edit(current), updatedAt: Math.max(Date.now(), current.updatedAt + 1) };
+    await db.items.put(next);
+    if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
+      await deleteUnreferencedAsset(current.previewAssetId);
+    }
+    return next;
+  });
+}
+
+export class LinkPreviewStaleError extends Error {
+  constructor() {
+    super("The link changed while its preview was loading");
+    this.name = "LinkPreviewStaleError";
+  }
+}
+
 export async function updateLink(
   id: string,
   input: { url: string; title?: string; noteContent?: string; noteFormat?: "plain" | "markdown" },
 ): Promise<LinkItem> {
-  const existing = await getDb().items.get(id);
-
-  if (!existing || existing.deletedAt !== undefined || existing.type !== "link") {
-    throw new Error("Link not found");
-  }
-
-  const current = normalizeItem(existing);
-  const next = applyLinkEdit(current, input);
-  await putActiveItem(next);
-  if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
-    await deleteUnreferencedAsset(current.previewAssetId);
-  }
-  return next;
+  return mutateLink(id, current => applyLinkEdit(current, input));
 }
 
 export async function updateImage(
   id: string,
   input: { title?: string; sourceUrl?: string; caption?: string; captionFormat?: "plain" | "markdown" },
 ): Promise<ImageItem> {
-  const existing = await getDb().items.get(id);
-
-  if (!existing || existing.deletedAt !== undefined || existing.type !== "image") {
-    throw new Error("Image not found");
-  }
-
-  const next = applyImageEdit(normalizeItem(existing), input);
-  await putActiveItem(next);
-  return next;
+  const db = getDb();
+  return db.transaction("rw", db.items, async () => {
+    const row = await db.items.get(id);
+    if (!row || row.deletedAt !== undefined || row.type !== "image") throw new Error("Image not found");
+    const current = normalizeItem(row);
+    const next = { ...applyImageEdit(current, input), updatedAt: Math.max(Date.now(), current.updatedAt + 1) };
+    await db.items.put(next);
+    return next;
+  });
 }
 
 export async function appendImageAssetToItem(
@@ -561,7 +563,7 @@ export async function appendImageAssetsToItem(
     for (const upload of prepared) {
       const asset = await putAsset(upload);
       await putThumbnail(asset.id, upload.thumbnail);
-      next = appendImageAsset(next, asset.id);
+      next = { ...appendImageAsset(next, asset.id), updatedAt: Math.max(Date.now(), next.updatedAt + 1) };
     }
     await putActiveItem(next);
     return next;
@@ -573,26 +575,28 @@ export async function replaceImageAssetAtIndex(
   slideIndex: number,
   input: { bytes: Uint8Array; mimeType: string },
 ): Promise<ImageItem> {
-  const existing = await getDb().items.get(id);
-
-  if (!existing || existing.deletedAt !== undefined || existing.type !== "image") {
-    throw new Error("Image not found");
-  }
-
-  const current = normalizeItem(existing);
-  const previousAssetId = current.assetIds[slideIndex];
-  if (!previousAssetId) {
-    throw new Error("Image slide not found");
-  }
-
-  const mime = assertLocalImageBytes(input.bytes, input.mimeType);
-  const thumbnail = await imageThumbnail(input.bytes, mime);
-  const asset = await putAsset({ mimeType: mime, bytes: input.bytes });
-  await putThumbnail(asset.id, thumbnail);
-  const next = replaceImageAssetAt(current, slideIndex, asset.id);
-  await putActiveItem(next);
-  await deleteUnreferencedAsset(previousAssetId);
-  return next;
+  const db = getDb();
+  const original = await db.items.get(id);
+  if (!original || original.deletedAt !== undefined || original.type !== "image") throw new Error("Image not found");
+  const expectedAssetId = normalizeItem(original).assetIds[slideIndex];
+  if (!expectedAssetId) throw new Error("Image slide not found");
+  const mimeType = assertLocalImageBytes(input.bytes, input.mimeType);
+  const contentHash = await hashAssetBytes(input.bytes);
+  const thumbnail = await imageThumbnail(input.bytes, mimeType);
+  return db.transaction("rw", db.items, db.assets, db.thumbnails, async () => {
+    const row = await db.items.get(id);
+    if (!row || row.deletedAt !== undefined || row.type !== "image") throw new Error("Image not found");
+    const current = normalizeItem(row);
+    const previousAssetId = current.assetIds[slideIndex];
+    if (!previousAssetId) throw new Error("Image slide not found");
+    if (previousAssetId !== expectedAssetId) throw new Error("This image slide changed while its replacement was preparing");
+    const asset = await putAsset({ mimeType, bytes: input.bytes, contentHash });
+    await putThumbnail(asset.id, thumbnail);
+    const next = { ...replaceImageAssetAt(current, slideIndex, asset.id), updatedAt: Math.max(Date.now(), current.updatedAt + 1) };
+    await db.items.put(next);
+    await deleteUnreferencedAsset(previousAssetId);
+    return next;
+  });
 }
 
 export async function removeImageAssetAtIndex(
@@ -612,7 +616,7 @@ export async function removeImageAssetAtIndex(
       throw new Error("Image slide not found");
     }
 
-    const next = removeImageAssetAt(current, slideIndex);
+    const next = { ...removeImageAssetAt(current, slideIndex), updatedAt: Math.max(Date.now(), current.updatedAt + 1) };
     await putActiveItem(next);
 
     await deleteUnreferencedAsset(removedAssetId);
@@ -621,21 +625,8 @@ export async function removeImageAssetAtIndex(
   });
 }
 
-export async function setLinkPreviewPending(id: string): Promise<LinkItem> {
-  const existing = await getDb().items.get(id);
-
-  if (!existing || existing.deletedAt !== undefined || existing.type !== "link") {
-    throw new Error("Link not found");
-  }
-
-  const current = normalizeItem(existing);
-  const next = {
-    ...markLinkPreviewPending(current),
-    previewAssetId: null,
-  };
-  await putActiveItem(next);
-  if (current.previewAssetId) await deleteUnreferencedAsset(current.previewAssetId);
-  return next;
+export async function setLinkPreviewPending(id: string, expectedUrl?: string): Promise<LinkItem> {
+  return mutateLink(id, current => ({ ...markLinkPreviewPending(current), previewAssetId: null }), expectedUrl);
 }
 
 export async function saveLinkPreviewResult(
@@ -643,132 +634,70 @@ export async function saveLinkPreviewResult(
   result:
     | { status: "ready"; title: string; description: string; imageUrl: string }
     | { status: "failed"; retry?: LinkPreviewRetry },
+  expectedUrl?: string,
 ): Promise<LinkItem> {
-  const existing = await getDb().items.get(id);
-
-  if (!existing || existing.deletedAt !== undefined || existing.type !== "link") {
-    throw new Error("Link not found");
-  }
-
-  const current = normalizeItem(existing);
-  const next = applyLinkPreviewResult(current, result);
-  await putActiveItem(next);
-  if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
-    await deleteUnreferencedAsset(current.previewAssetId);
-  }
-  return next;
+  return mutateLink(id, current => applyLinkPreviewResult(current, result), expectedUrl);
 }
 
 export async function setLinkPreviewRetry(
   id: string,
   previewRetry: LinkPreviewRetry | null,
+  expectedUrl?: string,
 ): Promise<LinkItem> {
-  const existing = await getDb().items.get(id);
-
-  if (!existing || existing.deletedAt !== undefined || existing.type !== "link") {
-    throw new Error("Link not found");
-  }
-
-  const current = normalizeItem(existing);
-  const next = applyLinkPreviewRetry(current, previewRetry);
-  await putActiveItem(next);
-  return next;
+  return mutateLink(id, current => applyLinkPreviewRetry(current, previewRetry), expectedUrl);
 }
 
 export async function setLinkPreviewAssetId(
   id: string,
   previewAssetId: string | null,
+  expectedUrl?: string,
 ): Promise<LinkItem> {
-  const existing = await getDb().items.get(id);
-
-  if (!existing || existing.deletedAt !== undefined || existing.type !== "link") {
-    throw new Error("Link not found");
-  }
-
-  const current = normalizeItem(existing);
-  const next = applyLinkPreviewAssetId(current, previewAssetId);
-  await putActiveItem(next);
-  if (current.previewAssetId && current.previewAssetId !== previewAssetId) {
-    await deleteUnreferencedAsset(current.previewAssetId);
-  }
-  return next;
+  return mutateLink(id, current => applyLinkPreviewAssetId(current, previewAssetId), expectedUrl);
 }
 
-export async function assignTagToItem(
-  itemId: string,
-  tagId: string,
-): Promise<Item> {
-  const tag = await getDb().tags.get(tagId);
-
-  if (!tag) {
-    throw new Error("Tag not found");
-  }
-
-  const existing = await getDb().items.get(itemId);
-
-  if (!existing || existing.deletedAt !== undefined) {
-    throw new Error("Item not found");
-  }
-
-  const current = normalizeItem(existing);
-  const next = {
-    ...current,
-    tagIds: assignTagId(current.tagIds, tagId),
-    updatedAt: Date.now(),
-  };
-
-  await putActiveItem(next);
-  return next;
+/** Commit downloaded bytes and their reference together, only for the requested URL. */
+export async function saveLinkPreviewImage(
+  id: string,
+  expectedUrl: string,
+  input: { bytes: Uint8Array; mimeType: string },
+): Promise<LinkItem> {
+  const contentHash = await hashAssetBytes(input.bytes);
+  const db = getDb();
+  return db.transaction("rw", db.items, db.assets, db.thumbnails, async () => {
+    const row = await db.items.get(id);
+    if (!row || row.deletedAt !== undefined || row.type !== "link") throw new Error("Link not found");
+    if (row.url !== expectedUrl) throw new LinkPreviewStaleError();
+    const asset = await putAsset({ ...input, contentHash });
+    return setLinkPreviewAssetId(id, asset.id, expectedUrl);
+  });
 }
 
-export async function unassignTagFromItem(
-  itemId: string,
-  tagId: string,
-): Promise<Item> {
-  const existing = await getDb().items.get(itemId);
-
-  if (!existing || existing.deletedAt !== undefined) {
-    throw new Error("Item not found");
-  }
-
-  const current = normalizeItem(existing);
-  const next = {
-    ...current,
-    tagIds: removeTagId(current.tagIds, tagId),
-    updatedAt: Date.now(),
-  };
-
-  await putActiveItem(next);
-  return next;
+export async function assignTagToItem(itemId: string, tagId: string): Promise<Item> {
+  const db = getDb();
+  return db.transaction("rw", db.items, db.tags, async () => {
+    if (!await db.tags.get(tagId)) throw new Error("Tag not found");
+    return mutateItem(itemId, current => ({ ...current, tagIds: assignTagId(current.tagIds, tagId), updatedAt: Date.now() }));
+  });
 }
 
-export async function assignCollectionToItem(
-  itemId: string,
-  collectionId: string,
-): Promise<Item> {
-  const collection = await getDb().collections.get(collectionId);
+export async function unassignTagFromItem(itemId: string, tagId: string): Promise<Item> {
+  return mutateItem(itemId, current => ({ ...current, tagIds: removeTagId(current.tagIds, tagId), updatedAt: Date.now() }));
+}
 
-  if (!collection) {
-    throw new Error("Collection not found");
-  }
-
-  const existing = await getDb().items.get(itemId);
-
-  if (!existing || existing.deletedAt !== undefined) {
-    throw new Error("Item not found");
-  }
-
-  const current = normalizeItem(existing);
-  const now = Date.now();
-  const next = {
-    ...current,
-    collectionAddedAt: current.collectionIds.includes(collectionId) ? current.collectionAddedAt ?? current.createdAt : now,
-    collectionIds: assignCollectionId(current.collectionIds, collectionId),
-    updatedAt: now,
-  };
-
-  await putActiveItem(next);
-  return next;
+export async function assignCollectionToItem(itemId: string, collectionId: string): Promise<Item> {
+  const db = getDb();
+  return db.transaction("rw", db.items, db.collections, async () => {
+    if (!await db.collections.get(collectionId)) throw new Error("Collection not found");
+    return mutateItem(itemId, current => {
+      const now = Date.now();
+      return {
+        ...current,
+        collectionAddedAt: current.collectionIds.includes(collectionId) ? current.collectionAddedAt ?? current.createdAt : now,
+        collectionIds: assignCollectionId(current.collectionIds, collectionId),
+        updatedAt: now,
+      };
+    });
+  });
 }
 
 export async function listNotes(): Promise<NoteItem[]> {

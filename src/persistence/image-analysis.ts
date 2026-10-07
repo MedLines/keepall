@@ -16,7 +16,7 @@ export async function saveImageAnalysis(itemId: string, result: ImageAnalysis): 
       ...(item.analysis ?? []).filter(entry => entry.assetId !== result.assetId),
       { ...existing, ...result },
     ], item.assetIds);
-    const updated = { ...item, analysis, updatedAt: Date.now() };
+    const updated = { ...item, analysis, updatedAt: Math.max(Date.now(), item.updatedAt + 1) };
     await db.items.put(updated);
     return updated;
   });
