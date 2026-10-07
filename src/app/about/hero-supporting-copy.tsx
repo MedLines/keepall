@@ -5,7 +5,7 @@ export function HeroSupportingCopy() {
   return <>
     <p className="ka-lede ka-hero-description">
       Save from the web with the Chrome extension.<br className="ka-desktop-break" />{" "}
-      Organize with collections and tags. Find anything with search.
+      Bring your files, too. Find saved words with search.
     </p>
     <div className="ka-hero-actions">
       <Link href="/" className="ka-button">Start your library <ArrowRightIcon /></Link>

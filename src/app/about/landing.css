@@ -405,6 +405,44 @@
   background: var(--ka-button-texture), var(--ka-button-body);
   box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.050980392);
 }
+.ka-reading, .ka-image-tools { padding-top: 160px; scroll-margin-top: 110px; }
+.ka-reading-lead, .ka-image-tools-card { overflow: hidden; }
+.ka-about :is(.ka-reading-lead, .ka-image-tools-card) .ka-feature-card { height: auto; min-height: 550px; grid-template-columns: .8fr 1.2fr; }
+.ka-about :is(.ka-reading-lead, .ka-image-tools-card) .ka-card-copy { padding: 36px 28px; }
+.ka-card-copy h3 { margin-top: 32px; font-size: 30px; line-height: 1.3; letter-spacing: -.035em; }
+.ka-reading-scene, .ka-image-tools-scene { flex-direction: column; gap: 20px; padding: 28px 20px; }
+.ka-about :is(.ka-reading-scene, .ka-image-tools-scene) { min-height: 0; }
+.ka-reading-scene img, .ka-image-tools-scene img, .ka-document-scene img { display: block; width: 100%; height: auto; border: 1px solid var(--ka-edge); border-radius: 10px; box-shadow: 0 20px 45px oklch(0 0 0 / .3); }
+.ka-reading figcaption, .ka-image-tools figcaption { color: var(--ka-muted); font-size: var(--ka-type-label); line-height: 1.5; }
+.ka-document-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 24px; }
+.ka-document-panel { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--ka-edge); border-radius: 24px; background: var(--ka-surface-texture), var(--ka-surface-body); box-shadow: inset 0 1px 0 oklch(1 0 0 / .05); }
+.ka-document-copy { display: flex; flex-direction: column; align-items: flex-start; flex: 1; padding: 32px; }
+.ka-document-copy h3 { margin-top: 18px; font-size: 26px; line-height: 1.3; letter-spacing: -.03em; }
+.ka-document-copy > p:not(.ka-eyebrow) { margin-top: 16px; color: var(--ka-muted); font-size: var(--ka-type-control); line-height: 1.6; }
+.ka-document-copy .ka-text-link { margin-top: auto; padding-top: 24px; font-size: 12px; }
+.ka-document-scene { display: flex; flex-direction: column; gap: 18px; padding: 24px; border-top: 1px solid var(--ka-line); background: linear-gradient(145deg in srgb, oklch(0.204626531 0 0), oklch(0.139791234 0 0)); }
+.ka-tool-links { width: 100%; margin-top: auto; padding-top: 18px; }
+.ka-tool-links .ka-card-foot { padding-top: 16px; }
+.ka-card-copy code { white-space: nowrap; font-size: .9em; color: var(--ka-text); }
+.ka-section-note { max-width: 780px; margin: 28px auto 0; color: var(--ka-muted); font-size: var(--ka-type-control); line-height: 1.7; text-align: center; }
+.ka-section-note a { display: inline-flex; align-items: center; gap: 8px; color: var(--ka-text); text-underline-offset: 3px; }
+.ka-section-note svg { width: 14px; height: 14px; }
+@media (max-width: 800px) {
+  .ka-reading, .ka-image-tools { padding-top: 110px; }
+  .ka-about :is(.ka-reading-lead, .ka-image-tools-card) .ka-feature-card { grid-template-columns: 1fr; min-height: 0; }
+  .ka-reading-scene, .ka-image-tools-scene { min-height: 0; padding: 28px; }
+  .ka-document-panels { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .ka-reading, .ka-image-tools { padding-top: 95px; }
+  .ka-about :is(.ka-reading-lead, .ka-image-tools-card) .ka-card-copy { padding: 26px 20px 32px; }
+  .ka-card-copy h3 { margin-top: 24px; font-size: 27px; }
+  .ka-reading-scene, .ka-image-tools-scene { padding: 20px 10px; gap: 14px; }
+  .ka-document-copy { padding: 26px; }
+  .ka-document-scene { padding: 20px 14px; gap: 14px; }
+  .ka-document-panel { border-radius: 18px; }
+  .ka-section-note { text-align: left; font-size: 12px; }
+}
 @media (hover: hover) and (pointer: fine) {
   :is(.ka-about, .kh-page) :is(.ka-button, .ka-header-open, .ka-gallery-foot button, .ka-recording-controls button):hover {
     border-color: oklch(1 0 0 / 0.2);

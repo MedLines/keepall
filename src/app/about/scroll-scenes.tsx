@@ -64,14 +64,14 @@ function RevealedPhrase({ text, index, progress }: { text: string; index: number
 export function ScrollStatement() {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start 85%", "end 55%"] });
-  return <div ref={ref} className="ka-statement ka-wrap"><p className="ka-eyebrow">A place for what stays with you</p><p className="ka-statement-text">{phrases.map((text, index) => <RevealedPhrase key={text} text={text} index={index} progress={scrollYProgress} />)}</p><p className="ka-statement-note">Links, notes, images, and videos.<br />A personal library, made for coming back.</p></div>;
+  return <div ref={ref} className="ka-statement ka-wrap"><p className="ka-eyebrow">A place for what stays with you</p><p className="ka-statement-text">{phrases.map((text, index) => <RevealedPhrase key={text} text={text} index={index} progress={scrollYProgress} />)}</p><p className="ka-statement-note">Links, notes, images, videos, and documents.<br />A personal library, made for coming back.</p></div>;
 }
 
 const views = [
-  { name: "Your library", recording: "library-demo", caption: "Browse the same library in grid or list view." },
+  { name: "Your library", recording: "library-demo", caption: "Preview your saves, read a document, or play a local video without losing your place." },
   { name: "Collections", recording: "collections-demo", caption: "Bring related finds together. Leave the rest in Unsorted." },
   { name: "Tags", recording: "tags-demo", caption: "Add a tag to a save. Choose that tag to find it again." },
-  { name: "Search", recording: "search-demo", caption: "Start with a word you remember. Pick up where you left off." },
+  { name: "Search", recording: "search-demo", caption: "Find words inside saved files and recognized screenshot text, with excerpts to help you choose." },
 ];
 
 export function FeatureGallery({ panels }: { panels: ReactNode[] }) {
