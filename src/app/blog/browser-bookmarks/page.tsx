@@ -6,11 +6,19 @@ import bookmarkResultImage from "../../../../public/help/bookmark-result.webp";
 import bookmarksImage from "../../../../public/marketing/app-bookmarks.webp";
 import bookmarkNoteImage from "../../../../public/marketing/app-bookmark-note.webp";
 import bookmarkSearchImage from "../../../../public/marketing/app-bookmark-search.webp";
-import { WebsitePage } from "../../website-page";
+import { BlogArticle } from "../blog-article";
 import { websiteOpenGraphImage, websiteTwitterImage } from "../../website-metadata";
 
 const title = "Import browser bookmarks and find them again";
 const description = "Import browser bookmarks into Keepall and make them easier to find with collections, personal notes, and search.";
+
+const contents = [
+  { href: "#import", label: "Export and import your bookmarks" },
+  { href: "#check", label: "Check a familiar folder" },
+  { href: "#organize", label: "Organize one useful group" },
+  { href: "#find", label: "Add notes you can search" },
+  { href: "#backup", label: "Back up the library" },
+];
 
 export const metadata: Metadata = {
   title: { absolute: `${title} · Keepall` },
@@ -22,25 +30,11 @@ export const metadata: Metadata = {
 
 export default function BrowserBookmarksArticle() {
   return (
-    <WebsitePage eyebrow="Browser bookmarks" title={title} description={description}>
-      <div className="kb-article-meta">
-        <Link href="/blog">← All articles</Link>
-        <span className="kb-post-meta">5 min read</span>
-      </div>
+    <BlogArticle readTime="5 min read" contents={contents} eyebrow="Browser bookmarks" title={title} description={description}>
       <section>
         <h2>Start with what you already saved</h2>
         <p>Old bookmarks can still help with a current project, course, or trip. Start with one folder you want to use again.</p>
         <p>Import them into Keepall to add personal notes and browse them alongside saved files and images. The export leaves your browser bookmarks in place.</p>
-        <nav className="kb-contents" aria-label="In this article">
-          <p>The workflow</p>
-          <ol>
-            <li><a href="#import">Export and import your bookmarks</a></li>
-            <li><a href="#check">Check a familiar folder</a></li>
-            <li><a href="#organize">Organize one useful group</a></li>
-            <li><a href="#find">Add notes you can search</a></li>
-            <li><a href="#backup">Back up the library</a></li>
-          </ol>
-        </nav>
       </section>
       <section id="import">
         <h2>Export and import your bookmarks</h2>
@@ -103,6 +97,6 @@ export default function BrowserBookmarksArticle() {
         <p>Follow the <Link href="/help/storage-and-backups#download">backup guide</Link> to keep a recovery copy, or the <Link href="/help/import#backup">restore guide</Link> to move your library to another browser.</p>
         <Link href="/" className="ka-button ka-button-light">Open your library</Link>
       </section>
-    </WebsitePage>
+    </BlogArticle>
   );
 }

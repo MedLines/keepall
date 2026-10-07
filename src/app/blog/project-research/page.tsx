@@ -6,11 +6,19 @@ import pdfImage from "../../../../public/marketing/app-pdf-reader-detail.webp";
 import markdownImage from "../../../../public/marketing/app-markdown-document-detail.webp";
 import searchImage from "../../../../public/marketing/app-search-files.webp";
 import previewImage from "../../../../public/marketing/app-preview-document.webp";
-import { WebsitePage } from "../../website-page";
+import { BlogArticle } from "../blog-article";
 import { websiteOpenGraphImage, websiteTwitterImage } from "../../website-metadata";
 
 const title = "Keep project research and your own notes together";
 const description = "Save articles, import PDFs and Markdown, and record what each source means for your project in one Keepall collection.";
+
+const contents = [
+  { href: "#articles", label: "Save the article you need to read" },
+  { href: "#files", label: "Import PDFs and Markdown" },
+  { href: "#notes", label: "Keep your conclusions separate" },
+  { href: "#search", label: "Find a passage and compare sources" },
+  { href: "#backup", label: "Back up the research" },
+];
 
 export const metadata: Metadata = {
   title: { absolute: `${title} · Keepall` }, description,
@@ -21,19 +29,11 @@ export const metadata: Metadata = {
 
 export default function ProjectResearchArticle() {
   return (
-    <WebsitePage eyebrow="Project research" title={title} description={description}>
-      <div className="kb-article-meta"><Link href="/blog">← All articles</Link><span className="kb-post-meta">5 min read</span></div>
+    <BlogArticle readTime="5 min read" contents={contents} eyebrow="Project research" title={title} description={description}>
       <section>
         <h2>Collect the sources for one question</h2>
         <p>Planning a reading room might involve an article about lighting, a PDF with measurements, and a Markdown plan you wrote yourself. Keep them in one project collection so you can compare the source material with your decisions.</p>
         <p>Start with a note naming the question, such as &quot;Where should the desk go, and what lighting will it need?&quot; In Save item, enter a collection name, choose Create collection, then save. Choose that collection for the sources you add next.</p>
-        <nav className="kb-contents" aria-label="In this article"><p>The workflow</p><ol>
-          <li><a href="#articles">Save the article you need to read</a></li>
-          <li><a href="#files">Import PDFs and Markdown</a></li>
-          <li><a href="#notes">Keep your conclusions separate</a></li>
-          <li><a href="#search">Find a passage and compare sources</a></li>
-          <li><a href="#backup">Back up the research</a></li>
-        </ol></nav>
       </section>
       <section id="articles">
         <h2>Save the article you need to read</h2>
@@ -76,6 +76,6 @@ export default function ProjectResearchArticle() {
         <p>Your library lives in this browser profile on this device. Before moving browsers or clearing site data, follow the <Link href="/help/storage-and-backups#download">backup guide</Link>. Importing a backup on another device moves a copy; it does not keep the two libraries in sync.</p>
         <Link href="/" className="ka-button ka-button-light">Open your library</Link>
       </section>
-    </WebsitePage>
+    </BlogArticle>
   );
 }

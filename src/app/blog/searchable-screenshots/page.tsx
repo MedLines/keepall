@@ -3,11 +3,19 @@ import Image from "next/image";
 import Link from "next/link";
 import toolsImage from "../../../../public/marketing/app-image-tools-detail.webp";
 import searchImage from "../../../../public/marketing/app-search-files.webp";
-import { WebsitePage } from "../../website-page";
+import { BlogArticle } from "../blog-article";
 import { websiteOpenGraphImage, websiteTwitterImage } from "../../website-metadata";
 
 const title = "Find saved screenshots by their text and colors";
 const description = "Make English screenshot text searchable, extract useful colors, and preview the images you saved in Keepall.";
+
+const contents = [
+  { href: "#text", label: "Recognize the screenshot text" },
+  { href: "#find", label: "Search for words in the image" },
+  { href: "#palette", label: "Extract a palette and search by color" },
+  { href: "#preview", label: "Preview the results" },
+  { href: "#backup", label: "Back up the images and results" },
+];
 
 export const metadata: Metadata = {
   title: { absolute: `${title} · Keepall` }, description,
@@ -18,19 +26,11 @@ export const metadata: Metadata = {
 
 export default function ScreenshotLibraryArticle() {
   return (
-    <WebsitePage eyebrow="Screenshot library" title={title} description={description}>
-      <div className="kb-article-meta"><Link href="/blog">← All articles</Link><span className="kb-post-meta">4 min read</span></div>
+    <BlogArticle readTime="4 min read" contents={contents} eyebrow="Screenshot library" title={title} description={description}>
       <section>
         <h2>Save screenshots you expect to use again</h2>
         <p>A screenshot can contain a useful instruction, receipt number, or layout detail. Later, you may remember its words or colors better than its filename. Keepall can recognize English image text and extract a color palette so you can search for those details.</p>
         <p>Start with a screenshot you need for a current task. Choose Save item, then Add files, or paste the image with Ctrl/⌘ + V. Add a source link if it came from a website, and a short note describing why you saved it. Choose a collection and save.</p>
-        <nav className="kb-contents" aria-label="In this article"><p>The workflow</p><ol>
-          <li><a href="#text">Recognize the screenshot text</a></li>
-          <li><a href="#find">Search for words in the image</a></li>
-          <li><a href="#palette">Extract a palette and search by color</a></li>
-          <li><a href="#preview">Preview the results</a></li>
-          <li><a href="#backup">Back up the images and results</a></li>
-        </ol></nav>
       </section>
       <section id="text">
         <h2>Recognize the screenshot text</h2>
@@ -75,6 +75,6 @@ export default function ScreenshotLibraryArticle() {
         <p>Each gallery image keeps its own analysis. Replacing or removing the original removes its palette and recognized text too. Follow the <Link href="/help/storage-and-backups#download">backup guide</Link> before clearing browser data or moving your library.</p>
         <Link href="/" className="ka-button ka-button-light">Open your library</Link>
       </section>
-    </WebsitePage>
+    </BlogArticle>
   );
 }

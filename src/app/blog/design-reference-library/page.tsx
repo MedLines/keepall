@@ -6,11 +6,19 @@ import collectionImage from "../../../../public/marketing/app-collection.webp";
 import saveItemImage from "../../../../public/marketing/app-save-item.webp";
 import tagsImage from "../../../../public/marketing/app-tags.webp";
 import searchImage from "../../../../public/marketing/app-design-search.webp";
-import { WebsitePage } from "../../website-page";
+import { BlogArticle } from "../blog-article";
 import { websiteOpenGraphImage, websiteTwitterImage } from "../../website-metadata";
 
 const title = "Build a design reference library for your next project";
 const description = "Save design references with their source and a useful note, then find examples for the decisions in your next project.";
+
+const contents = [
+  { href: "#collection", label: "Give the project a collection" },
+  { href: "#context", label: "Save the source and the reason" },
+  { href: "#tags", label: "Use tags for recurring details" },
+  { href: "#return", label: "Return with a question" },
+  { href: "#backup", label: "Keep a copy of the work" },
+];
 
 export const metadata: Metadata = {
   title: { absolute: `${title} · Keepall` },
@@ -22,25 +30,11 @@ export const metadata: Metadata = {
 
 export default function DesignReferenceArticle() {
   return (
-    <WebsitePage eyebrow="Design references" title={title} description={description}>
-      <div className="kb-article-meta">
-        <Link href="/blog">← All articles</Link>
-        <span className="kb-post-meta">4 min read</span>
-      </div>
+    <BlogArticle readTime="4 min read" contents={contents} eyebrow="Design references" title={title} description={description}>
       <section>
         <h2>Start with the decision you need to make</h2>
         <p>A reference should help you make a decision. Save a page for its readable typography, a screenshot for its navigation, or a photograph for the colors you want to try. Write down the detail that matters.</p>
         <p>Before collecting, save a note describing the project, such as &quot;A portfolio with readable, well-spaced case studies.&quot; Use that brief to decide which references belong.</p>
-        <nav className="kb-contents" aria-label="In this article">
-          <p>The workflow</p>
-          <ol>
-            <li><a href="#collection">Give the project a collection</a></li>
-            <li><a href="#context">Save the source and the reason</a></li>
-            <li><a href="#tags">Use tags for recurring details</a></li>
-            <li><a href="#return">Return with a question</a></li>
-            <li><a href="#backup">Keep a copy of the work</a></li>
-          </ol>
-        </nav>
       </section>
       <section id="collection">
         <h2>Give the project a collection</h2>
@@ -97,6 +91,6 @@ export default function DesignReferenceArticle() {
         <p>Follow the <Link href="/help/storage-and-backups#download">backup guide</Link> before clearing browser data or moving to another browser.</p>
         <Link href="/" className="ka-button ka-button-light">Open your library</Link>
       </section>
-    </WebsitePage>
+    </BlogArticle>
   );
 }
