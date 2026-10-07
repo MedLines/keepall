@@ -55,7 +55,7 @@ export default function BrowserBookmarksArticle() {
         <p>The <Link href="/help/import#bookmarks">bookmark import guide</Link> covers these steps. A browser bookmark export and a Keepall backup are different files. Use the bookmark import option for the HTML export.</p>
         <figure className="kb-figure kb-figure-compact">
           <Image src={bookmarkImportImage} width={960} height={1116} sizes="(max-width: 580px) calc(100vw - 64px), 480px" alt="Import browser bookmarks dialog with Browser folder to Unsorted only, Keep Keepall collections, and Browser folders win choices" />
-          <figcaption>The default files links from Unsorted using the browser folder. Already filed links keep their Keepall collection.</figcaption>
+          <figcaption>The default option moves links from Unsorted into the collection for their browser folder. Already filed links keep their Keepall collection.</figcaption>
         </figure>
         <p>Browser tags are added with every option. New links use their browser folder as a collection. The choice above controls existing links.</p>
         <figure className="kb-figure kb-figure-compact">
