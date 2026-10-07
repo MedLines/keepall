@@ -47,6 +47,7 @@ public/sw.js.map
 public/swe-worker*
 public/serwist*
 public/pdfjs/
+public/ocr/
 
 # typescript
 *.tsbuildinfo
