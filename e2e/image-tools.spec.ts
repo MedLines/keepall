@@ -1,0 +1,101 @@
+import { expect, test } from "@playwright/test";
+import sharp from "sharp";
+
+test.use({ serviceWorkers: "block" });
+
+test("extracts local palettes and real screenshot text with cancellation, retry, and searchable gallery results", async ({ page, context }) => {
+  test.setTimeout(120_000);
+  const externalRequests: string[] = [];
+  context.on("request", request => { if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== "localhost" && !request.url().startsWith("https://va.vercel-scripts.com/")) externalRequests.push(request.url()); });
+  const screenshot = await sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="320"><rect width="900" height="320" fill="white"/><text x="45" y="110" font-family="sans-serif" font-size="58" fill="black">Invoice 4823</text><text x="45" y="205" font-family="sans-serif" font-size="50" fill="black">Total 120 dollars</text><rect x="760" y="30" width="100" height="260" fill="#FF0000"/></svg>')).png().toBuffer();
+  await page.goto("/");
+  await page.getByRole("button", { name: "Save item", exact: true }).click();
+  const capture = page.getByRole("dialog", { name: "Save to Keepall" });
+  await capture.locator('input[data-capture-files]').setInputFiles({ name: "receipt.png", mimeType: "image/png", buffer: screenshot });
+  await capture.getByRole("textbox", { name: "Optional source URL or caption" }).fill("Receipt screenshot");
+  await capture.getByRole("button", { name: "Save", exact: true }).press("Enter");
+  await expect(capture).toBeHidden();
+  await page.getByRole("link", { name: "Open Receipt screenshot", exact: true }).click();
+  const tools = page.getByRole("region", { name: "Image 1 tools" });
+  await tools.getByRole("button", { name: "Extract palette" }).click();
+  await expect(tools.getByRole("button", { name: "Copy color #FF0000", exact: true })).toBeVisible();
+  await expect(tools.getByRole("link", { name: "Find similar red images" })).toHaveAttribute("href", /color%3A%23FF0000/);
+
+  await context.route("**/ocr/7.0.0/recognize.js", route => route.abort());
+  await tools.getByRole("button", { name: "Read text", exact: true }).click();
+  await expect(tools.getByRole("alert")).toContainText("Couldn't load text recognition");
+  await context.unroute("**/ocr/7.0.0/recognize.js");
+  await context.route("**/ocr/7.0.0/recognize.js", async route => { await new Promise(resolve => setTimeout(resolve, 1200)); await route.continue(); });
+  await tools.getByRole("button", { name: "Read text", exact: true }).click();
+  await tools.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(tools.getByRole("status").filter({ hasText: "Cancelled" })).toBeVisible();
+  await context.unrouteAll({ behavior: "wait" });
+  await tools.getByRole("button", { name: "Read text", exact: true }).click();
+  await expect(tools.getByRole("textbox", { name: "Extracted text from image 1" })).toHaveValue(/Invoice 4823/, { timeout: 60_000 });
+  await expect(tools.getByRole("textbox", { name: "Extracted text from image 1" })).toHaveValue(/Total 120 dollars/);
+  await page.reload();
+  await expect(tools.getByRole("textbox", { name: "Extracted text from image 1" })).toHaveValue(/Invoice 4823/);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await tools.getByRole("heading", { name: "Image tools" }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "/tmp/keepall-image-tools-mobile.png", fullPage: false });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const secondImage = await sharp({ create: { width: 50, height: 50, channels: 3, background: "#0000FF" } }).png().toBuffer();
+  await page.getByLabel("Choose images to add").setInputFiles({ name: "blue.png", mimeType: "image/png", buffer: secondImage });
+  const secondTools = page.getByRole("region", { name: "Image 2 tools" });
+  await expect(secondTools).toBeVisible();
+  await expect(secondTools.getByRole("textbox", { name: "Extracted text from image 2" })).toHaveCount(0);
+  await secondTools.getByRole("button", { name: "Extract palette" }).click();
+  await expect(secondTools.getByRole("button", { name: "Copy color #0000FF", exact: true })).toBeVisible();
+  await page.goto("/?q=color%3Ared%204823");
+  await expect(page.getByRole("link", { name: "Open Receipt screenshot", exact: true })).toBeVisible();
+  await page.goto("/?q=color%3Ablue%204823");
+  await expect(page.getByRole("link", { name: "Open Receipt screenshot", exact: true })).toBeVisible();
+  await page.goto("/?q=color%3Agreen%204823");
+  await expect(page.getByRole("link", { name: "Open Receipt screenshot", exact: true })).toHaveCount(0);
+  expect(externalRequests).toEqual([]);
+});
+
+test.describe("OCR offline cache", () => {
+  test.use({ serviceWorkers: "allow" });
+  test("loads one core on demand and reads a second time offline", async ({ page, context }) => {
+    test.setTimeout(120_000);
+    const engineRequests: string[] = [];
+    context.on("request", request => { if (new URL(request.url()).pathname.startsWith("/ocr/")) engineRequests.push(request.url()); });
+    await page.goto("/");
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+    expect(engineRequests).toEqual([]);
+    const screenshot = await sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="180"><rect width="800" height="180" fill="white"/><text x="30" y="110" font-family="sans-serif" font-size="60" fill="black">Offline invoice 7284</text></svg>')).png().toBuffer();
+    await page.getByRole("button", { name: "Save item", exact: true }).click();
+    const capture = page.getByRole("dialog", { name: "Save to Keepall" });
+    await capture.locator('input[data-capture-files]').setInputFiles({ name: "offline.png", mimeType: "image/png", buffer: screenshot });
+    await capture.getByRole("textbox", { name: "Optional source URL or caption" }).fill("Offline screenshot");
+    await capture.getByRole("button", { name: "Save", exact: true }).press("Enter");
+    await expect(capture).toBeHidden();
+    await page.getByRole("link", { name: "Open Offline screenshot", exact: true }).click();
+    const tools = page.getByRole("region", { name: "Image 1 tools" });
+    await tools.getByRole("button", { name: "Read text", exact: true }).click();
+    await expect(tools.getByRole("textbox", { name: "Extracted text from image 1" })).toHaveValue(/Offline invoice 7284/, { timeout: 60_000 });
+    await expect.poll(() => page.evaluate(async () => (await (await caches.open("keepall-ocr-7.0.0")).keys()).length)).toBeGreaterThanOrEqual(5);
+    const assets = await page.evaluate(async () => {
+      const cache = await caches.open("keepall-ocr-7.0.0");
+      return Promise.all((await cache.keys()).map(async request => ({ path: new URL(request.url).pathname, bytes: (await (await cache.match(request))!.arrayBuffer()).byteLength })));
+    });
+    expect(assets.filter(asset => /core.*wasm\.js$/.test(asset.path))).toHaveLength(1);
+    const precachedOcr = await page.evaluate(async () => {
+      const names = (await caches.keys()).filter(name => name.includes("precache"));
+      const urls = (await Promise.all(names.map(async name => (await (await caches.open(name)).keys()).map(request => request.url)))).flat();
+      return urls.filter(url => new URL(url).pathname.startsWith("/ocr/"));
+    });
+    expect(precachedOcr).toEqual([]);
+    console.info(`OCR first-use cached payload: ${assets.reduce((sum, asset) => sum + asset.bytes, 0)} bytes in ${assets.length} local files`);
+    await context.setOffline(true);
+    await tools.getByRole("button", { name: "Read text again", exact: true }).click();
+    await expect(tools.getByRole("button", { name: "Read text again", exact: true })).toBeDisabled();
+    await expect(tools.getByRole("status").filter({ hasText: "Text saved and searchable" })).toBeVisible({ timeout: 60_000 });
+    await expect(tools.getByRole("alert")).toHaveCount(0);
+    await expect(tools.getByRole("textbox", { name: "Extracted text from image 1" })).toHaveValue(/Offline invoice 7284/);
+  });
+});
