@@ -146,7 +146,7 @@ function ResultSection({ title, icon, action, children }: {
 }) {
   const [expanded, setExpanded] = useState(true);
   const contentId = useId();
-  return <div className="library-panel squircle-panel min-w-0 rounded-panel border border-border-control bg-bg-surface p-4 sm:p-5">
+  return <div className="library-panel squircle-panel min-w-0 rounded-panel border border-border-control bg-bg-image-viewer p-4 sm:p-5">
     <div className="flex items-center gap-2">
       <h2 className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-text-primary">{icon}<span>{title}</span></h2>
       {action}
