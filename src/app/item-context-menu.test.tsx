@@ -165,7 +165,7 @@ test("saves a link for offline reading from its right-click menu", async () => {
   const onSaveArticle = vi.fn();
   setup({ onSaveArticle });
   fireEvent.contextMenu(screen.getByText("Saved item"), { clientX: 100, clientY: 100 });
-  fireEvent.click(await screen.findByRole("menuitem", { name: "Save article for offline reading" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: "Save for offline" }));
   expect(onSaveArticle).toHaveBeenCalledOnce();
 });
 

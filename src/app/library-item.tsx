@@ -340,6 +340,7 @@ export function LibraryItem({
       onAddTag={onAddTag}
       onRemoveTag={onRemoveTag}
       onPreview={onPreview}
+      onOpenFullItem={item.type === "link" && !trashActions ? onOpenInspect : undefined}
       onFetchPreview={item.type === "link" && !trashActions ? () => {
         if (fetchingPreview || item.previewStatus === "pending") return;
         setFetchingPreview(true);

@@ -64,14 +64,14 @@ test("switching the keyed reader aborts old capture before it can update the nex
   const second = buildLink({ url: "https://example.com/second" }, { id: "second" });
   const onSaved = vi.fn();
   const { rerender } = render(<ArticleReader key={`${first.id}:${first.url}`} link={first} onSaved={onSaved} />);
-  fireEvent.click(screen.getByRole("button", { name: "Save article for offline reading" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save for offline" }));
   rerender(<ArticleReader key={`${second.id}:${second.url}`} link={second} onSaved={onSaved} />);
   expect(signal.aborted).toBe(true);
   resolve(new Response(JSON.stringify(article)));
   await new Promise(resolve => setTimeout(resolve, 0));
   expect(onSaved).not.toHaveBeenCalled();
   expect(saveLinkArticle).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: "Save article for offline reading" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Save for offline" })).toBeEnabled();
   vi.unstubAllGlobals();
 });
 

@@ -41,7 +41,7 @@ export function ArticleReader({ link, onSaved, disabled = false }: { link: LinkI
         <h2 className="text-xl font-semibold">Read offline</h2>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">Saving this link keeps its web address. Save the article too to read and search its text without a connection.</p>
       </div>}
-      <button type="button" className="ui-control min-h-11 px-4 text-sm font-medium" disabled={disabled || saving} onClick={() => void capture()}>{saving ? "Saving article…" : error ? "Retry saving article" : article ? "Update saved article" : "Save article for offline reading"}</button>
+      <button type="button" className="ui-control min-h-11 px-4 text-sm font-medium" disabled={disabled || saving} onClick={() => void capture()}>{saving ? "Saving article…" : error ? "Retry saving article" : article ? "Update saved article" : "Save for offline"}</button>
     </div>
     {error ? <p role="alert" className="mt-4 text-sm leading-relaxed text-text-danger">{error} Your link, personal note, and any saved article are still available.</p> : null}
     {saved ? <p role="status" className="mt-4 text-sm text-text-secondary">Article saved for offline reading.{articleImages(article?.content).some(image => !image.assetId) ? " Some images couldn't be saved; their placeholders mark where they belong." : ""}</p> : null}
