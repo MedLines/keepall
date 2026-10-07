@@ -143,7 +143,7 @@ export function ImageToolsDemo() {
 
 export function VideoDemo() {
   return <div className="kd-demo kd-video" data-feature-demo="video">
-    <ItemMediaFrame className="kd-media"><video aria-label="Play the sample afternoon light video" controls playsInline preload="none" poster="/marketing/architecture.webp" width={640} height={360} src="/marketing/demos/afternoon-light.mp4" /></ItemMediaFrame>
+    <ItemMediaFrame className="kd-media"><video aria-label="Play the sample afternoon light video" controls playsInline preload="metadata" poster="/marketing/architecture.webp" width={640} height={360} src="/marketing/demos/afternoon-light.mp4" /></ItemMediaFrame>
   </div>;
 }
 
