@@ -1,6 +1,7 @@
 import { resolveItemCollectionIds } from "./collections";
 import { deleteUnreferencedDocuments } from "./documents";
 import { normalizeItem, type Item } from "@/domain/item";
+import { articleAssetIds } from "@/domain/article";
 import {
   appendImageAsset,
   assertLocalImageBytes,
@@ -410,12 +411,12 @@ export async function emptyTrash(ids: string[]): Promise<void> {
 
 function itemAssetIds(item: Item): string[] {
   if (item.type === "image") return item.assetIds;
-  if (item.type === "link") return item.previewAssetId ? [item.previewAssetId] : [];
+  if (item.type === "link") return [...(item.previewAssetId ? [item.previewAssetId] : []), ...articleAssetIds(item.article)];
   if (item.type === "note") return noteImageAssetIds(item.content);
   return [];
 }
 
-async function deleteUnreferencedAssets(assetIds: string[]): Promise<void> {
+export async function deleteUnreferencedAssets(assetIds: string[]): Promise<void> {
   if (!assetIds.length) return;
   const db = getDb();
   const items = await db.items.toArray();
@@ -490,6 +491,7 @@ async function mutateLink(
     if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
       await deleteUnreferencedAsset(current.previewAssetId);
     }
+    if (current.article !== next.article) await deleteUnreferencedAssets(articleAssetIds(current.article));
     return next;
   });
 }

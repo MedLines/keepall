@@ -63,3 +63,5 @@
 }
 .article-content th { font-weight: 650; }
 .article-content hr { margin-block: 2rem; border-color: var(--color-border-control); }
+.article-content figure { margin-block: 1.5rem; }
+.article-content figcaption { color: var(--color-text-secondary); font-size: 0.875rem; line-height: 1.6; }

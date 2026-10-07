@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArticleValidationError, parseSavedArticle, type SavedArticle } from "@/domain/article";
+import { ArticleValidationError, articleImages, parseCapturedArticle, type SavedArticle } from "@/domain/article";
 import type { LinkItem } from "@/domain/link";
 import { saveLinkArticle } from "@/persistence/articles";
 import { ArticleContent } from "./article-content";
@@ -47,7 +47,7 @@ export function ArticleReader({ link, onSaved, disabled = false }: { link: LinkI
       const response = await fetch("/api/article", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: link.url }), signal: controller.signal });
       const body: unknown = await response.json();
       if (!response.ok) throw new ArticleValidationError(body && typeof body === "object" && "error" in body && typeof body.error === "string" ? body.error : "Couldn't save this article. Try again later.");
-      const article = parseSavedArticle(body);
+      const article = parseCapturedArticle(body);
       controller.signal.throwIfAborted();
       const updated = await saveLinkArticle(link.id, link.url, article);
       if (!controller.signal.aborted) { onSaved(updated); setSaved(true); }
@@ -68,7 +68,7 @@ export function ArticleReader({ link, onSaved, disabled = false }: { link: LinkI
       <button type="button" className="ui-control min-h-11 px-4 text-sm font-medium" disabled={disabled || saving} onClick={() => void capture()}>{saving ? "Saving article…" : error ? "Retry saving article" : article ? "Update saved article" : "Save article for offline reading"}</button>
     </div>
     {error ? <p role="alert" className="mt-4 text-sm leading-relaxed text-text-danger">{error} Your link, personal note, and any saved article are still available.</p> : null}
-    {saved ? <p role="status" className="mt-4 text-sm text-text-secondary">Article saved for offline reading.</p> : null}
+    {saved ? <p role="status" className="mt-4 text-sm text-text-secondary">Article saved for offline reading.{articleImages(article?.content).some(image => !image.assetId) ? " Some images couldn't be saved; their placeholders mark where they belong." : ""}</p> : null}
     {article ? <>
       <SavedArticleHeader article={article} previewAssetId={link.previewAssetId} />
       <ArticleContent article={article} />

@@ -10,12 +10,14 @@ import { isIncomingNewer, unionIds } from "@/domain/backup-merge";
 import { buildAsset, hashAssetBytes, sameContentHashMultiset, type CreateAssetInput } from "@/domain/asset";
 import { normalizeCollection } from "@/domain/collection";
 import { normalizeItem } from "@/domain/item";
+import { articleAssetIds, mapArticleImages, type SavedArticle } from "@/domain/article";
 import type { DocumentAsset, DocumentItem } from "@/domain/document";
 import { mergeDocumentBackup } from "./document-backup";
 import type { VideoItem } from "@/domain/video";
 import type { ImageItem } from "@/domain/image";
 import type { LinkItem } from "@/domain/link";
 import { normalizeLinkUrl } from "@/domain/link";
+import { deleteUnreferencedAssets } from "./items";
 import { replaceNoteImageAssetIds, type NoteItem } from "@/domain/note";
 import { putAsset, ensureContentHash, getAsset } from "./assets";
 import { createCollection } from "./collections";
@@ -201,6 +203,7 @@ async function mergeValidatedBackup(
   documents?: MergeDocuments,
 ): Promise<{ backup: KeepallBackup; summary: KeepallMergeSummary }> {
   const db = getDb();
+  const articleCleanup = new Set<string>();
 
   const tagIdMap = new Map<string, string>();
   for (const tag of backup.tags) {
@@ -248,6 +251,10 @@ async function mergeValidatedBackup(
     }
     return assetIdMap.get(id) ?? null;
   };
+  const remapArticle = (article: SavedArticle): SavedArticle => ({
+    ...article,
+    content: mapArticleImages(article.content, image => ({ ...image, assetId: image.assetId ? remapAssetId(image.assetId) ?? undefined : undefined })),
+  });
 
   const itemIdMap = new Map<string, string>();
   const summary: KeepallMergeSummary = {
@@ -414,6 +421,8 @@ async function mergeValidatedBackup(
       const urlKey = normalizeLinkUrl(incoming.url);
       const local = linksById.get(incoming.id) ??
         (incoming.deletedAt === undefined && urlKey ? linksByUrl.get(urlKey) : undefined);
+      for (const id of articleAssetIds(local?.article)) articleCleanup.add(id);
+      if (incoming.article) for (const id of articleAssetIds(remapArticle(incoming.article))) articleCleanup.add(id);
 
       if (!local) {
         const idTaken = await db.items.get(incoming.id);
@@ -424,6 +433,7 @@ async function mergeValidatedBackup(
           tagIds: remapTagIds(incoming.tagIds),
           collectionIds: remapCollectionIds(incoming.collectionIds),
           previewAssetId: remapAssetId(incoming.previewAssetId),
+          ...(incoming.article ? { article: remapArticle(incoming.article) } : {}),
         };
         await db.items.put(next);
         linksById.set(next.id, next);
@@ -446,6 +456,7 @@ async function mergeValidatedBackup(
             tagIds: org.tagIds,
             collectionIds: org.collectionIds,
             previewAssetId: remapAssetId(incoming.previewAssetId),
+            ...(incoming.article ? { article: remapArticle(incoming.article) } : {}),
           }
         : {
             ...local,
@@ -620,6 +631,7 @@ async function mergeValidatedBackup(
     );
   }
 
+  await deleteUnreferencedAssets([...articleCleanup]);
   return { backup, summary };
 }
 

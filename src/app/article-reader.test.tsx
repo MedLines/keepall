@@ -110,3 +110,22 @@ test("retains an already saved preview using a local Blob URL without a remote f
   expect(fetch).not.toHaveBeenCalled();
   vi.unstubAllGlobals();
 });
+
+test("inline article images use the shared local image component and missing images never fetch their source", () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  vi.mocked(useAssetObjectUrl).mockReturnValue("blob:https://keepall.test/saved-chart");
+  const content: ArticleNode[] = [{ tag: "p", children: [{ text: "An illustrated report." }] },
+    { tag: "figure", children: [{ tag: "img", children: [], src: "https://example.com/chart.png", alt: "Query throughput", assetId: "chart" }, { tag: "figcaption", children: [{ text: "Observed throughput" }] }] },
+    { tag: "img", children: [], src: "https://example.com/blocked.png", alt: "Unavailable chart" },
+    { tag: "pre", children: [{ tag: "code", children: [{ text: "const queries = 118;\n  report(queries);" }] }] }];
+  const { container } = render(<ArticleReader link={{ ...buildLink({ url: article.sourceUrl }), article: { ...article, content } }} onSaved={vi.fn()} />);
+  expect(screen.getByRole("img", { name: "Query throughput" })).toHaveAttribute("src", "blob:https://keepall.test/saved-chart");
+  expect(screen.getByRole("img", { name: "Unavailable chart" })).toHaveTextContent("Image not saved for offline reading");
+  expect(screen.getByText("Observed throughput")).toBeVisible();
+  expect(container.querySelector("pre code")?.textContent).toBe("const queries = 118;\n  report(queries);");
+  expect(container.querySelector('img[src^="https:"]')).toBeNull();
+  expect(fetch).not.toHaveBeenCalled();
+  vi.mocked(useAssetObjectUrl).mockReturnValue(null);
+  vi.unstubAllGlobals();
+});
