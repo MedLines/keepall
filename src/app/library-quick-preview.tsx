@@ -17,6 +17,7 @@ import { ItemTypeIcon } from "./item-type-icon";
 import { MediaViewerToolbar } from "./media-viewer-toolbar";
 import { linkCardHost } from "@/domain/card-display";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
+import { VideoPlayer } from "./video-player";
 import { ItemPreviewContentTransition, ItemPreviewTransition, ItemViewTransition } from "./item-view-transition";
 
 type Props = {
@@ -62,7 +63,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
               return;
             }
             const target = event.target as HTMLElement;
-            if (target.closest("input, textarea, select, video, [contenteditable=true]")) return;
+            if (target.closest('input, textarea, select, video, [contenteditable=true], [aria-label="Video player"]')) return;
             if (["ArrowUp", "ArrowDown"].includes(event.key) && target.closest("[data-preview-scroll]")) return;
             if (event.key.startsWith("Arrow")) {
               event.preventDefault();
@@ -228,10 +229,10 @@ function PreviewVideo({ assetId, title }: { assetId: string; title: string }) {
     return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
   }, [assetId]);
   if (media.error) return <p role="alert" className="text-sm text-text-secondary">This video could not be previewed. Open the full item to retry or check its saved file.</p>;
-  return <div className="preview-video-frame">
+  return <div className="preview-video-frame" onLoadedMetadataCapture={() => setReady(true)}>
     <div role={ready ? undefined : "status"} aria-label={ready ? undefined : "Loading video"} aria-hidden={ready || undefined} data-ready={ready} className="preview-video-loading"><span className="sr-only">Loading video…</span><span aria-hidden="true" /></div>
-    {media.url ? <video controls playsInline preload="metadata" src={media.url} poster={poster ?? undefined} aria-label={title}
-      data-ready={ready} className="preview-video-media block h-auto w-auto max-h-full max-w-full rounded-input object-contain"
-      onLoadedMetadata={() => setReady(true)} onError={() => setMedia({ url: null, error: true })} /> : null}
+    {media.url ? <div data-ready={ready} className="preview-video-media size-full min-h-0 min-w-0">
+      <VideoPlayer src={media.url} poster={poster ?? undefined} title={title} onError={() => setMedia({ url: null, error: true })} />
+    </div> : null}
   </div>;
 }

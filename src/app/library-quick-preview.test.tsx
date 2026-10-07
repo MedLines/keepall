@@ -22,7 +22,7 @@ test("reads saved link notes safely and keeps source navigation explicit", async
   expect(actions.onOpenItem).toHaveBeenCalledWith(item, false);
 });
 
-test("loads the local video, preserves native playback keys, and releases its object URL on item change", async () => {
+test("loads the shared video player, preserves playback keys, and releases its object URL on item change", async () => {
   const item = await createVideo(new File(["test video"], "local.webm", { type: "video/webm" }), null, "Local recording");
   const createUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:quick-preview-video");
   const revokeUrl = vi.spyOn(URL, "revokeObjectURL");
@@ -30,21 +30,39 @@ test("loads the local video, preserves native playback keys, and releases its ob
   const { rerender } = render(<LibraryQuickPreview item={item} index={0} count={2} {...actions} />);
   const video = await screen.findByLabelText("Local recording", { selector: "video" });
   await waitFor(() => expect(video).toHaveAttribute("src", "blob:quick-preview-video"));
-  expect(video).toHaveAttribute("controls");
+  expect(video).not.toHaveAttribute("controls");
   expect(video).not.toHaveAttribute("autoplay");
-  expect(video).toHaveAttribute("data-ready", "false");
+  const player = screen.getByRole("region", { name: "Video player" });
+  expect(screen.getByRole("button", { name: "Play video" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Full screen" })).toBeInTheDocument();
   expect(screen.getByRole("status", { name: "Loading video" })).toBeInTheDocument();
+  Object.defineProperty(video, "duration", { configurable: true, value: 120 });
   fireEvent.loadedMetadata(video);
-  expect(video).toHaveAttribute("data-ready", "true");
   expect(screen.queryByRole("status", { name: "Loading video" })).not.toBeInTheDocument();
-  fireEvent.keyDown(video, { key: "ArrowRight" });
-  fireEvent.keyDown(video, { key: " " });
+  fireEvent.keyDown(player, { key: "ArrowRight" });
+  expect((video as HTMLVideoElement).currentTime).toBe(10);
+  const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+  fireEvent.keyDown(player, { key: " " });
+  expect(play).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: "Playback speed" }));
+  const speed = await screen.findByRole("menuitemradio", { name: "1.5x" });
+  fireEvent.keyDown(speed, { key: "ArrowDown" });
+  fireEvent.click(speed);
+  expect((video as HTMLVideoElement).playbackRate).toBe(1.5);
   expect(actions.onMove).not.toHaveBeenCalled();
   expect(actions.onClose).not.toHaveBeenCalled();
   const note = buildNote({ title: "Next note", content: "Saved text" }, { id: "note", now: 2 });
   rerender(<LibraryQuickPreview item={note} index={1} count={2} {...actions} />);
   await waitFor(() => expect(revokeUrl).toHaveBeenCalledWith("blob:quick-preview-video"));
   expect(createUrl).toHaveBeenCalledTimes(1);
+});
+
+test("playback errors keep the preview recovery path available", async () => {
+  const item = await createVideo(new File(["test video"], "local.webm", { type: "video/webm" }), null, "Unplayable recording");
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:unplayable-preview-video");
+  render(<LibraryQuickPreview item={item} index={0} count={1} {...callbacks()} />);
+  fireEvent.error(await screen.findByLabelText("Unplayable recording", { selector: "video" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Open the full item to retry");
 });
 
 test("missing local video shows a recovery path without preventing navigation", async () => {
