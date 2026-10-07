@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
+import designReferenceThumbnail from "../../../public/blog/design-reference-library.webp";
+import browserBookmarksThumbnail from "../../../public/blog/browser-bookmarks.webp";
 import { ArrowRightIcon } from "../shell-icons";
 import { WebsitePage } from "../website-page";
 import { websiteOpenGraphImage, websiteTwitterImage } from "../website-metadata";
@@ -32,16 +35,30 @@ export default function BlogPage() {
     >
       <ul className="kb-post-list" aria-label="Workflow articles">
         <li>
-          <span className="kb-post-meta">Design references · 5 min read</span>
-          <h2><Link href="/blog/design-reference-library">Build a design reference library for your next project</Link></h2>
-          <p>Keep the layout, image, or small detail that caught your attention, along with a note about why it belongs in your project.</p>
-          <Link href="/blog/design-reference-library" className="kb-read">Read the design workflow <ArrowRightIcon /></Link>
+          <Link href="/blog/design-reference-library" className="kb-post-link" aria-labelledby="design-reference-title">
+            <div className="kb-post-thumbnail">
+              <Image src={designReferenceThumbnail} alt="" sizes="(max-width: 580px) calc(100vw - 40px), (max-width: 680px) calc(100vw - 64px), 300px" loading="eager" />
+            </div>
+            <div className="kb-post-copy">
+              <span className="kb-post-meta">Design references · 5 min read</span>
+              <h2 id="design-reference-title">Build a design reference library for your next project</h2>
+              <p>Keep the layout, image, or small detail that caught your attention, along with a note about why it belongs in your project.</p>
+              <span className="kb-read">Read the design workflow <ArrowRightIcon /></span>
+            </div>
+          </Link>
         </li>
         <li>
-          <span className="kb-post-meta">Browser bookmarks · 5 min read</span>
-          <h2><Link href="/blog/browser-bookmarks">Give your browser bookmarks a useful second home</Link></h2>
-          <p>Bring in an HTML export, make sense of the folders you already have, and build a simple habit for finding old saves.</p>
-          <Link href="/blog/browser-bookmarks" className="kb-read">Read the bookmark workflow <ArrowRightIcon /></Link>
+          <Link href="/blog/browser-bookmarks" className="kb-post-link" aria-labelledby="browser-bookmarks-title">
+            <div className="kb-post-thumbnail">
+              <Image src={browserBookmarksThumbnail} alt="" sizes="(max-width: 580px) calc(100vw - 40px), (max-width: 680px) calc(100vw - 64px), 300px" />
+            </div>
+            <div className="kb-post-copy">
+              <span className="kb-post-meta">Browser bookmarks · 5 min read</span>
+              <h2 id="browser-bookmarks-title">Give your browser bookmarks a useful second home</h2>
+              <p>Bring in an HTML export, make sense of the folders you already have, and build a simple habit for finding old saves.</p>
+              <span className="kb-read">Read the bookmark workflow <ArrowRightIcon /></span>
+            </div>
+          </Link>
         </li>
       </ul>
       <section>
