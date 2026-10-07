@@ -1,7 +1,8 @@
 "use client";
 
 import { Tabs } from "@base-ui/react/tabs";
-import { useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { ArrowRightIcon, BackupIcon, GridIcon, HelpIcon, SettingsIcon } from "../shell-icons";
 import { useShellMobile } from "../use-shell-mobile";
@@ -28,40 +29,83 @@ function subscribeToSection(onChange: () => void) {
   };
 }
 
-function currentSection(): Section {
-  const hash = window.location.hash.slice(1);
-  return Object.hasOwn(hashSections, hash) ? hashSections[hash] : "general";
+function currentHash() {
+  return window.location.hash.slice(1);
 }
 
 export function SettingsTabs(content: Record<Section, ReactNode>) {
-  const section = useSyncExternalStore(subscribeToSection, currentSection, (): Section => "general");
+  const hash = useSyncExternalStore(subscribeToSection, currentHash, () => "");
+  const section = Object.hasOwn(hashSections, hash) ? hashSections[hash] : "general";
   const mobile = useShellMobile();
   const contentRef = useRef<HTMLDivElement>(null);
+  const tabListRef = useRef<HTMLDivElement>(null);
+  const transitionRef = useRef<ViewTransition | null>(null);
+  const requestRef = useRef(0);
+  const keyboardRef = useRef(false);
 
-  useEffect(() => {
-    // Recovery links can point to headings inside a panel that was initially hidden.
-    const heading = document.getElementById(window.location.hash.slice(1));
-    if (!heading) return;
-    const frame = requestAnimationFrame(() => heading.scrollIntoView({ block: "start" }));
-    return () => cancelAnimationFrame(frame);
-  }, [section]);
+  useLayoutEffect(() => () => {
+    requestRef.current += 1;
+    transitionRef.current?.skipTransition();
+  }, []);
+
+  useLayoutEffect(() => {
+    const viewport = contentRef.current?.closest<HTMLElement>('[data-slot="scroll-area-viewport"]');
+    if (viewport) viewport.scrollTop = 0;
+    // Heading links also work when their tab is already active.
+    const heading = document.getElementById(hash);
+    if (heading && contentRef.current?.contains(heading)) {
+      heading.scrollIntoView({ block: "start", behavior: "instant" });
+    }
+  }, [hash]);
 
   return <Tabs.Root
     value={section}
     orientation={mobile ? "horizontal" : "vertical"}
-    onValueChange={(value) => {
-      const page = contentRef.current?.closest("main");
-      if (page) page.scrollTop = 0;
-      window.history.replaceState(window.history.state, "", `#${value}`);
-      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    onKeyDownCapture={() => { keyboardRef.current = true; }}
+    onPointerDownCapture={() => { keyboardRef.current = false; }}
+    onValueChange={(value, details) => {
+      const request = ++requestRef.current;
+      transitionRef.current?.skipTransition();
+      const update = () => {
+        if (request !== requestRef.current) return;
+        window.history.replaceState(window.history.state, "", `#${value}`);
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      };
+      const content = contentRef.current;
+      if (!content || !document.startViewTransition || keyboardRef.current || details.event instanceof KeyboardEvent) {
+        update();
+        return;
+      }
+      content.style.viewTransitionName = "settings-content";
+      const forward = sections.findIndex((entry) => entry.value === value) > sections.findIndex((entry) => entry.value === section);
+      const reverse = mobile && getComputedStyle(content).direction === "rtl" ? forward : !forward;
+      content.style.viewTransitionClass = `settings-${mobile ? "horizontal" : "vertical"}-${reverse ? "back" : "forward"}`;
+      const indicator = tabListRef.current?.querySelector<HTMLElement>(".settings-tab-indicator");
+      if (indicator) indicator.style.viewTransitionName = "settings-selection";
+      const transition = document.startViewTransition(() => flushSync(update));
+      transitionRef.current = transition;
+      void transition.ready.catch(() => {});
+      const cleanup = () => {
+        if (transitionRef.current !== transition) return;
+        content.style.viewTransitionName = "";
+        content.style.viewTransitionClass = "";
+        if (indicator) indicator.style.viewTransitionName = "";
+        transitionRef.current = null;
+      };
+      void transition.finished.then(cleanup, cleanup);
     }}
     className="grid items-start gap-3 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-6"
   >
     <div className="sticky top-0 z-10 border-b border-border-control bg-bg-canvas py-3 md:top-6 md:border-b-0 md:border-r md:py-0 md:pr-4">
-      <Tabs.List aria-label="Settings" activateOnFocus className="settings-tab-list relative isolate grid grid-cols-3 gap-1 md:flex md:flex-col">
+      <Tabs.List ref={tabListRef} aria-label="Settings" activateOnFocus className="settings-tab-list relative isolate grid grid-cols-3 gap-1 md:flex md:flex-col">
         {sections.map(({ value, label, icon: Icon }) => <Tabs.Tab
           key={value}
           value={value}
+          onPointerDownCapture={() => {
+            if (value !== section || !transitionRef.current) return;
+            requestRef.current += 1;
+            transitionRef.current.skipTransition();
+          }}
           className="settings-tab relative z-10 flex min-h-11 items-center justify-center gap-2 rounded-control-lg border border-transparent px-2 py-2 text-center text-xs font-medium text-text-secondary hover:text-text-primary data-[active]:text-text-primary sm:text-sm md:justify-start md:px-3 md:text-left"
         >
           <Icon className="hidden size-4 shrink-0 md:block" />
@@ -71,8 +115,8 @@ export function SettingsTabs(content: Record<Section, ReactNode>) {
       </Tabs.List>
       <div className="fixed bottom-6 hidden w-52 md:block"><HelpLink /></div>
     </div>
-    <div ref={contentRef} data-testid="settings-content" className="settings-panels relative grid min-w-0 items-start">
-      {sections.map(({ value }) => <Tabs.Panel key={value} value={value} keepMounted aria-hidden={section !== value || undefined} className="settings-panel space-y-4">
+    <div ref={contentRef} data-testid="settings-content" className="settings-panels min-w-0">
+      {sections.map(({ value }) => <Tabs.Panel key={value} value={value} keepMounted hidden={section !== value} aria-hidden={section !== value || undefined} className="settings-panel space-y-4">
         {content[value]}
       </Tabs.Panel>)}
     </div>

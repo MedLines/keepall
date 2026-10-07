@@ -119,6 +119,15 @@ test("retains images inside enlargement buttons without keeping interactive mark
   expect(JSON.stringify(article.content)).not.toMatch(/onclick|onerror|button|Enlarge chart/);
 });
 
+test("keeps one illustration when light and dark image variants share a wrapper", () => {
+  const illustrated = html.replace(paragraphs, `${paragraphs}<figure><span><img class="block dark:hidden" src="/light.avif" alt="Skyline"><img class="hidden dark:block" src="/dark.avif" alt="Skyline"></span><figcaption>City skyline</figcaption></figure><figure><img src="/other.png" alt="Skyline"></figure>`);
+  const article = extractArticleHtml(illustrated, "https://example.com/story");
+  expect(articleImages(article.content).map(image => image.src)).toEqual([
+    "https://example.com/light.avif", "https://example.com/other.png",
+  ]);
+  expect(article.text).toContain("City skyline");
+});
+
 test("the article deadline also bounds images and keeps readable text when they stall", async () => {
   vi.useFakeTimers();
   try {

@@ -716,33 +716,51 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
   corner-shape: var(--corner-shape-control);
   background: var(--color-bg-selected);
   pointer-events: none;
-  transition: transform var(--motion-moderate-enter) cubic-bezier(0.2, 0, 0, 1);
 }
 .settings-tab { border-radius: var(--radius-control-lg); corner-shape: var(--corner-shape-control); }
 .settings-tab:not([data-active]):hover { background: var(--color-bg-raised); }
 .settings-tab-list:not(:has(.settings-tab-indicator:not([hidden]))) .settings-tab[data-active] { background: var(--color-bg-selected); border-color: var(--color-border-control); }
-.settings-panels { --settings-panel-distance: 8px; }
-.settings-panel {
-  --settings-panel-enter-x: var(--settings-panel-distance);
-  grid-area: 1 / 1;
-  position: relative;
-  z-index: 1;
-  background: var(--color-bg-canvas);
-  opacity: 1;
-  transform: translateX(0);
-  transition: transform var(--motion-slow-enter) cubic-bezier(0.2, 0, 0, 1), opacity var(--motion-fast-enter) cubic-bezier(0.2, 0, 0, 1);
+.settings-panel[aria-hidden="true"] { display: none; }
+::view-transition-group(settings-selection) {
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1);
 }
-.settings-panel:is([data-activation-direction="left"], [data-activation-direction="up"]) { --settings-panel-enter-x: calc(-1 * var(--settings-panel-distance)); }
-:dir(rtl) .settings-panels { --settings-panel-distance: -8px; }
-.settings-panel[data-starting-style] { opacity: 0; transform: translateX(var(--settings-panel-enter-x)); }
-.settings-panel[data-ending-style] {
-  position: absolute;
-  inset: 0 0 auto;
-  z-index: 0;
-  transform: none;
-  opacity: 0;
-  transition: opacity var(--motion-moderate-exit) cubic-bezier(0.2, 0, 0, 1) var(--motion-moderate-exit);
-  pointer-events: none;
+::view-transition-old(settings-selection) { display: none; }
+::view-transition-new(settings-selection) { animation: none; }
+::view-transition-group(settings-content) {
+  animation: none;
+  overflow: clip;
+  --settings-travel-x: 0px;
+  --settings-travel-y: 24px;
+}
+::view-transition-group(.settings-vertical-back) { --settings-travel-y: -24px; }
+::view-transition-group(.settings-horizontal-forward) { --settings-travel-x: 24px; --settings-travel-y: 0px; }
+::view-transition-group(.settings-horizontal-back) { --settings-travel-x: -24px; --settings-travel-y: 0px; }
+::view-transition-image-pair(settings-content) { isolation: isolate; }
+::view-transition-old(settings-content), ::view-transition-new(settings-content) {
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+  mix-blend-mode: plus-lighter;
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation-fill-mode: both;
+}
+::view-transition-old(settings-content) { animation-name: settings-content-exit; }
+::view-transition-new(settings-content) { animation-name: settings-content-enter; }
+@keyframes settings-content-enter {
+  from { opacity: 0; transform: translate(var(--settings-travel-x), var(--settings-travel-y)); }
+  to { opacity: 1; transform: translate(0, 0); }
+}
+@keyframes settings-content-exit {
+  from { opacity: 1; transform: translate(0, 0); }
+  to { opacity: 0; transform: translate(calc(var(--settings-travel-x) * -0.5), calc(var(--settings-travel-y) * -0.5)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(settings-selection) { animation: none; }
+  ::view-transition-old(settings-content), ::view-transition-new(settings-content) { animation-duration: 120ms; }
+  ::view-transition-old(settings-content) { animation-name: library-layout-hide; }
+  ::view-transition-new(settings-content) { animation-name: library-content-reveal; }
 }
 .storage-health-placeholder { display: inline-block; width: 5rem; height: 12px; border-radius: var(--radius-control-sm); opacity: 0; animation: library-loading-show var(--motion-fast-enter) cubic-bezier(0.2, 0, 0, 1) 150ms both; }
 .storage-health-placeholder::after { content: ""; display: block; width: 100%; height: 100%; border-radius: inherit; background: var(--color-bg-raised); animation: library-loading-pulse 1600ms ease-in-out infinite; }
@@ -776,9 +794,6 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
   .library-loading-placeholders { animation-duration: 0ms; }
   .library-thumbnail-image { transition: none; }
   .storage-health-placeholder { animation: none; }
-  .settings-tab-indicator { transition: none; }
-  .settings-panel { transition: none; }
-  .settings-panel:is([data-starting-style], [data-ending-style]) { opacity: 1; transform: none; }
   .storage-health-meter { transition: none; }
   .storage-health-placeholder::after, .document-loading-lines > span, .pdf-page-first-reveal { animation: none; }
   .document-loading-lines, .preview-video-loading > span[aria-hidden] { animation-duration: 0ms; }

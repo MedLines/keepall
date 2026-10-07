@@ -11,7 +11,7 @@ import { uiMotion } from "@/components/ui/motion-tokens";
 import { normalizeCollectionName } from "@/domain/collection";
 import { normalizeTagName } from "@/domain/tag";
 import {
-  ArrowRightIcon, CheckIcon, CollectionIcon, DeleteIcon, EditIcon, EyeIcon, HashIcon, LayersIcon, LinkIcon,
+  ArrowRightIcon, CheckIcon, CollectionIcon, DeleteIcon, DownloadIcon, EditIcon, EyeIcon, FullScreenIcon, HashIcon, LayersIcon, LinkIcon,
   PinIcon, PlusIcon, RefreshIcon, SearchIcon,
 } from "./shell-icons";
 
@@ -37,9 +37,13 @@ type Props = {
   onAddTag: (name: string) => void;
   onRemoveTag: (id: string) => void;
   onPreview?: (animate?: boolean) => void;
+  onOpenFullItem?: () => void;
   onFetchPreview?: () => void;
   fetchingPreview?: boolean;
   hasPreview?: boolean;
+  onSaveArticle?: () => void;
+  savingArticle?: boolean;
+  hasArticle?: boolean;
   onEdit: () => void;
   onOrganize: () => void;
   onDelete: () => void;
@@ -62,9 +66,10 @@ function SelectionMark({ checked }: { checked: boolean }) {
 
 export function ItemContextMenu({
   children, trigger, title, openHref, tags, assignedTagIds, busy, disabled, tagError,
-  onAddTag, onRemoveTag, onPreview, onEdit, onOrganize, onDelete, onTogglePin, pinned, onOpen,
+  onAddTag, onRemoveTag, onPreview, onOpenFullItem, onEdit, onOrganize, onDelete, onTogglePin, pinned, onOpen,
   collections, assignedCollectionIds, collectionError, onMoveToCollection, onClearCollection, triggerRef, trashActions,
   onFetchPreview, fetchingPreview = false, hasPreview = false,
+  onSaveArticle, savingArticle = false, hasArticle = false,
 }: Props) {
   const openingDialog = useRef(false);
   const movingToTrash = useRef(false);
@@ -96,6 +101,9 @@ export function ItemContextMenu({
         <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger" disabled={busy} onClick={() => openDialog(trashActions.onDelete)}><DeleteIcon className="size-4" /><span className="leading-none">Delete permanently</span></Menu.Item>
       </> :
         <>
+          {onOpenFullItem ? <Menu.Item className={MENU_ITEM} onClick={() => openDialog(onOpenFullItem)}>
+            <FullScreenIcon />Open full item
+          </Menu.Item> : null}
           {openHref ? (
             <>
               <Menu.Item className={MENU_ITEM} render={<a href={openHref} target="_blank" rel="noopener noreferrer" />}>
@@ -109,6 +117,9 @@ export function ItemContextMenu({
           </Menu.Item> : null}
           {onFetchPreview ? <Menu.Item className={MENU_ITEM} disabled={busy || fetchingPreview} onClick={onFetchPreview}>
             <RefreshIcon />{fetchingPreview ? "Fetching preview…" : hasPreview ? "Refresh preview" : "Fetch preview"}
+          </Menu.Item> : null}
+          {onSaveArticle ? <Menu.Item className={MENU_ITEM} disabled={busy || savingArticle} onClick={onSaveArticle}>
+            <DownloadIcon />{savingArticle ? "Saving article…" : hasArticle ? "Update saved article" : "Save for offline"}
           </Menu.Item> : null}
           <OrganizationMenu kind="tags" entries={tags} assignedIds={assignedTagIds} busy={busy} error={tagError} onSelect={onAddTag} onRemove={onRemoveTag} />
           <OrganizationMenu kind="collections" entries={collections} assignedIds={assignedCollectionIds} busy={busy} error={collectionError} onSelect={onMoveToCollection} onClear={onClearCollection} />
