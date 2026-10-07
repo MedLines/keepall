@@ -18,7 +18,7 @@ import "./feature-demos.css";
 
 export { PreviewDemo } from "./bento-preview-demo";
 
-const sampleNote = "# A slower Sunday\n\nBring a **favorite book**.\n\n- Make some coffee\n- Leave the afternoon open";
+const sampleNote = "# A slower Sunday\n\nBring a **favorite book**.\n\nLeave the afternoon open.";
 const sampleArticle: SavedArticle = {
   title: "A little room to think", sourceUrl: "https://sunday-studio.example/reading-room", capturedAt: 0,
   text: "A book by the window. Time to think.",

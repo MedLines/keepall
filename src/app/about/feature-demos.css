@@ -22,7 +22,7 @@
 .kd-pdf-viewport { padding: 10px; }
 .kd-pdf-pages [data-pdf-page] { margin-inline: auto; }
 .kd-pdf input { font-size: 16px; }
-.kd-notes { display: flex; flex-direction: column; height: 340px; align-self: center; padding: 16px 20px 22px; border: 1px solid var(--color-border-control); border-radius: 16px; background: var(--color-bg-reading); }
+.kd-notes { display: flex; flex-direction: column; height: 280px; align-self: center; padding: 16px 20px 22px; border: 1px solid var(--color-border-control); border-radius: 16px; background: var(--color-bg-reading); }
 .kd-note-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .kd-note-heading > span { display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary); font-size: 12px; }
 .kd-note-heading svg { width: 16px; height: 16px; }
@@ -36,10 +36,10 @@
 .kd-note-format > [role="group"] { width: min(100%, 240px); }
 .kd-note-editor textarea { font-size: 16px; }
 .kd-image-tools { display: flex; flex-direction: column; justify-content: center; }
-.kd-image-stage { height: 280px; flex: none; min-height: 0; }
+.kd-image-stage { height: 210px; flex: none; min-height: 0; }
 .kd-image-stage-content { display: flex; flex-direction: column; justify-content: center; min-height: 100%; }
-.kd-logo-source { display: grid; place-items: center; height: 160px; flex: none; }
-.kd-palette-logo { width: 155px; height: 160px; }
+.kd-logo-source { display: grid; place-items: center; height: 110px; flex: none; }
+.kd-palette-logo { width: 110px; height: 110px; }
 .kd-palette-label { text-align: center; }
 .kd-ocr-source { display: block; width: 100%; height: 72px; object-fit: contain; border-radius: 16px; }
 .kd-image-text { min-height: 0; }
