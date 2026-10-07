@@ -58,8 +58,8 @@ function LoadedPdf({ document, noText }: { document: PDFDocumentProxy; noText: b
     <PdfViewerControls view={view} page={page} pageText={pageText} pageCount={document.numPages} zoom={zoom}
       onViewChange={setView} onZoomChange={setZoom} onPreviousPage={() => goToPage(page - 1)} onNextPage={() => goToPage(page + 1)}
       onPageFocus={() => setPageDraft(String(page))} onPageDraftChange={setPageDraft} onPageCommit={jumpToPage} />
-    {view === "pages" ? <div ref={pageFrame} className="min-w-0"><PdfPage document={document} number={page} zoom={zoom} /></div>
-      : layout.status === "ready" ? <PdfScroll key={zoom} document={document} sizes={layout.sizes} zoom={zoom} startPage={page} onPageChange={setPage} ref={scroll} />
+    {layout.status === "ready" ? <PdfScroll key={zoom} document={document} sizes={layout.sizes} zoom={zoom} view={view} startPage={page} onPageChange={setPage} ref={scroll} />
+      : view === "pages" ? <div ref={pageFrame} className="min-w-0"><PdfPage document={document} number={page} zoom={zoom} /></div>
       : layout.status === "error" ? <div role="alert" className="flex flex-wrap items-center gap-3 text-sm">Couldn&apos;t prepare the scroll view. Try again or use Pages.<button type="button" className="ui-control min-h-10 px-3" onClick={retry}>Retry scroll view</button></div>
       : <PdfLoadingPaper />}
 
