@@ -3,6 +3,7 @@
 import { ScrollPanel } from "@/components/ui/scroll-panel";
 
 import Link from "next/link";
+import { ItemPageLoading } from "./library-loading-content";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { itemActionLabel } from "@/domain/item-label";
@@ -90,9 +91,10 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
     };
   }, [videoAssetId, mediaKey]);
 
+  if (currentState.status === "loading") return <ItemPageLoading returnHref={returnHref} />;
   if (currentState.status !== "ready") {
     return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5 text-text-secondary">
-      {currentState.status === "loading" ? "Loading video…" : currentState.status === "missing" ? "Video not found." : "Couldn't load video."}
+      {currentState.status === "missing" ? "Video not found." : "Couldn't load video."}
       <Link href={returnHref} className="ui-control mt-4 min-h-10 px-4">Return to library</Link>
     </main>;
   }
@@ -125,7 +127,7 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
     finally { setBusy(false); }
   };
 
-  return <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+  return <div className="item-startup-content flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
     <ItemPageHeader returnHref={returnHref} title={item.title} />
     <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
       <div className={ITEM_PAGE_GRID}>

@@ -2,15 +2,19 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { DocumentItem } from "@/domain/document";
 import { NoteContent } from "./note-content";
 import { useDocumentText } from "./use-document-text";
 import { PdfViewerControls } from "./pdf-viewer-controls";
+import { PdfViewerLoading, TextDocumentLoading } from "./document-loading-content";
+import { LibraryStartupContent } from "./library-loading-content";
+import { peekPdfThumbnail } from "@/persistence/pdf-thumbnail";
+import { peekPreviewLayout } from "@/persistence/preview-layouts";
 
 // Bound Markdown's DOM size; the original download always includes the entire file.
 const PREVIEW_CHARACTERS = 200_000;
-const PdfViewer = dynamic(() => import("./pdf-viewer").then(module => module.PdfViewer), { ssr: false, loading: () => <div className="media-viewer-frame grid gap-4"><PdfViewerControls /><p role="status" className="text-text-secondary">Loading PDF…</p></div> });
+const PdfViewer = dynamic(() => import("./pdf-viewer").then(module => module.PdfViewer), { ssr: false, loading: PdfViewerLoading });
 
 export function DocumentText({ text, format }: { text: string; format: DocumentItem["format"] }) {
   const limited = text.length > PREVIEW_CHARACTERS;
@@ -23,10 +27,10 @@ export function DocumentText({ text, format }: { text: string; format: DocumentI
 }
 
 export function DocumentContent({ item, initialPreview }: { item: DocumentItem; initialPreview?: { text?: string; pdfImage?: string } }) {
-  return item.format === "pdf" ? <PdfDocumentContent key={`${item.id}:${item.assetId}`} item={item} preview={initialPreview?.pdfImage} /> : <TextDocumentContent item={item} initialText={initialPreview?.text} />;
+  return item.format === "pdf" ? <PdfDocumentContent key={`${item.id}:${item.assetId}`} item={item} preview={initialPreview?.pdfImage ?? peekPdfThumbnail(item.assetId)} /> : <TextDocumentContent key={`${item.id}:${item.assetId}`} item={item} initialText={initialPreview?.text} />;
 }
 
-function PdfDocumentContent({ item, preview }: { item: DocumentItem; preview?: string }) {
+function PdfDocumentContent({ item, preview }: { item: DocumentItem; preview?: string | null }) {
   const frame = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState<"preview" | "revealing" | "ready">("preview");
   useEffect(() => {
@@ -55,8 +59,10 @@ function PdfDocumentContent({ item, preview }: { item: DocumentItem; preview?: s
     observe();
     return () => { cancelled = true; observer.disconnect(); };
   }, [preview, item.id, item.assetId]);
-  if (!preview) return <PdfViewer item={item} />;
-  return <div ref={frame} data-document-pdf-shell className="media-viewer-frame relative">
+  const dimensions = peekPreviewLayout(item.assetId);
+  const placeholderStyle = dimensions ? { "--pdf-loading-aspect-ratio": `${dimensions.width} / ${dimensions.height}` } as CSSProperties : undefined;
+  if (!preview) return <div className="media-viewer-frame" style={placeholderStyle}><PdfViewer item={item} /></div>;
+  return <div ref={frame} data-document-pdf-shell className="media-viewer-frame relative" style={placeholderStyle}>
     {phase !== "ready" ? <div className="grid gap-4" data-pdf-opening-preview aria-hidden={phase === "revealing"}>
       <PdfViewerControls />
       {/* eslint-disable-next-line @next/next/no-img-element -- reuse the decoded local first-page thumbnail */}
@@ -71,8 +77,9 @@ function PdfDocumentContent({ item, preview }: { item: DocumentItem; preview?: s
 
 function TextDocumentContent({ item, initialText }: { item: DocumentItem; initialText?: string }) {
   const { state, retry } = useDocumentText(item);
-  if (state.status === "loading") return initialText !== undefined ? <DocumentText text={initialText} format={item.format} /> : <p role="status" className="text-text-secondary">Loading document…</p>;
-  if (state.status === "ready") return <DocumentText text={state.text} format={item.format} />;
+  if (state.status === "loading" || state.status === "ready") return <LibraryStartupContent loading={state.status === "loading" && initialText === undefined} layout="grid" placeholder={<TextDocumentLoading />}>
+    {state.status === "ready" ? <DocumentText text={state.text} format={item.format} /> : initialText !== undefined ? <DocumentText text={initialText} format={item.format} /> : null}
+  </LibraryStartupContent>;
   return <div className="grid justify-items-start gap-3">
     <p role="alert">{state.status === "missing" ? "The saved file is missing. Restore it from a backup." : "Couldn't read this document. Try again or restore a backup."}</p>
     <div className="flex flex-wrap gap-2">

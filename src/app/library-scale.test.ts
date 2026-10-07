@@ -1,4 +1,6 @@
 import { describe, expect, test } from "vitest";
+import { rememberPreviewLayout } from "@/persistence/preview-layouts";
+import { buildImageFromAssetIds } from "@/domain/image";
 import {
   estimateLibraryGridItemHeight,
   gridColumnCount,
@@ -65,5 +67,14 @@ describe("library-scale", () => {
 
     expect(longNote).toBeGreaterThan(shortNote);
     expect(linkWithoutLocalMedia).toBeLessThan(320);
+  });
+
+  test("portrait and landscape estimates follow cached proportions", async () => {
+    await rememberPreviewLayout("portrait-estimate", 400, 800);
+    await rememberPreviewLayout("landscape-estimate", 800, 400);
+    const portrait = buildImageFromAssetIds({ assetIds: ["portrait-estimate"] });
+    const landscape = buildImageFromAssetIds({ assetIds: ["landscape-estimate"] });
+    expect(estimateLibraryGridItemHeight(portrait, 360)).toBe(736);
+    expect(estimateLibraryGridItemHeight(landscape, 360)).toBe(196);
   });
 });

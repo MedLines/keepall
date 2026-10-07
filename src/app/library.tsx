@@ -2,6 +2,9 @@
 
 import { prepareItemNavigation } from "./item-navigation-snapshot";
 import { ScrollPanel } from "@/components/ui/scroll-panel";
+import { loadPreviewLayouts } from "@/persistence/preview-layouts";
+import { LibraryStartupContent } from "./library-loading-content";
+import { LibraryLayoutTransition, transitionLibraryLayout } from "./item-view-transition";
 
 import {
   type DragEvent,
@@ -372,6 +375,7 @@ export function Library() {
           listTrashedItems(),
           getDocumentRevision(),
         ]);
+        await loadPreviewLayouts([...nextItems, ...nextTrash]).catch(() => {});
         if (!cancelled) {
           const nextIndexes = buildLibraryBrowseIndexes(nextItems);
           browseIndexesRef.current = nextIndexes;
@@ -1798,7 +1802,9 @@ export function Library() {
         sort={view.sort}
         onSortChange={(sort) => updateView({ sort }, "push")}
         layout={browseLayout}
-        onLayoutChange={(layout) => updateView({ layout }, "replace")}
+        onLayoutChange={(layout) => {
+          if (layout !== browseLayout) transitionLibraryLayout(() => updateView({ layout }, "replace"));
+        }}
         listColumns={view.listColumns ?? "auto"}
         onListColumnsChange={(listColumns) => updateView({ listColumns }, "replace")}
         onPreview={() => libraryGridRef.current?.openPreview()}
@@ -1955,18 +1961,17 @@ export function Library() {
 
         <div data-library-panel className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel">
         {topBar}
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col" aria-labelledby="library-heading" aria-busy={documentSearch.pending}>
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col" aria-labelledby="library-heading" aria-busy={loadState === "loading" || documentSearch.pending}>
         <ScrollPanel className="min-h-0 min-w-0 flex-1" viewportRef={mainScrollRef}
           viewportClassName="scroll-fade px-3 pb-6 sm:px-6 [--scroll-fade-edge-opacity:0.35]">
 
-          {loadState === "loading" ? (
-            <p className="text-sm text-text-secondary">Loading…</p>
-          ) : loadState === "error" ? (
+          {loadState === "error" ? (
             <p className="text-sm text-text-danger" role="alert">
               {error ?? "Couldn't load items."}
             </p>
           ) : (
-            <>
+            <LibraryLayoutTransition><LibraryStartupContent loading={loadState === "loading"} layout={browseLayout} columns={view.listColumns ?? "auto"}
+              kind={view.collections ? "collections" : view.tags ? "tags" : "items"}>
               {documentSearch.error || documentSearch.unavailable > 0 ? <p role="status" className="mb-3 text-sm text-text-secondary">
                 {documentSearch.error ? "Couldn't search file contents. Titles, tags, and personal notes are still searchable." : `${documentSearch.unavailable} file${documentSearch.unavailable === 1 ? " couldn't" : "s couldn't"} be searched. Try again or restore missing files from a backup.`}
                 {" "}<button type="button" className="ui-control inline-flex min-h-8 items-center px-2 text-sm" onClick={documentSearch.retry}>Retry search</button>
@@ -2033,7 +2038,7 @@ export function Library() {
                   }
                 />
               )}
-            </>
+            </LibraryStartupContent></LibraryLayoutTransition>
           )}
         </ScrollPanel>
         </main>

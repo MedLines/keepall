@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
 import SettingsPage from "./page";
+import { SettingsTabs } from "./settings-tabs";
 
 test("groups working settings in tabs and explains storage beside recovery controls", async () => {
   render(<SettingsPage />);
@@ -30,4 +31,21 @@ test("groups working settings in tabs and explains storage beside recovery contr
     "href",
     "/",
   );
+});
+
+test("rapid tab changes retain form values and expose only the active panel", () => {
+  window.history.replaceState(window.history.state, "", "/settings");
+  render(<SettingsTabs general={<label>Draft setting<input defaultValue="Original" /></label>} storage={<p>Storage panel</p>} installation={<p>Installation panel</p>} />);
+  const input = screen.getByRole("textbox", { name: "Draft setting" });
+  fireEvent.change(input, { target: { value: "Unsaved edit" } });
+  fireEvent.click(screen.getByRole("tab", { name: "Storage & backups" }));
+  expect(screen.queryByRole("textbox", { name: "Draft setting" })).not.toBeInTheDocument();
+  expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+  fireEvent.click(screen.getByRole("tab", { name: "Installation" }));
+  expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+  fireEvent.click(screen.getByRole("tab", { name: "General" }));
+  expect(screen.getByRole("textbox", { name: "Draft setting" })).toBe(input);
+  expect(input).toHaveValue("Unsaved edit");
+  expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+  window.history.replaceState(window.history.state, "", "/");
 });

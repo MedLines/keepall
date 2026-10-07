@@ -3,6 +3,7 @@
 import { ScrollPanel } from "@/components/ui/scroll-panel";
 
 import Link from "next/link";
+import { ItemPageLoading } from "./library-loading-content";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useEffect, useState } from "react";
@@ -185,7 +186,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+    <div className="item-startup-content flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
       <ItemPageHeader returnHref={returnHref} title={title} sourceUrl={link.url} />
 
       <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
@@ -269,7 +270,8 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
 }
 
 function LinkPageUnavailable({ status, returnHref }: { status: "loading" | "missing" | "error"; returnHref: string }) {
-  const message = status === "loading" ? "Loading link…" : status === "missing" ? "Link not found." : "Couldn't load this link.";
+  if (status === "loading") return <ItemPageLoading returnHref={returnHref} />;
+  const message = status === "missing" ? "Link not found." : "Couldn't load this link.";
   return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5">
     <div className="text-center">
       <p className="text-text-secondary">{message}</p>

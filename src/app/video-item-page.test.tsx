@@ -110,7 +110,7 @@ describe("VideoItemPage", () => {
     view.rerender(<VideoItemPage itemId="video-2" returnHref="/" />);
     expect(screen.queryByRole("heading", { name: "A video" })).not.toBeInTheDocument();
     oldRead.resolve(new Blob(["old"]));
-    expect(screen.getByText("Loading video…")).toBeVisible();
+    expect(screen.getByRole("status", { name: "Loading item" })).toBeInTheDocument();
     expect(URL.createObjectURL).not.toHaveBeenCalled();
     nextItemRead.resolve(next);
     await screen.findByRole("heading", { name: "Next video" });

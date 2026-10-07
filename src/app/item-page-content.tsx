@@ -10,6 +10,7 @@ import { VideoItemPage } from "./video-item-page";
 import { DocumentItemPage } from "./document-item-page";
 
 import { readItemNavigation } from "./item-navigation-snapshot";
+import { ItemPageLoading } from "./library-loading-content";
 
 export function ItemPageContent({ itemId, returnHref }: { itemId: string; returnHref: string }) {
   const [initialSnapshot] = useState(() => readItemNavigation(itemId));
@@ -40,10 +41,9 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
   if (type === "note") return <NoteItemPage key={itemId} itemId={itemId} returnHref={returnHref} initialSnapshot={initialSnapshot} />;
   if (type === "video") return <VideoItemPage itemId={itemId} returnHref={returnHref} />;
   if (type === "document") return <DocumentItemPage key={itemId} itemId={itemId} returnHref={returnHref} initialSnapshot={initialSnapshot} />;
+  if (type === "loading") return <ItemPageLoading returnHref={returnHref} />;
   const message =
-    type === "loading"
-      ? "Loading item…"
-      : type === "error"
+    type === "error"
         ? "Couldn't load this item."
         : "Item not found. It may be in Trash.";
   return (

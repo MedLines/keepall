@@ -35,6 +35,7 @@ import { NoteContent } from "./note-content";
 import { NoteItemEditDialog, type NoteDetailsDraft } from "./item-edit-dialog";
 import { PlusIcon } from "./shell-icons";
 import { ItemPageHeader } from "./item-page-header";
+import { ItemPageLoading } from "./library-loading-content";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
 
 import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
@@ -91,11 +92,10 @@ export function NoteItemPage({
   }, [itemId]);
 
 
+  if (state.status === "loading") return <ItemPageLoading returnHref={returnHref} />;
   if (state.status !== "ready") {
     const message =
-      state.status === "loading"
-        ? "Loading note…"
-        : state.status === "missing"
+      state.status === "missing"
           ? "Note not found."
           : "Couldn't load this note.";
     return (
@@ -265,7 +265,7 @@ export function NoteItemPage({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+    <div className={`${initialSnapshot ? "" : "item-startup-content"} flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary`}>
       <ItemPageHeader returnHref={returnHref} title={title} />
 
       <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>

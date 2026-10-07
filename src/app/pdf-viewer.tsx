@@ -9,11 +9,12 @@ import { PdfViewerControls } from "./pdf-viewer-controls";
 import { usePdfDocument } from "./use-pdf-document";
 import { PdfScroll, type PdfScrollHandle } from "./pdf-scroll";
 import { usePdfPageSizes } from "./use-pdf-page-sizes";
+import { PdfLoadingPaper, PdfViewerLoading } from "./document-loading-content";
 
 
 export function PdfViewer({ item }: { item: DocumentItem }) {
   const { state, retry } = usePdfDocument(item);
-  if (state.status === "loading") return <section aria-label="PDF viewer" className="media-viewer-frame grid gap-4"><PdfViewerControls /><p role="status" className="text-text-secondary">Loading PDF…</p></section>;
+  if (state.status === "loading") return <PdfViewerLoading />;
   if (state.status === "error") return <div className="grid justify-items-start gap-3">
     <p role="alert">{state.message}</p>
     <div className="flex flex-wrap gap-2">
@@ -60,7 +61,7 @@ function LoadedPdf({ document, noText }: { document: PDFDocumentProxy; noText: b
     {view === "pages" ? <div ref={pageFrame} className="min-w-0"><PdfPage document={document} number={page} zoom={zoom} /></div>
       : layout.status === "ready" ? <PdfScroll key={zoom} document={document} sizes={layout.sizes} zoom={zoom} startPage={page} onPageChange={setPage} ref={scroll} />
       : layout.status === "error" ? <div role="alert" className="flex flex-wrap items-center gap-3 text-sm">Couldn&apos;t prepare the scroll view. Try again or use Pages.<button type="button" className="ui-control min-h-10 px-3" onClick={retry}>Retry scroll view</button></div>
-      : <p className="text-sm text-text-secondary">Preparing PDF pages…</p>}
+      : <PdfLoadingPaper />}
 
     {noText ? <p className="rounded-input border border-border-control bg-bg-raised p-3 text-sm text-text-secondary">This PDF has no selectable text. Search can find its title, filename, tags, and your notes. Text in scanned pages needs OCR.</p> : null}
   </section>;

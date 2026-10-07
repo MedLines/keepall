@@ -114,7 +114,7 @@ export function LibraryMasonry({ items, scrollRef, scopeKey, renderItem, focused
 
   return (
     <ul ref={setGridRef} aria-label="Library items" data-masonry-scope={scopeKey} className="relative w-full">
-      {virtualizer.getVirtualItems().map(cell => renderItem(items[cell.index], {
+      {width > 0 ? virtualizer.getVirtualItems().map(cell => renderItem(items[cell.index], {
         index: cell.index,
         measureElement: virtualizer.measureElement,
         style: {
@@ -123,7 +123,7 @@ export function LibraryMasonry({ items, scrollRef, scopeKey, renderItem, focused
           insetInlineStart: cell.lane * (columnWidth + LIBRARY_GRID_GAP_PX),
           width: width ? columnWidth : "100%",
         },
-      }))}
+      })) : null}
     </ul>
   );
 }

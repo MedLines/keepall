@@ -105,7 +105,7 @@ export async function replaceValidatedBackup(
 
   await db.transaction(
     "rw",
-    [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.preferences],
+    [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.preferences, db.previewLayouts],
     async () => {
       await Promise.all([
         db.items.clear(),
@@ -113,6 +113,7 @@ export async function replaceValidatedBackup(
         db.collections.clear(),
         db.assets.clear(),
         db.thumbnails.clear(),
+        db.previewLayouts.clear(),
         db.videoAssets.clear(),
         db.documentAssets.clear(),
         db.preferences.clear(),

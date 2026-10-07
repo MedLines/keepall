@@ -19,6 +19,7 @@ import { DocumentItemEditDialog } from "./item-edit-dialog";
 import { ItemLibraryDetails } from "./item-library-details";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ItemPageHeader } from "./item-page-header";
+import { ItemPageLoading } from "./library-loading-content";
 import { ITEM_DETAILS_CONTROL, ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { NoteContent } from "./note-content";
@@ -91,8 +92,9 @@ export function DocumentItemPage({ itemId, returnHref, initialSnapshot }: { item
     });
   }
 
-  if (state.status !== "ready" || state.itemId !== itemId) return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5">
-    <div className="text-center"><p className="text-text-secondary">{state.itemId !== itemId || state.status === "loading" ? "Loading document…" : state.status === "missing" ? "Document not found. It may be in Trash." : "Couldn't load this document."}</p>
+  if (state.itemId !== itemId || state.status === "loading") return <ItemPageLoading returnHref={returnHref} />;
+  if (state.status !== "ready") return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5">
+    <div className="text-center"><p className="text-text-secondary">{state.status === "missing" ? "Document not found. It may be in Trash." : "Couldn't load this document."}</p>
       <Link href={returnHref} className="ui-control mt-5 inline-flex min-h-11 items-center px-4">Return to library</Link>
     </div>
   </main>;
@@ -101,7 +103,7 @@ export function DocumentItemPage({ itemId, returnHref, initialSnapshot }: { item
   const itemTags = resolveItemTags(item, new Map(tags.map((tag) => [tag.id, tag])));
   const itemCollections = resolveItemCollections(item, new Map(collections.map((collection) => [collection.id, collection])));
   const busy = operation !== null;
-  return <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+  return <div className={`${initialSnapshot ? "" : "item-startup-content"} flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary`}>
     <ItemPageHeader returnHref={returnHref} title={item.title} titleAsHeading />
     <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`} viewportProps={{ "data-document-scroll": "", "data-testid": "item-page-scroll" }}>
       <div className={ITEM_PAGE_GRID}>

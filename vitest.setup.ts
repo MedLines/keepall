@@ -71,6 +71,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({
     replace: mockNavigation.replace,
     push: mockNavigation.push,
+    prefetch: vi.fn(),
   }),
 }));
 

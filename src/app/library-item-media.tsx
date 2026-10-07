@@ -10,6 +10,8 @@ import { useState } from "react";
 import { ItemViewTransition } from "./item-view-transition";
 import { ItemTypeIcon } from "./item-type-icon";
 import { PdfCardThumbnail } from "./pdf-card-thumbnail";
+import { peekPreviewLayout, rememberPreviewLayout } from "@/persistence/preview-layouts";
+import { LibraryThumbnailImage } from "./library-thumbnail-image";
 
 type MediaVariant = "card" | "grid" | "inspect" | "canvas" | "viewer" | "preview";
 
@@ -45,6 +47,8 @@ export function LibraryItemMedia({
   const thumbnailUrl = useThumbnailObjectUrl(useThumbnail || item.type === "image" ? assetIdForDisplay : null);
   const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl ?? (item.type === "image" ? thumbnailUrl : null);
   const [brokenAssetId, setBrokenAssetId] = useState<string | null>(null);
+  const [decodedLayout, setDecodedLayout] = useState<{ assetId: string; width: number; height: number } | null>(null);
+  const dimensions = decodedLayout?.assetId === assetIdForDisplay ? decodedLayout : peekPreviewLayout(assetIdForDisplay);
   const imageSrc = brokenAssetId === assetIdForDisplay ? null : localObjectUrl;
 
   if (item.type === "document" && item.format === "pdf") {
@@ -53,13 +57,19 @@ export function LibraryItemMedia({
 
   if (imageSrc && (item.type === "link" || item.type === "image" || item.type === "video")) {
     const image = (
-      // eslint-disable-next-line @next/next/no-img-element -- local object URLs + remote OG
-      <img
+      <LibraryThumbnailImage
+        animate={variant === "grid" || variant === "card"}
         alt=""
         className={imageClassName(variant, compact, className)}
         src={imageSrc}
+        width={dimensions?.width}
+        height={dimensions?.height}
         onLoad={(event) => {
           const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+          if (assetIdForDisplay && width > 0 && height > 0) {
+            setDecodedLayout({ assetId: assetIdForDisplay, width, height });
+            void rememberPreviewLayout(assetIdForDisplay, width, height).catch(() => {});
+          }
           onImageLoad?.(width / height, { width, height });
         }}
         onError={() => {
@@ -73,34 +83,36 @@ export function LibraryItemMedia({
   }
 
   if (item.type === "link") {
-    return <LinkFavicon key={item.url} item={item} variant={variant} compact={compact} className={className} />;
+    return <LinkFavicon key={item.url} item={item} variant={variant} compact={compact} className={className} dimensions={dimensions} />;
   }
 
   return (
     <div
       aria-hidden="true"
       className={fallbackClassName(variant, compact, className)}
+      style={variant === "grid" && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined}
     >
-      <FallbackContent item={item} compact={compact} />
+      {assetIdForDisplay && brokenAssetId !== assetIdForDisplay ? null : <FallbackContent item={item} compact={compact} />}
     </div>
   );
 }
 
-function LinkFavicon({ item, variant, compact, className }: {
-  item: LinkItem; variant: MediaVariant; compact: boolean; className: string;
+function LinkFavicon({ item, variant, compact, className, dimensions }: {
+  item: LinkItem; variant: MediaVariant; compact: boolean; className: string; dimensions?: { width: number; height: number };
 }) {
   const [faviconIndex, setFaviconIndex] = useState(0);
   const candidates = linkFaviconUrls(item.url, { size: compact ? 64 : 128 });
   const faviconSrc = candidates[faviconIndex];
 
   return (
-    <div aria-hidden="true" className={fallbackClassName(variant, compact, className)}>
+    <div aria-hidden="true" className={fallbackClassName(variant, compact, className)}
+      style={variant === "grid" && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined}>
       {faviconSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element -- best-effort favicon sources, then an offline icon
-        <img
+        <LibraryThumbnailImage
           alt=""
           className={compact || faviconIndex > 0 ? "size-8 object-contain" : "size-16 object-contain"}
           src={faviconSrc}
+          animate={variant === "card" || variant === "grid"}
           onError={() => setFaviconIndex(faviconIndex + 1)}
         />
       ) : <FallbackContent item={item} compact={compact} />}
@@ -128,10 +140,10 @@ function imageClassName(
     return `media-outline block h-auto w-auto max-h-full max-w-full rounded-input object-contain ${className}`;
   }
   if (variant === "viewer") {
-    return `media-outline media-elevated mx-auto block h-auto w-auto max-w-full ${className}`;
+    return `media-outline mx-auto block h-auto w-auto max-w-full ${className}`;
   }
   if (variant === "canvas") {
-    return `media-outline media-elevated block h-auto w-auto max-h-full max-w-full rounded-none object-contain ${className}`;
+    return `media-outline block h-auto w-auto max-h-full max-w-full rounded-none object-contain ${className}`;
   }
   if (variant === "inspect") {
     return `media-outline media-squircle-inset mx-auto block h-auto max-h-[min(78vh,56rem)] w-auto max-w-full object-contain ${className}`;

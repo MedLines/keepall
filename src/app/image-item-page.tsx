@@ -42,6 +42,7 @@ import { ItemViewTransition } from "./item-view-transition";
 import { NoteContent } from "./note-content";
 import { VerticalImageGallery } from "./vertical-image-gallery";
 import { ItemPageHeader } from "./item-page-header";
+import { ItemPageLoading } from "./library-loading-content";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
 import {
   ArrowLeftIcon,
@@ -379,7 +380,7 @@ export function ImageItemPage({ itemId, returnHref, initialSnapshot }: Props) {
   }
 
   if (loadState.status === "loading") {
-    return <ItemPageMessage message="Loading image…" />;
+    return <ItemPageLoading returnHref={returnHref} />;
   }
 
   if (loadState.status === "error") {
@@ -406,6 +407,7 @@ export function ImageItemPage({ itemId, returnHref, initialSnapshot }: Props) {
     <>
       <ImageWorkspace
         key={loadState.item.id}
+        loadingReveal={!initialSnapshot}
         item={loadState.item}
         tags={loadState.tags}
         collections={loadState.collections}
@@ -546,6 +548,7 @@ function ItemPageMessage({
 }
 
 function ImageWorkspace({
+  loadingReveal,
   item,
   tags,
   collections,
@@ -567,6 +570,7 @@ function ImageWorkspace({
   onOrganize,
   onDelete,
 }: {
+  loadingReveal: boolean;
   item: ImageItem;
   tags: Tag[];
   collections: Collection[];
@@ -670,7 +674,7 @@ function ImageWorkspace({
   );
 
   return (
-    <div className="h-full overflow-hidden bg-bg-canvas">
+    <div className={`${loadingReveal ? "item-startup-content" : ""} h-full overflow-hidden bg-bg-canvas`}>
       <div className="flex size-full flex-col">
         <ItemPageHeader returnHref={returnHref} title={title || "Image item"} sourceUrl={item.sourceUrl} titleAsHeading />
 

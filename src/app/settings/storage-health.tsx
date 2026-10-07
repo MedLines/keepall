@@ -107,22 +107,23 @@ export function StorageHealth() {
           {loading && snapshot ? "Refreshing…" : "Refresh storage status"}
         </button>
       </div>
-      <dl className="mt-4 grid gap-4 sm:grid-cols-3" aria-live="polite">
+      <dl className="mt-4 grid gap-4 sm:grid-cols-3" aria-live="polite" aria-busy={loading}>
         <div>
           <dt className="text-xs text-text-secondary">Site storage used</dt>
-          <dd className="mt-1 text-sm font-medium text-text-primary">{usage}</dd>
+          <dd className="mt-1 min-h-5 text-sm font-medium text-text-primary"><StorageHealthValue value={usage} checking={loading && !snapshot} /></dd>
         </div>
         <div>
           <dt className="text-xs text-text-secondary">Estimated allowance</dt>
-          <dd className="mt-1 text-sm font-medium text-text-primary">{quota}</dd>
+          <dd className="mt-1 min-h-5 text-sm font-medium text-text-primary"><StorageHealthValue value={quota} checking={loading && !snapshot} /></dd>
         </div>
         <div>
           <dt className="text-xs text-text-secondary">Persistent storage</dt>
-          <dd className="mt-1 text-sm font-medium text-text-primary">
-            {persistence}
+          <dd className="mt-1 min-h-5 text-sm font-medium text-text-primary">
+            <StorageHealthValue value={persistence} checking={loading && !snapshot} />
           </dd>
         </div>
       </dl>
+      <div className="mt-4 h-1.5">
       {usedPercent !== null ? <div
         role="meter"
         aria-label="Estimated storage usage"
@@ -130,12 +131,18 @@ export function StorageHealth() {
         aria-valuemax={100}
         aria-valuenow={usedPercent}
         aria-valuetext={`${usage} used out of ${quota}`}
-        className="mt-4 h-1.5 overflow-hidden rounded-full bg-bg-raised"
-      ><div className="h-full rounded-full bg-text-primary" style={{ width: `${usedPercent}%` }} /></div> : null}
+        className="h-full overflow-hidden rounded-full bg-bg-raised"
+      ><div className="storage-health-meter h-full rounded-full bg-text-primary" style={{ transform: `scaleX(${usedPercent / 100})` }} /></div> : null}
+      </div>
       <p className="mt-4 text-xs leading-5 text-text-secondary">
         Usage and allowance are estimates, including offline files. Persistent
         storage reduces automatic clearing; it is not a backup.
       </p>
     </div>
   );
+}
+
+function StorageHealthValue({ value, checking }: { value: string; checking: boolean }) {
+  return checking ? <><span aria-hidden="true" className="storage-health-placeholder" /><span className="sr-only">Checking…</span></>
+    : <span>{value}</span>;
 }

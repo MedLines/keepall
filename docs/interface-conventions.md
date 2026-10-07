@@ -50,6 +50,26 @@ Notes, MD, and TXT share `LibraryReadingCard`. Place the title and file metadata
 
 Markdown frontmatter is quiet, bounded plain metadata in the preview. The original document stays intact. Preview links, images, HTML, and inputs cannot become active content. Search highlighting still applies to body and metadata. TXT identifies imported `.txt` files; plain written notes use Note and Markdown notes use MD.
 
+## Library startup
+
+Cold startup shows placeholders only after 150ms. Item grids use CSS masonry with varied media proportions, while list placeholders follow the selected column count. All collections reuse the existing folder artwork; All tags use preview collages. Organization placeholders follow their own grid and list breakpoints rather than item-list column preferences. Keep placeholders noninteractive and bound them to twelve entries.
+
+Loading surfaces pulse gently through opacity on a 1.6-second loop, with no shimmer dependency. When the data is ready, keep the skeleton behind the content during one moderate-tier reveal; remove it after the handoff. Fast reads skip the reveal, and filtering, organizing, scrolling, and background refreshes do not replay it. Reduced motion disables pulses and entrances. Direct item routes keep the Library header and content/details zones while reading local data.
+
+Grid/List switches use a moderate-tier React view-transition crossfade of the content alone, tagged `library-layout`. Keep the scrolling viewport and toolbar mounted. Disable individual image/document morphs for this transition type so the content fades as one surface; preserve them for item navigation. Search, filters, and startup do not activate this transition. Unsupported runtimes and reduced motion switch layouts directly.
+
+PDF thumbnail slots stay white from their first paint through the rendered page. Loading does not introduce a temporary PDF glyph; reserve recovery glyphs and messages for failures. Images and favicons fade in only after load, over their stable media slot; decoded thumbnails skip the fade when remounted. Initialize PDF thumbnails from the existing bounded memory cache so Grid/List switches and virtual scrolling do not replay loading placeholders. Native image proportions remain the layout authority.
+
+Reserve media proportions from the small derived `previewLayouts` cache before thumbnails load. Existing previews learn their dimensions when first rendered; later starts can reserve that space immediately. Read cache records after mount, never original file bytes at startup. Cache writes do not change the library's backup revision; replacing a backup discards the cache atomically, and startup prunes dimensions for unused assets. Saved file contents and backup formats remain unchanged.
+
+## Preview and settings loading
+
+Settings reuse Base UI's panel transition lifecycle for an 8px directional slide over the slow motion tier. The incoming panel reaches full opacity over the fast tier. Keep the outgoing panel stationary and opaque for 120ms, then fade it over the moderate exit tier so it finishes with the incoming slide. Put the outgoing panel outside layout, below the incoming panel, and keep it inert and hidden from assistive technology. Keep the panel container unclipped so moving borders, curves, and focus rings remain intact. Panels remain mounted to retain field values; initial hydration has no entrance. The existing tab indicator moves with a moderate transform transition, vertically on desktop and horizontally on mobile. Its prehydration indicator and selected-tab fallback use identical control radii and corner shapes. Storage status reserves its value and meter space. Initial reads use delayed placeholders; refreshes retain values and update them without a fade. Animate meter updates with scale rather than width. Reduced motion switches panels and the indicator immediately.
+
+PDF viewers reuse the already-rendered first-page cover until the live page and selectable text finish painting. Cold viewers keep the actual disabled toolbar above a white paper placeholder, using cached proportions when available. Reveal only the initial standalone page. Page navigation keeps the previous canvas until its replacement is ready; virtual scroll pages do not replay an entrance.
+
+Text documents use bounded reading-line placeholders and the same delayed startup handoff as the library. Video quick previews retain the media area while loading, then reveal the native player when metadata is ready. Keep playback controls and error recovery intact. Reduced motion disables these reveals and pulses. Keyboard browsing, search, and background refreshes do not introduce staggered motion.
+
 ## Popup motion and text fields
 
 Use `uiMotion` for interaction timing and its derived CSS variables for CSS transitions. Menus use the fast tier, drawers the moderate tier, and dialogs the slow tier; dismissals use the paired, quicker exit. Popup transforms follow the resolved side after collision handling. Keep the existing cover morph and icon-swap timings separate.

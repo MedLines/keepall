@@ -16,6 +16,7 @@ import { ArrowLeftIcon, ArrowRightIcon, CloseIcon, ExternalLinkIcon, LinkIcon, N
 import { ItemTypeIcon } from "./item-type-icon";
 import { MediaViewerToolbar } from "./media-viewer-toolbar";
 import { linkCardHost } from "@/domain/card-display";
+import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 
 type Props = {
   item: Item | null;
@@ -178,6 +179,8 @@ function ImagePreview({ item, onGalleryStep }: { item: Extract<Item, { type: "im
 
 function PreviewVideo({ assetId, title }: { assetId: string; title: string }) {
   const [media, setMedia] = useState<{ url: string | null; error: boolean }>({ url: null, error: false });
+  const [ready, setReady] = useState(false);
+  const poster = useThumbnailObjectUrl(assetId);
   useEffect(() => {
     let cancelled = false;
     let url: string | null = null;
@@ -190,7 +193,10 @@ function PreviewVideo({ assetId, title }: { assetId: string; title: string }) {
     return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
   }, [assetId]);
   if (media.error) return <p role="alert" className="text-sm text-text-secondary">This video could not be previewed. Open the full item to retry or check its saved file.</p>;
-  return media.url
-    ? <video controls playsInline preload="metadata" src={media.url} aria-label={title} className="block h-auto w-auto max-h-full max-w-full rounded-input object-contain" onError={() => setMedia({ url: null, error: true })} />
-    : <p role="status" className="text-sm text-text-secondary">Loading video…</p>;
+  return <div className="preview-video-frame">
+    <div role={ready ? undefined : "status"} aria-label={ready ? undefined : "Loading video"} aria-hidden={ready || undefined} data-ready={ready} className="preview-video-loading"><span className="sr-only">Loading video…</span><span aria-hidden="true" /></div>
+    {media.url ? <video controls playsInline preload="metadata" src={media.url} poster={poster ?? undefined} aria-label={title}
+      data-ready={ready} className="preview-video-media block h-auto w-auto max-h-full max-w-full rounded-input object-contain"
+      onLoadedMetadata={() => setReady(true)} onError={() => setMedia({ url: null, error: true })} /> : null}
+  </div>;
 }

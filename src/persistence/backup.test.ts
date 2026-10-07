@@ -107,6 +107,7 @@ describe("backup persistence", () => {
     const backup = await exportKeepallBackup();
     const replacement = { ...backup, items: [buildNote({ content: "new item" })] };
     const db = getDb();
+    await db.previewLayouts.put({ assetId: "cached-cover", width: 400, height: 800 });
     const put = vi.spyOn(db.items, "bulkAdd").mockRejectedValueOnce(new DOMException("Storage full", "QuotaExceededError"));
     try {
       await expect(replaceValidatedBackup(replacement)).rejects.toThrow();
@@ -114,6 +115,7 @@ describe("backup persistence", () => {
       put.mockRestore();
     }
     expect(await listItems()).toEqual([original]);
+    expect(await db.previewLayouts.get("cached-cover")).toEqual({ assetId: "cached-cover", width: 400, height: 800 });
   });
 
   test("exportKeepallBackup snapshots current tables", async () => {
@@ -242,6 +244,7 @@ describe("backup persistence", () => {
   test("importKeepallBackupReplace replaces all tables atomically", async () => {
     await createNote({ content: "old local" });
     await createTag({ name: "old-tag" });
+    await getDb().previewLayouts.put({ assetId: "cached-cover", width: 400, height: 800 });
 
     const tag = buildTag({ name: "fresh" }, { id: "t1", now: 1 });
     const note = {
@@ -262,6 +265,7 @@ describe("backup persistence", () => {
     expect(await listItems()).toEqual([note]);
     expect(await listTags()).toEqual([tag]);
     expect(await libraryHasLocalData()).toBe(true);
+    expect(await getDb().previewLayouts.count()).toBe(0);
   });
 
   test("failed validation leaves the existing library untouched", async () => {

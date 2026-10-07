@@ -1,10 +1,11 @@
 import { Suspense } from "react";
 import { ItemPageContent } from "../../item-page-content";
 import { safeLibraryReturnHref } from "../../item-page-navigation";
+import { ItemPageLoading } from "../../library-loading-content";
 
 export default function ItemPage(props: PageProps<"/items/[id]">) {
   return (
-    <Suspense fallback={<div className="grid min-h-dvh place-items-center bg-bg-shell text-sm text-text-secondary">Loading item…</div>}>
+    <Suspense fallback={<ItemPageLoading />}>
       <ResolvedItemPage params={props.params} searchParams={props.searchParams} />
     </Suspense>
   );

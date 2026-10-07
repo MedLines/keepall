@@ -58,20 +58,21 @@ export function SettingsTabs(content: Record<Section, ReactNode>) {
     className="grid items-start gap-3 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-6"
   >
     <div className="sticky top-0 z-10 border-b border-border-control bg-bg-canvas py-3 md:top-6 md:border-b-0 md:border-r md:py-0 md:pr-4">
-      <Tabs.List aria-label="Settings" activateOnFocus className="grid grid-cols-3 gap-1 md:flex md:flex-col">
+      <Tabs.List aria-label="Settings" activateOnFocus className="settings-tab-list relative isolate grid grid-cols-3 gap-1 md:flex md:flex-col">
         {sections.map(({ value, label, icon: Icon }) => <Tabs.Tab
           key={value}
           value={value}
-          className="flex min-h-11 items-center justify-center gap-2 rounded-control-lg border border-transparent px-2 py-2 text-center text-xs font-medium text-text-secondary transition-colors hover:bg-bg-raised hover:text-text-primary data-[active]:border-border-control data-[active]:bg-bg-selected data-[active]:text-text-primary sm:text-sm md:justify-start md:px-3 md:text-left"
+          className="settings-tab relative z-10 flex min-h-11 items-center justify-center gap-2 rounded-control-lg border border-transparent px-2 py-2 text-center text-xs font-medium text-text-secondary hover:text-text-primary data-[active]:text-text-primary sm:text-sm md:justify-start md:px-3 md:text-left"
         >
           <Icon className="hidden size-4 shrink-0 md:block" />
           <span className="md:whitespace-nowrap">{label}</span>
         </Tabs.Tab>)}
+        <Tabs.Indicator renderBeforeHydration className="settings-tab-indicator" />
       </Tabs.List>
       <div className="fixed bottom-6 hidden w-52 md:block"><HelpLink /></div>
     </div>
-    <div ref={contentRef} data-testid="settings-content" className="relative min-w-0">
-      {sections.map(({ value }) => <Tabs.Panel key={value} value={value} keepMounted className="space-y-4">
+    <div ref={contentRef} data-testid="settings-content" className="settings-panels relative grid min-w-0 items-start">
+      {sections.map(({ value }) => <Tabs.Panel key={value} value={value} keepMounted aria-hidden={section !== value || undefined} className="settings-panel space-y-4">
         {content[value]}
       </Tabs.Panel>)}
     </div>

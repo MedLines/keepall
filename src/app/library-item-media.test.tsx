@@ -5,9 +5,23 @@ import { buildLink } from "@/domain/link";
 import { LibraryItemMedia } from "./library-item-media";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
+import { rememberPreviewLayout } from "@/persistence/preview-layouts";
 
 vi.mock("./use-asset-object-url", () => ({ useAssetObjectUrl: vi.fn(() => null) }));
 vi.mock("./use-thumbnail-object-url", () => ({ useThumbnailObjectUrl: vi.fn(() => null) }));
+
+test("reserves a portrait thumbnail's cached dimensions before its URL loads", async () => {
+  const item = buildImageFromAssetIds({ assetIds: ["portrait-media"] });
+  await rememberPreviewLayout("portrait-media", 400, 800);
+  vi.mocked(useThumbnailObjectUrl).mockReturnValue(null);
+  const { container, rerender } = render(<LibraryItemMedia item={item} variant="grid" />);
+  expect(container.querySelector<HTMLElement>("[aria-hidden]")?.style.aspectRatio).toBe("400 / 800");
+  vi.mocked(useThumbnailObjectUrl).mockReturnValue("blob:portrait");
+  rerender(<LibraryItemMedia item={item} variant="grid" />);
+  expect(container.querySelector("img")).toHaveAttribute("width", "400");
+  expect(container.querySelector("img")).toHaveAttribute("height", "800");
+  vi.mocked(useThumbnailObjectUrl).mockReturnValue(null);
+});
 
 test("favicon-only list links do not load their OG image asset", () => {
   const item = { ...buildLink({ url: "https://example.com" }), previewAssetId: "og-asset" };

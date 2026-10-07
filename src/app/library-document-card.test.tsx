@@ -47,5 +47,5 @@ test("trashed reading cards expose no navigation or editing controls", () => {
   render(<LibraryDocumentCard item={{ ...item, deletedAt: 2, noteContent: "Keep this note" }} query="" pinned openHref="/items/doc" onOpen={vi.fn()} />);
   expect(screen.queryByRole("link")).toBeNull();
   expect(screen.queryByRole("button")).toBeNull();
-  expect(screen.getByTitle("Pinned in this collection")).toBeVisible();
+  expect(screen.getByRole("img", { name: "Pinned in this collection" })).toBeVisible();
 });

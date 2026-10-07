@@ -32,6 +32,11 @@ test("loads the local video, preserves native playback keys, and releases its ob
   await waitFor(() => expect(video).toHaveAttribute("src", "blob:quick-preview-video"));
   expect(video).toHaveAttribute("controls");
   expect(video).not.toHaveAttribute("autoplay");
+  expect(video).toHaveAttribute("data-ready", "false");
+  expect(screen.getByRole("status", { name: "Loading video" })).toBeInTheDocument();
+  fireEvent.loadedMetadata(video);
+  expect(video).toHaveAttribute("data-ready", "true");
+  expect(screen.queryByRole("status", { name: "Loading video" })).not.toBeInTheDocument();
   fireEvent.keyDown(video, { key: "ArrowRight" });
   fireEvent.keyDown(video, { key: " " });
   expect(actions.onMove).not.toHaveBeenCalled();

@@ -1,6 +1,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ read: vi.fn(), revision: vi.fn(), open: vi.fn() }));
+vi.mock("./preview-layouts", () => ({ rememberPreviewLayout: vi.fn(async () => {}) }));
 vi.mock("./db", () => ({ getDb: () => ({ documentAssets: { get: mocks.read } }) }));
 vi.mock("./documents", () => ({ getDocumentRevision: mocks.revision }));
 vi.mock("./pdf-document", () => ({ openPdf: mocks.open }));
@@ -17,14 +18,18 @@ test("renders only the first page, bounds pixels, shares the result, and release
   const getPage = vi.fn(async () => ({ getViewport: ({ scale }: { scale: number }) => ({ width: 1000 * scale, height: 2000 * scale }), render }));
   const destroy = vi.fn(async () => {});
   mocks.open.mockResolvedValue({ promise: Promise.resolve({ getPage }), destroy });
-  const { getPdfThumbnail } = await import("./pdf-thumbnail");
+  const { getPdfThumbnail, peekPdfThumbnail } = await import("./pdf-thumbnail");
+  expect(peekPdfThumbnail("a")).toBeNull();
   expect(await getPdfThumbnail("a")).toContain("data:image/jpeg");
+  expect(peekPdfThumbnail("a")).toBe("data:image/jpeg;base64,thumbnail");
   expect(await getPdfThumbnail("a")).toContain("data:image/jpeg");
   expect(mocks.open).toHaveBeenCalledTimes(1);
   expect(getPage).toHaveBeenCalledExactlyOnceWith(1);
   const canvas = render.mock.calls[0][0].canvas as HTMLCanvasElement;
   expect(canvas.width).toBeLessThanOrEqual(480);
   expect(canvas.height).toBeLessThanOrEqual(640);
+  const { rememberPreviewLayout } = await import("./preview-layouts");
+  expect(rememberPreviewLayout).toHaveBeenCalledWith("a", canvas.width, canvas.height);
   expect(destroy).toHaveBeenCalledOnce();
   mocks.revision.mockResolvedValue("restored");
   await getPdfThumbnail("a");

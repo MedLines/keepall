@@ -7,9 +7,9 @@ import { ItemTypeBadge, ItemTypeIcon } from "./item-type-icon";
 import { CardNote, CardPin } from "./library-card-details";
 import { SearchHighlight } from "./search-highlight";
 import { ItemViewTransition } from "./item-view-transition";
+import { TextDocumentLoading } from "./document-loading-content";
 
-function previewStatus(text: string | null | undefined, type: "note" | "document") {
-  if (text === undefined) return "Loading preview…";
+function previewStatus(text: string | null, type: "note" | "document") {
   if (text === null) return "Preview unavailable";
   return type === "note" ? "No text preview" : "Empty file";
 }
@@ -19,7 +19,7 @@ export function LibraryReadingCard({ item, text, query, pinned, openHref, onOpen
 }) {
   const title = itemListTitle(item);
   const preview = <div className="library-reading-inset media-squircle-inset" data-document-preview={item.type === "document" ? text ?? undefined : undefined}>
-    {text?.trim() ? <LibraryTextPreview text={text} markdown={item.format === "markdown"} query={query} /> : <div className="library-reading-empty">
+    {text === undefined ? <TextDocumentLoading compact /> : text?.trim() ? <LibraryTextPreview text={text} markdown={item.format === "markdown"} query={query} /> : <div className="library-reading-empty">
       <ItemTypeIcon item={item} className="size-8" />
       <p>{previewStatus(text, item.type)}</p>
     </div>}
