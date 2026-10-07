@@ -16,7 +16,7 @@
     "test:pwa-update": "playwright test e2e/pwa-update.spec.ts --config playwright.pwa-update.config.ts && pnpm build"
   },
   "engines": {
-    "node": ">=22.13.0"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

@@ -3,10 +3,10 @@ import sharp from "sharp";
 
 test.use({ serviceWorkers: "block" });
 
-test("extracts local palettes and real screenshot text with cancellation, retry, and searchable gallery results", async ({ page, context }) => {
+test("extracts local palettes and real screenshot text with cancellation, retry, and searchable gallery results", async ({ page, context, baseURL }, testInfo) => {
   test.setTimeout(120_000);
   const externalRequests: string[] = [];
-  context.on("request", request => { if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== "localhost" && !request.url().startsWith("https://va.vercel-scripts.com/")) externalRequests.push(request.url()); });
+  context.on("request", request => { if (/^https?:/.test(request.url()) && new URL(request.url()).origin !== new URL(baseURL!).origin && !request.url().startsWith("https://va.vercel-scripts.com/")) externalRequests.push(request.url()); });
   const screenshot = await sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="320"><rect width="900" height="320" fill="white"/><text x="45" y="110" font-family="sans-serif" font-size="58" fill="black">Invoice 4823</text><text x="45" y="205" font-family="sans-serif" font-size="50" fill="black">Total 120 dollars</text><rect x="760" y="30" width="100" height="260" fill="#FF0000"/></svg>')).png().toBuffer();
   await page.goto("/");
   await page.getByRole("button", { name: "Save item", exact: true }).click();
@@ -37,7 +37,7 @@ test("extracts local palettes and real screenshot text with cancellation, retry,
   await expect(tools.getByRole("textbox", { name: "Extracted text from image 1" })).toHaveValue(/Invoice 4823/);
   await page.setViewportSize({ width: 390, height: 844 });
   await tools.getByRole("heading", { name: "Image tools" }).scrollIntoViewIfNeeded();
-  await page.screenshot({ path: "/tmp/keepall-image-tools-mobile.png", fullPage: false });
+  await page.screenshot({ path: testInfo.outputPath("image-tools-mobile.png"), fullPage: false });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.setViewportSize({ width: 1280, height: 900 });
   const secondImage = await sharp({ create: { width: 50, height: 50, channels: 3, background: "#0000FF" } }).png().toBuffer();
