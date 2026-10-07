@@ -2,7 +2,7 @@
 
 import { defaultCache, PAGES_CACHE_NAME } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from "serwist";
+import { CacheFirst, ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -25,6 +25,14 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
+    // Fetch only the selected OCR core on demand, then retain it for offline use.
+    {
+      matcher: ({ sameOrigin, url }) => sameOrigin && url.pathname.startsWith("/ocr/7.0.0/"),
+      handler: new CacheFirst({
+        cacheName: "keepall-ocr-7.0.0",
+        plugins: [new ExpirationPlugin({ maxEntries: 12, maxAgeSeconds: 365 * 24 * 60 * 60 })],
+      }),
+    },
     // Probe must hit the network so offline detection is not fooled by Cache Storage.
     {
       matcher: ({ url }) => url.pathname === CONNECTIVITY_PROBE_PATH,
