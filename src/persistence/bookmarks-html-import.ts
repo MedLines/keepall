@@ -22,13 +22,14 @@ export type BookmarksHtmlImportSummary = {
   skipped: number;
   skippedRows: SkippedBookmarkRow[];
   addedLinkIds: string[];
+  cancelled?: boolean;
 };
 
 export { BookmarksHtmlParseError, formatSkippedBookmarksLog };
 
 export async function importBookmarksHtmlMerge(
   html: string,
-  options: { collectionPolicy: BookmarksHtmlCollectionPolicy },
+  options: { collectionPolicy: BookmarksHtmlCollectionPolicy; signal?: AbortSignal; onProgress?: (done: number, total: number) => void },
 ): Promise<BookmarksHtmlImportSummary> {
   const rows = parseBookmarksHtml(html);
   const summary: BookmarksHtmlImportSummary = {
@@ -40,6 +41,8 @@ export async function importBookmarksHtmlMerge(
   };
 
   for (const row of rows) {
+    options.onProgress?.(summary.added + summary.merged + summary.skipped, rows.length);
+    if (options.signal?.aborted) { summary.cancelled = true; break; }
     const normalized = normalizeLinkUrl(row.url);
     if (!normalized) {
       summary.skipped += 1;
@@ -95,5 +98,6 @@ export async function importBookmarksHtmlMerge(
     }
   }
 
+  options.onProgress?.(summary.added + summary.merged + summary.skipped, rows.length);
   return summary;
 }

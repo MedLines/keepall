@@ -677,7 +677,7 @@ export function Library() {
     ? visibleOverviewEntries.map(entry => entry.organization)
     : visibleItems;
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
-  const emptyStateKind = getEmptyStateKind(view, hasActiveSearch, items.length + trashedItems.length);
+  const emptyStateKind = getEmptyStateKind(view, hasActiveSearch, items.length);
   const entireSearch = entireLibrarySearch(view);
   const emptySearchScope = [view.trash ? "Trash" : browseCollection?.name ?? (browseUnsorted ? "Unsorted" : "the library"), browseTagName ? `tag “${browseTagName}”` : null, browseType ? `${browseType} items` : null].filter(Boolean).join(" · ");
   const emptyStateMessage = getEmptyStateMessage(view, hasActiveSearch, browseCollectionId);

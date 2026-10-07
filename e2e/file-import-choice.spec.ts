@@ -25,7 +25,7 @@ async function counts(page: Page) {
 }
 async function openCapture(page: Page) {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+k");
   const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
   await expect(capture.getByRole("button", { name: "Add files", exact: true })).toBeEnabled();
@@ -66,7 +66,9 @@ for (const source of ["capture", "files", "folder"] as const) {
           expect(Object.values(await counts(page))).toEqual([0, 0, 0, 0, 0, 0, 0]);
           continue;
         }
-        expect(await counts(page)).toMatchObject({ items: mode === "gallery" ? 1 : 2, assets: 2, collections: 1, tags: 1 });
+        await expect.poll(() => counts(page)).toMatchObject({ items: mode === "gallery" ? 1 : 2, assets: 2, collections: 1, tags: 1 });
+        await expect(page.getByRole("dialog", { name: "Importing files", exact: true })).toBeHidden();
+        await expect(capture).toBeHidden();
         expect(await page.evaluate(async () => {
           const db = await new Promise<IDBDatabase>((resolve) => { const r = indexedDB.open("keepall"); r.onsuccess = () => resolve(r.result); });
           try { return await new Promise<boolean>((resolve) => { const r = db.transaction("items").objectStore("items").getAll(); r.onsuccess = () => resolve(r.result.every((item) => item.tagIds.length === 1 && item.collectionIds.length === 1)); }); }
@@ -106,7 +108,9 @@ for (const source of ["capture", "files", "folder"] as const) {
       await capture.getByRole("button", { name: cancel ? "Cancel" : "Save", exact: true }).click();
       await expect(capture).toBeHidden();
       if (cancel) { expect(Object.values(await counts(page))).toEqual([0, 0, 0, 0, 0, 0, 0]); continue; }
-      expect(await counts(page)).toMatchObject({ items: 4, assets: 1, documentAssets: 3, collections: 1, tags: 1 });
+      await expect.poll(() => counts(page)).toMatchObject({ items: 4, assets: 1, documentAssets: 3, collections: 1, tags: 1 });
+      await expect(page.getByRole("dialog", { name: "Importing files", exact: true })).toBeHidden();
+      await expect(capture).toBeHidden();
       await page.reload();
       await expect(page.locator("[data-item-id]")).toHaveCount(4);
       await page.getByRole("link", { name: "Open first", exact: true }).click();
@@ -119,8 +123,8 @@ for (const width of [320, 1024]) {
   test(`image choices and caption keep their space at ${width}px with searchable filing and reduced motion`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto("/");
-    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
     if (width < 768) await page.getByRole("button", { name: "Close navigation", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     await page.evaluate(async () => {
       const db = await new Promise<IDBDatabase>((resolve) => { const r = indexedDB.open("keepall"); r.onsuccess = () => resolve(r.result); });
       const tx = db.transaction(["collections", "tags"], "readwrite");

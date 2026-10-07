@@ -8,9 +8,11 @@ import { MAX_LOCAL_IMAGE_BYTES } from "@/domain/image";
 import { MAX_LOCAL_VIDEO_BYTES, type VideoItem } from "@/domain/video";
 import { importKeepallBackupMerge, replaceValidatedBackup } from "./backup";
 import type { KeepallMergeSummary } from "./backup";
+import type { BackupImportProgress } from "@/domain/backup";
 import type { Thumbnail, VideoAsset } from "./db";
 import { readBackupSnapshot } from "./backup-snapshot";
 import { parseAutomaticBackupIdentity, type AutomaticBackupIdentity } from "@/domain/automatic-backup";
+import { abortable } from "@/lib/abortable";
 
 const ARCHIVE_VERSION = 10;
 const UUID = "[0-9a-f-]{36}";
@@ -70,7 +72,7 @@ export async function exportKeepallArchive(exportedAt = Date.now(), automaticBac
   }
 }
 
-async function readArchive(file: Blob): Promise<{
+async function readArchive(file: Blob, signal?: AbortSignal): Promise<{
   backup: KeepallBackup;
   binaryAssets: Map<string, Uint8Array>;
   videoAssets: VideoAsset[];
@@ -80,7 +82,7 @@ async function readArchive(file: Blob): Promise<{
 }> {
   const reader = new ZipReader(new BlobReader(file));
   try {
-    const entries = await reader.getEntries();
+    const entries = await abortable(reader.getEntries(), signal);
     const byName = new Map(entries.map((entry) => [entry.filename, entry]));
     const manifestEntry = byName.get("manifest.json");
     if (byName.size !== entries.length || !manifestEntry || manifestEntry.directory) {
@@ -89,7 +91,7 @@ async function readArchive(file: Blob): Promise<{
     if (manifestEntry.uncompressedSize > 50 * 1024 * 1024) {
       throw new BackupValidationError("Archive manifest is too large");
     }
-    const manifestText = await manifestEntry.getData(new TextWriter());
+    const manifestText = await manifestEntry.getData(new TextWriter(), { signal });
     let raw: unknown;
     try { raw = JSON.parse(manifestText); }
     catch { throw new BackupValidationError("Archive manifest is invalid JSON"); }
@@ -195,7 +197,7 @@ async function readArchive(file: Blob): Promise<{
     for (const record of assets) {
       const entry = byName.get(record.path as string);
       if (!entry || entry.directory || entry.uncompressedSize !== record.byteLength) throw new BackupValidationError(`Archive asset is missing or damaged: ${record.id}`);
-      const bytes = await entry.getData(new Uint8ArrayWriter());
+      const bytes = await entry.getData(new Uint8ArrayWriter(), { signal });
       if (bytes.byteLength !== record.byteLength ||
           (record.contentHash && await hashAssetBytes(bytes) !== record.contentHash)) {
         throw new BackupValidationError(`Archive asset is damaged: ${record.id}`);
@@ -205,15 +207,15 @@ async function readArchive(file: Blob): Promise<{
     const documentAssets = await readArchiveDocuments(documents, async (path, size) => {
       const entry = byName.get(path);
       if (!entry || entry.directory || entry.uncompressedSize !== size) throw new BackupValidationError("Document original is missing or damaged.");
-      return entry.getData(new Uint8ArrayWriter());
+      return entry.getData(new Uint8ArrayWriter(), { signal });
     }, backup.items.filter((item): item is DocumentItem => item.type === "document"));
     const videoAssets: VideoAsset[] = [];
     for (const record of videos) {
       const entry = byName.get(record.path as string);
       if (!entry || entry.directory || entry.uncompressedSize !== record.byteLength) throw new BackupValidationError(`Archive video is missing or damaged: ${record.id}`);
       const blob = typeof Blob.prototype.stream === "function"
-        ? await entry.getData(new BlobWriter(record.mimeType as string))
-        : new Blob([new Uint8Array(await entry.getData(new Uint8ArrayWriter()))], { type: record.mimeType as string });
+        ? await entry.getData(new BlobWriter(record.mimeType as string), { signal })
+        : new Blob([new Uint8Array(await entry.getData(new Uint8ArrayWriter(), { signal }))], { type: record.mimeType as string });
       if (blob.size !== record.byteLength) {
         throw new BackupValidationError(`Archive video is damaged: ${record.id}`);
       }
@@ -227,12 +229,13 @@ async function readArchive(file: Blob): Promise<{
     for (const record of thumbnailRecords) {
       const entry = byName.get(record.path as string);
       if (!entry || entry.directory || entry.uncompressedSize !== record.byteLength) throw new BackupValidationError("Archive thumbnail is missing or damaged");
-      const bytes = await entry.getData(new Uint8ArrayWriter());
+      const bytes = await entry.getData(new Uint8ArrayWriter(), { signal });
       if (bytes.byteLength !== record.byteLength) throw new BackupValidationError("Archive thumbnail is damaged");
       thumbnails.push({ assetId: record.assetId as string, blob: new Blob([new Uint8Array(bytes)], { type: record.mimeType as string }) });
     }
     return { backup, binaryAssets, videoAssets, thumbnails, documentAssets, automaticBackup: parseAutomaticBackupIdentity(candidate.automaticBackup) };
   } catch (error) {
+    if (signal?.aborted) throw signal.reason;
     if (error instanceof BackupValidationError) throw error;
     throw new BackupValidationError("Could not read backup archive");
   } finally {
@@ -289,23 +292,24 @@ export type PreparedBackup = Readonly<{
   size: number;
   exportedAt: number;
   counts: BackupCounts;
-  replace: () => Promise<string[]>;
-  merge: () => Promise<KeepallMergeSummary>;
+  replace: (onProgress?: (progress: BackupImportProgress) => void, signal?: AbortSignal) => Promise<string[]>;
+  merge: (onProgress?: (progress: BackupImportProgress) => void, signal?: AbortSignal) => Promise<KeepallMergeSummary>;
 }>;
 
 /** Validate and retain one owned decode for the exact file the user reviews. */
-export async function prepareBackupFile(file: File): Promise<PreparedBackup> {
-  const signature = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+export async function prepareBackupFile(file: File, signal?: AbortSignal): Promise<PreparedBackup> {
+  const signature = new Uint8Array(await abortable(file.slice(0, 4).arrayBuffer(), signal));
   let payload: Awaited<ReturnType<typeof readArchive>>;
   if (signature[0] === 0x50 && signature[1] === 0x4b) {
-    payload = await readArchive(file);
+    payload = await readArchive(file, signal);
   } else {
     let raw: unknown;
-    try { raw = JSON.parse(await file.text()) as unknown; }
-    catch { throw new BackupValidationError("Backup file is not valid JSON or ZIP"); }
+    try { raw = JSON.parse(await abortable(file.text(), signal)) as unknown; }
+    catch { if (signal?.aborted) throw signal.reason; throw new BackupValidationError("Backup file is not valid JSON or ZIP"); }
     const backup = parseKeepallBackup(raw);
     const binaryAssets = new Map<string, Uint8Array>();
     for (const record of backup.assets) {
+      signal?.throwIfAborted();
       let bytes: Uint8Array;
       try {
         bytes = base64ToBytes(record.dataBase64);
@@ -321,6 +325,7 @@ export async function prepareBackupFile(file: File): Promise<PreparedBackup> {
     payload = { backup, binaryAssets, videoAssets: [], thumbnails: [], documentAssets: [] };
   }
   const { backup, binaryAssets, videoAssets, thumbnails, documentAssets } = payload;
+  signal?.throwIfAborted();
   const counts = summarizeBackupContents(backup.items, backup.tags.length,
     backup.collections.length, backup.assets.length, videoAssets.length, documentAssets.length);
   return Object.freeze({
@@ -328,16 +333,17 @@ export async function prepareBackupFile(file: File): Promise<PreparedBackup> {
     size: file.size,
     exportedAt: backup.exportedAt,
     counts,
-    replace: async () => {
-      await replaceValidatedBackup(backup, binaryAssets, videoAssets, thumbnails, documentAssets);
+    replace: async (onProgress, signal) => {
+      await replaceValidatedBackup(backup, binaryAssets, videoAssets, thumbnails, documentAssets, onProgress, signal);
       return backup.items.filter((item) => item.type === "link").map((item) => item.id);
     },
-    merge: async () => {
+    merge: async (onProgress, signal) => {
       const videoItems = backup.items.filter((item): item is VideoItem => item.type === "video");
       const { summary } = await importKeepallBackupMerge(
         { ...backup, items: backup.items.filter((item) => item.type !== "video" && item.type !== "document") },
         binaryAssets, { items: videoItems, assets: videoAssets, thumbnails },
         { items: backup.items.filter((item): item is DocumentItem => item.type === "document"), assets: documentAssets },
+        onProgress, signal,
       );
       return summary;
     },

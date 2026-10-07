@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { BackupValidationError, type BackupCounts } from "@/domain/backup";
+import { BackupValidationError, type BackupCounts, type BackupImportProgress } from "@/domain/backup";
 import { BackupPanel } from "./backup-panel";
 
 const { prepareBackupFile, countCurrentLibrary } = vi.hoisted(() => ({
@@ -68,6 +68,31 @@ test("invalid files show an alert and never offer restore actions", async () => 
   expect(replace).not.toHaveBeenCalled();
 });
 
+test.each(["merge", "replace"] as const)("canceling a running %s waits for rollback and reports an unchanged library", async (mode) => {
+  const action = mode === "merge" ? merge : replace;
+  let finishRollback!: () => void;
+  action.mockImplementation((_report, signal: AbortSignal) => new Promise((_resolve, reject) => {
+    signal.addEventListener("abort", () => { finishRollback = () => reject(signal.reason); }, { once: true });
+  }));
+  const { container } = render(<BackupPanel />);
+  chooseFile(container);
+  const review = await screen.findByRole("dialog", { name: "Import backup" });
+  if (mode === "replace") {
+    fireEvent.click(within(review).getByRole("button", { name: "Replace library" }));
+    fireEvent.click(within(await screen.findByRole("dialog", { name: "Replace library?" })).getByRole("button", { name: "Confirm replacement" }));
+  } else fireEvent.click(within(review).getByRole("button", { name: "Merge" }));
+  const dialog = screen.getByRole("dialog", { name: mode === "merge" ? "Merging backup" : "Restoring library" });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel import" }));
+  expect(dialog).toBeVisible();
+  expect(within(dialog).getByRole("button", { name: "Canceling…" })).toBeDisabled();
+  fireEvent.keyDown(dialog, { key: "Escape" });
+  expect(dialog).toBeVisible();
+  await act(async () => finishRollback());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: /Merging backup|Restoring library/ })).toBeNull());
+  expect(screen.getByRole("status")).toHaveTextContent("Backup import canceled. Your library wasn't changed.");
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
 test("failed merges explain that the library is unchanged and allow another attempt", async () => {
   merge.mockRejectedValueOnce(new DOMException("Storage full", "QuotaExceededError"));
   const { container } = render(<BackupPanel />);
@@ -92,7 +117,7 @@ test("restore shows pending state and blocks a second operation until completion
   const confirm = await screen.findByRole("dialog", { name: "Replace library?" });
   fireEvent.click(within(confirm).getByRole("button", { name: "Confirm replacement" }));
   expect(within(confirm).getByRole("button", { name: "Restoring library…" })).toBeDisabled();
-  expect(within(confirm).getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(within(confirm).getByRole("button", { name: "Cancel import" })).toBeEnabled();
   expect(replace).toHaveBeenCalledOnce();
   finish([]);
   await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Library replaced from backup"));
@@ -108,4 +133,62 @@ test("a completed read after unmount cannot open review", async () => {
   await Promise.resolve();
   expect(countCurrentLibrary).not.toHaveBeenCalled();
   expect(screen.queryByRole("dialog", { name: "Import backup" })).not.toBeInTheDocument();
+});
+
+test.each(["merge", "replace"] as const)("%s displays live progress inside its dialog and stays open until committed", async (mode) => {
+  let finish!: (value: unknown) => void;
+  let report!: (progress: BackupImportProgress) => void;
+  const action = mode === "merge" ? merge : replace;
+  action.mockImplementation((onProgress) => {
+    report = onProgress;
+    return new Promise((resolve) => { finish = resolve; });
+  });
+  const { container } = render(<BackupPanel variant="sidebar" onClose={vi.fn()} />);
+  chooseFile(container);
+  const review = await screen.findByRole("dialog", { name: "Import backup" });
+  if (mode === "replace") {
+    fireEvent.click(within(review).getByRole("button", { name: "Replace library" }));
+    const confirmation = await screen.findByRole("dialog", { name: "Replace library?" });
+    fireEvent.click(within(confirmation).getByRole("button", { name: "Confirm replacement" }));
+  } else {
+    fireEvent.click(within(review).getByRole("button", { name: "Merge" }));
+  }
+  const dialog = screen.getByRole("dialog", { name: mode === "merge" ? "Merging backup" : "Restoring library" });
+  expect(within(dialog).getByRole("progressbar")).toBeVisible();
+  expect(dialog).toHaveTextContent("Keep this tab open");
+  expect(within(dialog).getByRole("button", { name: "Close" })).toBeDisabled();
+  expect(within(dialog).getByRole("button", { name: "Cancel import" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Close backup", hidden: true })).toBeDisabled();
+  fireEvent.keyDown(dialog, { key: "Escape" });
+  expect(dialog).toBeVisible();
+  act(() => report({ phase: mode === "merge" ? "merging-items" : "restoring-items", completed: 3, total: 10 }));
+  expect(within(dialog).getByRole("progressbar")).toHaveAttribute("value", "3");
+  expect(within(dialog).getByRole("progressbar")).toHaveAttribute("max", "10");
+  expect(dialog).toHaveTextContent("3 of 10 items");
+  act(() => report({ phase: "saving-library" }));
+  expect(dialog).toHaveTextContent("Saving library");
+  expect(within(dialog).getByRole("progressbar")).not.toHaveAttribute("value");
+  expect(dialog).toBeVisible();
+  await act(async () => finish(mode === "merge" ? { added: 10, updated: 0, unchanged: 0, addedLinkIds: [] } : []));
+  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  expect(screen.getByRole("status")).toHaveTextContent(mode === "merge" ? "Merged: 10 added" : "Library replaced from backup");
+});
+
+test.each(["merge", "replace"] as const)("failed %s releases the dialog and explains that the library is unchanged", async (mode) => {
+  const action = mode === "merge" ? merge : replace;
+  action.mockRejectedValueOnce(new DOMException("Storage full", "QuotaExceededError"));
+  const { container } = render(<BackupPanel />);
+  chooseFile(container);
+  const review = await screen.findByRole("dialog", { name: "Import backup" });
+  if (mode === "replace") {
+    fireEvent.click(within(review).getByRole("button", { name: "Replace library" }));
+    const confirm = await screen.findByRole("dialog", { name: "Replace library?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Confirm replacement" }));
+  } else {
+    fireEvent.click(within(review).getByRole("button", { name: "Merge" }));
+  }
+  expect(await screen.findByRole("alert")).toHaveTextContent("Your library wasn't changed");
+  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  expect(screen.getByRole("button", { name: "Import backup" })).toBeEnabled();
+  expect(screen.getByRole("status")).not.toHaveTextContent(/Merged:|Library replaced/);
 });

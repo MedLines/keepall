@@ -25,6 +25,7 @@ export async function mergeDocumentBackup(
   remapCollections: (ids: string[]) => string[],
   itemIdMap: Map<string, string>,
   summary: KeepallMergeSummary,
+  onItemProcessed?: () => void,
 ) {
   const db = getDb();
   const originals = new Map(payload.assets.map((asset) => [asset.id, asset]));
@@ -48,6 +49,7 @@ export async function mergeDocumentBackup(
       if (local && local.assetId !== next.assetId) replacedOriginals.add(local.assetId);
       itemIdMap.set(incoming.id, id);
       recordMerge(local, next, summary);
+      onItemProcessed?.();
     }
     await deleteUnreferencedDocuments([...replacedOriginals]);
   });

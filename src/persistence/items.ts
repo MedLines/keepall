@@ -45,6 +45,8 @@ import { getDb } from "./db";
 import { putActiveItem } from "./active-item";
 import { imageThumbnail, putThumbnail } from "./thumbnails";
 import { createTag, resolveItemTagIds } from "./tags";
+import { abortable } from "@/lib/abortable";
+import { cancellableWrite } from "./cancellable-write";
 
 export async function createNote(input: CreateNoteInput): Promise<NoteItem> {
   const note = buildNote(input);
@@ -171,6 +173,7 @@ export async function createImage(input: {
   collectionIds?: string[];
   collectionName?: string;
   tagNames?: readonly string[];
+  signal?: AbortSignal;
 }): Promise<ImageItem> {
   if (input.assets.length === 0) {
     throw new ImageValidationError("Image asset is required");
@@ -184,14 +187,15 @@ export async function createImage(input: {
     thumbnail: Blob | null;
   }[] = [];
   for (const payload of input.assets) {
+    input.signal?.throwIfAborted();
     const mime = assertLocalImageBytes(payload.bytes, payload.mimeType);
-    const contentHash = await hashAssetBytes(payload.bytes);
+    const contentHash = await abortable(hashAssetBytes(payload.bytes), input.signal);
     preparedAssets.push({ mimeType: mime, bytes: payload.bytes, contentHash,
-      thumbnail: await imageThumbnail(payload.bytes, mime) });
+      thumbnail: await abortable(imageThumbnail(payload.bytes, mime), input.signal) });
   }
 
   const db = getDb();
-  return db.transaction("rw", [db.assets, db.items, db.thumbnails, db.collections, db.tags], async () => {
+  return cancellableWrite(db, [db.assets, db.items, db.thumbnails, db.collections, db.tags], input.signal, async () => {
     const collectionIds = await resolveItemCollectionIds(input.collectionIds, input.collectionName);
     for (const id of collectionIds) if (!await db.collections.get(id)) throw new Error("The selected collection no longer exists.");
     const tagIds = await resolveItemTagIds([], input.tagNames);

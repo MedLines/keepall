@@ -4,7 +4,7 @@ test.use({ serviceWorkers: "block" });
 
 test("settings owns backup and import recovery", async ({ page }, testInfo) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible();
@@ -65,7 +65,7 @@ test("settings owns backup and import recovery", async ({ page }, testInfo) => {
 
 test("validated review merges newer details and replacement requires confirmation", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   const note = (id: string, content: string, updatedAt: number, deletedAt?: number) => ({
     id, type: "note", title: "", content, tagIds: [], collectionIds: [],
     createdAt: 1, updatedAt, ...(deletedAt === undefined ? {} : { deletedAt }),
@@ -110,7 +110,7 @@ test("validated review merges newer details and replacement requires confirmatio
   await expect(contents.getByRole("rowheader", { name: "In Trash" }).locator("..")).toContainText("In Trash10");
   await expect(contents.getByRole("rowheader", { name: "Notes" }).locator("..")).toContainText("Notes32");
   await review.getByRole("button", { name: "Merge" }).click();
-  await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Merged:");
+  await expect(page.locator('div.sr-only[role="status"][aria-atomic="true"]')).toContainText("Merged:");
   expect((await readItems()).find((item) => item.id === "same")?.content).toBe("Newer detail");
   expect((await readItems()).some((item) => item.id === "new")).toBe(true);
   await select();
@@ -132,10 +132,81 @@ test("validated review merges newer details and replacement requires confirmatio
   expect((await readItems()).length).toBe(4);
   await review.getByRole("button", { name: "Replace library" }).click();
   await confirm.getByRole("button", { name: "Confirm replacement" }).click();
-  await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Library replaced from backup");
+  await expect(page.locator('div.sr-only[role="status"][aria-atomic="true"]')).toContainText("Library replaced from backup");
   await page.reload();
   expect((await readItems()).map((item) => item.id).sort()).toEqual(["new", "same"]);
   await input.setInputFiles({ name: "broken.json", mimeType: "application/json", buffer: Buffer.from("{}") });
   await expect(page.getByRole("region", { name: "Backup" }).getByRole("alert")).toContainText("Backup format");
   expect((await readItems()).length).toBe(2);
 });
+
+
+for (const mode of ["merge", "replace"] as const) {
+  test(`${mode} shows progress and cannot be dismissed while storage commits`, async ({ page }, testInfo) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.addInitScript(() => {
+      const original = IDBDatabase.prototype.transaction;
+      IDBDatabase.prototype.transaction = function (...args: Parameters<typeof original>) {
+        const tx = original.apply(this, args);
+        const gate = window as typeof window & { holdImportCommit?: boolean };
+        if (gate.holdImportCommit && tx.mode === "readwrite" && tx.objectStoreNames.contains("items")) {
+          const keepAlive = () => {
+            if (!gate.holdImportCommit) return;
+            const request = tx.objectStore("items").count();
+            request.onsuccess = keepAlive;
+          };
+          keepAlive();
+        }
+        return tx;
+      };
+    });
+    await page.goto("/settings#backup-heading");
+    const items = Array.from({ length: 205 }, (_, index) => ({
+      id: `progress-${index}`, type: "note", title: "", content: `Imported ${index}`,
+      tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 2,
+      ...(index === 0 ? { deletedAt: 3 } : {}),
+    }));
+    const backup = { format: "keepall", version: 7, exportedAt: 50, items,
+      tags: [], collections: [], assets: [], preferences: { pinnedCollectionIds: [] } };
+    const input = page.getByRole("region", { name: "Backup", exact: true }).locator('input[accept*="application/json"]');
+    await input.setInputFiles({ name: "progress.keepall.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
+    const review = page.getByRole("dialog", { name: "Import backup", exact: true });
+    await expect(review).toBeVisible();
+    if (mode === "replace") {
+      await review.getByRole("button", { name: "Replace library", exact: true }).click();
+      await expect(page.getByRole("dialog", { name: "Replace library?", exact: true })).toBeVisible();
+    }
+    await page.evaluate(() => {
+      (window as typeof window & { holdImportCommit?: boolean }).holdImportCommit = true;
+    });
+    await page.getByRole("dialog").getByRole("button", { name: mode === "merge" ? "Merge" : "Confirm replacement", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: mode === "merge" ? "Merging backup" : "Restoring library", exact: true });
+    await expect(dialog.getByRole("progressbar")).toBeVisible();
+    await expect(dialog).toContainText("Keep this tab open");
+    await expect(dialog.getByRole("button", { name: "Cancel import", exact: true })).toBeEnabled();
+    await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
+    await expect(dialog).toContainText("Saving library");
+    await page.mouse.click(8, 8);
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`${mode}-progress-desktop.png`) });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(dialog.getByRole("progressbar")).toBeInViewport();
+    await page.mouse.click(8, 8);
+    await expect(dialog).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`${mode}-progress-mobile.png`) });
+    await page.evaluate(() => {
+      (window as typeof window & { holdImportCommit?: boolean }).holdImportCommit = false;
+    });
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('div.sr-only[role="status"][aria-atomic="true"]')).toContainText(mode === "merge" ? "Merged: 205 added" : "Library replaced from backup");
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto("/");
+    await expect(page.getByRole("listitem", { name: "Imported 99", exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("listitem", { name: "Imported 99", exact: true })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+}

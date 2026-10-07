@@ -3,13 +3,14 @@ import { resolveItemCollectionIds } from "./collections";
 import { getDb } from "./db";
 import { resolveItemTagIds } from "./tags";
 import { putActiveItem } from "./active-item";
+import { cancellableWrite } from "./cancellable-write";
 
-export async function createVideo(file: File, poster: Blob | null = null, title?: string, notes?: { content: string; format: "plain" | "markdown" }, collectionIds: string[] = [], organization?: { collectionName?: string; tagNames?: readonly string[] }): Promise<VideoItem> {
+export async function createVideo(file: File, poster: Blob | null = null, title?: string, notes?: { content: string; format: "plain" | "markdown" }, collectionIds: string[] = [], organization?: { collectionName?: string; tagNames?: readonly string[]; signal?: AbortSignal }): Promise<VideoItem> {
   assertLocalVideo(file);
   const db = getDb();
   const assetId = crypto.randomUUID();
   const item = buildVideo({ assetId, fileName: file.name, title, noteContent: notes?.content, noteFormat: notes?.format });
-  await db.transaction("rw", [db.items, db.videoAssets, db.thumbnails, db.collections, db.tags], async () => {
+  await cancellableWrite(db, [db.items, db.videoAssets, db.thumbnails, db.collections, db.tags], organization?.signal, async () => {
     item.collectionIds = await resolveItemCollectionIds(collectionIds, organization?.collectionName);
     item.tagIds = await resolveItemTagIds([], organization?.tagNames);
     for (const id of item.collectionIds) if (!await db.collections.get(id)) throw new Error("The selected collection no longer exists.");

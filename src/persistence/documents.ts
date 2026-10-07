@@ -4,6 +4,8 @@ import { decodeTextDocument, documentFormat, DocumentValidationError, type Docum
 import { getDb } from "./db";
 import { resolveItemTagIds } from "./tags";
 import { readPdfText } from "./pdf-document";
+import { abortable } from "@/lib/abortable";
+import { cancellableWrite } from "./cancellable-write";
 
 export async function getDocumentRevision(): Promise<string> {
   return (await getDb().backupState.get("documents"))?.revision ?? "initial";
@@ -12,15 +14,16 @@ export async function getDocumentRevision(): Promise<string> {
 export async function createDocument(input: {
   fileName: string; bytes: Uint8Array; title?: string; noteContent?: string;
   tagIds?: string[]; collectionIds?: string[]; collectionName?: string; tagNames?: readonly string[];
+  signal?: AbortSignal;
 }): Promise<DocumentItem> {
   const format = documentFormat(input.fileName, input.bytes.byteLength);
   const bytes = new Uint8Array(input.bytes);
-  const pdfText = format === "pdf" ? await readPdfText(bytes) : undefined;
+  const pdfText = format === "pdf" ? await abortable(readPdfText(bytes), input.signal) : undefined;
   if (format !== "pdf") decodeTextDocument(bytes);
-  const contentHash = await hashAssetBytes(bytes);
+  const contentHash = await abortable(hashAssetBytes(bytes), input.signal);
   const now = Date.now();
   const db = getDb();
-  return db.transaction("rw", [db.items, db.documentAssets, db.tags, db.collections], async () => {
+  return cancellableWrite(db, [db.items, db.documentAssets, db.tags, db.collections], input.signal, async () => {
     const tagIds = await resolveItemTagIds(input.tagIds, input.tagNames);
     const collectionIds = await resolveItemCollectionIds(input.collectionIds, input.collectionName);
     for (const id of tagIds) if (!await db.tags.get(id)) throw new Error("The selected tag no longer exists.");

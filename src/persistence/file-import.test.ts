@@ -9,6 +9,63 @@ import { createVideo } from "./videos";
 
 const prepareVideo = vi.fn(async () => new Blob(["poster"], { type: "image/webp" }));
 
+test("canceling a file batch keeps completed items and never reads remaining files", async () => {
+  const controller = new AbortController();
+  const remaining = file("remaining.txt", "Remaining");
+  const read = vi.spyOn(remaining, "arrayBuffer");
+  const summary = await importFiles([file("saved.txt", "Saved"), remaining], {
+    prepareVideo, signal: controller.signal,
+    onProgress: () => controller.abort(),
+  });
+  expect(summary.cancelled).toBe(true);
+  expect(summary.results).toEqual([expect.objectContaining({ status: "saved", fileName: "saved.txt" })]);
+  expect(read).not.toHaveBeenCalled();
+  expect(await getDb().items.count()).toBe(1);
+  expect(await getDb().documentAssets.count()).toBe(1);
+});
+
+test("canceling a pending read stops promptly and a late read cannot save an item", async () => {
+  const controller = new AbortController();
+  let finish!: (bytes: ArrayBuffer) => void;
+  const pending = file("pending.txt", "Pending");
+  vi.spyOn(pending, "arrayBuffer").mockReturnValue(new Promise(resolve => { finish = resolve; }));
+  const importing = importFiles([pending], { prepareVideo, signal: controller.signal });
+  controller.abort();
+  await expect(importing).resolves.toMatchObject({ results: [], cancelled: true });
+  finish(new TextEncoder().encode("Late").buffer);
+  await Promise.resolve();
+  expect(await getDb().items.count()).toBe(0);
+});
+
+test("canceling the current write keeps earlier files and rolls back the current file's media", async () => {
+  const controller = new AbortController();
+  const add = getDb().items.add.bind(getDb().items);
+  let writes = 0;
+  vi.spyOn(getDb().items, "add").mockImplementation((...args) => add(...args).then(result => {
+    if (++writes === 2) controller.abort();
+    return result;
+  }));
+  const image = Object.assign(new NodeBlob([new Uint8Array([1])], { type: "image/png" }), { name: "cancel.png" }) as unknown as File;
+  const summary = await importFiles([file("keep.txt", "Keep"), image, file("later.txt", "Later")], { prepareVideo, signal: controller.signal });
+  expect(summary).toMatchObject({ cancelled: true, results: [expect.objectContaining({ fileName: "keep.txt", status: "saved" })] });
+  expect(await getDb().items.count()).toBe(1);
+  expect(await getDb().assets.count()).toBe(0);
+  expect(await getDb().thumbnails.count()).toBe(0);
+});
+
+test("canceling a gallery write rolls back the item, media and new organization", async () => {
+  const controller = new AbortController();
+  const add = getDb().items.add.bind(getDb().items);
+  vi.spyOn(getDb().items, "add").mockImplementation((...args) => add(...args).then(result => {
+    controller.abort();
+    return result;
+  }));
+  await expect(createImage({ assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }],
+    collectionName: "Canceled", tagNames: ["Canceled"], signal: controller.signal,
+  })).rejects.toMatchObject({ name: "AbortError" });
+  for (const table of [getDb().items, getDb().assets, getDb().thumbnails, getDb().collections, getDb().tags]) expect(await table.count()).toBe(0);
+});
+
 function file(name: string, text: string): File {
   const bytes = new TextEncoder().encode(text);
   return Object.assign(new NodeBlob([bytes]), { name }) as unknown as File;
@@ -91,6 +148,20 @@ test("a video decoding failure preserves other files without saving an unusable 
   expect(summary.results.map((result) => result.status)).toEqual(["saved", "failed", "saved"]);
   expect(await getDb().items.count()).toBe(2);
   expect(await getDb().videoAssets.count()).toBe(0);
+});
+
+test("reports each file's actual stage and counts failed files as processed", async () => {
+  const events: string[] = [];
+  await importFiles([file("first.txt", "First"), file("page.html", "Unsupported"), new File(["video"], "clip.mp4", { type: "video/mp4" })], {
+    prepareVideo,
+    onStage: (stage, name) => events.push(`${name}: ${stage}`),
+    onProgress: (done, result) => events.push(`${done}: ${result.status}`),
+  });
+  expect(events).toEqual([
+    "first.txt: reading", "first.txt: saving", "1: saved", "2: failed",
+    "clip.mp4: preparing-video", "clip.mp4: saving", "3: saved",
+  ]);
+  expect(await getDb().items.count()).toBe(2);
 });
 
 test("missing collection validation leaves no media item or original behind", async () => {
