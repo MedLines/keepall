@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import SettingsPage from "./page";
 import { SettingsTabs } from "./settings-tabs";
 
@@ -47,5 +47,26 @@ test("rapid tab changes retain form values and expose only the active panel", ()
   expect(screen.getByRole("textbox", { name: "Draft setting" })).toBe(input);
   expect(input).toHaveValue("Unsaved edit");
   expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+  window.history.replaceState(window.history.state, "", "/");
+});
+
+test("tab changes reset the scroll viewport and heading links work within the active tab", () => {
+  window.history.replaceState(window.history.state, "", "/settings");
+  render(<main><div data-slot="scroll-area-viewport" data-testid="viewport">
+    <SettingsTabs general={<p>General panel</p>} storage={<h2 id="backup-heading">Backup</h2>} installation={<p>Installation panel</p>} />
+  </div></main>);
+  const viewport = screen.getByTestId("viewport");
+  viewport.scrollTop = 300;
+  fireEvent.click(screen.getByRole("tab", { name: "Storage & backups" }));
+  expect(viewport.scrollTop).toBe(0);
+
+  const heading = screen.getByRole("heading", { name: "Backup" });
+  heading.scrollIntoView = vi.fn();
+  viewport.scrollTop = 200;
+  window.history.replaceState(window.history.state, "", "#backup-heading");
+  fireEvent(window, new HashChangeEvent("hashchange"));
+  expect(heading.scrollIntoView).toHaveBeenCalledWith({ block: "start", behavior: "instant" });
+  expect(viewport.scrollTop).toBe(0);
+  expect(screen.getByRole("tabpanel")).toContainElement(heading);
   window.history.replaceState(window.history.state, "", "/");
 });

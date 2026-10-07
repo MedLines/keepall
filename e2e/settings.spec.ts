@@ -2,6 +2,123 @@ import { expect, test } from "@playwright/test";
 
 test.use({ serviceWorkers: "block" });
 
+test("settings crossfades without overlapping live panels and resets scrolling", async ({ page }) => {
+  await page.goto("/settings");
+  const viewport = page.getByRole("main").locator('[data-slot="scroll-area-viewport"]').first();
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({ width, height: 825 });
+    for (const reducedMotion of ["no-preference", "reduce"] as const) {
+      await page.emulateMedia({ reducedMotion });
+      await page.getByRole("tab", { name: "General", exact: true }).click();
+      await expect(page.getByRole("tabpanel", { name: "General", exact: true })).toBeVisible();
+      await expect.poll(() => page.getByTestId("settings-content").evaluate((element) => element.style.viewTransitionName)).toBe("");
+      for (const name of ["Storage & backups", "Installation", "General"]) {
+        await viewport.evaluate((element) => { element.scrollTop = 300; });
+        const frames = page.evaluate(() => new Promise<number[]>((resolve) => {
+          const visibleCounts: number[] = [];
+          function sample() {
+            visibleCounts.push([...document.querySelectorAll(".settings-panel")].filter((panel) => panel.getBoundingClientRect().height > 0).length);
+            if (visibleCounts.length < 15) requestAnimationFrame(sample);
+            else resolve(visibleCounts);
+          }
+          requestAnimationFrame(sample);
+        }));
+        await page.getByRole("tab", { name, exact: true }).click();
+        expect(await frames).toEqual(Array(15).fill(1));
+        const panel = page.getByRole("tabpanel", { name, exact: true });
+        await expect(panel).toBeVisible();
+        await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBe(0);
+        expect(await panel.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return { transform: style.transform, opacity: style.opacity, animations: element.getAnimations().length };
+        })).toEqual({ transform: "none", opacity: "1", animations: 0 });
+      }
+      const general = page.getByRole("tab", { name: "General", exact: true });
+      await general.focus();
+      await page.keyboard.press(width < 768 ? "ArrowRight" : "ArrowDown");
+      await expect(page.getByRole("tab", { name: "Storage & backups", exact: true })).toBeFocused();
+      await expect(page.getByRole("tabpanel", { name: "Storage & backups", exact: true })).toBeVisible();
+    }
+  }
+});
+
+test("settings animates through intermediate frames without dimming and settles on the last tab", async ({ page }) => {
+  await page.goto("/settings");
+  test.skip(!await page.evaluate(() => !!document.startViewTransition), "Browser has no view transition support");
+  await page.evaluate(() => {
+    const frames: { oldDuration: string; newDuration: string; groupAnimation: string; objectFit: string; blend: string; samples: { opacity: number; sum: number; x: number; y: number; selectionY: number }[] }[] = [];
+    Reflect.set(window, "settingsTransitionFrames", frames);
+    const start = document.startViewTransition.bind(document);
+    document.startViewTransition = (update) => {
+      const transition = start(update);
+      void transition.ready.then(() => {
+        const frame = {
+          oldDuration: getComputedStyle(document.documentElement, "::view-transition-old(settings-content)").animationDuration,
+          newDuration: getComputedStyle(document.documentElement, "::view-transition-new(settings-content)").animationDuration,
+          groupAnimation: getComputedStyle(document.documentElement, "::view-transition-group(settings-content)").animationName,
+          objectFit: getComputedStyle(document.documentElement, "::view-transition-new(settings-content)").objectFit,
+          blend: getComputedStyle(document.documentElement, "::view-transition-new(settings-content)").mixBlendMode,
+          samples: [] as { opacity: number; sum: number; x: number; y: number; selectionY: number }[],
+        };
+        frames.push(frame);
+        let finished = false;
+        void transition.finished.then(() => { finished = true; }, () => { finished = true; });
+        function sample() {
+          if (finished) return;
+          const entering = getComputedStyle(document.documentElement, "::view-transition-new(settings-content)");
+          const leaving = getComputedStyle(document.documentElement, "::view-transition-old(settings-content)");
+          const matrix = new DOMMatrixReadOnly(entering.transform);
+          const selection = new DOMMatrixReadOnly(getComputedStyle(document.documentElement, "::view-transition-group(settings-selection)").transform);
+          frame.samples.push({ opacity: Number(entering.opacity), sum: Number(entering.opacity) + Number(leaving.opacity), x: matrix.m41, y: matrix.m42, selectionY: selection.m42 });
+          requestAnimationFrame(sample);
+        }
+        requestAnimationFrame(sample);
+      }, () => {});
+      return transition;
+    };
+  });
+  await page.getByRole("tab", { name: "Storage & backups", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => Reflect.get(window, "settingsTransitionFrames").length)).toBe(1);
+  await expect.poll(() => page.getByTestId("settings-content").evaluate((element) => element.style.viewTransitionName)).toBe("");
+  const first = await page.evaluate(() => Reflect.get(window, "settingsTransitionFrames")[0]);
+  expect(first).toMatchObject({
+    oldDuration: "0.26s", newDuration: "0.26s", groupAnimation: "none", objectFit: "none", blend: "plus-lighter",
+  });
+  expect(first.samples.filter((sample: { opacity: number; y: number }) => sample.opacity > 0.1 && sample.opacity < 0.9 && sample.y > 1).length).toBeGreaterThan(2);
+  const selectionPositions = first.samples.filter((sample: { opacity: number }) => sample.opacity > 0 && sample.opacity < 1).map((sample: { selectionY: number }) => sample.selectionY);
+  expect(Math.max(...selectionPositions) - Math.min(...selectionPositions)).toBeGreaterThan(10);
+  for (const sample of first.samples.filter((sample: { opacity: number }) => sample.opacity > 0 && sample.opacity < 1)) {
+    expect(Math.abs(sample.sum - 1)).toBeLessThan(0.01);
+  }
+  for (const name of ["Installation", "General", "Storage & backups", "Installation"]) {
+    await page.getByRole("tab", { name, exact: true }).click();
+  }
+  await expect(page.getByRole("tabpanel", { name: "Installation", exact: true })).toBeVisible();
+  await expect.poll(() => page.getByTestId("settings-content").evaluate((element) => element.style.viewTransitionName)).toBe("");
+  const transitionCount = await page.evaluate(() => Reflect.get(window, "settingsTransitionFrames").length);
+  await page.getByRole("tab", { name: "Installation", exact: true }).focus();
+  await page.keyboard.press("Home");
+  await expect(page.getByRole("tabpanel", { name: "General", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => Reflect.get(window, "settingsTransitionFrames").length)).toBe(transitionCount);
+
+  await page.setViewportSize({ width: 320, height: 825 });
+  await expect(page.getByRole("tablist", { name: "Settings", exact: true })).toHaveAttribute("data-orientation", "horizontal");
+  for (const name of ["Storage & backups", "General"]) {
+    await page.getByRole("tab", { name, exact: true }).click();
+    await expect(page.getByRole("tabpanel", { name, exact: true })).toBeVisible();
+    await expect.poll(() => page.getByTestId("settings-content").evaluate((element) => element.style.viewTransitionName)).toBe("");
+    const samples = await page.evaluate(() => Reflect.get(window, "settingsTransitionFrames").at(-1).samples);
+    expect(samples.some((sample: { opacity: number; x: number; y: number }) => sample.opacity > 0.1 && sample.opacity < 0.9 && sample.y === 0 && (name === "General" ? sample.x < -1 : sample.x > 1))).toBe(true);
+  }
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("tab", { name: "Storage & backups", exact: true }).click();
+  await expect(page.getByRole("tabpanel", { name: "Storage & backups", exact: true })).toBeVisible();
+  await expect.poll(() => page.getByTestId("settings-content").evaluate((element) => element.style.viewTransitionName)).toBe("");
+  const reduced = await page.evaluate(() => Reflect.get(window, "settingsTransitionFrames").at(-1));
+  expect(reduced.newDuration).toBe("0.12s");
+  expect(reduced.samples.every((sample: { x: number; y: number }) => sample.x === 0 && sample.y === 0)).toBe(true);
+});
+
 test("settings scrolls the whole page with sticky navigation and fixed Help", async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     localStorage.removeItem("keepall.storage-status-dismissed");
@@ -43,7 +160,11 @@ test("settings scrolls the whole page with sticky navigation and fixed Help", as
       await expect(page.getByRole("heading", { name: "Settings", exact: true })).not.toBeInViewport();
       await expect(page.getByRole("tablist", { name: "Settings", exact: true })).toBeInViewport();
       await expect(page.getByRole("link", { name: "Help & guides", exact: true })).toBeInViewport();
-      await expect(page.getByRole("button", { name: "Choose backup folder", exact: true })).toBeInViewport();
+      if (await page.evaluate(() => "showDirectoryPicker" in window)) {
+        await expect(page.getByRole("button", { name: "Choose backup folder", exact: true })).toBeInViewport();
+      } else {
+        await expect(page.getByText("Folder backups are not supported in this browser.", { exact: false })).toBeInViewport();
+      }
       await page.screenshot({ path: testInfo.outputPath(`settings-bottom-${width}-${withBanner}.png`) });
     }
   }
