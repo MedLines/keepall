@@ -1,0 +1,22 @@
+.kb-post-list { list-style: none; margin: 0; padding: 0; }
+.kb-post-list > li { padding-block: 32px; border-top: 1px solid var(--kh-line); }
+.kb-post-list h2 { font-size: 28px; line-height: 1.35; margin-top: 12px; }
+.kb-post-list p { color: var(--kh-muted); font-size: 15px; line-height: 1.8; margin-top: 16px; text-wrap: pretty; }
+.kb-post-meta { color: var(--kh-muted); font-size: 12px; line-height: 1.6; }
+.kb-post-list .kb-read { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 16px; font-size: 14px; }
+.kb-post-list .kb-read svg { width: 16px; height: 16px; }
+.kb-figure { margin-block: 28px; }
+.kb-figure img { display: block; width: 100%; height: auto; border: 1px solid var(--kh-line); border-radius: 14px; }
+.kb-figure figcaption { margin-top: 12px; color: var(--kh-muted); font-size: 12px; line-height: 1.75; }
+.kb-contents { margin-block: 28px 8px; }
+.kb-contents > p { color: var(--kh-muted); font-size: 12px; }
+.kb-contents ol { list-style: decimal; padding-left: 20px; margin-top: 12px; color: var(--kh-muted); }
+.kb-contents a { display: inline-block; padding-block: 5px; font-size: 14px; line-height: 1.7; }
+.kb-example { margin-block: 20px; padding: 16px 20px; border-left: 2px solid var(--kh-accent); background: var(--kh-surface); }
+.kb-example p { color: var(--ka-text); font-size: 15px; line-height: 1.8; }
+.kb-article-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-bottom: 24px; }
+.kb-article-meta > a { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; }
+@media (max-width: 580px) {
+  .kb-post-list h2 { font-size: 25px; }
+  .kb-post-list > li { padding-block: 28px; }
+}
