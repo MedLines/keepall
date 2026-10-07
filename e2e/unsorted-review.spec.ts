@@ -5,7 +5,7 @@ test.use({ serviceWorkers: "block" });
 async function seed(page: Page, count = 3) {
   await page.addInitScript(() => localStorage.setItem("keepall-shell-panel-open", "closed"));
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Save your first item" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save first item" })).toBeVisible();
   await page.evaluate(async (count) => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
@@ -82,15 +82,41 @@ test("review controls fit at 320px and a one-item queue keeps Undo after deletio
   await expect(dialog.getByRole("heading", { name: "Review item 1" })).toBeVisible();
 });
 
-test("custom shortcut survives reload and leaves search typing alone", async ({ page }) => {
+test("shortcut editing records, cancels, validates and saves before the app uses a new binding", async ({ page }, testInfo) => {
   await page.goto("/settings#keyboard-shortcuts-heading");
-  const capture = page.getByLabel("Save item", { exact: true });
-  await expect(capture).toBeEnabled();
-  await capture.focus(); await page.keyboard.press("Alt+j");
-  await expect(capture).toHaveValue("Alt/Option+J");
-  await page.reload(); await expect(capture).toHaveValue("Alt/Option+J");
+  const capture = page.getByRole("group", { name: "Shortcut for Save item", exact: true });
+  const change = capture.getByRole("button", { name: "Change Save item shortcut", exact: true });
+  await expect(change).toBeEnabled();
+  await change.click();
+  const recorder = page.getByRole("textbox", { name: "New shortcut for Save item", exact: true });
+  await expect(recorder).toBeFocused();
+  await recorder.press("j");
+  await expect(capture.getByRole("alert")).toContainText("Use Alt/Option");
+  await recorder.press("Alt+g");
+  await expect(capture.getByRole("alert")).toContainText("already assigned");
+  await expect(capture.getByRole("button", { name: "Save shortcut", exact: true })).toBeDisabled();
+  await recorder.press("Alt+j");
+  await expect(recorder).toHaveValue("Alt/Option+J");
+  await expect(capture.locator("kbd")).toHaveText("Alt/Option+K");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await recorder.press("Escape");
+  await expect(change).toBeFocused();
+  await expect(capture.locator("kbd")).toHaveText("Alt/Option+K");
+  await change.click();
+  await recorder.press("Alt+j");
+  await page.screenshot({ path: testInfo.outputPath("shortcut-recording-desktop.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await recorder.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath("shortcut-recording-mobile.png") });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await capture.getByRole("button", { name: "Save shortcut", exact: true }).click();
+  await expect(capture.locator("kbd")).toHaveText("Alt/Option+J");
+  await expect(page.getByRole("status").filter({ hasText: "Save item shortcut saved." })).toBeVisible();
+  await page.reload();
+  await expect(capture.locator("kbd")).toHaveText("Alt/Option+J");
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Save your first item" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save first item" })).toBeVisible();
   await page.keyboard.press("Alt+k"); await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.keyboard.press("Alt+j"); await expect(page.getByRole("dialog", { name: "Save to Keepall" })).toBeVisible();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -111,7 +137,7 @@ test("active filters do not restrict the Unsorted review queue", async ({ page }
 
 test("a new library offers Save, Import, and the tutorial, with empty Unsorted review disabled", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Save your first item" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save first item" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Import an existing library" })).toHaveAttribute("href", "/settings#backup-heading");
   await page.getByRole("link", { name: "Getting started", exact: true }).click();
   await expect(page).toHaveURL(/help\/getting-started/);

@@ -14,7 +14,7 @@ export function isShortcutEditingTarget(target: EventTarget | null): boolean {
 export function useAppShortcuts(actions: Partial<Record<ShortcutAction, () => void>>, enabled = true): KeyboardShortcuts {
   const [shortcuts, setShortcuts] = useState<KeyboardShortcuts>(DEFAULT_SHORTCUTS);
   const handleKey = useEffectEvent((event: KeyboardEvent) => {
-    if (!enabled || event.defaultPrevented || event.repeat || event.isComposing || isShortcutEditingTarget(event.target) || document.querySelector('[role="dialog"]:not([data-ending-style]), [role="alertdialog"]:not([data-ending-style])')) return;
+    if (!enabled || event.defaultPrevented || event.repeat || event.isComposing || isShortcutEditingTarget(event.target) || document.querySelector('[role="dialog"]:not([data-ending-style]), [role="alertdialog"]:not([data-ending-style]), [data-shortcut-recording]')) return;
     for (const action of SHORTCUT_ACTIONS) {
       if (actions[action] && shortcutMatches(event, shortcuts[action])) {
         event.preventDefault();

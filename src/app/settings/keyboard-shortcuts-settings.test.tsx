@@ -2,24 +2,79 @@ import { Blob as NodeBlob } from "node:buffer";
 import { DEFAULT_SHORTCUTS } from "@/domain/keyboard-shortcuts";
 import { exportKeepallArchive, importKeepallArchiveReplace } from "@/persistence/backup-archive";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { getLibraryPreferences, putKeyboardShortcuts } from "@/persistence/library-preferences";
 import { KeyboardShortcutsSettings } from "./keyboard-shortcuts-settings";
 
-test("reassigns, rejects conflicts and reserved keys, and resets app shortcuts", async () => {
+async function startRecording(label: string) {
+  const change = screen.getByRole("button", { name: `Change ${label} shortcut` });
+  await waitFor(() => expect(change).toBeEnabled());
+  fireEvent.click(change);
+  return screen.getByRole("textbox", { name: `New shortcut for ${label}` });
+}
+
+function binding(label: string, value: string) {
+  return within(screen.getByRole("group", { name: `Shortcut for ${label}` })).getByText(value);
+}
+
+test("records a shortcut only after Change and saves it explicitly", async () => {
   render(<KeyboardShortcutsSettings />);
-  const capture = screen.getByLabelText("Save item");
-  await waitFor(() => expect(capture).toBeEnabled());
-  fireEvent.keyDown(capture, { code: "KeyJ", key: "j", altKey: true });
-  await waitFor(() => expect(capture).toHaveValue("Alt/Option+J"));
+  const recorder = await startRecording("Save item");
+  expect(recorder).toHaveFocus();
+  fireEvent.keyDown(recorder, { code: "KeyJ", key: "j", altKey: true });
+  expect(recorder).toHaveValue("Alt/Option+J");
+  expect((await getLibraryPreferences()).keyboardShortcuts?.capture ?? DEFAULT_SHORTCUTS.capture).toBe("Alt+KeyK");
+  fireEvent.click(screen.getByRole("button", { name: "Save shortcut" }));
+  await waitFor(() => expect(binding("Save item", "Alt/Option+J")).toBeVisible());
   expect((await getLibraryPreferences()).keyboardShortcuts?.capture).toBe("Alt+KeyJ");
-  fireEvent.keyDown(screen.getByLabelText("Focus search"), { code: "KeyJ", key: "j", altKey: true });
-  expect(await screen.findByRole("alert")).toHaveTextContent("already assigned");
-  fireEvent.keyDown(capture, { code: "KeyD", key: "d", altKey: true });
-  await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("reserved by browsers"));
+  expect(screen.getByRole("button", { name: "Change Save item shortcut" })).toHaveFocus();
+  expect(screen.getByRole("status")).toHaveTextContent("Save item shortcut saved.");
+});
+
+test("Cancel and Escape discard recorded keys and restore Change focus", async () => {
+  render(<KeyboardShortcutsSettings />);
+  for (const cancel of ["button", "Escape"]) {
+    const recorder = await startRecording("Save item");
+    fireEvent.keyDown(recorder, { code: "KeyJ", key: "j", altKey: true });
+    if (cancel === "button") fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    else fireEvent.keyDown(recorder, { code: "Escape", key: "Escape" });
+    expect(binding("Save item", "Alt/Option+K")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Change Save item shortcut" })).toHaveFocus();
+    expect((await getLibraryPreferences()).keyboardShortcuts?.capture ?? DEFAULT_SHORTCUTS.capture).toBe("Alt+KeyK");
+  }
+});
+
+test("rejects unsupported keys, browser reservations and conflicts before saving", async () => {
+  render(<KeyboardShortcutsSettings />);
+  const recorder = await startRecording("Save item");
+  fireEvent.keyDown(recorder, { code: "KeyJ", key: "j", ctrlKey: true });
+  expect(screen.getByRole("alert")).toHaveTextContent("Use Alt/Option");
+  fireEvent.keyDown(recorder, { code: "KeyD", key: "d", altKey: true });
+  expect(screen.getByRole("alert")).toHaveTextContent("reserved by browsers");
+  fireEvent.keyDown(recorder, { code: "KeyG", key: "g", altKey: true });
+  expect(screen.getByRole("alert")).toHaveTextContent("already assigned");
+  expect(screen.getByRole("button", { name: "Save shortcut" })).toBeDisabled();
+  expect(recorder).toHaveAttribute("aria-invalid", "true");
+  fireEvent.keyDown(recorder, { code: "KeyJ", key: "j", altKey: true });
+  expect(screen.queryByRole("alert")).toBeNull();
+  fireEvent.keyDown(recorder, { code: "Enter", key: "Enter" });
+  await waitFor(() => expect(binding("Save item", "Alt/Option+J")).toBeVisible());
   fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
-  await waitFor(() => expect(capture).toHaveValue("Alt/Option+K"));
+  await waitFor(() => expect(binding("Save item", "Alt/Option+K")).toBeVisible());
+});
+
+test("explains that number shortcuts need Shift and records supported physical keys", async () => {
+  render(<KeyboardShortcutsSettings />);
+  const recorder = await startRecording("Save item");
+  expect(screen.getByText(/Numbers need Alt\/Option\+Shift/)).toBeVisible();
+  fireEvent.keyDown(recorder, { code: "Digit5", key: "5", altKey: true });
+  expect(screen.getByRole("alert")).toHaveTextContent("reserved by browsers");
+  fireEvent.keyDown(recorder, { code: "Digit5", key: "%", altKey: true, shiftKey: true });
+  expect(recorder).toHaveValue("Alt/Option+Shift+5");
+  fireEvent.click(screen.getByRole("button", { name: "Save shortcut" }));
+  await waitFor(() => expect(binding("Save item", "Alt/Option+Shift+5")).toBeVisible());
+  expect((await getLibraryPreferences()).keyboardShortcuts?.capture).toBe("Alt+Shift+Digit5");
 });
 
 test("a ZIP restore refreshes mounted settings and changing one key preserves the restored others", async () => {
@@ -29,24 +84,25 @@ test("a ZIP restore refreshes mounted settings and changing one key preserves th
   const archive = new NodeBlob([new Uint8Array(await source.arrayBuffer())]) as unknown as Blob;
   await putKeyboardShortcuts(DEFAULT_SHORTCUTS);
   render(<KeyboardShortcutsSettings />);
-  const capture = screen.getByLabelText("Save item");
-  await waitFor(() => expect(capture).toBeEnabled());
-  expect(capture).toHaveValue("Alt/Option+K");
+  await waitFor(() => expect(screen.getByRole("button", { name: "Change Save item shortcut" })).toBeEnabled());
+  expect(binding("Save item", "Alt/Option+K")).toBeVisible();
   await importKeepallArchiveReplace(archive);
   window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-  await waitFor(() => expect(capture).toHaveValue("Alt/Option+J"));
-  expect(screen.getByLabelText("Focus search")).toHaveValue("Alt/Option+M");
-  fireEvent.keyDown(capture, { code: "KeyL", key: "l", altKey: true });
-  await waitFor(() => expect(capture).toHaveValue("Alt/Option+L"));
+  await waitFor(() => expect(binding("Save item", "Alt/Option+J")).toBeVisible());
+  expect(binding("Focus search", "Alt/Option+M")).toBeVisible();
+  const recorder = await startRecording("Save item");
+  fireEvent.keyDown(recorder, { code: "KeyL", key: "l", altKey: true });
+  fireEvent.click(screen.getByRole("button", { name: "Save shortcut" }));
+  await waitFor(() => expect(binding("Save item", "Alt/Option+L")).toBeVisible());
   expect((await getLibraryPreferences()).keyboardShortcuts).toEqual({ ...imported, capture: "Alt+KeyL" });
 });
 
 test("changing a key merges against stored preferences even before a reload event arrives", async () => {
   render(<KeyboardShortcutsSettings />);
-  const capture = screen.getByLabelText("Save item");
-  await waitFor(() => expect(capture).toBeEnabled());
+  const recorder = await startRecording("Save item");
   await putKeyboardShortcuts({ ...DEFAULT_SHORTCUTS, search: "Alt+KeyM" });
-  fireEvent.keyDown(capture, { code: "KeyL", key: "l", altKey: true });
-  await waitFor(() => expect(capture).toHaveValue("Alt/Option+L"));
+  fireEvent.keyDown(recorder, { code: "KeyL", key: "l", altKey: true });
+  fireEvent.click(screen.getByRole("button", { name: "Save shortcut" }));
+  await waitFor(() => expect(binding("Save item", "Alt/Option+L")).toBeVisible());
   expect((await getLibraryPreferences()).keyboardShortcuts?.search).toBe("Alt+KeyM");
 });
