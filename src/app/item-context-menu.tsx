@@ -11,7 +11,7 @@ import { uiMotion } from "@/components/ui/motion-tokens";
 import { normalizeCollectionName } from "@/domain/collection";
 import { normalizeTagName } from "@/domain/tag";
 import {
-  ArrowRightIcon, CollectionIcon, DeleteIcon, EditIcon, EyeIcon, HashIcon, LayersIcon, LinkIcon,
+  ArrowRightIcon, CheckIcon, CollectionIcon, DeleteIcon, EditIcon, EyeIcon, HashIcon, LayersIcon, LinkIcon,
   PinIcon, PlusIcon, RefreshIcon, SearchIcon,
 } from "./shell-icons";
 
@@ -53,11 +53,11 @@ const ORGANIZATION_ITEM = `${MENU_ITEM} organization-choice rounded-control-md`;
 
 function SelectionMark({ checked }: { checked: boolean }) {
   const reduceMotion = useReducedMotion();
-  return <motion.svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+  return <motion.span aria-hidden="true" className="inline-flex size-4 shrink-0 items-center justify-center"
     initial={false} animate={{ opacity: checked ? 1 : 0 }}
     transition={reduceMotion ? { duration: 0 } : checked ? uiMotion.fast : uiMotion.fast.exit}>
-    <path d="M6 12L10 16L18 8" />
-  </motion.svg>;
+    <CheckIcon className="size-4" />
+  </motion.span>;
 }
 
 export function ItemContextMenu({
@@ -110,8 +110,8 @@ export function ItemContextMenu({
           {onFetchPreview ? <Menu.Item className={MENU_ITEM} disabled={busy || fetchingPreview} onClick={onFetchPreview}>
             <RefreshIcon />{fetchingPreview ? "Fetching preview…" : hasPreview ? "Refresh preview" : "Fetch preview"}
           </Menu.Item> : null}
-          <OrganizationSubmenu kind="tags" entries={tags} assignedIds={assignedTagIds} busy={busy} error={tagError} onSelect={onAddTag} onRemove={onRemoveTag} />
-          <OrganizationSubmenu kind="collections" entries={collections} assignedIds={assignedCollectionIds} busy={busy} error={collectionError} onSelect={onMoveToCollection} onClear={onClearCollection} />
+          <OrganizationMenu kind="tags" entries={tags} assignedIds={assignedTagIds} busy={busy} error={tagError} onSelect={onAddTag} onRemove={onRemoveTag} />
+          <OrganizationMenu kind="collections" entries={collections} assignedIds={assignedCollectionIds} busy={busy} error={collectionError} onSelect={onMoveToCollection} onClear={onClearCollection} />
           <ContextMenu.Separator className="my-1 border-t border-border-edge" />
           {onTogglePin ? (
             <ContextMenu.Item className={MENU_ITEM} disabled={busy} onClick={onTogglePin}>
@@ -136,7 +136,7 @@ export function ItemContextMenu({
   );
 }
 
-function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect, onRemove, onClear }: {
+export function OrganizationMenu({ kind, entries, assignedIds, busy, error, onSelect, onRemove, onClear, trigger }: {
   kind: "tags" | "collections";
   entries: NamedEntry[];
   assignedIds: string[];
@@ -145,6 +145,7 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
   onSelect: (name: string) => void;
   onRemove?: (id: string) => void;
   onClear?: () => void;
+  trigger?: ReactElement;
 }) {
   const [query, setQuery] = useState("");
   const [optimisticSelection, setOptimisticSelection] = useState<{ baseline: string; ids: string[] } | null>(null);
@@ -160,16 +161,9 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
   if (isTags) matches.sort((a, b) => Number(selectedIds.includes(b.id)) - Number(selectedIds.includes(a.id)));
   const canCreate = Boolean(name) && !entries.some((entry) => entry.name.toLowerCase() === search);
 
-  return (
-    <Menu.SubmenuRoot
-      onOpenChange={(open) => { if (!open) setQuery(""); }}
-      onOpenChangeComplete={(open) => { if (open) inputRef.current?.focus(); }}
-    >
-      <Menu.SubmenuTrigger className={MENU_ITEM}>
-        {isTags ? <HashIcon /> : <CollectionIcon />}{label}<ArrowRightIcon className="ms-auto size-4 rtl:rotate-180" />
-      </Menu.SubmenuTrigger>
+  const popup = (
       <Menu.Portal>
-        <Menu.Positioner className="z-[61] data-[anchor-hidden]:invisible" align="start" sideOffset={4} alignOffset={-4} collisionPadding={8} positionMethod="fixed">
+        <Menu.Positioner className={`${trigger ? "z-[90]" : "z-[61]"} data-[anchor-hidden]:invisible`} align="start" sideOffset={4} alignOffset={trigger ? 0 : -4} collisionPadding={8} positionMethod="fixed">
           <Menu.Popup aria-label={label} className="ui-menu-popup ui-popover flex max-h-[min(20rem,var(--available-height))] w-64 max-w-[calc(100vw-1rem)] flex-col overflow-hidden outline-none">
             <div className="flex shrink-0 items-center gap-2 border-b border-border-edge px-3 pb-2 pt-1">
               <SearchIcon className="size-4 text-text-secondary" />
@@ -246,6 +240,14 @@ function OrganizationSubmenu({ kind, entries, assignedIds, busy, error, onSelect
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>
-    </Menu.SubmenuRoot>
   );
+  const onOpenChange = (open: boolean) => { if (!open) { setQuery(""); setOptimisticSelection(null); } };
+  const onOpenChangeComplete = (open: boolean) => { if (open) inputRef.current?.focus(); };
+  return trigger ? <Menu.Root modal={false} onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
+    <Menu.Trigger render={trigger} />{popup}
+  </Menu.Root> : <Menu.SubmenuRoot onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
+    <Menu.SubmenuTrigger className={MENU_ITEM}>
+      {isTags ? <HashIcon /> : <CollectionIcon />}{label}<ArrowRightIcon className="ms-auto size-4 rtl:rotate-180" />
+    </Menu.SubmenuTrigger>{popup}
+  </Menu.SubmenuRoot>;
 }

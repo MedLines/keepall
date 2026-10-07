@@ -89,6 +89,9 @@ export const SHELL_PANEL_ROW_ACTIVE = SHELL_NAV_ITEM_ACTIVE;
 export const SHELL_TOP_BTN =
   "ui-control inline-flex h-10 items-center gap-1.5 px-3 text-sm font-medium disabled:opacity-60";
 
+export const SHELL_DESTRUCTIVE_BTN =
+  "text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger";
+
 export const SHELL_TOP_BTN_ACTIVE =
   "ui-primary";
 

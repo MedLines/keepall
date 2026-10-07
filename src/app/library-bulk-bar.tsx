@@ -8,7 +8,7 @@ import { OrganizerDrawer } from "./organizer-drawer";
 import { CaptureOrgPanel } from "./capture-org-panel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { OrgNameSuggestion } from "./org-name-suggest";
-import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
+import { SHELL_DESTRUCTIVE_BTN, SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 import { ArrowRightIcon, ChevronDownIcon, DeleteIcon, LayersIcon, SelectionCheckedIcon } from "./shell-icons";
 
 export type BulkPanel = null | "delete" | "organize";
@@ -216,7 +216,7 @@ export function LibraryBulkToolbar({
           <ArrowRightIcon className="size-4" />Restore selected
         </button> : null}
         <button
-          className={`${SHELL_TOP_BTN} h-10 shrink-0 px-3 text-xs text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger`}
+          className={`${SHELL_TOP_BTN} h-10 shrink-0 px-3 text-xs ${SHELL_DESTRUCTIVE_BTN}`}
           disabled={busy}
           type="button"
           onClick={destructiveAction}

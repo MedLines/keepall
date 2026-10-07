@@ -1,10 +1,9 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Tick02Icon } from "@hugeicons/core-free-icons";
+import { type ReactNode, type KeyboardEvent, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { CaptureOrgBrowser } from "./capture-org-browser";
-import { CloseIcon, CollectionIcon, HashIcon, PlusIcon } from "./shell-icons";
+import { CheckIcon, CloseIcon, CollectionIcon, HashIcon, PlusIcon } from "./shell-icons";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 
 type Props = {
@@ -15,6 +14,9 @@ type Props = {
   tagSuggestions: OrgNameSuggestion[];
   collectionSuggestions: OrgNameSuggestion[];
   disabled: boolean;
+  variant?: "review";
+  collectionBrowseControl?: ReactNode;
+  tagBrowseControl?: ReactNode;
   selection?: {
     partialTagNames: string[];
     collectionMixed: boolean;
@@ -43,7 +45,7 @@ const PICK_CHIP_SELECTED =
 
 const COMPACT_CHOICE_LIMIT = 6;
 
-function useTwoSuggestionRows(ref: React.RefObject<HTMLUListElement | null>, count: number, resetKey: string) {
+function useSuggestionRows(ref: React.RefObject<HTMLUListElement | null>, count: number, resetKey: string, rowLimit = 2) {
   const [visibleCount, setVisibleCount] = useState(count);
 
   useLayoutEffect(() => {
@@ -56,13 +58,13 @@ function useTwoSuggestionRows(ref: React.RefObject<HTMLUListElement | null>, cou
     const rows = new Set<number>();
     const limit = choices.findIndex((choice) => {
       rows.add(choice.offsetTop);
-      return rows.size > 2;
+      return rows.size > rowLimit;
     });
     if (limit >= 0) {
       const frame = requestAnimationFrame(() => setVisibleCount(limit));
       return () => cancelAnimationFrame(frame);
     }
-  }, [count, ref, resetKey, visibleCount]);
+  }, [count, ref, resetKey, visibleCount, rowLimit]);
 
   useEffect(() => {
     const container = ref.current?.parentElement;
@@ -88,6 +90,7 @@ type SectionHeaderProps = {
   showBrowse: boolean;
   disabled: boolean;
   onBrowse: (trigger: HTMLButtonElement) => void;
+  browseControl?: ReactNode;
 };
 
 function SectionHeader({
@@ -98,6 +101,7 @@ function SectionHeader({
   showBrowse,
   disabled,
   onBrowse,
+  browseControl,
 }: SectionHeaderProps) {
   return (
     <div className="flex min-h-6 items-center justify-between gap-3">
@@ -110,7 +114,7 @@ function SectionHeader({
           {label}
         </label>
       </h3>
-      {showBrowse ? (
+      {browseControl ?? (showBrowse ? (
         <button
           className="min-h-7 rounded-control px-2 text-xs font-medium text-text-secondary hover:bg-bg-raised hover:text-text-primary"
           type="button"
@@ -119,7 +123,7 @@ function SectionHeader({
         >
           {browseLabel}
         </button>
-      ) : null}
+      ) : null)}
     </div>
   );
 }
@@ -128,12 +132,13 @@ function compactChoices(
   entries: OrgNameSuggestion[],
   query: string,
   selectedName?: string | null,
+  limit = COMPACT_CHOICE_LIMIT,
 ) {
   const normalized = query.trim().toLowerCase();
   if (normalized) {
     return entries
       .filter((entry) => entry.name.toLowerCase().includes(normalized))
-      .slice(0, COMPACT_CHOICE_LIMIT);
+      .slice(0, limit);
   }
 
   const selected = selectedName
@@ -142,7 +147,7 @@ function compactChoices(
   const ordered = selected
     ? [selected, ...entries.filter((entry) => entry.id !== selected.id)]
     : entries;
-  return ordered.slice(0, COMPACT_CHOICE_LIMIT);
+  return ordered.slice(0, limit);
 }
 
 type BrowserSlotProps = Pick<
@@ -213,12 +218,14 @@ function CreateButton({
   kind,
   disabled,
   onCreate,
+  inline = false,
 }: {
   query: string;
   matchesExisting: boolean;
   kind: "collection" | "tag";
   disabled: boolean;
   onCreate: () => void;
+  inline?: boolean;
 }) {
   if (!query || matchesExisting) {
     return null;
@@ -226,12 +233,14 @@ function CreateButton({
   return (
     <button
       type="button"
-      className="ui-control inline-flex min-h-9 max-w-full items-center gap-2 self-start px-3 py-1.5 text-left text-xs font-medium disabled:opacity-60"
+      className={inline ? "ui-control inline-flex h-7 max-w-full items-center gap-1.5 ps-1.5 pe-2 text-xs font-medium disabled:opacity-60" : "ui-control inline-flex min-h-9 max-w-full items-center gap-2 self-start px-3 py-1.5 text-left text-xs font-medium disabled:opacity-60"}
+      aria-label={inline ? `Create ${kind} “${query}”` : undefined}
+      title={inline ? `Create ${kind} “${query}”` : undefined}
       disabled={disabled}
       onClick={onCreate}
     >
-      <PlusIcon className="size-4 shrink-0" />
-      <span className="break-words">Create {kind} “{query}”</span>
+      <PlusIcon className={`${inline ? "size-3.5" : "size-4"} shrink-0`} />
+      <span className="break-words">{inline ? `Create ${kind}` : `Create ${kind} “${query}”`}</span>
     </button>
   );
 }
@@ -248,7 +257,7 @@ type CollectionSectionProps = Pick<
   | "onCollectionInputChange"
   | "onSetCollection"
   | "onClearCollection"
-> & { onBrowse: (trigger: HTMLButtonElement) => void };
+> & { onBrowse: (trigger: HTMLButtonElement) => void; variant?: Props["variant"]; browseControl?: ReactNode };
 
 function CollectionSection({
   selection,
@@ -262,6 +271,8 @@ function CollectionSection({
   onSetCollection,
   onClearCollection,
   onBrowse,
+  variant,
+  browseControl,
 }: CollectionSectionProps) {
   const inputId = useId();
   const query = collectionInput.trim();
@@ -277,10 +288,16 @@ function CollectionSection({
     ? visible.filter((entry) => entry.name !== selectedCollection.name)
     : visible;
   const suggestionsRef = useRef<HTMLUListElement>(null);
-  const visibleCount = useTwoSuggestionRows(suggestionsRef, otherCollections.length + 1 + Number(!!selectedCollection), `${collectionInput}:${collectionName}`);
+  const prefixCount = Number(!!selectedCollection) + Number(variant !== "review" || !query);
+  const visibleCount = useSuggestionRows(suggestionsRef, otherCollections.length + prefixCount, `${collectionInput}:${collectionName}`);
   const matchesExisting = collectionSuggestions.some(
     (entry) => entry.name.toLowerCase() === query.toLowerCase(),
   );
+  const canCreate = !!query && visible.length === 0 && !collectionName?.toLowerCase().includes(query.toLowerCase());
+  const createCollection = () => {
+    onSetCollection(query);
+    onCollectionInputChange("");
+  };
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key !== "Enter" || event.metaKey || event.ctrlKey) {
@@ -290,89 +307,62 @@ function CollectionSection({
     if (!query || disabled) {
       return;
     }
-    onSetCollection(query);
+    onSetCollection(variant === "review" && visible.length ? visible[0].name : query);
     onCollectionInputChange("");
   }
 
-  return (
-    <section className="flex flex-col gap-2 rounded-panel border border-border-control p-3">
-      <SectionHeader
-        inputId={inputId}
-        label="Collection"
-        kind="collection"
-        browseLabel="Browse all collections"
-        showBrowse={collectionSuggestions.length > 0}
-        disabled={disabled}
-        onBrowse={onBrowse}
-      />
-      <div className="flex min-h-7 items-center gap-2 text-text-secondary focus-within:text-text-primary">
-        <PlusIcon className="size-4" />
-        <input
-          autoComplete="off"
-          className="min-h-7 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-secondary disabled:opacity-60"
-          disabled={disabled}
-          id={inputId}
-          aria-label={collectionInputLabel}
-          placeholder={collectionSuggestions.length > 0 ? "Find or create a collection…" : "Collection name"}
-          value={collectionInput}
-          onChange={(event) => onCollectionInputChange(event.target.value)}
-          onKeyDown={onKeyDown}
-        />
-      </div>
-      <ul ref={suggestionsRef} className="flex max-h-[3.875rem] flex-wrap gap-1.5 overflow-hidden" aria-label="Collections">
+  const choices = (
+      <ul ref={suggestionsRef} className={`flex gap-1.5 ${variant === "review" ? "w-max flex-nowrap" : "max-h-[3.875rem] flex-wrap overflow-hidden"}`} aria-label="Collections">
+        {variant === "review" && canCreate ? <li><CreateButton inline query={query} matchesExisting={false} kind="collection" disabled={disabled} onCreate={createCollection} /></li> : <>
         {selectedCollection ? (
           <li>
             <button className={`${PICK_CHIP} ${PICK_CHIP_SELECTED}`} type="button" disabled={disabled} aria-pressed="true" onClick={() => onSetCollection(selectedCollection.name)}>
-              <HugeiconsIcon icon={Tick02Icon} size={13} strokeWidth={1.5} aria-hidden="true" />
-              <span className="truncate">{selectedCollection.name}</span>
+              <CheckIcon className="size-[13px]" />
+              <span className="max-w-48 truncate">{selectedCollection.name}</span>
             </button>
           </li>
         ) : null}
-        <li>
-          <button
-            className={`${PICK_CHIP} ${
-              collectionName === null && !selection?.collectionMixed ? PICK_CHIP_SELECTED : PICK_CHIP_OUTLINE
-            }`}
-            type="button"
-            disabled={disabled}
-            aria-pressed={collectionName === null && !selection?.collectionMixed}
-            onClick={onClearCollection}
-          >
-            <span className="truncate">Unsorted</span>
-          </button>
-        </li>
-        {otherCollections.slice(0, Math.max(0, visibleCount - 1 - Number(!!selectedCollection))).map((entry) => (
+        {variant !== "review" || !query ? <li>
+          <button className={`${PICK_CHIP} ${collectionName === null && !selection?.collectionMixed ? PICK_CHIP_SELECTED : PICK_CHIP_OUTLINE}`} type="button" disabled={disabled} aria-pressed={collectionName === null && !selection?.collectionMixed} onClick={onClearCollection}>Unsorted</button>
+        </li> : null}
+        {otherCollections.slice(0, Math.max(0, visibleCount - prefixCount)).map(entry => (
           <li key={entry.id}>
-            <button
-              className={`${PICK_CHIP} ${
-                collectionName === entry.name
-                  ? PICK_CHIP_SELECTED
-                  : PICK_CHIP_OUTLINE
-              }`}
-              type="button"
-              disabled={disabled}
-              aria-pressed={collectionName === entry.name}
-              onClick={() => onSetCollection(entry.name)}
-            >
-              {collectionName === entry.name ? <HugeiconsIcon icon={Tick02Icon} size={13} strokeWidth={1.5} aria-hidden="true" /> : null}
-              <span className="truncate">{entry.name}</span>
+            <button className={`${PICK_CHIP} ${PICK_CHIP_OUTLINE}`} type="button" disabled={disabled} aria-pressed="false" onClick={() => onSetCollection(entry.name)}>
+              <span className="max-w-48 truncate">{entry.name}</span>
             </button>
           </li>
         ))}
+        </>}
       </ul>
+  );
+
+  return (
+    <section className="flex flex-col gap-2 rounded-panel border border-border-control p-3">
+      {variant !== "review" ? <SectionHeader
+        inputId={inputId} label="Collection" kind="collection" browseLabel="Browse all collections"
+        showBrowse={collectionSuggestions.length > 0} disabled={disabled} onBrowse={onBrowse} browseControl={browseControl}
+      /> : null}
+      <div className="flex min-h-7 min-w-0 items-center gap-2 text-text-secondary focus-within:text-text-primary">
+        {variant === "review" ? <CollectionIcon className="size-4" /> : <PlusIcon className="size-4" />}
+        <input autoComplete="off"
+          className="min-h-7 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-secondary disabled:opacity-60"
+          disabled={disabled} id={inputId} aria-label={collectionInputLabel}
+          placeholder={variant === "review" ? "Find a collection…" : collectionSuggestions.length > 0 ? "Find or create a collection…" : "Collection name"}
+          value={collectionInput} onChange={event => onCollectionInputChange(event.target.value)} onKeyDown={onKeyDown}
+        />
+        {variant === "review" ? browseControl : null}
+      </div>
+      {variant === "review" ? <ScrollArea orientation="horizontal" className="h-8" viewportClassName="overscroll-contain">{choices}</ScrollArea> : choices}
       {selection?.collectionMixed ? <p className="text-xs text-text-secondary">Selected items are in different collections.</p> : null}
-      <NoMatches
+      {variant !== "review" ? <NoMatches
         query={query}
         totalCount={collectionSuggestions.length}
         visibleCount={visible.length}
       >
         No matching collections.
-      </NoMatches>
+      </NoMatches> : null}
       {collectionError ? <p role="alert" className="text-sm text-text-danger">{collectionError}</p> : null}
-      <CreateButton query={query} matchesExisting={matchesExisting} kind="collection" disabled={disabled} onCreate={() => {
-        onSetCollection(query);
-        onCollectionInputChange("");
-      }} />
+      {variant !== "review" ? <CreateButton query={query} matchesExisting={matchesExisting} kind="collection" disabled={disabled} onCreate={createCollection} /> : null}
     </section>
   );
 }
@@ -396,7 +386,7 @@ function SelectedTag({ name, disabled, selection, onAdd, onRemove }: {
         </button>
       ) : (
         <>
-          <HugeiconsIcon icon={Tick02Icon} size={13} strokeWidth={1.5} aria-hidden="true" />
+          <CheckIcon className="size-[13px]" />
           <span className="max-w-40 truncate">{name}</span>
         </>
       )}
@@ -422,6 +412,8 @@ type TagSectionProps = Pick<
   | "onRemoveTag"
 > & {
   unusedTags: OrgNameSuggestion[];
+  variant?: Props["variant"];
+  browseControl?: ReactNode;
   onBrowse: (trigger: HTMLButtonElement) => void;
 };
 
@@ -438,15 +430,23 @@ function TagSection({
   onAddTag,
   onRemoveTag,
   onBrowse,
+  variant,
+  browseControl,
 }: TagSectionProps) {
   const inputId = useId();
   const query = tagInput.trim();
-  const visible = compactChoices(unusedTags, tagInput);
+  const selectedNames = variant === "review" && query ? tagNames.filter(name => name.toLowerCase().includes(query.toLowerCase())) : tagNames;
+  const visible = compactChoices(unusedTags, tagInput, null, variant === "review" ? 24 : COMPACT_CHOICE_LIMIT);
   const suggestionsRef = useRef<HTMLUListElement>(null);
-  const visibleCount = useTwoSuggestionRows(suggestionsRef, visible.length, `${tagInput}:${tagNames.join("|")}`);
+  const visibleCount = useSuggestionRows(suggestionsRef, visible.length + (variant === "review" ? selectedNames.length : 0), `${tagInput}:${tagNames.join("|")}`);
   const matchesExisting = tagSuggestions.some(
     (entry) => entry.name.toLowerCase() === query.toLowerCase(),
   );
+  const canCreate = !!query && !tagSuggestions.some(entry => entry.name.toLowerCase().includes(query.toLowerCase())) && !tagNames.some(name => name.toLowerCase().includes(query.toLowerCase()));
+  const createTag = () => {
+    onAddTag(query);
+    onTagInputChange("");
+  };
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key !== "Enter" || event.metaKey || event.ctrlKey) {
@@ -464,7 +464,7 @@ function TagSection({
 
   return (
     <section className="flex flex-col gap-2 rounded-panel border border-border-control p-3">
-      <SectionHeader
+      {variant !== "review" ? <SectionHeader
         inputId={inputId}
         label="Tags"
         kind="tag"
@@ -472,22 +472,24 @@ function TagSection({
         showBrowse={tagSuggestions.length > 0}
         disabled={disabled}
         onBrowse={onBrowse}
-      />
-      <div className="flex min-h-7 items-center gap-2 text-text-secondary focus-within:text-text-primary">
-        <PlusIcon className="size-4" />
+        browseControl={browseControl}
+      /> : null}
+      <div className="flex min-h-7 min-w-0 items-center gap-2 text-text-secondary focus-within:text-text-primary">
+        {variant === "review" ? <HashIcon className="size-4" /> : <PlusIcon className="size-4" />}
         <input
           autoComplete="off"
           className="min-h-7 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-secondary disabled:opacity-60"
           disabled={disabled}
           id={inputId}
           aria-label={tagInputLabel}
-          placeholder={tagSuggestions.length > 0 ? "Find or create a tag…" : "Tag name"}
+          placeholder={variant === "review" ? "Find a tag…" : tagSuggestions.length > 0 ? "Find or create a tag…" : "Tag name"}
           value={tagInput}
           onChange={(event) => onTagInputChange(event.target.value)}
           onKeyDown={onKeyDown}
         />
+        {variant === "review" ? browseControl : null}
       </div>
-      {tagNames.length > 0 ? (
+      {variant !== "review" && tagNames.length > 0 ? (
         <ul className="flex flex-wrap gap-1.5" aria-label="Selected tags">
           {tagNames.map((name) => (
             <SelectedTag key={name} name={name} disabled={disabled} selection={selection}
@@ -499,9 +501,11 @@ function TagSection({
         <button type="button" className="min-h-7 self-start text-xs font-medium text-text-danger hover:underline disabled:opacity-60"
           disabled={disabled} onClick={selection.onRemoveAllTags}>Remove all tags</button>
       ) : null}
-      {visible.length > 0 ? (
-        <ul ref={suggestionsRef} className="flex max-h-[3.875rem] flex-wrap gap-1.5 overflow-hidden" aria-label="Existing tags">
-          {visible.slice(0, visibleCount).map((entry) => (
+      {variant === "review" || visible.length > 0 ? (
+        <ul ref={suggestionsRef} className={`flex flex-wrap gap-1.5 overflow-hidden ${variant === "review" ? "h-[4.125rem] content-start items-start" : "max-h-[3.875rem]"}`} aria-label={variant === "review" ? "Tags" : "Existing tags"}>
+          {variant === "review" && canCreate ? <li><CreateButton inline query={query} matchesExisting={false} kind="tag" disabled={disabled} onCreate={createTag} /></li> : <>
+          {variant === "review" ? selectedNames.slice(0, visibleCount).map(name => <SelectedTag key={name} name={name} disabled={disabled} selection={selection} onAdd={() => onAddTag(name)} onRemove={() => onRemoveTag(name)} />) : null}
+          {visible.slice(0, Math.max(0, visibleCount - (variant === "review" ? selectedNames.length : 0))).map((entry) => (
             <li key={entry.id}>
               <button
                 className={`${PICK_CHIP} ${PICK_CHIP_OUTLINE}`}
@@ -513,20 +517,18 @@ function TagSection({
               </button>
             </li>
           ))}
+          </>}
         </ul>
       ) : null}
-      <NoMatches
+      {variant !== "review" ? <NoMatches
         query={query}
         totalCount={tagSuggestions.length}
         visibleCount={visible.length + tagNames.filter(name => name.toLowerCase().includes(query.toLowerCase())).length}
       >
         No matching tags.
-      </NoMatches>
+      </NoMatches> : null}
       {tagError ? <p role="alert" className="text-sm text-text-danger">{tagError}</p> : null}
-      <CreateButton query={query} matchesExisting={matchesExisting || tagNames.some((name) => name.toLowerCase() === query.toLowerCase())} kind="tag" disabled={disabled} onCreate={() => {
-        onAddTag(query);
-        onTagInputChange("");
-      }} />
+      {variant !== "review" ? <CreateButton query={query} matchesExisting={matchesExisting || tagNames.some((name) => name.toLowerCase() === query.toLowerCase())} kind="tag" disabled={disabled} onCreate={createTag} /> : null}
     </section>
   );
 }
@@ -549,8 +551,10 @@ export function CaptureOrgPanel(props: Props) {
   );
 
   return (
-    <div className="flex flex-col gap-4 py-1">
+    <div className={props.variant === "review" ? "library-review-organization grid min-w-0 gap-3" : "flex flex-col gap-4 py-1"}>
       <CollectionSection
+        variant={props.variant}
+        browseControl={props.collectionBrowseControl}
         selection={props.selection}
         collectionInputLabel={props.collectionInputLabel}
         collectionError={props.collectionError}
@@ -564,6 +568,8 @@ export function CaptureOrgPanel(props: Props) {
         onBrowse={trigger => browse("collection", trigger)}
       />
       <TagSection
+        variant={props.variant}
+        browseControl={props.tagBrowseControl}
         selection={props.selection}
         tagInputLabel={props.tagInputLabel}
         tagError={props.tagError}

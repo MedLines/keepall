@@ -81,7 +81,7 @@ export function ShellTopMenu<T extends string>({
           sideOffset={8}
           collisionPadding={8}
           positionMethod="fixed"
-          className="z-[70] data-[anchor-hidden]:invisible"
+          className="z-[90] data-[anchor-hidden]:invisible"
         >
           <Select.Popup className="shell-select-popup ui-menu-popup ui-popover flex flex-col overflow-hidden max-h-[min(24rem,var(--available-height))] min-w-[max(9rem,var(--anchor-width))] max-w-[calc(100vw-1rem)] outline-none">
             <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">

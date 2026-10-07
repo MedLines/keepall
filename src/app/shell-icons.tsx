@@ -16,7 +16,7 @@ import {
   CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle, Tick02Icon as Tick02,
   Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
   KeyboardIcon as Keyboard, TextFontIcon as TextFont, SourceCodeIcon as SourceCode,
-  RefreshIcon as Refresh,
+  RefreshIcon as Refresh, Undo02Icon as Undo02,
   ColorsIcon as Colors, Copy01Icon as Copy01, ScanTextIcon as ScanText,
   ComputerIcon as Computer, WifiOff01Icon as WifiOff,
   Globe02Icon as Globe, Clock01Icon as Clock,
@@ -31,12 +31,12 @@ const MarkdownFile: IconSvgElement = [Txt01[0], ["path", {
   stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", key: "md",
 }]];
 
-type IconProps = { className?: string; fill?: "none" | "currentColor" };
+type IconProps = { className?: string; fill?: "none" | "currentColor"; strokeWidth?: number };
 
 export function ColumnsIcon(props: IconProps) { return <ShellIcon icon={LayoutThreeColumn} {...props} />; }
 
-function ShellIcon({ icon, className = "", fill = "none" }: IconProps & { icon: IconSvgElement }) {
-  return <HugeiconsIcon icon={icon} size={18} strokeWidth={1.5} fill={fill} className={`shrink-0 ${className}`} aria-hidden="true" />;
+function ShellIcon({ icon, className = "", fill = "none", strokeWidth = 1.5 }: IconProps & { icon: IconSvgElement }) {
+  return <HugeiconsIcon icon={icon} size={18} strokeWidth={strokeWidth} fill={fill} className={`shrink-0 ${className}`} aria-hidden="true" />;
 }
 
 export function LogoIcon({ className = "" }: IconProps) {
@@ -98,6 +98,7 @@ export function DownloadIcon(props: IconProps) { return <ShellIcon icon={Downloa
 export function UploadIcon(props: IconProps) { return <ShellIcon icon={Upload} {...props} />; }
 export function DeleteIcon(props: IconProps) { return <ShellIcon icon={Delete02} {...props} />; }
 export function PinIcon(props: IconProps) { return <ShellIcon icon={Pin} {...props} />; }
+export function UndoIcon(props: IconProps) { return <ShellIcon icon={Undo02} {...props} />; }
 export function ArrowLeftIcon(props: IconProps) { return <ShellIcon icon={ArrowLeft01} {...props} />; }
 export function ArrowRightIcon(props: IconProps) { return <ShellIcon icon={ArrowRight01} {...props} />; }
 export function FullScreenIcon(props: IconProps) { return <ShellIcon icon={FullScreen} {...props} />; }

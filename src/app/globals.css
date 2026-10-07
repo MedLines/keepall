@@ -83,7 +83,8 @@
   --color-border-control: light-dark(oklch(0 0 0 / 0.078431373), oklch(1 0 0 / 0.078431373));
   --color-border-focus: light-dark(oklch(0.52 0 0), oklch(0.60 0 0));
   --color-border-selected: light-dark(oklch(0.478112036 0.021030497 253.478913982), oklch(0.839078171 0.013548353 251.578187792));
-  --color-action-primary: light-dark(var(--neutral-850), var(--paper));
+  --color-action-primary: light-dark(var(--neutral-850), var(--neutral-400));
+  --color-action-primary-hover: light-dark(var(--neutral-700), var(--paper));
   --color-text-on-action: light-dark(var(--white), var(--neutral-900));
   --color-text-danger: light-dark(oklch(0.500335978 0.182051182 29.512714275), oklch(0.807689675 0.103485729 19.570623816));
   --color-bg-danger: light-dark(oklch(0.968586961 0.015409139 27.280066214), oklch(0.268012128 0.045783995 11.811931989));
@@ -131,15 +132,16 @@
     color: var(--color-text-secondary);
     transition: transform 150ms ease-out, opacity var(--motion-moderate-enter) ease-out;
   }
-  .ui-control:hover:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { background: var(--color-bg-raised); color: var(--color-text-primary); }
+  .ui-control:not(.ui-primary):hover:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { background: var(--color-bg-raised); color: var(--color-text-primary); }
   .ui-control:active:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { transform: scale(0.96); }
   .ui-primary {
     border: 1px solid transparent;
     background: var(--color-action-primary);
     color: var(--color-text-on-action);
     box-shadow: none;
+    transition: background-color 150ms ease, transform 150ms ease-out, opacity var(--motion-moderate-enter) ease-out;
   }
-  .ui-primary:hover { background: var(--color-action-primary); color: var(--color-text-on-action); opacity: 0.9; }
+  .ui-primary:hover:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { background: var(--color-action-primary-hover); color: var(--color-text-on-action); }
   .ui-selected {
     background: var(--color-bg-active);
     color: var(--color-text-primary);
