@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
 import Image from "next/image";
-import searchDetailImage from "./details/search-result.webp";
+import { SearchDemo } from "./search-demo";
 import backupImage from "../../../public/marketing/app-backup.webp";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AndroidIcon, AppleIcon, ComputerIcon } from "@hugeicons/core-free-icons";
@@ -78,7 +78,7 @@ export default function AboutPage() {
             </section>
             <section className="ka-feature-card ka-organize" aria-labelledby="organize-title">
               <div className="ka-card-copy"><p className="ka-eyebrow">A little order, on your terms</p><h3 id="organize-title">Less digging.<br />More discovering.</h3><p>Use collections, tags, pins, and Unsorted, then search words inside your saves.</p><Link href="/help/search" className="ka-card-foot">Find your saves <ArrowRightIcon /></Link></div>
-              <div className="ka-card-scene ka-organize-scene"><Image className="ka-app-detail ka-search-detail" src={searchDetailImage} alt="A complete Keepall search result with highlighted file-content matches, a personal note, and its collection" sizes="(max-width: 800px) 85vw, 480px" /></div>
+              <div className="ka-card-scene ka-organize-scene"><SearchDemo /></div>
             </section>
             <section id="your-library" className="ka-feature-card ka-local" aria-labelledby="local-title">
               <div className="ka-card-copy"><p className="ka-eyebrow">Personal means yours</p><h3 id="local-title">Your interests.<br />Your device.<br />Your library.</h3><p>Your library stays in this browser, with no account or automatic sync; download backups to protect it.</p><Link href="/help/storage-and-backups" className="ka-card-foot">Back up your library <ArrowRightIcon /></Link></div>
