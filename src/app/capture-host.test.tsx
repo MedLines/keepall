@@ -147,6 +147,21 @@ describe("CaptureHost", () => {
     vi.mocked(importFiles).mockReset();
   });
 
+  test("bulk import opens immediately while clipboard access is pending and ignores a late clipboard result", async () => {
+    const clipboard = deferred<{ image: Blob | null; text: string }>();
+    vi.mocked(readClipboardImageAndText).mockReturnValue(clipboard.promise);
+    render(<CaptureHost />);
+    act(() => openCaptureDialog());
+    const bulkButton = await screen.findByRole("button", { name: "Bulk import" });
+    expect(bulkButton).toBeEnabled();
+    fireEvent.click(bulkButton);
+    expect(await screen.findByRole("dialog", { name: "Bulk import" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Import files" })).toBeEnabled();
+    await act(async () => clipboard.resolve({ image: null, text: "Stale clipboard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.getByLabelText("Link, note, or image")).toHaveValue("");
+  });
+
   for (const opener of ["shortcut", "button"] as const) {
     test(`defaults ${opener} capture to the active folder and allows overriding it`, async () => {
       vi.mocked(listCollections).mockResolvedValue([
@@ -391,6 +406,39 @@ describe("CaptureHost", () => {
     render(<CaptureHost />);
     act(() => openBulkImportDialog());
     expect(await screen.findByRole("dialog", { name: "Bulk import" })).toBeVisible();
+  });
+
+  test("bulk images show preparation progress, then a locked gallery save until the write finishes", async () => {
+    await openDraft("");
+    fireEvent.click(screen.getByRole("button", { name: "Bulk import" }));
+    const bulk = await screen.findByRole("dialog", { name: "Bulk import" });
+    const bytes = deferred<ArrayBuffer>();
+    const first = new File([new Uint8Array([1])], "one.png", { type: "image/png" });
+    vi.spyOn(first, "arrayBuffer").mockReturnValue(bytes.promise);
+    fireEvent.change(bulk.querySelector('input[data-bulk-files]')!, { target: { files: [first,
+      new File([new Uint8Array([2])], "two.png", { type: "image/png" }),
+    ] } });
+    const preparing = await screen.findByRole("dialog", { name: "Importing files" });
+    expect(preparing).toHaveTextContent("Preparing images");
+    expect(preparing).toHaveTextContent("one.png");
+    expect(within(preparing).getByRole("progressbar")).toHaveAttribute("value", "0");
+    expect(document.querySelector('button[aria-label="Close drawer"]')).toBeDisabled();
+    fireEvent.keyDown(preparing, { key: "Escape" });
+    expect(preparing).toBeVisible();
+    await act(async () => bytes.resolve(new Uint8Array([1]).buffer));
+    await screen.findByLabelText("2 images attached");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Importing files" })).toBeNull());
+    fireEvent.click(screen.getByRole("radio", { name: /One image item/ }));
+    const write = deferred<Awaited<ReturnType<typeof createImage>>>();
+    vi.mocked(createImage).mockReturnValue(write.promise);
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    const saving = await screen.findByRole("dialog", { name: "Importing files" });
+    expect(saving).toHaveTextContent("Saving gallery");
+    expect(saving).toHaveTextContent("2 images in this gallery");
+    expect(within(saving).getByRole("progressbar")).not.toHaveAttribute("value");
+    expect(within(saving).getByRole("button", { name: "Close" })).toBeDisabled();
+    await act(async () => write.resolve(buildImageFromAssetIds({ assetIds: ["one", "two"] }, { id: "gallery", now: 1 })));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Importing files" })).toBeNull());
   });
 
   test("the unified picker detects multiple text files without changing an existing capture", async () => {
@@ -1073,10 +1121,16 @@ describe("CaptureHost", () => {
     await screen.findByRole("region", { name: "Selected files" });
     await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled());
-    expect(screen.getByRole("button", { name: "Done" })).toBeDisabled();
+    const progress = await screen.findByRole("dialog", { name: "Importing files" });
+    expect(within(progress).getByRole("progressbar")).toHaveAttribute("value", "2");
+    expect(within(progress).getByRole("progressbar")).toHaveAttribute("max", "2");
+    expect(progress).toHaveTextContent("2 saved");
+    expect(progress).toHaveTextContent("0 failed");
+    expect(progress).toHaveTextContent("readme.txt");
+    expect(within(progress).getByRole("button", { name: "Close" })).toBeDisabled();
+    expect(within(drawer).getByRole("button", { name: "Saving…", hidden: true })).toBeDisabled();
+    expect(within(drawer).getByRole("button", { name: "Done", hidden: true })).toBeDisabled();
     expect(drawer.querySelector('button[aria-label="Close drawer"]')).toBeDisabled();
-    expect(await screen.findByText("Saving files… 2 of 2")).toBeVisible();
     fireEvent.keyDown(drawer, { key: "Escape" });
     expect(drawer).toBeVisible();
     expect(importFiles).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ collectionName: "My photos" }));

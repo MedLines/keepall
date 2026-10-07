@@ -93,6 +93,20 @@ test("a video decoding failure preserves other files without saving an unusable 
   expect(await getDb().videoAssets.count()).toBe(0);
 });
 
+test("reports each file's actual stage and counts failed files as processed", async () => {
+  const events: string[] = [];
+  await importFiles([file("first.txt", "First"), file("page.html", "Unsupported"), new File(["video"], "clip.mp4", { type: "video/mp4" })], {
+    prepareVideo,
+    onStage: (stage, name) => events.push(`${name}: ${stage}`),
+    onProgress: (done, result) => events.push(`${done}: ${result.status}`),
+  });
+  expect(events).toEqual([
+    "first.txt: reading", "first.txt: saving", "1: saved", "2: failed",
+    "clip.mp4: preparing-video", "clip.mp4: saving", "3: saved",
+  ]);
+  expect(await getDb().items.count()).toBe(2);
+});
+
 test("missing collection validation leaves no media item or original behind", async () => {
   await expect(createImage({ assets: [{ bytes: new Uint8Array([1]), mimeType: "image/png" }], collectionIds: ["missing"] })).rejects.toThrow("collection");
   await expect(createVideo(new File(["video"], "clip.mp4", { type: "video/mp4" }), null, undefined, undefined, ["missing"])).rejects.toThrow("collection");

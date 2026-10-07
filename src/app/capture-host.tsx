@@ -78,6 +78,7 @@ import { CaptureFileList } from "./capture-file-list";
 import { CaptureTypeMenu } from "./capture-type-menu";
 import { CAPTURE_FILE_ACCEPT, classifyCaptureFile } from "@/domain/capture-file";
 import { ModalDialog } from "@/components/ui/modal-dialog";
+import { CaptureImportProgressDialog, type CaptureImportProgress } from "./capture-import-progress";
 import { DocumentText } from "./document-content";
 
 
@@ -163,6 +164,8 @@ export function CaptureHost() {
   const [folderImportBusy, setFolderImportBusy] = useState(false);
   const [bookmarksImportBusy, setBookmarksImportBusy] = useState(false);
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [bulkImagesPreparing, setBulkImagesPreparing] = useState(false);
+  const clipboardReadGenerationRef = useRef(0);
   const imageDraftsRef = useRef<ImageDraft[]>([]);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const imageUploadErrorRef = useRef<string | null>(null);
@@ -170,6 +173,7 @@ export function CaptureHost() {
   const [imageUpload, setImageUpload] = useState<{
     completed: number;
     total: number;
+    fileName?: string;
   } | null>(null);
   const imageReadGenerationRef = useRef(0);
   const videoPreparationGenerationRef = useRef(0);
@@ -200,7 +204,7 @@ export function CaptureHost() {
   const [imageLayoutRequired, setImageLayoutRequired] = useState(false);
   const [imageLayout, setImageLayout] = useState<"gallery" | "separate" | null>(null);
   const [fileResults, setFileResults] = useState<FileImportResult[]>([]);
-  const [fileProgress, setFileProgress] = useState<{ done: number; total: number } | null>(null);
+  const [fileProgress, setFileProgress] = useState<CaptureImportProgress | null>(null);
   const [fileQuotaWarning, setFileQuotaWarning] = useState<string | null>(null);
   const [importSavedCount, setImportSavedCount] = useState(0);
   const saveInFlightRef = useRef(false);
@@ -211,13 +215,13 @@ export function CaptureHost() {
   const classified = classifyCapture(state.input).type;
   const kind = documentDraft ? "note" : state.override ?? classified;
   const savingImage = imageDrafts.length > 0;
-  const composeLocked =
+  const bulkImportLocked =
     state.status === "saving" ||
-    state.status === "reading" ||
     savedItemId !== null ||
     imageUpload !== null || videoPreparing || documentReading || folderImportBusy || bookmarksImportBusy || fileResults.length > 0;
+  const composeLocked = state.status === "reading" || bulkImportLocked;
   const orgLocked = state.status === "saving" || state.status === "reading" || documentReading || folderImportBusy || bookmarksImportBusy || fileResults.some((result) => result.status === "saved");
-  const dismissLocked = shouldBlockDialogDismiss(state.status) || folderImportBusy || bookmarksImportBusy;
+  const dismissLocked = shouldBlockDialogDismiss(state.status) || folderImportBusy || bookmarksImportBusy || bulkImagesPreparing;
 
   function dismiss() {
     resetSession();
@@ -255,9 +259,17 @@ export function CaptureHost() {
 
   useAppShortcuts({ capture: () => openCapture() });
 
+  function openBulkImport() {
+    if (bulkImportLocked) return;
+    clipboardReadGenerationRef.current += 1;
+    dispatch({ type: "clipboardUnavailable" });
+    if (state.status === "reading" || state.status === "idle") establishBaseline("");
+    setBulkImportOpen(true);
+  }
+
   const onOpenCapture = useEffectEvent((event: Event) => {
     openCapture();
-    if ((event as CustomEvent<{ bulkImport?: boolean }>).detail?.bulkImport) setBulkImportOpen(true);
+    if ((event as CustomEvent<{ bulkImport?: boolean }>).detail?.bulkImport) openBulkImport();
   });
   useEffect(() => {
     window.addEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
@@ -277,16 +289,17 @@ export function CaptureHost() {
     }
 
     let cancelled = false;
+    const generation = clipboardReadGenerationRef.current;
 
     void readClipboardImageAndText()
       .then(clipboard => {
-        if (cancelled) {
+        if (cancelled || generation !== clipboardReadGenerationRef.current) {
           return;
         }
         receiveClipboard(clipboard);
       })
       .catch(() => {
-        if (!cancelled) {
+        if (!cancelled && generation === clipboardReadGenerationRef.current) {
           establishBaseline("");
           dispatch({ type: "clipboardUnavailable" });
         }
@@ -380,6 +393,8 @@ export function CaptureHost() {
   function resetSession() {
     clipboardTextUntouchedRef.current = false;
     setBulkImportOpen(false);
+    setBulkImagesPreparing(false);
+    clipboardReadGenerationRef.current += 1;
     setFileDrafts(null);
     setImportSavedCount(0);
     setImageLayoutRequired(false);
@@ -446,12 +461,13 @@ export function CaptureHost() {
       const prepared: { file: File; bytes: Uint8Array; mimeType: string }[] = [];
       for (const [index, file] of files.entries()) {
         currentFile = file;
+        setImageUpload({ completed: index, total: files.length, fileName: file.name });
         assertLocalImageFile(file);
         const bytes = new Uint8Array(await file.arrayBuffer());
         if (generation !== imageReadGenerationRef.current) return;
         const mimeType = assertLocalImageBytes(bytes, file.type);
         prepared.push({ file, bytes, mimeType });
-        setImageUpload({ completed: index + 1, total: files.length });
+        setImageUpload({ completed: index + 1, total: files.length, fileName: file.name });
       }
 
       const drafts: ImageDraft[] = [];
@@ -534,7 +550,10 @@ export function CaptureHost() {
     });
     if (!selected.length) return;
     if (selected.every((file) => classifyCaptureFile(file).kind === "image") && !videoDraft && !hasFileBatch) {
-      const added = await setDraftFromFiles(selected, state.input, state.status);
+      if (bulk) setBulkImagesPreparing(true);
+      let added;
+      try { added = await setDraftFromFiles(selected, state.input, state.status); }
+      finally { if (bulk) setBulkImagesPreparing(false); }
       if (added && (selected.length > 1 || imageDrafts.length > 0)) {
         if (!imageLayoutRequired) setImageLayout(null);
         setImageLayoutRequired(true);
@@ -632,13 +651,19 @@ export function CaptureHost() {
     const indexes = files.map((_, index) => index).filter((index) => previous[index]?.status !== "saved");
     const pending = indexes.map((index) => files[index]);
     const completed = [...previous];
-    setFileProgress({ done: 0, total: pending.length });
+    let savedCount = 0;
+    let failedCount = 0;
+    setFileProgress({ stage: "reading", done: 0, total: pending.length, fileName: pending[0]?.name, saved: 0, failed: 0 });
     try {
       const summary = await importFiles(pending, {
         prepareVideo: prepareLocalVideo, collectionName: org.collectionName ?? undefined, tagNames: org.tagNames,
+        onStage: (stage, fileName) => setFileProgress({ stage, fileName, done: savedCount + failedCount, total: pending.length, saved: savedCount, failed: failedCount }),
         onProgress: (done, result) => {
           completed[indexes[done - 1]] = result;
-          if (done % 8 === 0 || done === pending.length) { setFileProgress({ done, total: pending.length }); setFileResults([...completed]); }
+          if (result.status === "saved") savedCount += 1;
+          else failedCount += 1;
+          setFileProgress({ stage: "saving", fileName: result.fileName, done, total: pending.length, saved: savedCount, failed: failedCount });
+          if (done % 8 === 0 || done === pending.length) setFileResults([...completed]);
         },
       });
       summary.results.forEach((result, index) => { completed[indexes[index]] = result; });
@@ -959,7 +984,7 @@ export function CaptureHost() {
         {videoDraft ? (
           <p className="rounded-input border border-border-control bg-bg-raised px-3 py-2 text-sm text-text-primary">Video: {videoDraft.file.name}</p>
         ) : null}
-        {imageDrafts.length > 0 ? (
+        {imageDrafts.length > 0 && !fileProgress ? (
           <div className="flex flex-col items-start gap-2">
             <ul
               className="flex w-full flex-wrap gap-2"
@@ -1033,7 +1058,7 @@ export function CaptureHost() {
             Adding images… {imageUpload.completed} of {imageUpload.total}
           </p>
         ) : null}
-        {hasFileBatch ? <CaptureFileList files={fileDrafts!} results={fileResults} disabled={composeLocked}
+        {hasFileBatch && !fileProgress ? <CaptureFileList files={fileDrafts!} results={fileResults} disabled={composeLocked}
           onRemove={(index) => { setFileDrafts((files) => files && files.length > 1 ? files.filter((_, position) => position !== index) : null); }} /> : null}
         {!hasFileBatch && fileResults.some((result) => result.status === "failed") ? <ul aria-label="Failed files" className="space-y-2 text-xs text-text-danger">
           {fileResults.map((result, index) => result.status === "failed" ? <li key={index}>{result.fileName}: {result.error}</li> : null)}
@@ -1183,7 +1208,6 @@ export function CaptureHost() {
           }}
           onClearCollection={() => setDraftCollectionName(null)}
         />
-        {fileProgress ? <p role="status" className="text-sm tabular-nums text-text-secondary">Saving files… {fileProgress.done} of {fileProgress.total}</p> : null}
         {state.error ? (
           <p className="text-sm text-text-danger" role="alert">
             {state.error}
@@ -1198,8 +1222,8 @@ export function CaptureHost() {
           <button
             className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} mr-auto px-3 text-xs disabled:opacity-60`}
             type="button"
-            disabled={composeLocked}
-            onClick={() => setBulkImportOpen(true)}
+            disabled={bulkImportLocked}
+            onClick={openBulkImport}
           >
             Bulk import
           </button>
@@ -1239,6 +1263,10 @@ export function CaptureHost() {
           )}
         </div>
       </form>
+      <CaptureImportProgressDialog progress={fileProgress ?? (bulkImagesPreparing && imageUpload
+        ? { stage: "preparing-images", done: imageUpload.completed, total: imageUpload.total, fileName: imageUpload.fileName, saved: 0, failed: 0 }
+        : state.status === "saving" && imageLayoutRequired && imageLayout === "gallery" && !hasFileBatch
+          ? { stage: "saving-gallery", done: 0, total: imageDrafts.length, saved: 0, failed: 0 } : null)} />
       {isActive ? (
         <ModalDialog
           open={bulkImportOpen}

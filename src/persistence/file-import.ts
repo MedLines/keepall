@@ -1,4 +1,4 @@
-import { classifyCaptureFile } from "@/domain/capture-file";
+import { classifyCaptureFile, type FileImportStage } from "@/domain/capture-file";
 import { CollectionValidationError } from "@/domain/collection";
 import { documentFormat, DocumentValidationError } from "@/domain/document";
 import { assertLocalImageFile, ImageValidationError } from "@/domain/image";
@@ -25,6 +25,7 @@ export async function importFiles(files: readonly File[], options: {
   imageMode?: "gallery" | "separate";
   prepareVideo: (file: File) => Promise<Blob>;
   onProgress?: (done: number, result: FileImportResult) => void;
+  onStage?: (stage: FileImportStage, fileName: string) => void;
 }): Promise<{ results: FileImportResult[]; collectionId?: string }> {
   if (options.imageMode === "gallery") return importGallery(files, options);
   const results: FileImportResult[] = [];
@@ -38,9 +39,11 @@ export async function importFiles(files: readonly File[], options: {
       if (kind === "document") documentFormat(file.name, file.size);
       if (kind === "image") assertLocalImageFile(media);
       if (kind === "video") assertLocalVideo(media);
+      options.onStage?.(kind === "video" ? "preparing-video" : "reading", file.name);
       const poster = kind === "video" ? await options.prepareVideo(media) : null;
       const bytes = kind === "video" ? null : new Uint8Array(await file.arrayBuffer());
       const collectionIds = collectionId ? [collectionId] : [];
+      options.onStage?.("saving", file.name);
       const item = kind === "document"
         ? await createDocument({ fileName: file.name, bytes: bytes!, collectionIds, collectionName: options.collectionName, tagNames: options.tagNames })
         : kind === "image"
