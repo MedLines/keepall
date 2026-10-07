@@ -85,3 +85,9 @@
 @media (prefers-reduced-motion: reduce) {
   .kd-demo *, .kd-demo *::before, .kd-demo *::after { animation: none !important; transition: none !important; }
 }
+@container (width < 300px) {
+  .kd-pdf > [data-pdf-toolbar] { grid-template-columns: minmax(0, 1fr); }
+  .kd-pdf .media-viewer-mode { grid-column: 1; grid-row: 1; justify-self: center; }
+  .kd-pdf .media-viewer-navigation { grid-column: 1; grid-row: 2; justify-self: center; }
+  .kd-pdf .media-viewer-zoom { grid-column: 1; grid-row: 3; justify-self: center; }
+}
