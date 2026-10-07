@@ -15,6 +15,7 @@ import {
   acquireThumbnailObjectUrl,
   clearAssetObjectUrlCache,
   peekAssetObjectUrl,
+  invalidateThumbnailObjectUrl,
 } from "./asset-object-url-cache";
 
 describe("asset object URL cache", () => {
@@ -59,6 +60,23 @@ describe("asset object URL cache", () => {
     await expect(remount.promise).resolves.toBe("blob:shared-asset");
     expect(getThumbnail).toHaveBeenCalledTimes(1);
     remount.release();
+  });
+
+  test("refreshes a replaced thumbnail while retaining the old URL until its users release it", async () => {
+    vi.mocked(URL.createObjectURL).mockReturnValueOnce("blob:old-poster").mockReturnValueOnce("blob:new-poster");
+    const old = acquireThumbnailObjectUrl("video");
+    await expect(old.promise).resolves.toBe("blob:old-poster");
+    invalidateThumbnailObjectUrl("video");
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    const next = acquireThumbnailObjectUrl("video");
+    await expect(next.promise).resolves.toBe("blob:new-poster");
+    expect(getThumbnail).toHaveBeenCalledTimes(2);
+    old.release();
+    expect(URL.revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:old-poster");
+    const another = acquireThumbnailObjectUrl("video");
+    await expect(another.promise).resolves.toBe("blob:new-poster");
+    expect(getThumbnail).toHaveBeenCalledTimes(2);
+    next.release(); another.release();
   });
 
   test("deduplicates reads and object URLs across concurrent card mounts", async () => {

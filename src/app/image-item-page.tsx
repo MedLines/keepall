@@ -43,8 +43,9 @@ import { VerticalImageGallery } from "./vertical-image-gallery";
 import { ImageToolsPanel } from "./image-tools-panel";
 import { CurrentImageMenu } from "./image-actions-menu";
 import { ItemPageHeader } from "./item-page-header";
+import { ItemMediaFrame } from "./item-media-frame";
 import { ItemPageLoading } from "./library-loading-content";
-import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
+import { ITEM_DETAILS_POSITION, ITEM_MEDIA_HEIGHT, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -681,7 +682,7 @@ function ImageWorkspace({
         <ScrollPanel role="main" className="min-h-0 flex-1" viewportRef={node => { scrollRef.current = node; }}
           viewportClassName={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`}
           viewportProps={{ onScroll: rememberReadingPosition, "data-testid": "item-page-scroll" }}>
-          <div className={`${ITEM_PAGE_GRID} [--image-viewer-height:max(24rem,min(76dvh,54rem))]`}>
+          <div className={`${ITEM_PAGE_GRID} ${ITEM_MEDIA_HEIGHT}`}>
                 <input
                   ref={addInputRef}
                   className="sr-only"
@@ -713,7 +714,7 @@ function ImageWorkspace({
               {galleryMode === "slides" && currentAssetId ? (
               <ImageToolsPanel key={currentAssetId} item={item} assetId={currentAssetId} slide={currentSlide} disabled={actionBusy}>
               <ItemViewTransition itemId={item.id} assetId={currentAssetId ?? ""} source={false}>
-              <div className="item-workspace-media image-viewer-canvas relative isolate flex h-[var(--image-viewer-height)] items-center justify-center overflow-hidden rounded-card bg-bg-image-viewer">
+              <ItemMediaFrame className="image-viewer-canvas">
                 <div className="pointer-events-none absolute inset-4 z-10 flex items-start justify-end">
                   <CurrentImageMenu
                     busy={galleryMutation !== null}
@@ -760,7 +761,7 @@ function ImageWorkspace({
                     </button>
                   </>
                 ) : null}
-              </div>
+              </ItemMediaFrame>
               </ItemViewTransition>
 
                 <GalleryControls
@@ -816,7 +817,7 @@ function ImageWorkspace({
               createdAt={item.createdAt}
               updatedAt={item.updatedAt}
               sourceFileName={item.sourceFileName}
-              className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2 lg:min-h-[var(--image-viewer-height)]`}
+              className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2 lg:min-h-[var(--item-viewer-height)]`}
               disabled={actionBusy}
               onOrganize={onOrganize}
               onEdit={onEdit}

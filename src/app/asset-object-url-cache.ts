@@ -3,6 +3,7 @@ import { getThumbnail } from "@/persistence/thumbnails";
 
 const MAX_IDLE_URLS = 16;
 const IDLE_URL_TTL_MS = 30_000;
+export const THUMBNAIL_UPDATED_EVENT = "keepall:thumbnail-updated";
 
 type CacheEntry = {
   key: string;
@@ -16,10 +17,12 @@ type CacheEntry = {
 const entries = new Map<string, CacheEntry>();
 
 function dispose(entry: CacheEntry): void {
-  if (entry.refs > 0 || entries.get(entry.key) !== entry) return;
+  if (entry.refs > 0) return;
   if (entry.disposeTimer) clearTimeout(entry.disposeTimer);
   if (entry.url) URL.revokeObjectURL(entry.url);
-  entries.delete(entry.key);
+  entry.url = null;
+  entry.disposeTimer = null;
+  if (entries.get(entry.key) === entry) entries.delete(entry.key);
 }
 
 function trimIdleEntries(): void {
@@ -79,7 +82,10 @@ function acquireObjectUrl(key: string, loadBlob: () => Promise<Blob | null>): {
       if (released) return;
       released = true;
       entry.refs = Math.max(0, entry.refs - 1);
-      if (entry.refs === 0) scheduleDispose(entry);
+      if (entry.refs === 0) {
+        if (entries.get(key) === entry) scheduleDispose(entry);
+        else dispose(entry);
+      }
     },
   };
 }
@@ -93,6 +99,15 @@ export function acquireAssetObjectUrl(id: string) {
 
 export function acquireThumbnailObjectUrl(id: string) {
   return acquireObjectUrl(`thumbnail:${id}`, () => getThumbnail(id));
+}
+
+export function invalidateThumbnailObjectUrl(id: string): void {
+  const entry = entries.get(`thumbnail:${id}`);
+  if (entry) {
+    entries.delete(entry.key);
+    if (entry.refs === 0) dispose(entry);
+  }
+  window.dispatchEvent(new CustomEvent(THUMBNAIL_UPDATED_EVENT, { detail: id }));
 }
 
 export function clearAssetObjectUrlCache(): void {

@@ -18,6 +18,7 @@ import {
   useBrowseChromeVisible,
 } from "./item-media-layout";
 import { LibraryItemMedia } from "./library-item-media";
+import { LibraryVideoPreview } from "./library-video-preview";
 import { prepareDocumentNavigationPreview } from "./item-navigation-snapshot";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibrarySelectionControl } from "./library-selection-control";
@@ -168,6 +169,8 @@ export function LibraryItem({
   const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
   const [imageRatio, setImageRatio] = useState(1.6);
   const [fetchingPreview, setFetchingPreview] = useState(false);
+  const [videoHovered, setVideoHovered] = useState(false);
+  const stopVideoPreview = useCallback(() => setVideoHovered(false), []);
   const actionsRef = useRef<HTMLButtonElement>(null);
   const reduceMotion = useReducedMotion();
   const router = useRouter();
@@ -191,6 +194,7 @@ export function LibraryItem({
   const title = itemListTitle(item);
   const actionLabel = itemActionLabel(item);
   const isList = layoutMode === "list";
+  const videoPreviewEnabled = item.type === "video" && !reduceMotion && !selectionActive && !trashActions && !inspected && !editing && !pendingDelete && !isDragging && !organizerOpen;
   const hasGridFooter = item.type !== "image" || Boolean(
     trashActions || searchQuery.trim() || item.title.trim() || item.caption.trim() || item.sourceUrl ||
     (pinVisible && pinned) || collections.length || tagNames.length || pendingDelete
@@ -284,10 +288,11 @@ export function LibraryItem({
           target="_blank"
         />
       ) : null}
-      {item.type === "video" && !inspected ? (
+      {item.type === "video" ? <LibraryVideoPreview assetId={item.assetId} active={videoPreviewEnabled && videoHovered} onStop={stopVideoPreview} /> : null}
+      {item.type === "video" && isList && !inspected ? (
         <span data-testid="video-play-overlay" aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 grid place-items-center">
-          <span className={`grid place-items-center rounded-full border border-white/45 bg-black/30 text-white/85 shadow-md ${isList ? "size-9" : "size-16"}`}>
-            <PlayIcon className={isList ? "size-5" : "size-8"} />
+          <span className="grid size-8 place-items-center rounded-full border border-border-media bg-bg-media/70 text-text-on-media backdrop-blur-sm">
+            <PlayIcon className="size-4" />
           </span>
         </span>
       ) : null}
@@ -361,7 +366,9 @@ export function LibraryItem({
       className={`library-item-root min-w-0 focus-within:z-10 ${isList ? "@container library-list-item" : ""} ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
-      onPointerEnter={prepareRoute}
+      onPointerEnter={event => { prepareRoute(); if (videoPreviewEnabled && event.pointerType === "mouse") setVideoHovered(true); }}
+      onPointerMove={event => { if (videoPreviewEnabled && event.pointerType === "mouse") setVideoHovered(true); }}
+      onPointerLeave={stopVideoPreview}
       onFocus={prepareRoute}
       onTouchStart={prepareRoute}
       onClickCapture={event => {

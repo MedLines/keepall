@@ -33,15 +33,21 @@ beforeEach(() => {
 });
 
 describe("VideoItemPage", () => {
+  test("shows the title once in the shared page header", async () => {
+    render(<VideoItemPage itemId="video-1" returnHref="/" />);
+    expect(await screen.findByRole("heading", { name: "A video", level: 1 })).toBeVisible();
+    expect(screen.getAllByText("A video")).toHaveLength(1);
+    await waitFor(() => expect(screen.getByRole("region", { name: "Video player" })).toBeVisible());
+  });
   test("shows loading until a delayed file read finishes and revokes its URL on unmount", async () => {
     const read = deferred<Blob | null>();
     vi.mocked(getVideoBlob).mockReturnValue(read.promise);
     const view = render(<VideoItemPage itemId="video-1" returnHref="/" />);
     await screen.findByRole("heading", { name: "A video" });
     expect(screen.getByText("Loading video…")).toBeVisible();
-    expect(document.querySelector("video[controls]")).toBeNull();
+    expect(document.querySelector("video")).toBeNull();
     read.resolve(new Blob(["video"]));
-    await waitFor(() => expect(document.querySelector("video[controls]")).toHaveAttribute("src", "blob:video-1"));
+    await waitFor(() => expect(document.querySelector("video")).toHaveAttribute("src", "blob:video-1"));
     view.unmount();
     expect(URL.revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:video-1");
   });
@@ -59,13 +65,13 @@ describe("VideoItemPage", () => {
     if (_name === "missing") expect(screen.getByRole("link", { name: "Check backups in Settings" })).toHaveAttribute("href", "/settings#backup-heading");
     expect(screen.getByText("Keep these notes")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Retry video" }));
-    await waitFor(() => expect(document.querySelector("video[controls]")).toHaveAttribute("src", "blob:video-1"));
+    await waitFor(() => expect(document.querySelector("video")).toHaveAttribute("src", "blob:video-1"));
   });
 
   test("shows playback guidance while preserving notes", async () => {
     render(<VideoItemPage itemId="video-1" returnHref="/" />);
-    await waitFor(() => expect(document.querySelector("video[controls]")).toBeTruthy());
-    fireEvent.error(document.querySelector("video[controls]")!);
+    await waitFor(() => expect(document.querySelector("video")).toBeTruthy());
+    fireEvent.error(document.querySelector("video")!);
     expect(screen.getByRole("alert")).toHaveTextContent(/browser couldn't play/i);
     expect(screen.queryByText("Loading video…")).not.toBeInTheDocument();
     expect(screen.getByText("Keep these notes")).toBeVisible();
@@ -74,11 +80,11 @@ describe("VideoItemPage", () => {
   test("retries playback with a fresh URL and revokes each created URL once", async () => {
     vi.mocked(URL.createObjectURL).mockReturnValueOnce("blob:first").mockReturnValueOnce("blob:second");
     const view = render(<VideoItemPage itemId="video-1" returnHref="/" />);
-    await waitFor(() => expect(document.querySelector("video[controls]")).toHaveAttribute("src", "blob:first"));
-    fireEvent.error(document.querySelector("video[controls]")!);
+    await waitFor(() => expect(document.querySelector("video")).toHaveAttribute("src", "blob:first"));
+    fireEvent.error(document.querySelector("video")!);
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Retry video" }));
-    await waitFor(() => expect(document.querySelector("video[controls]")).toHaveAttribute("src", "blob:second"));
+    await waitFor(() => expect(document.querySelector("video")).toHaveAttribute("src", "blob:second"));
     expect(URL.revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:first");
     view.unmount();
     expect(URL.revokeObjectURL).toHaveBeenCalledTimes(2);
@@ -88,13 +94,13 @@ describe("VideoItemPage", () => {
   test("does not let organization errors replace the ready player", async () => {
     vi.mocked(createCollection).mockRejectedValueOnce(new Error("write failed"));
     render(<VideoItemPage itemId="video-1" returnHref="/" />);
-    await waitFor(() => expect(document.querySelector("video[controls]")).toBeTruthy());
+    await waitFor(() => expect(document.querySelector("video")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Organize" }));
     const drawer = screen.getByRole("dialog", { name: /organize/i });
     fireEvent.change(within(drawer).getByRole("textbox", { name: "Move to collection" }), { target: { value: "Test" } });
     fireEvent.keyDown(within(drawer).getByRole("textbox", { name: "Move to collection" }), { key: "Enter" });
     await waitFor(() => expect(drawer).toHaveTextContent("Couldn't update video organization."));
-    expect(document.querySelector("video[controls]")).toBeTruthy();
+    expect(document.querySelector("video")).toBeTruthy();
     expect(screen.queryByText("Loading video…")).not.toBeInTheDocument();
   });
 
@@ -115,7 +121,7 @@ describe("VideoItemPage", () => {
     nextItemRead.resolve(next);
     await screen.findByRole("heading", { name: "Next video" });
     nextRead.resolve(new Blob(["next"]));
-    await waitFor(() => expect(document.querySelector("video[controls]")).toHaveAttribute("src", "blob:video-1"));
+    await waitFor(() => expect(document.querySelector("video")).toHaveAttribute("src", "blob:video-1"));
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
   });
 });

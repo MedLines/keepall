@@ -1,0 +1,102 @@
+import { expect, test } from "@playwright/test";
+
+test.use({ serviceWorkers: "block" });
+
+test("video uses the image frame and aligned details with working playback controls", async ({ page, browserName }, testInfo) => {
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 1707, height: 825 });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
+  await page.evaluate(async () => {
+    const blob = await (await fetch("/marketing/capture-image-demo.webm")).blob();
+    const canvas = document.createElement("canvas");
+    canvas.width = 600; canvas.height = 400;
+    const context = canvas.getContext("2d")!;
+    context.fillStyle = "#345d4c"; context.fillRect(0, 0, 600, 400);
+    const image = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!), "image/png"));
+    const bytes = new Uint8Array(await image.arrayBuffer());
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("keepall");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const tx = db.transaction(["items", "videoAssets", "assets"], "readwrite");
+    tx.objectStore("videoAssets").put({ id: "polish-video", blob, mimeType: "video/webm", byteLength: blob.size, createdAt: 1 });
+    tx.objectStore("assets").put({ id: "polish-image", bytes, mimeType: image.type, byteLength: image.size, contentHash: "polish-image", createdAt: 1 });
+    const common = { tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 1 };
+    tx.objectStore("items").put({ ...common, id: "polish-video", type: "video", title: "Video reference", assetId: "polish-video", sourceFileName: "reference.webm", noteContent: "Saved video notes" });
+    tx.objectStore("items").put({ ...common, id: "polish-image", type: "image", title: "Image reference", assetIds: ["polish-image"], sourceUrl: "", caption: "" });
+    await new Promise<void>((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); });
+    db.close();
+  });
+  await page.goto("/items/polish-image");
+  const imageFrame = page.locator(".image-viewer-canvas");
+  await expect(imageFrame).toBeVisible();
+  const imageStyle = await imageFrame.evaluate(node => ({ radius: getComputedStyle(node).borderRadius, background: getComputedStyle(node).backgroundColor, border: getComputedStyle(node).borderWidth }));
+  await page.goto("/items/polish-video");
+  await expect(page.getByRole("heading", { name: "Video reference", level: 1 })).toBeVisible();
+  await expect(page.getByText("Video reference", { exact: true })).toHaveCount(1);
+  const player = page.getByRole("region", { name: "Video player" });
+  const frame = page.locator(".video-viewer-canvas");
+  const details = page.getByRole("complementary", { name: "Video details" });
+  await expect(frame).toHaveCSS("border-radius", imageStyle.radius);
+  await expect(frame).toHaveCSS("background-color", imageStyle.background);
+  await expect(frame).toHaveCSS("border-width", imageStyle.border);
+  const left = (await frame.boundingBox())!;
+  const right = (await details.boundingBox())!;
+  expect(Math.abs(left.y - right.y)).toBeLessThan(1);
+  expect(Math.abs(left.height - right.height)).toBeLessThan(1);
+  await expect.poll(() => player.locator("video").evaluate((video: HTMLVideoElement) => Number.isFinite(video.duration) && video.duration > 0)).toBe(true);
+  await player.getByRole("button", { name: "Play video", exact: true }).click();
+  await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect.poll(() => player.locator("video").evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(0);
+  const controls = player.getByRole("group", { name: "Playback controls" });
+  await page.mouse.move(0, 0);
+  await expect(controls).not.toBeVisible({ timeout: 1200 });
+  await player.hover({ position: { x: 10, y: 10 } });
+  await expect(controls).toBeVisible();
+  await player.getByRole("button", { name: "Pause", exact: true }).click();
+  await expect.poll(() => player.locator("video").evaluate((video: HTMLVideoElement) => video.paused)).toBe(true);
+  await player.getByRole("slider", { name: "Seek video" }).focus();
+  await player.getByRole("slider", { name: "Seek video" }).press("ArrowRight");
+  await player.getByRole("button", { name: "Playback speed" }).click();
+  const speedMenu = page.getByRole("menu", { name: "Playback speed" });
+  await expect(speedMenu).toBeVisible();
+  await speedMenu.screenshot({ path: testInfo.outputPath(`${browserName}-speed-menu.png`) });
+  await page.keyboard.press("Home");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => player.locator("video").evaluate((video: HTMLVideoElement) => video.playbackRate)).toBe(0.75);
+  await player.getByRole("button", { name: "Playback speed" }).click();
+  await page.getByRole("menuitemradio", { name: "1.5x", exact: true }).click();
+  await expect.poll(() => player.locator("video").evaluate((video: HTMLVideoElement) => video.playbackRate)).toBe(1.5);
+  await player.getByRole("button", { name: "Mute", exact: true }).click();
+  await expect(player.getByRole("button", { name: "Unmute", exact: true })).toBeVisible();
+  await player.getByRole("button", { name: "Unmute", exact: true }).click();
+  await player.getByRole("button", { name: "Full screen", exact: true }).click();
+  await expect.poll(() => player.evaluate(node => document.fullscreenElement === node)).toBe(true);
+  await player.getByRole("button", { name: "Playback speed" }).click();
+  await expect(page.getByRole("menuitemradio", { name: "1.5x", exact: true })).toBeChecked();
+  await page.getByRole("menuitemradio", { name: "1x", exact: true }).click();
+  await expect.poll(() => player.locator("video").evaluate((video: HTMLVideoElement) => video.playbackRate)).toBe(1);
+  await player.getByRole("button", { name: "Exit full screen", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement === null)).toBe(true);
+  for (const width of [1707, 390, 320]) {
+    await page.setViewportSize({ width, height: 825 });
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(theme => { document.documentElement.dataset.theme = theme; }, theme);
+      await player.scrollIntoViewIfNeeded();
+      await expect(player.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+      await expect(player.getByRole("button", { name: "Full screen", exact: true })).toBeVisible();
+      await player.getByRole("button", { name: "Mute", exact: true }).click();
+      await expect(player.getByRole("button", { name: "Full screen", exact: true })).toBeInViewport();
+      await player.getByRole("button", { name: "Unmute", exact: true }).click();
+      expect(await player.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`${browserName}-video-${width}-${theme}.png`) });
+    }
+  }
+  expect(errors).toEqual([]);
+});

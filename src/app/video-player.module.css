@@ -1,0 +1,153 @@
+.player {
+  --player-inset: 12px;
+  --player-track: color-mix(in oklch, var(--color-text-on-media) 30%, transparent);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  corner-shape: inherit;
+}
+
+.player:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: -3px;
+  border-radius: calc(var(--radius-card) - var(--spacing-card-inset));
+}
+
+.player:fullscreen { background: var(--color-bg-media); --player-inset: 0px; }
+.player:fullscreen .stage { border-radius: 0; }
+
+.stage {
+  position: absolute;
+  inset: var(--player-inset);
+  overflow: hidden;
+  border-radius: calc(var(--radius-card) - var(--spacing-card-inset) - var(--player-inset));
+  corner-shape: inherit;
+  background: var(--color-bg-media);
+  color: var(--color-text-on-media);
+}
+
+.video { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+.playSurface {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.playOverlay {
+  pointer-events: none;
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border: 1px solid var(--player-track);
+  border-radius: 50%;
+  corner-shape: round;
+  background: color-mix(in oklch, var(--color-text-on-media) 20%, transparent);
+  backdrop-filter: blur(8px);
+  transition: opacity 160ms ease, background 160ms ease;
+}
+
+.playOverlay[data-playing="true"] { opacity: 0; }
+.playSurface:hover .playOverlay, .playSurface:focus-visible .playOverlay { opacity: 1; }
+.playSurface:hover .playOverlay { background: color-mix(in oklch, var(--color-text-on-media) 30%, transparent); }
+.playSurface:focus-visible { outline: none; }
+.playSurface:focus-visible .playOverlay { outline: 2px solid var(--color-text-on-media); outline-offset: 4px; }
+
+.controls {
+  position: absolute;
+  z-index: 2;
+  inset: auto 0 0;
+  padding: 40px 12px 12px;
+  background: linear-gradient(to top, color-mix(in oklch, var(--color-bg-media) 95%, transparent), color-mix(in oklch, var(--color-bg-media) 65%, transparent) 65%, transparent);
+  transition: opacity 160ms ease, visibility 160ms ease;
+}
+
+.player[data-idle="true"] .controls { opacity: 0; visibility: hidden; pointer-events: none; }
+.player[data-idle="true"] .playOverlay { opacity: 0; }
+
+.control {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  corner-shape: round;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.control:hover { background: color-mix(in oklch, var(--color-text-on-media) 15%, transparent); }
+.control:disabled { cursor: default; opacity: 0.4; }
+.control:focus-visible, .speed:focus-visible { outline: 2px solid var(--color-text-on-media); outline-offset: 2px; }
+.skip { display: none; }
+
+.volume { display: flex; align-items: center; }
+.volumeSlider { width: 0; overflow: hidden; visibility: hidden; transition: width 160ms ease; }
+.volumeSlider input { width: 68px; }
+
+.speed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  min-width: 0;
+  margin-inline-start: auto;
+  padding-inline: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.speed:hover, .speed[data-popup-open] { background: color-mix(in oklch, var(--color-text-on-media) 15%, transparent); }
+
+.range { height: 24px; margin: 0; appearance: none; background: transparent; cursor: pointer; }
+.range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-text-on-media) var(--range-progress), var(--player-track) var(--range-progress));
+}
+.range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-text-on-media) var(--range-progress), var(--player-track) var(--range-progress));
+}
+.range::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  appearance: none;
+  border-radius: 50%;
+  background: var(--color-text-on-media);
+}
+.range::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: var(--color-text-on-media); }
+.range:focus-visible { outline: 2px solid var(--color-text-on-media); outline-offset: 3px; border-radius: 4px; }
+.range:disabled { cursor: default; opacity: 0.4; }
+
+@media (min-width: 640px) {
+  .player { --player-inset: 20px; }
+  .controls { padding: 48px 20px 16px; }
+  .skip { display: inline-flex; }
+  .volume:hover .volumeSlider, .volume:focus-within .volumeSlider { width: 76px; visibility: visible; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playOverlay, .controls, .volumeSlider { transition: none; }
+}
