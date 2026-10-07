@@ -26,7 +26,16 @@ async function readUrl(request: Request): Promise<string> {
 
 export async function POST(request: Request) {
   const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) return Response.json({ error: "Save articles from Keepall." }, { status: 403, headers });
+  if (origin) {
+    // Next's internal URL can differ from the browser's host behind a proxy.
+    const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? new URL(request.url).host).split(",")[0]!.trim().toLowerCase();
+    let sameOrigin = false;
+    try {
+      const source = new URL(origin);
+      sameOrigin = ["http:", "https:"].includes(source.protocol) && source.origin === origin && source.host === host;
+    } catch { /* Malformed and opaque origins cannot identify Keepall. */ }
+    if (!sameOrigin) return Response.json({ error: "Save articles from Keepall." }, { status: 403, headers });
+  }
   let url: string;
   try { url = await readUrl(request); }
   catch { return Response.json({ error: "Provide a valid article URL." }, { status: 400, headers }); }
