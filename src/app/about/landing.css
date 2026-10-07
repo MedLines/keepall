@@ -81,9 +81,9 @@
 .ka-header-open svg { width: 14px; height: 14px; }
 .ka-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .ka-header-open { white-space: nowrap; }
-.ka-button { --ka-button-inline-padding: 24px; --ka-button-icon-padding: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 12px var(--ka-button-inline-padding); border: 1px solid oklch(1 0 0 / 0.666666667); border-radius: 40px; background: oklch(0.937076862 0.006771308 53.4431889); color: oklch(0.199825291 0.008446803 307.992444023); font-size: var(--ka-type-control); font-weight: 500; line-height: 1.4; box-shadow: inset 0 1px 0 oklch(1 0 0); transition: background 180ms ease, transform 180ms var(--ka-ease); }
+.ka-button { --ka-button-inline-padding: 24px; --ka-button-icon-padding: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 12px var(--ka-button-inline-padding); border: 1px solid oklch(1 0 0 / 0.666666667); border-radius: 40px; background: oklch(0.937076862 0.006771308 53.4431889); color: oklch(0.199825291 0.008446803 307.992444023); font-size: var(--ka-type-control); font-weight: 500; line-height: 1.4; box-shadow: inset 0 1px 0 oklch(1 0 0); transition: background 180ms ease, transform 180ms var(--ka-ease); }
 .ka-button svg { width: 16px; height: 16px; }
-.ka-button-small { --ka-button-inline-padding: 14px; --ka-button-icon-padding: 10px; min-height: 44px; padding: 10px var(--ka-button-inline-padding); gap: 16px; }
+.ka-button-small { --ka-button-inline-padding: 14px; --ka-button-icon-padding: 10px; min-height: 44px; padding: 10px var(--ka-button-inline-padding); gap: 6px; }
 .ka-button:has(> .ka-chrome-mark:first-child) { padding-inline-start: var(--ka-button-icon-padding); }
 .ka-button:has(> svg:last-child) { padding-inline-end: var(--ka-button-icon-padding); }
 .ka-button:active { transform: scale(.97); }
@@ -140,7 +140,7 @@
 }
 .ka-lede { margin: 24px auto 0 !important; max-width: 540px; color: oklch(0.865449907 0.011078525 339.369375823); font-size: var(--ka-type-body); line-height: 1.6; }
 .ka-hero-actions { margin-top: 36px; }
-.ka-hero-actions .ka-button { gap: 10px; }
+.ka-hero-actions .ka-button { gap: 6px; }
 .ka-hero .ka-fine-print { margin-top: 16px; }
 .ka-hero-library { position: relative; width: min(100%, 1080px); margin: 0 auto; padding: 8px; border: 1px solid oklch(1 0 0 / 0.133333333); border-radius: 24px; background: oklch(0.18519375 0.008192117 297.035409297 / 0.921568627); box-shadow: 0 40px 100px oklch(0 0 0 / 0.439215686), inset 0 1px 0 oklch(1 0 0 / 0.125490196); }
 .ka-hero-copy:has(:focus-visible) { opacity: 1 !important; }
@@ -245,7 +245,7 @@
   .ka-closing .keepall-logo-link:hover .keepall-logo-bottom { transform: translateY(10%); }
 }
 .ka-closing h2 { margin-top: 32px; font-size: 48px; }
-.ka-closing .ka-button { gap: 10px; margin-top: 32px; }
+.ka-closing .ka-button { gap: 6px; margin-top: 32px; }
 .ka-closing .ka-fine-print { margin-top: 18px; }
 .ka-footer { overflow: hidden; }
 .ka-footer-top { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 48px 0 20px; border-top: 1px solid var(--ka-line); }
