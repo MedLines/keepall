@@ -130,6 +130,17 @@ function ShortcutRecorder({ action, shortcuts, busy, saveError, onSave, onCancel
   const error = validationError ?? saveError;
   const canConfirm = candidate !== null && liveModifiers === null && !busy;
 
+  function chooseShortcut(next: string) {
+    setAttempted(shortcutLabel(next)); setLiveModifiers(null);
+    try {
+      assignShortcut(shortcuts, action, next);
+      setCandidate(next); setValidationError(null);
+    } catch (caught) {
+      setCandidate(null);
+      setValidationError(caught instanceof ShortcutValidationError ? caught.message : "Couldn't record this shortcut. Try again.");
+    }
+  }
+
   function record(event: KeyboardEvent<HTMLElement>) {
     if (busy || event.repeat || event.nativeEvent.isComposing || event.key === "Tab" || event.key === "Escape") return;
     if (isButtonActivation(event)) return;
@@ -139,15 +150,7 @@ function ShortcutRecorder({ action, shortcuts, busy, saveError, onSave, onCancel
       return;
     }
     if (event.key === "Enter" && !hasModifiers(event)) { if (canConfirm && candidate) onSave(candidate); return; }
-    const next = shortcutFromEvent(event);
-    setAttempted(shortcutLabel(next)); setLiveModifiers(null);
-    try {
-      assignShortcut(shortcuts, action, next);
-      setCandidate(next); setValidationError(null);
-    } catch (caught) {
-      setCandidate(null);
-      setValidationError(caught instanceof ShortcutValidationError ? caught.message : "Couldn't record this shortcut. Try again.");
-    }
+    chooseShortcut(shortcutFromEvent(event));
   }
 
   return <ModalDialog open busy={busy} initialFocus={input}
@@ -162,14 +165,17 @@ function ShortcutRecorder({ action, shortcuts, busy, saveError, onSave, onCancel
       <button type="button" className={`${CONTROL} bg-bg-active text-text-primary`} disabled={!canConfirm} onClick={() => { if (canConfirm && candidate) onSave(candidate); }}>{busy ? "Saving…" : "Confirm shortcut"}</button>
     </>}
   >
-    <div className="space-y-2">
-      <p className="text-sm font-medium text-text-primary">Current shortcut</p>
-      <kbd className="block text-sm font-normal text-text-secondary">{shortcutLabel(shortcuts[action])}</kbd>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-text-primary">Current shortcut</p>
+        <kbd className="block text-sm font-normal text-text-secondary">{shortcutLabel(shortcuts[action])}</kbd>
+      </div>
+      <button type="button" className={CONTROL} disabled={busy} onClick={() => { chooseShortcut(DEFAULT_SHORTCUTS[action]); input.current?.focus(); }}>Use default ({shortcutLabel(DEFAULT_SHORTCUTS[action])})</button>
     </div>
     <div className="space-y-2" data-shortcut-recording="">
       <label htmlFor={inputId} className="block text-sm font-medium text-text-primary">New shortcut</label>
       <input id={inputId} ref={input} className="ui-field min-h-12 w-full px-3 text-base" aria-label={`New shortcut for ${SHORTCUT_LABELS[action]}`} aria-describedby={`${instructionsId}${error ? ` ${errorId}` : ""}`} aria-invalid={error ? true : undefined} placeholder="Press a shortcut" readOnly disabled={busy} value={liveModifiers ?? attempted} />
-      <p id={instructionsId} className="text-xs leading-5 text-text-secondary">Press Alt/Option with a letter, optionally Shift. Numbers need Alt/Option+Shift. You can also use /.</p>
+      <p id={instructionsId} className="text-xs leading-5 text-text-secondary">Use a single key or a combination with Ctrl, Shift, Alt or Cmd / Windows. Function keys work too. Both / keys work. Use default selects the original shortcut.</p>
       {error ? <p id={errorId} role="alert" className="text-sm leading-5 text-text-danger">{error}</p> : null}
       <p className="text-xs text-text-secondary">{canConfirm ? "Enter to confirm · Esc to cancel" : "Esc to cancel"}</p>
     </div>

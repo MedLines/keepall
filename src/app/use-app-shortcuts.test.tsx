@@ -11,6 +11,63 @@ function Harness({ action }: { action: () => void }) {
 }
 
 describe("app shortcut handling", () => {
+  test.each([
+    { binding: "KeyS", event: { code: "KeyS", key: "s" } },
+    { binding: "Ctrl+Shift+KeyJ", event: { code: "KeyJ", key: "J", ctrlKey: true, shiftKey: true } },
+    { binding: "Meta+KeyJ", event: { code: "KeyJ", key: "j", metaKey: true } },
+    { binding: "F8", event: { code: "F8", key: "F8" } },
+  ])("runs $binding without Alt and protects typing", async ({ binding, event }) => {
+    await putKeyboardShortcuts({ ...DEFAULT_SHORTCUTS, capture: binding });
+    const capture = vi.fn();
+    render(<Harness action={capture} />);
+    await screen.findByText(binding);
+    fireEvent.keyDown(window, event);
+    expect(capture).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(screen.getByLabelText("Draft"), event);
+    fireEvent.keyDown(screen.getByTestId("editor"), event);
+    expect(capture).toHaveBeenCalledTimes(1);
+  });
+  test("an assigned arrow shortcut takes precedence over library navigation", async () => {
+    await putKeyboardShortcuts({ ...DEFAULT_SHORTCUTS, capture: "ArrowDown" });
+    const capture = vi.fn();
+    const navigate = vi.fn();
+    function ArrowHarness() {
+      const shortcuts = useAppShortcuts({ capture });
+      return <button onKeyDown={event => { if (!event.defaultPrevented) navigate(); }}>{shortcuts.capture}</button>;
+    }
+    render(<ArrowHarness />);
+    const target = await screen.findByRole("button", { name: "ArrowDown" });
+    fireEvent.keyDown(target, { code: "ArrowDown", key: "ArrowDown" });
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+  test("Space still activates a focused button when assigned as an app shortcut", async () => {
+    await putKeyboardShortcuts({ ...DEFAULT_SHORTCUTS, capture: "Space", preview: "F9" });
+    const capture = vi.fn();
+    function SpaceHarness() {
+      const shortcuts = useAppShortcuts({ capture });
+      return <button>{shortcuts.capture}</button>;
+    }
+    render(<SpaceHarness />);
+    const target = await screen.findByRole("button", { name: "Space" });
+    expect(fireEvent.keyDown(target, { code: "Space", key: " " })).toBe(true);
+    expect(capture).not.toHaveBeenCalled();
+    fireEvent.keyDown(window, { code: "Space", key: " " });
+    expect(capture).toHaveBeenCalledTimes(1);
+  });
+  test("number-pad / focuses search while / in a typing field stays native", async () => {
+    const search = vi.fn();
+    function SearchHarness() {
+      const shortcuts = useAppShortcuts({ search });
+      return <><span>{shortcuts.search}</span><input aria-label="Draft" /></>;
+    }
+    render(<SearchHarness />);
+    await screen.findByText("Slash");
+    fireEvent.keyDown(window, { code: "NumpadDivide", key: "/" });
+    expect(search).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(screen.getByLabelText("Draft"), { code: "NumpadDivide", key: "/" });
+    expect(search).toHaveBeenCalledTimes(1);
+  });
   test("all four customized bindings dispatch their actions after loading", async () => {
     const custom = { capture: "Alt+KeyJ", search: "Alt+KeyM", toggleLayout: "Alt+KeyN", preview: "Alt+KeyO" };
     await putKeyboardShortcuts(custom);

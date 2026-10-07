@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { buildNote } from "@/domain/note";
 import type { Item } from "@/domain/item";
 import { LibraryMainGrid, type LibraryPreviewHandle } from "./library-main-grid";
+import { DEFAULT_SHORTCUTS } from "@/domain/keyboard-shortcuts";
+import { putKeyboardShortcuts } from "@/persistence/library-preferences";
 
 const notes = ["Alpha", "Beta", "Gamma"].map((title, i) => buildNote(
   { title, content: `${title} body` }, { id: title.toLowerCase(), now: i },
@@ -61,6 +63,16 @@ function setup(selectedIds = new Set<string>()) {
 }
 
 describe("Library keyboard browsing", () => {
+  test("reassigning preview replaces Space on the focused item", async () => {
+    await putKeyboardShortcuts({ ...DEFAULT_SHORTCUTS, preview: "Ctrl+KeyJ" });
+    const { alpha } = setup();
+    await screen.findByText(/Ctrl\+J previews/);
+    act(() => alpha.focus());
+    fireEvent.keyDown(alpha, { key: " ", code: "Space" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.keyDown(alpha, { key: "j", code: "KeyJ", ctrlKey: true });
+    expect(await screen.findByRole("dialog", { name: "Alpha" })).toHaveTextContent("Alpha body");
+  });
   test("toolbar entry starts with the first result and then reuses the last focused item", async () => {
     setup();
     fireEvent.click(screen.getByRole("button", { name: "Preview results" }));
@@ -101,7 +113,7 @@ describe("Library keyboard browsing", () => {
   test("keeps one preview open across items and returns focus to the last previewed card", async () => {
     const { alpha } = setup();
     alpha.focus();
-    fireEvent.keyDown(alpha, { key: " " });
+    fireEvent.keyDown(alpha, { key: " ", code: "Space" });
     const dialog = await screen.findByRole("dialog", { name: "Alpha" });
     expect(dialog).toHaveTextContent("Alpha body");
     fireEvent.keyDown(dialog, { key: "ArrowRight" });

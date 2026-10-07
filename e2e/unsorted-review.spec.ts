@@ -130,7 +130,8 @@ test("shortcut editing records, cancels, validates and saves before the app uses
   await expect(recorder).toBeFocused();
   await recorder.press("j");
   await expect(recorder).toHaveValue("J");
-  await expect(dialog.getByRole("alert")).toContainText("Use Alt/Option");
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Confirm shortcut", exact: true })).toBeEnabled();
   await recorder.press("Alt+g");
   await expect(recorder).toHaveValue("Alt/Option+G");
   await expect(dialog.getByRole("alert")).toContainText("already assigned");
@@ -172,6 +173,86 @@ test("shortcut editing records, cancels, validates and saves before the app uses
   await page.keyboard.press("Alt+j");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.keyboard.type("draft"); await expect(page.getByRole("searchbox", { name: "Search", exact: true })).toHaveValue("draft");
+});
+
+test("single keys, Ctrl, Shift and function keys can be recorded and used without Alt", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  for (const [keys, label] of [["s", "S"], ["Control+Shift+y", "Ctrl+Shift+Y"], ["Shift+j", "Shift+J"], ["F8", "F8"]]) {
+    await page.goto("/settings#keyboard-shortcuts-heading");
+    await page.getByRole("button", { name: "Change Save item shortcut", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Change Save item shortcut", exact: true });
+    const recorder = dialog.getByRole("textbox", { name: "New shortcut for Save item", exact: true });
+    await recorder.press(keys);
+    await expect(recorder).toHaveValue(label);
+    await expect(dialog.getByRole("alert")).toHaveCount(0);
+    await dialog.getByRole("button", { name: "Confirm shortcut", exact: true }).click();
+    await expect(page.getByRole("group", { name: "Shortcut for Save item", exact: true }).locator("kbd")).toHaveText(label);
+    await page.goto("/");
+    const save = page.getByRole("button", { name: "Save item", exact: true });
+    await expect(save.locator("kbd")).toHaveCount(0);
+    await save.focus();
+    await page.keyboard.press(keys);
+    await expect(page.getByRole("dialog", { name: "Save to Keepall", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    const search = page.getByRole("searchbox", { name: "Search", exact: true });
+    await search.focus();
+    await page.keyboard.press(keys);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  }
+});
+
+test("number-pad / and Use default select the same search shortcut", async ({ page }) => {
+  await page.goto("/settings#keyboard-shortcuts-heading");
+  const change = page.getByRole("button", { name: "Change Focus search shortcut", exact: true });
+  await change.click();
+  const dialog = page.getByRole("dialog", { name: "Change Focus search shortcut", exact: true });
+  const recorder = dialog.getByRole("textbox", { name: "New shortcut for Focus search", exact: true });
+  await recorder.press("NumpadDivide");
+  await expect(recorder).toHaveValue("/");
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+  await recorder.press("Control+m");
+  await dialog.getByRole("button", { name: "Confirm shortcut", exact: true }).click();
+  await change.click();
+  await dialog.getByRole("button", { name: "Use default (/)", exact: true }).click();
+  await expect(recorder).toHaveValue("/");
+  await expect(dialog.locator("kbd")).toHaveText("Ctrl+M");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByRole("group", { name: "Shortcut for Focus search", exact: true }).locator("kbd")).toHaveText("Ctrl+M");
+  await change.click();
+  await dialog.getByRole("button", { name: "Use default (/)", exact: true }).click();
+  await dialog.getByRole("button", { name: "Confirm shortcut", exact: true }).click();
+  await page.reload();
+  await expect(page.getByRole("group", { name: "Shortcut for Focus search", exact: true }).locator("kbd")).toHaveText("/");
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Save first item", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Save item", exact: true }).focus();
+  await page.keyboard.press("NumpadDivide");
+  await expect(page.getByRole("searchbox", { name: "Search", exact: true })).toBeFocused();
+});
+
+test("Space is the preview default and changing it replaces Space on library cards", async ({ page }) => {
+  await seed(page);
+  await page.goto("/?layout=list&unsorted=1");
+  const card = page.locator('[data-item-id="review-0"]');
+  await expect(card).toBeVisible();
+  await card.focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("dialog", { name: "Review item 1", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.goto("/settings#keyboard-shortcuts-heading");
+  const group = page.getByRole("group", { name: "Shortcut for Preview results", exact: true });
+  await expect(group.locator("kbd")).toHaveText("Space");
+  await group.getByRole("button", { name: "Change Preview results shortcut", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Change Preview results shortcut", exact: true });
+  await dialog.getByRole("textbox", { name: "New shortcut for Preview results", exact: true }).press("Control+Shift+p");
+  await dialog.getByRole("button", { name: "Confirm shortcut", exact: true }).click();
+  await page.goto("/?layout=list&unsorted=1");
+  await expect(card).toBeVisible();
+  await card.focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.keyboard.press("Control+Shift+p");
+  await expect(page.getByRole("dialog", { name: "Review item 1", exact: true })).toBeVisible();
 });
 
 test("active filters do not restrict the Unsorted review queue", async ({ page }) => {

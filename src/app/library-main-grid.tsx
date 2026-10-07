@@ -7,6 +7,8 @@ import { LibraryVirtualItems } from "./library-virtual-items";
 import { LIBRARY_VIRTUALIZE_MIN, listColumnCount } from "./library-scale";
 import { LibraryMasonry, type MasonryPlacement } from "./library-masonry";
 import { LibraryQuickPreview } from "./library-quick-preview";
+import { shortcutLabel } from "@/domain/keyboard-shortcuts";
+import { useAppShortcuts } from "./use-app-shortcuts";
 
 export type LibraryPreviewHandle = { openPreview: (itemId?: string) => void };
 
@@ -56,7 +58,14 @@ export function LibraryMainGrid({
   const previewItem = visibleItems[previewIndex] ?? null;
   const previewOpen = previewItem !== null;
   useEffect(() => { onPreviewOpenChange?.(previewOpen); }, [onPreviewOpenChange, previewOpen]);
-
+  const shortcuts = useAppShortcuts({
+    preview: () => {
+      const item = visibleItems.find(item => item.id === focusedId) ?? visibleItems[0];
+      if (!item) return;
+      setFocusedId(item.id);
+      setPreviewId(item.id);
+    },
+  }, previewEnabled && !keyboardDisabled && visibleItems.length > 0);
 
   useImperativeHandle(ref, () => ({
     openPreview(itemId) {
@@ -149,16 +158,13 @@ export function LibraryMainGrid({
           onSelectIds(ids);
         } else rangeRef.current = null;
         requestFocus(next.id);
-      } else if (!event.shiftKey && event.key === " " && previewEnabled) {
-        event.preventDefault();
-        setPreviewId(id);
       } else if (!event.shiftKey && event.key === "Enter" && previewEnabled) {
         event.preventDefault();
         onOpenItem(visibleItems[index]);
       }
     }}
   >
-    <p id={instructionsId} className="sr-only">Arrow keys browse items in result order. Shift and an arrow selects a range.{previewEnabled ? " Space previews. Enter opens the full item." : ""}</p>
+    <p id={instructionsId} className="sr-only">Arrow keys browse items in result order. Shift and an arrow selects a range.{previewEnabled ? ` ${shortcutLabel(shortcuts.preview)} previews. Enter opens the full item.` : ""}</p>
     {grid}
     <LibraryQuickPreview item={previewItem} index={previewIndex} count={visibleItems.length}
       onClose={closePreview} onOpenItem={onOpenItem}

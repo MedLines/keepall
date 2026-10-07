@@ -54,15 +54,19 @@ test("Cancel and Escape discard recorded keys and restore Change focus", async (
   }
 });
 
-test("rejects unsupported keys, browser reservations and conflicts before saving", async () => {
+test("rejects unsupported keys and conflicts while allowing Ctrl and single keys", async () => {
   render(<KeyboardShortcutsSettings />);
   const recorder = await startRecording("Save item");
+  fireEvent.keyDown(recorder, { code: "Unidentified", key: "Unidentified" });
+  expect(screen.getByRole("alert")).toHaveTextContent("Press a key");
+  expect(screen.getByRole("button", { name: "Confirm shortcut" })).toBeDisabled();
   fireEvent.keyDown(recorder, { code: "KeyJ", key: "j", ctrlKey: true });
   expect(recorder).toHaveValue("Ctrl+J");
-  expect(screen.getByRole("alert")).toHaveTextContent("Use Alt/Option");
-  fireEvent.keyDown(recorder, { code: "KeyD", key: "d", altKey: true });
-  expect(recorder).toHaveValue("Alt/Option+D");
-  expect(screen.getByRole("alert")).toHaveTextContent("reserved by browsers");
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByRole("button", { name: "Confirm shortcut" })).toBeEnabled();
+  fireEvent.keyDown(recorder, { code: "KeyS", key: "s" });
+  expect(recorder).toHaveValue("S");
+  expect(screen.getByRole("button", { name: "Confirm shortcut" })).toBeEnabled();
   fireEvent.keyDown(recorder, { code: "KeyG", key: "g", altKey: true });
   expect(recorder).toHaveValue("Alt/Option+G");
   fireEvent.keyUp(recorder, { code: "AltLeft", key: "Alt" });
@@ -112,17 +116,64 @@ test("each action opens its own labelled modal with the current binding", async 
   }
 });
 
-test("explains that number shortcuts need Shift and records supported physical keys", async () => {
+test("records number shortcuts without requiring Shift", async () => {
   render(<KeyboardShortcutsSettings />);
   const recorder = await startRecording("Save item");
-  expect(screen.getByText(/Numbers need Alt\/Option\+Shift/)).toBeVisible();
-  fireEvent.keyDown(recorder, { code: "Digit5", key: "5", altKey: true });
-  expect(screen.getByRole("alert")).toHaveTextContent("reserved by browsers");
-  fireEvent.keyDown(recorder, { code: "Digit5", key: "%", altKey: true, shiftKey: true });
-  expect(recorder).toHaveValue("Alt/Option+Shift+5");
+  fireEvent.keyDown(recorder, { code: "Digit5", key: "5" });
+  expect(recorder).toHaveValue("5");
+  expect(screen.queryByRole("alert")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Confirm shortcut" }));
-  await waitFor(() => expect(binding("Save item", "Alt/Option+Shift+5")).toBeVisible());
-  expect((await getLibraryPreferences()).keyboardShortcuts?.capture).toBe("Alt+Shift+Digit5");
+  await waitFor(() => expect(binding("Save item", "5")).toBeVisible());
+  expect((await getLibraryPreferences()).keyboardShortcuts?.capture).toBe("Digit5");
+});
+
+test("records the number-pad slash as / and only saves it after confirmation", async () => {
+  await putKeyboardShortcuts({ ...DEFAULT_SHORTCUTS, search: "Alt+KeyM" });
+  render(<KeyboardShortcutsSettings />);
+  const recorder = await startRecording("Focus search");
+  fireEvent.keyDown(recorder, { code: "NumpadDivide", key: "/" });
+  expect(recorder).toHaveValue("/");
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByRole("button", { name: "Confirm shortcut" })).toBeEnabled();
+  expect((await getLibraryPreferences()).keyboardShortcuts?.search).toBe("Alt+KeyM");
+  fireEvent.click(screen.getByRole("button", { name: "Confirm shortcut" }));
+  await waitFor(() => expect(binding("Focus search", "/")).toBeVisible());
+  expect((await getLibraryPreferences()).keyboardShortcuts?.search).toBe("Slash");
+});
+
+test("Use default stages the default, clears a rejected key, and keeps Cancel reversible", async () => {
+  await putKeyboardShortcuts({ ...DEFAULT_SHORTCUTS, search: "Alt+KeyM" });
+  render(<KeyboardShortcutsSettings />);
+  const recorder = await startRecording("Focus search");
+  fireEvent.keyDown(recorder, { code: "Unidentified", key: "Unidentified" });
+  expect(screen.getByRole("alert")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Use default (/)" }));
+  expect(recorder).toHaveValue("/");
+  expect(recorder).toHaveFocus();
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByRole("button", { name: "Confirm shortcut" })).toBeEnabled();
+  expect((await getLibraryPreferences()).keyboardShortcuts?.search).toBe("Alt+KeyM");
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(binding("Focus search", "Alt/Option+M")).toBeVisible();
+  await startRecording("Focus search");
+  const useDefault = screen.getByRole("button", { name: "Use default (/)" });
+  useDefault.focus();
+  fireEvent.keyDown(useDefault, { code: "Enter", key: "Enter" });
+  fireEvent.click(useDefault);
+  expect(screen.getByRole("textbox", { name: "New shortcut for Focus search" })).toHaveValue("/");
+  fireEvent.click(screen.getByRole("button", { name: "Confirm shortcut" }));
+  await waitFor(() => expect(binding("Focus search", "/")).toBeVisible());
+});
+
+test("Use default still rejects a binding already assigned to a different action", async () => {
+  await putKeyboardShortcuts({ ...DEFAULT_SHORTCUTS, capture: "Alt+KeyJ", search: "Alt+KeyK" });
+  render(<KeyboardShortcutsSettings />);
+  const recorder = await startRecording("Save item");
+  fireEvent.click(screen.getByRole("button", { name: "Use default (Alt/Option+K)" }));
+  expect(recorder).toHaveValue("Alt/Option+K");
+  expect(screen.getByRole("alert")).toHaveTextContent("already assigned");
+  expect(screen.getByRole("button", { name: "Confirm shortcut" })).toBeDisabled();
+  expect((await getLibraryPreferences()).keyboardShortcuts?.capture).toBe("Alt+KeyJ");
 });
 
 test("a ZIP restore refreshes mounted settings and changing one key preserves the restored others", async () => {

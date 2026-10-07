@@ -15,6 +15,7 @@ export function useAppShortcuts(actions: Partial<Record<ShortcutAction, () => vo
   const [shortcuts, setShortcuts] = useState<KeyboardShortcuts>(DEFAULT_SHORTCUTS);
   const handleKey = useEffectEvent((event: KeyboardEvent) => {
     if (!enabled || event.defaultPrevented || event.repeat || event.isComposing || isShortcutEditingTarget(event.target) || document.querySelector('[role="dialog"]:not([data-ending-style]), [role="alertdialog"]:not([data-ending-style]), [data-shortcut-recording]')) return;
+    if (event.key === " " && !event.ctrlKey && !event.metaKey && !event.altKey && event.target instanceof Element && !event.target.hasAttribute("data-item-id") && event.target.closest('button, a[href], [role="button"], [role="menuitem"]')) return;
     for (const action of SHORTCUT_ACTIONS) {
       if (actions[action] && shortcutMatches(event, shortcuts[action])) {
         event.preventDefault();
@@ -33,12 +34,12 @@ export function useAppShortcuts(actions: Partial<Record<ShortcutAction, () => vo
     reload();
     window.addEventListener(SHORTCUTS_CHANGED_EVENT, reload);
     window.addEventListener(ITEMS_CHANGED_EVENT, reload);
-    window.addEventListener("keydown", handleKey);
+    window.addEventListener("keydown", handleKey, true);
     return () => {
       disposed = true;
       window.removeEventListener(SHORTCUTS_CHANGED_EVENT, reload);
       window.removeEventListener(ITEMS_CHANGED_EVENT, reload);
-      window.removeEventListener("keydown", handleKey);
+      window.removeEventListener("keydown", handleKey, true);
     };
   }, []);
   return shortcuts;

@@ -90,7 +90,6 @@ export function LibraryTopBar({
   const shortcuts = useAppShortcuts({
     search: () => document.getElementById("library-search")?.focus(),
     toggleLayout: () => onLayoutChange(layout === "grid" ? "list" : "grid"),
-    preview: () => { if (!previewDisabled && !trash && !collectionsView && !tagsView) onPreview?.(); },
   });
   const hasSearchFilter = searchQuery.trim().length > 0;
   const canSortByRelevance = hasSearchFilter && !collectionsView && !tagsView;
@@ -232,7 +231,7 @@ export function LibraryTopBar({
             onClick={() => openCaptureDialog()}
           >
             <PlusIcon />
-            Save item <kbd aria-hidden="true" className="hidden text-[10px] opacity-75 @min-[64rem]/toolbar:inline">{shortcutLabel(shortcuts.capture)}</kbd>
+            Save item
           </Tooltip.Trigger>
             <Tooltip.Portal><Tooltip.Positioner side="bottom" sideOffset={8} className="z-[100]"><Tooltip.Popup role="tooltip" className={SHELL_TOOLTIP}>Save item · {shortcutLabel(shortcuts.capture)}</Tooltip.Popup></Tooltip.Positioner></Tooltip.Portal>
           </Tooltip.Root>}

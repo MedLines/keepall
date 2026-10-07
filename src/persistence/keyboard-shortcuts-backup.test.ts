@@ -9,7 +9,7 @@ import { createCollection } from "./collections";
 import { getLibraryPreferences, pinCollection, putKeyboardShortcuts } from "./library-preferences";
 import { readBackupSnapshot } from "./backup-snapshot";
 
-const custom = { ...DEFAULT_SHORTCUTS, capture: "Alt+KeyJ" };
+const custom = { capture: "Ctrl+Shift+KeyJ", search: "KeyS", toggleLayout: "F8", preview: "Shift+KeyP" };
 
 describe("shortcut backup preferences", () => {
   test.each(["JSON", "ZIP", "folder"] as const)("%s replacement restores shortcuts and merge keeps the device's current shortcuts", async format => {

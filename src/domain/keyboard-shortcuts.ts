@@ -5,12 +5,14 @@ export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   capture: "Save item", search: "Focus search", toggleLayout: "Toggle grid / list", preview: "Preview results",
 };
 export const DEFAULT_SHORTCUTS: KeyboardShortcuts = {
-  capture: "Alt+KeyK", search: "Slash", toggleLayout: "Alt+KeyG", preview: "Alt+KeyP",
+  capture: "Alt+KeyK", search: "Slash", toggleLayout: "Alt+KeyG", preview: "Space",
 };
-type KeyEvent = { code: string; altKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean };
+type KeyEvent = { code: string; key?: string; altKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean };
 
 export function shortcutFromEvent(event: KeyEvent): string {
-  return [event.ctrlKey && "Ctrl", event.metaKey && "Meta", event.altKey && "Alt", event.shiftKey && "Shift", event.code].filter(Boolean).join("+");
+  if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey) return "Slash";
+  const code = event.code === "NumpadDivide" ? "Slash" : event.code;
+  return [event.ctrlKey && "Ctrl", event.metaKey && "Meta", event.altKey && "Alt", event.shiftKey && "Shift", code].filter(Boolean).join("+");
 }
 
 export function shortcutMatches(event: KeyEvent, shortcut: string): boolean {
@@ -18,7 +20,12 @@ export function shortcutMatches(event: KeyEvent, shortcut: string): boolean {
 }
 
 export function shortcutLabel(shortcut: string): string {
-  return shortcut.replace(/Key([A-Z])/g, "$1").replace(/Digit(\d)/g, "$1").replace("Slash", "/").replace("Meta", "Cmd").replace("Alt", "Alt/Option");
+  const keyLabels: Record<string, string> = {
+    Slash: "/", Backquote: "`", Minus: "-", Equal: "=", BracketLeft: "[", BracketRight: "]", Backslash: "\\", Semicolon: ";", Quote: "'", Comma: ",", Period: ".",
+    ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right", PageUp: "Page Up", PageDown: "Page Down",
+    Meta: "Cmd / Windows", Alt: "Alt/Option", NumpadAdd: "Numpad +", NumpadSubtract: "Numpad -", NumpadMultiply: "Numpad *", NumpadDecimal: "Numpad .", NumpadEnter: "Numpad Enter", NumpadEqual: "Numpad =",
+  };
+  return shortcut.split("+").map(part => keyLabels[part] ?? part.replace(/^Key([A-Z])$/, "$1").replace(/^Digit(\d)$/, "$1").replace(/^Numpad(\d)$/, "Numpad $1")).join("+");
 }
 
 export class ShortcutValidationError extends Error {
@@ -29,11 +36,9 @@ export class ShortcutValidationError extends Error {
 }
 
 function assertShortcut(shortcut: unknown): asserts shortcut is string {
-  if (typeof shortcut === "string" && /^Alt\+(Key[DEFBHTV]|Digit[0-9])$/.test(shortcut)) {
-    throw new ShortcutValidationError(`${shortcutLabel(shortcut)} is reserved by browsers. Choose another shortcut.`);
-  }
-  if (typeof shortcut !== "string" || (shortcut !== "Slash" && !/^Alt\+(Shift\+)?(Key[A-Z]|Digit[0-9]|Slash)$/.test(shortcut))) {
-    throw new ShortcutValidationError("Use Alt/Option with a letter or number, optionally Shift, or / without modifiers. Browser and text editing shortcuts are reserved.");
+  const pattern = /^(Ctrl\+)?(Meta\+)?(Alt\+)?(Shift\+)?(Key[A-Z]|Digit[0-9]|F([1-9]|1[0-9]|2[0-4])|Numpad([0-9]|Add|Subtract|Multiply|Decimal|Enter|Equal)|Arrow(Up|Down|Left|Right)|Backquote|Minus|Equal|BracketLeft|BracketRight|Backslash|IntlBackslash|IntlRo|IntlYen|Semicolon|Quote|Comma|Period|Slash|Space|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Enter)$/;
+  if (typeof shortcut !== "string" || !pattern.test(shortcut) || shortcut === "Enter") {
+    throw new ShortcutValidationError("Press a key, with or without Ctrl, Shift, Alt or Cmd. Escape cancels, Tab moves focus, and Enter confirms.");
   }
 }
 
