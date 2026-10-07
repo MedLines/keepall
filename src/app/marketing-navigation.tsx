@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRightIcon, LogoIcon } from "./shell-icons";
 import { CHROME_EXTENSION_URL } from "./help/guides";
+import "./marketing-footer.css";
 
 export function MarketingHeader({ help = false, floating = false }: { help?: boolean; floating?: boolean }) {
   return <header className={`ka-header${floating ? " ka-header-floating" : ""}`}><div className="ka-wrap ka-header-inner">
@@ -17,9 +18,11 @@ export function MarketingFooterLinks() {
 }
 
 export function MarketingFooter() {
-  return <footer className="ka-wrap ka-footer-top kh-footer">
-    <Link href="/about" className="ka-brand keepall-logo-link"><LogoIcon className="size-8" /><span>keepall</span></Link>
+  return <footer className="ka-wrap km-footer">
+    <div className="km-footer-brand">
+      <Link href="/about" className="ka-brand keepall-logo-link"><LogoIcon className="size-8" /><span>keepall</span></Link>
+      <p>Your library stays on your device.</p>
+    </div>
     <MarketingFooterLinks />
-    <span>Your library stays on your device.</span>
   </footer>;
 }
