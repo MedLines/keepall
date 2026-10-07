@@ -41,7 +41,7 @@ export default function PrivacyPage() {
       <section id="network" aria-labelledby="network-title">
         <h2 id="network-title">Link previews and article capture</h2>
         <p>While online, Keepall may send a saved link&apos;s URL to its preview service to fetch a title, description, and cover image. The service requests the linked website and may request an image from its host. Downloaded preview images are stored in your local library.</p>
-        <p>Choosing Save article for offline reading or Update saved article sends that link&apos;s URL to Keepall&apos;s server. The server requests the public page and supported article images, then returns a readable copy for local storage. It does not sign in to the website or use your browser&apos;s cookies.</p>
+        <p>Choosing Save for offline or Update saved article sends that link&apos;s URL to Keepall&apos;s server. The server requests the public page and supported article images, then returns a readable copy for local storage. It does not sign in to the website or use your browser&apos;s cookies.</p>
         <p>These requests share the URL, including any information in its path or query, with Keepall&apos;s service and the requested hosts. Your personal notes, collections, tags, and other library items are not included. A link still saves when its preview is unavailable. Reading a saved article uses the local copy.</p>
       </section>
 
@@ -79,8 +79,10 @@ export default function PrivacyPage() {
       </section>
 
       <section id="contact" aria-labelledby="contact-title">
-        <h2 id="contact-title">Privacy questions</h2>
-        <p>Use the <Link href="/contact">Contact page</Link> to report a privacy concern or ask how a feature handles data. GitHub issues are public, so leave out private library content and backup files.</p>
+        <h2 id="contact-title">Contact messages</h2>
+        <p>The <Link href="/contact">Contact form</Link> lets you write a support request, report a bug, or suggest an improvement. When email delivery is available and you choose Send message, your name, reply email, topic, message, and any bug details you enter go to Keepall&apos;s server, Resend, and the support inbox so we can respond.</p>
+        <p>The form does not attach your library, saved files, or browser data. Keepall does not store contact messages in an app database. Delivered messages remain with the email provider and support inbox. Leave out sensitive library content and never include a backup file.</p>
+        <p>If email delivery is unavailable, the form tells you before submission. Copy report puts the text on your clipboard. Opening the GitHub fallback sends the report details to GitHub to prepare an issue and leaves out your name and email. You decide whether to post it publicly. GitHub issues are public.</p>
       </section>
     </WebsitePage>
   );

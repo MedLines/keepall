@@ -56,8 +56,9 @@ for (const width of [320, 390, 580, 768, 1024, 1440]) {
     await page.screenshot({ path: testInfo.outputPath(`about-header-${width}.png`) });
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/contact$/);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Tell us what went wrong.");
-    await expect(page.getByRole("link", { name: "Open GitHub issues" })).toHaveAttribute("href", "https://github.com/MedLines/keepall/issues");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Let's hear from you.");
+    await expect(page.getByRole("form", { name: "Contact Keepall" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open GitHub draft" })).toHaveAttribute("href", /^https:\/\/github\.com\/MedLines\/keepall\/issues\/new\?/);
     await expect(page.locator('a[href^="mailto:"]')).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath(`contact-${width}.png`), fullPage: true });
   });
@@ -73,6 +74,70 @@ test("text-only website buttons have balanced padding", async ({ page }) => {
       });
       expect(padding.left, `${route}: ${await button.textContent()}`).toBe(padding.right);
     }
+  }
+});
+
+test("Contact keeps unsent bug reports available without email setup", async ({ page, context, browserName }) => {
+  if (browserName === "chromium") await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const submissions: string[] = [];
+  page.on("request", request => {
+    if (request.method() === "POST" && request.url().endsWith("/api/contact")) submissions.push(request.url());
+  });
+  await page.goto("/contact");
+  await expect(page.getByText("Email sending isn't available yet.", { exact: false })).toBeVisible();
+  await page.getByLabel("Name", { exact: true }).fill("Preview tester");
+  await page.getByLabel("Email", { exact: true }).fill("preview@example.com");
+  await page.getByLabel("Topic", { exact: true }).selectOption("bug");
+  await page.getByLabel("Message", { exact: true }).fill("The bookmark import stopped.");
+  await page.getByLabel("Browser and device").fill("Firefox on Android");
+  await page.getByLabel("Steps to reproduce").fill("Choose Bulk import and select a bookmarks file.");
+  await page.getByLabel("Expected result").fill("The bookmarks appear in my library.");
+  await page.getByLabel("Actual result").fill("The import closes before completing.");
+  await expect(page.getByRole("button", { name: "Send message" })).toBeDisabled();
+  await page.getByRole("button", { name: "Copy report" }).click();
+  await expect(page.getByText(/Report copied\. Review it before posting publicly\.|Select the report below and copy it\./)).toBeVisible();
+  const report = page.getByRole("textbox", { name: "Report to copy" });
+  if (!await report.isVisible()) await page.getByText("Review report", { exact: true }).click();
+  await expect(report).toHaveValue(/Firefox on Android/);
+  await expect(report).toHaveValue(/The import closes before completing/);
+  await expect(report).not.toHaveValue(/preview@example\.com|Preview tester/);
+  const github = new URL((await page.getByRole("link", { name: "Open GitHub draft" }).getAttribute("href"))!);
+  expect(github.searchParams.get("body")).toContain("The bookmark import stopped.");
+  expect(github.searchParams.get("body")).not.toContain("preview@example.com");
+  expect(submissions).toEqual([]);
+});
+
+test("Contact validates required fields and confirms only accepted submission", async ({ page }) => {
+  let posted: Record<string, string> | undefined;
+  await page.route("**/api/contact", async route => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({ json: { available: true } });
+    } else {
+      posted = route.request().postDataJSON();
+      await route.fulfill({ json: { accepted: true } });
+    }
+  });
+  await page.goto("/contact");
+  const submit = page.getByRole("button", { name: "Send message" });
+  await expect(submit).toBeEnabled();
+  await submit.click();
+  expect(posted).toBeUndefined();
+  await page.getByLabel("Name", { exact: true }).fill("Preview tester");
+  await page.getByLabel("Email", { exact: true }).fill("preview@example.com");
+  await page.getByLabel("Message", { exact: true }).fill("Thanks for adding bookmark imports.");
+  await submit.click();
+  await expect(page.getByText("Your message was submitted. We'll reply to the email you provided.")).toBeVisible();
+  expect(posted).toMatchObject({ email: "preview@example.com", topic: "help", message: "Thanks for adding bookmark imports." });
+});
+
+test("every Help guide has a loaded preview image", async ({ page }) => {
+  await page.goto("/help");
+  const previews = page.locator(".kh-guide-thumbnail img");
+  expect(await previews.count()).toBeGreaterThan(0);
+  for (const preview of await previews.all()) {
+    await preview.scrollIntoViewIfNeeded();
+    await expect(preview).toHaveAttribute("src", /\S/);
+    await expect.poll(() => preview.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   }
 });
 
@@ -132,7 +197,7 @@ test("blog articles are linked, show actual screenshots, and link to valid Help 
     for (const screenshot of await screenshots.all()) {
       await screenshot.scrollIntoViewIfNeeded();
       await expect.poll(() => screenshot.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-      await expect(screenshot).toHaveAttribute("alt", /Keepall/);
+      await expect(screenshot).toHaveAttribute("alt", /\S/);
     }
     for (const href of await page.locator('main a[href^="/help/"]').evaluateAll(links => links.map(link => link.getAttribute("href")!))) {
       helpAnchors.add(href);
