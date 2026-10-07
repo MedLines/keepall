@@ -8,7 +8,7 @@ import { ImageFolderImport } from "./image-folder-import";
 import { BackupFolderControls } from "./settings/backup-folder-controls";
 import { SettingsLink } from "./settings/settings-link";
 import { useRouter } from "next/navigation";
-import { BackupValidationError, type BackupCounts } from "@/domain/backup";
+import { BackupValidationError, type BackupCounts, type BackupImportProgress } from "@/domain/backup";
 import { exportKeepallArchive, prepareBackupFile, type PreparedBackup } from "@/persistence/backup-archive";
 import { countCurrentLibrary } from "@/persistence/backup";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
@@ -28,6 +28,31 @@ function formatFileSize(bytes: number) {
   const unit = bytes < 1024 * 1024 ? "KB" : "MB";
   const value = bytes / (unit === "KB" ? 1024 : 1024 * 1024);
   return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: value < 10 ? 1 : 0 }).format(value)} ${unit}`;
+}
+
+function ImportProgress({ progress }: { progress: BackupImportProgress | null }) {
+  const phase = progress?.phase ?? "preparing-media";
+  const label = {
+    "preparing-media": "Preparing media…",
+    "merging-items": "Merging items…",
+    "restoring-items": "Restoring items…",
+    "saving-library": "Saving library…",
+  }[phase];
+  const total = progress?.total ?? 0;
+  const completed = progress?.completed ?? 0;
+  const unit = phase === "preparing-media" ? "media files" : "items";
+  return <div className="space-y-3">
+    <div role="status" aria-live="polite" aria-atomic="true" className="text-sm font-medium text-text-primary">
+      <p className="flex items-center gap-2">
+        <span aria-hidden="true" className="size-4 shrink-0 rounded-full border-2 border-border-control border-t-text-primary motion-safe:animate-spin" />
+        {label}
+      </p>
+      {total > 0 ? <p className="mt-1 tabular-nums text-text-secondary">{completed} of {total} {unit} processed</p> : null}
+    </div>
+    <progress aria-label={label} value={total > 0 ? completed : undefined} max={total > 0 ? total : undefined}
+      className="h-2 w-full accent-action-primary" />
+    <p className="text-sm leading-6 text-text-secondary">Keep this tab open until the import finishes. Large backups can take a while.</p>
+  </div>;
 }
 
 const itemRows = [
@@ -70,6 +95,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [operation, setOperation] = useState<Operation | null>(null);
+  const [importMode, setImportMode] = useState<ImportMode>("merge");
+  const [importProgress, setImportProgress] = useState<BackupImportProgress | null>(null);
   const [imageImportBusy, setImageImportBusy] = useState(false);
   const [bookmarksImportBusy, setBookmarksImportBusy] = useState(false);
   const [folderBackupBusy, setFolderBackupBusy] = useState(false);
@@ -83,6 +110,9 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   function finish() {
     operationRef.current = null;
     if (mounted.current) setOperation(null);
+  }
+  function reportImportProgress(progress: BackupImportProgress) {
+    if (mounted.current) setImportProgress(progress);
   }
 
   async function onExport() {
@@ -136,7 +166,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   }
 
   function cancelImportChoice() {
-    if (busy) {
+    if (busy || operationRef.current) {
       return;
     }
     readVersion.current += 1;
@@ -163,17 +193,19 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   async function runImport(mode: ImportMode) {
     if (!prepared || !start("restore")) return;
     const selected = prepared.backup;
+    setImportMode(mode);
+    setImportProgress(null);
     setError(null);
     setStatus(null);
     try {
       if (mode === "merge") {
-        const summary = await selected.merge();
+        const summary = await selected.merge(reportImportProgress);
         if (!mounted.current) return;
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
         dispatchPreviewWelcome(summary.addedLinkIds);
         setStatus(`Merged: ${summary.added} added, ${summary.updated} updated, ${summary.unchanged} unchanged.`);
       } else {
-        const linkIds = await selected.replace();
+        const linkIds = await selected.replace(reportImportProgress);
         if (!mounted.current) return;
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
         dispatchPreviewWelcome(linkIds);
@@ -181,9 +213,9 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       }
     } catch (caught) {
       if (mounted.current) setError(caught instanceof BackupValidationError ? caught.message :
-        mode === "merge" ? "Couldn't merge backup. Your library wasn't changed. Try again." : "Couldn't replace library.");
+        mode === "merge" ? "Couldn't merge backup. Your library wasn't changed. Try again." : "Couldn't replace library. Your library wasn't changed. Try again.");
     } finally {
-      if (mounted.current) { setPrepared(null); setConfirmReplace(false); }
+      if (mounted.current) { setPrepared(null); setConfirmReplace(false); setImportProgress(null); }
       finish();
     }
   }
@@ -202,22 +234,24 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   const dialogButtonClass =
     "ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60";
+  const restoring = operation === "restore";
+  const operationLabel = restoring && importMode === "merge" ? "Merging backup…" : operation ? operationLabels[operation] : null;
 
   const choiceDialog = (
     <>
       <ModalDialog
-        open={prepared !== null && !confirmReplace} busy={busy} title="Import backup"
-        description="Compare this backup with your library."
+        open={prepared !== null && !confirmReplace} busy={busy} title={restoring ? "Merging backup" : "Import backup"}
+        description={restoring ? `Merging ${prepared?.backup.counts.total ?? 0} items from ${prepared?.backup.name ?? "backup"}.` : "Compare this backup with your library."}
         onOpenChange={(open) => { if (!open) cancelImportChoice(); }}
         footer={<>
           <button className={dialogButtonClass} type="button" disabled={busy} onClick={cancelImportChoice}>Cancel</button>
           <button className={`${dialogButtonClass} border-border-danger bg-bg-danger text-text-danger`}
             type="button" disabled={busy} onClick={() => void reviewReplacement()}>Replace library</button>
           <button className={`${dialogButtonClass} ui-primary`} type="button" disabled={busy}
-            onClick={() => void runImport("merge")}>Merge</button>
+            onClick={() => void runImport("merge")}>{restoring ? "Merging backup…" : "Merge"}</button>
         </>}
       >
-        {prepared ? <div className="space-y-4 text-sm text-text-primary" aria-busy={busy}>
+        {restoring ? <ImportProgress progress={importProgress} /> : prepared ? <div className="space-y-4 text-sm text-text-primary" aria-busy={busy}>
           <div className="flex min-w-0 items-start gap-3">
             <BackupIcon className="mt-0.5 text-text-secondary" />
             <div className="min-w-0 flex-1">
@@ -278,17 +312,18 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             </dl>
           </details>
           <p className="text-sm leading-6 text-text-secondary"><strong className="font-medium text-text-primary">Merge:</strong> Adds missing items. Matching items may use newer details. Tags combine; the newer item&apos;s collection wins.</p>
-          <p role="status" aria-live="polite">{operation === "restore" ? "Restoring library…" : ""}</p>
           {error ? <p role="alert" className="text-text-danger">{error}</p> : null}
         </div> : null}
       </ModalDialog>
       <ConfirmDialog
-        open={prepared !== null && confirmReplace} title="Replace library?"
-        description={prepared ? `Replace the current ${countText(prepared.current)} with ${countText(prepared.backup.counts)} from ${prepared.backup.name}? This removes the current library and cannot be undone.` : ""}
+        open={prepared !== null && confirmReplace} title={restoring ? "Restoring library" : "Replace library?"}
+        description={restoring ? `Restoring ${prepared?.backup.counts.total ?? 0} items from ${prepared?.backup.name ?? "backup"}.` : prepared ? `Replace the current ${countText(prepared.current)} with ${countText(prepared.backup.counts)} from ${prepared.backup.name}? This removes the current library and cannot be undone.` : ""}
         confirmLabel="Confirm replacement" pendingLabel="Restoring library…" busy={busy}
         onConfirm={() => void runImport("replace")}
-        onOpenChange={(open) => { if (!open) setConfirmReplace(false); }}
-      />
+        onOpenChange={(open) => { if (!open && !operationRef.current) setConfirmReplace(false); }}
+      >
+        {restoring ? <ImportProgress progress={importProgress} /> : null}
+      </ConfirmDialog>
     </>
   );
 
@@ -312,6 +347,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
           type="button"
           className="ui-control flex size-9 items-center justify-center"
           aria-label="Close backup"
+          disabled={busy}
           onClick={onClose}
         >
           <CloseIcon className="size-4" />
@@ -355,8 +391,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   const feedback = (
     <>
-      {(operation || status) ? <p className="mt-2 text-sm text-text-primary">{operation ? operationLabels[operation] : status}</p> : null}
-      {operation ? <progress aria-label={operationLabels[operation]} className="mt-2 h-2 w-full accent-action-primary" /> : null}
+      {(operation || status) ? <p className="mt-2 text-sm text-text-primary">{operationLabel ?? status}</p> : null}
+      {operation ? <progress aria-label={operationLabel ?? undefined} className="mt-2 h-2 w-full accent-action-primary" /> : null}
       {error ? (
         <p
           className={
@@ -373,7 +409,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   );
 
   const liveStatus = <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-    {operation ? operationLabels[operation] : status}
+    {operationLabel ?? status}
   </div>;
 
   const description =

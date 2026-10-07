@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { Blob as NodeBlob } from "node:buffer";
-import { BackupValidationError, buildKeepallBackup } from "@/domain/backup";
+import { BackupValidationError, buildKeepallBackup, type BackupImportProgress } from "@/domain/backup";
 import { buildNote, noteImageAssetIds } from "@/domain/note";
 import { buildTag } from "@/domain/tag";
 import {
@@ -482,4 +482,37 @@ describe("backup persistence", () => {
 
     expect(await listItems()).toEqual([existing]);
   });
+});
+
+test.each(["merge", "replace"] as const)("prepared %s reports item progress before the transaction commits", async (mode) => {
+  const items = Array.from({ length: 205 }, (_, index) => buildNote({ content: `Imported ${index}` }, { id: `incoming-${index}`, now: 2 }));
+  const backup = buildKeepallBackup({ items, tags: [], collections: [] });
+  const prepared = await prepareBackupFile(new File([JSON.stringify(backup)], "progress.json"));
+  const progress: BackupImportProgress[] = [];
+  await prepared[mode]((update) => { progress.push(update); });
+  const itemProgress = progress.filter((update) => update.phase === (mode === "merge" ? "merging-items" : "restoring-items"));
+  expect(itemProgress[0]).toMatchObject({ completed: 0, total: 205 });
+  expect(itemProgress.at(-1)).toMatchObject({ completed: 205, total: 205 });
+  expect(itemProgress.some((update) => update.completed! > 0 && update.completed! < 205)).toBe(true);
+  expect(progress.at(-1)).toEqual({ phase: "saving-library" });
+  expect(await getDb().items.count()).toBe(205);
+});
+
+test.each(["merge", "replace"] as const)("ZIP %s progress includes notes, videos, documents and Trash", async (mode) => {
+  const { createDocument } = await import("./documents");
+  const note = await createNote({ content: "Trashed note" });
+  await getDb().items.update(note.id, { deletedAt: 3 });
+  await createDocument({ fileName: "reference.md", bytes: new TextEncoder().encode("# Reference") });
+  const videoId = "33333333-3333-4333-8333-333333333333";
+  await getDb().items.put(buildVideo({ assetId: videoId, fileName: "clip.mp4" }, { id: "video-item", now: 1 }));
+  await getDb().videoAssets.put({ id: videoId, mimeType: "video/mp4", byteLength: 3,
+    blob: new NodeBlob([new Uint8Array([1, 2, 3])], { type: "video/mp4" }) as unknown as Blob, createdAt: 1 });
+  const prepared = await prepareBackupFile(new File([await exportKeepallArchive()], "mixed.keepall.zip"));
+  await deleteKeepallDatabase();
+  const progress: BackupImportProgress[] = [];
+  await prepared[mode]((update) => { progress.push(update); });
+  expect(prepared.counts).toMatchObject({ total: 3, active: 2, trash: 1, documents: 1, videos: 1 });
+  expect(progress.filter((update) => update.phase === (mode === "merge" ? "merging-items" : "restoring-items")).at(-1))
+    .toMatchObject({ completed: 3, total: 3 });
+  expect(await countCurrentLibrary()).toMatchObject({ total: 3, active: 2, trash: 1, documents: 1, videos: 1 });
 });

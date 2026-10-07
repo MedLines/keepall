@@ -8,6 +8,7 @@ import { MAX_LOCAL_IMAGE_BYTES } from "@/domain/image";
 import { MAX_LOCAL_VIDEO_BYTES, type VideoItem } from "@/domain/video";
 import { importKeepallBackupMerge, replaceValidatedBackup } from "./backup";
 import type { KeepallMergeSummary } from "./backup";
+import type { BackupImportProgress } from "@/domain/backup";
 import type { Thumbnail, VideoAsset } from "./db";
 import { readBackupSnapshot } from "./backup-snapshot";
 import { parseAutomaticBackupIdentity, type AutomaticBackupIdentity } from "@/domain/automatic-backup";
@@ -289,8 +290,8 @@ export type PreparedBackup = Readonly<{
   size: number;
   exportedAt: number;
   counts: BackupCounts;
-  replace: () => Promise<string[]>;
-  merge: () => Promise<KeepallMergeSummary>;
+  replace: (onProgress?: (progress: BackupImportProgress) => void) => Promise<string[]>;
+  merge: (onProgress?: (progress: BackupImportProgress) => void) => Promise<KeepallMergeSummary>;
 }>;
 
 /** Validate and retain one owned decode for the exact file the user reviews. */
@@ -328,16 +329,17 @@ export async function prepareBackupFile(file: File): Promise<PreparedBackup> {
     size: file.size,
     exportedAt: backup.exportedAt,
     counts,
-    replace: async () => {
-      await replaceValidatedBackup(backup, binaryAssets, videoAssets, thumbnails, documentAssets);
+    replace: async (onProgress) => {
+      await replaceValidatedBackup(backup, binaryAssets, videoAssets, thumbnails, documentAssets, onProgress);
       return backup.items.filter((item) => item.type === "link").map((item) => item.id);
     },
-    merge: async () => {
+    merge: async (onProgress) => {
       const videoItems = backup.items.filter((item): item is VideoItem => item.type === "video");
       const { summary } = await importKeepallBackupMerge(
         { ...backup, items: backup.items.filter((item) => item.type !== "video" && item.type !== "document") },
         binaryAssets, { items: videoItems, assets: videoAssets, thumbnails },
         { items: backup.items.filter((item): item is DocumentItem => item.type === "document"), assets: documentAssets },
+        onProgress,
       );
       return summary;
     },

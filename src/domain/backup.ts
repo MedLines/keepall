@@ -41,6 +41,12 @@ export type KeepallBackup = {
   };
 };
 
+export type BackupImportProgress = Readonly<{
+  phase: "preparing-media" | "merging-items" | "restoring-items" | "saving-library";
+  completed?: number;
+  total?: number;
+}>;
+
 export type BackupCounts = Readonly<{
   total: number;
   active: number;

@@ -4,6 +4,7 @@ import {
   type KeepallBackup,
   summarizeBackupContents,
   type BackupCounts,
+  type BackupImportProgress,
 } from "@/domain/backup";
 import { base64ToBytes, bytesToBase64 } from "@/domain/backup-encoding";
 import { isIncomingNewer, unionIds } from "@/domain/backup-merge";
@@ -80,6 +81,7 @@ export async function replaceValidatedBackup(
   videos: VideoAsset[] = [],
   thumbnails: Thumbnail[] = [],
   documents: DocumentAsset[] = [],
+  onProgress?: (progress: BackupImportProgress) => void,
 ): Promise<KeepallBackup> {
   const db = getDb();
 
@@ -97,12 +99,17 @@ export async function replaceValidatedBackup(
   const imageAssetIds = new Set(backup.items.filter((item) => item.type === "image").flatMap((item) => item.assetIds));
   const existingThumbnailIds = new Set(thumbnails.map((thumbnail) => thumbnail.assetId));
   const generatedThumbnails: Thumbnail[] = [];
+  let preparedAssets = 0;
+  onProgress?.({ phase: "preparing-media", completed: 0, total: restoredAssets.length });
   for (const asset of restoredAssets) {
-    if (!imageAssetIds.has(asset.id) || existingThumbnailIds.has(asset.id)) continue;
-    const blob = await imageThumbnail(asset.bytes, asset.mimeType);
-    if (blob) generatedThumbnails.push({ assetId: asset.id, blob });
+    if (imageAssetIds.has(asset.id) && !existingThumbnailIds.has(asset.id)) {
+      const blob = await imageThumbnail(asset.bytes, asset.mimeType);
+      if (blob) generatedThumbnails.push({ assetId: asset.id, blob });
+    }
+    onProgress?.({ phase: "preparing-media", completed: ++preparedAssets, total: restoredAssets.length });
   }
 
+  onProgress?.({ phase: "saving-library" });
   await db.transaction(
     "rw",
     [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.preferences, db.previewLayouts],
@@ -139,9 +146,12 @@ export async function replaceValidatedBackup(
         await db.thumbnails.bulkAdd([...thumbnails, ...generatedThumbnails]);
       }
 
-      if (backup.items.length > 0) {
-        await db.items.bulkAdd(backup.items);
+      onProgress?.({ phase: "restoring-items", completed: 0, total: backup.items.length });
+      for (let offset = 0; offset < backup.items.length; offset += 100) {
+        await db.items.bulkAdd(backup.items.slice(offset, offset + 100));
+        onProgress?.({ phase: "restoring-items", completed: Math.min(offset + 100, backup.items.length), total: backup.items.length });
       }
+      onProgress?.({ phase: "saving-library" });
       await db.preferences.put({
         id: "library",
         ...backup.preferences,
@@ -173,11 +183,13 @@ export async function importKeepallBackupMerge(
   binaryAssets?: Map<string, Uint8Array>,
   media?: MergeMedia,
   documents?: MergeDocuments,
+  onProgress?: (progress: BackupImportProgress) => void,
 ): Promise<{ backup: KeepallBackup; summary: KeepallMergeSummary }> {
   const backup = parseKeepallBackup(raw);
   const imageAssetIds = new Set(backup.items.filter((item) => item.type === "image").flatMap((item) => item.assetIds));
   const thumbnails = new Map(media?.thumbnails.map((thumbnail) => [thumbnail.assetId, thumbnail.blob]));
   const assets: PreparedMergeAsset[] = [];
+  onProgress?.({ phase: "preparing-media", completed: 0, total: backup.assets.length });
   // Decode images before opening the write transaction; browser APIs can otherwise commit it early.
   for (const record of backup.assets) {
     const bytes = binaryAssets?.get(record.id) ?? base64ToBytes(record.dataBase64);
@@ -186,11 +198,13 @@ export async function importKeepallBackupMerge(
       input: { mimeType: record.mimeType, bytes, contentHash: record.contentHash || await hashAssetBytes(bytes) },
       thumbnail: thumbnails.get(record.id) ?? (imageAssetIds.has(record.id) ? await imageThumbnail(bytes, record.mimeType) : null),
     });
+    onProgress?.({ phase: "preparing-media", completed: assets.length, total: backup.assets.length });
   }
   const db = getDb();
+  onProgress?.({ phase: "saving-library" });
   return db.transaction("rw",
     [db.items, db.tags, db.collections, db.assets, db.thumbnails, db.videoAssets, db.documentAssets, db.preferences],
-    async () => mergeValidatedBackup(backup, assets, media, documents),
+    async () => mergeValidatedBackup(backup, assets, media, documents, onProgress),
   );
 }
 
@@ -199,6 +213,7 @@ async function mergeValidatedBackup(
   assets: PreparedMergeAsset[],
   media?: MergeMedia,
   documents?: MergeDocuments,
+  onProgress?: (progress: BackupImportProgress) => void,
 ): Promise<{ backup: KeepallBackup; summary: KeepallMergeSummary }> {
   const db = getDb();
 
@@ -354,7 +369,11 @@ async function mergeValidatedBackup(
     return { tagIds, collectionIds };
   }
 
+  const totalItems = backup.items.length + (media?.items.length ?? 0) + (documents?.items.length ?? 0);
+  const reportItems = () => onProgress?.({ phase: "merging-items", completed: summary.added + summary.updated + summary.unchanged, total: totalItems });
+  reportItems();
   for (const rawIncoming of backup.items) {
+    reportItems();
     const incoming = normalizeItem(rawIncoming);
 
     if (incoming.type === "note") {
@@ -555,6 +574,7 @@ async function mergeValidatedBackup(
     const videoAssetsById = new Map(media.assets.map((asset) => [asset.id, asset]));
     const thumbnailsById = new Map(media.thumbnails.map((thumbnail) => [thumbnail.assetId, thumbnail]));
     for (const incoming of media.items) {
+      reportItems();
       const source = videoAssetsById.get(incoming.assetId);
       if (!source) throw new Error("Video asset is missing from archive");
       const existing = await db.items.get(incoming.id);
@@ -582,9 +602,12 @@ async function mergeValidatedBackup(
   }
 
   if (documents) {
-    await mergeDocumentBackup(documents, remapTagIds, remapCollectionIds, itemIdMap, summary);
+    reportItems();
+    await mergeDocumentBackup(documents, remapTagIds, remapCollectionIds, itemIdMap, summary, reportItems);
   }
 
+  reportItems();
+  onProgress?.({ phase: "saving-library" });
   for (const backupCollection of backup.collections) {
     const localId = collectionIdMap.get(backupCollection.id);
     if (!localId) {
