@@ -22,6 +22,8 @@ import {
   Download01Icon as Download, Upload01Icon as Upload,
   Txt01Icon as Txt01, ArrowUpRight01Icon as ArrowUpRight01,
   LayoutThreeColumnIcon as LayoutThreeColumn,
+  VolumeHighIcon as VolumeHigh, VolumeOffIcon as VolumeOff, MinimizeScreenIcon as MinimizeScreen,
+  GoBackward10SecIcon as GoBackward10Sec, GoForward10SecIcon as GoForward10Sec,
 } from "@hugeicons/core-free-icons";
 
 // Same folded file outline as PDF and TXT; the installed icon set has no MD file glyph.
@@ -63,6 +65,11 @@ export function ImagesIcon(props: IconProps) { return <ShellIcon icon={Images} {
 export function VideoIcon(props: IconProps) { return <ShellIcon icon={Video01} {...props} />; }
 export function PlayIcon(props: IconProps) { return <ShellIcon icon={Play} {...props} />; }
 export function PauseIcon(props: IconProps) { return <ShellIcon icon={Pause} {...props} />; }
+export function VolumeIcon(props: IconProps) { return <ShellIcon icon={VolumeHigh} {...props} />; }
+export function MuteIcon(props: IconProps) { return <ShellIcon icon={VolumeOff} {...props} />; }
+export function ExitFullScreenIcon(props: IconProps) { return <ShellIcon icon={MinimizeScreen} {...props} />; }
+export function RewindIcon(props: IconProps) { return <ShellIcon icon={GoBackward10Sec} {...props} />; }
+export function ForwardIcon(props: IconProps) { return <ShellIcon icon={GoForward10Sec} {...props} />; }
 export function KeyboardIcon(props: IconProps) { return <ShellIcon icon={Keyboard} {...props} />; }
 export function BackupIcon(props: IconProps) { return <ShellIcon icon={Archive01} {...props} />; }
 export function SettingsIcon(props: IconProps) { return <ShellIcon icon={Settings02} {...props} />; }
