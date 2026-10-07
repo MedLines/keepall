@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRightIcon } from "../shell-icons";
 import { WebsitePage } from "../website-page";
 import { websiteOpenGraphImage, websiteTwitterImage } from "../website-metadata";
+import { ContactForm } from "./contact-form";
+import "./contact.css";
 
 export const metadata: Metadata = {
   title: "Contact · Keepall",
-  description: "Get help with Keepall, report a bug, or suggest an improvement through GitHub.",
+  description: "Contact Keepall support, report a bug, or suggest an improvement.",
   alternates: { canonical: "/contact" },
   openGraph: {
     title: "Contact · Keepall",
-    description: "Get help with Keepall, report a bug, or suggest an improvement through GitHub.",
+    description: "Contact Keepall support, report a bug, or suggest an improvement.",
     url: "/contact",
     type: "website",
     images: [websiteOpenGraphImage],
@@ -19,42 +20,24 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     images: [websiteTwitterImage],
     title: "Contact · Keepall",
-    description: "Get help with Keepall, report a bug, or suggest an improvement through GitHub.",
+    description: "Contact Keepall support, report a bug, or suggest an improvement.",
   },
 };
 
 export default function ContactPage() {
   return (
     <WebsitePage
-      title="Tell us what went wrong."
+      title="Let's hear from you."
       eyebrow="Contact Keepall"
-      description="Need help, found a bug, or have an idea for Keepall? Open an issue on GitHub so we can follow up."
+      description="Need help, found a bug, or have an idea for Keepall? Write to us below."
     >
       <section aria-labelledby="support-title">
-        <h2 id="support-title">Get help or share an idea</h2>
+        <h2 id="support-title">Send us a message</h2>
         <p>
           Check the <Link href="/help">Help guides</Link> for walkthroughs of saving, importing,
-          organizing, and backing up your library. If you still need help, search the existing
-          issues or open a new one. You’ll need a GitHub account to post.
+          organizing, and backing up your library. If you still need a hand, tell us what&apos;s happening.
         </p>
-        <a href="https://github.com/MedLines/keepall/issues" target="_blank" rel="noreferrer" className="ka-button">
-          Open GitHub issues <ArrowRightIcon />
-        </a>
-      </section>
-      <section aria-labelledby="bug-report-title">
-        <h2 id="bug-report-title">What to include in a bug report</h2>
-        <p>A few details help us reproduce the problem:</p>
-        <ul>
-          <li>Your browser name and version, and whether you’re using a computer or phone.</li>
-          <li>The steps you took, starting from opening Keepall.</li>
-          <li>What you expected to happen.</li>
-          <li>What actually happened, including any error message.</li>
-          <li>A screenshot if it helps explain the problem.</li>
-        </ul>
-        <p>
-          GitHub issues are public. Remove personal links, notes, and other private details from
-          screenshots and reports. Don’t upload your library backup.
-        </p>
+        <ContactForm />
       </section>
       <section aria-labelledby="storage-help-title">
         <h2 id="storage-help-title">If your library is missing</h2>
