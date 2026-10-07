@@ -17,7 +17,7 @@ export default defineConfig({
     },
     {
       name: "firefox",
-      testMatch: ["**/library-corners.spec.ts", "**/video-polish.spec.ts"],
+      testMatch: ["**/library-corners.spec.ts", "**/video-polish.spec.ts", "**/video-hover-preview.spec.ts"],
       use: { ...devices["Desktop Firefox"] },
     },
   ],

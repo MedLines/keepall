@@ -42,14 +42,15 @@ export function LibraryItemMedia({
   sharedTransition = true,
 }: Props) {
   const assetIdForDisplay = faviconOnly && item.type === "link" ? null : resolveAssetId(item, assetId);
-  const useThumbnail = ["card", "grid"].includes(variant) && (item.type === "image" || item.type === "video");
+  const useThumbnail = item.type === "video" || (["card", "grid"].includes(variant) && item.type === "image");
   const originalUrl = useAssetObjectUrl(assetIdForDisplay, { enabled: !useThumbnail });
   const thumbnailUrl = useThumbnailObjectUrl(useThumbnail || item.type === "image" ? assetIdForDisplay : null);
   const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl ?? (item.type === "image" ? thumbnailUrl : null);
-  const [brokenAssetId, setBrokenAssetId] = useState<string | null>(null);
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const [decodedLayout, setDecodedLayout] = useState<{ assetId: string; width: number; height: number } | null>(null);
   const dimensions = decodedLayout?.assetId === assetIdForDisplay ? decodedLayout : peekPreviewLayout(assetIdForDisplay);
-  const imageSrc = brokenAssetId === assetIdForDisplay ? null : localObjectUrl;
+  const imageBroken = brokenUrl !== null && brokenUrl === localObjectUrl;
+  const imageSrc = imageBroken ? null : localObjectUrl;
 
   if (item.type === "document" && item.format === "pdf") {
     return <PdfCardThumbnail item={item} compact={compact} />;
@@ -73,7 +74,7 @@ export function LibraryItemMedia({
           onImageLoad?.(width / height, { width, height });
         }}
         onError={() => {
-          setBrokenAssetId(assetIdForDisplay);
+          setBrokenUrl(imageSrc);
         }}
       />
     );
@@ -92,7 +93,7 @@ export function LibraryItemMedia({
       className={fallbackClassName(variant, compact, className)}
       style={variant === "grid" && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined}
     >
-      {assetIdForDisplay && brokenAssetId !== assetIdForDisplay ? null : <FallbackContent item={item} compact={compact} />}
+      {item.type !== "video" && assetIdForDisplay && !imageBroken ? null : <FallbackContent item={item} compact={compact} />}
     </div>
   );
 }
@@ -175,7 +176,7 @@ function fallbackClassName(
 }
 
 function FallbackContent({ item, compact }: { item: Item; compact: boolean }) {
-  if (item.type === "link" || item.type === "document" || item.type === "note") return <ItemTypeIcon item={item} className={compact ? "size-6" : "size-10"} />;
+  if (item.type === "link" || item.type === "document" || item.type === "note" || item.type === "video") return <ItemTypeIcon item={item} className={compact ? "size-6" : "size-10"} />;
   if (!compact) return cardInitial(item);
   return <ItemTypeIcon item={item} className="size-6" />;
 }

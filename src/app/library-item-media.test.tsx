@@ -2,6 +2,7 @@ import { fireEvent, render } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { buildImageFromAssetIds } from "@/domain/image";
 import { buildLink } from "@/domain/link";
+import { buildVideo } from "@/domain/video";
 import { LibraryItemMedia } from "./library-item-media";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
@@ -57,5 +58,19 @@ test("keeps the loaded thumbnail visible until the full image URL resolves", () 
   rerender(<LibraryItemMedia item={item} variant="inspect" />);
   expect(container.querySelector("img")).toHaveAttribute("src", "blob:original");
   vi.mocked(useAssetObjectUrl).mockReturnValue(null);
+  vi.mocked(useThumbnailObjectUrl).mockReturnValue(null);
+});
+
+test("video previews use small posters in every layout and recover when a broken poster is replaced", () => {
+  const item = buildVideo({ assetId: "video-asset", fileName: "clip.webm" });
+  vi.mocked(useThumbnailObjectUrl).mockReturnValue("blob:old-poster");
+  const { container, rerender } = render(<LibraryItemMedia item={item} variant="inspect" />);
+  expect(useAssetObjectUrl).toHaveBeenLastCalledWith("video-asset", { enabled: false });
+  fireEvent.error(container.querySelector("img")!);
+  expect(container.querySelector("img")).toBeNull();
+  expect(container.querySelector("svg")).not.toBeNull();
+  vi.mocked(useThumbnailObjectUrl).mockReturnValue("blob:new-poster");
+  rerender(<LibraryItemMedia item={item} variant="grid" />);
+  expect(container.querySelector("img")).toHaveAttribute("src", "blob:new-poster");
   vi.mocked(useThumbnailObjectUrl).mockReturnValue(null);
 });
