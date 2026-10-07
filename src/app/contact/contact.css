@@ -11,7 +11,11 @@
 .kc-contact :is(input, textarea)::placeholder { color: var(--kh-muted); }
 .kc-contact :is(input, select, textarea):focus-visible { outline: 2px solid var(--kh-accent); outline-offset: 3px; }
 .kc-contact :is(input, select, textarea):disabled { opacity: .65; }
-.kc-contact select { color-scheme: dark; }
+.kc-select { position: relative; }
+.kc-select select { appearance: none; color-scheme: dark; padding-inline-end: 44px; }
+.kc-select > svg { position: absolute; inset-inline-end: 14px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); pointer-events: none; color: var(--kh-muted); }
+.kc-select:has(select:disabled) > svg { opacity: .65; }
+@media (forced-colors: active) { .kc-select select { appearance: auto; padding-inline-end: 14px; } .kc-select > svg { display: none; } }
 .kc-hint { font-size: 12px; color: var(--kh-muted); line-height: 1.75; }
 .kc-form .kc-bug-fields { border-top: 1px solid var(--kh-line); padding-top: 12px; margin-block: 8px 24px; }
 .kc-bug-fields legend { padding-right: 12px; }
@@ -22,11 +26,8 @@
 .kc-fallback { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--kh-line); }
 .kc-fallback h3 { font-size: 20px; line-height: 1.4; }
 .kc-fallback > p:not(.kc-hint) { margin-top: 12px; font-size: 13px; line-height: 1.75; color: var(--kh-muted); }
-.kc-actions { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; margin-block: 16px 8px; }
-.kc-actions :is(button, a) { display: inline-flex; gap: 10px; align-items: center; min-height: 44px; font-size: 13px; }
-.kc-actions button { padding-inline: 16px; border: 1px solid var(--kh-line); border-radius: 8px; background: var(--kh-surface); cursor: pointer; }
-.kc-actions button:hover { border-color: var(--kh-muted); }
-.kc-actions svg { width: 14px; height: 14px; }
+.kc-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-block: 16px 8px; }
+.kc-actions .ka-button { margin-top: 0; cursor: pointer; }
 .kc-fallback details { margin-top: 16px; }
 .kc-fallback summary { width: fit-content; cursor: pointer; min-height: 44px; padding-block: 12px; font-size: 13px; color: var(--kh-muted); }
 .kc-fallback details textarea { margin-top: 8px; font-size: 13px; }

@@ -77,6 +77,51 @@ test("text-only website buttons have balanced padding", async ({ page }) => {
   }
 });
 
+test("About and Contact buttons leave less space beside their icons", async ({ page }) => {
+  await page.setViewportSize({ width: 1707, height: 825 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const route of ["/about", "/contact"]) {
+    await page.goto(route);
+    const buttons = page.locator(".ka-header-open, .ka-button:has(> svg:last-child):not(:has(> .ka-chrome-mark))");
+    expect(await buttons.count()).toBeGreaterThan(0);
+    for (const button of await buttons.all()) {
+      const padding = await button.evaluate(element => {
+        const style = getComputedStyle(element);
+        return { text: parseFloat(style.paddingLeft), icon: parseFloat(style.paddingRight) };
+      });
+      expect(padding.icon, `${route}: ${await button.textContent()}`).toBeLessThan(padding.text);
+    }
+  }
+});
+
+test("Contact has an inset Topic arrow and matching report actions", async ({ page }) => {
+  await page.setViewportSize({ width: 1707, height: 825 });
+  await page.goto("/contact");
+  const topic = page.getByLabel("Topic", { exact: true });
+  const inset = await topic.evaluate(element => {
+    const style = getComputedStyle(element);
+    const arrow = element.parentElement!.querySelector("svg")!.getBoundingClientRect();
+    const select = element.getBoundingClientRect();
+    return { text: parseFloat(style.paddingLeft), arrow: select.right - arrow.right, pointerEvents: getComputedStyle(element.parentElement!.querySelector("svg")!).pointerEvents };
+  });
+  expect(Math.abs(inset.text - inset.arrow)).toBeLessThanOrEqual(1);
+  expect(inset.arrow).toBeGreaterThanOrEqual(12);
+  expect(inset.pointerEvents).toBe("none");
+  await topic.focus();
+  await page.keyboard.press("b");
+  await page.keyboard.press("Tab");
+  await expect(topic).toHaveValue("bug");
+  await expect(page.getByLabel("Browser and device")).toBeVisible();
+  const copy = page.getByRole("button", { name: "Copy report" });
+  const github = page.getByRole("link", { name: "Open GitHub draft" });
+  for (const action of [copy, github]) await expect(action).toHaveClass(/ka-button/);
+  const appearance = async (element: typeof copy) => element.evaluate(button => {
+    const style = getComputedStyle(button);
+    return { radius: style.borderRadius, background: style.backgroundImage, height: button.getBoundingClientRect().height, margin: style.marginTop };
+  });
+  expect(await appearance(copy)).toEqual(await appearance(github));
+});
+
 test("Contact keeps unsent bug reports available without email setup", async ({ page, context, browserName }) => {
   if (browserName === "chromium") await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const submissions: string[] = [];

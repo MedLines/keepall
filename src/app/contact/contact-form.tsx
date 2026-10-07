@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowRightIcon } from "../shell-icons";
+import { ArrowRightIcon, ChevronDownIcon } from "../shell-icons";
 import { contactLimits, contactReport, contactTopics, type ContactFields } from "./contact-fields";
 
 const emptyFields: ContactFields = {
@@ -96,7 +96,7 @@ export function ContactForm() {
           <div className="kc-field"><label htmlFor="contact-name">Name</label><input id="contact-name" name="name" autoComplete="name" value={fields.name} required maxLength={contactLimits.name} onChange={event => updateField("name", event.target.value)} /></div>
           <div className="kc-field"><label htmlFor="contact-email">Email</label><input id="contact-email" name="email" type="email" autoComplete="email" value={fields.email} required maxLength={contactLimits.email} onChange={event => updateField("email", event.target.value)} /></div>
         </div>
-        <div className="kc-field"><label htmlFor="contact-topic">Topic</label><select id="contact-topic" name="topic" value={fields.topic} onChange={event => updateField("topic", event.target.value)}>{Object.entries(contactTopics).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className="kc-field"><label htmlFor="contact-topic">Topic</label><div className="kc-select"><select id="contact-topic" name="topic" value={fields.topic} onChange={event => updateField("topic", event.target.value)}>{Object.entries(contactTopics).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDownIcon aria-hidden="true" /></div></div>
         <div className="kc-field"><label htmlFor="contact-message">Message</label><textarea id="contact-message" name="message" value={fields.message} rows={6} required maxLength={contactLimits.message} aria-describedby="contact-message-hint" onChange={event => updateField("message", event.target.value)} /><span id="contact-message-hint" className="kc-hint">What can we help with? Up to 5,000 characters.</span></div>
         {fields.topic === "bug" && <fieldset className="kc-bug-fields"><legend>Help us reproduce the bug</legend><p className="kc-hint">These details are optional. Include what you know.</p>
           <div className="kc-field"><label htmlFor="contact-browser">Browser and device</label><input id="contact-browser" name="browser" placeholder="For example, Chrome 140 on Windows 11" value={fields.browser} maxLength={contactLimits.browser} onChange={event => updateField("browser", event.target.value)} /></div>
@@ -112,7 +112,7 @@ export function ContactForm() {
     </form>
     <aside className="kc-fallback" aria-labelledby="contact-github-title">
       <h3 id="contact-github-title">Prefer GitHub?</h3><p>GitHub issues are public and need a GitHub account. <a href="https://github.com/MedLines/keepall/issues" target="_blank" rel="noreferrer">Browse existing issues</a> or share a report. The report below includes your message and bug details, with your name and email left out. Review it for private information before posting.</p>
-      <div className="kc-actions"><button type="button" onClick={copyReport}>Copy report</button><a href={longReport ? "https://github.com/MedLines/keepall/issues/new" : githubUrl.href} target="_blank" rel="noreferrer">{longReport ? "Open GitHub issue" : "Open GitHub draft"} <ArrowRightIcon /></a></div>
+      <div className="kc-actions"><button className="ka-button" type="button" onClick={copyReport}>Copy report</button><a className="ka-button" href={longReport ? "https://github.com/MedLines/keepall/issues/new" : githubUrl.href} target="_blank" rel="noreferrer">{longReport ? "Open GitHub issue" : "Open GitHub draft"} <ArrowRightIcon /></a></div>
       {longReport && <p className="kc-hint">This report is too long for a GitHub link. Copy the report and paste it into your issue.</p>}
       <p role="status" className="kc-hint">{copyStatus}</p>
       <details open={showReport} onToggle={event => setShowReport(event.currentTarget.open)}><summary>Review report</summary><textarea ref={reportRef} aria-label="Report to copy" value={report} readOnly rows={8} /></details>
