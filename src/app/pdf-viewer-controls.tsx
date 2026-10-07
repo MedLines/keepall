@@ -7,7 +7,8 @@ import { MediaViewerToolbar } from "./media-viewer-toolbar";
 
 const BUTTON = "ui-control inline-flex size-[var(--viewer-control-size,2.75rem)] shrink-0 items-center justify-center disabled:opacity-40";
 
-export function PdfViewerControls({ view = "scroll", page = 1, pageText, pageCount, zoom = "fit", onViewChange, onZoomChange, onPreviousPage, onNextPage, onPageFocus, onPageDraftChange, onPageCommit }: {
+export function PdfViewerControls({ view = "scroll", page = 1, pageText, pageCount, zoom = "fit", onViewChange, onZoomChange, onPreviousPage, onNextPage, onPageFocus, onPageDraftChange, onPageCommit, portalContainer }: {
+  portalContainer?: HTMLElement | null;
   view?: "scroll" | "pages"; page?: number; pageText?: string; pageCount?: number; zoom?: string;
   onViewChange?: (view: "scroll" | "pages") => void; onZoomChange?: (zoom: string) => void;
   onPreviousPage?: () => void; onNextPage?: () => void; onPageFocus?: () => void;
@@ -28,7 +29,7 @@ export function PdfViewerControls({ view = "scroll", page = 1, pageText, pageCou
       <button type="button" className={BUTTON} aria-label="Next page" disabled={loading || page === pageCount} onClick={onNextPage}><ArrowRightIcon className="size-4" /></button>
     </div>}
     zoom={<div className="flex items-center gap-2 text-sm text-text-secondary"><span className="sr-only">Zoom</span>
-      <ShellTopMenu ariaLabel="PDF zoom" value={zoom} onChange={value => onZoomChange?.(value)} disabled={loading} className="h-[var(--viewer-control-size,2.75rem)] gap-3 text-text-primary"
+      <ShellTopMenu portalContainer={portalContainer} ariaLabel="PDF zoom" value={zoom} onChange={value => onZoomChange?.(value)} disabled={loading} className="h-[var(--viewer-control-size,2.75rem)] gap-3 text-text-primary"
         options={[{ value: "fit", label: "Fit width" }, { value: "0.75", label: "75%" }, { value: "1", label: "100%" }, { value: "1.5", label: "150%" }, { value: "2", label: "200%" }]} />
     </div>}
   />;

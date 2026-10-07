@@ -33,6 +33,7 @@ type Props<T extends string> = {
   showCheckmark?: boolean;
   className?: string;
   disabled?: boolean;
+  portalContainer?: HTMLElement | null;
 };
 
 export function ShellTopMenu<T extends string>({
@@ -46,6 +47,7 @@ export function ShellTopMenu<T extends string>({
   showCheckmark = true,
   className = "",
   disabled = false,
+  portalContainer,
 }: Props<T>) {
   const tooltipId = useId();
   const activeOption =
@@ -74,7 +76,7 @@ export function ShellTopMenu<T extends string>({
         )}
         {!iconOnly ? <ChevronDownIcon className="text-text-secondary" /> : null}
       </Select.Trigger>
-      <Select.Portal>
+      <Select.Portal container={portalContainer}>
         <Select.Positioner
           align="end"
           alignItemWithTrigger={false}
@@ -117,7 +119,7 @@ export function ShellTopMenu<T extends string>({
         </Select.Positioner>
       </Select.Portal>
     </Select.Root>
-    <Tooltip.Portal>
+    <Tooltip.Portal container={portalContainer}>
       <Tooltip.Positioner side="bottom" sideOffset={8} collisionPadding={8} className="z-[100]">
         <Tooltip.Popup id={tooltipId} role="tooltip" className={SHELL_TOOLTIP}>{ariaLabel}: {activeOption?.label}</Tooltip.Popup>
       </Tooltip.Positioner>
