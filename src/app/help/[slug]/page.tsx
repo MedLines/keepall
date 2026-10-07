@@ -43,7 +43,7 @@ export default async function GuidePage({ params }: Props) {
         <div className="kh-article-body">{guide.sections.map((section, index) => <section key={section.id} id={section.id} aria-labelledby={`${section.id}-title`}>
           <div className="kh-section-heading"><span>{String(index + 1).padStart(2, "0")}</span><h2 id={`${section.id}-title`}>{section.title}</h2></div>
           {section.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
-          {section.steps && <ol className="kh-steps">{section.steps.map(step => <li key={step}>{step}</li>)}</ol>}
+          {!!section.steps?.length && <ol className="kh-steps">{section.steps.map(step => <li key={step}>{step}</li>)}</ol>}
           {section.visual && <GuideFigure visual={section.visual} />}
           {section.note && <p className="kh-note">{section.note}</p>}
           {section.images && <div className="kh-permissions">{section.images.map(image => <figure className="kh-figure" key={image.src}><Image src={image.src} width={image.width} height={image.height} alt={image.alt} sizes="(max-width: 800px) 90vw, 740px" /><figcaption>{image.caption}</figcaption></figure>)}</div>}
