@@ -52,7 +52,7 @@
 .kd-preview-content { animation: kd-reveal 200ms ease-out; }
 .kd-preview-media { height: 180px; border-radius: var(--radius-card); }
 .kd-preview-media img { width: 100%; height: 100%; object-fit: cover; }
-.kd-preview-note, .kd-preview-note-card { min-height: 180px; padding: 22px; border-radius: var(--radius-card); background: var(--color-bg-reading); }
+.kd-preview-note { min-height: 180px; padding: 22px; border-radius: var(--radius-card); background: var(--color-bg-reading); }
 .kd-preview .library-card-title { font-size: 14px; letter-spacing: 0; line-height: 1.4; }
 .kd-preview-controls { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding-top: 8px; }
 .kd-preview-controls .kd-caption { overflow-wrap: anywhere; text-align: center; }
