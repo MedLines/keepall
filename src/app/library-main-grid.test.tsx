@@ -1,12 +1,47 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createRef, useState } from "react";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { buildNote } from "@/domain/note";
+import type { Item } from "@/domain/item";
 import { LibraryMainGrid, type LibraryPreviewHandle } from "./library-main-grid";
+import { DEFAULT_SHORTCUTS } from "@/domain/keyboard-shortcuts";
+import { putKeyboardShortcuts } from "@/persistence/library-preferences";
 
 const notes = ["Alpha", "Beta", "Gamma"].map((title, i) => buildNote(
   { title, content: `${title} body` }, { id: title.toLowerCase(), now: i },
 ));
+
+beforeEach(() => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+});
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+test("list columns respond to width and the chosen limit; vertical arrows follow rows", async () => {
+  const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1400);
+  let resize: ResizeObserverCallback;
+  vi.stubGlobal("ResizeObserver", class {
+    constructor(callback: ResizeObserverCallback) { resize = callback; }
+    observe() {} unobserve() {} disconnect() {}
+  });
+  const scrollRef = createRef<HTMLElement>();
+  const items = [...notes, buildNote({ title: "Delta", content: "body" }, { id: "delta", now: 4 })];
+  const props = { visibleItems: items, scopeKey: "all", layout: "list" as const, scrollRef, empty: null,
+    selectedIds: new Set<string>(), onSelectIds: vi.fn(), onOpenItem: vi.fn(),
+    renderItem: (item: Item) => <li key={item.id} tabIndex={0} data-item-id={item.id}>{item.title}</li> };
+  const { rerender } = render(<LibraryMainGrid {...props} listColumns="3" />);
+  const list = screen.getByRole("list", { name: "Library items" });
+  expect(list.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+  act(() => screen.getByText("Alpha").focus());
+  fireEvent.keyDown(screen.getByText("Alpha"), { key: "ArrowDown" });
+  await waitFor(() => expect(screen.getByText("Delta")).toHaveFocus());
+  act(() => resize([{ contentRect: { width: 900 } } as ResizeObserverEntry], {} as ResizeObserver));
+  expect(list.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+  rerender(<LibraryMainGrid {...props} listColumns="auto" />);
+  expect(list.style.gridTemplateColumns).toBe("repeat(2, minmax(0, 1fr))");
+  rerender(<LibraryMainGrid {...props} listColumns="1" />);
+  expect(list.style.gridTemplateColumns).toBe("repeat(1, minmax(0, 1fr))");
+  width.mockRestore();
+});
 
 function setup(selectedIds = new Set<string>()) {
   const open = vi.fn();
@@ -28,6 +63,16 @@ function setup(selectedIds = new Set<string>()) {
 }
 
 describe("Library keyboard browsing", () => {
+  test("reassigning preview replaces Space on the focused item", async () => {
+    await putKeyboardShortcuts({ ...DEFAULT_SHORTCUTS, preview: "Ctrl+KeyJ" });
+    const { alpha } = setup();
+    await screen.findByText(/Ctrl\+J previews/);
+    act(() => alpha.focus());
+    fireEvent.keyDown(alpha, { key: " ", code: "Space" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.keyDown(alpha, { key: "j", code: "KeyJ", ctrlKey: true });
+    expect(await screen.findByRole("dialog", { name: "Alpha" })).toHaveTextContent("Alpha body");
+  });
   test("toolbar entry starts with the first result and then reuses the last focused item", async () => {
     setup();
     fireEvent.click(screen.getByRole("button", { name: "Preview results" }));
@@ -68,7 +113,7 @@ describe("Library keyboard browsing", () => {
   test("keeps one preview open across items and returns focus to the last previewed card", async () => {
     const { alpha } = setup();
     alpha.focus();
-    fireEvent.keyDown(alpha, { key: " " });
+    fireEvent.keyDown(alpha, { key: " ", code: "Space" });
     const dialog = await screen.findByRole("dialog", { name: "Alpha" });
     expect(dialog).toHaveTextContent("Alpha body");
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
@@ -78,6 +123,21 @@ describe("Library keyboard browsing", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await waitFor(() => expect(screen.getByRole("listitem", { name: "Beta" })).toHaveFocus());
   });
+
+  for (const entry of ["button", "Enter"]) {
+    test(`opening the full item with ${entry} dismisses preview and forwards the selected item`, async () => {
+      const { alpha, open } = setup();
+      act(() => alpha.focus());
+      fireEvent.keyDown(alpha, { key: " ", code: "Space" });
+      const dialog = await screen.findByRole("dialog", { name: "Alpha" });
+      fireEvent.keyDown(dialog, { key: "ArrowRight" });
+      await screen.findByRole("dialog", { name: "Beta" });
+      if (entry === "button") fireEvent.click(screen.getByRole("button", { name: "Open full item" }), { detail: 1 });
+      else fireEvent.keyDown(dialog, { key: "Enter" });
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(open).toHaveBeenCalledWith(notes[1], entry === "button", true);
+    });
+  }
 
   test("extends and contracts a range while preserving an unrelated selection", async () => {
     const { alpha, select } = setup(new Set(["hidden"]));

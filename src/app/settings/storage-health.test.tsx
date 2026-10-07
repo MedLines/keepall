@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { StorageHealth } from "./storage-health";
 
@@ -83,4 +83,27 @@ test("caps the meter when usage exceeds the browser allowance", async () => {
   } });
   render(<StorageHealth />);
   expect(await screen.findByRole("meter")).toHaveAttribute("aria-valuenow", "100");
+});
+
+test("retains the previous storage values and meter while a refresh is pending", async () => {
+  let finishRefresh!: (value: StorageEstimate) => void;
+  const refresh = new Promise<StorageEstimate>(resolve => { finishRefresh = resolve; });
+  vi.stubGlobal("navigator", { storage: {
+    estimate: vi.fn()
+      .mockResolvedValueOnce({ usage: 1024 * 1024, quota: 2 * 1024 * 1024 })
+      .mockReturnValueOnce(refresh),
+    persisted: vi.fn().mockResolvedValue(false),
+  } });
+  render(<StorageHealth />);
+  expect(await screen.findByText("1 MB")).toBeInTheDocument();
+  const meter = screen.getByRole("meter");
+  fireEvent.click(screen.getByRole("button", { name: "Refresh storage status" }));
+  expect(screen.getByText("1 MB")).toBeInTheDocument();
+  expect(screen.queryByText("Checking…")).not.toBeInTheDocument();
+  expect(screen.getByRole("meter")).toBe(meter);
+  expect(screen.getByRole("button", { name: "Refreshing…" })).toBeDisabled();
+  await act(async () => { finishRefresh({ usage: 2 * 1024 * 1024, quota: 4 * 1024 * 1024 }); });
+  expect(screen.getByRole("meter")).toBe(meter);
+  expect(screen.getByRole("meter")).toHaveAttribute("aria-valuetext", "2 MB used out of 4 MB");
+  expect(screen.getByRole("button", { name: "Refresh storage status" })).toBeEnabled();
 });

@@ -17,7 +17,7 @@ export function ItemPageHeader({ returnHref, title, sourceUrl, titleAsHeading = 
   return (
     <header className="z-10 shrink-0 border-b border-border-control bg-bg-canvas">
       <div className="mx-auto flex min-h-16 w-full max-w-[100rem] items-center gap-3 px-3 sm:px-5">
-        <Link className={CONTROL} href={returnHref} aria-label="Back to library">
+        <Link className={`${CONTROL} sm:ps-2.5`} href={returnHref} aria-label="Back to library">
           <ArrowLeftIcon />
           <span className="hidden sm:inline">Library</span>
         </Link>
@@ -26,7 +26,7 @@ export function ItemPageHeader({ returnHref, title, sourceUrl, titleAsHeading = 
         </Title>
         <div className="ms-auto flex shrink-0 items-center gap-2">
           {sourceUrl ? (
-            <a className={CONTROL} href={sourceUrl} target="_blank" rel="noopener noreferrer" aria-label="Source link">
+            <a className={`${CONTROL} xl:ps-2.5`} href={sourceUrl} target="_blank" rel="noopener noreferrer" aria-label="Source link">
               <LinkIcon />
               <span className="hidden xl:inline">Source link</span>
             </a>

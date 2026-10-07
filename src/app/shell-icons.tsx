@@ -16,16 +16,29 @@ import {
   CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle, Tick02Icon as Tick02,
   Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
   KeyboardIcon as Keyboard, TextFontIcon as TextFont, SourceCodeIcon as SourceCode,
-  RefreshIcon as Refresh,
+  RefreshIcon as Refresh, Undo02Icon as Undo02,
+  ColorsIcon as Colors, Copy01Icon as Copy01, ScanTextIcon as ScanText,
   ComputerIcon as Computer, WifiOff01Icon as WifiOff,
   Globe02Icon as Globe, Clock01Icon as Clock,
   Download01Icon as Download, Upload01Icon as Upload,
+  Txt01Icon as Txt01, ArrowUpRight01Icon as ArrowUpRight01,
+  LayoutThreeColumnIcon as LayoutThreeColumn,
+  VolumeHighIcon as VolumeHigh, VolumeOffIcon as VolumeOff, MinimizeScreenIcon as MinimizeScreen,
+  GoBackward10SecIcon as GoBackward10Sec, GoForward10SecIcon as GoForward10Sec,
 } from "@hugeicons/core-free-icons";
 
-type IconProps = { className?: string; fill?: "none" | "currentColor" };
+// Same folded file outline as PDF and TXT; the installed icon set has no MD file glyph.
+const MarkdownFile: IconSvgElement = [Txt01[0], ["path", {
+  d: "M4 22V16L7 19.5L10 16V22M14 16H16C18.2 16 20 17.35 20 19C20 20.65 18.2 22 16 22H14V16Z",
+  stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", key: "md",
+}]];
 
-function ShellIcon({ icon, className = "", fill = "none" }: IconProps & { icon: IconSvgElement }) {
-  return <HugeiconsIcon icon={icon} size={18} strokeWidth={1.5} fill={fill} className={`shrink-0 ${className}`} aria-hidden="true" />;
+type IconProps = { className?: string; fill?: "none" | "currentColor"; strokeWidth?: number };
+
+export function ColumnsIcon(props: IconProps) { return <ShellIcon icon={LayoutThreeColumn} {...props} />; }
+
+function ShellIcon({ icon, className = "", fill = "none", strokeWidth = 1.5 }: IconProps & { icon: IconSvgElement }) {
+  return <HugeiconsIcon icon={icon} size={18} strokeWidth={strokeWidth} fill={fill} className={`shrink-0 ${className}`} aria-hidden="true" />;
 }
 
 export function LogoIcon({ className = "" }: IconProps) {
@@ -45,11 +58,19 @@ export function CollectionIcon(props: IconProps) { return <ShellIcon icon={Folde
 export function LinkIcon(props: IconProps) { return <ShellIcon icon={Link04} {...props} />; }
 export function NoteIcon(props: IconProps) { return <ShellIcon icon={Note01} {...props} />; }
 export function PdfIcon(props: IconProps) { return <ShellIcon icon={Pdf01} {...props} />; }
+export function TextFileIcon(props: IconProps) { return <ShellIcon icon={Txt01} {...props} />; }
+export function MarkdownFileIcon(props: IconProps) { return <ShellIcon icon={MarkdownFile} {...props} />; }
+export function ExternalLinkIcon(props: IconProps) { return <ShellIcon icon={ArrowUpRight01} {...props} />; }
 export function ImageIcon(props: IconProps) { return <ShellIcon icon={Image01} {...props} />; }
 export function ImagesIcon(props: IconProps) { return <ShellIcon icon={Images} {...props} />; }
 export function VideoIcon(props: IconProps) { return <ShellIcon icon={Video01} {...props} />; }
 export function PlayIcon(props: IconProps) { return <ShellIcon icon={Play} {...props} />; }
 export function PauseIcon(props: IconProps) { return <ShellIcon icon={Pause} {...props} />; }
+export function VolumeIcon(props: IconProps) { return <ShellIcon icon={VolumeHigh} {...props} />; }
+export function MuteIcon(props: IconProps) { return <ShellIcon icon={VolumeOff} {...props} />; }
+export function ExitFullScreenIcon(props: IconProps) { return <ShellIcon icon={MinimizeScreen} {...props} />; }
+export function RewindIcon(props: IconProps) { return <ShellIcon icon={GoBackward10Sec} {...props} />; }
+export function ForwardIcon(props: IconProps) { return <ShellIcon icon={GoForward10Sec} {...props} />; }
 export function KeyboardIcon(props: IconProps) { return <ShellIcon icon={Keyboard} {...props} />; }
 export function BackupIcon(props: IconProps) { return <ShellIcon icon={Archive01} {...props} />; }
 export function SettingsIcon(props: IconProps) { return <ShellIcon icon={Settings02} {...props} />; }
@@ -73,6 +94,9 @@ export function MoreIcon(props: IconProps) { return <ShellIcon icon={MoreVertica
 export function EditIcon(props: IconProps) { return <ShellIcon icon={Edit02} {...props} />; }
 export function EyeIcon(props: IconProps) { return <ShellIcon icon={Eye} {...props} />; }
 export function RefreshIcon(props: IconProps) { return <ShellIcon icon={Refresh} {...props} />; }
+export function PaletteIcon(props: IconProps) { return <ShellIcon icon={Colors} {...props} />; }
+export function CopyIcon(props: IconProps) { return <ShellIcon icon={Copy01} {...props} />; }
+export function OcrIcon(props: IconProps) { return <ShellIcon icon={ScanText} {...props} />; }
 export function DeviceIcon(props: IconProps) { return <ShellIcon icon={Computer} {...props} />; }
 export function OfflineIcon(props: IconProps) { return <ShellIcon icon={WifiOff} {...props} />; }
 export function InternetIcon(props: IconProps) { return <ShellIcon icon={Globe} {...props} />; }
@@ -81,6 +105,7 @@ export function DownloadIcon(props: IconProps) { return <ShellIcon icon={Downloa
 export function UploadIcon(props: IconProps) { return <ShellIcon icon={Upload} {...props} />; }
 export function DeleteIcon(props: IconProps) { return <ShellIcon icon={Delete02} {...props} />; }
 export function PinIcon(props: IconProps) { return <ShellIcon icon={Pin} {...props} />; }
+export function UndoIcon(props: IconProps) { return <ShellIcon icon={Undo02} {...props} />; }
 export function ArrowLeftIcon(props: IconProps) { return <ShellIcon icon={ArrowLeft01} {...props} />; }
 export function ArrowRightIcon(props: IconProps) { return <ShellIcon icon={ArrowRight01} {...props} />; }
 export function FullScreenIcon(props: IconProps) { return <ShellIcon icon={FullScreen} {...props} />; }

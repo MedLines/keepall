@@ -59,6 +59,20 @@ export function observeBackupFolderSettings(
   return () => subscription.unsubscribe();
 }
 
+export function observeBackupFolderStatus(
+  onChange: (status: { settings?: BackupFolderSettings; hasPendingChanges: boolean }) => void,
+  onError: (error: unknown) => void,
+): () => void {
+  const subscription = liveQuery(() => {
+    const db = getDb();
+    return db.transaction("r", db.backupSettings, db.backupState, async () => {
+      const [settings, state] = await Promise.all([getBackupFolderSettings(), db.backupState.get("library")]);
+      return { settings, hasPendingChanges: settings?.lastBackupRevision !== (state?.revision ?? "initial") };
+    });
+  }).subscribe({ next: onChange, error: onError });
+  return () => subscription.unsubscribe();
+}
+
 export function backupFailureMessage(error: unknown): string {
   return error instanceof BackupFolderError ? error.message :
     "Couldn't save the backup. Check folder access and disk space, then try again.";

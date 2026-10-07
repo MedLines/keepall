@@ -1,3 +1,4 @@
+import { ScrollPanel } from "@/components/ui/scroll-panel";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeftIcon, LogoIcon } from "../shell-icons";
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function SettingsPage() {
   return (
-    <main className="settings-page ui-scrollbar h-full min-h-0 overflow-y-auto bg-bg-shell p-2.5">
+    <ScrollPanel role="main" className="settings-page h-full min-h-0 bg-bg-shell" viewportClassName="p-2.5" contentClassName="!grid min-h-full">
       <div className="library-panel min-h-full bg-bg-canvas px-4 py-4 pb-24 sm:px-7 sm:pt-6 md:pb-6">
         <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4">
           <LogoContextMenu>
@@ -51,6 +52,6 @@ export default function SettingsPage() {
           />
         </div>
       </div>
-    </main>
+    </ScrollPanel>
   );
 }

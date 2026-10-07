@@ -74,9 +74,9 @@ for (const failFirstSave of [false, true]) {
       }
 
       await page.goto("/");
-      await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
       await page.keyboard.press("Alt+k");
-      const dialog = page.getByRole("dialog");
+      const dialog = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
       await dialog.locator('input[data-capture-files]').setInputFiles([
         "public/icons/icon-192.png",
         "public/icons/icon-512.png",
@@ -95,8 +95,9 @@ for (const failFirstSave of [false, true]) {
         await dialog.getByRole("button", { name: "Save", exact: true }).click();
       }
 
+      await expect.poll(() => storedRecordCounts(page)).toEqual([1, 2]);
+      await expect(page.getByRole("dialog", { name: "Importing files", exact: true })).toBeHidden();
       await expect(dialog).toBeHidden();
-      expect(await storedRecordCounts(page)).toEqual([1, 2]);
       await page.reload();
       await expect(page.getByLabel("Library").getByRole("link", { name: "Open Atomic image capture" }))
         .toBeVisible();
@@ -153,6 +154,10 @@ test("drawer image controls remove individual photos and clear all attachments",
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto("/");
+  const navigation = page.getByRole("dialog", { name: "Sidebar navigation", exact: true });
+  await navigation.getByRole("button", { name: "Close navigation", exact: true }).click();
+  await expect(navigation).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+k");
   const drawer = page.getByRole("dialog", { name: "Save to Keepall" });
   const files = ["icon-192.png", "icon-512.png", "icon-maskable-512.png"];
@@ -186,7 +191,7 @@ test("drawer image controls remove individual photos and clear all attachments",
     await bulkButton.click();
     const bulk = page.getByRole("dialog", { name: "Bulk import", exact: true });
     await expect(bulk.getByRole("button", { name: "Import folder" })).toBeVisible();
-    await expect(bulk.getByRole("button", { name: "Import bookmarks HTML" })).toBeVisible();
+    await expect(bulk.getByRole("button", { name: "Import browser bookmarks" })).toBeVisible();
     const bulkModalBox = (await bulk.boundingBox())!;
     expect(bulkModalBox.x + bulkModalBox.width / 2).toBeCloseTo(width / 2, 0);
     await page.screenshot({ path: testInfo.outputPath(`bulk-import-${width}.png`) });
@@ -204,6 +209,8 @@ test("drawer image controls remove individual photos and clear all attachments",
   await page.keyboard.press("Enter");
   await expect(drawer.getByRole("list", { name: "2 images attached" })).toBeVisible();
   await drawer.getByRole("button", { name: "Save", exact: true }).click();
+  await expect.poll(() => storedRecordCounts(page)).toEqual([1, 2]);
+  await expect(page.getByRole("dialog", { name: "Importing files", exact: true })).toBeHidden();
   await expect(drawer).toBeHidden();
   expect(await storedRecordCounts(page)).toEqual([1, 2]);
   const expectedHashes = [files[0], files[2]].map((name) =>
@@ -251,11 +258,13 @@ for (const width of [320, 1024]) {
     await review.getByRole("button", { name: "Unsorted", exact: true }).click();
     await review.getByRole("textbox", { name: "Collection", exact: true }).fill("Imported photos");
     await review.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(review.getByText("Saving files… 0 of 3", { exact: true })).toBeVisible();
-    await expect(review.getByRole("button", { name: "Close drawer", exact: true })).toBeDisabled();
+    const progress = page.getByRole("dialog", { name: "Importing files", exact: true });
+    await expect(progress).toContainText("0 of 3 files processed");
+    await expect(progress.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
     await page.keyboard.press("Escape");
-    await expect(review).toBeVisible();
-    await review.screenshot({ path: testInfo.outputPath(`image-import-progress-${entry}.png`) });
+    await expect(progress).toBeVisible();
+    await progress.screenshot({ path: testInfo.outputPath(`image-import-progress-${entry}.png`) });
+    await expect(progress).toBeHidden();
     await expect(review).toContainText("2 saved, 1 failed.");
     await expect(review).toContainText("unsupported.pdf");
     await expect(review.getByRole("button", { name: "Retry failed files", exact: true })).toBeEnabled();
@@ -295,7 +304,7 @@ for (const width of [320, 1024]) {
     await page.getByLabel("Link, note, or image").fill("Unfinished note");
     await page.getByRole("button", { name: "Bulk import", exact: true }).click();
     const chooser = page.waitForEvent("filechooser");
-    await page.getByRole("button", { name: "Import bookmarks HTML", exact: true }).click();
+    await page.getByRole("button", { name: "Import browser bookmarks", exact: true }).click();
     await (await chooser).setFiles({
       name: "bookmarks.html",
       mimeType: "text/html",
@@ -401,7 +410,7 @@ test("read-only folder import scans nested files without triggering the upload c
   await expect(page).toHaveURL(/collection=/);
   await expect(page.getByRole("main", { name: "Read-only photos" }).getByRole("link", { name: "Open Image", exact: true })).toHaveCount(2);
   await expect(page.locator("[data-item-id]")).toHaveCount(3);
-  await page.getByRole("link", { name: /readme.md/ }).click();
+  await page.getByRole("link", { name: "Open readme", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Folder note", exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Folder note", exact: true })).toBeVisible();

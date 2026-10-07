@@ -4,7 +4,7 @@ test("collection folders preview recent items, lift on hover, and open their col
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const canvas = document.createElement("canvas");
     canvas.width = 200;
@@ -85,7 +85,7 @@ test("collection folders preview recent items, lift on hover, and open their col
     await expect(innerCard).toHaveCSS('background-color', 'oklch(0.984548 0.00263721 106.448)');
   }
   for (const content of await folders.locator('.collection-folder-text-preview').all()) {
-    await expect(content).toHaveCSS('background-color', 'oklch(0.247759 0 0)');
+    await expect(content).toHaveCSS('background-color', 'oklch(0.22645 0.00003 271.152)');
     await expect(content).toHaveCSS('border-top-left-radius', '16px');
     await expect(content).toHaveCSS('color', 'oklch(1 0 0)');
     await expect(content.locator('svg')).toHaveCSS('color', 'oklch(1 0 0)');
@@ -151,10 +151,10 @@ test("collection folders preview recent items, lift on hover, and open their col
   const notePaper = design.locator('.collection-folder-preview[data-type="note"] .collection-folder-item-card').first();
   const linkCard = folders.getByRole('link', { name: 'Open Reading, 1 item', exact: true }).locator('.collection-folder-item-card');
   for (const innerCard of await design.locator('.collection-folder-item-card').all()) {
-    await expect(innerCard).toHaveCSS('background-color', 'oklch(0.67968 0 0)');
+    await expect(innerCard).toHaveCSS('background-color', 'oklch(0.50676 0.00006 271.152)');
   }
-  await expect(notePaper.locator('.collection-folder-text-preview')).toHaveCSS('background-color', 'oklch(0.247759 0 0)');
-  await expect(linkCard.locator('.collection-folder-text-preview')).toHaveCSS('background-color', 'oklch(0.247759 0 0)');
+  await expect(notePaper.locator('.collection-folder-text-preview')).toHaveCSS('background-color', 'oklch(0.22645 0.00003 271.152)');
+  await expect(linkCard.locator('.collection-folder-text-preview')).toHaveCSS('background-color', 'oklch(0.22645 0.00003 271.152)');
   const textPairs = await page.locator('.collection-folder-preview-title').evaluateAll(elements => elements.map(element => {
     const style = getComputedStyle(element);
     const surface = element.closest('.collection-folder-text-preview')!;
@@ -231,7 +231,7 @@ test("collection folders preview recent items, lift on hover, and open their col
     await card.scrollIntoViewIfNeeded();
     await design.hover();
     await expect(design.locator('.collection-folder-gradient-top')).toHaveCSS('stop-opacity', '0.86');
-    await page.getByRole('main').evaluate(element => { element.scrollTop = 0; });
+    await design.evaluate(element => { element.closest('[data-slot="scroll-area-viewport"]')!.scrollTop = 0; });
     await expect.poll(async () => (await preview.boundingBox())!.y).toBeLessThan((await design.locator('.collection-folder-stage').boundingBox())!.y);
     const mainTop = (await page.getByRole('main').boundingBox())!.y;
     const controlBottoms = await card.locator('label, button.organization-actions').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().bottom));

@@ -1,5 +1,12 @@
 "use client";
 
+import { prepareItemNavigation } from "./item-navigation-snapshot";
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+import { loadPreviewLayouts } from "@/persistence/preview-layouts";
+import { LibraryStartupContent } from "./library-loading-content";
+import { LibraryLayoutTransition, transitionLibraryLayout } from "./item-view-transition";
+
+import { BackupStatusNotice } from "./backup-status-notice";
 import {
   type DragEvent,
   type KeyboardEvent,
@@ -9,6 +16,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -56,6 +64,7 @@ import {
   clearCollectionsOnItems,
   assignTagToItem,
   deleteItem,
+  restoreItems,
   getItem,
   listItems,
   listTrashedItems,
@@ -113,7 +122,8 @@ import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
 import { type BulkPanel } from "./library-bulk-bar";
 import { LibraryTopBar } from "./library-top-bar";
-import { LibraryEmptyState, type LibraryEmptyStateKind } from "./library-empty-state";
+import { UnsortedReview } from "./unsorted-review";
+import { LibraryEmptyState, getEmptyStateKind, entireLibrarySearch } from "./library-empty-state";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
 import { isShellMobileViewport } from "./use-shell-mobile";
 import type { OrgNameSuggestion } from "./org-name-suggest";
@@ -129,17 +139,6 @@ import { itemPageHref } from "./item-page-navigation";
 import type { ImageDetailsDraft, LinkDetailsDraft, NoteDetailsDraft, VideoDetailsDraft, DocumentDetailsDraft } from "./item-edit-dialog";
 
 type RestoreFocus = { id: string; action: "edit" | "delete" };
-
-function getEmptyStateKind(
-  view: LibraryViewState,
-  hasActiveSearch: boolean,
-): LibraryEmptyStateKind {
-  if (hasActiveSearch || view.type !== null || view.tag !== null) return "filtered";
-  if (view.trash) return "trash";
-  if (view.unsorted) return "unsorted";
-  if (view.collection !== null) return "collection";
-  return "library";
-}
 
 function getEmptyStateMessage(
   view: LibraryViewState,
@@ -185,6 +184,13 @@ function libraryViewTitle(
   return "All items";
 }
 
+function subscribePanelPreference(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+const panelServerSnapshot = () => null;
+
 export function Library() {
   const router = useRouter();
   const pathname = usePathname();
@@ -193,7 +199,7 @@ export function Library() {
   /** Local view is the source of truth so folder clicks update the sidebar immediately. */
   const [view, setView] = useState(() => parseLibraryViewState(searchParams));
   const viewRef = useRef(view);
-  viewRef.current = view;
+  useLayoutEffect(() => { viewRef.current = view; }, [view]);
   /** Ignore stale Next.js URL updates from older router.push while clicking fast. */
   const ignoreUrlSyncRef = useRef(false);
   const lastWrittenSearchRef = useRef(urlSearchKey);
@@ -204,6 +210,7 @@ export function Library() {
   const flushSoftReloadRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    if (pathname.startsWith("/items/")) return;
     if (urlSearchKey === lastWrittenSearchRef.current) {
       ignoreUrlSyncRef.current = false;
       return;
@@ -213,10 +220,11 @@ export function Library() {
       return;
     }
     setView(parseLibraryViewState(searchParams));
-  }, [urlSearchKey, searchParams]);
+  }, [urlSearchKey, searchParams, pathname]);
 
   useEffect(() => {
     function onPopState() {
+      if (window.location.pathname.startsWith("/items/")) return;
       ignoreUrlSyncRef.current = false;
       const params = new URLSearchParams(window.location.search);
       lastWrittenSearchRef.current = params.toString();
@@ -262,7 +270,9 @@ export function Library() {
     "loading",
   );
   const [error, setError] = useState<string | null>(null);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [trashUndoItems, setTrashUndoItems] = useState<Item[]>([]);
+  const singleTrashPending = useRef(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
@@ -312,30 +322,29 @@ export function Library() {
   const [dragError, setDragError] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
   const [panelPreference, setPanelOpen] = useState<boolean | null>(null);
-  const panelOpen = panelPreference ?? true;
+  const storedPanelPreference = useSyncExternalStore(subscribePanelPreference, readShellPanelOpen, panelServerSnapshot);
+  const panelOpen = panelPreference ?? storedPanelPreference ?? true;
   const [previewEnrichProgress, setPreviewEnrichProgress] =
     useState<PreviewEnrichProgress>(null);
 
   const libraryHeadingRef = useRef<HTMLHeadingElement>(null);
-  const mainScrollRef = useRef<HTMLElement>(null);
+  const mainScrollRef = useRef<HTMLDivElement>(null);
   const libraryGridRef = useRef<LibraryPreviewHandle>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const reviewButtonRef = useRef<HTMLButtonElement>(null);
   const [documentRevision, setDocumentRevision] = useState("initial");
   const prevBrowseScopeRef = useRef<string | null>(null);
   const pendingNavScopeLabelRef = useRef<string | null>(null);
-  const browseIndexesRef = useRef(buildLibraryBrowseIndexes([]));
+  const [liveBrowseIndexes, setLiveBrowseIndexes] = useState(() => buildLibraryBrowseIndexes([]));
+  const browseIndexesRef = useRef(liveBrowseIndexes);
   const [browseIndexEpoch, setBrowseIndexEpoch] = useState(0);
   const navigationGenerationRef = useRef(0);
   const [navigationGeneration, setNavigationGeneration] = useState(0);
   const firstEditFieldRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
     null,
   );
-  const confirmDeleteRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef<RestoreFocus | null>(null);
-
-  useLayoutEffect(() => {
-    setPanelOpen(readShellPanelOpen());
-  }, []);
 
   useEffect(() => {
     if (panelPreference !== null) writeShellPanelOpen(panelPreference);
@@ -344,9 +353,12 @@ export function Library() {
   useEffect(() => {
     let cancelled = false;
     let softReloadTimer: number | null = null;
+    let requestGeneration = 0;
+    let hasLoaded = false;
 
     async function reload(options?: { soft?: boolean }) {
-      const soft = options?.soft === true;
+      const generation = ++requestGeneration;
+      const soft = options?.soft === true && hasLoaded;
       if (!soft) {
         setLoadState("loading");
       }
@@ -361,8 +373,12 @@ export function Library() {
           listTrashedItems(),
           getDocumentRevision(),
         ]);
-        if (!cancelled) {
-          browseIndexesRef.current = buildLibraryBrowseIndexes(nextItems);
+        await loadPreviewLayouts([...nextItems, ...nextTrash]).catch(() => {});
+        if (!cancelled && generation === requestGeneration) {
+          hasLoaded = true;
+          const nextIndexes = buildLibraryBrowseIndexes(nextItems);
+          browseIndexesRef.current = nextIndexes;
+          setLiveBrowseIndexes(nextIndexes);
           setBrowseIndexEpoch((epoch) => epoch + 1);
           setItems(nextItems);
           setTrashedItems(nextTrash);
@@ -382,7 +398,7 @@ export function Library() {
           setError(null);
         }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && generation === requestGeneration) {
           setError("Couldn't load items.");
           if (!soft) {
             setLoadState("error");
@@ -490,7 +506,7 @@ export function Library() {
       window.removeEventListener("focus", scheduleSoftReload);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     void wakeLinkPreviewRetries();
@@ -525,11 +541,6 @@ export function Library() {
       return;
     }
 
-    if (pendingDeleteId) {
-      confirmDeleteRef.current?.focus();
-      return;
-    }
-
     const restore = restoreFocusRef.current;
     if (!restore) {
       return;
@@ -539,7 +550,7 @@ export function Library() {
       `button[data-item-actions="${restore.id}"]`,
     )?.focus();
     restoreFocusRef.current = null;
-  }, [editingId, pendingDeleteId, items]);
+  }, [editingId, items]);
 
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
@@ -570,6 +581,9 @@ export function Library() {
   });
   const mutationBusy =
     pendingMutation !== null || pendingCollectionPreferenceId !== null || trashActions.busy;
+  const previewBusy = pendingCollectionPreferenceId !== null || trashActions.busy || (
+    pendingMutation !== null && pendingMutation.op !== "assign-tag" && pendingMutation.op !== "unassign-tag" && pendingMutation.op !== "assign-collection"
+  );
   const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
   const collectionsById = useMemo(
     () => new Map(collections.map((collection) => [collection.id, collection])),
@@ -597,7 +611,7 @@ export function Library() {
   const documentSearch = useDocumentSearch(browseItems, tags, view.collections || view.tags ? "" : searchQuery, documentRevision);
   const resultQuery = view.collections || view.tags ? searchQuery : documentSearch.query;
   const resultView = useMemo(() => ({ ...view, q: resultQuery }), [view, resultQuery]);
-  const browseIndexes = view.trash ? trashIndexes : browseIndexesRef.current;
+  const browseIndexes = view.trash ? trashIndexes : liveBrowseIndexes;
   const typeCountIndexes = useMemo(
     () => buildLibraryBrowseIndexes(browseItems),
     [browseItems],
@@ -644,7 +658,7 @@ export function Library() {
         browseIndexes,
         documentSearch.matches,
       ).length,
-    [browseItems, tags, resultView, collectionsById, browseIndexEpoch, documentSearch.matches],
+    [browseItems, tags, resultView, collectionsById, browseIndexes, browseIndexEpoch, documentSearch.matches],
   );
   const visibleItems = useMemo(
     () =>
@@ -656,14 +670,16 @@ export function Library() {
         browseIndexes,
         documentSearch.matches,
       ),
-    [browseItems, tags, resultView, collectionsById, browseIndexEpoch, documentSearch.matches],
+    [browseItems, tags, resultView, collectionsById, browseIndexes, browseIndexEpoch, documentSearch.matches],
   );
   const browseScopeKey = `${Boolean(view.tags)}|${Boolean(view.collections)}|${Boolean(view.trash)}|${browseCollectionId ?? ""}|${browseUnsorted}|${browseType ?? ""}|${browseTagId ?? ""}`;
   const selectionEntries = view.collections || view.tags
     ? visibleOverviewEntries.map(entry => entry.organization)
     : visibleItems;
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
-  const emptyStateKind = getEmptyStateKind(view, hasActiveSearch);
+  const emptyStateKind = getEmptyStateKind(view, hasActiveSearch, items.length);
+  const entireSearch = entireLibrarySearch(view);
+  const emptySearchScope = [view.trash ? "Trash" : browseCollection?.name ?? (browseUnsorted ? "Unsorted" : "the library"), browseTagName ? `tag “${browseTagName}”` : null, browseType ? `${browseType} items` : null].filter(Boolean).join(" · ");
   const emptyStateMessage = getEmptyStateMessage(view, hasActiveSearch, browseCollectionId);
   const allVisibleSelected =
     selectionEntries.length > 0 &&
@@ -712,7 +728,6 @@ export function Library() {
 
   const selectionActive = selectedIds.size > 0;
   const itemsById = new Map(items.map((item) => [item.id, item]));
-  const deleteItemTarget = pendingDeleteId ? itemsById.get(pendingDeleteId) ?? null : null;
   const deleteCollectionTarget = pendingCollectionDeleteId
     ? collections.find((entry) => entry.id === pendingCollectionDeleteId) ?? null
     : null;
@@ -809,6 +824,11 @@ export function Library() {
     document.getElementById("library-search")?.focus();
     updateView({ q: "", type: null, tag: null, item: null, slide: 0 }, "push");
   }, [updateView]);
+
+  const searchEntireLibrary = entireSearch ? () => {
+    document.getElementById("library-search")?.focus();
+    updateView(entireSearch, "push");
+  } : undefined;
 
   useLayoutEffect(() => {
     if (pendingNavScopeLabelRef.current !== null) {
@@ -922,31 +942,20 @@ export function Library() {
   function closeInspect() {
     updateView({ item: null, slide: 0 }, "push");
     clearEdit();
-    setPendingDeleteId(null);
     setGalleryError(null);
   }
 
-  function openInspect(item: Item) {
-    if (item.type === "image" || item.type === "note" || item.type === "video" || item.type === "document") {
-      const returnView = mergeLibraryViewState(viewRef.current, {
-        item: null,
-        slide: 0,
-      });
-      router.push(itemPageHref(item.id, libraryViewHref(pathname, returnView)));
-      return;
-    }
-    updateView({ item: item.id, slide: 0 }, "push");
+  function openInspect(item: Item, animate = false, fromPreview = false) {
+    prepareItemNavigation({ item, tags, collections, animate, fromPreview });
+    const returnView = mergeLibraryViewState(viewRef.current, {
+      item: null,
+      slide: 0,
+    });
+    router.push(itemPageHref(item.id, libraryViewHref(pathname, returnView)));
   }
 
   function setInspectSlide(slide: number) {
     updateView({ slide });
-  }
-
-  function cancelDelete() {
-    if (pendingDeleteId) {
-      restoreFocusRef.current = { id: pendingDeleteId, action: "delete" };
-    }
-    setPendingDeleteId(null);
   }
 
   function onEditSaveShortcut(
@@ -961,26 +970,52 @@ export function Library() {
     }
   }
 
-  async function confirmDelete(id: string) {
-    if (pendingMutation) {
-      return;
-    }
-
+  async function moveItemToTrash(id: string) {
+    if (mutationBusy || singleTrashPending.current) return;
+    const item = itemsById.get(id);
+    if (!item) return;
+    singleTrashPending.current = true;
+    const focusedBefore = document.activeElement;
+    const actionMenu = focusedBefore instanceof HTMLElement ? focusedBefore.closest('[role="menu"], .row-action-popup') : null;
+    const itemActions = Array.from(document.querySelectorAll<HTMLButtonElement>("button[data-item-actions]")).find(button => button.dataset.itemActions === id);
+    const startedNavigation = navigationGenerationRef.current;
     setPendingMutation({ op: "delete", id });
     setDeleteError(null);
 
     try {
       await deleteItem(id);
-      setPendingDeleteId(null);
       restoreFocusRef.current = null;
-      if (view.item === id) {
+      if (startedNavigation === navigationGenerationRef.current && viewRef.current.item === id) {
         updateView({ item: null, slide: 0 });
       }
-      libraryHeadingRef.current?.focus();
+      setTrashUndoItems(previous => [...previous.filter(entry => entry.id !== id), item].slice(-5));
+      setItems(previous => previous.filter(entry => entry.id !== id));
+      if (startedNavigation === navigationGenerationRef.current && (document.activeElement === focusedBefore || document.activeElement === itemActions || actionMenu?.contains(document.activeElement) || document.activeElement === document.body)) libraryHeadingRef.current?.focus();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
-      setDeleteError("Couldn't move item to Trash.");
+      setDeleteError("Couldn't move item to Trash. Try again using the item menu.");
     } finally {
+      singleTrashPending.current = false;
+      setPendingMutation(null);
+    }
+  }
+
+  async function undoTrash(id: string) {
+    if (mutationBusy || singleTrashPending.current) return;
+    singleTrashPending.current = true;
+    const focusedBefore = document.activeElement;
+    setPendingMutation({ op: "delete", id });
+    setDeleteError(null);
+    try {
+      const restored = await restoreItems([id]);
+      if (document.activeElement === focusedBefore) libraryHeadingRef.current?.focus();
+      setTrashUndoItems(previous => previous.filter(item => item.id !== id));
+      if (!restored.includes(id)) setDeleteError("This item is no longer in Trash. Check your library or restore a backup.");
+      window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    } catch {
+      setDeleteError("Couldn't restore this item. Try Undo again or open Trash.");
+    } finally {
+      singleTrashPending.current = false;
       setPendingMutation(null);
     }
   }
@@ -1681,8 +1716,9 @@ export function Library() {
               )
             : undefined
         }
+        onPrepareOpen={animate => prepareItemNavigation({ item, tags, collections, animate })}
         onOpenInspect={() => openInspect(item)}
-        onPreview={!view.trash ? () => libraryGridRef.current?.openPreview(item.id) : undefined}
+        onPreview={!view.trash ? animate => libraryGridRef.current?.openPreview(item.id, animate) : undefined}
         tagNames={resolveItemTags(item, tagsById)}
         tagError={tagErrorItemId === item.id ? tagError : null}
         collections={
@@ -1714,7 +1750,6 @@ export function Library() {
           void addCollectionToItem(item.id, name)
         }
         onStartEdit={() => {
-          setPendingDeleteId(null);
           setDeleteError(null);
           setEditError(null);
           setTagError(null);
@@ -1744,7 +1779,7 @@ export function Library() {
           setTagErrorItemId(null);
           setCollectionError(null);
           setCollectionErrorItemId(null);
-          setPendingDeleteId(item.id);
+          void moveItemToTrash(item.id);
         }}
         selected={selectedIds.has(item.id)}
         selectionActive={selectionActive}
@@ -1754,7 +1789,6 @@ export function Library() {
         dragEnabled={
           !view.trash && !mutationBusy &&
           editingId !== item.id &&
-          pendingDeleteId !== item.id &&
           inspectId !== item.id
         }
         isDragging={draggingIds.has(item.id)}
@@ -1780,9 +1814,13 @@ export function Library() {
         sort={view.sort}
         onSortChange={(sort) => updateView({ sort }, "push")}
         layout={browseLayout}
-        onLayoutChange={(layout) => updateView({ layout }, "replace")}
+        onLayoutChange={(layout) => {
+          if (layout !== browseLayout) transitionLibraryLayout(() => updateView({ layout }, "replace"));
+        }}
+        listColumns={view.listColumns ?? "auto"}
+        onListColumnsChange={(listColumns) => updateView({ listColumns }, "replace")}
         onPreview={() => libraryGridRef.current?.openPreview()}
-        previewDisabled={mutationBusy || loadState !== "ready" || visibleItems.length === 0}
+        previewDisabled={previewBusy || loadState !== "ready" || visibleItems.length === 0}
         collectionsView={Boolean(view.collections)}
         tagsView={Boolean(view.tags)}
         typeFilter={browseType}
@@ -1873,8 +1911,8 @@ export function Library() {
       <div className="relative flex h-full min-h-0 overflow-hidden bg-bg-shell py-2.5 pr-2.5">
         <LibraryShell
           panelOpen={panelOpen}
-          previewOpen={previewOpen}
-          panelReady={panelPreference !== null}
+          previewOpen={reviewOpen || previewOpen || pathname.startsWith("/items/")}
+          panelReady={panelPreference !== null || storedPanelPreference !== null}
           onPanelOpenChange={setPanelOpen}
           browseCollectionId={browseCollectionId}
           browseUnsorted={browseUnsorted}
@@ -1935,24 +1973,39 @@ export function Library() {
 
         <div data-library-panel className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel">
         {topBar}
-        <main
-          ref={mainScrollRef}
-          className="scroll-fade min-h-0 min-w-0 flex-1 overflow-auto px-3 pb-6 sm:px-6 [--scroll-fade-edge-opacity:0.35]"
-          aria-labelledby="library-heading"
-          aria-busy={documentSearch.pending}
-        >
-          {loadState === "loading" ? (
-            <p className="text-sm text-text-secondary">Loading…</p>
-          ) : loadState === "error" ? (
+        {browseUnsorted && !view.trash && !view.collections && !view.tags ? <div className="px-3 pb-4 sm:px-6">
+          <button ref={reviewButtonRef} type="button" aria-haspopup="dialog" disabled={loadState !== "ready" || mutationBusy || previewOpen || items.every(item => item.collectionIds.length > 0)} className="ui-control min-h-11 px-4 text-sm disabled:opacity-50" onClick={() => setReviewOpen(true)}>Review Unsorted</button>
+          <p className="mt-2 text-xs text-text-secondary">Review all items without a collection, one at a time.</p>
+        </div> : null}
+        {reviewOpen ? <UnsortedReview items={items} collections={collections} tags={tags} onClose={() => setReviewOpen(false)} onOpenItem={openInspect} returnFocus={() => reviewButtonRef.current ?? libraryHeadingRef.current} /> : null}
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col" aria-labelledby="library-heading" aria-busy={loadState === "loading" || documentSearch.pending}>
+        <ScrollPanel className="min-h-0 min-w-0 flex-1" viewportRef={mainScrollRef}
+          viewportClassName="scroll-fade px-3 pb-6 sm:px-6 [--scroll-fade-edge-opacity:0.35]">
+
+          <BackupStatusNotice />
+          {loadState === "error" ? (
             <p className="text-sm text-text-danger" role="alert">
-              {error ?? "Couldn't load items."}
+              {error ?? "Couldn't load items."} Try loading again.
+              {" "}<button type="button" className="ui-control inline-flex min-h-10 items-center px-4" onClick={() => setLoadAttempt(attempt => attempt + 1)}>Retry</button>
             </p>
           ) : (
-            <>
+            <LibraryLayoutTransition><LibraryStartupContent loading={loadState === "loading"} layout={browseLayout} columns={view.listColumns ?? "auto"}
+              kind={view.collections ? "collections" : view.tags ? "tags" : "items"}>
               {documentSearch.error || documentSearch.unavailable > 0 ? <p role="status" className="mb-3 text-sm text-text-secondary">
                 {documentSearch.error ? "Couldn't search file contents. Titles, tags, and personal notes are still searchable." : `${documentSearch.unavailable} file${documentSearch.unavailable === 1 ? " couldn't" : "s couldn't"} be searched. Try again or restore missing files from a backup.`}
                 {" "}<button type="button" className="ui-control inline-flex min-h-8 items-center px-2 text-sm" onClick={documentSearch.retry}>Retry search</button>
               </p> : null}
+              {trashUndoItems.map(item => (
+                <div key={item.id} className="mb-3 flex flex-wrap items-center gap-2 text-sm text-text-secondary">
+                  <p role="status">Moved “{itemActionLabel(item)}” to Trash.</p>
+                  <button type="button" className="ui-control inline-flex min-h-10 items-center px-4"
+                    aria-label={`Undo moving ${itemActionLabel(item)} to Trash`} disabled={mutationBusy}
+                    onClick={() => void undoTrash(item.id)}>Undo</button>
+                  <button type="button" className="ui-control inline-flex min-h-10 items-center px-4"
+                    aria-label={`Dismiss Trash notice for ${itemActionLabel(item)}`} disabled={mutationBusy}
+                    onClick={() => setTrashUndoItems(previous => previous.filter(entry => entry.id !== item.id))}>Dismiss</button>
+                </div>
+              ))}
               {trashActions.notice ? <p role="status" className="mb-3 text-sm text-text-secondary">{trashActions.notice}</p> : null}
               {trashActions.error ? <p role="alert" className="mb-3 text-sm text-text-danger">{trashActions.error}</p> : null}
               {deleteError ? (
@@ -1989,6 +2042,9 @@ export function Library() {
                 <LibraryEmptyState
                   kind={emptyStateKind}
                   message={emptyStateMessage}
+                  query={hasActiveSearch ? searchQuery : undefined}
+                  scope={emptySearchScope}
+                  onSearchEntireLibrary={searchEntireLibrary}
                   onClearFilters={clearFilters}
                 />
               ) : (
@@ -1999,23 +2055,29 @@ export function Library() {
                   scopeKey={browseScopeKey}
                   layout={browseLayout}
                   scrollRef={mainScrollRef}
+                  listColumns={view.listColumns ?? "auto"}
                   renderItem={renderLibraryItem}
                   selectedIds={selectedIds}
                   onSelectIds={setSelectedIds}
-                  keyboardDisabled={mutationBusy}
+                  keyboardDisabled={previewBusy}
+                  suspendCardTransitions={reviewOpen}
                   previewEnabled={!view.trash}
-                  onOpenItem={item => router.push(itemPageHref(item.id, libraryViewHref(pathname, mergeLibraryViewState(viewRef.current, { item: null, slide: 0 }))))}
+                  onOpenItem={openInspect}
                   empty={
                     <LibraryEmptyState
                       kind={emptyStateKind}
                       message={emptyStateMessage}
+                      query={hasActiveSearch ? searchQuery : undefined}
+                      scope={emptySearchScope}
+                      onSearchEntireLibrary={searchEntireLibrary}
                       onClearFilters={clearFilters}
                     />
                   }
                 />
               )}
-            </>
+            </LibraryStartupContent></LibraryLayoutTransition>
           )}
+        </ScrollPanel>
         </main>
         <LibraryInspect
                 item={inspectedItem}
@@ -2114,7 +2176,6 @@ export function Library() {
                     return;
                   }
                   const target = inspectedItem;
-                  setPendingDeleteId(null);
                   setDeleteError(null);
                   setEditError(null);
                   setTagError(null);
@@ -2147,7 +2208,7 @@ export function Library() {
                   setTagErrorItemId(null);
                   setCollectionError(null);
                   setCollectionErrorItemId(null);
-                  setPendingDeleteId(inspectedItem.id);
+                  void moveItemToTrash(inspectedItem.id);
                 }}
                 tagSuggestions={tagSuggestions}
                 collectionSuggestions={collectionSuggestions}
@@ -2184,22 +2245,6 @@ export function Library() {
         >
           {organizationDelete?.kind === "collections" ? <CollectionDeleteOptions value={collectionDeleteDestination} busy={pendingMutation?.op === "bulk-delete"} onChange={setCollectionDeleteDestination} /> : null}
         </ConfirmDialog>
-        <ConfirmDialog
-          open={deleteItemTarget !== null}
-          title="Move this item to Trash?"
-          description={deleteItemTarget ? `Move “${itemActionLabel(deleteItemTarget)}” to Trash? You can restore it later.` : ""}
-          confirmLabel="Move to Trash"
-          pendingLabel="Moving…"
-          busy={pendingMutation?.op === "delete"}
-          error={deleteError}
-          confirmRef={confirmDeleteRef}
-          onConfirm={() => {
-            if (deleteItemTarget) void confirmDelete(deleteItemTarget.id);
-          }}
-          onOpenChange={(open) => {
-            if (!open) cancelDelete();
-          }}
-        />
         <ConfirmDialog
           open={deleteCollectionTarget !== null}
           title="Delete collection?"

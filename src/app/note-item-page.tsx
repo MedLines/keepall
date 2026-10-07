@@ -1,5 +1,8 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+import { ItemPreviewContentTransition } from "./item-view-transition";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -33,7 +36,10 @@ import { NoteContent } from "./note-content";
 import { NoteItemEditDialog, type NoteDetailsDraft } from "./item-edit-dialog";
 import { PlusIcon } from "./shell-icons";
 import { ItemPageHeader } from "./item-page-header";
+import { ItemPageLoading } from "./library-loading-content";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
+
+import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
 
 type LoadState =
   | { status: "loading" | "missing" | "error" }
@@ -42,12 +48,16 @@ type LoadState =
 export function NoteItemPage({
   itemId,
   returnHref,
+  initialSnapshot,
 }: {
   itemId: string;
   returnHref: string;
+  initialSnapshot?: ItemNavigationSnapshot;
 }) {
   const router = useRouter();
-  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [state, setState] = useState<LoadState>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "note"
+    ? { status: "ready", note: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
+    : { status: "loading" });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -83,11 +93,10 @@ export function NoteItemPage({
   }, [itemId]);
 
 
+  if (state.status === "loading") return <ItemPageLoading returnHref={returnHref} />;
   if (state.status !== "ready") {
     const message =
-      state.status === "loading"
-        ? "Loading note…"
-        : state.status === "missing"
+      state.status === "missing"
           ? "Note not found."
           : "Couldn't load this note.";
     return (
@@ -257,17 +266,19 @@ export function NoteItemPage({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+    <div className={`${initialSnapshot ? "" : "item-startup-content"} flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary`}>
       <ItemPageHeader returnHref={returnHref} title={title} />
 
-      <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
+      <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
         <div className={ITEM_PAGE_GRID}>
           <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-4xl lg:pt-6">
             <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-4xl">
               {title}
             </h1>
             <article className="mt-9 border-t border-border-control pt-8">
+              <ItemPreviewContentTransition itemId={itemId}>
               <NoteContent content={noteReadingBody(note)} format={note.format === "markdown" ? "markdown" : "plain"} headingStart={2} />
+              </ItemPreviewContentTransition>
             </article>
           </div>
 
@@ -298,7 +309,7 @@ export function NoteItemPage({
             }
           />
         </div>
-      </main>
+      </ScrollPanel>
 
       {editing ? <NoteItemEditDialog
         key={itemId} item={note} open busy={saving} error={editError}

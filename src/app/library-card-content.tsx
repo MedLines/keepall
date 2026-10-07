@@ -1,23 +1,20 @@
 "use client";
 
-import Link from "next/link";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip } from "@base-ui/react/tooltip";
+
 import { SearchHighlight, SearchResult } from "./search-highlight";
 import type { SearchExcerpt } from "@/domain/search";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { itemListTitle, type Item } from "@/domain/item";
-import { imageCardSecondary, linkCardHost, noteCardExcerpt } from "@/domain/card-display";
-import { documentFormatLabel } from "@/domain/document";
-import { CloseIcon, CollectionIcon, HashIcon, LinkIcon, NoteIcon, PdfIcon, PinIcon } from "./shell-icons";
-
-function LinkSource({ host, query }: { host: string; query: string }) {
-  return (
-    <div className="mb-3 flex min-w-0 items-center gap-2 pr-9 text-xs text-text-secondary">
-      <LinkIcon className="size-4" />
-      <span className="truncate"><SearchHighlight text={host} query={query} /></span>
-    </div>
-  );
-}
+import { imageCardSecondary } from "@/domain/card-display";
+import { noteReadingBody } from "@/domain/note";
+import { CloseIcon, CollectionIcon, HashIcon } from "./shell-icons";
+import { LibraryDocumentCard } from "./library-document-card";
+import { LibraryReadingCard } from "./library-reading-card";
+import { CardNote, CardPin, CardSource } from "./library-card-details";
+import { SHELL_TOOLTIP } from "./shell-styles";
 
 function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
   id: string;
@@ -31,8 +28,8 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
   return (
     <motion.div
       id={id}
-      className="ui-popover ui-scrollbar absolute right-0 top-[calc(100%+8px)] z-40 max-h-[min(20rem,50dvh)] w-64 max-w-[calc(100vw-6rem)] overflow-y-auto"
-      style={{ transformOrigin: "top right", pointerEvents: isPresent ? "auto" : "none" }}
+      className="library-tag-popover ui-popover flex flex-col overflow-hidden absolute end-0 top-[calc(100%+8px)] z-40 max-h-[min(20rem,50dvh)] w-48 max-w-[calc(100vw-6rem)]"
+      style={{ pointerEvents: isPresent ? "auto" : "none" }}
       inert={!isPresent}
       aria-hidden={!isPresent}
       initial={reduceMotion ? false : { opacity: 0, scale: 0.95 }}
@@ -40,14 +37,16 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
       exit={reduceMotion ? undefined : { opacity: 0, scale: 0.95, transition: { duration: 0.1, ease: [0.2, 0, 0, 1] } }}
       transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.2, 0, 0, 1] }}
     >
+      <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
       <ul aria-label="Tags" className="flex min-w-0 flex-col gap-1">
         {tags.map(tag => {
-          return <li key={tag.id} className="squircle-panel flex min-w-0 items-center rounded-control-sm hover:bg-bg-active focus-within:bg-bg-active">
-            <button type="button" title={tag.name} className="ui-menu-item min-w-0 flex-1 truncate text-start text-sm text-text-primary hover:bg-transparent" onClick={() => onBrowseTag(tag.id)}>{tag.name}</button>
-            <button type="button" title={`Remove ${tag.name}`} aria-label={`Remove tag ${tag.name}`} className="squircle-panel flex size-10 shrink-0 items-center justify-center rounded-control-sm text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => onRemoveTag(tag.id)}><CloseIcon /></button>
+          return <li key={tag.id} className="library-tag-row squircle-panel flex min-w-0 items-center rounded-control-sm hover:bg-bg-active focus-within:bg-bg-active">
+            <button type="button" className="ui-menu-item min-w-0 flex-1 truncate text-start text-sm text-text-primary hover:bg-transparent" onClick={() => onBrowseTag(tag.id)}>{tag.name}</button>
+            <button type="button" aria-label={`Remove tag ${tag.name}`} className="library-tag-remove squircle-panel flex size-7 shrink-0 items-center justify-center rounded-control-sm text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => onRemoveTag(tag.id)}><CloseIcon className="size-4" /></button>
           </li>;
         })}
       </ul>
+      </ScrollArea>
     </motion.div>
   );
 }
@@ -64,80 +63,39 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
   const readOnly = item.deletedAt !== undefined;
   const wrap = (content: ReactNode) => <SearchResult item={item} query={query} tagNames={tagNames} excerpt={searchExcerpt}>{content}</SearchResult>;
   if (item.type === "document") {
-    const body = <>
-      <h2 className="break-words text-lg font-semibold leading-snug"><SearchHighlight text={itemListTitle(item)} query={query} /></h2>
-      <p className="mt-2 break-all text-sm text-text-secondary"><SearchHighlight text={item.sourceFileName} query={query} /></p>
-      <span className="mt-4 block text-xs font-medium">{item.format === "pdf" ? "Read PDF →" : "Read note →"}</span>
-    </>;
-    return wrap(<div className="min-w-0">
-      <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary">{item.format === "pdf" ? <PdfIcon className="size-4" /> : <NoteIcon className="size-4" />}{documentFormatLabel(item.format)}{pinned ? <PinIcon className="ms-auto size-4" /> : null}</div>
-      {readOnly ? <h2 className="break-words text-lg font-semibold">{itemListTitle(item)}</h2> : openHref ? <Link href={openHref} prefetch={false} className="block min-w-0 rounded-control-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">{body}</Link> : <button type="button" className="block w-full min-w-0 rounded-control-sm text-left" onClick={onOpen}>{body}</button>}
-    </div>);
+    return wrap(<LibraryDocumentCard item={item} query={query} pinned={pinned} openHref={openHref} onOpen={onOpen} />);
   }
   if (item.type === "note") {
-    const title = itemListTitle(item);
-    const excerpt = noteCardExcerpt(item);
-    const body = <>
-      <h2 className="text-lg font-semibold leading-snug text-text-primary [overflow-wrap:anywhere]"><SearchHighlight text={title} query={query} /></h2>
-      {excerpt ? <p className="mt-2 break-words text-sm leading-6 text-text-secondary"><SearchHighlight text={excerpt} query={query} /></p> : null}
-      {!readOnly ? <span className="mt-4 block text-xs font-medium text-text-secondary">Read note →</span> : null}
-    </>;
-    return wrap(
-      <div className="min-w-0">
-        <div className="mb-3 flex items-center gap-1.5 text-xs text-text-secondary"><NoteIcon className="size-4" />Note{pinned ? <PinIcon className="ms-auto size-4" /> : null}</div>
-        {readOnly ? <div>{body}</div> : openHref ? <Link href={openHref} prefetch={false} className="block min-w-0 rounded-control-sm text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">{body}</Link> : <button type="button" onClick={onOpen} className="block min-w-0 w-full rounded-control-sm text-start">{body}</button>}
-        <p className="mt-4 text-xs text-text-secondary">{readOnly ? "Moved to Trash" : "Edited"} <time dateTime={new Date(item.updatedAt).toISOString()}>{new Date(item.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</time></p>
-      </div>
-    );
+    return wrap(<LibraryReadingCard item={item} text={noteReadingBody(item) || item.content} query={query} pinned={pinned} openHref={openHref} onOpen={onOpen} />);
   }
   const title = item.type === "link" && !item.title.trim() && !item.previewTitle.trim()
     ? item.url.replace(/^https?:\/\//, "")
     : item.type === "image" ? item.title.trim() : itemListTitle(item);
-  const description = item.type === "link" ? item.previewDescription : item.type === "image" ? imageCardSecondary(item) : "";
-  if (item.type === "image" && !title && !description && !pinned) return query.trim() ? wrap(null) : null;
+  if (item.type === "image" && !title && !imageCardSecondary(item) && !pinned) return query.trim() ? wrap(null) : null;
   const TitleRow = title ? "h2" : "div";
+  const hasLinkImage = item.type === "link" && Boolean(item.previewAssetId);
   return wrap(
-    <div className="min-w-0">
-      {item.type === "link" ? <LinkSource key={item.url} host={linkCardHost(item)} query={query} /> : null}
-      {title || pinned ? <TitleRow className={`flex min-w-0 items-start gap-1.5 leading-snug ${item.type === "link" ? "text-xl font-semibold" : "text-sm font-medium"}`}>
-        {pinned ? (
-          <span
-            title="Pinned in this collection"
-            className="mt-0.5 flex size-4 shrink-0 items-center justify-center text-text-secondary"
-          >
-            <PinIcon className="size-4" />
-            <span className="sr-only">Pinned in this collection</span>
-          </span>
-        ) : null}
-        {item.type === "link" ? (
-          <a href={item.url} target="_blank" rel="noreferrer" title={title} className="min-w-0 flex-1 line-clamp-2 break-words underline-offset-2 hover:underline"><SearchHighlight text={title} query={query} /></a>
-        ) : readOnly ? <span className="min-w-0 flex-1 truncate"><SearchHighlight text={title} query={query} /></span> : title ? (
-          <button type="button" onClick={onOpen} title={title} className={`${item.type === "image" ? "truncate" : "line-clamp-2 break-words"} min-w-0 flex-1 text-left underline-offset-2 hover:underline`}><SearchHighlight text={title} query={query} /></button>
-        ) : null}
+    <div className="library-card-copy">
+      {title || pinned ? <TitleRow className={`library-card-title ${item.type === "link" && !hasLinkImage ? "library-card-title-fallback" : ""}`}>
+        {pinned ? <CardPin /> : null}
+        {item.type === "link" ? <a href={item.url} target="_blank" rel="noopener noreferrer" className="library-card-title-action library-card-hit-area"><span><SearchHighlight text={title} query={query} /></span></a>
+          : readOnly ? <span className="min-w-0 flex-1 truncate"><SearchHighlight text={title} query={query} /></span> : title ? <button type="button" onClick={onOpen} className="library-card-title-action library-card-hit-area"><span><SearchHighlight text={title} query={query} /></span></button> : null}
       </TitleRow> : null}
-      {description ? <p className="mt-2 line-clamp-2 break-words text-sm leading-relaxed text-text-secondary">
-        {item.type === "image" && !item.caption && item.sourceUrl ? (
-          <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" title={item.sourceUrl} className="rounded-sm underline-offset-2 hover:text-text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">
-            <SearchHighlight text={description} query={query} />
-          </a>
-        ) : <SearchHighlight text={description} query={query} />}
-      </p> : null}
-      {item.type === "link" && openHref ? (
-        <Link href={openHref} prefetch={false} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-control-sm text-sm font-medium text-text-primary underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus">
-          <NoteIcon className="size-4" />
-          {item.noteContent?.trim() ? "Read my note" : "Add a note"} <span aria-hidden="true">→</span>
-        </Link>
-      ) : null}
+      {item.type === "link" && item.previewDescription ? <p className={`library-card-description ${hasLinkImage ? "line-clamp-1" : "line-clamp-2"}`}><SearchHighlight text={item.previewDescription} query={query} /></p> : null}
+      {item.type === "link" ? <CardSource url={item.url} query={query} /> : item.type === "image" && item.sourceUrl ? <CardSource url={item.sourceUrl} query={query} /> : null}
+      {item.type === "link" ? <CardNote content={item.noteContent ?? ""} format={item.noteFormat} title={itemListTitle(item)} openHref={openHref} onOpen={onOpen} readOnly={readOnly} query={query} />
+        : item.type === "image" ? <CardNote content={item.caption} format={item.captionFormat} title={itemListTitle(item)} openHref={openHref} onOpen={onOpen} readOnly={readOnly} query={query} /> : null}
     </div>
   );
 }
 
-export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onBrowseTag, onRemoveTag }: {
+export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onBrowseTag, onRemoveTag, className = "" }: {
   collections: { id: string; name: string }[];
   tags: { id: string; name: string }[];
   onBrowseCollection: (id: string) => void;
   onBrowseTag: (id: string) => void;
   onRemoveTag: (id: string) => void;
+  className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const id = useId();
@@ -166,20 +124,33 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
 
   if (!collections.length && !tags.length) return null;
   return (
-    <div className="mt-1 text-xs text-text-secondary">
+    <div className={`library-card-metadata text-xs text-text-secondary ${className}`}>
       <div className="flex min-h-8 items-center justify-between gap-2">
         {collections.length ? <ul aria-label="Collections" className="min-w-0 flex-1">
-          {collections.map(collection => <li key={collection.id} className="min-w-0">
-            <button type="button" className="flex min-h-8 max-w-full items-center gap-1.5 rounded-md px-1.5 text-left hover:bg-bg-raised hover:text-text-primary" title={collection.name} onClick={() => onBrowseCollection(collection.id)}>
+          {collections.map(collection => <li key={collection.id} className="min-w-0"><Tooltip.Root>
+            <Tooltip.Trigger type="button" delay={100} className="library-card-metadata-pill max-w-full rounded-full" aria-label={collection.name} aria-describedby={`${id}-collection-${collection.id}`} onClick={() => onBrowseCollection(collection.id)}>
               <CollectionIcon className="size-4 shrink-0" />
               <span className="truncate">{collection.name}</span>
-            </button>
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Positioner side="top" sideOffset={8} className="z-[100]">
+                <Tooltip.Popup id={`${id}-collection-${collection.id}`} role="tooltip" className={SHELL_TOOLTIP}>{collection.name}</Tooltip.Popup>
+              </Tooltip.Positioner>
+            </Tooltip.Portal>
+          </Tooltip.Root>
           </li>)}
         </ul> : <span />}
         {tags.length ? <div ref={rootRef} className="library-card-tag-control relative shrink-0">
-          <button ref={triggerRef} type="button" aria-expanded={expanded} aria-controls={id} className="squircle-panel flex min-h-8 items-center gap-1.5 rounded-control bg-bg-raised px-2 text-text-secondary hover:text-text-primary active:scale-[0.96] motion-reduce:active:scale-100" onClick={() => {
+          <Tooltip.Root disabled={expanded}>
+          <Tooltip.Trigger ref={triggerRef} type="button" delay={100} closeDelay={100} aria-label={`${tags.length} ${tags.length === 1 ? "tag" : "tags"}`} aria-describedby={`${id}-tag-preview`} aria-expanded={expanded} aria-controls={id} className="library-card-metadata-pill rounded-full" onClick={() => {
             setExpanded(!expanded);
-          }}><HashIcon className="size-3.5" />{tags.length} {tags.length === 1 ? "tag" : "tags"}</button>
+          }}><HashIcon className="size-4" /><span>{tags.length}<span className="library-card-tag-label"> {tags.length === 1 ? "tag" : "tags"}</span></span></Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Positioner side="top" align="end" sideOffset={8} collisionPadding={8} className="z-[100]">
+              <Tooltip.Popup id={`${id}-tag-preview`} role="tooltip" className={`${SHELL_TOOLTIP} max-w-72 whitespace-normal [overflow-wrap:anywhere]`}>{tags.map(tag => tag.name).join(", ")}</Tooltip.Popup>
+            </Tooltip.Positioner>
+          </Tooltip.Portal>
+          </Tooltip.Root>
           <AnimatePresence>
             {expanded ? <TagPopover
               key="tags"

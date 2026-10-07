@@ -1,6 +1,10 @@
 "use client";
 
+import { ArticleReader } from "./article-reader";
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import Link from "next/link";
+import { ItemPageLoading } from "./library-loading-content";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useEffect, useState } from "react";
@@ -30,19 +34,23 @@ import { LinkItemEditDialog, type LinkDetailsDraft } from "./item-edit-dialog";
 import { LinkIcon } from "./shell-icons";
 import { ItemPageHeader } from "./item-page-header";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
+import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+import { ItemPreviewContentTransition } from "./item-view-transition";
 
 type LoadState =
   | { status: "loading" | "missing" | "error" }
   | { status: "ready"; link: LinkItem; tags: Tag[]; collections: Collection[] };
 
-export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHref: string }) {
+export function LinkItemPage({ itemId, returnHref, initialSnapshot }: { itemId: string; returnHref: string; initialSnapshot?: ItemNavigationSnapshot }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [itemMutation, setItemMutation] = useState<"save" | "delete" | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [state, setState] = useState<LoadState>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "link"
+    ? { status: "ready", link: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
+    : { status: "loading" });
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
   const [organizeMutation, setOrganizeMutation] = useState<"tag" | "collection" | null>(null);
@@ -74,12 +82,12 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
 
   const busy = organizeMutation !== null || itemMutation !== null;
   const link = state.link;
-  const title = link.title.trim() || link.previewTitle.trim() || link.url;
+  const title = link.title.trim() || link.article?.title || link.previewTitle.trim() || link.url;
   const itemTags = resolveItemTags(link, new Map(state.tags.map((tag) => [tag.id, tag])));
   const itemCollections = resolveItemCollections(link, new Map(state.collections.map((collection) => [collection.id, collection])));
 
   function applyLinkUpdate(updated: LinkItem, extra?: { tag?: Tag; collection?: Collection }) {
-    setState((current) => current.status === "ready" ? {
+    setState((current) => current.status === "ready" && current.link.id === updated.id ? {
       ...current,
       link: updated,
       tags: extra?.tag && !current.tags.some((tag) => tag.id === extra.tag?.id)
@@ -183,13 +191,14 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+    <div className={`${initialSnapshot ? "" : "item-startup-content"} flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary`}>
       <ItemPageHeader returnHref={returnHref} title={title} sourceUrl={link.url} />
 
-      <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
+      <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
         <div className={ITEM_PAGE_GRID}>
-          <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
-            <div className="squircle-panel overflow-hidden rounded-panel border border-border-control bg-bg-surface">
+          <ItemPreviewContentTransition itemId={itemId}>
+          <div className="row-start-1 min-w-0 lg:col-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
+            {!link.article ? <div className="squircle-panel overflow-hidden rounded-panel border border-border-control bg-bg-surface">
               {link.previewAssetId ? <LibraryItemMedia item={link} variant="card" className="max-h-96 w-full" /> : null}
               <div className="px-5 pb-6 pt-5 sm:px-7">
                 <div className="flex min-w-0 items-center gap-2 text-sm text-text-secondary"><LinkIcon className="size-4" />{linkCardHost(link)}</div>
@@ -197,9 +206,11 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
                 {link.previewDescription ? <p className="mt-3 text-sm leading-relaxed text-text-secondary">{link.previewDescription}</p> : null}
                 <a href={link.url} target="_blank" rel="noopener noreferrer" className="mt-4 block break-all text-sm text-text-secondary underline underline-offset-2 hover:text-text-primary">{link.url}</a>
               </div>
-            </div>
+            </div> : null}
 
-            <section aria-labelledby="personal-note-heading" className="mt-10 border-t border-border-control pt-7">
+            <ArticleReader key={`${link.id}:${link.url}`} link={link} disabled={busy} onSaved={applyLinkUpdate} />
+
+            <section aria-labelledby="personal-note-heading" className={`mt-10 border-t border-border-control pt-7 ${link.article ? "mx-auto max-w-[46rem] px-2 sm:px-7" : ""}`}>
               <h2 id="personal-note-heading" className="text-xl font-semibold">My note</h2>
               {link.noteContent?.trim() ? (
                 <article className="mt-6"><NoteContent content={link.noteContent} format={link.noteFormat === "markdown" ? "markdown" : "plain"} headingStart={2} /></article>
@@ -208,6 +219,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
               )}
             </section>
           </div>
+          </ItemPreviewContentTransition>
 
           <ItemLibraryDetails
             label="Link details"
@@ -216,9 +228,8 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
             tags={itemTags}
             createdAt={link.createdAt}
             updatedAt={link.updatedAt}
-            className={ITEM_DETAILS_POSITION}
+            className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2`}
             disabled={busy}
-            editDisabled={editing}
             deleteLabel="Move link to Trash"
             onEdit={() => {
               setEditError(null);
@@ -236,7 +247,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
             }}
           />
         </div>
-      </main>
+      </ScrollPanel>
 
       {editing ? <LinkItemEditDialog item={link} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}
       <ConfirmDialog open={deleteOpen} title="Move this link to Trash?" description={`Move “${itemActionLabel(link)}” to Trash? You can restore it later.`} confirmLabel="Move to Trash" pendingLabel="Moving…" busy={itemMutation === "delete"} error={deleteError} onConfirm={() => void confirmDelete()} onOpenChange={(open) => {
@@ -267,7 +278,8 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
 }
 
 function LinkPageUnavailable({ status, returnHref }: { status: "loading" | "missing" | "error"; returnHref: string }) {
-  const message = status === "loading" ? "Loading link…" : status === "missing" ? "Link not found." : "Couldn't load this link.";
+  if (status === "loading") return <ItemPageLoading returnHref={returnHref} />;
+  const message = status === "missing" ? "Link not found." : "Couldn't load this link.";
   return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5">
     <div className="text-center">
       <p className="text-text-secondary">{message}</p>

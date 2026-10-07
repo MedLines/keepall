@@ -89,11 +89,17 @@ export const SHELL_PANEL_ROW_ACTIVE = SHELL_NAV_ITEM_ACTIVE;
 export const SHELL_TOP_BTN =
   "ui-control inline-flex h-10 items-center gap-1.5 px-3 text-sm font-medium disabled:opacity-60";
 
+export const SHELL_DESTRUCTIVE_BTN =
+  "text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger";
+
 export const SHELL_TOP_BTN_ACTIVE =
   "ui-primary";
 
 export const SHELL_TOP_BTN_IDLE =
   "text-text-secondary";
+
+export const SHELL_TOOLTIP =
+  "rounded-control-sm border border-border-control bg-bg-surface px-2.5 py-1.5 text-xs font-medium text-text-primary shadow-menu transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0";
 
 /** Sidebar sits behind the inset content panel. */
 export const SHELL_ASIDE =

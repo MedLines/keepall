@@ -1,3 +1,4 @@
+import type { SavedArticle } from "./article";
 import { isHttpUrl } from "./classify";
 
 export type LinkPreviewStatus = "idle" | "pending" | "ready" | "failed";
@@ -17,6 +18,7 @@ export type LinkItem = {
   noteContent?: string;
   /** Absence means plain text for older links. */
   noteFormat?: "markdown";
+  article?: SavedArticle;
   previewStatus: LinkPreviewStatus;
   previewTitle: string;
   previewDescription: string;
@@ -251,7 +253,7 @@ export function applyLinkEdit(
     ...(input.noteFormat !== undefined
       ? { noteFormat: input.noteFormat === "markdown" ? "markdown" as const : undefined }
       : {}),
-    ...(urlChanged ? EMPTY_LINK_PREVIEW : {}),
+    ...(urlChanged ? { ...EMPTY_LINK_PREVIEW, article: undefined } : {}),
     updatedAt: options?.now ?? Date.now(),
   };
 }
@@ -334,6 +336,8 @@ export function linkListTitle(link: LinkItem): string {
   if (link.title) {
     return link.title;
   }
+
+  if (link.article?.title) return link.article.title;
 
   if (link.previewTitle) {
     return link.previewTitle;

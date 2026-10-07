@@ -8,6 +8,7 @@ import {
 } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { itemActionLabel } from "@/domain/item-label";
 import { itemListTitle, type Item } from "@/domain/item";
 import type { LibraryLayout } from "@/domain/library-view";
@@ -17,13 +18,16 @@ import {
   useBrowseChromeVisible,
 } from "./item-media-layout";
 import { LibraryItemMedia } from "./library-item-media";
+import { LibraryVideoPreview } from "./library-video-preview";
+import { prepareDocumentNavigationPreview } from "./item-navigation-snapshot";
 import { usePreviewEnrichViewport } from "./use-preview-enrich-viewport";
 import { LibrarySelectionControl } from "./library-selection-control";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
-import { DeleteIcon, ImagesIcon, MoreIcon, PlayIcon } from "./shell-icons";
+import { DeleteIcon, MoreIcon, PlayIcon } from "./shell-icons";
+import { ItemTypeBadge } from "./item-type-icon";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import type { MasonryPlacement } from "./library-masonry";
-import { LibraryListContent, LibraryListMetadata } from "./library-list-content";
+import { LibraryListContent } from "./library-list-content";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ItemContextMenu } from "./item-context-menu";
 import { requestManualPreviewEnrich } from "./preview-enrich-coordinator";
@@ -73,7 +77,8 @@ export type LibraryItemProps = {
   inspected: boolean;
   openHref?: string;
   onOpenInspect: () => void;
-  onPreview?: () => void;
+  onPrepareOpen?: (animate: boolean) => void;
+  onPreview?: (animate?: boolean) => void;
   tagNames: { id: string; name: string }[];
   tagError: string | null;
   collections: { id: string; name: string }[];
@@ -121,6 +126,7 @@ export function LibraryItem({
   inspected,
   openHref,
   onOpenInspect,
+  onPrepareOpen,
   onPreview,
   tagNames,
   tagError,
@@ -163,8 +169,19 @@ export function LibraryItem({
   const [organizerSide, setOrganizerSide] = useState<"left" | "right">("right");
   const [imageRatio, setImageRatio] = useState(1.6);
   const [fetchingPreview, setFetchingPreview] = useState(false);
+  const [videoHovered, setVideoHovered] = useState(false);
+  const stopVideoPreview = useCallback(() => setVideoHovered(false), []);
   const actionsRef = useRef<HTMLButtonElement>(null);
   const reduceMotion = useReducedMotion();
+  const router = useRouter();
+  const [prefetchOnIntent, setPrefetchOnIntent] = useState(false);
+  const prepareRoute = () => {
+    if (!selectionActive && !trashActions && openHref?.startsWith("/items/")) {
+      setPrefetchOnIntent(true);
+      if (item.type === "document") prepareDocumentNavigationPreview(item);
+      if (item.type === "note") router.prefetch(openHref);
+    }
+  };
 
   const checkboxVisible = selected || selectionActive;
   const availableTagSuggestions = tagSuggestions.filter(
@@ -177,11 +194,13 @@ export function LibraryItem({
   const title = itemListTitle(item);
   const actionLabel = itemActionLabel(item);
   const isList = layoutMode === "list";
+  const videoPreviewEnabled = item.type === "video" && !reduceMotion && !selectionActive && !trashActions && !inspected && !editing && !pendingDelete && !isDragging && !organizerOpen;
   const hasGridFooter = item.type !== "image" || Boolean(
     trashActions || searchQuery.trim() || item.title.trim() || item.caption.trim() || item.sourceUrl ||
     (pinVisible && pinned) || collections.length || tagNames.length || pendingDelete
   );
-  const hasMedia = item.type === "image" || item.type === "link" || item.type === "video";
+  const isPdf = item.type === "document" && item.format === "pdf";
+  const hasMedia = item.type === "image" || item.type === "link" || item.type === "video" || isPdf;
   const rowRef = useRef<HTMLLIElement>(null);
   const measureElement = placement?.measureElement;
   const setRowRef = useCallback((node: HTMLLIElement | null) => {
@@ -206,10 +225,11 @@ export function LibraryItem({
   /* Cover morphs; sizing on the motion node only (avoids double-box stretch). */
   const mediaSlot = (
     <div
+      data-kind={isList ? item.type : undefined}
       className={
         isList
-          ? "library-list-thumbnail relative shrink-0 overflow-hidden rounded-lg bg-bg-raised"
-          : `library-card-media squircle-panel relative ${hasGridFooter && (item.type === "link" || !openHref) ? "mb-3" : ""}`
+          ? "library-list-thumbnail squircle-panel relative shrink-0 overflow-hidden bg-bg-reading"
+          : "library-card-media squircle-panel relative"
       }
     >
       {inspected ? (
@@ -225,7 +245,7 @@ export function LibraryItem({
               ? "size-full"
               : item.type === "link"
                 ? "w-full"
-                : trashActions ? "w-full" : "w-full cursor-pointer"
+                : trashActions ? "w-full" : "library-card-open w-full cursor-pointer"
           }
           onClick={
             trashActions || isList || item.type === "link" || openHref
@@ -252,6 +272,7 @@ export function LibraryItem({
             item={item}
             variant={isList ? "card" : "grid"}
             compact={isList}
+            faviconOnly={isList && item.type === "link"}
             onImageLoad={setImageRatio}
             className={isList ? "!aspect-auto h-full w-full object-cover" : ""}
           />
@@ -260,29 +281,22 @@ export function LibraryItem({
       {!isList && item.type === "link" && !inspected ? (
         <a
           aria-label={title}
-          className="absolute inset-0 z-[1]"
+          className="library-card-open absolute inset-0 z-[1]"
           draggable={false}
           href={item.url}
           rel="noreferrer"
           target="_blank"
         />
       ) : null}
-      {item.type === "video" && !inspected ? (
+      {item.type === "video" ? <LibraryVideoPreview assetId={item.assetId} active={videoPreviewEnabled && videoHovered} onStop={stopVideoPreview} /> : null}
+      {item.type === "video" && isList && !inspected ? (
         <span data-testid="video-play-overlay" aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 grid place-items-center">
-          <span className={`grid place-items-center rounded-full border border-white/45 bg-black/30 text-white/85 shadow-md ${isList ? "size-9" : "size-16"}`}>
-            <PlayIcon className={isList ? "size-5" : "size-8"} />
+          <span className="grid size-8 place-items-center rounded-full border border-border-media bg-bg-media/70 text-text-on-media backdrop-blur-sm">
+            <PlayIcon className="size-4" />
           </span>
         </span>
       ) : null}
-      {!isList && item.type === "image" && item.assetIds.length > 1 && !inspected ? (
-        <span
-          className="library-card-media-chrome pointer-events-none absolute bottom-2 end-2 z-10 flex min-h-11 items-center gap-1.5 px-3 text-xs font-medium tabular-nums"
-          aria-label={`${item.assetIds.length} images`}
-        >
-          <ImagesIcon className="size-4" />
-          {item.assetIds.length}
-        </span>
-      ) : null}
+      {!isList && hasMedia && !inspected ? <ItemTypeBadge item={item} /> : null}
     </div>
   );
 
@@ -292,9 +306,9 @@ export function LibraryItem({
       aria-label={`Actions for ${actionLabel}`}
       data-item-actions={item.id}
       disabled={mutationBusy}
-      className={`library-card-actions absolute z-30 flex cursor-pointer items-center justify-center text-text-secondary hover:text-text-primary disabled:cursor-default ${isList ? "end-0 top-5 size-10 rounded-control hover:bg-bg-raised" : "library-card-media-chrome end-4 top-4 size-11"}`}
+      className={`library-card-actions absolute z-30 flex cursor-pointer items-center justify-center text-text-secondary hover:text-text-primary disabled:cursor-default ${isList ? "library-list-actions library-card-media-chrome" : "library-card-media-chrome library-card-corner-control library-card-corner-end"}`}
     >
-      <MoreIcon />
+      <MoreIcon className="size-4" />
     </button>
   ) : null;
 
@@ -349,10 +363,17 @@ export function LibraryItem({
       aria-description="Arrow keys browse in result order. Shift and an arrow selects a range. Space previews. Enter opens the full item."
       aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Space Enter Shift+ArrowLeft Shift+ArrowRight Shift+ArrowUp Shift+ArrowDown"
       draggable={dragEnabled}
-      className={`library-item-root min-w-0 rounded-control-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-border-focus focus-within:z-10 ${isList ? "@container" : ""} ${isDragging ? "opacity-50" : ""}`}
+      className={`library-item-root min-w-0 focus-within:z-10 ${isList ? "@container library-list-item" : ""} ${isDragging ? "opacity-50" : ""}`}
       onDragStart={onItemDragStart}
       onDragEnd={onItemDragEnd}
+      onPointerEnter={event => { prepareRoute(); if (videoPreviewEnabled && event.pointerType === "mouse") setVideoHovered(true); }}
+      onPointerMove={event => { if (videoPreviewEnabled && event.pointerType === "mouse") setVideoHovered(true); }}
+      onPointerLeave={stopVideoPreview}
+      onFocus={prepareRoute}
+      onTouchStart={prepareRoute}
       onClickCapture={event => {
+        const link = (event.target as HTMLElement).closest("a");
+        if (!selectionActive && link?.getAttribute("href")?.startsWith("/items/")) onPrepareOpen?.(event.detail > 0);
         if (!selectionActive || (event.target as HTMLElement).closest("label[data-visible], [data-item-actions]")) return;
         if (!event.currentTarget.contains(event.target as Node)) return;
         event.preventDefault();
@@ -447,8 +468,8 @@ export function LibraryItem({
         data-selected={selected || undefined}
         className={
           isList
-            ? "library-list-row group relative flex items-start gap-3 rounded-control-lg border-b border-border-edge px-3 py-4"
-            : "library-card squircle-panel group relative flex flex-col rounded-card p-card-inset"
+            ? "library-list-row squircle-panel group relative flex items-start gap-3"
+            : `library-card squircle-panel group relative flex flex-col rounded-card pt-[8px] pr-[8px] pl-[8px] ${hasGridFooter ? "pb-[2px]" : "pb-[8px]"}`
         }
       >
       {trigger}
@@ -460,8 +481,8 @@ export function LibraryItem({
         onToggle={onToggleSelect}
         className={
           isList
-            ? `library-list-select absolute start-1 top-5 z-20 flex size-8 items-center justify-center rounded-md bg-bg-surface/95 shadow-edge ${editing || pendingDelete ? "hidden" : ""}`
-            : `library-card-media-chrome absolute start-4 top-4 z-20 flex size-11 items-center justify-center ${
+            ? `library-list-select library-card-media-chrome absolute z-20 flex items-center justify-center ${editing || pendingDelete ? "hidden" : ""}`
+            : `library-card-media-chrome library-card-corner-control library-card-corner-start absolute z-20 flex items-center justify-center ${
                 !chromeVisible
                   ? "pointer-events-none opacity-0"
                   : checkboxVisible
@@ -470,36 +491,36 @@ export function LibraryItem({
               }`
         }
       />
-      {isList ? trashActions ? <div className="shrink-0 rounded-lg">{mediaSlot}</div> : !pendingDelete ? (
+      {isList ? trashActions ? <div className="library-list-media-open shrink-0">{mediaSlot}</div> : !pendingDelete ? (
         item.type === "link" ? (
           <a
             href={item.url}
             target="_blank"
             rel="noreferrer"
             aria-label={`Open ${title}`}
-            className="shrink-0 rounded-lg"
+            className="library-list-media-open shrink-0"
           >
             {mediaSlot}
           </a>
         ) : openHref ? (
           <Link
             href={openHref}
-            prefetch={false}
+            prefetch={prefetchOnIntent}
             aria-label={`Open ${title}`}
-            className="shrink-0 rounded-lg"
+            className="library-list-media-open shrink-0"
           >
             {mediaSlot}
           </Link>
         ) : (
-          <button type="button" onClick={onOpenInspect} aria-label={`Preview ${title}`} className="shrink-0 rounded-lg">{mediaSlot}</button>
+          <button type="button" onClick={onOpenInspect} aria-label={`Preview ${title}`} className="library-list-media-open shrink-0">{mediaSlot}</button>
         )
       ) : null : hasMedia ? (
         !trashActions && openHref && item.type !== "link" ? (
           <Link
             href={openHref}
-            prefetch={false}
+            prefetch={prefetchOnIntent}
             aria-label={`Open ${title}`}
-            className={`block ${hasGridFooter ? "mb-5" : ""}`}
+            className="library-card-open block"
           >
             {mediaSlot}
           </Link>
@@ -512,7 +533,7 @@ export function LibraryItem({
         className={
           isList
             ? `min-w-0 flex-1 ${pendingDelete ? "" : "library-list-body"}`
-            : item.type === "image" ? "px-2 pb-1" : hasMedia ? "px-4 pb-3 pt-3" : "px-4 pb-3 pt-4"
+            : `library-card-footer ${hasMedia ? "library-card-footer-with-media" : ""}`
         }
         style={{ pointerEvents: chromeVisible ? "auto" : "none" }}
       >
@@ -533,7 +554,7 @@ export function LibraryItem({
             ) : <p className="text-sm font-medium">{title}</p>}
           </div>
         )}
-        {isList && !pendingDelete && !trashActions ? <LibraryListMetadata collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} /> : null}
+        {isList && !pendingDelete && !trashActions ? <LibraryCardMetadata className="library-list-metadata" collections={collections} tags={tagNames} onBrowseCollection={onBrowseCollection} onBrowseTag={onBrowseTag} onRemoveTag={onRemoveTag} /> : null}
 
         {!isList && !pendingDelete && !trashActions ? (
           <LibraryCardMetadata

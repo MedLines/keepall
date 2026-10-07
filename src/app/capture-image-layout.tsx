@@ -1,5 +1,8 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollTextarea } from "@/components/ui/scroll-textarea";
+
 import { useEffect, useRef, type RefObject } from "react";
 import { NoteEditorControls } from "./note-editor-controls";
 import { NoteContent } from "./note-content";
@@ -71,8 +74,8 @@ export function CaptureImageLayout({ mode, disabled, value, format, preview, lab
         <button type="button" className="ui-control min-h-8 shrink-0 px-2 text-xs" disabled={disabled} onClick={() => changeMode(null)}>Change image layout</button>
       </div>
       <NoteEditorControls format={format} preview={preview} disabled={disabled} onFormatChange={onFormatChange} onPreviewChange={onPreviewChange} />
-      {preview ? <section aria-label="Image note preview" className="ui-field min-h-0 flex-1 overflow-y-auto rounded-input p-3"><NoteContent content={value} format={format} /></section>
-        : <textarea ref={inputRef} id="capture-image-caption" aria-label={label} className="ui-field min-h-0 flex-1 resize-none rounded-input px-4 py-3 text-sm disabled:opacity-60"
+      {preview ? <ScrollArea role="region" aria-label="Image note preview" className="ui-field min-h-0 flex-1 rounded-input" viewportClassName="scroll-fade"><div className="p-3"><NoteContent content={value} format={format} /></div></ScrollArea>
+        : <ScrollTextarea ref={inputRef} id="capture-image-caption" aria-label={label} className="ui-field min-h-0 flex-1 resize-none rounded-input px-4 py-3 text-sm disabled:opacity-60"
           placeholder="Optional source URL or caption" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />}
     </div>
   </div>;

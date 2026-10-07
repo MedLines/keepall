@@ -58,6 +58,7 @@ test("choose, save, reload, retain three backups, and turn off without deleting 
   await expect(backup.getByRole("button", { name: "Back up now" })).toBeEnabled();
   await expect(backup.locator("time")).toBeVisible();
   await expect(backup).toContainText("Keepall Backups");
+  await expect(backup).toContainText("Up to date");
   await page.reload();
   await expect(backup.getByRole("button", { name: "Back up now" })).toBeEnabled();
   await expect(backup.locator("time")).toBeVisible();
@@ -95,6 +96,7 @@ test("revoked permission is checked on reload and requested only by reconnecting
   await page.getByRole("link", { name: "Back to library" }).click();
   await addNote(page, "Pending before permission was revoked");
   await page.goto("/settings#storage");
+  await expect(backup).toContainText("Changes waiting for backup");
   await page.addInitScript(() => {
     (window as unknown as { permissionOverride: string; denyReconnect: boolean }).permissionOverride = "prompt";
     (window as unknown as { denyReconnect: boolean }).denyReconnect = true;
@@ -113,6 +115,7 @@ test("revoked permission is checked on reload and requested only by reconnecting
   await backup.getByRole("button", { name: "Reconnect folder" }).click();
   await expect(backup.getByRole("button", { name: "Back up now" })).toBeEnabled();
   expect(await page.evaluate(() => (window as unknown as { permissionRequests: number }).permissionRequests)).toBe(2);
+  await expect(backup).toContainText("Up to date");
 });
 
 test("failed first writes stay pending and can be retried", async ({ page }) => {

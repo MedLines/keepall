@@ -4,19 +4,17 @@ import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import type { DocumentItem } from "@/domain/document";
-import { ArrowLeftIcon, ArrowRightIcon } from "./shell-icons";
 import { PdfPage } from "./pdf-page";
+import { PdfViewerControls } from "./pdf-viewer-controls";
 import { usePdfDocument } from "./use-pdf-document";
 import { PdfScroll, type PdfScrollHandle } from "./pdf-scroll";
-import { SegmentedControl } from "./segmented-control";
 import { usePdfPageSizes } from "./use-pdf-page-sizes";
-import { ShellTopMenu } from "./shell-top-menu";
+import { PdfLoadingPaper, PdfViewerLoading } from "./document-loading-content";
 
-const BUTTON = "ui-control inline-flex size-11 shrink-0 items-center justify-center disabled:opacity-40";
 
 export function PdfViewer({ item }: { item: DocumentItem }) {
   const { state, retry } = usePdfDocument(item);
-  if (state.status === "loading") return <p role="status" className="text-text-secondary">Loading PDF…</p>;
+  if (state.status === "loading") return <PdfViewerLoading />;
   if (state.status === "error") return <div className="grid justify-items-start gap-3">
     <p role="alert">{state.message}</p>
     <div className="flex flex-wrap gap-2">
@@ -56,31 +54,15 @@ function LoadedPdf({ document, noText }: { document: PDFDocumentProxy; noText: b
     const inset = toolbar.getBoundingClientRect().height + (Number.parseFloat(getComputedStyle(toolbar).top) || 0) + gap;
     main.scrollTo({ top: frame.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - inset, behavior: "instant" });
   }, [page, view]);
-  return <section aria-label="PDF viewer" className="grid min-w-0 shrink-0 gap-4">
-    <div data-pdf-toolbar className="sticky top-3 z-10 flex flex-wrap items-start justify-between gap-3 bg-bg-canvas pb-2 before:absolute before:inset-x-0 before:-top-3 before:h-3 before:bg-bg-canvas">
-      <span aria-hidden="true" className="scroll-fade-overlay absolute inset-x-0 top-full h-6" />
-      <SegmentedControl label="PDF view" value={view} onChange={setView} className="w-40" choices={[{ value: "scroll", label: "Scroll" }, { value: "pages", label: "Pages" }]} />
-      <div className="flex items-center gap-2">
-        <button type="button" className={BUTTON} aria-label="Previous page" disabled={page === 1} onClick={() => goToPage(page - 1)}><ArrowLeftIcon className="size-4" /></button>
-        <label className="flex items-center gap-1.5 text-sm tabular-nums">Page
-          <input aria-label="PDF page number" inputMode="numeric" className="ui-field h-11 w-14 px-1 text-center text-sm tabular-nums" value={pageText}
-            onFocus={() => setPageDraft(String(page))}
-            onChange={event => setPageDraft(event.target.value)} onBlur={jumpToPage}
-            onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); jumpToPage(); } }} />
-          <span>of {document.numPages}</span>
-        </label>
-        <span className="sr-only" role="status">Page {page} of {document.numPages}</span>
-        <button type="button" className={BUTTON} aria-label="Next page" disabled={page === document.numPages} onClick={() => goToPage(page + 1)}><ArrowRightIcon className="size-4" /></button>
-      </div>
-      <div className="flex items-center gap-2 text-sm text-text-secondary"><span>Zoom</span>
-        <ShellTopMenu ariaLabel="PDF zoom" value={zoom} onChange={setZoom} className="h-11 gap-3 text-text-primary"
-          options={[{ value: "fit", label: "Fit width" }, { value: "0.75", label: "75%" }, { value: "1", label: "100%" }, { value: "1.5", label: "150%" }, { value: "2", label: "200%" }]} />
-      </div>
-    </div>
-    {noText ? <p className="rounded-input border border-border-control bg-bg-raised p-3 text-sm text-text-secondary">This PDF has no selectable text. Search can find its title, filename, tags, and your notes. Text in scanned pages needs OCR.</p> : null}
-    {view === "pages" ? <div ref={pageFrame} className="min-w-0"><PdfPage document={document} number={page} zoom={zoom} /></div>
-      : layout.status === "ready" ? <PdfScroll key={zoom} document={document} sizes={layout.sizes} zoom={zoom} startPage={page} onPageChange={setPage} ref={scroll} />
+  return <section aria-label="PDF viewer" className="media-viewer-frame grid min-w-0 shrink-0 gap-4">
+    <PdfViewerControls view={view} page={page} pageText={pageText} pageCount={document.numPages} zoom={zoom}
+      onViewChange={setView} onZoomChange={setZoom} onPreviousPage={() => goToPage(page - 1)} onNextPage={() => goToPage(page + 1)}
+      onPageFocus={() => setPageDraft(String(page))} onPageDraftChange={setPageDraft} onPageCommit={jumpToPage} />
+    {layout.status === "ready" ? <PdfScroll key={zoom} document={document} sizes={layout.sizes} zoom={zoom} view={view} startPage={page} onPageChange={setPage} ref={scroll} />
+      : view === "pages" ? <div ref={pageFrame} className="min-w-0"><PdfPage document={document} number={page} zoom={zoom} /></div>
       : layout.status === "error" ? <div role="alert" className="flex flex-wrap items-center gap-3 text-sm">Couldn&apos;t prepare the scroll view. Try again or use Pages.<button type="button" className="ui-control min-h-10 px-3" onClick={retry}>Retry scroll view</button></div>
-      : <p className="text-sm text-text-secondary">Preparing PDF pages…</p>}
+      : <PdfLoadingPaper />}
+
+    {noText ? <p className="rounded-input border border-border-control bg-bg-raised p-3 text-sm text-text-secondary">This PDF has no selectable text. Search can find its title, filename, tags, and your notes. Text in scanned pages needs OCR.</p> : null}
   </section>;
 }

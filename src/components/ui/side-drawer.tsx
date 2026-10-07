@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import {
   Drawer,
   type DrawerRootChangeEventDetails,
@@ -18,6 +18,7 @@ type SideDrawerProps = {
   description?: string;
   widthClassName?: string;
   closeDisabled?: boolean;
+  initialFocus?: ComponentProps<typeof Drawer.Popup>["initialFocus"];
   children: ReactNode;
 };
 
@@ -29,6 +30,7 @@ export function SideDrawer({
   description,
   widthClassName = "w-[min(30rem,100vw)]",
   closeDisabled = false,
+  initialFocus,
   children,
 }: SideDrawerProps) {
   const fromRight = side === "right";
@@ -40,17 +42,19 @@ export function SideDrawer({
       swipeDirection={side}
     >
       <Drawer.Portal>
-        <Drawer.Backdrop className="ui-backdrop fixed inset-0 z-[70] opacity-100 transition-opacity duration-200 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
+        <Drawer.Backdrop className="ui-backdrop ui-drawer-backdrop fixed inset-0 z-[70]" />
         <Drawer.Viewport
           className={`fixed inset-0 z-[70] flex overflow-hidden ${
             fromRight ? "justify-end" : "justify-start"
           }`}
         >
           <Drawer.Popup
-            className={`flex h-dvh ${widthClassName} flex-col overflow-hidden border-border-control bg-bg-canvas text-text-primary shadow-menu transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
+            initialFocus={initialFocus}
+            data-side={side}
+            className={`ui-drawer-popup flex h-dvh ${widthClassName} flex-col overflow-hidden border-border-control bg-bg-canvas text-text-primary shadow-menu outline-none ${
               fromRight
-                ? "border-l data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full"
-                : "border-r data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full"
+                ? "border-l"
+                : "border-r"
             }`}
           >
             <Drawer.Content className="flex min-h-0 flex-1 flex-col">

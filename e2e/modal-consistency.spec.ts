@@ -88,7 +88,7 @@ for (const width of [320, 768, 1024, 1440]) {
     await expect(editor).toHaveValue(/keepall-image:/);
     await dialog.getByRole("button", { name: "Save note", exact: true }).click();
     await expect(dialog).toBeHidden();
-    await card.getByText("Read note →", { exact: true }).click();
+    await card.getByRole("link", { name: new RegExp(title) }).click();
     await expect(page.getByRole("img", { name: "Image", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Edit note", exact: true }).click();
     await assertOrder(page, dialog, "Cancel edit", "Save note");

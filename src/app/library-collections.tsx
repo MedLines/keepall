@@ -9,9 +9,9 @@ import "./library-collections.css";
 const FOLDER_FRONT_PATH = "M1 78C1 59 10 50 29 50H92C104 50 110 54 119 60L137 70C144 74 149 76 160 76H251C270 76 279 85 279 104V211C279 230 270 239 251 239H29C10 239 1 230 1 211Z";
 const itemIcons = { note: NoteIcon, image: ImageIcon, link: LinkIcon, video: VideoIcon, document: NoteIcon };
 
-export function LibraryFolderArtwork({ previews, itemTypes }: { previews: Item[]; itemTypes: Item["type"][] }) {
+export function LibraryFolderArtwork({ previews, itemTypes, emptyState = false }: { previews: Item[]; itemTypes: Item["type"][]; emptyState?: boolean }) {
   return (
-    <span className="collection-folder-stage" aria-hidden="true">
+    <span className={`collection-folder-stage${emptyState ? " library-empty-folder" : ""}`} aria-hidden="true">
       <span className="collection-folder-back" />
       <span className="collection-folder-previews">
         {previews.slice(0, 3).map((item, index) => (
@@ -19,7 +19,9 @@ export function LibraryFolderArtwork({ previews, itemTypes }: { previews: Item[]
             <LibraryOrganizationPreview item={item} />
           </span>
         ))}
+        {emptyState ? [["center", "404"], ["left", "Not"], ["right", "Found"]].map(([position, label]) => <span key={position} className="collection-folder-preview library-empty-sheet" data-position={position}><span className="library-empty-sheet-label">{label}</span></span>) : null}
       </span>
+      {emptyState ? <span className="library-empty-light"><span className="library-empty-dust" /></span> : null}
       <FolderFront itemTypes={itemTypes} />
     </span>
   );

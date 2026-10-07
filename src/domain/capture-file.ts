@@ -1,5 +1,7 @@
 import { isAllowedLocalImageMime } from "./image";
 
+export type FileImportStage = "reading" | "preparing-video" | "saving";
+
 const MEDIA_MIMES: Record<string, string> = {
   png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
   webp: "image/webp", avif: "image/avif", mp4: "video/mp4", webm: "video/webm",

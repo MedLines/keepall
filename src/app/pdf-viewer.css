@@ -1,12 +1,3 @@
-.library-quick-preview [data-pdf-toolbar] {
-  --color-bg-canvas: var(--color-bg-control);
-}
-
-.library-quick-preview [data-pdf-toolbar],
-.library-quick-preview [data-pdf-toolbar]::before {
-  background: var(--color-bg-control);
-}
-
 .keepall-pdf-text {
   color-scheme: only light;
   position: absolute;

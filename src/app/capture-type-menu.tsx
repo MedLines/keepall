@@ -17,7 +17,7 @@ export function CaptureTypeMenu({ value, disabled, onChange }: Props) {
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[80] data-[anchor-hidden]:invisible">
-          <Menu.Popup aria-label="Save as" className="ui-popover w-44 max-w-[calc(100vw-1rem)] outline-none">
+          <Menu.Popup aria-label="Save as" className="ui-menu-popup ui-popover w-44 max-w-[calc(100vw-1rem)] outline-none">
             <Menu.RadioGroup value={value} onValueChange={(next) => {
               if (next === "link" || next === "note") onChange(next);
             }}>

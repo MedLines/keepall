@@ -71,6 +71,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({
     replace: mockNavigation.replace,
     push: mockNavigation.push,
+    prefetch: vi.fn(),
   }),
 }));
 
@@ -96,6 +97,11 @@ if (typeof URL.createObjectURL !== "function") {
 
 if (typeof URL.revokeObjectURL !== "function") {
   URL.revokeObjectURL = vi.fn();
+}
+
+// jsdom has no Web Animations API; Base UI checks it when scroll content resizes.
+if (typeof Element.prototype.getAnimations !== "function") {
+  Element.prototype.getAnimations = () => [];
 }
 
 if (typeof window.matchMedia !== "function") {

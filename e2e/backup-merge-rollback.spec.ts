@@ -33,7 +33,7 @@ async function snapshot(page: Page) {
 
 test("mixed ZIP merge rolls back native storage on quota failure and retries successfully", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async (png) => {
     const request = indexedDB.open("keepall");
     const db = await new Promise<IDBDatabase>(resolve => { request.onsuccess = () => resolve(request.result); });
@@ -103,7 +103,7 @@ test("mixed ZIP merge rolls back native storage on quota failure and retries suc
   expect(await snapshot(page)).toEqual(before);
   await choose();
   await review.getByRole("button", { name: "Merge", exact: true }).click();
-  await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Merged: 2 added, 2 updated, 0 unchanged.");
+  await expect(page.locator('div.sr-only[role="status"][aria-atomic="true"]')).toContainText("Merged: 2 added, 2 updated, 0 unchanged.");
   const restored = await snapshot(page);
   expect(restored.items).toHaveLength(4);
   expect(restored.assets).toHaveLength(2);

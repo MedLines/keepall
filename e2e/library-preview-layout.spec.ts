@@ -75,7 +75,8 @@ test("preview frame and controls stay fixed across media, captions, long notes, 
   const shortText = dialog.getByText("A short piece of plain text.");
   const text = await shortText.boundingBox();
   const body = await dialog.getByRole("region", { name: "Preview content", exact: true }).boundingBox();
-  expect(Math.abs(text!.y + text!.height / 2 - body!.y - body!.height / 2)).toBeLessThan(2);
+  expect(text!.y).toBeGreaterThanOrEqual(body!.y);
+  await expect(shortText).toHaveCSS("padding-top", "20px");
   await dialog.getByRole("button", { name: "Next item" }).click();
   await expect(dialog).toHaveAccessibleName("Image");
   await expect(dialog.getByRole("heading")).toHaveText("Image");
@@ -97,7 +98,7 @@ test("preview frame and controls stay fixed across media, captions, long notes, 
     expect(box!.width / box!.height).toBeCloseTo(natural.width / natural.height, 2);
     const galleryControls = await dialog.getByRole("group", { name: "Image sizing" }).boundingBox();
     const noteBox = await notes.boundingBox();
-    expect(box!.y + box!.height).toBeLessThanOrEqual(galleryControls!.y + 1);
+    expect(box!.y).toBeGreaterThanOrEqual(galleryControls!.y + galleryControls!.height);
     expect(box!.y + box!.height).toBeLessThanOrEqual(noteBox!.y + 1);
     expect(noteBox!.y + noteBox!.height).toBeLessThanOrEqual(footer!.y);
     await assertFrame();

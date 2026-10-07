@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -17,19 +19,24 @@ import { DocumentItemEditDialog } from "./item-edit-dialog";
 import { ItemLibraryDetails } from "./item-library-details";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ItemPageHeader } from "./item-page-header";
+import { ItemPageLoading } from "./library-loading-content";
 import { ITEM_DETAILS_CONTROL, ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { NoteContent } from "./note-content";
 import { DownloadIcon } from "./shell-icons";
+import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+import { ItemViewTransition } from "./item-view-transition";
 
 type State = { itemId: string } & (
   | { status: "loading" | "missing" | "error" }
   | { status: "ready"; item: DocumentItem; tags: Tag[]; collections: Collection[] }
 );
 
-export function DocumentItemPage({ itemId, returnHref }: { itemId: string; returnHref: string }) {
+export function DocumentItemPage({ itemId, returnHref, initialSnapshot }: { itemId: string; returnHref: string; initialSnapshot?: ItemNavigationSnapshot }) {
   const router = useRouter();
-  const [state, setState] = useState<State>({ itemId, status: "loading" });
+  const [state, setState] = useState<State>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "document"
+    ? { itemId, status: "ready", item: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
+    : { itemId, status: "loading" });
   const [editing, setEditing] = useState(false);
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -85,8 +92,9 @@ export function DocumentItemPage({ itemId, returnHref }: { itemId: string; retur
     });
   }
 
-  if (state.status !== "ready" || state.itemId !== itemId) return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5">
-    <div className="text-center"><p className="text-text-secondary">{state.itemId !== itemId || state.status === "loading" ? "Loading document…" : state.status === "missing" ? "Document not found. It may be in Trash." : "Couldn't load this document."}</p>
+  if (state.itemId !== itemId || state.status === "loading") return <ItemPageLoading returnHref={returnHref} />;
+  if (state.status !== "ready") return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5">
+    <div className="text-center"><p className="text-text-secondary">{state.status === "missing" ? "Document not found. It may be in Trash." : "Couldn't load this document."}</p>
       <Link href={returnHref} className="ui-control mt-5 inline-flex min-h-11 items-center px-4">Return to library</Link>
     </div>
   </main>;
@@ -95,12 +103,14 @@ export function DocumentItemPage({ itemId, returnHref }: { itemId: string; retur
   const itemTags = resolveItemTags(item, new Map(tags.map((tag) => [tag.id, tag])));
   const itemCollections = resolveItemCollections(item, new Map(collections.map((collection) => [collection.id, collection])));
   const busy = operation !== null;
-  return <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
+  return <div className={`${initialSnapshot ? "" : "item-startup-content"} flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary`}>
     <ItemPageHeader returnHref={returnHref} title={item.title} titleAsHeading />
-    <main data-document-scroll className={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`} data-testid="item-page-scroll">
+    <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`} viewportProps={{ "data-document-scroll": "", "data-testid": "item-page-scroll" }}>
       <div className={ITEM_PAGE_GRID}>
         <div className={`row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-4xl ${item.format === "pdf" ? "" : "lg:pt-6"}`}>
-          <article aria-label="Document content"><DocumentContent key={item.id} item={item} /></article>
+          <ItemViewTransition itemId={item.id} assetId={item.assetId} kind="document" source={false}>
+            <article aria-label="Document content"><DocumentContent key={`${item.id}:${item.assetId}`} item={item} initialPreview={initialSnapshot?.item.type === "document" && initialSnapshot.item.assetId === item.assetId ? initialSnapshot.documentPreview : undefined} /></article>
+          </ItemViewTransition>
           <section aria-label="Personal note" className="mt-9 border-t border-border-control pt-8">
             <h2 className="mb-4 text-lg font-semibold">My note</h2>
             {item.noteContent ? <NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /> : <button type="button" className="ui-control min-h-11 px-4 text-sm font-medium" disabled={busy} onClick={() => { setError(null); setEditing(true); }}>Add a personal note</button>}
@@ -116,7 +126,7 @@ export function DocumentItemPage({ itemId, returnHref }: { itemId: string; retur
           </>}
         />
       </div>
-    </main>
+    </ScrollPanel>
     {editing ? <DocumentItemEditDialog key={item.id} item={item} open busy={busy} error={error?.message ?? null} onOpenChange={setEditing}
       onSave={(draft) => void mutate("save", async () => { applyItem(await updateDocument(item.id, draft)); setEditing(false); })} /> : null}
     <ItemOrganizerDrawer open={organizerOpen} onOpenChange={setOrganizerOpen} side={organizerSide} itemTitle={item.title}

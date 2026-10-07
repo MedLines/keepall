@@ -1,8 +1,11 @@
+import { validateShortcuts, type KeyboardShortcuts } from "./keyboard-shortcuts";
+
 export const LIBRARY_PREFERENCES_ID = "library" as const;
 
 export type LibraryPreferences = {
   id: typeof LIBRARY_PREFERENCES_ID;
   pinnedCollectionIds: string[];
+  keyboardShortcuts?: KeyboardShortcuts;
 };
 
 export function normalizePinnedCollectionIds(
@@ -28,10 +31,12 @@ export function normalizePinnedCollectionIds(
 
 export function buildLibraryPreferences(
   pinnedCollectionIds: string[] = [],
+  keyboardShortcuts?: KeyboardShortcuts,
 ): LibraryPreferences {
   return {
     id: LIBRARY_PREFERENCES_ID,
     pinnedCollectionIds: normalizePinnedCollectionIds(pinnedCollectionIds),
+    ...(keyboardShortcuts ? { keyboardShortcuts: validateShortcuts(keyboardShortcuts) } : {}),
   };
 }
 

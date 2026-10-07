@@ -1,12 +1,16 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select } from "@base-ui/react/select";
-import type { ReactNode } from "react";
+import { Tooltip } from "@base-ui/react/tooltip";
+import { useId, type ReactNode } from "react";
+import { MenuHoverList } from "@/components/ui/menu-hover-list";
 import { CheckIcon, ChevronDownIcon } from "./shell-icons";
 import {
   SHELL_TOP_BTN,
   SHELL_TOP_BTN_ACTIVE,
   SHELL_TOP_BTN_IDLE,
+  SHELL_TOOLTIP,
 } from "./shell-styles";
 
 type Option<T extends string> = {
@@ -23,9 +27,12 @@ type Props<T extends string> = {
   onChange: (value: T) => void;
   /** Trigger shows only the icon; dropdown options keep labels. */
   iconOnly?: boolean;
+  triggerIcon?: ReactNode;
   /** Emphasize trigger when a non-default value is active (e.g. type filter). */
   emphasized?: boolean;
+  showCheckmark?: boolean;
   className?: string;
+  disabled?: boolean;
 };
 
 export function ShellTopMenu<T extends string>({
@@ -34,25 +41,32 @@ export function ShellTopMenu<T extends string>({
   options,
   onChange,
   iconOnly = false,
+  triggerIcon,
   emphasized = false,
+  showCheckmark = true,
   className = "",
+  disabled = false,
 }: Props<T>) {
+  const tooltipId = useId();
   const activeOption =
     options.find((option) => option.value === value) ?? options[0];
 
   return (
+    <Tooltip.Root>
     <Select.Root<T>
+      disabled={disabled}
       value={value}
       onValueChange={(nextValue) => {
         if (nextValue !== null) onChange(nextValue);
       }}
     >
       <Select.Trigger
+        render={<Tooltip.Trigger delay={350} />}
         className={`${iconOnly ? `ui-control flex size-11 items-center justify-center rounded-control-lg ${emphasized ? "ui-selected" : ""}` : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`} ${className}`}
         aria-label={`${ariaLabel}: ${activeOption?.label ?? ""}`}
-        title={`${ariaLabel}: ${activeOption?.label ?? ""}`}
+        aria-describedby={tooltipId}
       >
-        {activeOption?.icon}
+        {triggerIcon ?? activeOption?.icon}
         {iconOnly ? (
           <span className="sr-only">{activeOption?.label}</span>
         ) : (
@@ -67,37 +81,47 @@ export function ShellTopMenu<T extends string>({
           sideOffset={8}
           collisionPadding={8}
           positionMethod="fixed"
-          className="z-50 data-[anchor-hidden]:invisible"
+          className="z-[90] data-[anchor-hidden]:invisible"
         >
-          <Select.Popup className="shell-select-popup ui-popover ui-scrollbar max-h-[min(24rem,var(--available-height))] min-w-[max(9rem,var(--anchor-width))] max-w-[calc(100vw-1rem)] overflow-y-auto outline-none">
-            <Select.List aria-label={ariaLabel} className="flex flex-col gap-1">
-              {options.map((option) => (
-                <Select.Item
-                  key={option.value}
-                  value={option.value}
-                  label={option.label}
-                  className={`shell-select-option ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active ${
-                    option.value === value
-                      ? "font-medium"
-                      : ""
-                  }`}
-                >
-                  {option.icon}
-                  <Select.ItemText className="flex-1 whitespace-nowrap">{option.label}</Select.ItemText>
-                  {option.count !== undefined ? (
-                    <span className="pl-2 text-xs tabular-nums text-text-secondary">
-                      {option.count}
-                    </span>
-                  ) : null}
-                  <span aria-hidden="true" className="inline-flex size-4 shrink-0 items-center justify-center">
-                    {option.value === value ? <CheckIcon className="size-4" /> : null}
-                  </span>
-                </Select.Item>
-              ))}
+          <Select.Popup className="shell-select-popup ui-menu-popup ui-popover flex flex-col overflow-hidden max-h-[min(24rem,var(--available-height))] min-w-[max(9rem,var(--anchor-width))] max-w-[calc(100vw-1rem)] outline-none">
+            <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
+            <Select.List aria-label={ariaLabel}>
+              <MenuHoverList>
+                {options.map((option) => (
+                  <Select.Item
+                    key={option.value}
+                    value={option.value}
+                    label={option.label}
+                    className={`shell-select-option ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active ${
+                      option.value === value
+                        ? "font-medium"
+                        : ""
+                    }`}
+                  >
+                    {option.icon}
+                    <Select.ItemText className="flex-1 whitespace-nowrap">{option.label}</Select.ItemText>
+                    {option.count !== undefined ? (
+                      <span className="pl-2 text-xs tabular-nums text-text-secondary">
+                        {option.count}
+                      </span>
+                    ) : null}
+                    {showCheckmark ? <span aria-hidden="true" className="inline-flex size-4 shrink-0 items-center justify-center">
+                      {option.value === value ? <CheckIcon className="size-4" /> : null}
+                    </span> : null}
+                  </Select.Item>
+                ))}
+              </MenuHoverList>
             </Select.List>
+            </ScrollArea>
           </Select.Popup>
         </Select.Positioner>
       </Select.Portal>
     </Select.Root>
+    <Tooltip.Portal>
+      <Tooltip.Positioner side="bottom" sideOffset={8} collisionPadding={8} className="z-[100]">
+        <Tooltip.Popup id={tooltipId} role="tooltip" className={SHELL_TOOLTIP}>{ariaLabel}: {activeOption?.label}</Tooltip.Popup>
+      </Tooltip.Positioner>
+    </Tooltip.Portal>
+    </Tooltip.Root>
   );
 }

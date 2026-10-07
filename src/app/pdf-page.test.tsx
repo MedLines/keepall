@@ -42,12 +42,15 @@ function documentFixture() {
 test("keeps the painted page and selectable text visible until the replacement finishes", async () => {
   const { document, pending } = documentFixture();
   const { rerender } = render(<PdfPage document={document} number={1} zoom="fit" />);
+  expect(screen.getByRole("status", { name: "Loading PDF" })).toBeInTheDocument();
   await waitFor(() => expect(pending).toHaveLength(1));
   await act(async () => pending[0].finish());
+  expect(screen.queryByRole("status", { name: "Loading PDF" })).not.toBeInTheDocument();
   const previous = screen.getByRole("img", { name: "PDF page 1" });
   const resets = vi.spyOn(HTMLCanvasElement.prototype, "width", "set");
   rerender(<PdfPage document={document} number={2} zoom="fit" />);
   await waitFor(() => expect(pending).toHaveLength(2));
+  expect(screen.queryByRole("status", { name: "Loading PDF" })).not.toBeInTheDocument();
   expect(previous).toBeVisible();
   expect(screen.getByText("Chapter 1")).toBeVisible();
   expect(resets.mock.contexts).not.toContain(previous);
@@ -55,6 +58,16 @@ test("keeps the painted page and selectable text visible until the replacement f
   expect(screen.getByRole("img", { name: "PDF page 2" })).toBeVisible();
   expect(screen.getByText("Chapter 2")).toBeVisible();
   expect(screen.queryByRole("img", { name: "PDF page 1" })).not.toBeInTheDocument();
+});
+
+test("virtual scroll pages do not repaint when their reserved size object is recreated", async () => {
+  const { document, pending } = documentFixture();
+  const { rerender } = render(<PdfPage document={document} number={1} zoom="fit" viewportSize={{ width: 612, height: 792 }} />);
+  await waitFor(() => expect(pending).toHaveLength(1));
+  await act(async () => pending[0].finish());
+  expect(screen.getByRole("img", { name: "PDF page 1" }).parentElement).not.toHaveClass("pdf-page-first-reveal");
+  rerender(<PdfPage document={document} number={1} zoom="fit" viewportSize={{ width: 612, height: 792 }} />);
+  expect(document.getPage).toHaveBeenCalledTimes(1);
 });
 
 test("rapid page changes cancel unfinished paints and cannot replace the newest page", async () => {

@@ -14,6 +14,7 @@ type Props = {
   className?: string;
   controls?: ReactNode;
   mediaAction?: ReactNode;
+  children?: ReactNode;
   onEdit: () => void;
   onOrganize: () => void;
   onDelete: () => void;
@@ -23,7 +24,7 @@ type Props = {
   deleteLabel?: string;
 };
 
-const ORGANIZATION_LINK = "inline-flex min-h-9 min-w-0 max-w-full items-center gap-2 rounded-control px-2 py-1 text-sm text-text-primary hover:bg-bg-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus";
+const ORGANIZATION_LINK = "inline-flex min-h-9 min-w-0 max-w-full items-center gap-2 rounded-control px-2 py-1 text-sm text-text-primary hover:bg-bg-raised focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-border-focus";
 
 function DateRow({ label, value }: { label: string; value: number }) {
   const date = new Date(value);
@@ -37,7 +38,7 @@ function DateRow({ label, value }: { label: string; value: number }) {
 
 export function ItemLibraryDetails({
   label, summary, collections, tags, createdAt, updatedAt, sourceFileName,
-  controls, mediaAction, onEdit, onOrganize, onDelete,
+  controls, mediaAction, children, onEdit, onOrganize, onDelete,
   disabled = false, editDisabled = false, editLabel = "Edit details",
   deleteLabel = "Move item to Trash", className = "",
 }: Props) {
@@ -66,7 +67,7 @@ export function ItemLibraryDetails({
           <h3 className="flex min-h-8 items-center text-xs text-text-secondary" title="Tags"><HashIcon className="size-4" /><span className="sr-only">Tags</span></h3>
           <div className="flex max-h-[4.375rem] flex-wrap gap-1.5 overflow-hidden">
             {tags.length ? tags.map((tag) => (
-              <Link key={tag.id} href={`/?tag=${encodeURIComponent(tag.id)}`} title={tag.name} className="inline-flex h-8 max-w-full shrink-0 items-center rounded-control bg-bg-control px-2.5 py-1 text-xs text-text-secondary hover:bg-bg-raised hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus"><span className="truncate">{tag.name}</span></Link>
+              <Link key={tag.id} href={`/?tag=${encodeURIComponent(tag.id)}`} title={tag.name} className="inline-flex h-8 max-w-full shrink-0 items-center rounded-control bg-bg-control px-2.5 py-1 text-xs text-text-secondary hover:bg-bg-raised hover:text-text-primary focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-border-focus"><span className="truncate">{tag.name}</span></Link>
             )) : <p className="flex min-h-8 items-center py-1 text-xs text-text-secondary">No tags</p>}
           </div>
         </div>
@@ -83,6 +84,7 @@ export function ItemLibraryDetails({
           </button>
         </div>
       </div>
+      {children}
       <div className="mt-auto grid shrink-0 gap-2 border-t border-border-control pt-3">
         <button className={`${ITEM_DETAILS_CONTROL} whitespace-nowrap text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger`} type="button" aria-label={deleteLabel} disabled={disabled} onClick={onDelete}>
           <DeleteIcon className="size-4" />Move to Trash

@@ -10,7 +10,7 @@ export function LogoContextMenu({ children }: { children: ReactElement }) {
       <ContextMenu.Trigger render={children} />
       <ContextMenu.Portal>
         <ContextMenu.Positioner sideOffset={4} collisionPadding={8} className="z-[60]">
-          <ContextMenu.Popup aria-label="Keepall navigation" className="ui-popover w-48 outline-none">
+          <ContextMenu.Popup aria-label="Keepall navigation" className="ui-menu-popup ui-popover w-48 outline-none">
             {[
               ["/about", "About"],
               ["/help", "Help"],

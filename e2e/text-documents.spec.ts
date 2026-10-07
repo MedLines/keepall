@@ -40,7 +40,7 @@ test("a successful batch closes the empty drawer and a plain-text file opens wit
   await review.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Save to Keepall", exact: true })).toBeHidden();
   await expect(page.locator("[data-item-id]")).toHaveCount(2);
-  await page.getByRole("link", { name: /plain.*plain.txt/ }).click();
+  await page.getByRole("link", { name: "Open plain", exact: true }).click();
   await expect(page.getByRole("article", { name: "Document content" })).toHaveText("Plain file content");
   await page.getByRole("button", { name: "Edit document", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Edit document", exact: true });
@@ -112,7 +112,7 @@ test("one Add files picker detects mixed media and text without replacing an unf
   await expect(page.locator("[data-item-id]")).toHaveCount(3);
   await page.goto("/?type=note");
   await expect(page.locator("[data-item-id]")).toHaveCount(1);
-  await expect(page.getByRole("link", { name: /plan.*plan.md/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open plan", exact: true })).toBeVisible();
 });
 
 async function chooseDocuments(page: Page, files: { name: string; mimeType: string; buffer: Buffer }[], draft?: string) {
@@ -180,7 +180,7 @@ test("Alt+K imports Markdown safely, edits personal notes, and downloads the unc
   await page.getByRole("link", { name: "Back to library", exact: true }).click();
   await expect(page).toHaveURL(/type=note/);
   await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Planning document.*plan.md/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open Planning document", exact: true })).toBeVisible();
   await page.locator(".library-card").filter({ hasText: "Planning document" }).hover();
   await page.getByRole("button", { name: "Actions for Planning document", exact: true }).click();
   await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
@@ -273,10 +273,10 @@ test("bulk files keep images, TXT, and Markdown separate in one collection after
   await page.reload();
   await expect(page.locator("[data-item-id]")).toHaveCount(3);
   await expect(page.getByRole("link", { name: "Open Image", exact: true })).toHaveCount(1);
-  await page.getByRole("link", { name: /first.md/ }).click();
+  await page.getByRole("link", { name: "Open first", exact: true }).click();
   await expect(page.getByRole("heading", { name: "First bulk note", exact: true })).toBeVisible();
   await page.goBack();
-  await page.getByRole("link", { name: /second.txt/ }).click();
+  await page.getByRole("link", { name: "Open second", exact: true }).click();
   await expect(page.getByRole("article", { name: "Document content" })).toHaveText("Second bulk note");
   expect(errors).toEqual([]);
 });

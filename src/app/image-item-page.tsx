@@ -1,7 +1,8 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import { Dialog } from "@base-ui/react/dialog";
-import { Menu } from "@base-ui/react/menu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -36,19 +37,21 @@ import { ItemLibraryDetails } from "./item-library-details";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
+import { ItemViewTransition } from "./item-view-transition";
 import { NoteContent } from "./note-content";
 import { VerticalImageGallery } from "./vertical-image-gallery";
+import { ImageToolsPanel } from "./image-tools-panel";
+import { CurrentImageMenu } from "./image-actions-menu";
 import { ItemPageHeader } from "./item-page-header";
-import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
+import { ItemMediaFrame } from "./item-media-frame";
+import { ItemPageLoading } from "./library-loading-content";
+import { ITEM_DETAILS_POSITION, ITEM_MEDIA_HEIGHT, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
   CloseIcon,
-  DeleteIcon,
   FullScreenIcon,
   PlusIcon,
-  ImageIcon,
-  MoreIcon,
 } from "./shell-icons";
 
 type LoadState =
@@ -62,9 +65,12 @@ type LoadState =
       collections: Collection[];
     };
 
+import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+
 type Props = {
   itemId: string;
   returnHref: string;
+  initialSnapshot?: ItemNavigationSnapshot;
 };
 
 const CONTROL =
@@ -72,10 +78,13 @@ const CONTROL =
 const MAX_VISIBLE_GALLERY_PREVIEWS = 15;
 type GalleryMode = "slides" | "scroll";
 
-export function ImageItemPage({ itemId, returnHref }: Props) {
+export function ImageItemPage({ itemId, returnHref, initialSnapshot }: Props) {
   const router = useRouter();
-  const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
-  const [slide, setSlide] = useState(0);
+  const [loadState, setLoadState] = useState<LoadState>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "image"
+    ? { status: "ready", item: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
+    : { status: "loading" });
+  const [slide, setSlide] = useState(() => initialSnapshot?.item.type === "image" && initialSnapshot.previewImageAssetId
+    ? Math.max(0, initialSnapshot.item.assetIds.indexOf(initialSnapshot.previewImageAssetId)) : 0);
   const [galleryMode, setGalleryMode] = useState<GalleryMode>("slides");
   const [viewerOpen, setViewerOpen] = useState(false);
   const [galleryMutation, setGalleryMutation] = useState<
@@ -143,7 +152,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
         (event.key !== "ArrowLeft" && event.key !== "ArrowRight") ||
         event.altKey || event.ctrlKey || event.metaKey ||
         (event.target instanceof Element &&
-          event.target.closest("input, textarea, select, [contenteditable='true'], [role='menu']"))
+          event.target.closest("input, textarea, select, [contenteditable='true'], [role='menu'], [data-image-tools]"))
       ) return;
 
       event.preventDefault();
@@ -185,11 +194,11 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
     }
   }
 
-  async function replaceImage(file: File) {
+  async function replaceImage(file: File, index = slide) {
     if (loadState.status !== "ready" || galleryMutation) {
       return;
     }
-    const currentSlide = clampImageSlideIndex(loadState.item.assetIds, slide);
+    const currentSlide = clampImageSlideIndex(loadState.item.assetIds, index);
     setGalleryMutation("replace");
     setGalleryError(null);
     try {
@@ -371,7 +380,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
   }
 
   if (loadState.status === "loading") {
-    return <ItemPageMessage message="Loading image…" />;
+    return <ItemPageLoading returnHref={returnHref} />;
   }
 
   if (loadState.status === "error") {
@@ -398,6 +407,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
     <>
       <ImageWorkspace
         key={loadState.item.id}
+        loadingReveal={!initialSnapshot}
         item={loadState.item}
         tags={loadState.tags}
         collections={loadState.collections}
@@ -413,7 +423,7 @@ export function ImageItemPage({ itemId, returnHref }: Props) {
         galleryError={galleryError}
         actionBusy={actionMutation !== null || galleryMutation !== null}
         onAddImages={(files) => void addImages(files)}
-        onReplaceImage={(file) => void replaceImage(file)}
+        onReplaceImage={(file, index) => void replaceImage(file, index)}
         onRemoveImage={() => {
           setRemoveImageError(null);
           setRemoveImageOpen(true);
@@ -538,6 +548,7 @@ function ItemPageMessage({
 }
 
 function ImageWorkspace({
+  loadingReveal,
   item,
   tags,
   collections,
@@ -559,6 +570,7 @@ function ImageWorkspace({
   onOrganize,
   onDelete,
 }: {
+  loadingReveal: boolean;
   item: ImageItem;
   tags: Tag[];
   collections: Collection[];
@@ -574,7 +586,7 @@ function ImageWorkspace({
   galleryError: string | null;
   actionBusy: boolean;
   onAddImages: (files: File[]) => void;
-  onReplaceImage: (file: File) => void;
+  onReplaceImage: (file: File, index: number) => void;
   onRemoveImage: () => void;
   onEdit: () => void;
   onOrganize: () => void;
@@ -582,6 +594,7 @@ function ImageWorkspace({
 }) {
   const addInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const replacementIndex = useRef<number | null>(null);
   const scrollRef = useRef<HTMLElement>(null);
   const galleryListRef = useRef<HTMLOListElement>(null);
   const readingPosition = useRef<{ assetId: string; offset: number } | null>(null);
@@ -662,17 +675,14 @@ function ImageWorkspace({
   );
 
   return (
-    <div className="h-full overflow-hidden bg-bg-canvas">
+    <div className={`${loadingReveal ? "item-startup-content" : ""} h-full overflow-hidden bg-bg-canvas`}>
       <div className="flex size-full flex-col">
         <ItemPageHeader returnHref={returnHref} title={title || "Image item"} sourceUrl={item.sourceUrl} titleAsHeading />
 
-        <main
-          ref={scrollRef}
-          onScroll={rememberReadingPosition}
-          className={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`}
-          data-testid="item-page-scroll"
-        >
-          <div className={`${ITEM_PAGE_GRID} [--image-viewer-height:max(24rem,min(76dvh,54rem))]`}>
+        <ScrollPanel role="main" className="min-h-0 flex-1" viewportRef={node => { scrollRef.current = node; }}
+          viewportClassName={`${ITEM_PAGE_SCROLL} scroll-fade scroll-fade-6 [--scroll-fade-t-size:0px] [--scroll-fade-edge-opacity:0.5]`}
+          viewportProps={{ onScroll: rememberReadingPosition, "data-testid": "item-page-scroll" }}>
+          <div className={`${ITEM_PAGE_GRID} ${ITEM_MEDIA_HEIGHT}`}>
                 <input
                   ref={addInputRef}
                   className="sr-only"
@@ -694,45 +704,36 @@ function ImageWorkspace({
                   aria-label="Choose replacement image"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
-                    if (file) onReplaceImage(file);
+                    if (file) onReplaceImage(file, replacementIndex.current ?? currentSlide);
+                    replacementIndex.current = null;
                     event.target.value = "";
                   }}
                 />
-            <div className="min-w-0 row-start-2 lg:col-start-1 lg:row-start-1">
-            <section className="relative flex min-w-0 flex-col gap-3" aria-label="Image gallery">
-              {galleryMode === "scroll" ? (
-              <div className="sticky top-0 z-10 -mb-3 h-0 self-end">
-                <div className="absolute right-4 top-4">
-                  <CurrentImageMenu
-                    busy={galleryMutation !== null}
-                    canRemove={item.assetIds.length > 1}
-                    onReplace={() => replaceInputRef.current?.click()}
-                    onRemove={onRemoveImage}
-                  />
-                </div>
-              </div>
-              ) : null}
-              {galleryMode === "slides" ? (
-              <div className="item-workspace-media relative isolate flex h-[var(--image-viewer-height)] items-center justify-center overflow-hidden rounded-card bg-bg-media">
+            <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+            <section className="relative row-start-1 flex min-w-0 flex-col gap-3" aria-label="Image gallery">
+              {galleryMode === "slides" && currentAssetId ? (
+              <ImageToolsPanel key={currentAssetId} item={item} assetId={currentAssetId} slide={currentSlide} disabled={actionBusy}>
+              <ItemViewTransition itemId={item.id} assetId={currentAssetId ?? ""} source={false}>
+              <ItemMediaFrame className="image-viewer-canvas">
                 <div className="pointer-events-none absolute inset-4 z-10 flex items-start justify-end">
                   <CurrentImageMenu
                     busy={galleryMutation !== null}
                     canRemove={item.assetIds.length > 1}
-                    onReplace={() => replaceInputRef.current?.click()}
+                    onReplace={() => { replacementIndex.current = currentSlide; replaceInputRef.current?.click(); }}
                     onRemove={onRemoveImage}
                   />
                 </div>
                 <button
                   type="button"
-                  className="control-shape-none group relative flex size-full min-h-0 items-center justify-center overflow-hidden"
+                  className="control-shape-none image-viewer-trigger group relative flex size-full min-h-0 min-w-0 items-center justify-center overflow-hidden p-3 sm:p-5"
                   aria-label="View image full screen"
                   onClick={() => onViewerOpenChange(true)}
                 >
                   <LibraryItemMedia
                     item={item}
-                    variant="inspect"
+                    variant="canvas"
                     assetId={currentAssetId}
-                    className="max-h-[calc(100dvh-14rem)]"
+                    sharedTransition={false}
                   />
                   <span className="ui-control pointer-events-none absolute bottom-3 right-3 flex size-11 items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">
                     <FullScreenIcon />
@@ -760,19 +761,23 @@ function ImageWorkspace({
                     </button>
                   </>
                 ) : null}
-              </div>
+              </ItemMediaFrame>
+              </ItemViewTransition>
 
-              ) : null}
-              {galleryMode === "slides" ? (
                 <GalleryControls
                   item={item}
                   currentSlide={currentSlide}
                   onSlideChange={onSlideChange}
                 />
+              </ImageToolsPanel>
               ) : null}
-              <VerticalImageGallery
+              {galleryMode === "scroll" ? <VerticalImageGallery
                 item={item}
-                active={galleryMode === "scroll"}
+                active
+                busy={galleryMutation !== null}
+                toolsDisabled={actionBusy}
+                onReplace={index => { replacementIndex.current = index; onSlideChange(index); replaceInputRef.current?.click(); }}
+                onRemove={index => { onSlideChange(index); onRemoveImage(); }}
                 listRef={galleryListRef}
                 scrollRef={scrollRef}
                 preserveScrollAnchor={preserveScrollAnchor}
@@ -781,7 +786,7 @@ function ImageWorkspace({
                   onSlideChange(index);
                   onViewerOpenChange(true);
                 }}
-              />
+              /> : null}
               {galleryMode === "scroll" ? (
                 <div className="sticky bottom-0 z-10 flex justify-end bg-bg-canvas py-3">
                   <ImageCount current={currentSlide + 1} total={item.assetIds.length} />
@@ -812,7 +817,7 @@ function ImageWorkspace({
               createdAt={item.createdAt}
               updatedAt={item.updatedAt}
               sourceFileName={item.sourceFileName}
-              className={`${ITEM_DETAILS_POSITION} lg:min-h-[var(--image-viewer-height)]`}
+              className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2 lg:min-h-[var(--item-viewer-height)]`}
               disabled={actionBusy}
               onOrganize={onOrganize}
               onEdit={onEdit}
@@ -825,7 +830,7 @@ function ImageWorkspace({
               }
             />
           </div>
-        </main>
+        </ScrollPanel>
       </div>
 
       <FocusedImageViewer
@@ -838,39 +843,6 @@ function ImageWorkspace({
         onSlideChange={onSlideChange}
       />
     </div>
-  );
-}
-
-function CurrentImageMenu({ busy, canRemove, onReplace, onRemove }: {
-  busy: boolean;
-  canRemove: boolean;
-  onReplace: () => void;
-  onRemove: () => void;
-}) {
-  const openingDialog = useRef(false);
-  return (
-    <Menu.Root modal={false} onOpenChange={(open) => { if (open) openingDialog.current = false; }}>
-      <Menu.Trigger className="ui-control pointer-events-auto flex size-11 items-center justify-center bg-bg-surface disabled:opacity-60" aria-label="Current image actions" title="Current image actions" disabled={busy}>
-        <MoreIcon />
-      </Menu.Trigger>
-      <Menu.Portal>
-        <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
-          <Menu.Popup aria-label="Current image actions" className="ui-popover w-56 max-w-[calc(100vw-1rem)] outline-none" finalFocus={() => openingDialog.current ? false : true}>
-            <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active data-[disabled]:opacity-50" disabled={busy} onClick={onReplace}>
-              <ImageIcon />Replace current image
-            </Menu.Item>
-            {canRemove ? (
-              <>
-                <Menu.Separator className="my-1 border-t border-border-edge" />
-                <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger data-[disabled]:opacity-50" disabled={busy} onClick={() => { openingDialog.current = true; onRemove(); }}>
-                  <DeleteIcon />Remove current image
-                </Menu.Item>
-              </>
-            ) : null}
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
   );
 }
 
@@ -911,7 +883,7 @@ function GalleryControls({
   );
 
   return (
-    <nav className="flex min-w-0 items-center gap-3" aria-label="Image slides">
+    <nav className="flex h-14 min-w-0 shrink-0 items-center gap-3" aria-label="Image slides">
       {slideCount > 1 ? <div className="ui-scrollbar-hidden scroll-fade-x flex min-w-0 flex-1 items-center justify-start gap-1 overflow-x-auto p-1 sm:gap-2">
         {visibleSlides.map((index) => (
           <button
@@ -1019,12 +991,12 @@ function FocusedImageViewer({
       }}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop className="focused-image-backdrop fixed inset-0 z-[90]" />
+        <Dialog.Backdrop className="focused-image-backdrop fixed inset-0 z-[90]" data-zoomed={zoom !== null} />
         <Dialog.Viewport
-          ref={viewportRef}
-          className="ui-scrollbar fixed inset-0 z-[90] overflow-auto p-2 sm:p-5"
-          data-testid="focused-image-scroll"
+          className="fixed inset-0 z-[90] overflow-hidden"
         >
+          <ScrollPanel orientation="both" className="size-full" viewportRef={node => { viewportRef.current = node; }}
+            viewportClassName="p-2 sm:p-5" contentClassName="min-h-full" viewportProps={{ "data-testid": "focused-image-scroll" }}>
           <Dialog.Popup
             className={`relative mx-auto grid min-h-full place-items-center outline-none ${zoom ? "w-max min-w-full" : "w-full max-w-[100rem]"}`}
             onKeyDownCapture={(event) => {
@@ -1042,7 +1014,7 @@ function FocusedImageViewer({
             <button
               ref={imageButtonRef}
               type="button"
-              className={`control-shape-none mx-auto block p-0 focus-visible:outline-2 focus-visible:outline-border-focus ${zoom ? "cursor-grab active:cursor-grabbing" : "w-fit max-w-full cursor-zoom-in"}`}
+              className={`control-shape-none mx-auto block p-0 focus-visible:outline-1 focus-visible:outline-border-focus ${zoom ? "cursor-grab active:cursor-grabbing" : "w-fit max-w-full cursor-zoom-in"}`}
               style={zoom ? { width: zoom.width } : undefined}
               aria-label={zoom ? "Zoom out image" : "Zoom in image"}
               aria-pressed={zoom !== null}
@@ -1073,7 +1045,7 @@ function FocusedImageViewer({
               }}
               onPointerCancel={() => { drag.current = null; }}
             >
-              <LibraryItemMedia item={item} variant="viewer" assetId={assetId} className={zoom ? "!w-full" : ""} />
+              <LibraryItemMedia item={item} variant="viewer" assetId={assetId} className={zoom ? "!w-full" : "max-h-[calc(100dvh-5rem)] object-contain"} />
             </button>
             <Dialog.Close className={`${CONTROL} fixed right-3 top-3 z-10 bg-bg-surface/95 backdrop-blur-sm`} aria-label="Close full-screen image">
               <CloseIcon />
@@ -1097,6 +1069,7 @@ function FocusedImageViewer({
               {currentSlide + 1} / {slideCount}
             </p>
           </Dialog.Popup>
+          </ScrollPanel>
         </Dialog.Viewport>
       </Dialog.Portal>
     </Dialog.Root>

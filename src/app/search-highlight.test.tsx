@@ -25,6 +25,23 @@ test("highlights every literal match while retaining text and case", () => {
   expect(container.querySelector("mark")).toBeNull();
 });
 
+test("keeps the excerpt until every query term appears in the visible sample", () => {
+  const item: DocumentItem = { id: "file", type: "document", format: "text", title: "Reference", sourceFileName: "reference.txt", assetId: "original", noteContent: "", tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 1 };
+  const rect = new DOMRect(0, 0, 100, 20);
+  const rectangles = vi.spyOn(Element.prototype, "getClientRects").mockReturnValue([rect] as unknown as DOMRectList);
+  const bounds = vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(rect);
+  const renderResult = (sample: string) => <SearchResult item={item} query="reference animation" excerpt={{ label: "Notes", text: "Reference animation examples" }}>
+    <h2><SearchHighlight text={item.title} query="reference animation" /></h2>
+    <p><SearchHighlight text={sample} query="reference animation" /></p>
+  </SearchResult>;
+  try {
+    const { container, rerender } = render(renderResult("A short sample"));
+    expect(container.querySelector(".search-excerpt")).toBeVisible();
+    rerender(renderResult("Animation examples"));
+    expect(container.querySelector(".search-excerpt")).not.toBeVisible();
+  } finally { rectangles.mockRestore(); bounds.mockRestore(); }
+});
+
 test("renders saved HTML as text rather than elements", () => {
   const text = '<img src=x onerror="alert(1)"> **saved**';
   const { container } = render(<SearchHighlight text={text} query="img" />);

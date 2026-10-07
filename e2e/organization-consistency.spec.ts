@@ -5,7 +5,7 @@ test.use({ serviceWorkers: "block" });
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");
@@ -63,8 +63,8 @@ for (const width of [320, 1440]) {
     await closeNavigation(page);
     for (const id of ["one", "two"]) {
       const card = page.locator(`[data-item-id="${id}"]`);
-      await card.hover();
-      await card.locator("[data-selection-indicator]").click();
+      await card.getByRole("checkbox").focus();
+      await card.getByRole("checkbox").press("Space");
     }
     await page.getByRole("searchbox", { name: "Search", exact: true }).fill("One");
     const bulk = page.getByRole("region", { name: "Bulk actions" });

@@ -1,5 +1,8 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollTextarea } from "@/components/ui/scroll-textarea";
+
 import { type KeyboardEvent, useRef, useState } from "react";
 import { noteImageMarkers, removeNoteImageMarkerAt } from "@/domain/note";
 import { NoteContent } from "./note-content";
@@ -142,11 +145,12 @@ export function NoteEditor({
         </section>
       ) : null}
       {showPreview ? (
-        <section aria-label="Note preview" className="ui-scrollbar h-64 min-h-40 overflow-y-auto rounded-input border border-border-control bg-bg-control p-4">
+        <ScrollArea role="region" aria-label="Note preview" className="h-64 min-h-40 rounded-input border border-border-control bg-bg-control" viewportClassName="scroll-fade">
+        <div className="p-4">
           <NoteContent content={content} format={format} pendingImageUrls={pendingImageUrls} />
-        </section>
+        </div></ScrollArea>
       ) : (
-        <textarea
+        <ScrollTextarea
           id={`edit-note-${itemId}`}
           ref={(node) => {
             textareaRef.current = node;

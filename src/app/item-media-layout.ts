@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { LibraryLayout } from "@/domain/library-view";
 import { itemMediaLayoutId } from "@/domain/library-view";
 
@@ -59,23 +59,14 @@ export function useBrowseChromeVisible(
   layoutMode: LibraryLayout,
   reduceMotion: boolean | null,
 ): boolean {
-  const [visible, setVisible] = useState(true);
-  const prevMode = useRef(layoutMode);
+  const [transition, setTransition] = useState({ mode: layoutMode, visible: true });
+  if (transition.mode !== layoutMode) setTransition({ mode: layoutMode, visible: Boolean(reduceMotion) });
 
   useEffect(() => {
-    if (reduceMotion) {
-      prevMode.current = layoutMode;
-      setVisible(true);
-      return;
-    }
-    if (prevMode.current === layoutMode) {
-      return;
-    }
-    prevMode.current = layoutMode;
-    setVisible(false);
-    const id = window.setTimeout(() => setVisible(true), BROWSE_CHROME_REVEAL_MS);
+    if (reduceMotion || transition.visible) return;
+    const id = window.setTimeout(() => setTransition(previous => previous.mode === layoutMode ? { ...previous, visible: true } : previous), BROWSE_CHROME_REVEAL_MS);
     return () => window.clearTimeout(id);
-  }, [layoutMode, reduceMotion]);
+  }, [layoutMode, reduceMotion, transition.visible]);
 
-  return visible;
+  return Boolean(reduceMotion) || transition.visible;
 }

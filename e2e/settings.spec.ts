@@ -18,27 +18,28 @@ test("settings scrolls the whole page with sticky navigation and fixed Help", as
         const dismiss = page.getByRole("button", { name: /Dismiss storage/ });
         if (await dismiss.isVisible()) await dismiss.click();
       }
-      const dimensions = await page.getByRole("main").evaluate((main) => ({
+      const main = page.getByRole("main");
+      const viewport = main.locator('[data-slot="scroll-area-viewport"]').first();
+      const dimensions = await main.evaluate((main) => ({
         viewport: window.innerHeight,
         documentHeight: document.documentElement.scrollHeight,
         mainBottom: main.getBoundingClientRect().bottom,
-        frameBottom: main.parentElement!.getBoundingClientRect().bottom,
         scrollAreas: [...document.querySelectorAll("*")].filter((element) => {
           const style = getComputedStyle(element);
           return ["auto", "scroll"].includes(style.overflowY) && element.clientHeight > 0 &&
             element.scrollHeight > element.clientHeight + 1;
         }).length,
       }));
-      expect(dimensions.mainBottom).toBeLessThanOrEqual(dimensions.frameBottom + 1);
+      expect(dimensions.mainBottom).toBeLessThanOrEqual(dimensions.viewport + 1);
       expect(dimensions.documentHeight).toBeLessThanOrEqual(dimensions.viewport + 1);
       expect(dimensions.scrollAreas).toBe(1);
-      expect(await page.getByRole("main").evaluate((main) =>
-        main.scrollHeight > main.clientHeight && getComputedStyle(main).overflowY === "auto"
+      expect(await viewport.evaluate((element) =>
+        element.scrollHeight > element.clientHeight && ["auto", "scroll"].includes(getComputedStyle(element).overflowY)
       )).toBe(true);
       expect(await page.getByTestId("settings-content").evaluate((content) =>
         content.scrollHeight <= content.clientHeight + 1 && getComputedStyle(content).overflowY === "visible"
       )).toBe(true);
-      await page.getByRole("main").evaluate((main) => { main.scrollTop = main.scrollHeight; });
+      await viewport.evaluate((element) => { element.scrollTop = element.scrollHeight; });
       await expect(page.getByRole("heading", { name: "Settings", exact: true })).not.toBeInViewport();
       await expect(page.getByRole("tablist", { name: "Settings", exact: true })).toBeInViewport();
       await expect(page.getByRole("link", { name: "Help & guides", exact: true })).toBeInViewport();
@@ -95,9 +96,9 @@ test("recovery links open backup settings and bulk import opens from capture", a
   await page.goto("/settings#constructor");
   await expect(page.getByRole("tabpanel", { name: "General", exact: true })).toBeVisible();
   await page.goto("/");
-  await page.getByRole("button", { name: "Save your first item", exact: true }).click();
+  await page.getByRole("button", { name: "Save first item", exact: true }).click();
   await page.getByRole("button", { name: "Bulk import", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Bulk import", exact: true }).getByRole("button", { name: "Import bookmarks HTML", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Bulk import", exact: true }).getByRole("button", { name: "Import browser bookmarks", exact: true })).toBeVisible();
 });
 
 test("settings labels and keyboard navigation work on narrow screens in both themes", async ({ page }, testInfo) => {
@@ -123,7 +124,7 @@ test("settings labels and keyboard navigation work on narrow screens in both the
         expect(await label.evaluate((text) => text.getBoundingClientRect().height <= parseFloat(getComputedStyle(text).lineHeight) + 1)).toBe(true);
       }
       for (const tab of await tabs.getByRole("tab").all()) await expect(tab).toBeVisible();
-      expect(await page.locator("main").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+      expect(await page.getByRole("main").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
       await page.mouse.move(0, 0);
       await page.screenshot({ path: testInfo.outputPath(`settings-${width}-${theme}.png`) });
       await page.keyboard.press("End");

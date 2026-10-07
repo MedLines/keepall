@@ -1,5 +1,7 @@
 "use client";
 
+import { animate, useMotionValue, useReducedMotion } from "motion/react";
+import { uiMotion } from "@/components/ui/motion-tokens";
 import { useLayoutEffect, useRef } from "react";
 import {
   SIDEBAR_WIDTH_KEY as WIDTH_KEY,
@@ -8,7 +10,8 @@ import {
   SIDEBAR_MAX_WIDTH as MAX_WIDTH,
 } from "./shell-styles";
 const RAIL_WIDTH = 56;
-const COLLAPSE_THRESHOLD = (MIN_WIDTH + RAIL_WIDTH) / 2;
+const COLLAPSE_THRESHOLD = MIN_WIDTH - 56;
+const DRAG_SLOP = 4;
 
 function maximumWidth() {
   return Math.min(MAX_WIDTH, window.innerWidth * 0.4);
@@ -21,9 +24,13 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
   const handleRef = useRef<HTMLDivElement>(null);
   const widthRef = useRef(DEFAULT_WIDTH);
   const expandedRef = useRef(expanded);
+  const displayedWidth = useMotionValue(DEFAULT_WIDTH);
+  const reduceMotion = useReducedMotion();
+  const syncWidth = useRef<(() => void) | null>(null);
 
   useLayoutEffect(() => {
     expandedRef.current = expanded;
+    syncWidth.current?.();
     const handle = handleRef.current;
     handle?.setAttribute("aria-valuenow", String(expanded ? Math.min(widthRef.current, maximumWidth()) : RAIL_WIDTH));
     handle?.setAttribute("aria-valuetext", expanded ? `${Math.round(Math.min(widthRef.current, maximumWidth()))} pixels` : "Collapsed");
@@ -34,7 +41,9 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
     const sidebar = handle.parentElement!;
     const libraryPanel = sidebar.parentElement?.querySelector<HTMLElement>("[data-library-panel]");
     let frame = 0;
-    let drag: { pointerId: number; startX: number; startWidth: number; savedWidth: number; wasExpanded: boolean; nextWidth: number } | null = null;
+    let animation: ReturnType<typeof animate> | null = null;
+    let targetWidth = DEFAULT_WIDTH;
+    let drag: { pointerId: number; startX: number; startWidth: number; savedWidth: number; wasExpanded: boolean; moved: boolean; nextWidth: number } | null = null;
 
     try {
       const stored = Number(localStorage.getItem(WIDTH_KEY));
@@ -43,6 +52,52 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
       // Resizing still works when the browser disallows preference storage.
     }
     sidebar.style.setProperty("--sidebar-width", `${widthRef.current}px`);
+
+    function freezeLibrary() {
+      if (libraryPanel && !libraryPanel.style.getPropertyValue("--library-resize-width")) {
+        libraryPanel.style.setProperty("--library-resize-width", `${libraryPanel.getBoundingClientRect().width}px`);
+      }
+    }
+
+    function releaseLibrary() {
+      if (!drag && !animation) libraryPanel?.style.removeProperty("--library-resize-width");
+    }
+
+    function stopAnimation() {
+      const previous = animation;
+      animation = null;
+      previous?.stop();
+    }
+
+    const unsubscribeWidth = displayedWidth.on("change", value => {
+      sidebar.style.width = `${Math.max(RAIL_WIDTH, Math.min(maximumWidth(), value))}px`;
+    });
+    const initialOpen = sidebar.dataset.ready === "false" && document.documentElement.dataset.shellPanel === "closed" ? false : expandedRef.current;
+    const initialWidth = initialOpen ? Math.min(widthRef.current, maximumWidth()) : RAIL_WIDTH;
+    displayedWidth.set(initialWidth);
+    sidebar.style.width = `${initialWidth}px`;
+    targetWidth = initialWidth;
+
+    function updateWidth(tier: typeof uiMotion.slow | typeof uiMotion.moderate = uiMotion.slow, immediate = false) {
+      const next = expandedRef.current ? Math.min(widthRef.current, maximumWidth()) : RAIL_WIDTH;
+      if (targetWidth === next && (animation || displayedWidth.get() === next)) return;
+      targetWidth = next;
+      stopAnimation();
+      if (immediate || reduceMotion) {
+        displayedWidth.set(next);
+        releaseLibrary();
+        return;
+      }
+      freezeLibrary();
+      const playback = animate(displayedWidth, next, expandedRef.current ? tier : tier.exit);
+      animation = playback;
+      playback.then(() => {
+        if (animation !== playback) return;
+        animation = null;
+        releaseLibrary();
+      });
+    }
+    syncWidth.current = () => updateWidth(drag ? uiMotion.moderate : uiMotion.slow);
 
     function updateAria() {
       const width = expandedRef.current ? Math.min(widthRef.current, maximumWidth()) : RAIL_WIDTH;
@@ -57,10 +112,10 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
         widthRef.current = Math.max(MIN_WIDTH, Math.min(maximumWidth(), Math.round(requested)));
         sidebar.style.setProperty("--sidebar-width", `${widthRef.current}px`);
       }
-      if (open !== expandedRef.current) {
-        expandedRef.current = open;
-        onExpandedChange(open);
-      }
+      const flipped = open !== expandedRef.current;
+      expandedRef.current = open;
+      updateWidth(drag ? uiMotion.moderate : uiMotion.slow, Boolean(drag) && !flipped && !animation);
+      if (flipped) onExpandedChange(open);
       updateAria();
     }
 
@@ -83,26 +138,26 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
         sidebar.style.setProperty("--sidebar-width", `${current.savedWidth}px`);
         expandedRef.current = current.wasExpanded;
         onExpandedChange(current.wasExpanded);
+        updateWidth();
         updateAria();
       } else {
-        apply(current.nextWidth);
+        apply(current.moved ? current.nextWidth : expandedRef.current ? RAIL_WIDTH : widthRef.current);
         save();
       }
       delete sidebar.dataset.resizing;
       delete document.documentElement.dataset.sidebarResizing;
-      libraryPanel?.style.removeProperty("--library-resize-width");
+      releaseLibrary();
       if (handle.hasPointerCapture(current.pointerId)) handle.releasePointerCapture(current.pointerId);
     }
 
     function pointerDown(event: PointerEvent) {
       if (event.button !== 0 || !event.isPrimary || drag) return;
       event.preventDefault();
-      const startWidth = sidebar.getBoundingClientRect().width;
-      // Keep card widths and the virtualizer's viewport steady until release.
-      if (libraryPanel) {
-        libraryPanel.style.setProperty("--library-resize-width", `${libraryPanel.getBoundingClientRect().width}px`);
-      }
-      drag = { pointerId: event.pointerId, startX: event.clientX, startWidth, savedWidth: widthRef.current, wasExpanded: expandedRef.current, nextWidth: startWidth };
+      stopAnimation();
+      const startWidth = displayedWidth.get();
+      // Hold card widths through dragging and the final collapse transition.
+      freezeLibrary();
+      drag = { pointerId: event.pointerId, startX: event.clientX, startWidth, savedWidth: widthRef.current, wasExpanded: expandedRef.current, moved: false, nextWidth: startWidth };
       handle.focus({ preventScroll: true });
       handle.setPointerCapture(event.pointerId);
       sidebar.dataset.resizing = "";
@@ -111,7 +166,10 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
 
     function pointerMove(event: PointerEvent) {
       if (!drag || event.pointerId !== drag.pointerId) return;
-      drag.nextWidth = drag.startWidth + event.clientX - drag.startX;
+      const delta = event.clientX - drag.startX;
+      if (!drag.moved && Math.abs(delta) < DRAG_SLOP) return;
+      drag.moved = true;
+      drag.nextWidth = drag.startWidth + delta;
       if (!frame) frame = requestAnimationFrame(() => {
         frame = 0;
         if (drag) apply(drag.nextWidth);
@@ -120,7 +178,9 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
 
     function pointerUp(event: PointerEvent) {
       if (!drag || event.pointerId !== drag.pointerId) return;
-      drag.nextWidth = drag.startWidth + event.clientX - drag.startX;
+      const delta = event.clientX - drag.startX;
+      drag.moved ||= Math.abs(delta) >= DRAG_SLOP;
+      drag.nextWidth = drag.startWidth + delta;
       finish();
     }
 
@@ -151,7 +211,7 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
       }
     }
 
-    function resize() { cancel(); updateAria(); }
+    function resize() { cancel(); stopAnimation(); updateWidth(uiMotion.slow, true); releaseLibrary(); updateAria(); }
 
     updateAria();
     handle.addEventListener("pointerdown", pointerDown);
@@ -165,6 +225,9 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
     window.addEventListener("resize", resize);
     return () => {
       cancelAnimationFrame(frame);
+      stopAnimation();
+      unsubscribeWidth();
+      syncWidth.current = null;
       delete sidebar.dataset.resizing;
       delete document.documentElement.dataset.sidebarResizing;
       libraryPanel?.style.removeProperty("--library-resize-width");
@@ -178,7 +241,7 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
       window.removeEventListener("blur", cancel);
       window.removeEventListener("resize", resize);
     };
-  }, [onExpandedChange]);
+  }, [onExpandedChange, displayedWidth, reduceMotion]);
 
   return (
     <div
@@ -191,7 +254,7 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
       aria-valuemin={RAIL_WIDTH}
       aria-valuemax={MAX_WIDTH}
       aria-valuenow={expanded ? DEFAULT_WIDTH : RAIL_WIDTH}
-      title="Drag to resize. Arrow keys to resize; Enter to collapse or expand."
+      title="Drag to resize. Click or press Enter to collapse or expand. Arrow keys resize."
       className="library-sidebar-resize"
     />
   );

@@ -1,12 +1,14 @@
 "use client";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Menu } from "@base-ui/react/menu";
 import { useLayoutEffect, useRef, useState } from "react";
 import { OrganizerDrawer } from "./organizer-drawer";
 import { CaptureOrgPanel } from "./capture-org-panel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { OrgNameSuggestion } from "./org-name-suggest";
-import { SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
+import { SHELL_DESTRUCTIVE_BTN, SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 import { ArrowRightIcon, ChevronDownIcon, DeleteIcon, LayersIcon, SelectionCheckedIcon } from "./shell-icons";
 
 export type BulkPanel = null | "delete" | "organize";
@@ -152,11 +154,12 @@ export function LibraryBulkToolbar({
           <Menu.Positioner align="start" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
             <Menu.Popup
               aria-label="Selection actions"
-              className="ui-popover ui-scrollbar max-h-[min(24rem,var(--available-height))] min-w-48 max-w-[calc(100vw-1rem)] overflow-y-auto outline-none"
+              className="ui-menu-popup ui-popover flex flex-col overflow-hidden max-h-[min(24rem,var(--available-height))] min-w-48 max-w-[calc(100vw-1rem)] outline-none"
               finalFocus={() => focusSearchAfterClose.current
                 ? document.getElementById("library-search")
                 : restoreTriggerFocus.current ? triggerRef.current : false}
             >
+              <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
               {!allVisibleSelected ? (
                 <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onSelectAllVisible}>
                   Select all
@@ -185,6 +188,7 @@ export function LibraryBulkToolbar({
               <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-danger data-[highlighted]:bg-bg-danger" onClick={() => runWithoutTriggerRestore(destructiveAction)}>
                 <DeleteIcon className="size-4" />{destructiveLabel}
               </Menu.Item>
+              </ScrollArea>
             </Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>
@@ -212,7 +216,7 @@ export function LibraryBulkToolbar({
           <ArrowRightIcon className="size-4" />Restore selected
         </button> : null}
         <button
-          className={`${SHELL_TOP_BTN} h-10 shrink-0 px-3 text-xs text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger`}
+          className={`${SHELL_TOP_BTN} h-10 shrink-0 px-3 text-xs ${SHELL_DESTRUCTIVE_BTN}`}
           disabled={busy}
           type="button"
           onClick={destructiveAction}

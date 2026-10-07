@@ -30,6 +30,7 @@ export async function readBackupSnapshot() {
     items: rawItems.map((item) => normalizeItem(item)),
     tags, collections, assets, videos, thumbnails, documents,
     preferences: {
+      ...(preferences?.keyboardShortcuts ? { keyboardShortcuts: preferences.keyboardShortcuts } : {}),
       pinnedCollectionIds: normalizePinnedCollectionIds(
         preferences?.pinnedCollectionIds, collections.map((collection) => collection.id),
       ),

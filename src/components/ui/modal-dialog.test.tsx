@@ -24,3 +24,20 @@ test("dismissal interception leaves the parent open until the caller accepts it"
   expect(onOpenChange).not.toHaveBeenCalled();
   expect(screen.getByRole("dialog", { name: "Edit draft" })).toBeVisible();
 });
+
+test("editor content scrolls independently of actions and keeps keyboard submission", async () => {
+  const onSubmit = vi.fn();
+  render(
+    <ModalDialog open size="editor" onOpenChange={vi.fn()} title="Edit note" description="Change your text."
+      onSubmit={onSubmit} footer={<button type="submit">Save</button>}>
+      <label>Note<textarea defaultValue="Original note" /></label>
+    </ModalDialog>,
+  );
+  const textarea = screen.getByRole("textbox", { name: "Note" });
+  expect(textarea.closest('[data-slot="scroll-area-viewport"]')).not.toBeNull();
+  expect(screen.getByRole("button", { name: "Save" }).closest('[data-slot="scroll-area"]')).toBeNull();
+  fireEvent.change(textarea, { target: { value: "Updated note" } });
+  fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
+  await waitFor(() => expect(onSubmit).toHaveBeenCalledOnce());
+  expect(textarea).toHaveValue("Updated note");
+});

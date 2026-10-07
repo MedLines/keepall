@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { putAsset } from "@/persistence/assets";
 import {
   saveLinkPreviewResult,
-  setLinkPreviewAssetId,
+  saveLinkPreviewImage,
   setLinkPreviewPending,
   setLinkPreviewRetry,
 } from "@/persistence/items";
@@ -13,12 +12,8 @@ import { setPreviewEnrichPaused } from "./preview-enrich-pause";
 vi.mock("@/persistence/items", () => ({
   setLinkPreviewPending: vi.fn(),
   saveLinkPreviewResult: vi.fn(),
-  setLinkPreviewAssetId: vi.fn(),
+  saveLinkPreviewImage: vi.fn(),
   setLinkPreviewRetry: vi.fn(),
-}));
-
-vi.mock("@/persistence/assets", () => ({
-  putAsset: vi.fn(),
 }));
 
 describe("enrichLinkPreview", () => {
@@ -26,21 +21,12 @@ describe("enrichLinkPreview", () => {
     setPreviewEnrichPaused(false);
     vi.mocked(setLinkPreviewPending).mockReset();
     vi.mocked(saveLinkPreviewResult).mockReset();
-    vi.mocked(setLinkPreviewAssetId).mockReset();
+    vi.mocked(saveLinkPreviewImage).mockReset();
     vi.mocked(setLinkPreviewRetry).mockReset();
-    vi.mocked(putAsset).mockReset();
     vi.mocked(setLinkPreviewPending).mockResolvedValue({} as never);
     vi.mocked(saveLinkPreviewResult).mockResolvedValue({} as never);
-    vi.mocked(setLinkPreviewAssetId).mockResolvedValue({} as never);
+    vi.mocked(saveLinkPreviewImage).mockResolvedValue({} as never);
     vi.mocked(setLinkPreviewRetry).mockResolvedValue({} as never);
-    vi.mocked(putAsset).mockResolvedValue({
-      id: "a1",
-      mimeType: "image/png",
-      byteLength: 3,
-      bytes: new Uint8Array([1, 2, 3]),
-      contentHash: "abc",
-      createdAt: 1,
-    });
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
@@ -73,7 +59,7 @@ describe("enrichLinkPreview", () => {
 
     await enrichLinkPreview("l1", "https://example.com");
 
-    expect(setLinkPreviewPending).toHaveBeenCalledWith("l1");
+    expect(setLinkPreviewPending).toHaveBeenCalledWith("l1", "https://example.com");
     expect(fetch).toHaveBeenCalledWith(
       "/api/preview",
       expect.objectContaining({
@@ -87,7 +73,7 @@ describe("enrichLinkPreview", () => {
       title: "Hello",
       description: "World",
       imageUrl: "https://cdn.example.com/x.png",
-    });
+    }, "https://example.com");
     expect(fetch).toHaveBeenCalledWith(
       "/api/preview-image",
       expect.objectContaining({
@@ -96,8 +82,7 @@ describe("enrichLinkPreview", () => {
         body: JSON.stringify({ url: "https://cdn.example.com/x.png" }),
       }),
     );
-    expect(putAsset).toHaveBeenCalled();
-    expect(setLinkPreviewAssetId).toHaveBeenCalledWith("l1", "a1");
+    expect(saveLinkPreviewImage).toHaveBeenCalledWith("l1", "https://example.com", { mimeType: "image/png", bytes: new Uint8Array([1, 2, 3]) });
     expect(
       dispatchSpy.mock.calls.some(
         ([event]) =>
@@ -121,8 +106,8 @@ describe("enrichLinkPreview", () => {
     expect(saveLinkPreviewResult).toHaveBeenCalledWith("l1", {
       status: "failed",
       retry: "network",
-    });
-    expect(putAsset).not.toHaveBeenCalled();
+    }, "https://example.com");
+    expect(saveLinkPreviewImage).not.toHaveBeenCalled();
     expect(
       dispatchSpy.mock.calls.some(
         ([event]) =>
@@ -148,7 +133,7 @@ describe("enrichLinkPreview", () => {
     expect(saveLinkPreviewResult).toHaveBeenCalledWith("l1", {
       status: "failed",
       retry: "network",
-    });
+    }, "https://example.com");
     expect(
       dispatchSpy.mock.calls.some(
         ([event]) =>
@@ -171,7 +156,7 @@ describe("enrichLinkPreview", () => {
     expect(saveLinkPreviewResult).toHaveBeenCalledWith("l1", {
       status: "failed",
       retry: "none",
-    });
+    }, "https://example.com");
   });
 
   test("marks none when the image API rejects oversize", async () => {
@@ -197,9 +182,9 @@ describe("enrichLinkPreview", () => {
       title: "Hello",
       description: "World",
       imageUrl: "https://cdn.example.com/x.png",
-    });
-    expect(setLinkPreviewRetry).toHaveBeenCalledWith("l1", "none");
-    expect(putAsset).not.toHaveBeenCalled();
+    }, "https://example.com");
+    expect(setLinkPreviewRetry).toHaveBeenCalledWith("l1", "none", "https://example.com");
+    expect(saveLinkPreviewImage).not.toHaveBeenCalled();
   });
 
   test("marks network when preview fetch throws offline", async () => {
@@ -210,6 +195,6 @@ describe("enrichLinkPreview", () => {
     expect(saveLinkPreviewResult).toHaveBeenCalledWith("l1", {
       status: "failed",
       retry: "network",
-    });
+    }, "https://example.com");
   });
 });

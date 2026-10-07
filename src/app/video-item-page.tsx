@@ -1,6 +1,9 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
+
 import Link from "next/link";
+import { ItemPageLoading } from "./library-loading-content";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { itemActionLabel } from "@/domain/item-label";
@@ -21,7 +24,11 @@ import { ItemLibraryDetails } from "./item-library-details";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { VideoIcon } from "./shell-icons";
 import { ItemPageHeader } from "./item-page-header";
-import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
+import { ItemMediaFrame } from "./item-media-frame";
+import { VideoPlayer } from "./video-player";
+import { ITEM_DETAILS_POSITION, ITEM_MEDIA_HEIGHT, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
+import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+import { ItemPreviewContentTransition } from "./item-view-transition";
 
 type VideoState =
   | { itemId: string; status: "loading" | "missing" | "error" }
@@ -32,9 +39,9 @@ type MediaState =
   | { key: string; status: "ready"; url: string };
 
 function VideoPlayback({ title, poster, media, onRetry, onError }: { title: string; poster: string | null; media: MediaState; onRetry: () => void; onError: () => void }) {
-  return <div className="overflow-hidden rounded-control border border-border-control bg-bg-media">
-    {media.status === "ready" ? <video aria-label={title} src={media.url} poster={poster ?? undefined} controls preload="metadata" playsInline className="mx-auto max-h-[75vh] w-full" onError={onError} />
-      : <div className="grid aspect-video place-content-center gap-3 p-5 text-center text-text-on-media">
+  return <ItemMediaFrame className="video-viewer-canvas">
+    {media.status === "ready" ? <VideoPlayer key={media.url} title={title} src={media.url} poster={poster ?? undefined} onError={onError} />
+      : <div className="grid size-full place-content-center justify-items-center gap-3 p-5 text-center text-text-secondary">
         <VideoIcon />
         {media.status === "loading" ? <span>Loading video…</span> : <>
           <p role="alert" className="text-sm">{media.status === "missing" ? "The saved video file is missing." : media.status === "unsupported" ? "This browser couldn't play the saved video. Try a browser that supports this video format." : "Couldn't load video. Try reading the saved file again."}</p>
@@ -42,12 +49,14 @@ function VideoPlayback({ title, poster, media, onRetry, onError }: { title: stri
           <button type="button" className="ui-control mx-auto min-h-10 px-3 text-sm text-text-primary" onClick={onRetry}>Retry video</button>
         </>}
       </div>}
-  </div>;
+  </ItemMediaFrame>;
 }
 
-export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHref: string }) {
+export function VideoItemPage({ itemId, returnHref, initialSnapshot }: { itemId: string; returnHref: string; initialSnapshot?: ItemNavigationSnapshot }) {
   const router = useRouter();
-  const [state, setState] = useState<VideoState>({ itemId, status: "loading" });
+  const [state, setState] = useState<VideoState>(() => initialSnapshot?.item.id === itemId && initialSnapshot.item.type === "video"
+    ? { itemId, status: "ready", item: initialSnapshot.item, tags: initialSnapshot.tags, collections: initialSnapshot.collections }
+    : { itemId, status: "loading" });
   const [media, setMedia] = useState<MediaState>({ key: "", status: "loading" });
   const [retry, setRetry] = useState(0);
   const [editing, setEditing] = useState(false);
@@ -88,9 +97,10 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
     };
   }, [videoAssetId, mediaKey]);
 
+  if (currentState.status === "loading") return <ItemPageLoading returnHref={returnHref} />;
   if (currentState.status !== "ready") {
     return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5 text-text-secondary">
-      {currentState.status === "loading" ? "Loading video…" : currentState.status === "missing" ? "Video not found." : "Couldn't load video."}
+      {currentState.status === "missing" ? "Video not found." : "Couldn't load video."}
       <Link href={returnHref} className="ui-control mt-4 min-h-10 px-4">Return to library</Link>
     </main>;
   }
@@ -123,13 +133,12 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
     finally { setBusy(false); }
   };
 
-  return <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary">
-    <ItemPageHeader returnHref={returnHref} title={item.title} />
-    <main className={ITEM_PAGE_SCROLL} data-testid="item-page-scroll">
-      <div className={ITEM_PAGE_GRID}>
-        <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
-          <h1 className="mb-5 break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{item.title}</h1>
-          <VideoPlayback title={item.title} poster={poster} media={currentMedia} onRetry={() => setRetry((value) => value + 1)} onError={() => setMedia((current) => current.key === mediaKey ? { key: mediaKey, status: "unsupported" } : current)} />
+  return <div className={`${initialSnapshot ? "" : "item-startup-content"} flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas text-text-primary`}>
+    <ItemPageHeader returnHref={returnHref} title={item.title} titleAsHeading />
+    <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
+      <div className={`${ITEM_PAGE_GRID} ${ITEM_MEDIA_HEIGHT}`}>
+        <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1">
+          <ItemPreviewContentTransition itemId={item.id}><VideoPlayback title={item.title} poster={poster} media={currentMedia} onRetry={() => setRetry((value) => value + 1)} onError={() => setMedia((current) => current.key === mediaKey ? { key: mediaKey, status: "unsupported" } : current)} /></ItemPreviewContentTransition>
           {item.noteContent?.trim() ? <article aria-labelledby="video-notes-heading" className="mt-10 border-t border-border-control pt-7">
             <h2 id="video-notes-heading" className="text-xl font-semibold">Notes</h2>
             <NoteContent content={item.noteContent} format={item.noteFormat === "markdown" ? "markdown" : "plain"} className="mt-5 text-text-primary" />
@@ -143,7 +152,7 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
           createdAt={item.createdAt}
           updatedAt={item.updatedAt}
           sourceFileName={item.sourceFileName}
-          className={ITEM_DETAILS_POSITION}
+          className={`${ITEM_DETAILS_POSITION} lg:min-h-[var(--item-viewer-height)]`}
           disabled={busy}
           editDisabled={editing}
           deleteLabel="Move to Trash"
@@ -152,7 +161,7 @@ export function VideoItemPage({ itemId, returnHref }: { itemId: string; returnHr
           onDelete={() => { setActionError(null); setDeleteOpen(true); }}
         />
       </div>
-    </main>
+    </ScrollPanel>
     {editing ? <VideoItemEditDialog item={item} open busy={busy} error={editError} onSave={(draft) => void saveDetails(draft)} onOpenChange={setEditing} /> : null}
     <ItemOrganizerDrawer open={organizerOpen} onOpenChange={setOrganizerOpen} side="right" itemTitle={itemActionLabel(item)}
       tags={tags} collections={collections} tagSuggestions={currentState.tags.map((tag) => ({ id: tag.id, name: tag.name }))}

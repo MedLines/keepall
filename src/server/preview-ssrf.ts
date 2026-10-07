@@ -28,6 +28,9 @@ function isBlockedIpv4(ip: string): boolean {
     [ipv4ToInt("169.254.0.0"), ipv4ToInt("169.254.255.255")],
     [ipv4ToInt("172.16.0.0"), ipv4ToInt("172.31.255.255")],
     [ipv4ToInt("192.0.0.0"), ipv4ToInt("192.0.0.255")],
+    [ipv4ToInt("192.0.2.0"), ipv4ToInt("192.0.2.255")],
+    [ipv4ToInt("198.51.100.0"), ipv4ToInt("198.51.100.255")],
+    [ipv4ToInt("203.0.113.0"), ipv4ToInt("203.0.113.255")],
     [ipv4ToInt("192.168.0.0"), ipv4ToInt("192.168.255.255")],
     [ipv4ToInt("198.18.0.0"), ipv4ToInt("198.19.255.255")],
     [ipv4ToInt("224.0.0.0"), ipv4ToInt("255.255.255.255")],
@@ -36,24 +39,13 @@ function isBlockedIpv4(ip: string): boolean {
 }
 
 function isBlockedIpv6(ip: string): boolean {
-  const normalized = ip.toLowerCase();
-  if (normalized === "::" || normalized === "::1") {
-    return true;
-  }
-  // Unique local, link-local, and IPv4-mapped loopback/private checks (simplified).
-  if (normalized.startsWith("fc") || normalized.startsWith("fd")) {
-    return true;
-  }
-  if (normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb")) {
-    return true;
-  }
-  if (normalized.startsWith("::ffff:")) {
-    const mapped = normalized.slice("::ffff:".length);
-    if (isIP(mapped) === 4) {
-      return isBlockedIpv4(mapped);
-    }
-  }
-  return false;
+  // Restrict outbound requests to global unicast; also exclude transition and documentation ranges.
+  // This blocks compressed/expanded loopback, mapped IPv4, local, multicast and translation addresses.
+  const normalized = new URL(`http://[${ip}]/`).hostname.slice(1, -1).toLowerCase();
+  const first = Number.parseInt(normalized.split(":")[0] ?? "", 16);
+  const second = Number.parseInt(normalized.split(":")[1] || "0", 16);
+  return !Number.isFinite(first) || first < 0x2000 || first > 0x3fff || first === 0x2002 ||
+    (first === 0x2001 && (second === 0 || second === 2 || second === 0xdb8 || (second >= 0x10 && second <= 0x2f)));
 }
 
 export function isBlockedIpAddress(ip: string): boolean {
@@ -91,11 +83,12 @@ export function parsePreviewCandidateUrl(raw: string): URL {
     throw new PreviewUrlBlockedError("URL host is required");
   }
 
-  if (BLOCKED_HOSTNAMES.has(parsed.hostname.toLowerCase())) {
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, "").toLowerCase().replace(/\.$/, "");
+  if (BLOCKED_HOSTNAMES.has(hostname)) {
     throw new PreviewUrlBlockedError("URL host is not allowed");
   }
 
-  if (isIP(parsed.hostname) !== 0 && isBlockedIpAddress(parsed.hostname)) {
+  if (isIP(hostname) !== 0 && isBlockedIpAddress(hostname)) {
     throw new PreviewUrlBlockedError("URL host is not allowed");
   }
 
@@ -108,13 +101,14 @@ export async function assertPreviewUrlAllowed(
 ): Promise<URL> {
   const parsed = parsePreviewCandidateUrl(raw);
 
-  if (isIP(parsed.hostname) !== 0) {
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, "");
+  if (isIP(hostname) !== 0) {
     return parsed;
   }
 
   let lookupResult: Awaited<ReturnType<typeof lookup>>;
   try {
-    lookupResult = await resolveDns(parsed.hostname, { all: false });
+    lookupResult = await resolveDns(hostname, { all: false });
   } catch {
     throw new PreviewUrlBlockedError("URL host could not be resolved");
   }

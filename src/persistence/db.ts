@@ -11,6 +11,7 @@ import type { BackupFolderSettings } from "./backup-settings";
 export const KEEPALL_DB_NAME = "keepall";
 
 export type Thumbnail = { assetId: string; blob: Blob };
+export type PreviewLayout = { assetId: string; width: number; height: number };
 export type VideoAsset = { id: string; mimeType: string; byteLength: number; blob: Blob; createdAt: number };
 
 export type KeepallDB = Dexie & {
@@ -19,6 +20,7 @@ export type KeepallDB = Dexie & {
   collections: EntityTable<Collection, "id">;
   assets: EntityTable<Asset, "id">;
   thumbnails: EntityTable<Thumbnail, "assetId">;
+  previewLayouts: EntityTable<PreviewLayout, "assetId">;
   videoAssets: EntityTable<VideoAsset, "id">;
   preferences: EntityTable<LibraryPreferences, "id">;
   documentAssets: EntityTable<DocumentAsset, "id">;
@@ -89,6 +91,7 @@ function createKeepallDb(): KeepallDB {
 
   db.version(10).stores({ backupState: "id" });
   db.version(11).stores({ documentAssets: "id, contentHash" });
+  db.version(12).stores({ previewLayouts: "assetId" });
   trackBackupRevision(db);
 
   return db;

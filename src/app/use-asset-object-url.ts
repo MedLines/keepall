@@ -5,7 +5,7 @@ import {
   isLibraryNavigationStale,
   useLibraryNavigationGenerationRef,
 } from "./library-navigation";
-import { acquireAssetObjectUrl } from "./asset-object-url-cache";
+import { acquireAssetObjectUrl, peekAssetObjectUrl } from "./asset-object-url-cache";
 
 /**
  * Load a local asset Blob and expose a shared object URL for <img src>.
@@ -14,14 +14,18 @@ import { acquireAssetObjectUrl } from "./asset-object-url-cache";
  */
 export function useAssetObjectUrl(
   assetId: string | null,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; onUnavailable?: () => void },
 ): string | null {
   const enabled = options?.enabled !== false;
+  const onUnavailable = options?.onUnavailable;
   const navigationGenerationRef = useLibraryNavigationGenerationRef();
   const [resolved, setResolved] = useState<{
     assetId: string;
     url: string;
-  } | null>(null);
+  } | null>(() => {
+    const url = typeof window !== "undefined" && enabled && assetId ? peekAssetObjectUrl(assetId) : null;
+    return url && assetId ? { assetId, url } : null;
+  });
 
   useEffect(() => {
     if (!assetId || !enabled) {
@@ -35,12 +39,12 @@ export function useAssetObjectUrl(
     void handle.promise.then((url) => {
       if (
         cancelled ||
-        !url ||
         (navigationGenerationRef !== null &&
           isLibraryNavigationStale(navigationGenerationRef, capturedGeneration))
       ) {
         return;
       }
+      if (!url) { onUnavailable?.(); return; }
       setResolved({ assetId, url });
     });
 
@@ -48,7 +52,7 @@ export function useAssetObjectUrl(
       cancelled = true;
       handle.release();
     };
-  }, [assetId, enabled, navigationGenerationRef]);
+  }, [assetId, enabled, navigationGenerationRef, onUnavailable]);
 
   return enabled && resolved?.assetId === assetId ? resolved.url : null;
 }

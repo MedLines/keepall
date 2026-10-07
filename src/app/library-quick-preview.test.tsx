@@ -16,10 +16,10 @@ test("reads saved link notes safely and keeps source navigation explicit", async
   const actions = callbacks();
   render(<LibraryQuickPreview item={item} index={0} count={2} {...actions} />);
   expect(await screen.findByRole("heading", { name: "Context" })).toBeVisible();
-  expect(screen.getByRole("link", { name: item.url })).toHaveAttribute("href", item.url);
+  expect(screen.getByRole("link", { name: `Open source: ${item.url}` })).toHaveAttribute("href", item.url);
   expect(actions.onOpenItem).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Open full item" }));
-  expect(actions.onOpenItem).toHaveBeenCalledWith(item);
+  expect(actions.onOpenItem).toHaveBeenCalledWith(item, false);
 });
 
 test("loads the local video, preserves native playback keys, and releases its object URL on item change", async () => {
@@ -32,6 +32,11 @@ test("loads the local video, preserves native playback keys, and releases its ob
   await waitFor(() => expect(video).toHaveAttribute("src", "blob:quick-preview-video"));
   expect(video).toHaveAttribute("controls");
   expect(video).not.toHaveAttribute("autoplay");
+  expect(video).toHaveAttribute("data-ready", "false");
+  expect(screen.getByRole("status", { name: "Loading video" })).toBeInTheDocument();
+  fireEvent.loadedMetadata(video);
+  expect(video).toHaveAttribute("data-ready", "true");
+  expect(screen.queryByRole("status", { name: "Loading video" })).not.toBeInTheDocument();
   fireEvent.keyDown(video, { key: "ArrowRight" });
   fireEvent.keyDown(video, { key: " " });
   expect(actions.onMove).not.toHaveBeenCalled();

@@ -7,20 +7,27 @@ import type { LinkItem } from "@/domain/link";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { useState } from "react";
-import { ImageIcon, LinkIcon, NoteIcon, PdfIcon, VideoIcon } from "./shell-icons";
+import { ItemViewTransition } from "./item-view-transition";
+import { ItemTypeIcon } from "./item-type-icon";
+import { PdfCardThumbnail } from "./pdf-card-thumbnail";
+import { peekPreviewLayout, rememberPreviewLayout } from "@/persistence/preview-layouts";
+import { LibraryThumbnailImage } from "./library-thumbnail-image";
 
-type MediaVariant = "card" | "grid" | "inspect" | "viewer" | "preview";
+type MediaVariant = "card" | "grid" | "inspect" | "canvas" | "viewer" | "preview";
 
 type Props = {
   item: Item;
-  /** Grid preserves proportions, cards crop, inspect fits, viewer keeps natural height, and preview contains without upscaling. */
+  /** Grid preserves proportions, cards crop, inspect fits, canvas fits without upscaling, viewer keeps natural height, and preview contains without upscaling. */
   variant?: MediaVariant;
   onImageLoad?: (ratio: number, dimensions: { width: number; height: number }) => void;
   /** Inspect gallery: show this asset instead of the cover. */
   assetId?: string | null;
   /** Smaller favicon for list-row thumbs. */
   compact?: boolean;
+  /** Dense link lists show identity without loading the OG asset. */
+  faviconOnly?: boolean;
   className?: string;
+  sharedTransition?: boolean;
 };
 
 /** Renders link/image preview or note letter. No links; inspect owns outbound. */
@@ -29,64 +36,85 @@ export function LibraryItemMedia({
   variant = "card",
   assetId,
   compact = false,
+  faviconOnly = false,
   onImageLoad,
   className = "",
+  sharedTransition = true,
 }: Props) {
-  const assetIdForDisplay = resolveAssetId(item, assetId);
-  const useThumbnail = ["card", "grid"].includes(variant) && (item.type === "image" || item.type === "video");
+  const assetIdForDisplay = faviconOnly && item.type === "link" ? null : resolveAssetId(item, assetId);
+  const useThumbnail = item.type === "video" || (["card", "grid"].includes(variant) && item.type === "image");
   const originalUrl = useAssetObjectUrl(assetIdForDisplay, { enabled: !useThumbnail });
-  const thumbnailUrl = useThumbnailObjectUrl(useThumbnail ? assetIdForDisplay : null);
-  const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl;
-  const [brokenAssetId, setBrokenAssetId] = useState<string | null>(null);
-  const imageSrc = brokenAssetId === assetIdForDisplay ? null : localObjectUrl;
+  const thumbnailUrl = useThumbnailObjectUrl(useThumbnail || item.type === "image" ? assetIdForDisplay : null);
+  const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl ?? (item.type === "image" ? thumbnailUrl : null);
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  const [decodedLayout, setDecodedLayout] = useState<{ assetId: string; width: number; height: number } | null>(null);
+  const dimensions = decodedLayout?.assetId === assetIdForDisplay ? decodedLayout : peekPreviewLayout(assetIdForDisplay);
+  const imageBroken = brokenUrl !== null && brokenUrl === localObjectUrl;
+  const imageSrc = imageBroken ? null : localObjectUrl;
+
+  if (item.type === "document" && item.format === "pdf") {
+    return <PdfCardThumbnail item={item} compact={compact} />;
+  }
 
   if (imageSrc && (item.type === "link" || item.type === "image" || item.type === "video")) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- local object URLs + remote OG
-      <img
+    const image = (
+      <LibraryThumbnailImage
+        animate={variant === "grid" || variant === "card"}
+        data-preview-image-asset={variant === "preview" && item.type === "image" ? assetIdForDisplay : undefined}
         alt=""
         className={imageClassName(variant, compact, className)}
         src={imageSrc}
+        width={dimensions?.width}
+        height={dimensions?.height}
         onLoad={(event) => {
           const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+          if (assetIdForDisplay && width > 0 && height > 0) {
+            setDecodedLayout({ assetId: assetIdForDisplay, width, height });
+            void rememberPreviewLayout(assetIdForDisplay, width, height).catch(() => {});
+          }
           onImageLoad?.(width / height, { width, height });
         }}
         onError={() => {
-          setBrokenAssetId(assetIdForDisplay);
+          setBrokenUrl(imageSrc);
         }}
       />
     );
+    return sharedTransition && item.type === "image" && assetIdForDisplay && ["card", "grid", "inspect", "preview"].includes(variant)
+      ? <ItemViewTransition itemId={item.id} assetId={assetIdForDisplay} source={variant !== "inspect"} preview={variant === "preview"}>{image}</ItemViewTransition>
+      : image;
   }
 
   if (item.type === "link") {
-    return <LinkFavicon key={item.url} item={item} variant={variant} compact={compact} className={className} />;
+    return <LinkFavicon key={item.url} item={item} variant={variant} compact={compact} className={className} dimensions={dimensions} />;
   }
 
   return (
     <div
       aria-hidden="true"
       className={fallbackClassName(variant, compact, className)}
+      style={variant === "grid" && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined}
     >
-      <FallbackContent item={item} compact={compact} />
+      {item.type !== "video" && assetIdForDisplay && !imageBroken ? null : <FallbackContent item={item} compact={compact} />}
     </div>
   );
 }
 
-function LinkFavicon({ item, variant, compact, className }: {
-  item: LinkItem; variant: MediaVariant; compact: boolean; className: string;
+function LinkFavicon({ item, variant, compact, className, dimensions }: {
+  item: LinkItem; variant: MediaVariant; compact: boolean; className: string; dimensions?: { width: number; height: number };
 }) {
   const [faviconIndex, setFaviconIndex] = useState(0);
   const candidates = linkFaviconUrls(item.url, { size: compact ? 64 : 128 });
   const faviconSrc = candidates[faviconIndex];
 
   return (
-    <div aria-hidden="true" className={fallbackClassName(variant, compact, className)}>
+    <div aria-hidden="true" className={fallbackClassName(variant, compact, className)}
+      style={variant === "grid" && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined}>
       {faviconSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element -- best-effort favicon sources, then an offline icon
-        <img
+        <LibraryThumbnailImage
           alt=""
           className={compact || faviconIndex > 0 ? "size-8 object-contain" : "size-16 object-contain"}
           src={faviconSrc}
+          animate={variant === "card" || variant === "grid"}
           onError={() => setFaviconIndex(faviconIndex + 1)}
         />
       ) : <FallbackContent item={item} compact={compact} />}
@@ -116,8 +144,11 @@ function imageClassName(
   if (variant === "viewer") {
     return `media-outline mx-auto block h-auto w-auto max-w-full ${className}`;
   }
+  if (variant === "canvas") {
+    return `media-outline block h-auto w-auto max-h-full max-w-full rounded-none object-contain ${className}`;
+  }
   if (variant === "inspect") {
-    return `media-outline media-squircle-inset mx-auto max-h-[min(78vh,56rem)] w-full object-contain ${className}`;
+    return `media-outline media-squircle-inset mx-auto block h-auto max-h-[min(78vh,56rem)] w-auto max-w-full object-contain ${className}`;
   }
   if (compact) {
     return `media-outline size-full rounded-[inherit] object-cover ${className}`;
@@ -133,7 +164,10 @@ function fallbackClassName(
   if (variant === "preview") {
     return `flex size-full min-h-0 items-center justify-center rounded-input bg-bg-media text-5xl font-semibold text-text-on-media ${className}`;
   }
-  if (variant === "inspect" || variant === "viewer") {
+  if (variant === "canvas" || variant === "viewer") {
+    return `flex min-h-48 items-center justify-center bg-bg-image-viewer text-5xl font-semibold text-text-primary ${className}`;
+  }
+  if (variant === "inspect") {
     return `flex min-h-48 items-center justify-center bg-bg-media text-5xl font-semibold text-text-on-media ${className}`;
   }
   if (compact) {
@@ -143,12 +177,7 @@ function fallbackClassName(
 }
 
 function FallbackContent({ item, compact }: { item: Item; compact: boolean }) {
-  if (item.type === "link") {
-    return <LinkIcon className={compact ? "size-6" : "size-12"} />;
-  }
+  if (item.type === "link" || item.type === "document" || item.type === "note" || item.type === "video") return <ItemTypeIcon item={item} className={compact ? "size-6" : "size-10"} />;
   if (!compact) return cardInitial(item);
-  if (item.type === "document" && item.format === "pdf") return <PdfIcon className="size-6" />;
-  if (item.type === "note" || item.type === "document") return <NoteIcon className="size-6" />;
-  if (item.type === "video") return <VideoIcon className="size-6" />;
-  return <ImageIcon className="size-6" />;
+  return <ItemTypeIcon item={item} className="size-6" />;
 }

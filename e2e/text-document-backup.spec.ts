@@ -54,7 +54,7 @@ test("document originals survive native storage, ZIP export, replacement and rel
   await expect(review.getByLabel("Current Document files: 0", { exact: true })).toHaveText("0");
   await expect(review.getByLabel("Backup Document files: 1", { exact: true })).toHaveText("1");
   await review.getByRole("button", { name: "Merge", exact: true }).click();
-  await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Merged:");
+  await expect(page.locator('div.sr-only[role="status"][aria-atomic="true"]')).toContainText("Merged:");
   const snapshot = await documentSnapshot(page);
   expect(snapshot.items).toHaveLength(2);
   expect(snapshot.items).toContainEqual(expect.objectContaining({ sourceFileName: "original.md", noteContent: "Personal note" }));
@@ -80,7 +80,7 @@ test("document originals survive native storage, ZIP export, replacement and rel
   await input.setInputFiles(path!);
   await review.getByRole("button", { name: "Replace library", exact: true }).click();
   await page.getByRole("dialog", { name: "Replace library?", exact: true }).getByRole("button", { name: "Confirm replacement", exact: true }).click();
-  await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Library replaced from backup");
+  await expect(page.locator('div.sr-only[role="status"][aria-atomic="true"]')).toContainText("Library replaced from backup");
   await page.reload();
   expect(await documentSnapshot(page)).toEqual(snapshot);
   await page.goto("/?q=" + encodeURIComponent("مرحبا café"));

@@ -1,10 +1,37 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LibraryCardContent, LibraryCardMetadata } from "./library-card-content";
 import { EMPTY_LINK_PREVIEW } from "@/domain/link";
 import { buildImage } from "@/domain/image";
 
 const base = { id: "item", createdAt: 1, updatedAt: 1, tagIds: [], collectionIds: [] };
+
+it("folder pills show styled collection names and still open the collection", async () => {
+  const browse = vi.fn();
+  render(<LibraryCardMetadata collections={[{ id: "reading", name: "Reading references" }]} tags={[]} onBrowseCollection={browse} onBrowseTag={vi.fn()} onRemoveTag={vi.fn()} />);
+  const folder = screen.getByRole("button", { name: "Reading references" });
+  expect(folder).not.toHaveAttribute("title");
+  act(() => folder.focus());
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("Reading references");
+  fireEvent.click(folder);
+  expect(browse).toHaveBeenCalledExactlyOnceWith("reading");
+});
+
+it("tag pills preview tag names in a styled tooltip before opening the dropdown", async () => {
+  const tags = [{ id: "design", name: "Design" }, { id: "reading", name: "Reading" }];
+  const browse = vi.fn();
+  render(<LibraryCardMetadata collections={[]} tags={tags} onBrowseCollection={vi.fn()} onBrowseTag={browse} onRemoveTag={vi.fn()} />);
+  const pill = screen.getByRole("button", { name: "2 tags" });
+  expect(pill).not.toHaveAttribute("title");
+  act(() => pill.focus());
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("Design, Reading");
+  expect(screen.queryByRole("list", { name: "Tags" })).not.toBeInTheDocument();
+  fireEvent.click(pill);
+  expect(screen.getByRole("list", { name: "Tags" })).toBeVisible();
+  await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: "Design" }));
+  expect(browse).toHaveBeenCalledExactlyOnceWith("design");
+});
 
 describe("grid card content", () => {
   it("omits untitled image content without replacing it with a filename or placeholder", () => {
@@ -16,7 +43,7 @@ describe("grid card content", () => {
     render(<LibraryCardContent item={buildImage({ assetId: "a", caption: "Footer detail" })} pinned onOpen={vi.fn()} />);
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.getByText("Footer detail")).toBeVisible();
-    expect(screen.getByTitle("Pinned in this collection")).toBeVisible();
+    expect(screen.getByRole("img", { name: "Pinned in this collection" })).toBeVisible();
   });
 
   it("preserves a supplied title even if it resembles a filename", () => {
@@ -30,29 +57,52 @@ describe("grid card content", () => {
     expect(screen.getByRole("heading", { name: "Image card redesign" })).toBeVisible();
     expect(screen.queryByText("Untitled")).toBeNull();
     expect(screen.getByText("The image should lead.")).toBeVisible();
-    expect(screen.queryByText(/More ideas/)).toBeNull();
+    expect(screen.getByText(/More ideas/)).toBeVisible();
     expect(screen.getByRole("link", { name: /Image card redesign/ })).toHaveAttribute("href", "/items/item?from=%2F");
     expect(screen.getByText(/Edited/)).toBeVisible();
   });
 
-  it("keeps link metadata local and labels the source with a glyph", () => {
+  it("keeps link metadata local and shows the source host", () => {
     const { container } = render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "", url: "https://example.com/components/footer", previewDescription: "A spacious footer." }} onOpen={vi.fn()} />);
-    expect(screen.getByRole("link").getAttribute("href")).toBe("https://example.com/components/footer");
-    expect(screen.getByRole("link").textContent).toContain("example.com/components/footer");
+    expect(screen.getByRole("link", { name: "example.com/components/footer" })).toHaveAttribute("href", "https://example.com/components/footer");
+    expect(screen.getByRole("link", { name: "example.com" })).toHaveAttribute("href", "https://example.com/components/footer");
     expect(screen.getByText("A spacious footer.")).toBeTruthy();
-    expect(container.querySelector("img")).toBeNull();
-    expect(container.querySelector("svg")).toBeTruthy();
+    expect(container.querySelector("img")).toHaveAttribute("src", "https://www.google.com/s2/favicons?domain=example.com&sz=32");
+    expect(container.querySelector("img")).toHaveAttribute("alt", "");
+  });
+
+  it("keeps a one-line note readable instead of replacing its excerpt with an empty state", () => {
+    const { container } = render(<LibraryCardContent item={{ ...base, type: "note", title: "", content: "Remember this idea" }} onOpen={vi.fn()} />);
+    expect(container.querySelector(".library-text-preview")).toHaveTextContent("Remember this idea");
+    expect(screen.queryByText("No text preview")).toBeNull();
+    expect(screen.getByRole("img", { name: "Note" })).toBeVisible();
   });
 
   it("keeps the link title external and opens its personal note in Keepall", () => {
     render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "Article", url: "https://example.com/article", noteContent: "Why I saved it" }} onOpen={vi.fn()} openHref="/items/item?from=%2F" />);
     expect(screen.getByRole("link", { name: "Article" })).toHaveAttribute("href", "https://example.com/article");
-    expect(screen.getByRole("link", { name: /Read my note/ })).toHaveAttribute("href", "/items/item?from=%2F");
+    expect(screen.getByRole("link", { name: /Open notes for/ })).toHaveAttribute("href", "/items/item?from=%2F");
   });
 
-  it("offers a note page for a link without a note", () => {
+  it("omits empty note and details controls for links", () => {
     render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "Article", url: "https://example.com/article" }} onOpen={vi.fn()} openHref="/items/item?from=%2F" />);
-    expect(screen.getByRole("link", { name: /Add a note/ })).toHaveAttribute("href", "/items/item?from=%2F");
+    expect(screen.queryByRole("link", { name: /Open details|Open notes/ })).toBeNull();
+    expect(screen.queryByText("Details")).toBeNull();
+  });
+
+  it("keeps an image source visible alongside its Markdown caption", () => {
+    render(<LibraryCardContent item={buildImage({ assetId: "a", sourceUrl: "https://example.com/gallery", caption: "**Why I saved it**", captionFormat: "markdown" })} onOpen={vi.fn()} openHref="/items/item" />);
+    expect(screen.getByRole("link", { name: "example.com" })).toHaveAttribute("href", "https://example.com/gallery");
+    expect(screen.getByRole("link", { name: /Open notes/ })).toHaveTextContent("Why I saved it");
+    expect(screen.getByRole("img", { name: "Markdown note" })).toBeVisible();
+  });
+
+  it("uses a Note glyph for plain personal notes and an MD glyph for Markdown", () => {
+    const { rerender } = render(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "Article", url: "https://example.com", noteContent: "My thought" }} onOpen={vi.fn()} openHref="/items/item" />);
+    expect(screen.getByRole("img", { name: "Note" })).toBeVisible();
+    expect(screen.queryByRole("img", { name: "Text document" })).toBeNull();
+    rerender(<LibraryCardContent item={{ ...base, ...EMPTY_LINK_PREVIEW, type: "link", title: "Article", url: "https://example.com", noteContent: "**My thought**", noteFormat: "markdown" }} onOpen={vi.fn()} openHref="/items/item" />);
+    expect(screen.getByRole("img", { name: "Markdown note" })).toBeVisible();
   });
 
   it("places pinned status beside the card title", () => {
@@ -72,7 +122,7 @@ describe("grid card content", () => {
     );
 
     const title = screen.getByRole("button", { name: "Pinned reference" });
-    const status = screen.getByTitle("Pinned in this collection");
+    const status = screen.getByRole("img", { name: "Pinned in this collection" });
 
     expect(status.parentElement).toContainElement(title);
   });

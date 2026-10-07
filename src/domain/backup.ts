@@ -1,9 +1,12 @@
+import { validateShortcuts, type KeyboardShortcuts } from "./keyboard-shortcuts";
+import { articleAssetIds, parseSavedArticle } from "./article";
 import { documentFormat, DocumentValidationError, type DocumentFormat } from "./document";
 import { isHttpUrl } from "./classify";
 import type { Collection } from "./collection";
 import { coerceExclusiveCollectionIds } from "./collection";
 import type { Item } from "./item";
 import type { ImageItem } from "./image";
+import { validateImageAnalysis } from "./image-analysis";
 import { coerceImageFields } from "./image";
 import type { LinkItem } from "./link";
 import { coerceLinkPreviewFields } from "./link";
@@ -34,8 +37,15 @@ export type KeepallBackup = {
   assets: BackupAssetRecord[];
   preferences: {
     pinnedCollectionIds: string[];
+    keyboardShortcuts?: KeyboardShortcuts;
   };
 };
+
+export type BackupImportProgress = Readonly<{
+  phase: "preparing-media" | "merging-items" | "restoring-items" | "saving-library";
+  completed?: number;
+  total?: number;
+}>;
 
 export type BackupCounts = Readonly<{
   total: number;
@@ -88,7 +98,7 @@ export function buildKeepallBackup(input: {
   tags: Tag[];
   collections: Collection[];
   assets?: BackupAssetRecord[];
-  preferences?: { pinnedCollectionIds: string[] };
+  preferences?: KeepallBackup["preferences"];
   exportedAt?: number;
 }): KeepallBackup {
   return {
@@ -228,7 +238,12 @@ function parseBackupPreferences(
     );
   }
 
-  return { pinnedCollectionIds: normalizePinnedCollectionIds(ids) };
+  const shortcuts = (raw as Record<string, unknown>).keyboardShortcuts;
+  try {
+    return { pinnedCollectionIds: normalizePinnedCollectionIds(ids), ...(shortcuts === undefined ? {} : { keyboardShortcuts: validateShortcuts(shortcuts) }) };
+  } catch (error) {
+    throw new BackupValidationError(error instanceof Error ? error.message : "Invalid app shortcuts");
+  }
 }
 
 function assertUniqueIds(ids: string[], label: string) {
@@ -503,6 +518,10 @@ function parseItem(
       throw new BackupValidationError(`Link at index ${index} has an unknown note format`);
     }
 
+    let article;
+    try { article = item.article === undefined ? undefined : parseSavedArticle(item.article); }
+    catch { throw new BackupValidationError(`Link at index ${index} has an invalid saved article`); }
+    if (articleAssetIds(article).some(id => !assetIds.has(id))) throw new BackupValidationError(`Link at index ${index} has a missing article image`);
     const preview = coerceLinkPreviewFields(item as Partial<LinkItem>);
     const previewAssetId =
       preview.previewAssetId && assetIds.has(preview.previewAssetId)
@@ -514,6 +533,7 @@ function parseItem(
       type: "link",
       title: item.title,
       url: item.url,
+      ...(article ? { article } : {}),
       ...(typeof item.noteContent === "string" ? { noteContent: item.noteContent } : {}),
       ...(item.noteFormat === "markdown" ? { noteFormat: "markdown" as const } : {}),
       ...preview,
@@ -547,11 +567,15 @@ function parseItem(
       );
     }
 
+    let analysis;
+    try { analysis = validateImageAnalysis(item.analysis, fields.assetIds); }
+    catch (error) { throw new BackupValidationError(error instanceof Error ? error.message : "Invalid image analysis"); }
     const image: ImageItem = {
       id: item.id,
       type: "image",
       title: item.title,
       assetIds: fields.assetIds,
+      ...(analysis.length ? { analysis } : {}),
       ...(fields.sourceFileName ? { sourceFileName: fields.sourceFileName } : {}),
       sourceUrl: fields.sourceUrl,
       caption: fields.caption,

@@ -53,6 +53,7 @@ test("page navigation never clears a painted canvas that is still visible", asyn
   const href = await page.locator('[data-item-id] a[href^="/items/"]').first().getAttribute("href");
   await page.goto(href!);
   const viewer = page.getByRole("region", { name: "PDF viewer", exact: true });
+  await expect(viewer.getByRole("group", { name: "PDF view" }).getByRole("button")).toHaveText(["Pages", "Scroll"]);
   await viewer.getByRole("button", { name: "Pages", exact: true }).click();
   const first = viewer.getByRole("img", { name: "PDF page 1", exact: true });
   await expect(first).toBeVisible();
@@ -110,7 +111,7 @@ test("PDF imports search all pages, render locally, edit notes, and download exa
   await page.getByRole("searchbox", { name: "Search", exact: true }).fill("UNICORN café");
   await expect(page.locator("[data-item-id]")).toHaveCount(1);
   await expect(page.locator(".search-excerpt mark")).toHaveText(["Unicorn", "café"]);
-  await expect(page.getByText("PDF document", { exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "PDF document", exact: true })).toBeVisible();
   const href = await page.locator('[data-item-id] a[href^="/items/"]').first().getAttribute("href");
   await page.goto(href!);
   const viewer = page.getByRole("region", { name: "PDF viewer", exact: true });

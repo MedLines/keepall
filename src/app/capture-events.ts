@@ -13,3 +13,7 @@ export function getCaptureCollectionName(): string | null {
 export function openCaptureDialog(): void {
   window.dispatchEvent(new CustomEvent(OPEN_CAPTURE_EVENT));
 }
+
+export function openBulkImportDialog(): void {
+  window.dispatchEvent(new CustomEvent(OPEN_CAPTURE_EVENT, { detail: { bulkImport: true } }));
+}

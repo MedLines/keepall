@@ -1,11 +1,15 @@
 import type { Item } from "@/domain/item";
+import type { LibraryListColumns } from "@/domain/library-view";
+import { itemPreviewAssetId, peekPreviewLayout } from "@/persistence/preview-layouts";
 
 /** Keep small libraries mounted; window larger libraries for folder navigation. */
 export const LIBRARY_VIRTUALIZE_MIN = 60;
 
 export const LIBRARY_GRID_MIN_COL_PX = 320;
 export const LIBRARY_GRID_GAP_PX = 20;
-export const LIBRARY_LIST_ROW_ESTIMATE_PX = 112;
+export const LIBRARY_LIST_ROW_ESTIMATE_PX = 64;
+export const LIBRARY_LIST_GAP_PX = 4;
+export const LIBRARY_LIST_MIN_COL_PX = 440;
 export const LIBRARY_GRID_ROW_ESTIMATE_PX = 320;
 
 export function gridColumnCount(containerWidth: number): number {
@@ -13,6 +17,12 @@ export function gridColumnCount(containerWidth: number): number {
     (containerWidth + LIBRARY_GRID_GAP_PX) /
     (LIBRARY_GRID_MIN_COL_PX + LIBRARY_GRID_GAP_PX),
   ));
+}
+
+export function listColumnCount(containerWidth: number, preference: LibraryListColumns = "auto"): number {
+  if (preference !== "auto") return Number(preference);
+  const available = Math.max(1, Math.floor((containerWidth + LIBRARY_LIST_GAP_PX) / (LIBRARY_LIST_MIN_COL_PX + LIBRARY_LIST_GAP_PX)));
+  return Math.min(available, 3);
 }
 
 function estimatedLines(text: string, columnWidth: number, maximum: number): number {
@@ -31,6 +41,8 @@ export function estimateLibraryGridItemHeight(
   columnWidth: number,
 ): number {
   const width = Math.max(LIBRARY_GRID_MIN_COL_PX, columnWidth);
+  const dimensions = peekPreviewLayout(itemPreviewAssetId(item));
+  const ratio = dimensions ? dimensions.width / dimensions.height : 1.6;
 
   if (item.type === "note") {
     const title = item.title.trim() || "Untitled";
@@ -40,7 +52,7 @@ export function estimateLibraryGridItemHeight(
   }
 
   if (item.type === "link") {
-    const mediaHeight = item.previewAssetId ? width / 1.6 : 0;
+    const mediaHeight = item.previewAssetId ? width / ratio : 0;
     const title = item.title.trim() || item.previewTitle.trim() || item.url;
     const descriptionLines = item.previewDescription.trim()
       ? estimatedLines(item.previewDescription, width, 2)
@@ -48,10 +60,10 @@ export function estimateLibraryGridItemHeight(
     return mediaHeight + 100 + estimatedLines(title, width, 2) * 24 + descriptionLines * 20;
   }
 
-  if (item.type === "document") return 112 + estimatedLines(item.title || item.sourceFileName, width, 2) * 24;
+  if (item.type === "document") return (item.format === "pdf" ? width / ratio : 144) + 64 + estimatedLines(item.title || item.sourceFileName, width, 2) * 20;
 
   const hasFooter = item.type === "video"
     ? Boolean(item.title.trim())
     : Boolean(item.title.trim() || item.caption.trim() || item.sourceUrl);
-  return width / 1.25 + (hasFooter ? 76 : 16);
+  return width / ratio + (hasFooter ? 76 : 16);
 }

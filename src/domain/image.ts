@@ -1,4 +1,5 @@
 import { isHttpUrl } from "./classify";
+import { retainImageAnalysis, validateImageAnalysis, type ImageAnalysis } from "./image-analysis";
 
 export const MAX_LOCAL_IMAGE_BYTES = 20 * 1024 * 1024;
 
@@ -17,6 +18,7 @@ export type ImageItem = {
   sourceFileName?: string;
   /** Ordered gallery; cover / grid preview is always index 0. */
   assetIds: string[];
+  analysis?: ImageAnalysis[];
   sourceUrl: string;
   caption: string;
   /** Absence means plain text for older images. */
@@ -130,6 +132,7 @@ export function replaceImageAssetAt(
   return {
     ...image,
     assetIds,
+    analysis: retainImageAnalysis(image.analysis, assetIds),
     updatedAt: options?.now ?? Date.now(),
   };
 }
@@ -150,6 +153,7 @@ export function removeImageAssetAt(
   return {
     ...image,
     assetIds: image.assetIds.filter((_, assetIndex) => assetIndex !== index),
+    analysis: retainImageAnalysis(image.analysis, image.assetIds.filter((_, assetIndex) => assetIndex !== index)),
     updatedAt: options?.now ?? Date.now(),
   };
 }
@@ -284,13 +288,18 @@ function coerceAssetIds(raw: ImageFieldsRaw | null | undefined): string[] {
 
 export function coerceImageFields(
   raw: ImageFieldsRaw | null | undefined,
-): Pick<ImageItem, "assetIds" | "sourceUrl" | "caption" | "captionFormat" | "title" | "sourceFileName"> {
+): Pick<ImageItem, "assetIds" | "sourceUrl" | "caption" | "captionFormat" | "title" | "sourceFileName" | "analysis"> {
   return {
     title: typeof raw?.title === "string" ? raw.title : "",
     ...(typeof raw?.sourceFileName === "string" ? { sourceFileName: raw.sourceFileName } : {}),
     assetIds: coerceAssetIds(raw),
+    ...(raw?.analysis ? { analysis: coerceAnalysis(raw.analysis, coerceAssetIds(raw)) } : {}),
     sourceUrl: typeof raw?.sourceUrl === "string" ? raw.sourceUrl : "",
     caption: typeof raw?.caption === "string" ? raw.caption : "",
     ...(raw?.captionFormat === "markdown" ? { captionFormat: "markdown" as const } : {}),
   };
+}
+
+function coerceAnalysis(raw: ImageAnalysis[], assetIds: string[]): ImageAnalysis[] {
+  try { return validateImageAnalysis(retainImageAnalysis(raw, assetIds), assetIds); } catch { return []; }
 }
