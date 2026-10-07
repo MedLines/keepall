@@ -4,7 +4,7 @@
 .organization-card[data-selected="true"] :is(.organization-select, .organization-actions-container) { opacity: 1; pointer-events: auto; }
 .organization-card[data-selection-active="true"] .organization-select { opacity: 1; pointer-events: auto; }
 .organization-card:has(.organization-actions[data-popup-open]) .organization-actions-container { opacity: 1; pointer-events: auto; }
-.organization-card { background: transparent; box-shadow: none; border-radius: var(--radius-panel); corner-shape: var(--corner-shape-panel); }
+.organization-card.library-card { background: transparent; box-shadow: none; border-radius: var(--radius-panel); corner-shape: var(--corner-shape-panel); }
 .organization-copy { display: contents; }
 .organization-card[data-kind="tags"] { border-radius: var(--radius-card); }
 .organization-card[data-selected="true"] > .collection-folder { background: inherit; }
