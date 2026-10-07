@@ -43,10 +43,10 @@ Group the existing Help rows under **Start saving**, **Read and explore**, **Org
 
 ## About structure
 
-Preserve the hero, four-tab walkthrough gallery, installation section, and closing treatment. The latest 2026-10-08 revision restores the original three stacked cards for Capture, organization/search, and local storage/backups. Six small visual tiles cover complementary features.
+Preserve the hero, four-tab walkthrough gallery, installation section, and closing treatment. The latest 2026-10-08 revision restores the original three stacked cards for Capture, organization/search, and local storage/backups. An asymmetric bento uses two wide cards, two tall side cards, and two smaller center cards for complementary features.
 
 - The gallery shows Library, Collections, Tags, and Search. Demos use current preview, local video, file-search, and recognized-text results.
-- Compact tiles cover article/PDF reading, Markdown and text notes, palette/OCR, local video, Preview, and file/folder import. Real app snippets end at complete component or text boundaries and sit inside padded frames.
+- Live demos cover article/PDF reading, Markdown and text notes, palette/OCR, local video, Preview, and file/folder import. They reuse app components, use sample content, and keep state on this page. The search stack card also uses actual search rules and highlight components instead of a stretched screenshot.
 - Capture retains its manual demo. Search and Preview, import, and local storage cards link to detailed Help procedures.
 - The offline FAQ distinguishes saved addresses from saved article text. Cached Keepall can read local content; original websites and new requests need the internet.
 
@@ -68,7 +68,7 @@ Use real app output, sample content, and the existing capture scripts. Preserve 
 1. Correct stale action names and inaccurate limits; update existing About wording and metadata.
 2. Add focused Help guides, topic entry points, and crosslinks without breaking old anchors.
 3. Extend sample fixtures and capture current UI for each new feature claim.
-4. Restore the three-card About stack, add six compact feature tiles, and refresh demos using current assets.
+4. Preserve the three-card About stack and add the asymmetric live-component bento with sample interactions.
 5. Verify the actual actions described, image/video loading, anchors, metadata, keyboard use, reduced motion, and layouts at 320, 390, 768, and 1707 pixels. Build and typecheck, then run the website suite in Chromium and Firefox.
 
 Keep About and Help implementation in separate worktrees branched from the isolated website branch, with the shared visual capture work integrated before final browser verification. Do not change app behavior to match documentation.
@@ -82,7 +82,7 @@ Contact now records submissions in Neon Postgres before notifying the support in
 The user's dev server runs at `http://localhost:3116` from `/home/med/projects/personal/bookmark-project/keepall`, checked out on `feature/website-feature-coverage`.
 
 - `/about`: existing Library and Search demos now show documents, image text, and local video.
-- `/about#reading`: six compact feature tiles, starting with articles and PDFs.
+- `/about#reading`: asymmetric live demos. Try Article/PDF, edit a note, copy a palette color, reveal recognized text, play the video, browse Preview, and remove/reset sample files.
 - `/about#image-tools`: palette, color search, and English screenshot recognition.
 - `/about#collection`: four-tab gallery. The three stacked cards cover Capture, organization/search, and local storage/backups; the offline FAQ is near the bottom.
 - All four `/blog/*` articles: sticky left navigation on desktop and collapsible navigation above the article on phones. Article styling differs from Help.
@@ -165,3 +165,20 @@ Independent Chromium review covered all four articles at seven widths from 320â€
 - All 50 production website scenarios passed in Chromium and Firefox. This includes the three-card/six-tile structure, 280px wide-desktop tile ceiling, text insets, loaded images, all four Blog sidebars, mobile contents, direct palette anchors, matching native/link button shapes, keyboard use, public links, Help procedures, metadata, and Contact draft/rate-limit states.
 - A long repeated-context Blog development run intermittently reported a webpack `app/layout.js` eval error. Independent live review on the user server and the full production suite had no page errors; no unrelated app behavior was changed to address the unconfirmed development-run symptom.
 - The user checkout remains on `feature/website-feature-coverage`; its dev server stays available at `http://localhost:3116`. Task worktrees and their commits remain isolated. Contact sending still requires the database schema and documented environment variables; no live credentials or delivery test were supplied.
+
+## Live component and visual revision, 2026-10-08
+
+This revision supersedes the static tiles and the first nested demo layout. The three stacked cards remain above the bento. Their search card now contains a working sample search. The bento has one large reader, two smaller side panels, and a lower row for video, Preview, and import. Linked feature names replace the repeated Guide rows.
+
+The reader combines a photo with actual ArticleContent on a paper surface. Open PDF loads a real two-page file with the app's page and zoom controls. Notes start with rendered Markdown; Edit reveals the editor and format controls. Image tools reuse PaletteSwatch without the surrounding tools panel. Show text reveals the included image's English OCR result. Video starts with a poster and a manual Play button. Preview has stacked photo and note cards. Import starts with a populated CaptureFileList, removal actions, and reset.
+
+These demos use page state and bundled files. They do not write to the visitor's library. The displayed image text and 95% confidence came from local English OCR of the included image. Six obsolete private screenshots were removed after their UI was replaced with rendered components.
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| MEDIUM | About search stack card | Stretched screenshot with baked-in fades and highlights | Actual search rules, highlighted results, and sample Preview | Keeps text sharp and allows visitors to try search. |
+| MEDIUM | About bento | Repeated nested dark panels and control rows | Dominant reader, short feature descriptions, and larger media | Gives each feature a distinct visual and reduces competing controls. |
+| MEDIUM | Image tools demo | Complete collapsible tools panel inside a tile | Shared palette swatches and a separate text action | Keeps the useful interaction with less framing. |
+| LOW | Demo menus and tooltips | Portals could inherit colors from the system theme | Optional containers inside About | Keeps menus consistent while retaining the app defaults. |
+
+Search foreground/background contrast measured 14.95:1; highlighted text measured 6.68:1. The colors matched under light and dark preferences in Chromium and Firefox at 390px and 1707px. Reduced motion disables demo entrance animations. Video requires a user action. Review does not claim full accessibility certification, RTL coverage, or 200% zoom coverage.

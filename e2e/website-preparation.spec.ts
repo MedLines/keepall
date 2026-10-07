@@ -339,12 +339,27 @@ test("titles, descriptions and share images are usable on every public route", a
 });
 
 for (const width of [390, 1707]) {
-  test(`About preserves the stack and keeps six compact visual tiles readable at ${width}px`, async ({ page }) => {
+  test(`About preserves the stack and uses six live demos in an asymmetric bento at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 825 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/about");
     await expect(page.locator(".ka-stack .ka-feature-card")).toHaveCount(3);
     await expect(page.locator(".ka-bento-card")).toHaveCount(6);
+    await expect(page.locator(".ka-bento-visual [data-feature-demo]")).toHaveCount(6);
+    await expect(page.locator('.ka-bento-visual img[src*="/details/"]')).toHaveCount(0);
+    if (width === 1707) {
+      const reading = (await page.locator(".ka-bento-reading").boundingBox())!;
+      const images = (await page.locator(".ka-bento-images").boundingBox())!;
+      const notes = (await page.locator(".ka-bento-notes").boundingBox())!;
+      const video = (await page.locator(".ka-bento-video").boundingBox())!;
+      const preview = (await page.locator(".ka-bento-preview").boundingBox())!;
+      const importing = (await page.locator(".ka-bento-import").boundingBox())!;
+      expect(reading.width).toBeGreaterThan(images.width * 1.4);
+      expect(reading.height).toBeGreaterThan(notes.height * 1.4);
+      expect(reading.height).toBeGreaterThan(images.height * 1.4);
+      expect(Math.abs(video.y - preview.y)).toBeLessThan(2);
+      expect(Math.abs(video.y - importing.y)).toBeLessThan(2);
+    }
     await expect(page.locator(".ka-gallery-tabs button")).toHaveCount(4);
     for (const id of ["reading", "image-tools", "extension", "your-library"]) {
       const card = page.locator(`#${id}`);
@@ -356,7 +371,6 @@ for (const width of [390, 1707]) {
     for (const tile of await page.locator(".ka-bento-card").all()) {
       await tile.scrollIntoViewIfNeeded();
       const bounds = (await tile.boundingBox())!;
-      if (width === 1707) expect(bounds.height).toBeLessThanOrEqual(280);
       for (const text of await tile.locator(".ka-bento-copy > *").all()) {
         const box = (await text.boundingBox())!;
         expect(box.x - bounds.x).toBeGreaterThanOrEqual(20);
@@ -370,6 +384,76 @@ for (const width of [390, 1707]) {
         }
       }
     }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
+for (const width of [390, 1707]) {
+  test(`Live About demos respond to sample interactions at ${width}px`, async ({ page, context, browserName }) => {
+    await page.setViewportSize({ width, height: 825 });
+    await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
+    if (browserName === "chromium") await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto("/about");
+    const search = page.getByRole("region", { name: "Search a sample library", exact: true });
+    await search.getByRole("button", { name: "notes", exact: true }).click();
+    await expect(search.locator(".ka-search-demo-results > li")).toHaveCount(1);
+    await search.getByRole("button", { name: "Preview Website project" }).click();
+    await expect(search.getByRole("region", { name: "Sample item preview" })).toContainText("Collect layout references.");
+    await search.getByRole("button", { name: "Back to results" }).click();
+    await search.getByRole("searchbox").fill("nomatchhere");
+    await expect(search.getByText("No matches.", { exact: false })).toBeVisible();
+    await search.getByRole("button", { name: "Clear sample search" }).click();
+    await expect(search.locator(".ka-search-demo-results > li")).toHaveCount(3);
+    await expect(search).toHaveCSS("color-scheme", "dark");
+
+    const notes = page.locator('[data-feature-demo="notes"]');
+    await notes.getByRole("button", { name: "Edit", exact: true }).click();
+    await notes.getByRole("textbox", { name: "Edit sample note" }).fill("# My project\n\nKeep **useful references** here.");
+    await notes.getByRole("button", { name: "Preview", exact: true }).click();
+    await expect(notes.locator("strong")).toHaveText("useful references");
+    await notes.getByRole("button", { name: "Edit", exact: true }).click();
+    await notes.getByRole("button", { name: "Plain text", exact: true }).click();
+    await notes.getByRole("button", { name: "Preview", exact: true }).click();
+    await expect(notes.locator(".kd-note-body")).toContainText("**useful references**");
+
+    const reading = page.locator('[data-feature-demo="reading"]');
+    await reading.getByRole("button", { name: "Open PDF", exact: true }).click();
+    await expect(reading.locator('[data-pdf-ready="1"]')).toBeVisible();
+    await reading.getByRole("button", { name: "Next page", exact: true }).click();
+    await expect(reading.getByRole("textbox", { name: "PDF page number" })).toHaveValue("2");
+    await expect(reading.locator('[data-pdf-ready="2"]')).toBeVisible();
+    await reading.getByRole("button", { name: "Previous page", exact: true }).click();
+    await expect(reading.getByRole("textbox", { name: "PDF page number" })).toHaveValue("1");
+
+    const imageTools = page.locator('[data-feature-demo="image-tools"]');
+    await imageTools.getByRole("button", { name: "Copy color #F7F3E8", exact: true }).click();
+    await expect(imageTools.getByRole("status")).toContainText(/#F7F3E8/);
+    await imageTools.getByRole("button", { name: "Show text", exact: true }).click();
+    await expect(imageTools.getByRole("region", { name: "Extracted text from image 1" })).toContainText("FIELD NOTES");
+
+    const preview = page.locator('[data-feature-demo="preview"]');
+    await expect(preview.getByRole("img", { name: "A sunlit reading corner" })).toBeVisible();
+    await preview.getByRole("button", { name: "Next sample preview", exact: true }).click();
+    await expect(preview.getByRole("status")).toContainText("a-little-pause.md");
+    await expect(preview.locator(".kd-preview-note")).toContainText("Leave the afternoon open.");
+    await preview.getByRole("button", { name: "Previous sample preview", exact: true }).click();
+    await expect(preview.getByRole("status")).toContainText("reading-corner.webp");
+    await expect(preview.getByRole("img", { name: "A sunlit reading corner" })).toBeVisible();
+
+    const importing = page.locator('[data-feature-demo="import"]');
+    await importing.getByRole("button", { name: "Reset sample files", exact: true }).click();
+    await expect(importing.getByRole("region", { name: "Selected files" }).locator("li")).toHaveCount(2);
+    await importing.getByRole("button", { name: "Remove file weekend-notes.md", exact: true }).click();
+    await expect(importing.getByRole("region", { name: "Selected files" }).locator("li")).toHaveCount(1);
+    await importing.getByRole("button", { name: "Reset sample files", exact: true }).click();
+    await expect(importing.getByRole("region", { name: "Selected files" }).locator("li")).toHaveCount(2);
+
+    const video = page.locator('[data-feature-demo="video"] video');
+    expect(await video.evaluate(element => (element as HTMLVideoElement).paused)).toBe(true);
+    await page.getByRole("button", { name: "Play sample video", exact: true }).click();
+    await expect(video).toHaveAttribute("controls", "");
+    await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(0);
+    await video.evaluate(element => (element as HTMLVideoElement).pause());
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
