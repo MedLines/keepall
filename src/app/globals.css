@@ -145,7 +145,8 @@
     color: var(--color-text-primary);
     box-shadow: inset 0 1px 0 var(--color-border-active);
   }
-  .ui-field:focus-visible { outline: 1px solid var(--color-border-focus); outline-offset: -2px; }
+  .ui-field:focus-visible,
+  .scroll-textarea.ui-field:has(textarea:focus-visible) { outline: 1px solid var(--color-border-focus); outline-offset: -2px; }
   .ui-popover {
     border: 1px solid var(--color-border-control);
     border-radius: var(--radius-panel);
@@ -178,15 +179,23 @@
     transform: translate(var(--popup-slide-x), var(--popup-slide-y)) scale(0.96);
   }
   .ui-menu-popup[data-ending-style] { transition-duration: var(--motion-fast-exit); }
-  .ui-drawer-popup { transition: transform var(--motion-moderate-enter) cubic-bezier(0.2, 0, 0, 1); }
-  .ui-drawer-popup[data-ending-style] { transition-duration: var(--motion-moderate-exit); }
+  .ui-drawer-popup { transform: translateX(0); transition: transform var(--motion-slow-enter) cubic-bezier(0.32, 0.72, 0, 1); }
+  .ui-drawer-popup[data-ending-style] { transition-duration: var(--motion-slow-exit); }
+  .ui-drawer-popup[data-side="right"]:is([data-starting-style], [data-ending-style]) { transform: translateX(100%); }
+  .ui-drawer-popup[data-side="left"]:is([data-starting-style], [data-ending-style]) { transform: translateX(-100%); }
+  .ui-backdrop.ui-drawer-backdrop { transition-duration: var(--motion-slow-enter); transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1); }
+  .ui-backdrop.ui-drawer-backdrop[data-ending-style] { transition-duration: var(--motion-slow-exit); }
   @media (prefers-reduced-motion: reduce) {
     .confirm-dialog-popup, .ui-menu-popup { transition-property: opacity; }
     .confirm-dialog-popup:is([data-starting-style], [data-ending-style]) {
       transform: none;
     }
     .ui-menu-popup:is([data-starting-style], [data-ending-style]) { transform: none; }
-    .ui-drawer-popup { transition: none; }
+    .ui-drawer-popup { transition: opacity var(--motion-fast-enter) ease; }
+    .ui-drawer-popup[data-ending-style] { transition-duration: var(--motion-fast-exit); }
+    .ui-drawer-popup[data-side]:is([data-starting-style], [data-ending-style]) { transform: none; opacity: 0; }
+    .ui-backdrop.ui-drawer-backdrop { transition-duration: var(--motion-fast-enter); }
+    .ui-backdrop.ui-drawer-backdrop[data-ending-style] { transition-duration: var(--motion-fast-exit); }
   }
   .ui-backdrop {
     opacity: 1;

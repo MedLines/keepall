@@ -253,7 +253,7 @@ export function CaptureHost() {
       dispatch({ type: "open" });
   }
 
-  useAppShortcuts({ capture: () => openCapture() });
+  useAppShortcuts({ capture: openCapture });
 
   const onOpenCapture = useEffectEvent((event: Event) => {
     openCapture();
@@ -913,6 +913,7 @@ export function CaptureHost() {
     <SideDrawer
       open={isActive}
       side={captureSide}
+      initialFocus={() => inputRef.current?.disabled ? inputRef.current.closest<HTMLElement>('[role="dialog"]') : inputRef.current}
       title="Save to Keepall"
       description="Paste a link, write a note, or add files."
       widthClassName="w-[min(30rem,100vw)]"
