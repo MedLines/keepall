@@ -325,6 +325,22 @@ async function mergeValidatedBackup(
     return null;
   }
 
+  async function mergedImageAnalysis(local: ImageItem, incoming: ImageItem): Promise<ImageItem["analysis"]> {
+    const byAsset = new Map(local.analysis?.map(entry => [entry.assetId, entry]));
+    const targetsByHash = new Map<string, string>();
+    for (const id of local.assetIds) {
+      const asset = await getAsset(id);
+      if (asset) targetsByHash.set((await ensureContentHash(asset)).contentHash, id);
+    }
+    for (const entry of incoming.analysis ?? []) {
+      const mappedId = assetIdMap.get(entry.assetId);
+      const asset = mappedId ? await getAsset(mappedId) : undefined;
+      const targetId = asset ? targetsByHash.get((await ensureContentHash(asset)).contentHash) : undefined;
+      if (targetId) byAsset.set(targetId, { ...byAsset.get(targetId), ...entry, assetId: targetId });
+    }
+    return byAsset.size ? [...byAsset.values()] : undefined;
+  }
+
   function mergeOrg(
     local: { tagIds: string[]; collectionIds: string[]; updatedAt: number },
     incoming: { tagIds: string[]; collectionIds: string[]; updatedAt: number },
@@ -475,6 +491,7 @@ async function mergeValidatedBackup(
         const next: ImageItem = {
           ...incoming,
           id,
+          analysis: incoming.analysis?.map(entry => ({ ...entry, assetId: assetIdMap.get(entry.assetId) ?? entry.assetId })),
           assetIds: incoming.assetIds
             .map((assetId) => assetIdMap.get(assetId))
             .filter((assetId): assetId is string => !!assetId),
@@ -499,6 +516,7 @@ async function mergeValidatedBackup(
             ...incoming,
             id: local.id,
             assetIds: local.assetIds,
+            analysis: await mergedImageAnalysis(local, incoming),
             tagIds: org.tagIds,
             collectionIds: org.collectionIds,
           }
