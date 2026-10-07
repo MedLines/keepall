@@ -50,12 +50,14 @@ for (const type of ["image", "pdf", "note", "link"]) {
     page.on("pageerror", error => errors.push(error.message));
     const card = page.locator(`[data-item-id="handoff-${type}"]`);
     if (type === "image" || type === "pdf") await expect(card.locator("img").first()).toBeVisible();
-    const source = type === "pdf" ? card.locator("[data-pdf-preview]") : type === "image" ? card.locator("img").first() : card;
-    const bounds = await source.boundingBox();
     await card.click({ button: "right" });
     await page.evaluate(kind => {
       const original = document.startViewTransition.bind(document);
       document.startViewTransition = (...args: Parameters<typeof document.startViewTransition>) => {
+        const card = document.querySelector<HTMLElement>(`[data-item-id="handoff-${kind}"]`)!;
+        const source = card.querySelector<HTMLElement>("[data-item-transition]") ?? card;
+        const { x, y, width, height } = source.getBoundingClientRect();
+        Reflect.set(window, "cardPreviewSource", { x, y, width, height });
         const transition = original(...args);
         void transition.ready.then(() => {
           const group = document.getAnimations().find(animation => (animation.effect as KeyframeEffect)?.pseudoElement?.startsWith(kind === "image" ? "::view-transition-group(item-image" : kind === "pdf" ? "::view-transition-group(item-document" : "::view-transition-group(item-preview-content"));
@@ -73,7 +75,8 @@ for (const type of ["image", "pdf", "note", "link"]) {
       const matrix = new DOMMatrixReadOnly(frame.transform);
       return { x: matrix.m41, y: matrix.m42, width: parseFloat(frame.width), height: parseFloat(frame.height) };
     });
-    for (const axis of ["x", "y", "width", "height"] as const) expect(Math.abs(origin[axis] - bounds![axis])).toBeLessThan(1);
+    const bounds = await page.evaluate(() => Reflect.get(window, "cardPreviewSource") as { x: number; y: number; width: number; height: number });
+    for (const axis of ["x", "y", "width", "height"] as const) expect(Math.abs(origin[axis] - bounds[axis])).toBeLessThan(1);
     expect(await page.evaluate(() => Reflect.get(window, "cardPreviewError"))).toBeUndefined();
     expect(errors).toEqual([]);
     await expect(preview).toHaveCSS("transform", "none");

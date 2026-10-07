@@ -115,7 +115,7 @@ test("article capture retries, persists, reads offline, searches and restores fr
   await backup.locator('input[accept*="application/zip"]').setInputFiles(path!);
   await page.getByRole("dialog", { name: "Import backup", exact: true }).getByRole("button", { name: "Replace library", exact: true }).click();
   await page.getByRole("dialog", { name: "Replace library?", exact: true }).getByRole("button", { name: "Confirm replacement", exact: true }).click();
-  await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Library replaced from backup");
+  await expect(page.getByRole("status").filter({ hasText: "Library replaced from backup" })).toContainText("Library replaced from backup");
   await page.goto("/items/article-reader");
   await expect(page.getByRole("article", { name: "Article text" })).toContainText("elusive narwhal");
   await expect(page.getByText("My independent personal note", { exact: true })).toBeVisible();

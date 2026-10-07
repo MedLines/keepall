@@ -739,6 +739,7 @@ test("number-pad / and Use default select the same search shortcut", async ({ pa
   await change.click();
   await dialog.getByRole("button", { name: "Use default (/)", exact: true }).click();
   await dialog.getByRole("button", { name: "Confirm shortcut", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("group", { name: "Shortcut for Focus search", exact: true }).locator("kbd")).toHaveText("/");
   await page.goto("/");
@@ -764,6 +765,7 @@ test("Space is the preview default and changing it replaces Space on library car
   const dialog = page.getByRole("dialog", { name: "Change Preview results shortcut", exact: true });
   await dialog.getByRole("textbox", { name: "New shortcut for Preview results", exact: true }).press("Control+Shift+p");
   await dialog.getByRole("button", { name: "Confirm shortcut", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
   await page.goto("/?layout=list&unsorted=1");
   await expect(card).toBeVisible();
   await card.focus();
@@ -784,7 +786,7 @@ test("active filters do not restrict the Unsorted review queue", async ({ page }
 test("a new library offers Save, Import, and the tutorial, with empty Unsorted review disabled", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Save first item" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Import an existing library" })).toHaveAttribute("href", "/settings#backup-heading");
+  await expect(page.getByRole("link", { name: "Import backup", exact: true })).toHaveAttribute("href", "/settings#backup-heading");
   await page.getByRole("link", { name: "Getting started", exact: true }).click();
   await expect(page).toHaveURL(/help\/getting-started/);
   await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
