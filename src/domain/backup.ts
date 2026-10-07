@@ -5,6 +5,7 @@ import type { Collection } from "./collection";
 import { coerceExclusiveCollectionIds } from "./collection";
 import type { Item } from "./item";
 import type { ImageItem } from "./image";
+import { validateImageAnalysis } from "./image-analysis";
 import { coerceImageFields } from "./image";
 import type { LinkItem } from "./link";
 import { coerceLinkPreviewFields } from "./link";
@@ -554,11 +555,15 @@ function parseItem(
       );
     }
 
+    let analysis;
+    try { analysis = validateImageAnalysis(item.analysis, fields.assetIds); }
+    catch (error) { throw new BackupValidationError(error instanceof Error ? error.message : "Invalid image analysis"); }
     const image: ImageItem = {
       id: item.id,
       type: "image",
       title: item.title,
       assetIds: fields.assetIds,
+      ...(analysis.length ? { analysis } : {}),
       ...(fields.sourceFileName ? { sourceFileName: fields.sourceFileName } : {}),
       sourceUrl: fields.sourceUrl,
       caption: fields.caption,

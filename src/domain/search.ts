@@ -1,4 +1,5 @@
 import type { Item } from "./item";
+import { matchesPaletteColor } from "./image-analysis";
 
 export function normalizeSearchQuery(query: string): string {
   return query.trim().toLowerCase();
@@ -44,6 +45,7 @@ function searchableFields(item: Item, tagNames: readonly string[], documentText 
     case "image":
       fields = [
         { field: "caption", label: "Caption", text: item.caption },
+        { field: "content", label: "Image text", text: item.analysis?.map(entry => entry.ocr?.text ?? "").join("\n") ?? "" },
         { field: "sourceUrl", label: "Source", text: item.sourceUrl },
       ];
       break;
@@ -146,6 +148,11 @@ export function searchRelevanceScore(item: Item, terms: readonly string[], tagNa
   const fields = searchableFields(item, tagNames, documentText).map(field => ({ ...field, text: field.text.toLowerCase() }));
   let score = 0;
   for (const term of terms) {
+    if (term.startsWith("color:")) {
+      if (item.type !== "image" || !matchesPaletteColor(item.analysis?.flatMap(entry => entry.palette ?? []) ?? [], term.slice(6))) return null;
+      score += 4;
+      continue;
+    }
     let best = 0;
     for (const field of fields) {
       if (!field.text.includes(term)) continue;
