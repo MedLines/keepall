@@ -65,7 +65,7 @@ export function PaletteSection({ palette, copied, onCopy, allowLibrarySearch = t
   </ResultSection>;
 }
 
-function PaletteSwatch({ hex, copied, onCopy, allowLibrarySearch, portalContainer }: { hex: string; copied: boolean; onCopy: () => void; allowLibrarySearch: boolean; portalContainer?: HTMLElement | null }) {
+export function PaletteSwatch({ hex, copied, onCopy, allowLibrarySearch, portalContainer }: { hex: string; copied: boolean; onCopy: () => void; allowLibrarySearch: boolean; portalContainer?: HTMLElement | null }) {
   const menuItem = "ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active";
   return <ContextMenu.Root>
     <Tooltip.Root>
