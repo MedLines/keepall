@@ -38,7 +38,7 @@ test("reviews tags, skips, files, deletion and Undo through the last queue posit
   await dialog.getByLabel("Add tag", { exact: true }).fill("Reference");
   await dialog.getByLabel("Add tag", { exact: true }).press("Enter");
   await expect(page).not.toHaveURL(/items\//);
-  await expect(dialog.getByText("Tags: Reference", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Remove tag Reference", exact: true })).toBeVisible();
   await expect(dialog.getByText("0 of 3 reviewed · Item 1", { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Skip", exact: true }).focus();
   await page.keyboard.press("Enter");
@@ -46,6 +46,7 @@ test("reviews tags, skips, files, deletion and Undo through the last queue posit
   await expect(dialog.getByRole("heading", { name: "Review item 2" })).toBeVisible();
   await dialog.getByLabel("Move to collection").fill("Reading");
   await dialog.getByLabel("Move to collection").press("Enter");
+  await dialog.getByRole("button", { name: "File and next", exact: true }).click();
   await expect(page).not.toHaveURL(/items\//);
   await expect(dialog.getByRole("heading", { name: "Review item 3" })).toBeVisible();
   await dialog.getByRole("button", { name: "Delete", exact: true }).click();
@@ -80,6 +81,39 @@ test("review controls fit at 320px and a one-item queue keeps Undo after deletio
   await expect(dialog.getByRole("heading", { name: "Review complete" })).toBeVisible();
   await dialog.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(dialog.getByRole("heading", { name: "Review item 1" })).toBeVisible();
+});
+
+test("review reuses searchable organizer choices and stages collection selection", async ({ page }, testInfo) => {
+  await seed(page);
+  await page.getByRole("button", { name: "Review Unsorted" }).click();
+  const dialog = page.getByRole("dialog", { name: "Review item 1", exact: true });
+  await expect(dialog.getByRole("button", { name: "Unsorted", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(dialog.getByRole("button", { name: "File and next", exact: true })).toBeDisabled();
+  await dialog.getByRole("button", { name: "Browse all collections", exact: true }).click();
+  const collectionPicker = page.getByRole("dialog", { name: "Choose a collection", exact: true });
+  await expect(collectionPicker.getByRole("searchbox", { name: "Search collections" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Browse all collections", exact: true })).toBeFocused();
+  await dialog.getByRole("button", { name: "Browse all collections", exact: true }).click();
+  await collectionPicker.getByRole("searchbox", { name: "Search collections" }).fill("Read");
+  await collectionPicker.getByRole("button", { name: "Reading", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Reading", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect((await rows(page)).find(row => row.id === "review-0")?.collectionIds).toEqual([]);
+  await dialog.getByRole("button", { name: "Browse all tags", exact: true }).click();
+  const tagPicker = page.getByRole("dialog", { name: "Choose a tag", exact: true });
+  await tagPicker.getByRole("searchbox", { name: "Search tags" }).fill("Ref");
+  await tagPicker.getByRole("button", { name: "Reference", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Remove tag Reference", exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Remove tag Reference", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Remove tag Reference", exact: true })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Remove tag Reference", exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Reading", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "File and next", exact: true })).toBeEnabled();
+  await page.screenshot({ path: testInfo.outputPath("review-shared-organizer-desktop.png") });
+  await dialog.getByRole("button", { name: "File and next", exact: true }).click();
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "Review item 2", exact: true })).toBeVisible();
 });
 
 test("shortcut editing records, cancels, validates and saves before the app uses a new binding", async ({ page }, testInfo) => {
@@ -165,13 +199,14 @@ test("same-session tag and filing actions remain reversible through their exact 
   const dialog = page.getByRole("dialog");
   const tag = dialog.getByLabel("Add tag", { exact: true });
   await tag.fill("Reference"); await tag.press("Enter");
-  await expect(dialog.getByText("Tags: Reference", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Remove tag Reference", exact: true })).toBeVisible();
   await tag.fill("Second tag"); await tag.press("Enter");
-  await expect(dialog.getByText("Tags: Reference, Second tag", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Remove tag Second tag", exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(dialog.getByText("Tags: Reference", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Remove tag Reference", exact: true })).toBeVisible();
   await dialog.getByLabel("Move to collection").fill("Reading");
   await dialog.getByLabel("Move to collection").press("Enter");
+  await dialog.getByRole("button", { name: "File and next", exact: true }).click();
   await expect(dialog.getByRole("heading", { name: "Review item 2" })).toBeVisible();
   await dialog.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(dialog.getByRole("heading", { name: "Review item 1" })).toBeVisible();

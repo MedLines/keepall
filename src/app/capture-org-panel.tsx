@@ -87,7 +87,7 @@ type SectionHeaderProps = {
   browseLabel: string;
   showBrowse: boolean;
   disabled: boolean;
-  onBrowse: () => void;
+  onBrowse: (trigger: HTMLButtonElement) => void;
 };
 
 function SectionHeader({
@@ -115,7 +115,7 @@ function SectionHeader({
           className="min-h-7 rounded-control px-2 text-xs font-medium text-text-secondary hover:bg-bg-raised hover:text-text-primary"
           type="button"
           disabled={disabled}
-          onClick={onBrowse}
+          onClick={event => onBrowse(event.currentTarget)}
         >
           {browseLabel}
         </button>
@@ -153,6 +153,7 @@ type BrowserSlotProps = Pick<
   collectionSuggestions: OrgNameSuggestion[];
   unusedTags: OrgNameSuggestion[];
   onClose: () => void;
+  returnFocus: () => HTMLElement | null;
 };
 
 function BrowserSlot({
@@ -166,6 +167,7 @@ function BrowserSlot({
   onSetCollection,
   onAddTag,
   onClose,
+  returnFocus,
 }: BrowserSlotProps) {
   if (!browserKind) {
     return null;
@@ -183,6 +185,7 @@ function BrowserSlot({
       disabled={disabled}
       onChoose={isCollection ? onSetCollection : onAddTag}
       onClose={onClose}
+      returnFocus={returnFocus}
     />
   );
 }
@@ -245,7 +248,7 @@ type CollectionSectionProps = Pick<
   | "onCollectionInputChange"
   | "onSetCollection"
   | "onClearCollection"
-> & { onBrowse: () => void };
+> & { onBrowse: (trigger: HTMLButtonElement) => void };
 
 function CollectionSection({
   selection,
@@ -419,7 +422,7 @@ type TagSectionProps = Pick<
   | "onRemoveTag"
 > & {
   unusedTags: OrgNameSuggestion[];
-  onBrowse: () => void;
+  onBrowse: (trigger: HTMLButtonElement) => void;
 };
 
 function TagSection({
@@ -529,9 +532,14 @@ function TagSection({
 }
 
 export function CaptureOrgPanel(props: Props) {
+  const browserTrigger = useRef<HTMLElement | null>(null);
   const [browserKind, setBrowserKind] = useState<"collection" | "tag" | null>(
     null,
   );
+  function browse(kind: "collection" | "tag", trigger: HTMLButtonElement) {
+    browserTrigger.current = trigger;
+    setBrowserKind(kind);
+  }
   const unusedTags = useMemo(
     () =>
       props.tagSuggestions.filter(
@@ -553,7 +561,7 @@ export function CaptureOrgPanel(props: Props) {
         onCollectionInputChange={props.onCollectionInputChange}
         onSetCollection={props.onSetCollection}
         onClearCollection={props.onClearCollection}
-        onBrowse={() => setBrowserKind("collection")}
+        onBrowse={trigger => browse("collection", trigger)}
       />
       <TagSection
         selection={props.selection}
@@ -567,11 +575,12 @@ export function CaptureOrgPanel(props: Props) {
         onTagInputChange={props.onTagInputChange}
         onAddTag={props.onAddTag}
         onRemoveTag={props.onRemoveTag}
-        onBrowse={() => setBrowserKind("tag")}
+        onBrowse={trigger => browse("tag", trigger)}
       />
       <BrowserSlot
         selection={props.selection}
         browserKind={browserKind}
+        returnFocus={() => browserTrigger.current}
         collectionName={props.collectionName}
         tagNames={props.tagNames}
         collectionSuggestions={props.collectionSuggestions}

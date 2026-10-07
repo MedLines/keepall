@@ -33,6 +33,34 @@ test("tag-only changes remain unsorted and undo removes only the added tag", asy
   expect((await applyUnsortedReviewAction(item.id, { kind: "tag", tagId: tag.id })).undo).toBeNull();
   expect((await undoUnsortedReviewAction(result.undo!)).item).toMatchObject({ collectionIds: [], tagIds: [] });
 });
+test("tag removal Undo restores its position and keeps older tag actions reversible", async () => {
+  const item = await createNote({ content: "Two selected tags" });
+  const first = await createTag({ name: "First" });
+  const second = await createTag({ name: "Second" });
+  const firstAction = await applyUnsortedReviewAction(item.id, { kind: "tag", tagId: first.id });
+  const secondAction = await applyUnsortedReviewAction(item.id, { kind: "tag", tagId: second.id });
+  const removal = await applyUnsortedReviewAction(item.id, { kind: "remove-tag", tagId: first.id });
+  expect(removal.item).toMatchObject({ tagIds: [second.id], collectionIds: [] });
+  const restored = await undoUnsortedReviewAction(removal.undo!);
+  expect(restored.item.tagIds).toEqual([first.id, second.id]);
+  const secondUndo = rebaseUnsortedReviewUndo(rebaseUnsortedReviewUndo(secondAction.undo!, removal), restored);
+  const undoneSecond = await undoUnsortedReviewAction(secondUndo);
+  const firstUndo = [secondAction, removal, restored, undoneSecond].reduce(rebaseUnsortedReviewUndo, firstAction.undo!);
+  expect((await undoUnsortedReviewAction(firstUndo)).item.tagIds).toEqual([]);
+});
+
+test("tag removal Undo refuses later item edits and deleted tag definitions", async () => {
+  const item = await createNote({ content: "Selected tag" });
+  const tag = await createTag({ name: "Reference" });
+  await applyUnsortedReviewAction(item.id, { kind: "tag", tagId: tag.id });
+  const removal = await applyUnsortedReviewAction(item.id, { kind: "remove-tag", tagId: tag.id });
+  await getDb().items.update(item.id, { updatedAt: removal.item.updatedAt + 1 });
+  await expect(undoUnsortedReviewAction(removal.undo!)).rejects.toThrow(/changed since/);
+  await getDb().items.update(item.id, { updatedAt: removal.item.updatedAt });
+  await deleteTags([tag.id]);
+  await expect(undoUnsortedReviewAction(removal.undo!)).rejects.toThrow(/tag was deleted/);
+  expect(await getDb().items.get(item.id)).toMatchObject({ tagIds: [] });
+});
 test("delete undo restores the row while preserving concurrent content edits", async () => {
   const item = await createNote({ content: "Deleted" });
   const result = await applyUnsortedReviewAction(item.id, { kind: "delete" });
