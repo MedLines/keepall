@@ -29,9 +29,9 @@
 
 .library-empty-light {
   position: absolute;
-  z-index: -1;
-  inset: auto -45% 72%;
-  height: 7.5rem;
+  z-index: 1;
+  inset: auto -45% 55%;
+  height: 16.5rem;
   opacity: 0.9;
   transform-origin: 50% 100%;
   pointer-events: none;
@@ -62,17 +62,6 @@
     radial-gradient(circle at 64% 30%, light-dark(oklch(0.65 0 0 / 0.3), oklch(1 0 0 / 0.3)) 0 0.7px, transparent 1px),
     radial-gradient(circle at 44% 51%, light-dark(oklch(0.65 0 0 / 0.3), oklch(1 0 0 / 0.3)) 0 0.6px, transparent 1px),
     radial-gradient(circle at 57% 66%, light-dark(oklch(0.65 0 0 / 0.3), oklch(1 0 0 / 0.3)) 0 0.7px, transparent 1px);
-}
-
-.library-empty-folder .collection-folder-previews::after {
-  content: "";
-  position: absolute;
-  z-index: 2;
-  inset: 18% 12% auto;
-  height: 20%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, light-dark(oklch(0.9 0.09 70 / 0.65), oklch(1 0 0 / 0.5)), transparent 70%);
-  filter: blur(4px);
 }
 
 .library-empty-folder {

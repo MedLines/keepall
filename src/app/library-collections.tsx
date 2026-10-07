@@ -21,6 +21,7 @@ export function LibraryFolderArtwork({ previews, itemTypes, emptyState = false }
         ))}
         {emptyState ? ["center", "left", "right"].map(position => <span key={position} className="collection-folder-preview library-empty-sheet" data-position={position} />) : null}
       </span>
+      {emptyState ? <span className="library-empty-light"><span className="library-empty-dust" /></span> : null}
       <FolderFront itemTypes={itemTypes} />
     </span>
   );
