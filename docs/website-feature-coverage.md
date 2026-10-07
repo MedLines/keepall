@@ -168,17 +168,27 @@ Independent Chromium review covered all four articles at seven widths from 320â€
 
 ## Live component and visual revision, 2026-10-08
 
-This revision supersedes the static tiles and the first nested demo layout. The three stacked cards remain above the bento. Their search card now contains a working sample search. The bento has one large reader, two smaller side panels, and a lower row for video, Preview, and import. Linked feature names replace the repeated Guide rows.
+This revision supersedes the static tiles and the first nested demo layout. The three stacked cards remain above the bento. Their search card now contains a working sample search. The bento has one large reader, two smaller side panels, and a lower row for video, Preview, and import. It keeps About's neutral textured outer rim, inset border, and existing pill buttons. Linked feature names replace the repeated Guide rows.
 
-The reader combines a photo with actual ArticleContent on a paper surface. Open PDF loads a real two-page file with the app's page and zoom controls. Notes start with rendered Markdown; Edit reveals the editor and format controls. Image tools reuse PaletteSwatch without the surrounding tools panel. Show text reveals the included image's English OCR result. Video starts with a poster and a manual Play button. Preview has stacked photo and note cards. Import starts with a populated CaptureFileList, removal actions, and reset.
+The reader combines a photo with actual ArticleContent using the existing dark app colors. Open PDF loads a real two-page file with the app's page and zoom controls. Notes start with rendered Markdown. The format control stays visible during editing and preview. Selecting Plain text or Markdown renders that format immediately and preserves the entered text. The editor uses ScrollTextarea. Article, PDF, note, OCR, Preview, and file-list panels use the library's ScrollPanel.
+
+Image tools reuse PaletteSwatch with the logo's exact colors: #FFF4F5, #FFB0BC, and #FF4A6B. Show text switches to the included field-notes image and its English OCR result. Back to logo restores the palette. Video starts with a poster and a manual Play button. Preview uses LibraryCardContent inside the original library card and media framing, with a coastal image and a Markdown note. Open actions show those samples locally. Import starts with a populated CaptureFileList, removal actions, and reset.
+
+The demos reserve their panel and action-row dimensions across loading, editing, format changes, OCR, Preview navigation, and empty file queues. Long notes scroll inside the panel. The compact logo and note panels keep that reserved space from enlarging the grid unnecessarily. Website text-and-icon buttons use a 6px gap and retain their existing inset pill styling.
 
 These demos use page state and bundled files. They do not write to the visitor's library. The displayed image text and 95% confidence came from local English OCR of the included image. Six obsolete private screenshots were removed after their UI was replaced with rendered components.
 
 | Severity | Location | Before | After | Why |
 | --- | --- | --- | --- | --- |
 | MEDIUM | About search stack card | Stretched screenshot with baked-in fades and highlights | Actual search rules, highlighted results, and sample Preview | Keeps text sharp and allows visitors to try search. |
-| MEDIUM | About bento | Repeated nested dark panels and control rows | Dominant reader, short feature descriptions, and larger media | Gives each feature a distinct visual and reduces competing controls. |
+| MEDIUM | About bento | Repeated nested dark panels and control rows | Original inset styling, a dominant reader, short descriptions, and larger media | Gives each feature a distinct visual and reduces competing controls. |
 | MEDIUM | Image tools demo | Complete collapsible tools panel inside a tile | Shared palette swatches and a separate text action | Keeps the useful interaction with less framing. |
 | LOW | Demo menus and tooltips | Portals could inherit colors from the system theme | Optional containers inside About | Keeps menus consistent while retaining the app defaults. |
 
 Search foreground/background contrast measured 14.95:1; highlighted text measured 6.68:1. The colors matched under light and dark preferences in Chromium and Firefox at 390px and 1707px. Reduced motion disables demo entrance animations. Video requires a user action. Review does not claim full accessibility certification, RTL coverage, or 200% zoom coverage.
+
+### Final interaction review
+
+Independent production review passed 208 state checks at 320px, 390px, 768px, and 1707px under normal and reduced motion. Phone checks used touch contexts. Grid, card, demo, stage, and action-row geometry stayed within 0.5px across PDF loading and navigation, note editing and format changes, long-note scrolling, OCR expansion, Preview navigation, queue removal and reset, and video playback. The existing button hover animation was excluded from flow measurements. No runtime errors or horizontal overflow were found. Narrow PDF controls fit inside the frame. Logo colors matched the authored assets, and Preview retained the app's card and inset styling.
+
+The final production build, full typecheck, changed-file ESLint, and whitespace checks passed. All 54 production website scenarios passed in Chromium and Firefox. These include direct Plain text/Markdown rendering, long-note keyboard scrolling, strict demo layout measurements, the original three-card stack, the asymmetric bento, button spacing, all Blog sidebars, Help navigation, public links, metadata, and Contact draft and rate-limit states. The user checkout remains on feature/website-feature-coverage, with the latest source at http://localhost:3116/about#reading. Contact still needs the documented database and mail environment setup before live delivery can be tested.

@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const port = process.env.WEBSITE_TEST_PORT ?? "3114";
-const baseURL = `http://localhost:${port}`;
+const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -20,7 +20,7 @@ export default defineConfig({
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
   ],
   webServer: {
-    command: `pnpm exec next start --port ${port}`,
+    command: `pnpm exec next start --hostname 127.0.0.1 --port ${port}`,
     url: `${baseURL}/about`,
     reuseExistingServer: process.env.WEBSITE_TEST_REUSE_SERVER === "1",
     timeout: 120_000,

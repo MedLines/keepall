@@ -89,14 +89,15 @@ test("About and Contact buttons leave less space beside their icons", async ({ p
   await page.emulateMedia({ reducedMotion: "reduce" });
   for (const route of ["/about", "/contact"]) {
     await page.goto(route);
-    const buttons = page.locator(".ka-header-open, .ka-button:has(> svg:last-child):not(:has(> .ka-chrome-mark))");
+    const buttons = page.locator(".ka-header-open, .ka-button:has(> svg:last-child):not(:has(> svg:only-child)):not(:has(> .ka-chrome-mark))");
     expect(await buttons.count()).toBeGreaterThan(0);
     for (const button of await buttons.all()) {
       const padding = await button.evaluate(element => {
         const style = getComputedStyle(element);
-        return { text: parseFloat(style.paddingLeft), icon: parseFloat(style.paddingRight) };
+        return { text: parseFloat(style.paddingLeft), icon: parseFloat(style.paddingRight), gap: parseFloat(style.columnGap) };
       });
       expect(padding.icon, `${route}: ${await button.textContent()}`).toBeLessThan(padding.text);
+      expect(padding.gap, `${route}: ${await button.textContent()}`).toBeLessThanOrEqual(8);
     }
   }
 });
@@ -405,54 +406,103 @@ for (const width of [390, 1707]) {
     await search.getByRole("button", { name: "Clear sample search" }).click();
     await expect(search.locator(".ka-search-demo-results > li")).toHaveCount(3);
     await expect(search).toHaveCSS("color-scheme", "dark");
+    const bounds = () => page.locator(".ka-bento, .ka-bento-card, .ka-bento-visual [data-feature-demo]").evaluateAll(elements => elements.map(element => {
+      const box = element.getBoundingClientRect();
+      return { x: box.x, y: box.y + scrollY, width: box.width, height: box.height };
+    }));
+    const initialBounds = await bounds();
+    const expectStableBounds = async () => {
+      const current = await bounds();
+      expect(current).toHaveLength(initialBounds.length);
+      for (let index = 0; index < current.length; index += 1) {
+        for (const dimension of ["x", "y", "width", "height"] as const) {
+          expect(Math.abs(current[index][dimension] - initialBounds[index][dimension]), `demo layout ${index} ${dimension}`).toBeLessThan(1);
+        }
+      }
+    };
 
     const notes = page.locator('[data-feature-demo="notes"]');
     await notes.getByRole("button", { name: "Edit", exact: true }).click();
-    await notes.getByRole("textbox", { name: "Edit sample note" }).fill("# My project\n\nKeep **useful references** here.");
+    await expectStableBounds();
+    const longNote = "# My project\n\nKeep **useful references** here.\n\n" + "Another reference for this project.\n\n".repeat(40);
+    await notes.getByRole("textbox", { name: "Edit sample note" }).fill(longNote);
     await notes.getByRole("button", { name: "Preview", exact: true }).click();
     await expect(notes.locator("strong")).toHaveText("useful references");
-    await notes.getByRole("button", { name: "Edit", exact: true }).click();
+    await expectStableBounds();
     await notes.getByRole("button", { name: "Plain text", exact: true }).click();
-    await notes.getByRole("button", { name: "Preview", exact: true }).click();
     await expect(notes.locator(".kd-note-body")).toContainText("**useful references**");
+    await expectStableBounds();
+    await notes.getByRole("button", { name: "Markdown", exact: true }).click();
+    await expect(notes.locator("strong")).toHaveText("useful references");
+    await expectStableBounds();
+    const noteViewport = notes.locator('.kd-note-body [data-slot="scroll-area-viewport"]');
+    await expect.poll(() => noteViewport.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+    await noteViewport.focus();
+    await page.keyboard.press("End");
+    await expect.poll(() => noteViewport.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+    await expectStableBounds();
 
     const reading = page.locator('[data-feature-demo="reading"]');
     await reading.getByRole("button", { name: "Open PDF", exact: true }).click();
+    await expectStableBounds();
     await expect(reading.locator('[data-pdf-ready="1"]')).toBeVisible();
+    await expectStableBounds();
     await reading.getByRole("button", { name: "Next page", exact: true }).click();
     await expect(reading.getByRole("textbox", { name: "PDF page number" })).toHaveValue("2");
     await expect(reading.locator('[data-pdf-ready="2"]')).toBeVisible();
     await reading.getByRole("button", { name: "Previous page", exact: true }).click();
     await expect(reading.getByRole("textbox", { name: "PDF page number" })).toHaveValue("1");
+    await expectStableBounds();
+    await reading.getByRole("button", { name: "Back to article", exact: true }).click();
+    await expect(reading.locator(".article-content")).toContainText("A little room to think");
+    await expectStableBounds();
 
     const imageTools = page.locator('[data-feature-demo="image-tools"]');
-    await imageTools.getByRole("button", { name: "Copy color #F7F3E8", exact: true }).click();
-    await expect(imageTools.getByRole("status")).toContainText(/#F7F3E8/);
+    await expect(imageTools.getByRole("img", { name: "Keepall logo", exact: true })).toBeVisible();
+    await imageTools.getByRole("button", { name: "Copy color #FFF4F5", exact: true }).click();
+    await expect(imageTools.getByRole("status")).toContainText(/#FFF4F5/);
     await imageTools.getByRole("button", { name: "Show text", exact: true }).click();
     await expect(imageTools.getByRole("region", { name: "Extracted text from image 1" })).toContainText("FIELD NOTES");
+    await expectStableBounds();
+    await imageTools.getByRole("button", { name: "Back to logo", exact: true }).click();
+    await expectStableBounds();
 
     const preview = page.locator('[data-feature-demo="preview"]');
-    await expect(preview.getByRole("img", { name: "A sunlit reading corner" })).toBeVisible();
+    await expect(preview.getByRole("img", { name: "A quiet coastline at dusk" })).toBeVisible();
     await preview.getByRole("button", { name: "Next sample preview", exact: true }).click();
     await expect(preview.getByRole("status")).toContainText("a-little-pause.md");
+    await expect(preview.locator(".library-card .library-reading-inset")).toBeVisible();
+    await preview.getByRole("button", { name: "Open a-little-pause.md", exact: true }).click();
     await expect(preview.locator(".kd-preview-note")).toContainText("Leave the afternoon open.");
+    await expectStableBounds();
+    await preview.getByRole("button", { name: "Back to card", exact: true }).click();
     await preview.getByRole("button", { name: "Previous sample preview", exact: true }).click();
-    await expect(preview.getByRole("status")).toContainText("reading-corner.webp");
-    await expect(preview.getByRole("img", { name: "A sunlit reading corner" })).toBeVisible();
+    await expect(preview.getByRole("status")).toContainText("keepall-coast.webp");
+    await expect(preview.getByRole("img", { name: "A quiet coastline at dusk" })).toBeVisible();
+    await preview.getByRole("button", { name: "Coastal evening", exact: true }).click();
+    await expect(preview.locator(".kd-preview-open-image img")).toBeVisible();
+    await expectStableBounds();
+    await preview.getByRole("button", { name: "Back to card", exact: true }).click();
 
     const importing = page.locator('[data-feature-demo="import"]');
     await importing.getByRole("button", { name: "Reset sample files", exact: true }).click();
     await expect(importing.getByRole("region", { name: "Selected files" }).locator("li")).toHaveCount(2);
     await importing.getByRole("button", { name: "Remove file weekend-notes.md", exact: true }).click();
     await expect(importing.getByRole("region", { name: "Selected files" }).locator("li")).toHaveCount(1);
+    await expectStableBounds();
+    await importing.getByRole("button", { name: "Remove file reading-room.txt", exact: true }).click();
+    await expect(importing.locator(".kd-import-empty")).toBeVisible();
+    await expectStableBounds();
     await importing.getByRole("button", { name: "Reset sample files", exact: true }).click();
     await expect(importing.getByRole("region", { name: "Selected files" }).locator("li")).toHaveCount(2);
+    await expectStableBounds();
 
     const video = page.locator('[data-feature-demo="video"] video');
     expect(await video.evaluate(element => (element as HTMLVideoElement).paused)).toBe(true);
     await page.getByRole("button", { name: "Play sample video", exact: true }).click();
     await expect(video).toHaveAttribute("controls", "");
     await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(0);
+    await expectStableBounds();
     await video.evaluate(element => (element as HTMLVideoElement).pause());
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
