@@ -192,7 +192,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
 
       <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
         <div className={ITEM_PAGE_GRID}>
-          <div className={`row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-5xl ${link.article ? "max-lg:row-start-1" : ""}`}>
+          <div className="row-start-1 min-w-0 lg:col-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
             {!link.article ? <div className="squircle-panel overflow-hidden rounded-panel border border-border-control bg-bg-surface">
               {link.previewAssetId ? <LibraryItemMedia item={link} variant="card" className="max-h-96 w-full" /> : null}
               <div className="px-5 pb-6 pt-5 sm:px-7">
@@ -222,7 +222,7 @@ export function LinkItemPage({ itemId, returnHref }: { itemId: string; returnHre
             tags={itemTags}
             createdAt={link.createdAt}
             updatedAt={link.updatedAt}
-            className={`${ITEM_DETAILS_POSITION} ${link.article ? "max-lg:row-start-2" : ""}`}
+            className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2`}
             disabled={busy}
             editDisabled={editing}
             deleteLabel="Move link to Trash"

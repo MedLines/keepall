@@ -38,7 +38,7 @@ test("article capture retries, persists, reads offline, searches and restores fr
     await route.fulfill({ status: attempts === 1 ? 422 : 200, contentType: "application/json", body: JSON.stringify(attempts === 1 ? { error: "This website is temporarily unavailable." } : article) });
   });
   await page.goto("/items/article-reader");
-  await page.getByRole("button", { name: "Save article", exact: true }).click();
+  await page.getByRole("button", { name: "Save article for offline reading", exact: true }).click();
   await expect(page.getByRole("region", { name: "Saved article", exact: true }).getByRole("alert")).toContainText("temporarily unavailable");
   await expect(page.getByText("My independent personal note", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Retry saving article", exact: true }).click();
