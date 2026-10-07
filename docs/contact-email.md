@@ -8,11 +8,17 @@ Set these variables in the deployment's server environment, or in a gitignored `
 
 ```dotenv
 RESEND_API_KEY=<Resend API key with email sending permission>
-CONTACT_FROM_EMAIL=<verified sender mailbox>
+CONTACT_FROM_EMAIL=<address on your verified sending domain>
 CONTACT_TO_EMAIL=<support recipient mailbox>
 ```
 
 Use bare email addresses, such as `contact@example.com`, without display names or multiple recipients. Verify the sender domain in Resend and use a recipient mailbox that somebody monitors. The visitor's validated address becomes `reply_to`; the sender and recipient always come from server configuration. The browser cannot choose a recipient.
+
+No Neon database or separate support inbox is required for this flow. `CONTACT_TO_EMAIL` can be your existing personal inbox. `CONTACT_FROM_EMAIL` identifies the sending address on a domain you own; replies from your inbox go to the visitor through `reply_to`. The app does not store submissions.
+
+After updating `.env.local`, restart the development server. For a hosted deployment, set all three server variables in the intended environment and redeploy. `GET /api/contact` returns `available: true` when the configuration is present and structurally valid; it does not check the API key, domain verification, or delivery. Confirm those by sending a deliberate test message and checking receipt and reply routing.
+
+For an initial test without a verified domain, Resend permits `onboarding@resend.dev` as the sender only when the recipient is the email address associated with your Resend account. This is a testing setup, not a production sender. See [Resend's testing-domain restrictions](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain) and [verified domain setup](https://resend.com/docs/dashboard/domains/introduction).
 
 The server calls [Resend's Send email API](https://resend.com/docs/api-reference/emails/send-email) over HTTPS with plain text. A successful UI response means Resend accepted the message and returned an email id. It does not confirm arrival in the recipient's inbox. The app does not retry automatically. A timeout leaves delivery uncertain, so a manual retry may create a duplicate.
 
