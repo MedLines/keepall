@@ -5,7 +5,7 @@ The work lives on `feature/website-preparation`, with separate worktrees for Con
 ## Pages and behavior
 
 - Contact has a form for help, bug reports, and suggestions, plus the existing GitHub issues link. Email delivery depends on the server-side Resend settings described in `docs/contact-email.md`. An unconfigured service must never report a message as sent.
-- Contact is a plain header navigation link. Open Keepall remains the header button. Shared website buttons have balanced horizontal padding, including buttons with only text.
+- Contact is a plain header navigation link. Open Keepall remains the header button. Text-only website buttons have equal horizontal padding. Buttons with an icon use a smaller inset beside the icon.
 - Changelog has dated New, Improved, and Fixed entries reconstructed from public GitHub history. `docs/changelog.md` records the source commits, merged pull requests, date policy, and release-note maintenance workflow.
 - Privacy describes local library storage, preview and article requests, website icons, hosting and analytics, browser-data loss, backups, offline limits, and contact-message handling. Help and Settings link to the same guidance.
 - The blog has design-reference and bookmark-import workflows. Screenshots and application recordings are captured from the current app in disposable browser contexts with sample data. Capture scripts are kept alongside the fixture files so the assets can be refreshed.
@@ -19,7 +19,7 @@ The revised production build and typecheck passed. Full lint completed with zero
 
 All 32 production browser scenarios passed in Chromium and Firefox in three minutes. They check plain Contact navigation and keyboard activation at 320, 390, 580, 768, 1024, and 1440 pixels; balanced text-button padding; the unconfigured contact form and identity-free copy/GitHub fallback; required-field validation and mocked accepted submission; Help thumbnails; page scrolling and overflow; app information links; article images and Help anchors; and rendered sharing metadata and images. No real email was sent.
 
-The preview is running from this branch at http://localhost:3114. Fresh application captures include 19 screenshots and four walkthrough recordings in MP4 and WebM. The blog shows actual bookmark policy selection, completed import results, the imported collection, note editing, and search. Static screenshot imports use content-hashed paths to avoid stale browser image caches.
+The development preview is running from this branch at http://localhost:3115. Fresh application captures include 19 screenshots and four walkthrough recordings in MP4 and WebM. The blog shows actual bookmark policy selection, completed import results, the imported collection, note editing, and search. Static screenshot imports use content-hashed paths to avoid stale browser image caches.
 
 Verification logs are outside version control in `/tmp/keepall-website-revision-{build,typecheck,lint,unit,browser}.log`, with the permission-required test rerun in `/tmp/keepall-website-revision-runtime-test.log`. The focused browser screenshot artifacts are under `test-results/`.
 
@@ -34,3 +34,11 @@ Vercel serves `/_vercel/insights/script.js` on the deployed website. A local Nex
 - [ ] Resume the press kit when the user supplies founder and contact details.
 
 No deployment, remote merge, or checklist update was performed as part of the local work.
+
+## Page feedback corrections
+
+The About header, hero, and closing buttons and Contact submit button now use smaller padding beside their icons. The Contact Topic select keeps native keyboard behavior and places its decorative arrow 14 pixels inside the field, matching the text inset. Both Copy report and Open GitHub draft use the shared website button style. Text-only controls keep equal padding.
+
+The blog index has two 1200 × 900 WebP thumbnail compositions made from existing About reference imagery and the current bookmark import dialog. The article rows stack their images above the text on phones and provide a single named keyboard-accessible link. The shared information-page footer places the device-storage note beneath the logo and uses a separate responsive navigation grid.
+
+Both agent changes were reviewed in source and in screenshots before integration. The combined development preview was checked at the reported 1707 × 825 viewport on About, Contact, Blog, and Changelog, with no horizontal overflow or page errors. Agent checks also covered 320, 390, and 768 pixel widths. Targeted ESLint, the Contact component tests, the final production build, and typecheck passed. All 36 final production browser scenarios passed in Chromium and Firefox in three minutes, including icon-side padding, balanced text-only padding, the inset Topic arrow, matching report buttons, decoded blog thumbnails, and responsive footer navigation. The result is recorded in `/tmp/keepall-feedback-browser.log`. The initial broad text-only check against the development server timed out during route compilation; the complete final production run passed. No live email was sent.
