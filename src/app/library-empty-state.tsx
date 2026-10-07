@@ -64,6 +64,10 @@ export function LibraryEmptyState({ kind, message, query, scope, onClearFilters,
           <button type="button" className="ui-control library-empty-action" onClick={onClearFilters}>Clear filters</button>
         </> : null}
       </div>
+      {firstSave ? <div className="mt-3 flex max-w-full flex-wrap items-center justify-center gap-x-4 text-xs text-text-secondary">
+        <Link className="inline-flex min-h-10 items-center underline underline-offset-4" href="/settings#backup-heading">Import an existing library</Link>
+        <Link className="inline-flex min-h-10 items-center underline underline-offset-4" href="/help/getting-started">Getting started</Link>
+      </div> : null}
     </section>
   );
 }
