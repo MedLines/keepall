@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollPanel } from "@/components/ui/scroll-panel";
 import { Tooltip } from "@base-ui/react/tooltip";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import type { PDFDocumentLoadingTask, PDFDocumentProxy } from "pdfjs-dist";
@@ -53,11 +54,11 @@ export function SamplePdf({ portalContainer }: { portalContainer: HTMLElement | 
     <PdfViewerControls portalContainer={portalContainer} view={view} page={page} pageText={draft ?? String(page)} pageCount={document?.numPages} zoom={zoom}
       onViewChange={setView} onZoomChange={setZoom} onPreviousPage={() => goToPage(page - 1)} onNextPage={() => goToPage(page + 1)}
       onPageFocus={() => setDraft(String(page))} onPageDraftChange={setDraft} onPageCommit={commitPage} />
-    <div className="kd-pdf-pages" data-document-scroll tabIndex={0} aria-label="Sample PDF pages">
+    <ScrollPanel className="kd-pdf-pages" viewportClassName="kd-pdf-viewport" viewportProps={{ "data-document-scroll": true, tabIndex: 0, "aria-label": "Sample PDF pages" }}>
       {document ? <SamplePdfPages document={document} page={page} zoom={zoom} view={view} onPageChange={setPage} scrollRef={scrollRef} />
         : failed ? <p role="alert">Sample PDF unavailable. <button type="button" className="kd-button" onClick={() => { setFailed(false); setAttempt(value => value + 1); }}>Retry</button></p>
         : <p role="status">Loading sample PDF…</p>}
-    </div>
+    </ScrollPanel>
   </div></Tooltip.Provider>;
 }
 
