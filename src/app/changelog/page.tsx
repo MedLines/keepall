@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { WebsitePage } from "../website-page";
+import { websiteOpenGraphImage, websiteTwitterImage } from "../website-metadata";
 
 export const metadata: Metadata = {
   title: "Changelog · Keepall",
   description: "Keepall's public feature baseline and release notes for changes available in the app.",
+  alternates: { canonical: "/changelog" },
+  openGraph: {
+    title: "Changelog · Keepall",
+    description: "Keepall's public feature baseline and release notes for changes available in the app.",
+    url: "/changelog",
+    type: "website",
+    images: [websiteOpenGraphImage],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [websiteTwitterImage],
+    title: "Changelog · Keepall",
+    description: "Keepall's public feature baseline and release notes for changes available in the app.",
+  },
 };
 
 export default function ChangelogPage() {

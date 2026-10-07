@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRightIcon } from "../shell-icons";
 import { WebsitePage } from "../website-page";
+import { websiteOpenGraphImage, websiteTwitterImage } from "../website-metadata";
 
 export const metadata: Metadata = {
   title: { absolute: "Blog · Keepall" },
@@ -12,6 +13,13 @@ export const metadata: Metadata = {
     description: "Practical ways to build a personal library you can use again.",
     url: "/blog",
     type: "website",
+    images: [websiteOpenGraphImage],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Blog · Keepall",
+    description: "Practical ways to build a personal library you can use again.",
+    images: [websiteTwitterImage],
   },
 };
 

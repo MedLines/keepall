@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { WebsitePage } from "../../website-page";
+import { websiteOpenGraphImage, websiteTwitterImage } from "../../website-metadata";
 
 const title = "Give your browser bookmarks a useful second home";
 const description = "Import your browser bookmarks into Keepall, organize a little at a time, and make old links easier to find with titles, notes, and search.";
@@ -10,7 +11,8 @@ export const metadata: Metadata = {
   title: { absolute: `${title} · Keepall` },
   description,
   alternates: { canonical: "/blog/browser-bookmarks" },
-  openGraph: { title, description, url: "/blog/browser-bookmarks", type: "article" },
+  openGraph: { title, description, url: "/blog/browser-bookmarks", type: "article", images: [websiteOpenGraphImage] },
+  twitter: { card: "summary_large_image", title, description, images: [websiteTwitterImage] },
 };
 
 export default function BrowserBookmarksArticle() {

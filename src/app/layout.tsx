@@ -23,13 +23,13 @@ export const metadata: Metadata = {
     siteName: "Keepall",
     title: "Keepall · Your personal library",
     description: "Keep links, notes, images, and videos on your device. Free, with no account or automatic sync.",
-    images: [{ url: "/marketing/share-keepall.png", width: 1200, height: 630, alt: "Keepall personal library with a view of the app" }],
+    images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "Keepall personal library with a view of the app" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Keepall · Your personal library",
     description: "Keep links, notes, images, and videos on your device. Free, with no account or automatic sync.",
-    images: [{ url: "/marketing/share-keepall.png", alt: "Keepall personal library" }],
+    images: [{ url: "/twitter-image.png", alt: "Keepall personal library" }],
   },
   appleWebApp: {
     capable: true,

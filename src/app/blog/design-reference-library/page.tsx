@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { WebsitePage } from "../../website-page";
+import { websiteOpenGraphImage, websiteTwitterImage } from "../../website-metadata";
 
 const title = "Build a design reference library for your next project";
 const description = "A practical workflow for saving design references, keeping their source and context, and finding the right example when you start making.";
@@ -10,7 +11,8 @@ export const metadata: Metadata = {
   title: { absolute: `${title} · Keepall` },
   description,
   alternates: { canonical: "/blog/design-reference-library" },
-  openGraph: { title, description, url: "/blog/design-reference-library", type: "article" },
+  openGraph: { title, description, url: "/blog/design-reference-library", type: "article", images: [websiteOpenGraphImage] },
+  twitter: { card: "summary_large_image", title, description, images: [websiteTwitterImage] },
 };
 
 export default function DesignReferenceArticle() {

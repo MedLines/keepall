@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { WebsitePage } from "../website-page";
+import { websiteOpenGraphImage, websiteTwitterImage } from "../website-metadata";
 
 export const metadata: Metadata = {
   title: "Privacy · Keepall",
   description: "How Keepall stores your local library, uses network services, and handles backups and browser storage.",
+  alternates: { canonical: "/privacy" },
+  openGraph: {
+    title: "Privacy · Keepall",
+    description: "How Keepall stores your local library, uses network services, and handles backups and browser storage.",
+    url: "/privacy",
+    type: "website",
+    images: [websiteOpenGraphImage],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [websiteTwitterImage],
+    title: "Privacy · Keepall",
+    description: "How Keepall stores your local library, uses network services, and handles backups and browser storage.",
+  },
 };
 
 export default function PrivacyPage() {

@@ -2,10 +2,25 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRightIcon } from "../shell-icons";
 import { WebsitePage } from "../website-page";
+import { websiteOpenGraphImage, websiteTwitterImage } from "../website-metadata";
 
 export const metadata: Metadata = {
   title: "Contact · Keepall",
   description: "Get help with Keepall, report a bug, or suggest an improvement through GitHub.",
+  alternates: { canonical: "/contact" },
+  openGraph: {
+    title: "Contact · Keepall",
+    description: "Get help with Keepall, report a bug, or suggest an improvement through GitHub.",
+    url: "/contact",
+    type: "website",
+    images: [websiteOpenGraphImage],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [websiteTwitterImage],
+    title: "Contact · Keepall",
+    description: "Get help with Keepall, report a bug, or suggest an improvement through GitHub.",
+  },
 };
 
 export default function ContactPage() {
