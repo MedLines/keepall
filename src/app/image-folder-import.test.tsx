@@ -28,7 +28,9 @@ async function reviewFolder(collectionName = "Photos") {
   });
   const review = await screen.findByRole("dialog", { name: "Import image folder" });
   fireEvent.change(within(review).getByLabelText("Collection (optional)"), { target: { value: collectionName } });
-  fireEvent.click(within(review).getByRole("button", { name: "Import images" }));
+  const importButton = within(review).getByRole("button", { name: "Import images" });
+  await waitFor(() => expect(importButton).toBeEnabled());
+  fireEvent.click(importButton);
 }
 
 test("Open folder navigates to the imported collection using its id", async () => {
