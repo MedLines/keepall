@@ -1,0 +1,8 @@
+.ka-page :is(.ka-button, .ka-header-open) {
+  border-radius: 999px;
+  corner-shape: round;
+}
+
+.ka-page :is(.ka-gallery-tabs button, .ka-gallery-foot button, .ka-demo-choices button, .ka-recording-controls button) {
+  corner-shape: round;
+}

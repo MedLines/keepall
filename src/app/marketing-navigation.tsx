@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRightIcon, LogoIcon } from "./shell-icons";
 import { CHROME_EXTENSION_URL } from "./help/guides";
 import "./marketing-footer.css";
+import "./marketing-controls.css";
 
 export function MarketingHeader({ help = false, floating = false }: { help?: boolean; floating?: boolean }) {
   return <header className={`ka-header${floating ? " ka-header-floating" : ""}`}><div className="ka-wrap ka-header-inner">
