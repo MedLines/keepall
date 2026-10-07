@@ -1,5 +1,5 @@
-import sharp from "sharp";
 import { chromium, expect } from "@playwright/test";
+import { captureReaderDetails } from "./capture-reader-details.mjs";
 import { seedMarketingLibrary } from "./marketing-fixture.mjs";
 import { prepareCaptureContext, capturePreview, localCaptureOrigin } from "./preview-capture.mjs";
 
@@ -14,14 +14,6 @@ try {
   page.on("pageerror", error => browserErrors.push(error.message));
 
   const capture = (name, locator = page) => capturePreview(page, new URL(`../public/marketing/${name}.webp`, import.meta.url), locator);
-  async function focusCapture(name, locator) {
-    const box = await locator.boundingBox();
-    if (!box) throw new Error("Missing reader crop.");
-    const clip = { x: Math.max(0, box.x), y: Math.max(0, box.y), width: Math.min(box.width, page.viewportSize().width - box.x), height: Math.min(box.height, page.viewportSize().height - box.y) };
-    const png = await page.screenshot({ clip, animations: "disabled" });
-    await sharp(png).webp({ quality: 88 }).toFile(new URL(`../public/marketing/${name}.webp`, import.meta.url).pathname);
-    console.log(`Captured reader crop ${name}`);
-  }
   await page.goto(origin);
   await page.locator("#library-heading").waitFor();
   await seedMarketingLibrary(page);
@@ -37,8 +29,6 @@ try {
     await page.goto(`${origin}/items/${id}`);
     await ready();
     await capture(name);
-    if (id !== "sample-video") await focusCapture(`${name}-detail`, id === "sample-article" ? page.locator('section[aria-label="Saved article"]') : page.locator('article[aria-label="Document content"]'));
-
   }
   await page.goto(`${origin}/items/sample-screenshot`);
   await page.getByRole("button", { name: "Current image actions", exact: true }).click();
@@ -54,7 +44,6 @@ try {
   await expect(page.getByRole("heading", { name: "Palette", exact: true })).toBeInViewport();
   await expect(page.getByRole("heading", { name: "Screenshot text", exact: true })).toBeInViewport();
   await capture("app-image-tools");
-  await capture("app-image-tools-detail", page.locator("[data-image-tools]"));
 
   await page.setViewportSize({ width: 1440, height: 860 });
   await page.goto(origin);
@@ -81,5 +70,6 @@ try {
   const editor = page.getByRole("dialog", { name: "Edit note", exact: true });
   await expect(editor.getByRole("region", { name: "Images in this note", exact: true })).toBeVisible();
   await capturePreview(page, new URL("../public/help/note-editor.webp", import.meta.url), editor);
+  await captureReaderDetails(page, origin);
   if (browserErrors.length) throw new Error(browserErrors.join("\n"));
 } finally { await browser.close(); }
