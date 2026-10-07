@@ -41,6 +41,7 @@ import { LibraryItemMedia } from "./library-item-media";
 import { ItemViewTransition } from "./item-view-transition";
 import { NoteContent } from "./note-content";
 import { VerticalImageGallery } from "./vertical-image-gallery";
+import { ImageToolsPanel } from "./image-tools-panel";
 import { ItemPageHeader } from "./item-page-header";
 import { ItemPageLoading } from "./library-loading-content";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
@@ -800,6 +801,8 @@ function ImageWorkspace({
               ) : null}
               {galleryError ? <p className="text-sm text-text-danger" role="alert">{galleryError}</p> : null}
             </section>
+
+            {currentAssetId ? <ImageToolsPanel key={currentAssetId} item={item} assetId={currentAssetId} slide={currentSlide} disabled={actionBusy} /> : null}
 
             {item.caption ? (
               <article
