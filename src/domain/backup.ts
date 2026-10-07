@@ -1,3 +1,4 @@
+import { parseSavedArticle } from "./article";
 import { documentFormat, DocumentValidationError, type DocumentFormat } from "./document";
 import { isHttpUrl } from "./classify";
 import type { Collection } from "./collection";
@@ -503,6 +504,9 @@ function parseItem(
       throw new BackupValidationError(`Link at index ${index} has an unknown note format`);
     }
 
+    let article;
+    try { article = item.article === undefined ? undefined : parseSavedArticle(item.article); }
+    catch { throw new BackupValidationError(`Link at index ${index} has an invalid saved article`); }
     const preview = coerceLinkPreviewFields(item as Partial<LinkItem>);
     const previewAssetId =
       preview.previewAssetId && assetIds.has(preview.previewAssetId)
@@ -514,6 +518,7 @@ function parseItem(
       type: "link",
       title: item.title,
       url: item.url,
+      ...(article ? { article } : {}),
       ...(typeof item.noteContent === "string" ? { noteContent: item.noteContent } : {}),
       ...(item.noteFormat === "markdown" ? { noteFormat: "markdown" as const } : {}),
       ...preview,
