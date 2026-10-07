@@ -60,12 +60,6 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 400px) {
-  .palette {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.5rem), 1fr));
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .swatchFeedback {
     transition: none;

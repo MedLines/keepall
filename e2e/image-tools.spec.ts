@@ -13,12 +13,18 @@ async function expectPaletteFillsCard(tools: Locator) {
     const swatches = Array.from(list.querySelectorAll("button"), button => button.getBoundingClientRect());
     const gap = Number.parseFloat(getComputedStyle(list).gap);
     const firstRow = swatches.filter(rect => Math.abs(rect.top - swatches[0].top) < 1);
-    return { row: list.getBoundingClientRect().width, widths: swatches.map(rect => rect.width), heights: swatches.map(rect => rect.height), total: firstRow.reduce((width, rect) => width + rect.width, 0) + gap * (firstRow.length - 1) };
+    const iconGaps = Array.from(list.querySelectorAll("button"), button => {
+      const code = button.querySelector(".font-mono")!.getBoundingClientRect();
+      const icon = button.querySelector("[data-copy-feedback]")!.getBoundingClientRect();
+      return icon.left - code.right;
+    });
+    return { row: list.getBoundingClientRect().width, widths: swatches.map(rect => rect.width), heights: swatches.map(rect => rect.height), iconGaps, total: firstRow.reduce((width, rect) => width + rect.width, 0) + gap * (firstRow.length - 1) };
   });
   expect(Math.max(...layout.widths) - Math.min(...layout.widths)).toBeLessThan(1);
   expect(Math.abs(layout.total - layout.row)).toBeLessThan(1);
   expect(Math.min(...layout.widths)).toBeGreaterThanOrEqual(44);
   expect(layout.heights.every(height => Math.abs(height - 68) < 1)).toBe(true);
+  expect(Math.min(...layout.iconGaps)).toBeGreaterThanOrEqual(4);
 }
 
 test("extracts local palettes and real screenshot text with cancellation, retry, and searchable gallery results", async ({ page, context, baseURL }, testInfo) => {
