@@ -7,10 +7,10 @@ import { LibraryEmptyState, getEmptyStateKind, entireLibrarySearch } from "./lib
 describe("LibraryEmptyState", () => {
   test("offers a first save in a new library", () => {
     render(<LibraryEmptyState kind="first-save" message="No items yet." onClearFilters={vi.fn()} />);
-    expect(screen.getByRole("heading", { name: "A place for what you want to keep" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Import bookmarks or files" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Start your library" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Import items" })).toBeVisible();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save your first item" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save first item" })).toBeVisible();
   });
 
   test.each([
@@ -82,7 +82,7 @@ describe("empty state scope", () => {
     const onOpen = vi.fn();
     window.addEventListener(OPEN_CAPTURE_EVENT, onOpen);
     render(<LibraryEmptyState kind="first-save" message="No items yet." onClearFilters={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Import bookmarks or files" }));
+    fireEvent.click(screen.getByRole("button", { name: "Import items" }));
     expect(onOpen.mock.calls[0][0].detail).toEqual({ bulkImport: true });
     window.removeEventListener(OPEN_CAPTURE_EVENT, onOpen);
   });

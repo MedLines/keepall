@@ -5,6 +5,7 @@ import type { LibraryViewState } from "@/domain/library-view";
 import { openBulkImportDialog, openCaptureDialog } from "./capture-events";
 import { LibraryFolderArtwork } from "./library-collections";
 import { SearchIcon, DeleteIcon } from "./shell-icons";
+import "./library-empty-state.css";
 
 export type LibraryEmptyStateKind = "library" | "collection" | "unsorted" | "trash" | "filtered" | "first-save";
 
@@ -39,27 +40,28 @@ export function LibraryEmptyState({ kind, message, query, scope, onClearFilters,
     : kind === "trash" ? "Deleted items appear here until you restore them or empty the trash."
     : kind === "filtered" ? "Try another search or clear the active filters."
     : "Save an item to add it to your library.";
-  const title = firstSave ? "A place for what you want to keep" : query?.trim() ? `No results for “${query.trim()}”` : message;
+  const title = firstSave ? "Start your library" : query?.trim() ? `No results for “${query.trim()}”` : message;
   return (
-    <section className="mx-auto flex w-full max-w-xl flex-col items-center px-4 py-6 text-center sm:py-16">
+    <section className="library-empty-state">
       {canSave ? (
-        <div className="mb-6 w-24 max-w-full sm:w-44 pointer-events-none" aria-hidden="true">
-          <LibraryFolderArtwork previews={[]} itemTypes={[]} />
+        <div className="library-empty-illustration" aria-hidden="true">
+          <span className="library-empty-glow" />
+          <LibraryFolderArtwork previews={[]} itemTypes={[]} emptyState />
         </div>
       ) : (
-        <div className="mb-6 flex size-16 items-center justify-center rounded-2xl bg-bg-active text-text-secondary" aria-hidden="true">
-          {kind === "trash" ? <DeleteIcon className="size-6" /> : <SearchIcon className="size-6" />}
+        <div className="library-empty-symbol text-text-secondary" aria-hidden="true">
+          {kind === "trash" ? <DeleteIcon className="size-5" /> : <SearchIcon className="size-5" />}
         </div>
       )}
-      <h2 className="max-w-full break-words text-xl font-semibold tracking-tight text-text-primary">{title}</h2>
-      {query?.trim() && scope ? <p className="mt-2 max-w-full break-words text-sm text-text-secondary">Searching {scope}</p> : null}
-      <p className="mt-3 max-w-md text-sm leading-relaxed text-text-secondary">{description}</p>
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        {canSave ? <button type="button" className="ui-control ui-primary min-h-11 px-4 py-2 text-sm font-medium" onClick={openCaptureDialog}>{firstSave ? "Save your first item" : "Save an item"}</button> : null}
-        {firstSave ? <button type="button" className="ui-control min-h-11 px-4 py-2 text-sm font-medium" onClick={openBulkImportDialog}>Import bookmarks or files</button> : null}
+      <h2 className="library-empty-title text-text-primary">{title}</h2>
+      {query?.trim() && scope ? <p className="library-empty-scope text-text-secondary">Searching {scope}</p> : null}
+      <p className="library-empty-description text-text-secondary">{description}</p>
+      <div className="library-empty-actions">
+        {canSave ? <button type="button" className="ui-control ui-primary library-empty-action" onClick={openCaptureDialog}>{firstSave ? "Save first item" : "Save an item"}</button> : null}
+        {firstSave ? <button type="button" className="ui-control library-empty-action" onClick={openBulkImportDialog} title="Import bookmarks or files">Import items</button> : null}
         {kind === "filtered" ? <>
-          {onSearchEntireLibrary ? <button type="button" className="ui-control ui-primary min-h-11 px-4 py-2 text-sm font-medium" onClick={onSearchEntireLibrary}>Search entire library</button> : null}
-          <button type="button" className="ui-control min-h-11 px-4 py-2 text-sm font-medium" onClick={onClearFilters}>Clear filters</button>
+          {onSearchEntireLibrary ? <button type="button" className="ui-control ui-primary library-empty-action" onClick={onSearchEntireLibrary}>Search entire library</button> : null}
+          <button type="button" className="ui-control library-empty-action" onClick={onClearFilters}>Clear filters</button>
         </> : null}
       </div>
     </section>

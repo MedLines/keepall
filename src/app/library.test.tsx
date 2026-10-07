@@ -531,12 +531,12 @@ describe("Library", () => {
     await clickItemAction("Move to Trash");
     await waitFor(() => expect(deleteItem).toHaveBeenCalledWith("n1"));
     expect(screen.queryByText("Move this item to Trash?")).not.toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "A place for what you want to keep" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Start your library" })).toBeInTheDocument();
     const undo = await screen.findByRole("button", { name: /^Undo moving/ });
     vi.mocked(listItems).mockResolvedValue([note]);
     fireEvent.click(undo);
     await waitFor(() => expect(restoreItems).toHaveBeenCalledWith(["n1"]));
-    expect(await screen.findByText("A persisted note")).toBeInTheDocument();
+    expect(await screen.findByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Undo moving/ })).not.toBeInTheDocument();
   });
 
@@ -929,9 +929,7 @@ describe("Library focus management", () => {
   });
 
   test("moves focus for edit, cancel, and removed item", async () => {
-    vi.mocked(listItems)
-      .mockResolvedValueOnce([note])
-      .mockResolvedValue([]);
+    vi.mocked(listItems).mockResolvedValue([note]);
     vi.mocked(deleteItem).mockResolvedValue(undefined);
     render(<Library />);
 
@@ -941,13 +939,14 @@ describe("Library focus management", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
     await waitFor(() => expect(screen.getByRole("button", { name: /^Actions for / })).toHaveFocus());
 
+    vi.mocked(listItems).mockResolvedValue([]);
     await clickItemAction("Move to Trash");
     await waitFor(() => {
       expect(deleteItem).toHaveBeenCalledWith("n1");
     });
-    expect(await screen.findByRole("heading", { name: "A place for what you want to keep" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Start your library" })).toBeInTheDocument();
 
-    expect(screen.getByRole("heading", { name: "All items" })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "All items" })).toHaveFocus());
   });
 });
 
@@ -1984,7 +1983,7 @@ describe("Library inspect", () => {
   test("preview entry is disabled for empty results and absent from overview and Trash", async () => {
     vi.mocked(listItems).mockResolvedValue([]);
     render(<Library />);
-    await screen.findByRole("heading", { name: "A place for what you want to keep" });
+    await screen.findByRole("heading", { name: "Start your library" });
     expect(screen.getByRole("button", { name: "Preview" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "All collections" }));
     await waitFor(() => expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument());
