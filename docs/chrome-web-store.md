@@ -1,59 +1,57 @@
-# Keepall Capture — Chrome Web Store update
+# Keepall Capture — Chrome Web Store 0.4.0 draft
 
 - Item ID: `ehloefgfecmfjbncknaoleakbnjhkpea`
-- Published version checked September 26, 2026: **0.1.0**
-- Prepared update: **0.2.0**
+- Published version verified in the dashboard October 8, 2026: **0.3.0**
+- Prepared update: **0.4.0**
+- Prepared October 8, 2026. Dashboard and production checks must be recorded separately from local tests.
 
-Upload this update to the **existing item**, not a new Store listing. The minor
-version increases because this release adds image, link, and selected-text
-capture, toast actions, drafts, and settings. The web app's package version is
-independent of the extension version.
+Upload to the **existing item**. This feature update adds local files and image
+paste, note preview, shared app drawer controls, continued collection/tag
+organization, a larger search-clear target, and an extension-icon library menu.
+The web app's package version is independent of the extension version.
 
-## Upload steps
+## Draft preparation
 
-1. Commit the release changes and push them to the repository.
+1. Commit and push the reviewed release changes. Deploy the matching app bridge and updated privacy page before testing the production file workflow.
 2. Open the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole), then **Keepall Capture**.
-3. In **Package**, choose **Upload New Package** and upload `build/keepall-capture-0.2.0.zip`. Confirm the version shown is **0.2.0**.
-4. In **Store listing**, replace the description with the text below. The short summary comes from the manifest.
-5. In **Privacy practices**, update the single purpose and permission justifications below. Keep **Web history** and **Website content** disclosed, and review the certifications. Keep the existing remote-iframe disclosure.
-6. Update the reviewer test instructions below. Save changes on each edited tab.
-7. Click **Submit for review**. Choose automatic publication after approval if you want it to go live as soon as Google approves it.
+3. In **Package**, choose **Upload New Package** and upload `/tmp/keepall-extension-drawer-update.zip`. Confirm **0.4.0**.
+4. In **Store listing**, use the description below. The short summary comes from the manifest.
+5. In **Privacy practices**, use the single purpose and permission explanations below. Review the existing data categories and certifications against the actual dashboard fields. Retain the isolated website iframe disclosure.
+6. Add the reviewer instructions below and save each edited tab. Verify the uploaded version, listing, privacy fields, and production workflow.
+7. Leave **Submit for review** for the publisher. Do not submit or publish this draft.
 
-Submitting an update does not change the currently published version. Google
-reviews the new package before it is published. See the official
-[update instructions](https://developer.chrome.com/docs/webstore/update).
-
-The public privacy page and GitHub support URL both returned HTTP 200 on
-September 26, 2026. The live privacy page includes image downloads, optional host
-access, selected text, temporary Undo receipts, and the appearance setting.
-The public Store listing shows a publisher contact email and the two data
-categories above. Draft-only dashboard fields still need checking when uploading.
+The official [update instructions](https://developer.chrome.com/docs/webstore/update)
+describe the Store update process. Uploading a package and saving draft metadata
+are separate from submitting it for review.
 
 ## Store listing
 
 **Description** — paste as plain text:
 
 ```text
-Save what you want to come back to: pages, links, images, and useful passages. Keepall Capture adds them to your personal Keepall library without needing to keep a Keepall tab open.
+Save pages, links, images, useful passages, and local files to your personal Keepall library. Keepall Capture works with the Keepall web app in this Chrome profile; you do not need to keep a library tab open to save.
 
-SAVE IN ONE CLICK
-Click the toolbar icon to save the page you're reading. Right-click a link to save its destination without opening it. Right-click an image to save the image itself, or highlight text and right-click to save the passage as a note with its source link. New items go to Unsorted.
+SAVE FROM THE WEB
+Click the toolbar icon to save the current page. Right-click a link to save its destination without opening it. Right-click an image to save the image itself. Highlight text and choose Save to Keepall to add the passage to the source link's note. Repeated selections do not add duplicate passages.
 
-ADD A LITTLE CONTEXT
-Press Alt+K (Option+K on Mac) to open the capture drawer. Edit the title, add a plain-text or Markdown note, and choose collections and tags. Unfinished drawer edits stay available in that tab until you reload or close it. If the shortcut is already in use, change it at chrome://extensions/shortcuts.
+ADD CONTEXT AND FILES
+Press Alt+K (Option+K on Mac) to open the capture drawer, using the same controls and appearance as the Keepall app. Edit the page title, write a plain-text or Markdown note, preview it, and choose collections and tags. Close keeps unfinished edits in that tab until you reload or close the tab; Discard draft removes them.
+
+Use Add files for PNG, JPEG, GIF, WebP, AVIF, MP4, WebM, TXT, Markdown, or PDF files. You can also paste an image into the drawer. Save multiple images as one gallery or separate items, add an image caption or video note, and inspect or edit text-file contents. These become independent library items rather than attachments to the current page. Mixed files save separately. Progress and results show which files saved, with retry and cancellation controls. Bulk import opens the app's import dialog while preserving the extension draft.
 
 KEEP ORGANIZING
-After a quick save, open the saved item, move it to a collection, or undo a new save from the confirmation. Already-saved links keep their existing organization. Repeated text selections do not add duplicate passages.
+After a quick save, open the item, organize it, or undo a new save. The organizer stays open after choosing a collection so you can add tags immediately. Search collection and tag lists, create a name when there are no matches, and clear the search with an easy-to-hit button. Already-saved links keep their organization unless you change it.
+
+OPEN YOUR LIBRARY
+Right-click the extension icon and choose Open Keepall library. It focuses an existing library tab without losing its current search or draft, or opens a new one. Visit https://www.keepall.app to browse, search, edit, and back up your library.
 
 YOUR LIBRARY, ON YOUR DEVICE
-No Keepall account is needed. Your library lives in this Chrome profile, in the Keepall web app's local browser storage. Open https://www.keepall.app to browse, search, edit, and back up your library. Each browser profile has its own library.
+No Keepall account is needed. Saved items and local file contents live in the Keepall website's IndexedDB in this Chrome profile. Each profile has its own library. The extension passes selected files locally to the app in your browser; it does not upload those files to cloud storage. Markdown preview runs locally and does not load remote images. Back up your library in Keepall Settings before clearing browser data.
 
 IMAGE PERMISSIONS, YOUR CHOICE
-An image hosted on another website may need a one-time permission for that image host. Allow sites as you need them, or optionally grant access to all websites from Options. The guide explains Chrome's permission warning and how to manage access. Keepall downloads images only when you choose to save them.
+A right-clicked image hosted on another website may need permission for that image host. Allow sites as needed, or optionally allow all websites from Options. Explicit local file selection and image paste do not need image-host permission. Options also includes a library connection check, shortcut help, and System, Light, or Dark appearance.
 
-Options also lets you check your library connection, manage the capture shortcut, and choose System, Light, or Dark appearance.
-
-Works on ordinary HTTP and HTTPS pages. Chrome's internal pages cannot be captured. Link previews in the Keepall app may send the saved URL to Keepall's preview service; see the privacy policy for details.
+Page capture works on ordinary HTTP and HTTPS pages, not Chrome's internal pages. Right-click downloads of PDF or video files and standalone empty-note capture are not supported; use Add files for local documents and videos. The default library is https://www.keepall.app; Options also supports a locally running Keepall instance. Link previews in the app may send saved URLs to Keepall's preview service. See the privacy policy for network-request details.
 ```
 
 - **Category:** Tools
@@ -63,100 +61,105 @@ Works on ordinary HTTP and HTTPS pages. Chrome's internal pages cannot be captur
 - **Privacy policy URL:** `https://www.keepall.app/extension-privacy`
 - **Mature content:** Off
 
-Keep the existing no-glow Store icon. Screenshots can be updated to show the new
-drawer, toast actions, or Options. Use real UI, remove private library content,
-and keep Store screenshots at 1280 × 800 or 640 × 400. The ZIP does not replace
-listing screenshots; upload those separately if changing them.
+Use real UI without private library content for Store screenshots. The ZIP does
+not replace listing screenshots; manage those separately in the dashboard.
 
 ## Privacy practices
 
 **Single purpose:**
 
 ```text
-Save user-selected pages, links, images, and text to the user's local Keepall library, with optional notes and organization into collections and tags.
+Save user-selected pages, links, images, text passages, and local files to the user's local Keepall library, with optional notes, collections, and tags, and access to that library.
 ```
 
-**Permission justifications** — update existing fields and add the new context-menu explanation:
+**Permission justifications** — existing permissions only:
 
 | Permission | Paste-ready explanation |
 | --- | --- |
-| `activeTab` | Read the current page URL and title after the user clicks the toolbar icon, invokes the capture shortcut, or uses Save to Keepall in the right-click menu. Temporary access also lets the extension display save feedback on that page. |
-| `scripting` | Display the capture drawer, save-result toast, and collection picker on the page where the user invokes Keepall. Notify an already open Keepall tab after a confirmed save, edit, move, or Undo. |
-| `offscreen` | Hold an invisible Keepall bridge page so explicit saves and library actions reach the user's local Keepall database without opening a visible tab. The connection check reads library organization through the same bridge without creating an item. |
-| `storage` | Store the selected Keepall address and extension appearance. Hold pending link captures for retry for at most ten minutes, removing them after confirmation. Temporarily keep saved item and library identifiers in browser-session storage for Open, Organize, and Undo. Image bytes and selected passages are not kept in extension storage. |
-| `alarms` | Run periodic cleanup of expired pending link captures. |
-| `contextMenus` | Provide one Save to Keepall right-click action for images, links, and selected text. Read only the selected target and its source context when the user chooses that action. |
-| `https://www.keepall.app/*` | Load the hidden Keepall bridge and notify open Keepall tabs after library changes. The library is stored in this website origin's local IndexedDB in the user's browser profile. |
-| `http://localhost/*` | Support users running Keepall locally who select a localhost address in Options. The default destination is the production Keepall address. |
-| Optional `*://*/*` | Download an image from its host only after the user selects Save to Keepall. Access to an image host can be requested as needed. Users may instead choose optional access to all websites in Options to avoid repeated host prompts. All-website access is not required for saving ordinary page links or selected text. |
+| `activeTab` | Read the current page URL and title after the user clicks the toolbar icon, invokes the capture shortcut, or selects Save to Keepall. Temporary access also lets the extension display capture controls and save feedback on that page. |
+| `scripting` | Display the capture drawer, local file controls, packaged note preview, save-result toast, and organizer on the page where the user invokes Keepall. Notify an open Keepall tab after confirmed library changes. |
+| `offscreen` | Hold an invisible Keepall bridge page so explicit saves, local file transfers, and organization changes reach the app origin's local IndexedDB without opening a visible tab. The connection check reads organization through the same bridge without creating an item. File bytes pass through browser messages, not a server upload. |
+| `storage` | Store the chosen Keepall address and appearance. Pending link retries may include the URL, title, entered note, and organization; they expire after ten minutes and are removed on confirmation or cleanup. Browser-session storage holds save-action identifiers and temporary editor records containing tab/editor IDs, source/library URLs, saved item IDs, and action tokens. File bytes, file-note contents, and directly selected passages are not written to extension storage. |
+| `alarms` | Periodically remove expired pending link captures and temporary editor-session records. |
+| `contextMenus` | Provide Save to Keepall for images, links, and selected text in webpage menus, and Open Keepall library in the extension icon's menu. The save action reads the chosen target and source context; the library action opens or focuses the user's library without capturing the current page. |
+| `https://www.keepall.app/*` | Load the hidden Keepall bridge and notify open library tabs after changes. Saved content lives in this website origin's local IndexedDB in the user's browser profile. |
+| `http://localhost/*` | Support users who choose a locally running Keepall address in Options. The default destination remains https://www.keepall.app. |
+| Optional `*://*/*` | Download an image from its host only after the user chooses Save to Keepall. Request permission for individual image hosts, or let users optionally allow all websites from Options. This access is not needed for ordinary page links, selected text, explicitly chosen local files, or image paste. |
 
-**Host permission justification** — paste into the host-permission box:
-
-```text
-https://www.keepall.app/* lets the extension load the hidden Keepall bridge and save or organize the user's selected content in the Keepall website's local IndexedDB. It also lets the extension refresh an open library tab after a change. http://localhost/* supports users who choose a locally running Keepall address in Options. Optional *://*/* access is used to download images the user explicitly chooses through Save to Keepall. Permission can be requested for an individual image host, or users can optionally allow all websites from Options after reading the guide. The extension does not automatically collect page content or browsing history.
-```
-
-**Remote code:** Keep **Yes** for the disclosed isolated website iframe:
+**Host permission justification:**
 
 ```text
-The extension embeds https://www.keepall.app/extension-bridge in an iframe inside its offscreen document. The Keepall website's script runs only in that isolated iframe, without access to extension APIs. It writes user-requested captures and organization changes to the Keepall website origin's local IndexedDB without opening a visible tab. The extension worker and injected page scripts are packaged locally; they do not fetch or evaluate remote JavaScript.
+https://www.keepall.app/* loads the hidden Keepall bridge and lets explicit captures, local file transfers, and organization changes reach that website origin's local IndexedDB. It also allows open library tabs to refresh after changes. http://localhost/* supports a locally running Keepall address chosen in Options. Optional *://*/* access downloads only images the user explicitly selects through Save to Keepall; users can allow individual hosts or optionally all websites. Local files are selected through the file picker or an explicit paste and do not need host-download access. The extension does not automatically collect page content or browsing history.
 ```
 
-**Data usage:** Keep **Web history** for user-selected URLs/titles and **Website
-content** for selected images, passages, and capture text. If the dashboard offers
-a separate **User-generated content** category, include it for notes, titles,
-collection names, and tags. Do not select unrelated categories. These declarations
-describe data handled by the extension even when stored locally; they do not mean
-Keepall automatically reads Chrome history or uploads the library.
+**Remote code:** Retain **Yes** for the disclosed isolated website iframe:
 
-**Certifications:** Review the three existing statements about not selling data,
-using it only for the single purpose, and not using it for creditworthiness or
-lending. The privacy policy also explains link-preview requests and hosting.
+```text
+The extension embeds https://www.keepall.app/extension-bridge, or the configured localhost equivalent, in an iframe inside its offscreen document. The website's script runs in that isolated iframe without extension APIs and saves user-requested content to the website origin's local IndexedDB. The extension worker, injected scripts, drawer styles, and note controls/preview are packaged locally; they do not fetch or evaluate remote JavaScript.
+```
+
+**Data usage:** Disclose **Web history** for user-selected URLs/titles and
+**Website content** for selected images, passages, local file contents, and capture
+text. If the actual dashboard provides a separate **User-generated content**
+category, include notes, captions, edited titles, collection names, and tags.
+These declarations describe handled data, including local processing; they do
+not mean the extension reads Chrome history or uploads the library. Review the
+actual dashboard categories rather than adding unrelated categories.
+
+**Temporary storage details:** Drawer drafts, selected File objects, pasted image
+bytes, and file-note contents remain in tab memory. The hidden bridge keeps
+transfer manifests, filenames, metadata, and results in memory; it releases its
+file-byte buffers when processing settles, a receiving transfer is cancelled,
+or the session expires. Inactive bridge sessions expire after ten minutes and
+are pruned every thirty seconds. Editor-session records in extension session
+storage expire after ten minutes of inactivity and are removed during cleanup
+or when the tab closes; saved-result action tokens also expire after ten minutes.
+Those records contain identifiers and source/library URLs, not file bytes or
+file-note contents. Pending link retries are a separate storage path and can
+include entered link-note text, as disclosed above.
+
+**Certifications:** Review the existing statements about not selling data, using
+it only for the single purpose, and not using it for creditworthiness or lending.
+The privacy policy retains disclosures for link previews, website icons,
+user-requested article fetches, hosting logs, and aggregate page-view analytics.
 
 ## Reviewer test instructions
 
-The following text fits the 500-character field:
+Paste-ready text, under 500 characters:
 
 ```text
-No account needed. Open https://www.keepall.app in the same Chrome profile. On a normal HTTPS page, click Keepall to save; check the library without refreshing. Alt+K opens the drawer for a note, collection, and tags. Right-click a link, image, or selected text and choose Save to Keepall; allow the image host if asked. Try Open, Organize, and Undo on a new save. Options includes connection checks, shortcut help, themes, and image permissions. Chrome internal pages are unsupported.
+No account needed. Open https://www.keepall.app in this Chrome profile. On an HTTPS page, click Keepall; try Organize, tags and Undo. Alt+K opens the drawer: Add files (PNG/JPEG, MP4, TXT/MD/PDF), paste an image, and preview Markdown. Save, then check the library. Right-click a link/image/selection to save; allow the image host if asked. Right-click the extension icon > Open Keepall library. Bulk import opens the app. Internal pages cannot be captured.
 ```
 
-## Release verification — September 26, 2026
+## Local release verification — October 8, 2026
 
-- Options screenshots reviewed in light/dark and a narrow window; sticky
-  navigation, keyboard access, reload selection, and preserved edits pass.
-- All 12 extension browser tests pass against the extracted package on localhost.
-- Five integration tests pass with the live keepall.app library and bridge:
-  connection/text/theme, drawer editing, Open/Organize/Undo, images, and links.
-- All 32 extension persistence tests pass; typecheck and extension lint pass.
-- ZIP integrity, source-file equality, root manifest, version, and Store ID checked.
-  Only the public key is restored in the disposable unpacked test copy.
-- Public privacy and support pages are reachable; production disclosures match.
+The reviewed branch passed the production app build, extension bundle build and
+deterministic check, type checking, and relevant lint. The shared drawer change
+passed 32 Chromium extension cases; its final file-layout corrections passed six
+file/parity cases. Subsequent clear-target and library-menu changes passed the
+organizer browser case in both themes, all 15 capture cases, and two final menu
+routing checks. Focused organizer and worker-transfer units passed 16 and six
+tests respectively. These were local tests with disposable profiles, not a
+physical toolbar-menu click or verification of the signed-in Store draft.
 
-Production tests used disposable Chromium profiles and synthetic source pages for
-repeatable captures. They did not access the publisher's personal library or
-signed-in Store dashboard. Native Store installation/update prompts and the
-private draft fields must be checked in the dashboard/Store-installed copy.
-
-ZIP SHA-256:
+The prepared ZIP has version 0.4.0, valid archive integrity, no development key,
+and byte-matching extension sources and generated assets. Its SHA-256 is:
 
 ```text
-204c91a1f3b9e63a4b13a9a27820b5a7f2b5d24ae47c28695ad617acd62fbe5d
+968539c9a9759696f33b822b9d8eb820703b69b5999e6296de872b0efde6ec08
 ```
+
+Production deployment, the live privacy page, the uploaded package, and saved
+dashboard fields need separate verification before the publisher submits.
 
 ## Rebuild and identity
 
 ```bash
-python3 scripts/package-extension.py build/keepall-capture-0.2.0.zip
+python3 scripts/package-extension.py /tmp/keepall-extension-drawer-update.zip
 ```
 
 The ZIP has `manifest.json` at its root and excludes the public development key.
-The Store preserves this item's ID when the ZIP is uploaded to the existing
-listing. The source manifest keeps the Store's public key so the unpacked
-extension has the same ID as the web bridge allows. For tests of extracted ZIP
-contents, restore only that public key in a separate test copy; never alter the
-upload ZIP to test it. Never commit the generated ZIP or temporary browser profiles.
-
-If a published update needs to be reverted, use the Store's
-[rollback guidance](https://developer.chrome.com/docs/webstore/rollback), then
-verify captures against the production library again.
+The Store preserves the item ID when uploaded to the existing listing. The
+source manifest retains the public key for unpacked bridge-compatible testing.
+For tests of an extracted ZIP, restore only that public key in a separate test
+copy; never alter the upload ZIP. Do not commit generated ZIPs or browser profiles.
