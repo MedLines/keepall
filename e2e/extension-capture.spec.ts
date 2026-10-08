@@ -596,7 +596,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await expect(editorHost).toBeAttached();
     await editor.getByRole("textbox", { name: "Title" }).fill("Chosen title");
     await editor.getByRole("textbox", { name: "Your note (optional)" }).fill("# Read for layout ideas");
-    await editor.getByRole("checkbox", { name: "Markdown" }).check();
+    await editor.getByRole("button", { name: "Markdown", exact: true }).click();
     await editor.getByRole("button", { name: "Reading", exact: true }).click();
     await editor.getByRole("button", { name: "Design", exact: true }).click();
     await editor.getByRole("button", { name: "Close drawer" }).click();
@@ -608,7 +608,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await expect(editor.getByText("Draft restored", { exact: true })).toBeVisible();
     await expect(editor.getByRole("textbox", { name: "Title" })).toHaveValue("Chosen title");
     await expect(editor.getByRole("textbox", { name: "Your note (optional)" })).toHaveValue("# Read for layout ideas");
-    await expect(editor.getByRole("checkbox", { name: "Markdown" })).toBeChecked();
+    await expect(editor.getByRole("button", { name: "Markdown", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(editor.getByRole("button", { name: "Reading", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(editor.getByRole("button", { name: "Remove tag Design" })).toBeVisible();
     await editor.getByRole("button", { name: "Save", exact: true }).click();
@@ -634,7 +634,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await expect(editor.getByText("Draft restored", { exact: true })).toHaveCount(0);
     await expect(editor.getByRole("textbox", { name: "Title" })).toHaveValue("Chosen title");
     await expect(editor.getByRole("textbox", { name: "Your note (optional)" })).toHaveValue("# Read for layout ideas");
-    await expect(editor.getByRole("checkbox", { name: "Markdown" })).toBeChecked();
+    await expect(editor.getByRole("button", { name: "Markdown", exact: true })).toHaveAttribute("aria-pressed", "true");
     await editorPage.setViewportSize({ width: 320, height: 640 });
     await editor.locator("dialog").evaluate(async (dialog) => {
       await Promise.all(dialog.getAnimations().map((animation) => animation.finished));
@@ -1315,7 +1315,7 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
       lastSave: () => lastSave,
     };
   }, origin);
-  for (const file of ["org-picker.js", "page-ui.js"]) {
+  for (const file of ["note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"]) {
     await page.addScriptTag({ content: await readFile(path.resolve("extension", file), "utf8") });
   }
   const editorHost = page.locator("#keepall-capture-ui");
@@ -1355,7 +1355,7 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
 
   await open();
   await note.fill("# Unfinished note");
-  await editor.getByRole("checkbox", { name: "Markdown" }).check();
+  await editor.getByRole("button", { name: "Markdown", exact: true }).click();
   await editor.getByRole("textbox", { name: "Filter or new collection" }).fill("New collection");
   await editor.getByRole("textbox", { name: "Filter or new collection" }).press("Enter");
   await editor.getByRole("textbox", { name: "Filter or create tag" }).fill("New tag");
@@ -1372,7 +1372,7 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
 
   await open();
   await expect(note).toHaveValue("# Unfinished note");
-  await expect(editor.getByRole("checkbox", { name: "Markdown" })).toBeChecked();
+  await expect(editor.getByRole("button", { name: "Markdown", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(editor.getByRole("button", { name: "New collection", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(editor.getByRole("button", { name: "Remove tag New tag" })).toBeVisible();
   for (const colorScheme of ["light", "dark"] as const) {

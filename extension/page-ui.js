@@ -99,6 +99,47 @@ if (!globalThis.__keepallPageUi) {
     textarea { min-height: 136px; padding: 12px 14px; resize: vertical; }
     textarea::placeholder { color: var(--secondary); }
     textarea[readonly] { background: var(--raised); }
+    .note-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .note-segment { display: flex; padding: 2px; border-radius: 13px; background: var(--raised); }
+    .note-segment button { min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--secondary); font-size: 12px; }
+    .note-segment button[aria-pressed="true"] { background: var(--control); color: var(--primary); box-shadow: 0 1px 3px var(--border); }
+    .note-views { margin-left: auto; }
+    .note-views button { display: grid; place-items: center; width: 42px; padding: 0; }
+    .note-views svg { width: 18px; height: 18px; }
+    .note-preview { min-height: 136px; max-height: 400px; overflow: auto; padding: 12px 14px; border: 1px solid var(--border); border-radius: 13px; background: var(--control); overflow-wrap: anywhere; font-weight: 400; }
+    .note-preview[hidden], .note-editor textarea[hidden] { display: none; }
+    .note-preview .note-plain { white-space: pre-wrap; margin: 0; }
+    .note-markdown :first-child { margin-top: 0; }
+    .note-markdown :last-child { margin-bottom: 0; }
+    .note-markdown h3 { font-size: 20px; } .note-markdown h4 { font-size: 18px; } .note-markdown h5, .note-markdown h6 { font-size: 16px; }
+    .note-markdown ul, .note-markdown ol { padding-left: 24px; }
+    .note-markdown pre { white-space: pre-wrap; padding: 12px; border-radius: 10px; background: var(--raised); }
+    .note-markdown blockquote { margin-left: 0; border-left: 3px solid var(--border); padding-left: 12px; color: var(--secondary); }
+    .note-markdown table { border-collapse: collapse; width: 100%; } .note-markdown td, .note-markdown th { padding: 6px; border: 1px solid var(--border); text-align: left; }
+    .note-markdown input[type="checkbox"] { width: 14px; min-height: 14px; margin-right: 6px; }
+    .note-markdown a { color: inherit; text-decoration: underline; }
+    .field[hidden], .file-staging[hidden], .file-layout[hidden], .file-actions button[hidden], .footer button[hidden] { display: none; }
+    .file-capture { display: grid; gap: 8px; }
+    .file-add { justify-self: start; min-height: 40px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 13px; font-size: 14px; }
+    .file-staging { display: grid; gap: 12px; }
+    .file-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .file-row { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 13px; background: var(--control); }
+    .file-thumbnail { width: 48px; height: 48px; flex: none; object-fit: cover; border-radius: 8px; }
+    .file-name { min-width: 0; flex: 1; display: grid; gap: 3px; }
+    .file-name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-name > small { color: var(--secondary); overflow-wrap: anywhere; }
+    .file-remove { display: grid; place-items: center; flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--secondary); font-size: 20px; }
+    .file-remove:hover:not(:disabled) { background: var(--raised); }
+    .file-layout, .file-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .file-layout button, .file-actions button, .file-staging > button { min-height: 36px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 12px; }
+    .file-layout button[aria-pressed="true"] { background: var(--active); color: var(--primary); }
+    .file-staging > button { justify-self: start; }
+    .file-details { display: grid; gap: 12px; }
+    .file-progress { margin: 0; font-size: 12px; color: var(--secondary); }
+    .file-progress:empty { display: none; }
+    .bulk-import { margin-right: auto; padding: 0 8px !important; background: transparent; color: var(--secondary); border-color: transparent !important; }
+    .bulk-import:hover:not(:disabled) { background: var(--raised); color: var(--primary); }
+    .footer-hint { flex-basis: 100%; text-align: right; }
     .org-section { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 20px; }
     .org-section[hidden], .selected-tags[hidden], .browse-trigger[hidden], .org-status[hidden], .org-create[hidden], .save-status[hidden] { display: none; }
     .org-title { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--primary); font-weight: 600; }
@@ -228,6 +269,7 @@ if (!globalThis.__keepallPageUi) {
   let closeTimer;
   let currentPicker;
   let stopFieldFades;
+  let destroyEditorContent;
   const drafts = new Map();
   let rememberDraft;
 
@@ -506,8 +548,48 @@ if (!globalThis.__keepallPageUi) {
     closeTimer = setTimeout(() => target.close(), 180);
   }
 
+  let noteEditorSequence = 0;
+  function createNoteEditor({ document, label, content = "", format = "plain", onChange = () => {} }) {
+    const element = document.createElement("div"); element.className = "field note-editor";
+    const heading = document.createElement("label"); heading.textContent = label;
+    const input = document.createElement("textarea"); input.id = `keepall-note-${++noteEditorSequence}`; input.value = content;
+    input.maxLength = label === "File contents" ? 10 * 1024 * 1024 : 10000; heading.htmlFor = input.id;
+    const controls = document.createElement("div"); controls.className = "note-controls";
+    const formats = document.createElement("div"); formats.className = "note-segment"; formats.setAttribute("role", "group"); formats.setAttribute("aria-label", "Note format");
+    const views = document.createElement("div"); views.className = "note-segment note-views"; views.setAttribute("role", "group"); views.setAttribute("aria-label", "Note editor view");
+    const preview = document.createElement("div"); preview.className = "note-preview"; preview.setAttribute("role", "region"); preview.setAttribute("aria-label", `${label} preview`); preview.tabIndex = 0; preview.hidden = true;
+    let showingPreview = false;
+    let disabled = false;
+    let renderer;
+    const make = (name, group, handler) => { const button = document.createElement("button"); button.type = "button"; button.textContent = name; button.title = name; button.addEventListener("click", handler); group.append(button); return button; };
+    const plain = make("Plain text", formats, () => { format = "plain"; update(); onChange(value()); });
+    const markdown = make("Markdown", formats, () => { format = "markdown"; update(); onChange(value()); });
+    const edit = make("Edit", views, () => { showingPreview = false; update(); input.focus(); });
+    const view = make("Preview", views, () => { showingPreview = true; update(); preview.focus(); });
+    const paths = { Edit: '<path d="m15 5 4 4M4 20l4-1L20 7a3 3 0 0 0-4-4L4 15v5Z"/>', Preview: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>' };
+    for (const button of [edit, view]) { const name = button.textContent; button.setAttribute("aria-label", name); button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`; }
+    controls.append(formats, views); element.append(heading, controls, input, preview);
+    function value() { return { content, format }; }
+    function update(next = {}) {
+      if (next.content !== undefined) { content = next.content; input.value = content; }
+      if (next.format) format = next.format;
+      plain.setAttribute("aria-pressed", String(format === "plain")); markdown.setAttribute("aria-pressed", String(format === "markdown"));
+      edit.setAttribute("aria-pressed", String(!showingPreview)); view.setAttribute("aria-pressed", String(showingPreview));
+      input.hidden = showingPreview; preview.hidden = !showingPreview;
+      if (showingPreview) {
+        if (!renderer) renderer = globalThis.__keepallNotePreview.mount(preview, value());
+        else renderer.update(value());
+      }
+      input.disabled = disabled; edit.disabled = disabled; view.disabled = disabled;
+      plain.disabled = disabled || input.readOnly; markdown.disabled = disabled || input.readOnly;
+    }
+    input.addEventListener("input", () => { content = input.value; onChange(value()); });
+    update();
+    return { element, input, value, update, setDisabled(value) { disabled = value; update(); }, destroy() { renderer?.destroy(); renderer = undefined; } };
+  }
+
   function openEditor(url, title, editorId, origin) {
-    if (dialog?.dataset.state === "saving") return;
+    if (dialog?.dataset.state === "saving") return false;
     rememberDraft?.();
     const draftKey = JSON.stringify([origin, url]);
     const draft = drafts.get(draftKey);
@@ -515,6 +597,7 @@ if (!globalThis.__keepallPageUi) {
     clearTimeout(closeTimer);
     currentPicker?.destroy();
     stopFieldFades?.();
+    destroyEditorContent?.();
     dialog?.remove();
     editorSurface?.destroy();
     const surface = createEditorSurface();
@@ -556,36 +639,12 @@ if (!globalThis.__keepallPageUi) {
     titleInput.maxLength = 500;
     titleInput.value = title;
     titleLabel.append(titleName, titleInput);
-    const noteLabel = document.createElement("div");
-    noteLabel.className = "field";
-    const noteHead = document.createElement("div");
-    noteHead.className = "note-head";
-    const noteName = document.createElement("label");
-    noteName.htmlFor = "keepall-note-input";
-    noteName.textContent = "Your note (optional)";
-    const markdownToggle = document.createElement("label");
-    markdownToggle.className = "markdown-toggle";
-    const markdownInput = document.createElement("input");
-    markdownInput.type = "checkbox";
-    const markdownCheck = document.createElement("span");
-    markdownCheck.className = "markdown-check";
-    markdownCheck.setAttribute("aria-hidden", "true");
-    markdownCheck.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 14L8.5 17.5L19 6.5"/></svg>';
-    const markdownBox = document.createElement("span");
-    markdownBox.className = "markdown-box";
-    markdownBox.append(markdownInput, markdownCheck);
-    markdownToggle.append(markdownBox, document.createTextNode("Markdown"));
-    const noteInput = document.createElement("textarea");
-    noteInput.id = "keepall-note-input";
-    noteInput.maxLength = 10000;
+    const noteEditor = createNoteEditor({ document, label: "Your note (optional)", onChange() { noteDirty = true; markdownDirty = true; } });
+    const noteLabel = noteEditor.element;
+    const noteInput = noteEditor.input;
     noteInput.placeholder = "Why are you saving this link?";
-    const noteHelp = document.createElement("p");
-    noteHelp.className = "note-help";
-    noteHelp.id = "keepall-note-help";
-    noteHelp.textContent = "This note includes local images. Edit its contents in Keepall.";
-    noteHelp.hidden = true;
-    noteHead.append(noteName, markdownToggle);
-    noteLabel.append(noteHead, noteInput, noteHelp);
+    const noteHelp = document.createElement("p"); noteHelp.className = "note-help"; noteHelp.id = "keepall-note-help";
+    noteHelp.textContent = "This note includes local images. Edit its contents in Keepall."; noteHelp.hidden = true; noteLabel.append(noteHelp);
     const picker = globalThis.__keepallCreateOrgPicker(shadow, observeScrollEdges);
     currentPicker = picker;
     let existingLink = draft?.existingLink;
@@ -596,29 +655,32 @@ if (!globalThis.__keepallPageUi) {
     let initialSelection = {};
     let discarded = false;
     let saved = false;
+    let fileCapture;
+    let organizationReady = false;
     if (titleDirty) titleInput.value = draft.title;
-    if (noteDirty) noteInput.value = draft.noteContent;
-    if (markdownDirty) markdownInput.checked = draft.markdown;
+    if (noteDirty) noteEditor.update({ content: draft.noteContent });
+    if (markdownDirty) noteEditor.update({ format: draft.markdown ? "markdown" : "plain" });
     rememberDraft = () => {
       if (saved || discarded) return;
       const selection = picker.loaded ? picker.selection() : draft?.selection;
       const organizationDirty = selection && JSON.stringify(selection) !== JSON.stringify(initialSelection);
-      if (!titleDirty && !noteDirty && !markdownDirty && !organizationDirty) {
+      const fileDraft = fileCapture?.hasFiles && !fileCapture.draft().entries.every(entry => entry.saved) ? fileCapture.draft() : undefined;
+      if (!titleDirty && !noteDirty && !markdownDirty && !organizationDirty && !fileDraft) {
         drafts.delete(draftKey);
         return;
       }
       drafts.set(draftKey, {
         ...(titleDirty ? { title: titleInput.value } : {}),
         ...(noteDirty ? { noteContent: noteInput.value } : {}),
-        ...(markdownDirty ? { markdown: markdownInput.checked } : {}),
+        ...(markdownDirty ? { markdown: noteEditor.value().format === "markdown" } : {}),
         ...(organizationDirty ? { selection } : {}),
         existingLink,
         snapshotLoaded,
+        ...(fileDraft ? { files: fileDraft } : {}),
       });
     };
     titleInput.addEventListener("input", () => { titleDirty = true; });
     noteInput.addEventListener("input", () => { noteDirty = true; });
-    markdownInput.addEventListener("change", () => { markdownDirty = true; });
     onOrganizationMessage = (message) => {
       if (message.editorId !== currentEditorId || !dialog?.open) return;
       // Retain a restored draft's original snapshot for the save conflict check.
@@ -627,15 +689,16 @@ if (!globalThis.__keepallPageUi) {
         snapshotLoaded = true;
       }
       if (message.type === "organizations" && message.existingLink) {
-        heading.textContent = "Edit saved link";
+        if (!fileCapture?.hasFiles) heading.textContent = "Edit saved link";
         if (!titleDirty) titleInput.value = message.existingLink.title;
-        if (!noteDirty || message.existingNoteHasImages) noteInput.value = message.existingLink.noteContent;
+        if (!noteDirty || message.existingNoteHasImages) noteEditor.update({ content: message.existingLink.noteContent });
         if (message.existingNoteHasImages) {
           noteInput.readOnly = true;
           noteInput.setAttribute("aria-describedby", noteHelp.id);
           noteHelp.hidden = false;
         }
-        if (!markdownDirty) markdownInput.checked = message.existingLink.noteFormat === "markdown";
+        if (!markdownDirty) noteEditor.update({ format: message.existingLink.noteFormat ?? "plain" });
+        noteEditor.update();
       }
       picker.load(message);
       initialSelection = picker.selection();
@@ -645,8 +708,10 @@ if (!globalThis.__keepallPageUi) {
         saveButton.textContent = "Save";
         return;
       }
-      saveButton.disabled = false;
-      saveButton.textContent = existingLink ? "Save changes" : "Save";
+      organizationReady = true;
+      bulk.disabled = fileCapture?.locked ?? false;
+      saveButton.disabled = fileCapture?.locked ?? false;
+      saveButton.textContent = fileCapture?.hasFiles ? "Save files" : existingLink ? "Save changes" : "Save";
     };
     errorLine = document.createElement("p");
     errorLine.className = "error";
@@ -663,7 +728,7 @@ if (!globalThis.__keepallPageUi) {
       discard.className = "discard-draft";
       discard.textContent = "Discard draft";
       discard.addEventListener("click", () => {
-        if (dialog?.dataset.state === "saving") return;
+        if (dialog?.dataset.state === "saving") return false;
         discarded = true;
         drafts.delete(draftKey);
         dismissEditor();
@@ -686,7 +751,19 @@ if (!globalThis.__keepallPageUi) {
     const hint = document.createElement("span");
     hint.className = "hint";
     hint.textContent = "Ctrl/⌘ Enter to save";
-    footer.append(hint, cancel, saveButton);
+    const bulk = document.createElement("button"); bulk.type = "button"; bulk.className = "bulk-import"; bulk.textContent = "Bulk import"; bulk.disabled = true;
+    bulk.addEventListener("click", async () => {
+      if (bulk.disabled) return;
+      rememberDraft?.(); bulk.disabled = true; errorLine.textContent = "";
+      try {
+        const result = await chrome.runtime.sendMessage({ type: "editor-file-action", editorId, operation: "open-bulk-import", payload: {} });
+        if (!result?.success) throw new Error(result?.error || "Could not open Bulk import. Try again.");
+      } catch (error) { errorLine.textContent = error.message; }
+      finally { bulk.disabled = false; }
+    });
+    footer.append(bulk, cancel, saveButton);
+    const shortcut = document.createElement("div"); shortcut.className = "footer-hint"; shortcut.append(hint);
+    footer.append(shortcut);
     form.append(fields, footer);
     const complete = document.createElement("div");
     complete.className = "save-complete";
@@ -743,19 +820,23 @@ if (!globalThis.__keepallPageUi) {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       if (saveButton.disabled) return;
+      if (fileCapture?.hasFiles) { void fileCapture.save(); return; }
       saveButton.disabled = true;
       saveButton.textContent = "Saving…";
       dialog.dataset.state = "saving";
       close.disabled = true;
       cancel.disabled = true;
       picker.setDisabled(true);
+      noteEditor.setDisabled(true);
+      fileCapture.setDisabled(true);
+      bulk.disabled = true;
       errorLine.textContent = "";
       chrome.runtime.sendMessage({
         type: "save-from-editor",
         editorId,
         title: titleInput.value,
         noteContent: noteInput.value,
-        noteFormat: markdownInput.checked ? "markdown" : "plain",
+        noteFormat: noteEditor.value().format,
         ...(existingLink ? { existingLink } : {}),
         ...picker.selection(),
       });
@@ -786,17 +867,49 @@ if (!globalThis.__keepallPageUi) {
         close.disabled = false;
         cancel.disabled = false;
         picker.setDisabled(false);
+        noteEditor.setDisabled(false);
+        fileCapture.setDisabled(false);
+        bulk.disabled = false;
         errorLine.textContent = message.message;
         toast("Couldn't save to Keepall", false);
       }
     };
+    fileCapture = globalThis.__keepallCreateFileCapture({
+      document, sourceUrl: url, draft: draft?.files,
+      request: (operation, payload) => chrome.runtime.sendMessage({ type: "editor-file-action", editorId, operation, payload }),
+      getOrganization: () => picker.selection(),
+      createNoteEditor: (options) => createNoteEditor({ document, ...options }),
+      onChange() {
+        if (!fileCapture) return;
+        const mode = fileCapture.hasFiles;
+        titleLabel.hidden = mode; noteLabel.hidden = mode;
+        heading.textContent = mode ? "Save files to Keepall" : existingLink ? "Edit saved link" : "Save to Keepall";
+        cancel.textContent = mode && fileCapture.draft().entries.some(entry => entry.saved) ? "Done" : "Close";
+        saveButton.hidden = mode && fileCapture.draft().entries.every(entry => entry.saved);
+        saveButton.textContent = mode ? "Save files" : existingLink ? "Save changes" : "Save";
+      },
+      onBusy(value) {
+        dialog.dataset.state = value ? "saving" : "editing";
+        saveButton.disabled = value || !organizationReady;
+        close.disabled = value; cancel.disabled = value; bulk.disabled = value;
+        picker.setDisabled(value); noteEditor.setDisabled(value);
+      },
+      onComplete() { rememberDraft?.(); },
+    });
+    fields.prepend(fileCapture.element);
+    titleLabel.hidden = fileCapture.hasFiles; noteLabel.hidden = fileCapture.hasFiles;
+    if (fileCapture.hasFiles) heading.textContent = "Save files to Keepall";
+    form.addEventListener("paste", (event) => fileCapture.paste(event));
     dialog.append(header, form, complete);
     const currentDialog = dialog;
+    const destroyContent = () => { noteEditor.destroy(); fileCapture.destroy(); };
+    destroyEditorContent = destroyContent;
     const stopFades = observeScrollEdges(fields);
     stopFieldFades = stopFades;
     dialog.addEventListener("close", () => {
       picker.destroy();
       stopFades();
+      destroyContent();
       currentDialog.remove();
       surface.destroy();
       if (dialog === currentDialog) {
@@ -813,13 +926,14 @@ if (!globalThis.__keepallPageUi) {
     });
     shadow.append(dialog);
     dialog.showModal();
-    titleInput.focus();
-    titleInput.select();
+    if (fileCapture.hasFiles) fileCapture.element.querySelector("button").focus();
+    else { titleInput.focus(); titleInput.select(); }
+    return true;
   }
 
-  chrome.runtime.onMessage.addListener((message) => {
+  chrome.runtime.onMessage.addListener((message, _sender, respond) => {
     if (message?.type === "theme" || message?.theme !== undefined) applyTheme(message.theme);
-    if (message?.type === "editor") openEditor(message.url, message.title, message.editorId, message.origin);
+    if (message?.type === "editor") { const accepted = openEditor(message.url, message.title, message.editorId, message.origin); respond?.({ accepted }); }
     if (message?.type === "organizations" || message?.type === "organization-error") onOrganizationMessage?.(message);
     if (message?.type === "toast-feedback") toast(message.message, message.success, message.actions);
     if (message?.type === "editor-feedback") onEditorFeedback?.(message);

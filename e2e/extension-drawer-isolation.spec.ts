@@ -53,7 +53,7 @@ async function openDrawerOnShortcutPage(page: Page) {
       lastSave: () => lastSave,
     };
   });
-  for (const file of ["org-picker.js", "page-ui.js"]) {
+  for (const file of ["note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"]) {
     await page.addScriptTag({ path: path.resolve("extension", file) });
   }
   await bridge.evaluate((value, origin) => value.send({
@@ -226,7 +226,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 360, height: 740 
       const footerBounds = (await footer.boundingBox())!;
       expect(headerBounds.height).toBeLessThan(160);
       expect(footerBounds.y + footerBounds.height).toBeLessThanOrEqual(viewport.height);
-      await expect(footer.getByRole("button")).toHaveText(["Close", "Save"]);
+      await expect(footer.getByRole("button")).toHaveText(["Bulk import", "Close", "Save"]);
       const note = editor.getByRole("textbox", { name: "Your note (optional)" });
       await note.fill("A note\n".repeat(50));
       await note.press("End");
