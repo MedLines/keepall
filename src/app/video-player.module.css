@@ -1,4 +1,5 @@
 .player {
+  container-type: inline-size;
   --player-inset: 12px;
   --player-track: color-mix(in oklch, var(--color-text-on-media) 30%, transparent);
   position: relative;
@@ -64,6 +65,7 @@
 .playSurface:focus-visible .playOverlay { outline: 2px solid var(--color-text-on-media); outline-offset: 4px; }
 
 .controls {
+  pointer-events: none;
   position: absolute;
   z-index: 2;
   inset: auto 0 0;
@@ -71,6 +73,8 @@
   background: linear-gradient(to top, color-mix(in oklch, var(--color-bg-media) 95%, transparent), color-mix(in oklch, var(--color-bg-media) 65%, transparent) 65%, transparent);
   transition: opacity 160ms ease, visibility 160ms ease;
 }
+
+.controls > * { pointer-events: auto; }
 
 .player[data-idle="true"] .controls { opacity: 0; visibility: hidden; pointer-events: none; }
 .player[data-idle="true"] .playOverlay { opacity: 0; }
@@ -141,8 +145,7 @@
 .range:focus-visible { outline: 2px solid var(--color-text-on-media); outline-offset: 3px; border-radius: 4px; }
 .range:disabled { cursor: default; opacity: 0.4; }
 
-@media (min-width: 640px) {
-  .player { --player-inset: 20px; }
+@container (min-width: 480px) {
   .controls { padding: 48px 20px 16px; }
   .skip { display: inline-flex; }
   .volume:hover .volumeSlider, .volume:focus-within .volumeSlider { width: 76px; visibility: visible; }

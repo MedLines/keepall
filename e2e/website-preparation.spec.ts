@@ -340,13 +340,13 @@ test("titles, descriptions and share images are usable on every public route", a
 });
 
 for (const width of [390, 1707]) {
-  test(`About preserves the stack and uses six live demos in an asymmetric bento at ${width}px`, async ({ page }) => {
+  test(`About preserves the stack and uses seven live demos in an asymmetric bento at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 825 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/about");
     await expect(page.locator(".ka-stack .ka-feature-card")).toHaveCount(3);
-    await expect(page.locator(".ka-bento-card")).toHaveCount(6);
-    await expect(page.locator(".ka-bento-visual [data-feature-demo]")).toHaveCount(6);
+    await expect(page.locator(".ka-bento-card")).toHaveCount(7);
+    await expect(page.locator(".ka-bento-visual [data-feature-demo]")).toHaveCount(7);
     await expect(page.locator('.ka-bento-visual img[src*="/details/"]')).toHaveCount(0);
     if (width === 1707) {
       const reading = (await page.locator(".ka-bento-reading").boundingBox())!;
@@ -355,9 +355,12 @@ for (const width of [390, 1707]) {
       const video = (await page.locator(".ka-bento-video").boundingBox())!;
       const preview = (await page.locator(".ka-bento-preview").boundingBox())!;
       const importing = (await page.locator(".ka-bento-import").boundingBox())!;
-      expect(reading.width).toBeGreaterThan(images.width * 1.4);
-      expect(reading.height).toBeGreaterThan(notes.height * 1.4);
-      expect(reading.height).toBeGreaterThan(images.height * 1.4);
+      const pdf = (await page.locator(".ka-bento-pdf").boundingBox())!;
+      expect(Math.abs(reading.y - pdf.y)).toBeLessThan(2);
+      expect(Math.abs(reading.width - pdf.width)).toBeLessThan(2);
+      expect(pdf.x).toBeGreaterThan(reading.x + reading.width);
+      expect(images.width).toBeGreaterThan(notes.width);
+      expect(images.y).toBeGreaterThan(reading.y + reading.height);
       expect(Math.abs(video.y - preview.y)).toBeLessThan(2);
       expect(Math.abs(video.y - importing.y)).toBeLessThan(2);
     }
@@ -423,6 +426,8 @@ for (const width of [390, 1707]) {
 
     const notes = page.locator('[data-feature-demo="notes"]');
     await notes.getByRole("button", { name: "Edit", exact: true }).click();
+    await expect(notes.locator("textarea")).toHaveCount(0);
+    await expect(notes.getByRole("textbox", { name: "Edit sample note" })).toHaveAttribute("contenteditable", "plaintext-only");
     await expectStableBounds();
     const longNote = "# My project\n\nKeep **useful references** here.\n\n" + "Another reference for this project.\n\n".repeat(40);
     await notes.getByRole("textbox", { name: "Edit sample note" }).fill(longNote);
@@ -443,31 +448,47 @@ for (const width of [390, 1707]) {
     await expectStableBounds();
 
     const reading = page.locator('[data-feature-demo="reading"]');
-    await reading.getByRole("button", { name: "Open PDF", exact: true }).click();
-    await expectStableBounds();
-    await expect(reading.locator('[data-pdf-ready="1"]')).toBeVisible();
-    await expectStableBounds();
-    await reading.getByRole("button", { name: "Next page", exact: true }).click();
-    await expect(reading.getByRole("textbox", { name: "PDF page number" })).toHaveValue("2");
-    await expect(reading.locator('[data-pdf-ready="2"]')).toBeVisible();
-    await reading.getByRole("button", { name: "Previous page", exact: true }).click();
-    await expect(reading.getByRole("textbox", { name: "PDF page number" })).toHaveValue("1");
-    await expectStableBounds();
-    await reading.getByRole("button", { name: "Back to article", exact: true }).click();
     await expect(reading.locator(".article-content")).toContainText("A little room to think");
+    await expect(reading.getByRole("button", { name: "Open PDF", exact: true })).toHaveCount(0);
+    const pdf = page.locator('[data-feature-demo="pdf"]');
+    await expect(pdf.locator('[data-pdf-ready="1"]')).toBeVisible();
+    await expectStableBounds();
+    await pdf.getByRole("button", { name: "Next page", exact: true }).click();
+    await expect(pdf.getByRole("textbox", { name: "PDF page number" })).toHaveValue("2");
+    await expect(pdf.locator('[data-pdf-ready="2"]')).toBeVisible();
+    await pdf.getByRole("button", { name: "Previous page", exact: true }).click();
+    await expect(pdf.getByRole("textbox", { name: "PDF page number" })).toHaveValue("1");
     await expectStableBounds();
 
     const imageTools = page.locator('[data-feature-demo="image-tools"]');
+    await expect(imageTools.getByRole("img", { name: /Reading notes. Make room/ })).toBeVisible();
+    await expect(imageTools.getByRole("region", { name: "Extracted text from image 1" })).toContainText("READING NOTES");
+    await imageTools.getByRole("button", { name: "Copy text", exact: true }).click();
+    await expect(imageTools.getByRole("status")).toContainText(/Text copied|Select and copy/);
+    await expect(imageTools.getByRole("heading", { name: "Extract color palettes", exact: true })).toBeVisible();
+    const textExample = (await imageTools.locator(".kd-ocr-demo").boundingBox())!;
+    const paletteExample = (await imageTools.locator(".kd-palette-result").boundingBox())!;
+    expect(Math.abs(textExample.width - paletteExample.width)).toBeLessThan(1);
+    expect(Math.abs(textExample.height - paletteExample.height)).toBeLessThan(1);
+    if (width === 1707) expect(Math.abs(textExample.y - paletteExample.y)).toBeLessThan(1);
+    const inset = (await imageTools.locator(".kd-palette-inset").boundingBox())!;
+    const swatches = (await imageTools.locator(".kd-swatches").boundingBox())!;
+    expect(swatches.x - inset.x).toBeGreaterThanOrEqual(8);
+    expect(inset.x + inset.width - swatches.x - swatches.width).toBeGreaterThanOrEqual(8);
+    await expect(imageTools.getByRole("list", { name: "Keepall logo colors" })).toBeVisible();
     await expect(imageTools.getByRole("img", { name: "Keepall logo", exact: true })).toBeVisible();
+    await expect(imageTools.getByRole("button", { name: "Colors", exact: true })).toHaveCount(0);
+    for (const swatch of await imageTools.locator(".kd-swatches button").all()) {
+      expect(await swatch.evaluate(element => Number.parseFloat(getComputedStyle(element).borderRadius))).toBeGreaterThanOrEqual(14);
+    }
+    await expectStableBounds();
     await imageTools.getByRole("button", { name: "Copy color #FFF4F5", exact: true }).click();
     await expect(imageTools.getByRole("status")).toContainText(/#FFF4F5/);
-    await imageTools.getByRole("button", { name: "Show text", exact: true }).click();
-    await expect(imageTools.getByRole("region", { name: "Extracted text from image 1" })).toContainText("FIELD NOTES");
-    await expectStableBounds();
-    await imageTools.getByRole("button", { name: "Back to logo", exact: true }).click();
+    await expect(imageTools.getByRole("region", { name: "Extracted text from image 1" })).toBeVisible();
     await expectStableBounds();
 
     const preview = page.locator('[data-feature-demo="preview"]');
+    await expect(preview.locator('[data-slot="scroll-area"]')).toHaveCount(0);
     await expect(preview.getByRole("img", { name: "A quiet coastline at dusk" })).toBeVisible();
     await preview.getByRole("button", { name: "Next sample preview", exact: true }).click();
     await expect(preview.getByRole("status")).toContainText("a-little-pause.md");
@@ -484,26 +505,55 @@ for (const width of [390, 1707]) {
     await expectStableBounds();
     await preview.getByRole("button", { name: "Back to card", exact: true }).click();
 
-    const importing = page.locator('[data-feature-demo="import"]');
-    await importing.getByRole("button", { name: "Reset sample files", exact: true }).click();
-    await expect(importing.getByRole("region", { name: "Selected files" }).locator("li")).toHaveCount(2);
-    await importing.getByRole("button", { name: "Remove file weekend-notes.md", exact: true }).click();
-    await expect(importing.getByRole("region", { name: "Selected files" }).locator("li")).toHaveCount(1);
-    await expectStableBounds();
-    await importing.getByRole("button", { name: "Remove file reading-room.txt", exact: true }).click();
-    await expect(importing.locator(".kd-import-empty")).toBeVisible();
-    await expectStableBounds();
-    await importing.getByRole("button", { name: "Reset sample files", exact: true }).click();
-    await expect(importing.getByRole("region", { name: "Selected files" }).locator("li")).toHaveCount(2);
+    await preview.getByRole("button", { name: "Next sample preview", exact: true }).click();
+    await preview.getByRole("button", { name: "Next sample preview", exact: true }).click();
+    await expect(preview.getByRole("status")).toHaveText("3 of 5: Project Gutenberg");
+    await expect(preview.getByRole("link", { name: "Project Gutenberg", exact: true })).toHaveAttribute("href", "https://www.gutenberg.org/");
+    await preview.getByRole("button", { name: "Preview Project Gutenberg", exact: true }).click();
+    await expect(preview.getByRole("link", { name: "Visit website", exact: true })).toHaveAttribute("href", "https://www.gutenberg.org/");
+    await preview.getByRole("button", { name: "Next sample preview", exact: true }).click();
+    await expect(preview.getByRole("status")).toHaveText("4 of 5: architecture.webp");
+    await expect(preview.locator(".kd-preview-open-image img")).toBeVisible();
+    await preview.getByRole("button", { name: "Next sample preview", exact: true }).click();
+    await expect(preview.getByRole("status")).toHaveText("5 of 5: Are.na");
+    await expect(preview.getByRole("link", { name: "Visit website", exact: true })).toHaveAttribute("href", "https://www.are.na/");
+    await preview.getByRole("button", { name: "Next sample preview", exact: true }).click();
+    await expect(preview.getByRole("status")).toHaveText("1 of 5: keepall-coast.webp");
+    await preview.getByRole("button", { name: "Previous sample preview", exact: true }).click();
+    await expect(preview.getByRole("status")).toHaveText("5 of 5: Are.na");
     await expectStableBounds();
 
-    const video = page.locator('[data-feature-demo="video"] video');
-    expect(await video.evaluate(element => (element as HTMLVideoElement).paused)).toBe(true);
-    await page.getByRole("button", { name: "Play sample video", exact: true }).click();
-    await expect(video).toHaveAttribute("controls", "");
-    await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(0);
+    const importing = page.locator('[data-feature-demo="import"]');
+    await importing.scrollIntoViewIfNeeded();
+    await expect(importing.locator(".kd-import-file")).toHaveCount(3);
+    await expect(importing.getByRole("button")).toHaveCount(0);
+    await expect(importing.locator(".kd-import-folder-front")).toHaveCSS("opacity", "0");
+    expect(await importing.evaluate(element => element.getAnimations({ subtree: true }).length)).toBe(0);
     await expectStableBounds();
-    await video.evaluate(element => (element as HTMLVideoElement).pause());
+
+    const player = page.locator('[data-feature-demo="video"]');
+    const video = player.locator('video');
+    await expect(video).toHaveAttribute("src", "/marketing/demos/abstract-silk.mp4");
+    await expect(video).toHaveCSS("object-fit", "cover");
+    const videoCard = (await page.locator("#video").boundingBox())!;
+    const videoFrame = (await video.boundingBox())!;
+    const videoHeading = (await page.locator("#video .ka-bento-copy").boundingBox())!;
+    const innerFrame = (await player.locator(".kd-video-player").boundingBox())!;
+    expect(videoFrame.y).toBeGreaterThanOrEqual(videoHeading.y + videoHeading.height);
+    expect(videoCard.width - videoFrame.width).toBeGreaterThan(40);
+    expect(Math.abs(videoFrame.width - innerFrame.width)).toBeLessThan(1);
+    expect(Math.abs(videoFrame.height - innerFrame.height)).toBeLessThan(1);
+    expect(await video.evaluate(element => (element as HTMLVideoElement).paused)).toBe(true);
+    await player.getByRole("button", { name: "Play video", exact: true }).click();
+    await expect(video).not.toHaveAttribute("controls");
+    await expect(player.getByRole("group", { name: "Playback controls" })).toBeVisible();
+    await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(0);
+    await player.getByRole("button", { name: "Pause", exact: true }).click();
+    await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).paused)).toBe(true);
+    await player.getByRole("button", { name: "Playback speed", exact: true }).click();
+    await player.getByRole("menuitemradio", { name: "1.5x", exact: true }).click();
+    await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).playbackRate)).toBe(1.5);
+    await expectStableBounds();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
@@ -590,4 +640,38 @@ test.describe("Contact rate limit", () => {
     await expect(page.getByRole("form", { name: "Contact Keepall" }).getByRole("alert")).toContainText("Please try again in 3 minutes");
     await expect(page.getByLabel("Message", { exact: true })).toHaveValue("My draft stays here.");
   });
+});
+
+test("Collections walkthrough starts at the folder overview and plays the folder interaction", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/about");
+  await page.getByRole("button", { name: "Collections", exact: true }).click();
+  const gallery = page.getByRole("region", { name: "Collections", exact: true });
+  await expect(gallery.getByRole("img", { name: /All Keepall collections/ })).toBeVisible();
+  await gallery.getByRole("button", { name: "Play Collections demo", exact: true }).click();
+  const video = gallery.locator('video[aria-label="Collections demonstration recorded in Keepall"]');
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(0);
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.duration)).toBeGreaterThan(10);
+  await gallery.getByRole("button", { name: "Pause Collections demo", exact: true }).click();
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true);
+});
+
+test("Import folder animation keeps looping on hover and pauses on focus", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/about");
+  const importing = page.locator('[data-feature-demo="import"]');
+  await importing.scrollIntoViewIfNeeded();
+  await page.mouse.move(0, 0);
+  await expect(importing.getByRole("button")).toHaveCount(0);
+  const folder = importing.locator(".kd-import-folder-front");
+  await importing.getByRole("img", { name: /A folder opens/ }).hover();
+  await expect(folder).toHaveCSS("animation-play-state", "running");
+  await expect.poll(() => folder.evaluate(element => Number(getComputedStyle(element).opacity)), { timeout: 8000 }).toBeLessThan(0.1);
+  await expect.poll(() => folder.evaluate(element => Number(getComputedStyle(element).opacity)), { timeout: 8000 }).toBeGreaterThan(0.9);
+  await expect.poll(() => folder.evaluate(element => Number(getComputedStyle(element).opacity)), { timeout: 8000 }).toBeLessThan(0.1);
+  await importing.getByRole("img", { name: /A folder opens/ }).focus();
+  await expect(folder).toHaveCSS("animation-play-state", "paused");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(folder).toHaveCSS("animation-name", "none");
+  for (const file of await importing.locator(".kd-import-file").all()) await expect(file).toHaveCSS("opacity", "1");
 });

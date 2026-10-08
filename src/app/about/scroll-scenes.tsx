@@ -51,7 +51,7 @@ export function HeroScene({ children, preview }: { children: ReactNode; preview:
 
 const views = [
   { name: "Your library", recording: "library-demo", caption: "Browse saves in grid or list view, then open Preview." },
-  { name: "Collections", recording: "collections-demo", caption: "Group related saves in a collection." },
+  { name: "Collections", recording: "collections-demo", caption: "Browse your folders, peek inside, then open a collection." },
   { name: "Tags", recording: "tags-demo", caption: "Filter the library by a tag." },
   { name: "Search", recording: "search-demo", caption: "Search file contents and recognized screenshot text." },
 ];

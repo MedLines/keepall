@@ -1,44 +1,57 @@
 "use client";
 
 import Image from "next/image";
-import { ScrollPanel } from "@/components/ui/scroll-panel";
 import { useState } from "react";
 import type { NoteItem } from "@/domain/note";
 import type { ImageItem } from "@/domain/image";
+import { EMPTY_LINK_PREVIEW, type LinkItem } from "@/domain/link";
 import { LibraryCardContent } from "../library-card-content";
-import { ItemMediaFrame } from "../item-media-frame";
 import { ItemTypeBadge } from "../item-type-icon";
 import { NoteContent } from "../note-content";
-import { ArrowLeftIcon, ArrowRightIcon } from "../shell-icons";
+import { ArrowLeftIcon, ArrowRightIcon, ExternalLinkIcon } from "../shell-icons";
 
-const previewNote: NoteItem = { id: "demo-preview-note", type: "note", title: "a-little-pause.md", content: "# A little pause\n\nA book by the window.\n\nLeave the afternoon open.", format: "markdown", tagIds: [], collectionIds: [], createdAt: 1791453600000, updatedAt: 1791453600000 };
-const previewImage: ImageItem = { id: "demo-preview-image", type: "image", title: "Coastal evening", sourceFileName: "keepall-coast.webp", assetIds: [], sourceUrl: "", caption: "", tagIds: [], collectionIds: [], createdAt: 0, updatedAt: 0 };
+const common = { tagIds: [], collectionIds: [], createdAt: 1791453600000, updatedAt: 1791453600000 };
+const previewNote: NoteItem = { ...common, id: "demo-preview-note", type: "note", title: "a-little-pause.md", content: "# A little pause\n\nA book by the window.\n\nLeave the afternoon open.", format: "markdown" };
+const previewImage: ImageItem = { ...common, id: "demo-preview-image", type: "image", title: "Coastal evening", sourceFileName: "keepall-coast.webp", assetIds: [], sourceUrl: "", caption: "" };
+const books: LinkItem = { ...common, ...EMPTY_LINK_PREVIEW, id: "demo-preview-books", type: "link", title: "Project Gutenberg", url: "https://www.gutenberg.org/", previewStatus: "ready", previewDescription: "A shelf of free ebooks for your next quiet afternoon.", previewAssetId: "demo-books" };
+const ideas: LinkItem = { ...common, ...EMPTY_LINK_PREVIEW, id: "demo-preview-ideas", type: "link", title: "Are.na", url: "https://www.are.na/", previewStatus: "ready", previewDescription: "Collect references and follow a thread of ideas.", previewAssetId: "demo-ideas" };
+const samples: { item: ImageItem | NoteItem | LinkItem; image?: string; alt?: string }[] = [
+  { item: previewImage, image: "keepall-coast.webp", alt: "A quiet coastline at dusk" },
+  { item: previewNote },
+  { item: books, image: "reading-corner.webp", alt: "Books and a chair beside a sunlit window" },
+  { item: { ...previewImage, id: "demo-preview-architecture", title: "Lines & light", sourceFileName: "architecture.webp" }, image: "architecture.webp", alt: "An architectural study in light and shadow" },
+  { item: ideas, image: "workflow-canvas.svg", alt: "A canvas of connected ideas" },
+];
+type Sample = typeof samples[number];
 
-function PreviewImage() {
-  return <ItemMediaFrame className="kd-preview-media"><Image src="/marketing/keepall-coast.webp" width={480} height={320} alt="A quiet coastline at dusk" sizes="(max-width: 700px) 80vw, 300px" /></ItemMediaFrame>;
+function PreviewImage({ sample }: { sample: Sample }) {
+  return <Image className="kd-preview-photo" src={`/marketing/${sample.image}`} width={480} height={320} alt={sample.alt!} sizes="(max-width: 700px) 80vw, 300px" unoptimized={sample.image?.endsWith(".svg")} />;
 }
 
-function SampleCard({ image, onOpen }: { image: boolean; onOpen: () => void }) {
-  return <div className="library-card squircle-panel relative flex flex-col rounded-card p-[8px]">
-    {image && <div className="library-card-media"><PreviewImage /><ItemTypeBadge item={previewImage} /></div>}
-    <div className={`library-card-footer ${image ? "library-card-footer-with-media" : "kd-preview-note-card"}`}><LibraryCardContent item={image ? previewImage : previewNote} onOpen={onOpen} /></div>
+function SampleCard({ sample, onOpen }: { sample: Sample; onOpen: () => void }) {
+  return <div className="library-card squircle-panel kd-sample-card">
+    {sample.image && <div className="library-card-media"><button type="button" className="kd-preview-media-open" aria-label={`Preview ${sample.item.title}`} onClick={onOpen}><PreviewImage sample={sample} /></button><ItemTypeBadge item={sample.item} /></div>}
+    <div className={`library-card-footer ${sample.image ? "library-card-footer-with-media" : "kd-preview-note-card"}`}><LibraryCardContent item={sample.item} onOpen={onOpen} /></div>
   </div>;
 }
 
 export function PreviewDemo() {
   const [index, setIndex] = useState(0);
   const [opened, setOpened] = useState(false);
-  function move() { setIndex(value => (value + 1) % 2); setOpened(false); }
+  const sample = samples[index];
+  function move(direction: number) { setIndex(value => (value + direction + samples.length) % samples.length); }
   return <div className="kd-demo kd-preview" data-feature-demo="preview">
-    <ScrollPanel className="kd-preview-stage" viewportClassName="kd-preview-viewport" viewportProps={{ tabIndex: 0, "aria-label": "Sample Preview cards" }}>
-      {opened ? <div className="kd-preview-open">
-        <ScrollPanel className={index === 0 ? "kd-preview-open-image" : "kd-preview-note"} viewportProps={{ tabIndex: 0, "aria-label": "Opened sample preview" }}>{index === 0 ? <PreviewImage /> : <NoteContent content={previewNote.content} format="markdown" allowLocalImages={false} />}</ScrollPanel>
-        <button type="button" className="ka-button ka-button-small kd-button" onClick={() => setOpened(false)}>Back to card</button>
-      </div> : <div className="kd-preview-deck">
-        <div className="kd-preview-rear" inert aria-hidden="true"><SampleCard image={index !== 0} onOpen={() => setOpened(true)} /></div>
-        <div className="kd-preview-content" key={index}><SampleCard image={index === 0} onOpen={() => setOpened(true)} /></div>
-      </div>}
-    </ScrollPanel>
-    <div className="kd-preview-controls"><button type="button" className="ka-button ka-button-small kd-button" aria-label="Previous sample preview" onClick={move}><ArrowLeftIcon /></button><span className="kd-caption" role="status">{index === 0 ? "keepall-coast.webp" : "a-little-pause.md"}</span><button type="button" className="ka-button ka-button-small kd-button" aria-label="Next sample preview" onClick={move}><ArrowRightIcon /></button></div>
+    <div className="kd-preview-stage">
+      {opened ? sample.item.type === "note" ? <div className="kd-preview-note"><NoteContent content={sample.item.content} format="markdown" allowLocalImages={false} /></div>
+        : sample.item.type === "link" ? <div className="kd-preview-link"><PreviewImage sample={sample} /><div><h4>{sample.item.title}</h4><p>{sample.item.previewDescription}</p><a href={sample.item.url} target="_blank" rel="noreferrer">Visit website<ExternalLinkIcon /></a></div></div>
+          : <div className="kd-preview-open-image"><PreviewImage sample={sample} /></div>
+        : <SampleCard sample={sample} onOpen={() => setOpened(true)} />}
+    </div>
+    <div className="kd-preview-controls">
+      <button type="button" className="ui-control kd-button" aria-label="Previous sample preview" onClick={() => move(-1)}><ArrowLeftIcon /></button>
+      {opened ? <button type="button" className="ui-control kd-button" onClick={() => setOpened(false)}>Back to card</button> : <span className="kd-caption" aria-hidden="true">{sample.item.type === "link" ? "Link" : sample.item.type === "note" ? "Note" : "Image"} · {index + 1} / {samples.length}</span>}
+      <span className="kd-live" role="status">{index + 1} of {samples.length}: {sample.item.type === "image" ? sample.item.sourceFileName : sample.item.title}</span>
+      <button type="button" className="ui-control kd-button" aria-label="Next sample preview" onClick={() => move(1)}><ArrowRightIcon /></button>
+    </div>
   </div>;
 }

@@ -31,7 +31,7 @@ try {
   await page.evaluate(() => document.fonts.ready);
   await page.addStyleTag({ content: "nextjs-portal, [data-agentation-root], [data-interface-kit], #interface-kit-root { display:none !important; }" });
   await page.waitForFunction(() => [...document.querySelectorAll('main img')].every(image => image.complete));
-  await page.evaluate(() => {
+  const attachPointer = () => page.evaluate(() => {
     const pointer = document.createElement("div");
     pointer.id = "recording-pointer";
     pointer.setAttribute("aria-hidden", "true");
@@ -40,6 +40,7 @@ try {
     document.body.append(pointer);
     addEventListener("pointermove", event => { pointer.style.left = `${event.clientX}px`; pointer.style.top = `${event.clientY}px`; });
   });
+  await attachPointer();
   const clips = [];
   const rest = ms => page.waitForTimeout(ms);
   async function click(locator, options) {
@@ -81,11 +82,29 @@ try {
   await page.goto(origin);
   await page.locator(".library-card").first().waitFor();
   await page.addStyleTag({ content: "nextjs-portal, [data-agentation-root], [data-interface-kit], #interface-kit-root { display:none !important; }" });
+  if (!selectedClips || selectedClips.includes("collections-demo")) {
+    await click(page.getByRole("button", { name: "All collections", exact: true }));
+    await expect(page.locator("#library-heading")).toHaveText("Collections");
+    await expect(page.locator(".collection-folder-grid > li")).toHaveCount(3);
+    await page.mouse.move(1250, 700, { steps: 20 });
+    await rest(500);
+    await page.screenshot({ path: join(scratch, "collections-poster.png") });
+  }
+  await attachPointer();
   await record("collections-demo", async () => {
-    await click(sidebar.getByRole("button", { name: "Design Inspiration", exact: true }));
+    const folder = page.getByRole("link", { name: "Open Design Inspiration, 9 items", exact: true });
+    const bounds = await folder.boundingBox();
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, { steps: 30 });
+    await rest(1800);
+    await click(folder);
     await expect(page.locator("#library-heading")).toHaveText("Design Inspiration");
     await expect(page.locator(".library-card")).toHaveCount(9);
-    await click(sidebar.getByRole("button", { name: "Quiet spaces", exact: true }));
+    await rest(1200);
+    await click(page.getByRole("button", { name: "All collections", exact: true }));
+    const quiet = page.getByRole("link", { name: "Open Quiet spaces, 3 items", exact: true });
+    await quiet.hover();
+    await rest(1200);
+    await click(quiet);
     await expect(page.locator(".library-card")).toHaveCount(3);
   });
   await click(sidebar.getByRole("button", { name: "All items", exact: true }));
@@ -122,6 +141,7 @@ try {
     console.log(`${clip.name}: ${clip.duration.toFixed(1)}s`);
   }
   if (clips.some(clip => clip.name === "tags-demo")) execFileSync("ffmpeg", ["-loglevel", "error", "-y", "-i", join(scratch, "tags-poster.png"), join(output, "app-tags.webp")]);
+  if (clips.some(clip => clip.name === "collections-demo")) execFileSync("ffmpeg", ["-loglevel", "error", "-y", "-i", join(scratch, "collections-poster.png"), join(output, "app-collections-overview.webp")]);
   console.log(`Raw capture and timing: ${scratch}`);
 } finally {
   await browser.close();

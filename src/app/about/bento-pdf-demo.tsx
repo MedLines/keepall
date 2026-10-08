@@ -14,7 +14,7 @@ function SamplePdfPages({ document, page, zoom, view, onPageChange, scrollRef }:
 }) {
   const { layout, retry } = usePdfPageSizes(document);
   return layout.status === "ready" ? <PdfScroll key={zoom} document={document} sizes={layout.sizes} zoom={zoom} view={view} startPage={page} onPageChange={onPageChange} ref={scrollRef} />
-    : layout.status === "error" ? <button className="kd-button" type="button" onClick={retry}>Retry sample pages</button>
+    : layout.status === "error" ? <button className="ui-control kd-button" type="button" onClick={retry}>Retry sample pages</button>
     : <p role="status">Preparing sample pages…</p>;
 }
 
@@ -56,7 +56,7 @@ export function SamplePdf({ portalContainer }: { portalContainer: HTMLElement | 
       onPageFocus={() => setDraft(String(page))} onPageDraftChange={setDraft} onPageCommit={commitPage} />
     <ScrollPanel className="kd-pdf-pages" viewportClassName="kd-pdf-viewport" viewportProps={{ "data-document-scroll": true, tabIndex: 0, "aria-label": "Sample PDF pages" }}>
       {document ? <SamplePdfPages document={document} page={page} zoom={zoom} view={view} onPageChange={setPage} scrollRef={scrollRef} />
-        : failed ? <p role="alert">Sample PDF unavailable. <button type="button" className="kd-button" onClick={() => { setFailed(false); setAttempt(value => value + 1); }}>Retry</button></p>
+        : failed ? <p role="alert">Sample PDF unavailable. <button type="button" className="ui-control kd-button" onClick={() => { setFailed(false); setAttempt(value => value + 1); }}>Retry</button></p>
         : <p role="status">Loading sample PDF…</p>}
     </ScrollPanel>
   </div></Tooltip.Provider>;

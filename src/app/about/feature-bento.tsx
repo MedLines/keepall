@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ArrowRightIcon } from "../shell-icons";
-import { ReadingDemo, NotesDemo, ImageToolsDemo, VideoDemo, PreviewDemo, ImportDemo } from "./feature-demos";
+import { ReadingDemo, PdfDemo, NotesDemo, ImageToolsDemo, VideoDemo, PreviewDemo, ImportDemo } from "./feature-demos";
 
 const features = [
-  { id: "reading", className: "ka-bento-reading", title: "Offline reading & PDFs", description: "Read saved articles and browse PDFs offline.", href: "/help/saved-articles", Demo: ReadingDemo },
+  { id: "reading", className: "ka-bento-reading", title: "Saved articles", description: "A clean reading view, available offline.", href: "/help/saved-articles", Demo: ReadingDemo },
+  { id: "pdfs", className: "ka-bento-pdf", title: "PDFs, kept close", description: "Browse pages, zoom in, and pick up where you left off.", href: "/help/documents", Demo: PdfDemo },
   { id: "image-tools", className: "ka-bento-images", title: "Palettes & image text", description: "Copy image colors and recognized English text.", href: "/help/images-and-videos#palette", Demo: ImageToolsDemo },
   { id: "notes", className: "ka-bento-notes", title: "Markdown & text", description: "Write notes or edit Markdown and text files.", href: "/help/notes", Demo: NotesDemo },
   { id: "video", className: "ka-bento-video", title: "Local video", description: "Press play, even offline.", href: "/help/images-and-videos#videos", Demo: VideoDemo },
