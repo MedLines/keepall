@@ -1,5 +1,5 @@
 if (!globalThis.__keepallCreateOrgPicker) {
-  globalThis.__keepallCreateOrgPicker = function createOrgPicker(shadow) {
+  globalThis.__keepallCreateOrgPicker = function createOrgPicker(shadow, observeScrollEdges = () => () => {}) {
     const document = shadow.ownerDocument;
     const LIMIT = 6;
     const normalize = (name) => name.trim().replace(/\s+/g, " ");
@@ -16,6 +16,7 @@ if (!globalThis.__keepallCreateOrgPicker) {
     };
     let browser;
     let browserCloseTimer;
+    let stopBrowserFades;
 
     function element(tag, className, text) {
       const node = document.createElement(tag);
@@ -311,6 +312,7 @@ if (!globalThis.__keepallCreateOrgPicker) {
       browser.append(header, searchWrap, results);
       browser.addEventListener("close", () => {
         clearTimeout(browserCloseTimer);
+        stopBrowserFades?.();
         browser.remove();
         browser = null;
         trigger.focus();
@@ -322,6 +324,7 @@ if (!globalThis.__keepallCreateOrgPicker) {
       shadow.append(browser);
       renderResults();
       browser.showModal();
+      stopBrowserFades = observeScrollEdges(results);
       search.focus();
     }
 
@@ -373,6 +376,7 @@ if (!globalThis.__keepallCreateOrgPicker) {
       destroy() {
         clearTimeout(browserCloseTimer);
         resizeObserver.disconnect();
+        stopBrowserFades?.();
         browser?.close();
       },
     };
