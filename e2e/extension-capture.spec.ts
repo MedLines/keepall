@@ -1316,7 +1316,7 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
       lastSave: () => lastSave,
     };
   }, origin);
-  for (const file of ["note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"]) {
+  for (const file of ["drawer-styles.js", "note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"]) {
     await page.addScriptTag({ content: await readFile(path.resolve("extension", file), "utf8") });
   }
   const editorHost = page.locator("#keepall-capture-ui");

@@ -53,7 +53,7 @@ async function openDrawerOnShortcutPage(page: Page) {
       lastSave: () => lastSave,
     };
   });
-  for (const file of ["note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"]) {
+  for (const file of ["drawer-styles.js", "note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"]) {
     await page.addScriptTag({ path: path.resolve("extension", file) });
   }
   await bridge.evaluate((value, origin) => value.send({
