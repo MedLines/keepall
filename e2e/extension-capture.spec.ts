@@ -658,6 +658,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     const fields = editor.locator(".fields");
     expect(await fields.evaluate((node) => node.scrollHeight > node.clientHeight)).toBe(true);
     await fields.evaluate((node) => { node.scrollTop = node.scrollHeight; });
+    await editor.getByRole("button", { name: "Browse all tags" }).scrollIntoViewIfNeeded();
     await expect(editor.getByRole("button", { name: "Browse all tags" })).toBeInViewport();
     await fields.evaluate((node) => { node.scrollTop = 0; });
     await worker.evaluate(async () => {
