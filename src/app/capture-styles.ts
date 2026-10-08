@@ -18,6 +18,7 @@ export const captureStyles = {
   "note-editor": "flex flex-col gap-3",
   "note-head": "flex flex-wrap items-center justify-between gap-2",
   "field-label": "text-sm font-medium text-text-primary",
+  "text-input": "ui-field min-h-11 w-full px-3 py-2 text-sm disabled:opacity-60",
   "note-input": "ui-field min-h-28 resize-y px-3 py-2 text-sm",
   "note-preview": "flex min-h-0 max-h-36 shrink-0 flex-col rounded-input border border-border-control bg-bg-control h-28 overflow-auto p-4",
   "org-panel": "flex flex-col gap-4 py-1",

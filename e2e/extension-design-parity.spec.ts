@@ -128,6 +128,7 @@ for (const theme of ["light", "dark"] as const) {
       ];
       await drawer.locator('input[type="file"]').setInputFiles(selectedFiles);
       await frame.locator('input[type="file"]').setInputFiles(selectedFiles);
+      for (const selector of [".file-details", ".file-progress", ".error", ".file-actions"]) await expect(frame.locator(".file-staging").locator(selector)).toBeHidden();
       const appFile = drawer.getByRole("listitem").filter({ hasText: "first.txt" });
       const extensionFile = frame.locator(".file-row").filter({ hasText: "first.txt" });
       await same(appFile, extensionFile, "File row");

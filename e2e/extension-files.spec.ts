@@ -127,7 +127,9 @@ test("image picker and paste save a gallery, separate files, video and PDF witho
     await f.editor.getByRole("button", { name: "Save files", exact: true }).click();
     await expect(f.editor.locator(".file-progress")).toHaveText("2 files saved to Keepall.", { timeout: 30_000 });
     await f.editor.getByRole("button", { name: "Done", exact: true }).click(); await f.open();
+    const titleStyle = await f.editor.getByRole("textbox", { name: "Title", exact: true }).evaluate(node => { const css = getComputedStyle(node); return { backgroundColor: css.backgroundColor, borderRadius: css.borderRadius, padding: css.padding, height: css.height }; });
     await f.editor.locator('input[type="file"]').setInputFiles(path.resolve("e2e/fixtures/tiny.mp4"));
+    expect(await f.editor.getByRole("textbox", { name: "Video title" }).evaluate(node => { const css = getComputedStyle(node); return { backgroundColor: css.backgroundColor, borderRadius: css.borderRadius, padding: css.padding, height: css.height }; })).toEqual(titleStyle);
     await f.editor.getByRole("textbox", { name: "Video title" }).fill("Local clip");
     await f.editor.getByRole("textbox", { name: "Video note (optional)" }).fill("Video note");
     await f.editor.getByRole("button", { name: "Save files", exact: true }).click();

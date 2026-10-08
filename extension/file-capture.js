@@ -150,7 +150,7 @@ if (!globalThis.__keepallCreateFileCapture) {
       const single = state.entries.length === 1 ? state.entries[0] : undefined;
       if (single && !single.saved) {
         if (single.kind === "video") {
-          const label = node("label", "field", "Video title"); const title = node("input"); title.value = single.title; title.maxLength = 500;
+          const label = node("label", "field", "Video title"); const title = node("input", "text-input"); title.value = single.title; title.maxLength = 500;
           title.addEventListener("input", () => { single.title = title.value; invalidate(); }); label.append(title); details.append(label);
         }
         if (single.kind !== "pdf") addEditor(single, single.kind === "image" ? "Caption (optional)" : ["txt", "md"].includes(single.kind) ? "File contents" : "Video note (optional)");

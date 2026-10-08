@@ -28,3 +28,6 @@ html, body { margin: 0; background: transparent; }
 .save-complete-actions { @apply flex flex-col items-center gap-3; }
 .save-complete-actions svg { width: 16px; height: 16px; }
 .fields, .browse-results { mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top, 0px), #000 calc(100% - var(--fade-bottom, 0px)), transparent); scrollbar-color: var(--color-border-subtle) transparent; scrollbar-width: thin; }
+
+.file-staging > :is(.file-details, .file-progress, .error):empty,
+.file-actions:not(:has(> :not([hidden]))) { display: none; }

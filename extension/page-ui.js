@@ -490,7 +490,7 @@ if (!globalThis.__keepallPageUi) {
     const titleName = document.createElement("span");
     titleName.textContent = "Title";
     const titleInput = document.createElement("input");
-    titleInput.className = "ui-field min-h-11 w-full px-3 py-2 text-sm disabled:opacity-60";
+    titleInput.className = drawerClass("text-input");
     titleName.className = drawerClass("field-label");
     titleInput.maxLength = 500;
     titleInput.value = title;
