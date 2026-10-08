@@ -17,7 +17,7 @@ import {
   useState,
 } from "react";
 import type { Collection } from "@/domain/collection";
-import type { LibraryTypeFilter } from "@/domain/library-view";
+import type { LibraryTypeSelection } from "@/domain/library-view";
 import type { Tag } from "@/domain/tag";
 import type { LibrarySidebarCounts } from "./library-sidebar-counts";
 import {
@@ -74,7 +74,7 @@ type Props = {
   trashCount?: number;
   onGoTrash?: () => void;
   onEmptyTrash?: () => void;
-  browseType: LibraryTypeFilter | null;
+  browseType: LibraryTypeSelection;
   browseTagId: string | null;
   collectionsView?: boolean;
   tagsView?: boolean;

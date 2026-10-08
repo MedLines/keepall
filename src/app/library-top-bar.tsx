@@ -6,7 +6,7 @@ import type {
   LibraryLayout,
   LibraryListColumns,
   LibrarySort,
-  LibraryTypeFilter,
+  LibraryTypeSelection,
 } from "@/domain/library-view";
 import { useAppShortcuts } from "./use-app-shortcuts";
 import { shortcutLabel } from "@/domain/keyboard-shortcuts";
@@ -55,9 +55,9 @@ type Props = {
   onListColumnsChange?: (columns: LibraryListColumns) => void;
   onPreview?: () => void;
   previewDisabled?: boolean;
-  typeFilter: LibraryTypeFilter | null;
+  typeFilter: LibraryTypeSelection;
   typeCounts: LibrarySidebarCounts;
-  onTypeFilterChange: (type: LibraryTypeFilter | null) => void;
+  onTypeFilterChange: (type: LibraryTypeSelection) => void;
   tagFilterName: string | null;
   searchPlaceholder?: string;
   typeFilterName: string | null;

@@ -33,6 +33,15 @@ beforeEach(() => {
 });
 
 describe("VideoItemPage", () => {
+  test("downloads the original video with its filename even when playback fails", async () => {
+    render(<VideoItemPage itemId="video-1" returnHref="/" />);
+    await waitFor(() => expect(document.querySelector("video")).toBeTruthy());
+    const download = screen.getByRole("link", { name: "Download video" });
+    expect(download).toHaveAttribute("download", "tiny.mp4");
+    expect(download).toHaveAttribute("href", "blob:video-1");
+    fireEvent.error(document.querySelector("video")!);
+    expect(screen.getByRole("link", { name: "Download video" })).toHaveAttribute("href", "blob:video-1");
+  });
   test("shows the title once in the shared page header", async () => {
     render(<VideoItemPage itemId="video-1" returnHref="/" />);
     expect(await screen.findByRole("heading", { name: "A video", level: 1 })).toBeVisible();

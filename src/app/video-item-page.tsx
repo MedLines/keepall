@@ -22,11 +22,11 @@ import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ItemLibraryDetails } from "./item-library-details";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
-import { VideoIcon } from "./shell-icons";
+import { DownloadIcon, VideoIcon } from "./shell-icons";
 import { ItemPageHeader } from "./item-page-header";
 import { ItemMediaFrame } from "./item-media-frame";
 import { VideoPlayer } from "./video-player";
-import { ITEM_DETAILS_POSITION, ITEM_MEDIA_HEIGHT, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
+import { ITEM_DETAILS_CONTROL, ITEM_DETAILS_POSITION, ITEM_MEDIA_HEIGHT, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
 import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
 import { ItemPreviewContentTransition } from "./item-view-transition";
 
@@ -35,8 +35,8 @@ type VideoState =
   | { itemId: string; status: "ready"; item: VideoItem; tags: Tag[]; collections: Collection[] };
 
 type MediaState =
-  | { key: string; status: "loading" | "missing" | "error" | "unsupported" }
-  | { key: string; status: "ready"; url: string };
+  | { key: string; status: "loading" | "missing" | "error" }
+  | { key: string; status: "ready" | "unsupported"; url: string };
 
 function VideoPlayback({ title, poster, media, onRetry, onError }: { title: string; poster: string | null; media: MediaState; onRetry: () => void; onError: () => void }) {
   return <ItemMediaFrame className="video-viewer-canvas">
@@ -138,7 +138,7 @@ export function VideoItemPage({ itemId, returnHref, initialSnapshot }: { itemId:
     <ScrollPanel role="main" className="min-h-0 flex-1" viewportClassName={ITEM_PAGE_SCROLL} viewportProps={{ "data-testid": "item-page-scroll" }}>
       <div className={`${ITEM_PAGE_GRID} ${ITEM_MEDIA_HEIGHT}`}>
         <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1">
-          <ItemPreviewContentTransition itemId={item.id}><VideoPlayback title={item.title} poster={poster} media={currentMedia} onRetry={() => setRetry((value) => value + 1)} onError={() => setMedia((current) => current.key === mediaKey ? { key: mediaKey, status: "unsupported" } : current)} /></ItemPreviewContentTransition>
+          <ItemPreviewContentTransition itemId={item.id}><VideoPlayback title={item.title} poster={poster} media={currentMedia} onRetry={() => setRetry((value) => value + 1)} onError={() => setMedia((current) => current.key === mediaKey && current.status === "ready" ? { ...current, status: "unsupported" } : current)} /></ItemPreviewContentTransition>
           {item.noteContent?.trim() ? <article aria-labelledby="video-notes-heading" className="mt-10 border-t border-border-control pt-7">
             <h2 id="video-notes-heading" className="text-xl font-semibold">Notes</h2>
             <NoteContent content={item.noteContent} format={item.noteFormat === "markdown" ? "markdown" : "plain"} className="mt-5 text-text-primary" />
@@ -159,6 +159,9 @@ export function VideoItemPage({ itemId, returnHref, initialSnapshot }: { itemId:
           onEdit={() => { setEditError(null); setEditing(true); }}
           onOrganize={() => { setActionError(null); setOrganizerOpen(true); }}
           onDelete={() => { setActionError(null); setDeleteOpen(true); }}
+          controls={currentMedia.status === "ready" || currentMedia.status === "unsupported"
+            ? <a className={ITEM_DETAILS_CONTROL} href={currentMedia.url} download={item.sourceFileName}><DownloadIcon className="size-4" />Download video</a>
+            : <button type="button" className={ITEM_DETAILS_CONTROL} disabled><DownloadIcon className="size-4" />Download video</button>}
         />
       </div>
     </ScrollPanel>

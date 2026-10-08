@@ -175,7 +175,7 @@ export function OrganizationMenu({ kind, entries, assignedIds, busy, error, onSe
   const popup = (
       <Menu.Portal>
         <Menu.Positioner className={`${trigger ? "z-[90]" : "z-[61]"} data-[anchor-hidden]:invisible`} align="start" sideOffset={4} alignOffset={trigger ? 0 : -4} collisionPadding={8} positionMethod="fixed">
-          <Menu.Popup aria-label={label} className="ui-menu-popup ui-popover flex max-h-[min(20rem,var(--available-height))] w-64 max-w-[calc(100vw-1rem)] flex-col overflow-hidden outline-none">
+          <Menu.Popup aria-label={label} className="ui-menu-popup ui-popover flex h-[min(20rem,var(--available-height))] w-64 max-w-[calc(100vw-1rem)] flex-col overflow-hidden outline-none">
             <div className="flex shrink-0 items-center gap-2 border-b border-border-edge px-3 pb-2 pt-1">
               <SearchIcon className="size-4 text-text-secondary" />
               <input
@@ -199,7 +199,7 @@ export function OrganizationMenu({ kind, entries, assignedIds, busy, error, onSe
                 }}
               />
             </div>
-            <ScrollPanel viewportRef={resultsRef} className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1 pt-1">
+            <ScrollPanel viewportRef={resultsRef} className="flex min-h-0 flex-1 flex-col" viewportClassName="min-h-0 flex-1 pt-1">
               {isTags ? matches.map((tag) => (
                 <Menu.CheckboxItem
                   key={tag.id}

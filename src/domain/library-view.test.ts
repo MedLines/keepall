@@ -64,6 +64,13 @@ test("tags overview is exclusive with collections and opens tagged items", () =>
 });
 
 describe("parseLibraryType", () => {
+  test("parses multiple types, removes duplicates and ignores unknown types", () => {
+    expect(parseLibraryType("image,video,link")).toEqual(["image", "video", "link"]);
+    expect(parseLibraryType("video,image,video,unknown")).toEqual(["image", "video"]);
+    expect(parseLibraryType("unknown,image")).toBe("image");
+    const view = parseLibraryViewState(new URLSearchParams("type=image,video,link"));
+    expect(libraryViewStateToSearchParams(view).get("type")).toBe("image,video,link");
+  });
   test("accepts link note image video and rejects unknown", () => {
     expect(parseLibraryType("link")).toBe("link");
     expect(parseLibraryType("note")).toBe("note");

@@ -9,7 +9,7 @@ import {
   resolveItemTagNames,
 } from "@/domain/item";
 import { parseSearchTerms, searchRelevanceScore, type DocumentSearchMatch } from "@/domain/search";
-import { sortLibraryItemsWithCollectionPins } from "@/domain/library-view";
+import { selectedLibraryTypes, sortLibraryItemsWithCollectionPins, type LibraryTypeFilter } from "@/domain/library-view";
 
 /** Precomputed pools so folder/tag/type browse avoids scanning the whole library. */
 export type LibraryBrowseIndexes = {
@@ -110,13 +110,19 @@ function browseCandidatePool(
   if (view.tag !== null) {
     return indexes.byTag.get(view.tag) ?? [];
   }
-  if (view.type === "note") {
-    return [...(indexes.byType.get("note") ?? []), ...(indexes.byType.get("document") ?? []).filter(item => item.type === "document" && item.format !== "pdf")];
-  }
-  if (view.type !== null) {
-    return indexes.byType.get(view.type) ?? [];
+  const types = selectedLibraryTypes(view.type);
+  if (types.length) {
+    const pools = types.flatMap(type => indexes.byType.get(type) ?? []);
+    if (types.includes("note") && !types.includes("document")) {
+      pools.push(...(indexes.byType.get("document") ?? []).filter(item => matchesType(item, "note")));
+    }
+    return pools;
   }
   return items;
+}
+
+function matchesType(item: Item, type: LibraryTypeFilter): boolean {
+  return item.type === type || (type === "note" && item.type === "document" && item.format !== "pdf");
 }
 
 export function filterAndSortLibraryItems(
@@ -132,12 +138,13 @@ export function filterAndSortLibraryItems(
   const collection =
     collectionId !== null ? (collectionsById.get(collectionId) ?? null) : null;
   const pool = browseCandidatePool(items, view, indexes);
+  const types = selectedLibraryTypes(view.type);
   const terms = parseSearchTerms(view.q);
   const searchScores = new Map<string, number>();
 
   return sortLibraryItemsWithCollectionPins(
     pool.filter((item) => {
-      if (view.type !== null && item.type !== view.type && !(view.type === "note" && item.type === "document" && item.format !== "pdf")) {
+      if (types.length && !types.some(type => matchesType(item, type))) {
         return false;
       }
       if (collectionId !== null && !itemInCollection(item, collectionId)) {

@@ -2,8 +2,23 @@ import type { Item } from "./item";
 
 export type LibrarySort = "newest" | "oldest" | "relevance";
 
-/** Item kind filter; null means All types. */
+/** One item kind in the type filter. */
 export type LibraryTypeFilter = "link" | "note" | "image" | "video" | "document";
+export type LibraryTypeSelection = LibraryTypeFilter | LibraryTypeFilter[] | null;
+
+const LIBRARY_TYPES: LibraryTypeFilter[] = ["image", "video", "link", "note", "document"];
+const TYPE_LABELS: Record<LibraryTypeFilter, string> = {
+  image: "Images", video: "Videos", link: "Links", note: "Notes", document: "Documents",
+};
+
+export function selectedLibraryTypes(value: LibraryTypeSelection): LibraryTypeFilter[] {
+  return value === null ? [] : Array.isArray(value) ? value : [value];
+}
+
+export function libraryTypeSelectionLabel(value: LibraryTypeSelection): string | null {
+  const types = selectedLibraryTypes(value);
+  return types.length ? types.map(type => TYPE_LABELS[type]).join(", ") : null;
+}
 
 /** How the library paints items; null/grid is default. */
 export type LibraryLayout = "grid" | "list";
@@ -22,8 +37,8 @@ export type LibraryViewState = {
   unsorted: boolean;
   /** Active tag filter id; null when showing all tags. */
   tag: string | null;
-  /** Active type filter; null when All. */
-  type: LibraryTypeFilter | null;
+  /** Selected types are combined with OR; null means All. */
+  type: LibraryTypeSelection;
   /** grid (default) or list; omitted from URL when grid. */
   layout: LibraryLayout;
   /** List column limit; omitted for automatic sizing. */
@@ -50,11 +65,10 @@ export function parseLibrarySort(value: string | null): LibrarySort {
 
 export function parseLibraryType(
   value: string | null,
-): LibraryTypeFilter | null {
-  if (value === "link" || value === "note" || value === "image" || value === "video" || value === "document") {
-    return value;
-  }
-  return null;
+): LibraryTypeSelection {
+  const requested = new Set(value?.split(",").map(type => type.trim()));
+  const types = LIBRARY_TYPES.filter(type => requested.has(type));
+  return types.length > 1 ? types : types[0] ?? null;
 }
 
 export function parseLibraryLayout(value: string | null): LibraryLayout {
@@ -133,7 +147,7 @@ export function libraryViewStateToSearchParams(
   }
 
   if (state.type) {
-    params.set("type", state.type);
+    params.set("type", selectedLibraryTypes(state.type).join(","));
   }
 
   if (state.layout !== DEFAULT_LIBRARY_LAYOUT) {

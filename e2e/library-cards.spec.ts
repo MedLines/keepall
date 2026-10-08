@@ -558,9 +558,10 @@ test("item types live in the toolbar while library destinations stay in the side
   await menu.getByRole("option", { name: /Images/ }).click();
   await expect(page).toHaveURL(/type=image/);
   await expect(page.getByRole("heading", { name: "Images", exact: true })).toBeVisible();
-  await typeMenu.click();
+  await expect(menu).toBeVisible();
   await page.getByRole("option", { name: /All types/ }).click();
   await expect(page).not.toHaveURL(/type=/);
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("heading", { name: "All items", exact: true })).toBeVisible();
 });
 

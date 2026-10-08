@@ -34,10 +34,11 @@ import {
 } from "@/domain/item";
 import {
   libraryViewHref,
+  libraryTypeSelectionLabel,
   mergeLibraryViewState,
   parseLibraryViewState,
   sortLibraryItems,
-  type LibraryTypeFilter,
+  type LibraryTypeSelection,
   type LibraryViewState,
 } from "@/domain/library-view";
 import { itemActionLabel } from "@/domain/item-label";
@@ -146,7 +147,7 @@ function getEmptyStateMessage(
   collectionId: string | null,
 ): string {
   if (hasActiveSearch) return "No matching items.";
-  if (view.type !== null) return "No items of this type.";
+  if (view.type !== null) return Array.isArray(view.type) ? "No items of these types." : "No items of this type.";
   if (view.tag !== null) return "No items with this tag.";
   if (view.unsorted) return "No unsorted items.";
   if (collectionId !== null) return "No items in this collection.";
@@ -160,7 +161,7 @@ const BROWSE_IDLE_MS = 2500;
 function libraryViewTitle(
   browseCollection: Collection | null,
   browseUnsorted: boolean,
-  browseType: LibraryTypeFilter | null,
+  browseType: LibraryTypeSelection,
   browseTagName: string | null,
 ): string {
   if (browseCollection) {
@@ -172,16 +173,7 @@ function libraryViewTitle(
   if (browseTagName) {
     return browseTagName;
   }
-  if (browseType === "link") {
-    return "Links";
-  }
-  if (browseType === "note") {
-    return "Notes";
-  }
-  if (browseType === "image") return "Images";
-  if (browseType === "video") return "Videos";
-  if (browseType === "document") return "Documents";
-  return "All items";
+  return libraryTypeSelectionLabel(browseType) ?? "All items";
 }
 
 function subscribePanelPreference(onChange: () => void) {
@@ -679,7 +671,7 @@ export function Library() {
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
   const emptyStateKind = getEmptyStateKind(view, hasActiveSearch, items.length);
   const entireSearch = entireLibrarySearch(view);
-  const emptySearchScope = [view.trash ? "Trash" : browseCollection?.name ?? (browseUnsorted ? "Unsorted" : "the library"), browseTagName ? `tag “${browseTagName}”` : null, browseType ? `${browseType} items` : null].filter(Boolean).join(" · ");
+  const emptySearchScope = [view.trash ? "Trash" : browseCollection?.name ?? (browseUnsorted ? "Unsorted" : "the library"), browseTagName ? `tag “${browseTagName}”` : null, browseType ? `${Array.isArray(browseType) ? browseType.join(" or ") : browseType} items` : null].filter(Boolean).join(" · ");
   const emptyStateMessage = getEmptyStateMessage(view, hasActiveSearch, browseCollectionId);
   const allVisibleSelected =
     selectionEntries.length > 0 &&
@@ -1830,7 +1822,7 @@ export function Library() {
         onEmptyTrash={() => trashActions.requestEmpty(trashedItems)}
         onTypeFilterChange={(type) => updateView({ type }, "push")}
         tagFilterName={browseTagName}
-        typeFilterName={browseType === "link" ? "Links" : browseType === "note" ? "Notes" : browseType === "image" ? "Images" : browseType === "video" ? "Videos" : browseType === "document" ? "Documents" : null}
+        typeFilterName={libraryTypeSelectionLabel(browseType)}
         onClearSearchFilter={() => updateView({ q: "" }, "push")}
         onClearTypeFilter={() => updateView({ type: null }, "push")}
         onClearTagFilter={() => updateView({ tag: null }, "push")}

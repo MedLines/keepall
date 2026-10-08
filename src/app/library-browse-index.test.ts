@@ -14,6 +14,17 @@ import {
 } from "./library-browse-index";
 
 describe("library-browse-index", () => {
+  test("combines selected types without duplicates and intersects them with the scope", () => {
+    const image = { ...buildImage({ assetId: "asset" }, { id: "image", now: 3 }), tagIds: ["tag"], collectionIds: ["collection"] };
+    const note = buildNote({ content: "Note" }, { id: "note", now: 1 });
+    const text: DocumentItem = { id: "text", type: "document", format: "text", title: "Text", sourceFileName: "text.txt", assetId: "text", noteContent: "", tagIds: ["tag"], collectionIds: ["collection"], createdAt: 2, updatedAt: 2 };
+    const pdf: DocumentItem = { ...text, id: "pdf", format: "pdf", createdAt: 4 };
+    const candidates = [image, note, text, pdf, buildLink({ url: "https://example.com" })];
+    const indexes = buildLibraryBrowseIndexes(candidates);
+    const view = parseLibraryViewState(new URLSearchParams("type=image,note,document"));
+    expect(filterAndSortLibraryItems(candidates, [], view, new Map(), indexes).map(item => item.id)).toEqual(["pdf", "image", "text", "note"]);
+    expect(filterAndSortLibraryItems(candidates, [], { ...view, tag: "tag", collection: "collection", q: "Text" }, new Map(), indexes).map(item => item.id)).toEqual(["pdf", "text"]);
+  });
   test("file-content matches participate in combined filters, relevance and collection pins", () => {
     const first: DocumentItem = { id: "first", type: "document", format: "text", title: "Reference", sourceFileName: "reference.txt", assetId: "one", noteContent: "", tagIds: ["tag"], collectionIds: ["collection"], createdAt: 1, updatedAt: 1 };
     const second = { ...first, id: "second", createdAt: 2 };

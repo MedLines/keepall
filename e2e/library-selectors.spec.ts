@@ -4,7 +4,7 @@ test.use({ serviceWorkers: "block" });
 
 test("library selectors support tab, arrow, home/end, selection, and Escape", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
   const typeFilter = page.getByRole("combobox", { name: /^Filter by type: All types$/ });
   const sort = page.getByRole("combobox", { name: /^Sort library: Newest first$/ });
@@ -44,6 +44,10 @@ test("library selectors support tab, arrow, home/end, selection, and Escape", as
 
   await expect(page).toHaveURL(/type=image/);
   const selectedFilter = page.getByRole("combobox", { name: /^Filter by type: Images$/ });
+  await expect(typeList).toBeVisible();
+  await expect(images).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
+  await expect(typeList).toHaveCount(0);
   await expect(selectedFilter).toBeFocused();
   await expect(selectedFilter).toHaveAttribute("title", "Filter by type: Images");
 });
@@ -51,9 +55,10 @@ test("library selectors support tab, arrow, home/end, selection, and Escape", as
 test("selector popup stays inside a 320px viewport", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
   const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
-  if (await closeNavigation.isVisible()) await closeNavigation.click();
+  await expect(closeNavigation).toBeVisible();
+  await closeNavigation.click();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
   const sort = page.getByRole("combobox", { name: /^Sort library:/ });
   await sort.focus();
