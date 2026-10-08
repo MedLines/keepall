@@ -5,7 +5,10 @@ let creatingOffscreen;
 void chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
 void chrome.alarms.create("pending-cleanup", { periodInMinutes: 1 });
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "pending-cleanup") void pendingCapture("", "", "").catch(() => {});
+  if (alarm.name === "pending-cleanup") {
+    void pendingCapture("", "", "").catch(() => {});
+    void pruneEditorSessions().catch(() => {});
+  }
 });
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -471,10 +474,59 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-  void chrome.storage.session.remove(`save-feedback:${tabId}`);
+  void chrome.storage.session.remove([`save-feedback:${tabId}`, `file-editor:${tabId}`]);
 });
 
 chrome.action.onClicked.addListener((tab) => { void saveTab(tab); });
+
+const FILE_CHUNK_BYTES = 256 * 1024;
+const EDITOR_LIFETIME_MS = 10 * 60 * 1000;
+function fileUuid(value) {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+async function pruneEditorSessions() {
+  const all = await chrome.storage.session.get(null);
+  const records = Object.entries(all).filter(([key]) => key.startsWith("file-editor:"));
+  const expired = records.filter(([, value]) => !value || Date.now() - value.createdAt > EDITOR_LIFETIME_MS).map(([key]) => key);
+  const active = records.filter(([key]) => !expired.includes(key)).sort((a, b) => b[1].createdAt - a[1].createdAt);
+  expired.push(...active.slice(63).map(([key]) => key));
+  if (expired.length) await chrome.storage.session.remove(expired);
+}
+async function handleEditorFileAction(message, sender) {
+  if (!sender.tab?.id || (sender.frameId !== undefined && sender.frameId !== 0) || !fileUuid(message.editorId)) throw new Error("This file editor is not registered. Reopen it and try again.");
+  const key = `file-editor:${sender.tab.id}`;
+  const record = (await chrome.storage.session.get(key))[key];
+  if (!record || record.editorId !== message.editorId || record.tabId !== sender.tab.id || Date.now() - record.createdAt > EDITOR_LIFETIME_MS) throw new Error("This file editor has expired. Reopen it and try again.");
+  const operation = message.operation;
+  if (!["begin", "chunk", "commit", "status", "cancel", "open-bulk-import"].includes(operation)) throw new Error("Unsupported file action.");
+  await requireLibraryAccess(record.origin);
+  if (operation === "open-bulk-import") {
+    const url = `${record.origin}/#keepall-bulk-import=${crypto.randomUUID()}`;
+    const tabs = await chrome.tabs.query({ url: `${record.origin}/*` });
+    const root = tabs.find(tab => tab.id && new URL(tab.url).pathname === "/");
+    if (root) {
+      const destination = new URL(root.url);
+      destination.hash = new URL(url).hash;
+      await chrome.tabs.update(root.id, { url: destination.href, active: true });
+      await chrome.windows.update(root.windowId, { focused: true });
+    } else await chrome.tabs.create({ url });
+    return { success: true };
+  }
+  let payload = message.payload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("Invalid file action.");
+  if (operation === "begin") {
+    if (payload.metadata !== undefined && (!payload.metadata || typeof payload.metadata !== "object" || Array.isArray(payload.metadata))) throw new Error("Invalid file metadata.");
+    if (payload.metadata?.sourceUrl !== undefined && payload.metadata.sourceUrl !== record.sourceUrl) throw new Error("The file source does not match this editor.");
+    payload = { ...payload, metadata: { ...payload.metadata, sourceUrl: record.sourceUrl } };
+  } else if (!fileUuid(payload.sessionId)) throw new Error("Invalid file session.");
+  if (operation === "chunk" && (typeof payload.data !== "string" || payload.data.length > Math.ceil(FILE_CHUNK_BYTES / 3) * 4 || !Number.isSafeInteger(payload.offset) || payload.offset < 0 || !Number.isSafeInteger(payload.fileIndex) || payload.fileIndex < 0 || payload.fileIndex >= 50)) throw new Error("Invalid file chunk.");
+  await chrome.storage.session.set({ [key]: { ...record, createdAt: Date.now() } });
+  await ensureOffscreen(record.origin);
+  const result = await chrome.runtime.sendMessage({ target: "offscreen", type: "file-action", origin: record.origin, editorId: record.editorId, tabId: record.tabId, operation, payload });
+  if (!result || typeof result.success !== "boolean") throw new Error("Keepall did not confirm this file action. Check status before retrying.");
+  if (result.success && result.results?.some(item => item.status === "saved")) await notifyOpenKeepallTabs(record.origin).catch(() => {});
+  return result;
+}
 
 async function openEditor(tab) {
   if (!tab?.id) return;
@@ -493,6 +545,8 @@ async function openEditor(tab) {
   }
   await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"] });
   const editorId = crypto.randomUUID();
+  await pruneEditorSessions();
+  await chrome.storage.session.set({ [`file-editor:${tab.id}`]: { tabId: tab.id, editorId, origin, sourceUrl: tab.url, createdAt: Date.now() } });
   await chrome.tabs.sendMessage(tab.id, { type: "editor", editorId, origin, title: tab.title ?? "", url: tab.url, theme: await captureTheme() });
   try {
     await ensureOffscreen(origin);
@@ -517,6 +571,10 @@ chrome.commands.onCommand.addListener((command, tab) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "editor-file-action") {
+    void handleEditorFileAction(message, sender).then(sendResponse).catch(error => sendResponse({ success: false, error: error.message || "Could not complete this file action." }));
+    return true;
+  }
   if (message?.type === "check-connection" && sender.url?.split("#")[0] === chrome.runtime.getURL("options.html")) {
     void checkLibraryConnection().then(sendResponse).catch(() => sendResponse({ success: false, reason: "unavailable" }));
     return true;

@@ -78,3 +78,11 @@ test("stale tag IDs roll back new organization for every file kind", async () =>
   }
   for (const table of [getDb().items, getDb().collections, getDb().tags, getDb().assets, getDb().documentAssets]) expect(await table.count()).toBe(0);
 });
+
+test("organization restored from a backup can use existing non-UUID IDs", async () => {
+  await getDb().collections.add({ id: "restored-collection", name: "Restored", createdAt: 1, pinnedItemIds: [] });
+  await getDb().tags.add({ id: "restored-tag", name: "Restored tag", createdAt: 1 });
+  const input = manifest(); input.organization = { collectionId: "restored-collection", tagIds: ["restored-tag"] };
+  expect((await captureExtensionFiles(input, [bytes("one")], options))[0].status).toBe("saved");
+  expect(await getDb().items.get(input.itemIds[0])).toMatchObject({ collectionIds: ["restored-collection"], tagIds: ["restored-tag"] });
+});

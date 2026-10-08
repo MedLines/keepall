@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import { createFileTransfer } from "./file-transfer";
+import { captureExtensionFiles } from "@/persistence/extension-file-capture";
+import { prepareLocalVideo } from "../prepare-local-video";
+import { isUuid } from "@/domain/extension-file-capture";
 import { getExtensionOrganizationOptions, saveExtensionImage, saveExtensionLink, type ExtensionImageCapture, type ExtensionLinkCapture } from "@/persistence/extension-capture";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
 import { getCaptureCollections, moveCaptureToCollection, updateCaptureTag } from "@/persistence/extension-collections";
@@ -128,6 +132,13 @@ async function selectionReply(value: unknown) {
 export function ExtensionBridge() {
   useEffect(() => {
     if (window.parent === window) return;
+    const fileTransfer = createFileTransfer((manifest, bytes, options) => captureExtensionFiles(manifest, bytes, {
+      ...options, prepareVideo: prepareLocalVideo,
+      onResult(result) {
+        options.onResult?.(result);
+        if (result.status === "saved") window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      },
+    }));
 
     function reply(message: Record<string, unknown>, origin: string) {
       window.parent.postMessage({ channel: "keepall-extension", ...message }, origin);
@@ -136,6 +147,18 @@ export function ExtensionBridge() {
     async function onMessage(event: MessageEvent) {
       if (event.source !== window.parent || !EXTENSION_ORIGINS.some((origin) => origin === event.origin)) return;
       if (event.data?.channel !== "keepall-extension") return;
+
+      if (event.data.type === "file-action") {
+        const { requestId, editorId, tabId, operation, payload } = event.data;
+        if (!isUuid(requestId) || !isUuid(editorId) || !Number.isSafeInteger(tabId) || tabId < 0) return;
+        try {
+          const status = fileTransfer.handle(`${event.origin}:${tabId}:${editorId}`, operation, payload);
+          reply({ type: "file-result", requestId, success: true, ...status }, event.origin);
+        } catch (error) {
+          reply({ type: "file-result", requestId, success: false, error: error instanceof Error ? error.message : "Could not process this file action." }, event.origin);
+        }
+        return;
+      }
 
       if (event.data.type === "capture-selection") {
         const result = await selectionReply(event.data.payload);
@@ -200,8 +223,8 @@ export function ExtensionBridge() {
     }
 
     window.addEventListener("message", onMessage);
-    for (const origin of EXTENSION_ORIGINS) reply({ type: "ready" }, origin);
-    return () => window.removeEventListener("message", onMessage);
+    for (const origin of EXTENSION_ORIGINS) reply({ type: "ready", capabilities: ["file-transfer-v1"] }, origin);
+    return () => { window.removeEventListener("message", onMessage); fileTransfer.dispose(); };
   }, []);
 
   return <main className="sr-only">Keepall extension bridge</main>;
