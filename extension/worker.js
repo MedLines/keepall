@@ -20,10 +20,15 @@ chrome.runtime.onInstalled.addListener(() => {
       documentUrlPatterns: ["http://*/*", "https://*/*"],
       targetUrlPatterns: ["http://*/*", "https://*/*"],
     });
+    chrome.contextMenus.create({ id: "open-keepall-library", title: "Open Keepall library", contexts: ["action"] });
   });
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === "open-keepall-library") {
+    void openKeepallLibrary().catch(() => { void chrome.action.setBadgeText({ text: "!" }).catch(() => {}); });
+    return;
+  }
   void saveContext(info, tab);
 });
 
@@ -42,6 +47,22 @@ async function keepallOrigin() {
   return typeof origin === "string" && /^http:\/\/localhost:\d{2,5}$/.test(origin)
     ? origin
     : DEFAULT_ORIGIN;
+}
+
+async function openKeepallLibrary() {
+  const origin = await keepallOrigin();
+  const tabs = await chrome.tabs.query({});
+  const library = tabs.find((tab) => {
+    if (tab.id === undefined || !tab.url) return false;
+    try {
+      const url = new URL(tab.url);
+      return url.origin === origin && url.pathname === "/";
+    } catch { return false; }
+  });
+  if (library) {
+    await chrome.tabs.update(library.id, { active: true });
+    await chrome.windows.update(library.windowId, { focused: true });
+  } else await chrome.tabs.create({ url: `${origin}/` });
 }
 
 async function requireLibraryAccess(origin) {

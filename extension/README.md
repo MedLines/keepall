@@ -7,6 +7,9 @@ profile. No Keepall tab needs to remain open. If one is open, its Library update
 after a confirmed save. The badge and an animated top-right toast confirm the
 write; an error never reports success.
 
+Right-click the extension icon and choose **Open Keepall library** to open the
+library or focus its existing tab, preserving its current search and draft.
+
 Quick-save confirmations show a separate icon-and-label action row below the
 message. **Open in Keepall** opens the saved item's `/items/<id>?from=%2F` detail
 page and reuses an existing library or item-detail tab when possible. **Undo** appears only for a new

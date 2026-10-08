@@ -26,9 +26,10 @@ declare function openEditor(tab: ExtensionTab): Promise<void>;
 declare function saveContext(info: { menuItemId: string; mediaType?: string; srcUrl?: string; linkUrl?: string; pageUrl?: string; frameUrl?: string; selectionText?: string }, tab: ExtensionTab): Promise<void> | undefined;
 declare function imageSourceUrl(pageUrl: string, linkUrl?: string): string;
 declare function keepallOrigin(): Promise<string>;
+declare function openKeepallLibrary(): Promise<void>;
 declare function advanceNotificationClock(): void;
 
-test("extension registers one direct menu action for images and links", async () => {
+test("extension registers distinct page-save and toolbar-library menu actions", async () => {
   const menus: Array<{ id: string; title: string; contexts: string[] }> = [];
   const listeners = new Map<string, (...args: unknown[]) => void>();
   const event = (name: string) => ({
@@ -57,7 +58,82 @@ test("extension registers one direct menu action for images and links", async ()
     id: "save-to-keepall",
     title: "Save to Keepall",
     contexts: ["image", "link", "selection"],
-  })]);
+    documentUrlPatterns: ["http://*/*", "https://*/*"],
+    targetUrlPatterns: ["http://*/*", "https://*/*"],
+  }), { id: "open-keepall-library", title: "Open Keepall library", contexts: ["action"] }]);
+});
+
+test("toolbar library menu uses the configured origin without repurposing other tabs", async () => {
+  const listeners = new Map<string, (...args: unknown[]) => void>();
+  const event = (name: string) => ({ addListener: (listener: (...args: unknown[]) => void) => listeners.set(name, listener) });
+  let configuredOrigin: string | undefined;
+  let failQuery = false;
+  let tabs: Array<{ id: number; windowId: number; url?: string }> = [];
+  const calls: Array<[string, unknown, unknown?]> = [];
+  const scope = { URL, chrome: {
+    storage: { local: { setAccessLevel: async () => {}, get: async () => ({ origin: configuredOrigin }) }, onChanged: event("storage") },
+    alarms: { create: async () => {}, onAlarm: event("alarm") },
+    runtime: { onInstalled: event("install"), onMessage: event("message") },
+    contextMenus: { onClicked: event("menu") }, action: { onClicked: event("toolbar"), setBadgeText: async (value: object) => { calls.push(["badge", value]); } }, commands: { onCommand: event("command") },
+    tabs: { onUpdated: event("tab"), onRemoved: event("removed"), query: async () => { if (failQuery) throw new Error("Browser unavailable"); return tabs; },
+      create: async (value: object) => { calls.push(["create", value]); },
+      update: async (id: number, value: object) => { calls.push(["update", id, value]); } },
+    windows: { update: async (id: number, value: object) => { calls.push(["window", id, value]); } },
+  } };
+  runInNewContext(await readFile(path.resolve("extension/worker.js"), "utf8"), scope);
+  const openLibrary = (scope as typeof scope & { openKeepallLibrary(): Promise<void> }).openKeepallLibrary;
+  listeners.get("menu")!({ menuItemId: "open-keepall-library" });
+  await expect.poll(() => calls.length).toBe(1);
+  expect(calls).toEqual([["create", { url: "https://www.keepall.app/" }]]);
+  configuredOrigin = origin;
+  tabs = [
+    { id: 1, windowId: 7, url: `${origin}/items/keep-this` },
+    { id: 2, windowId: 7, url: `${origin}/settings` },
+    { id: 3, windowId: 8, url: `${origin}/?q=Reading#draft` },
+    { id: 4, windowId: 7, url: "https://www.keepall.app/" },
+    { id: 5, windowId: 7, url: `${origin}/extension-bridge` },
+    { id: 6, windowId: 7, url: "chrome://extensions/" },
+    { id: 7, windowId: 7 },
+  ];
+  calls.length = 0;
+  listeners.get("menu")!({ menuItemId: "open-keepall-library" }, { id: 6, url: "chrome://extensions/" });
+  await expect.poll(() => calls.length).toBe(2);
+  expect(calls).toEqual([["update", 3, { active: true }], ["window", 8, { focused: true }]]);
+  tabs = tabs.filter(tab => tab.id !== 3); calls.length = 0;
+  await openLibrary();
+  expect(calls).toEqual([["create", { url: `${origin}/` }]]);
+  configuredOrigin = "https://untrusted.example"; calls.length = 0;
+  await openLibrary();
+  expect(calls).toEqual([["update", 4, { active: true }], ["window", 7, { focused: true }]]);
+  calls.length = 0; failQuery = true;
+  listeners.get("menu")!({ menuItemId: "open-keepall-library" });
+  await expect.poll(() => calls).toEqual([["badge", { text: "!" }]]);
+});
+
+test("unpacked extension opens and reuses the library root without losing its draft", async () => {
+  const profile = await mkdtemp(path.join(tmpdir(), "keepall-library-menu-"));
+  const extensionPath = path.resolve("extension");
+  const context = await chromium.launchPersistentContext(profile, { channel: "chromium", headless: true,
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`] });
+  try {
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
+    await worker.evaluate(value => chrome.storage.local.set({ origin: value }), origin);
+    const [library] = await Promise.all([context.waitForEvent("page"), worker.evaluate(() => openKeepallLibrary())]);
+    await expect(library).toHaveURL(`${origin}/`);
+    await library.goto(`${origin}/?q=Reading#draft`);
+    await expect(library.getByRole("button", { name: "Save item", exact: true })).toBeVisible();
+    await library.getByRole("button", { name: "Save item", exact: true }).click();
+    const capture = library.getByRole("dialog", { name: "Save to Keepall", exact: true });
+    await capture.getByRole("textbox", { name: "Link, note, or image", exact: true }).fill("Keep this draft");
+    const other = await context.newPage(); await other.goto(`${origin}/settings`);
+    const count = context.pages().length;
+    await worker.evaluate(() => openKeepallLibrary());
+    expect(context.pages()).toHaveLength(count);
+    await expect(library).toHaveURL(`${origin}/?q=Reading#draft`);
+    await expect(capture.getByRole("textbox", { name: "Link, note, or image", exact: true })).toHaveValue("Keep this draft");
+    await expect(other).toHaveURL(`${origin}/settings`);
+    expect(await worker.evaluate(async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0].url)).toBe(`${origin}/?q=Reading#draft`);
+  } finally { await context.close(); await rm(profile, { recursive: true, force: true }); }
 });
 
 test("extension uses the canonical production library address", async () => {
