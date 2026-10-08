@@ -14,9 +14,23 @@ import "@fontsource-variable/inter";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.keepall.app"),
   applicationName: "Keepall",
   title: "Keepall",
-  description: "A local-first personal library for links and notes.",
+  description: "A personal library for links, notes, images, videos, and documents. Free, with no account. Your library stays in this browser on this device.",
+  openGraph: {
+    type: "website",
+    siteName: "Keepall",
+    title: "Keepall · Your personal library",
+    description: "Keep links, notes, images, videos, and documents on your device. Free, with no account or automatic sync.",
+    images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "Keepall personal library with a view of the app" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Keepall · Your personal library",
+    description: "Keep links, notes, images, videos, and documents on your device. Free, with no account or automatic sync.",
+    images: [{ url: "/twitter-image.png", alt: "Keepall personal library" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

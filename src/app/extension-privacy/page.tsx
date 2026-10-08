@@ -26,7 +26,8 @@ export default function ExtensionPrivacyPage() {
           </Link>
           <p className="mt-7 text-xs font-medium uppercase tracking-[0.12em] text-text-secondary">Keepall Capture</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Privacy</h1>
-          <p className="mt-3 text-sm text-text-secondary">Last updated September 26, 2026</p>
+          <p className="mt-3 text-sm text-text-secondary">Last updated October 7, 2026</p>
+          <p className="mt-3 text-sm text-text-secondary">This page covers the Chrome extension. Read <Link className="font-medium text-text-primary underline underline-offset-2" href="/privacy">Keepall&apos;s app-wide privacy page</Link> for browser storage, network requests, and backups.</p>
 
           <div className="mt-8 space-y-6 text-sm leading-7 text-text-secondary">
             <section>
@@ -42,14 +43,15 @@ export default function ExtensionPrivacyPage() {
               <h2 className="text-lg font-semibold text-text-primary">Network requests</h2>
               <p className="mt-2">The extension loads a Keepall page over HTTPS to write to the same local library without opening a visible tab. This request does not include your captured URL, note, or image bytes in its URL. For a selected image, the extension requests its bytes directly from the image host; Chrome may ask you to allow access to that host. You can optionally grant access to all websites once in the extension&apos;s Options page to avoid repeated image-host prompts, and use the link there to manage or remove website access in Chrome. Keepall downloads an image only when you choose the right-click save action. The image host receives the request, and the bytes pass to the Keepall page in your browser for local storage. When you view saved links in Keepall, the app may send a saved link URL to Keepall&apos;s preview service to fetch a title, description, or image from the linked website. The preview service and linked website may receive that URL. Notes, collections, and tags are not sent with preview requests.</p>
               <p className="mt-2">Keepall is hosted on Vercel. Normal visits to Keepall may produce hosting logs, and Vercel Web Analytics records aggregate page-view information. The extension does not use saved library content for analytics or advertising.</p>
+              <p className="mt-2">The app may load website icons from Google&apos;s favicon service, sending the saved link&apos;s hostname, or from the original website. Choosing to save or update an article in Keepall sends that link&apos;s URL to the server to request the public page and supported images. Your personal notes, collections, and tags are not included.</p>
             </section>
             <section>
               <h2 className="text-lg font-semibold text-text-primary">Use, sharing, and control</h2>
-              <p className="mt-2">Information received through Chrome permissions is used to save the page or image you choose. We do not sell your saved data or use it for advertising. You can edit or delete saved items in Keepall, clear the site&apos;s browser storage to remove the local library, and remove the extension to clear its local settings and pending captures. Because the library is local, make a backup in Keepall Settings before clearing browser data.</p>
+              <p className="mt-2">Information received through Chrome permissions is used to save the page or image you choose. We do not sell your saved data or use it for advertising. You can edit saved items, move them to Trash, and permanently delete them from Trash. Clearing the site&apos;s browser storage removes the local library. Removing the extension clears its local settings and pending captures, but leaves the library in Keepall&apos;s browser storage. Copies in existing backup files remain until you remove them. Because the library is local, make a backup in Keepall Settings before clearing browser data.</p>
             </section>
             <section>
               <h2 className="text-lg font-semibold text-text-primary">Contact</h2>
-              <p className="mt-2">For questions or a privacy request, open an issue on <a className="font-medium text-text-primary underline underline-offset-2" href="https://github.com/MedLines/keepall/issues" target="_blank" rel="noreferrer">Keepall&apos;s GitHub repository</a>.</p>
+              <p className="mt-2">For questions or a privacy concern, use the <Link className="font-medium text-text-primary underline underline-offset-2" href="/contact">Contact page</Link>. GitHub issues are public, so leave out private library content and backup files.</p>
             </section>
           </div>
         </article>

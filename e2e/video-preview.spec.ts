@@ -47,6 +47,7 @@ test("quick preview uses shared playback controls without browsing away from the
 
   await player.getByRole("button", { name: "Playback speed" }).click();
   await expect(page.getByRole("menu", { name: "Playback speed" })).toBeVisible();
+  await expect(page.getByRole("menu", { name: "Playback speed" })).toBeFocused();
   await page.keyboard.press("Home");
   await expect(page.getByRole("menuitemradio", { name: "0.5x", exact: true })).toBeFocused();
   await page.keyboard.press("ArrowDown");

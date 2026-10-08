@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon, ArrowRightIcon } from "../../shell-icons";
-import { getGuide, guides } from "../guides";
+import { getGuide, guideGroups, guides } from "../guides";
 import { GuideFigure } from "../guide-visual";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScrollPanel } from "@/components/ui/scroll-panel";
@@ -22,7 +22,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GuidePage({ params }: Props) {
   const guide = getGuide((await params).slug);
   if (!guide) notFound();
-  const next = guides[(guides.indexOf(guide) + 1) % guides.length];
+  const guideOrder = guideGroups.flatMap(group => group.slugs);
+  const next = getGuide(guideOrder[(guideOrder.indexOf(guide.slug) + 1) % guideOrder.length])!;
   return <>
     <div className="kh-guide-layout">
       <aside className="kh-sidebar">
@@ -42,7 +43,7 @@ export default async function GuidePage({ params }: Props) {
         <div className="kh-article-body">{guide.sections.map((section, index) => <section key={section.id} id={section.id} aria-labelledby={`${section.id}-title`}>
           <div className="kh-section-heading"><span>{String(index + 1).padStart(2, "0")}</span><h2 id={`${section.id}-title`}>{section.title}</h2></div>
           {section.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
-          {section.steps && <ol className="kh-steps">{section.steps.map(step => <li key={step}>{step}</li>)}</ol>}
+          {!!section.steps?.length && <ol className="kh-steps">{section.steps.map(step => <li key={step}>{step}</li>)}</ol>}
           {section.visual && <GuideFigure visual={section.visual} />}
           {section.note && <p className="kh-note">{section.note}</p>}
           {section.images && <div className="kh-permissions">{section.images.map(image => <figure className="kh-figure" key={image.src}><Image src={image.src} width={image.width} height={image.height} alt={image.alt} sizes="(max-width: 800px) 90vw, 740px" /><figcaption>{image.caption}</figcaption></figure>)}</div>}

@@ -3,15 +3,14 @@ import { join } from "node:path";
 import { chromium } from "@playwright/test";
 
 const root = process.cwd();
-const [logo, font] = await Promise.all([
+const [logo, font, screenshot] = await Promise.all([
   readFile(join(root, "public/icons/keepall.svg")),
   readFile(join(root, "node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2")),
+  readFile(join(root, "public/marketing/app-library.webp")),
 ]);
-
 const browser = await chromium.launch();
-
 try {
-  const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
   await page.setContent(`
     <style>
       @font-face {
@@ -21,80 +20,31 @@ try {
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; width: 1200px; height: 630px; }
-      .canvas {
-        position: relative;
-        width: 1200px;
-        height: 630px;
-        overflow: hidden;
-        color: oklch(0.977463055 0.002838102 308.428134416);
-        font-family: Inter, sans-serif;
-        background:
-          radial-gradient(ellipse 430px 390px at 26% 52% in srgb, oklch(0.67113669 0.221856036 12.190952936 / 0.27), transparent 82%),
-          radial-gradient(ellipse 430px 360px at 96% 2% in srgb, oklch(0.751482108 0.154058319 10.000737587 / 0.075), transparent 80%),
-          linear-gradient(145deg in srgb, oklch(0.245648959 0.009412423 285.68645299), oklch(0.192582609 0.005994532 285.823429075) 72%);
-      }
-      .canvas::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border: 1px solid oklch(1 0 0 / 0.09);
-        pointer-events: none;
-      }
-      .logo {
-        position: absolute;
-        left: 29px;
-        top: 47px;
-        width: 550px;
-        height: 550px;
-      }
-      .copy { position: absolute; left: 568px; top: 178px; width: 565px; }
-      .eyebrow {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        color: oklch(0.801248641 0.118820386 6.225045038);
-        font-size: 17px;
-        font-weight: 600;
-        letter-spacing: .16em;
-        text-transform: uppercase;
-      }
-      .eyebrow::before {
-        content: "";
-        display: block;
-        width: 43px;
-        height: 3px;
-        border-radius: 999px;
-        background: linear-gradient(90deg in srgb, oklch(0.691861834 0.203656757 11.114259268), oklch(0.842735894 0.090479972 5.334087616));
-      }
-      h1 {
-        margin: 25px 0 25px;
-        font-size: 108px;
-        font-weight: 580;
-        line-height: 1;
-        letter-spacing: -.075em;
-      }
-      p {
-        margin: 0;
-        max-width: 520px;
-        color: oklch(0.866814238 0.007134219 304.226844616);
-        font-size: 33px;
-        font-weight: 380;
-        line-height: 1.32;
-        letter-spacing: -.028em;
-      }
+      .canvas { width: 1200px; height: 630px; overflow: hidden; padding: 56px 64px 0;
+        background: #101014; color: #f3eeeb; font-family: Inter, sans-serif; }
+      header { display: flex; align-items: center; gap: 12px; }
+      .logo { width: 44px; height: 44px; }
+      .brand { font-size: 48px; font-weight: 650; letter-spacing: -2px; }
+      .address { margin-left: auto; font-size: 24px; color: #cbbfc5; }
+      h1 { margin: 30px 0 12px; font-size: 36px; font-weight: 450; letter-spacing: -1px; }
+      p { margin: 0; color: #beb7bf; font-size: 22px; line-height: 1.5; }
+      .library { display: block; width: 1072px; height: auto; margin-top: 32px;
+        border: 1px solid #323236; border-radius: 16px 16px 0 0; }
     </style>
     <main class="canvas">
-      <img class="logo" src="data:image/svg+xml;base64,${logo.toString("base64")}" alt="" />
-      <div class="copy">
-        <div class="eyebrow">Local-first personal library</div>
-        <h1>keepall</h1>
-        <p>A home for your links and notes.</p>
-      </div>
+      <header>
+        <img class="logo" src="data:image/svg+xml;base64,${logo.toString("base64")}" alt="" />
+        <span class="brand">keepall</span>
+        <span class="address">keepall.app</span>
+      </header>
+      <h1>A home for your good finds.</h1>
+      <p>Links, notes, images, articles, and files. Free. No account.</p>
+      <img class="library" src="data:image/webp;base64,${screenshot.toString("base64")}" alt="" />
     </main>
   `);
   await page.evaluate(async () => {
     await document.fonts.ready;
-    await document.querySelector(".logo").decode();
+    await Promise.all([...document.images].map(image => image.decode()));
   });
   const output = join(root, "src/app/opengraph-image.png");
   await page.locator(".canvas").screenshot({ path: output });

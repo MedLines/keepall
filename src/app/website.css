@@ -1,0 +1,15 @@
+.kw-article { max-width: 760px; margin-inline: auto; padding-block: 64px 80px; }
+.kw-body section > h2 { font-size: 26px; line-height: 1.35; }
+.kw-body section > :is(ul, ol) { display: grid; gap: 12px; margin-top: 20px; padding-left: 24px; color: var(--ka-text); font-size: 15px; line-height: 1.8; }
+.kw-body section > ul { list-style: disc; }
+.kw-body section > ol { list-style: decimal; }
+.kw-body a:not(.ka-button) { text-decoration: underline; text-decoration-color: var(--ka-edge); text-underline-offset: 4px; }
+.kw-body a:not(.ka-button):hover { text-decoration-color: currentColor; }
+.kw-body .ka-button { margin-top: 24px; }
+.kw-body :is(a, code) { overflow-wrap: anywhere; }
+.kw-body section > p + p { margin-top: 16px; }
+.kw-body .kw-date { display: block; margin-bottom: 16px; color: var(--kh-muted); font-size: 13px; }
+@media (max-width: 580px) {
+  .kw-article { padding-block: 40px 56px; }
+  .kw-body section > h2 { font-size: 24px; }
+}

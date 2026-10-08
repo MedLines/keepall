@@ -1,13 +1,13 @@
 import Image from "next/image";
 import libraryImage from "../../../public/marketing/app-library.webp";
-import collectionImage from "../../../public/marketing/app-collection.webp";
+import collectionImage from "../../../public/marketing/app-collections-overview.webp";
 import searchImage from "../../../public/marketing/app-search.webp";
 import tagsImage from "../../../public/marketing/app-tags.webp";
 
 const previews = {
-  library: { src: libraryImage, alt: "Keepall’s actual library interface with its sidebar, search, and masonry grid, populated with sample saves" },
-  collection: { src: collectionImage, alt: "Design Inspiration selected in Keepall’s collection sidebar, showing its saved images in the library grid" },
-  search: { src: searchImage, alt: "Keepall searching for quiet spaces, with matching sample images and a note highlighted in the real library" },
+  library: { src: libraryImage, alt: "Keepall's actual library with sample links, notes, images, PDFs, Markdown, text files, and a local video" },
+  collection: { src: collectionImage, alt: "All Keepall collections, with folder previews for Design Inspiration, Quiet spaces, and Weekend projects" },
+  search: { src: searchImage, alt: "Keepall search results with highlighted matches inside saved files and recognized screenshot text" },
   tags: { src: tagsImage, alt: "Keepall filtered by the favorites tag, showing a tagged save in the real library" },
 };
 

@@ -64,7 +64,8 @@ try {
   const page = context.pages()[0];
   // This disposable profile has its own library and sample collections.
   await page.goto(origin);
-  await page.getByText("No items yet.", { exact: true }).waitFor();
+  await page.locator("#library-heading").waitFor();
+  await page.waitForFunction(async () => (await indexedDB.databases()).some(database => database.name === "keepall"));
   await seedMarketingLibrary(page);
   const ui = await extensionRecordingUi(context, page, move, xdo);
   await page.goto("http://localhost:3188/");

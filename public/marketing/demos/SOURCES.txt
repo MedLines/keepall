@@ -1,0 +1,8 @@
+abstract-silk.mp4 and abstract-silk-poster.webp
+
+Source: Abstract Flowing Silky Waves in Black Background, Chandresh Uike / Pexels
+https://www.pexels.com/video/abstract-flowing-silky-waves-in-black-background-31710216/
+License: https://www.pexels.com/license/
+
+A 12-second excerpt starting at 3 seconds, resized to 960px wide and encoded
+at 30fps without audio. The WebP poster is the first frame of the excerpt.

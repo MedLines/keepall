@@ -1,15 +1,11 @@
 "use client";
 
 import { useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
-import { oklchToHex } from "@/color-format.mjs";
 import { ArrowLeftIcon, ArrowRightIcon, PlayIcon } from "../shell-icons";
 import { RecordedDemo } from "./recorded-demo";
 import { HeroFlightLayer, useHeroFlight } from "./hero-flight";
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
+import { motion, useScroll, useTransform, type MotionValue } from "motion/react";
 
-// Scroll storyboard:
-// Statement crosses the viewport → each phrase brightens in reading order.
-// Feature cards reach 108px → pin; earlier cards recede as the next arrives.
 const SCENE = { landscapeTravel: 220, stackTop: 108, stackStep: 24, cardBottom: 786 };
 
 function subscribeReducedMotion(onChange: () => void) {
@@ -53,25 +49,11 @@ export function HeroScene({ children, preview }: { children: ReactNode; preview:
   );
 }
 
-const phrases = ["A link that sends you somewhere.", "An image that stays with you.", "A thought you don’t want to lose.", "Keep them close.", "See where they take you."];
-
-function RevealedPhrase({ text, index, progress }: { text: string; index: number; progress: MotionValue<number> }) {
-  const reduceMotion = useReducedMotion();
-  const color = useTransform(progress, [index / phrases.length, (index + 1) / phrases.length], [oklchToHex("oklch(0.562593681 0.005813544 325.653702919)"), oklchToHex("oklch(0.951883059 0.00761396 61.450898715)")]);
-  return <motion.span style={{ color: reduceMotion ? "oklch(0.951883059 0.00761396 61.450898715)" : color }}>{text}{" "}</motion.span>;
-}
-
-export function ScrollStatement() {
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 85%", "end 55%"] });
-  return <div ref={ref} className="ka-statement ka-wrap"><p className="ka-eyebrow">A place for what stays with you</p><p className="ka-statement-text">{phrases.map((text, index) => <RevealedPhrase key={text} text={text} index={index} progress={scrollYProgress} />)}</p><p className="ka-statement-note">Links, notes, images, and videos.<br />A personal library, made for coming back.</p></div>;
-}
-
 const views = [
-  { name: "Your library", recording: "library-demo", caption: "Browse the same library in grid or list view." },
-  { name: "Collections", recording: "collections-demo", caption: "Bring related finds together. Leave the rest in Unsorted." },
-  { name: "Tags", recording: "tags-demo", caption: "Add a tag to a save. Choose that tag to find it again." },
-  { name: "Search", recording: "search-demo", caption: "Start with a word you remember. Pick up where you left off." },
+  { name: "Your library", recording: "library-demo", caption: "Browse saves in grid or list view, then open Preview." },
+  { name: "Collections", recording: "collections-demo", caption: "Browse your folders, peek inside, then open a collection." },
+  { name: "Tags", recording: "tags-demo", caption: "Filter the library by a tag." },
+  { name: "Search", recording: "search-demo", caption: "Search file contents and recognized screenshot text." },
 ];
 
 export function FeatureGallery({ panels }: { panels: ReactNode[] }) {
@@ -89,7 +71,7 @@ export function FeatureGallery({ panels }: { panels: ReactNode[] }) {
 }
 
 function StackCard({ children, index, progress }: { children: ReactNode; index: number; progress: MotionValue<number> }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionPreference, () => false);
   const scale = useTransform(progress, [index / 3, 1], [1, 1 - (2 - index) * .05]);
   // Match each sticky offset with its remaining stack depth so all three edges
   // stay separated when the cards reach their container's bottom boundary.

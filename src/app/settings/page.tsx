@@ -50,6 +50,11 @@ export default function SettingsPage() {
             storage={<StorageSettings />}
             installation={<InstallationSettings />}
           />
+          <nav aria-label="Support and information" className="mt-8 flex flex-wrap gap-2 border-t border-border-control pt-5">
+            <SettingsLink href="/contact">Contact</SettingsLink>
+            <SettingsLink href="/changelog">Changelog</SettingsLink>
+            <SettingsLink href="/privacy">Privacy</SettingsLink>
+          </nav>
         </div>
       </div>
     </ScrollPanel>

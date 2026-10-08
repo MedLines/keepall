@@ -1,0 +1,52 @@
+.km-footer {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 1.65fr);
+  align-items: start;
+  gap: 64px;
+  padding-block: 40px;
+  border-top: 1px solid var(--ka-line);
+}
+
+.km-footer-brand p {
+  margin-top: 16px;
+  color: var(--ka-muted);
+  font-size: var(--ka-type-caption);
+  line-height: var(--ka-leading-body);
+}
+
+.km-footer > nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 24px;
+  color: var(--ka-muted);
+  font-size: var(--ka-type-caption);
+}
+
+.km-footer > nav a {
+  display: flex;
+  align-items: center;
+  justify-self: start;
+  min-height: 32px;
+  line-height: 1.5;
+}
+
+@media (hover: hover) {
+  .km-footer a:hover { color: var(--ka-text); }
+}
+
+@media (max-width: 800px) {
+  .km-footer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    padding-block: 32px;
+  }
+
+  .km-footer > nav a { min-height: 44px; }
+}
+
+@media (max-width: 520px) {
+  .km-footer > nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 16px;
+  }
+}

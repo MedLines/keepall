@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="440" viewBox="0 0 400 440">
+  <rect width="400" height="440" rx="8" fill="#ECEBE7"/>
+  <g fill="#282828">
+    <text x="36" y="52" font-family="Arial,sans-serif" font-size="13" letter-spacing="2">READING NOTES</text>
+    <path d="M36 76H364" stroke="#A7A7A2"/>
+    <text x="36" y="154" font-family="Georgia,serif" font-size="42">Make room</text>
+    <text x="36" y="204" font-family="Georgia,serif" font-size="42">to think.</text>
+    <text x="36" y="255" font-family="Arial,sans-serif" font-size="18">Leave the afternoon open.</text>
+  </g>
+  <path d="M36 310H364M36 344H364M36 378H270" stroke="#A7A7A2" opacity=".5"/>
+</svg>
