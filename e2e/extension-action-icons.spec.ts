@@ -20,7 +20,7 @@ test("extension Organize uses the app icon and still opens its collection and ta
     Object.assign(globalThis, { chrome: { runtime: {
       getURL: () => "data:font/woff2;base64,",
       onMessage: { addListener: (callback: typeof listener) => { listener = callback; } },
-      sendMessage: async () => ({ success: true, collections: [{ id: "reading", name: "Reading" }], tags: [{ id: "reference", name: "Reference" }], collectionIds: [], tagIds: [] }),
+      sendMessage: async () => ({ success: true, collections: [{ id: "reading", name: "Reading" }], tags: [{ id: "reference", name: "Reference" }, { id: "research", name: "Research" }], collectionIds: [], tagIds: [] }),
     } } });
     return { send: (message: Record<string, unknown>) => listener(message) };
   });
@@ -36,9 +36,32 @@ test("extension Organize uses the app icon and still opens its collection and ta
   await expect(picker.getByRole("button", { name: "Reading", exact: true })).toBeVisible();
   await picker.getByRole("button", { name: "Tags", exact: true }).click();
   await expect(picker.getByRole("button", { name: "Reference", exact: true })).toBeVisible();
+  await picker.getByRole("button", { name: "Collection", exact: true }).click();
+  await picker.getByRole("searchbox").fill("Read");
+  await picker.getByRole("button", { name: "Tags", exact: true }).click();
   for (const theme of ["light", "dark"]) {
     await bridge.evaluate((value, theme) => value.send({ type: "theme", theme }), theme);
+    const search = picker.getByRole("searchbox", { name: "Find a tag" });
+    const clear = picker.getByRole("button", { name: "Clear search", exact: true });
+    await search.fill("Ref");
+    await expect(picker.getByRole("button", { name: "Research", exact: true })).toBeHidden();
+    const bounds = await clear.boundingBox();
+    expect(bounds!.width).toBeGreaterThanOrEqual(40); expect(bounds!.height).toBeGreaterThanOrEqual(40);
+    expect(await search.evaluate(node => [...(node.getRootNode() as ShadowRoot).querySelectorAll("style")].flatMap(style => [...(style.sheet?.cssRules ?? [])]).some(rule => rule instanceof CSSStyleRule && rule.selectorText === ".toast-collections-search::-webkit-search-cancel-button" && rule.style.display === "none"))).toBe(true);
     await toast.screenshot({ path: testInfo.outputPath(`extension-organize-${theme}.png`) });
+    await clear.click({ position: { x: 3, y: 3 } });
+    await expect(search).toHaveValue(""); await expect(search).toBeFocused();
+    await expect(clear).toBeHidden(); await expect(picker).toBeVisible();
+    await expect(picker.getByRole("button", { name: "Research", exact: true })).toBeVisible();
+    await expect(picker.getByRole("button", { name: "Reference", exact: true })).toBeVisible();
+    await picker.getByRole("button", { name: "Collection", exact: true }).click();
+    await expect(picker.getByRole("searchbox")).toHaveValue("Read");
+    await picker.getByRole("button", { name: "Tags", exact: true }).click();
+    await expect(search).toHaveValue("");
+    await search.fill("Keyboard"); await search.press("Tab"); await expect(clear).toBeFocused();
+    await clear.press(theme === "light" ? "Enter" : "Space");
+    await expect(search).toHaveValue(""); await expect(search).toBeFocused();
+    await expect(picker).toBeVisible();
   }
   await picker.getByRole("button", { name: "Close organizer", exact: true }).click();
   await expect(picker).toBeHidden();

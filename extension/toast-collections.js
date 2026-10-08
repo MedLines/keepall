@@ -9,10 +9,11 @@ if (!globalThis.__keepallCreateToastCollections) {
         <button type="button" data-kind="collection" aria-pressed="true">Collection</button>
         <button type="button" data-kind="tag" aria-pressed="false">Tags</button>
       </div>
-      <input class="toast-collections-search" type="search" placeholder="Find or create a collection…" aria-label="Find a collection" autocomplete="off" maxlength="120" disabled></div>
+      <div class="toast-collections-search-wrap"><input class="toast-collections-search" type="search" placeholder="Find or create a collection…" aria-label="Find a collection" autocomplete="off" maxlength="120" disabled><button type="button" class="toast-search-clear" aria-label="Clear search" hidden disabled><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></button></div></div>
       <div class="toast-collections-list" role="group" aria-label="Collections"></div>
       <div class="toast-collections-footer"><p class="toast-collections-status" role="status">Loading collections and tags…</p><button type="button" class="toast-collections-retry" hidden>Retry</button></div>`;
     const search = panel.querySelector("input");
+    const clear = panel.querySelector(".toast-search-clear");
     const status = panel.querySelector("p");
     const list = panel.querySelector(".toast-collections-list");
     const close = panel.querySelector(".toast-close");
@@ -41,7 +42,14 @@ if (!globalThis.__keepallCreateToastCollections) {
         if (options) search.focus();
       });
     }
-    search.addEventListener("input", render);
+    search.addEventListener("input", () => { queries[kind] = search.value; render(); });
+    clear.addEventListener("click", () => {
+      if (search.disabled) return;
+      search.value = "";
+      queries[kind] = "";
+      render();
+      search.focus();
+    });
     panel.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !saving) {
         event.preventDefault();
@@ -96,6 +104,7 @@ if (!globalThis.__keepallCreateToastCollections) {
     }
 
     function render() {
+      clear.hidden = !search.value;
       if (!options) return;
       const name = normalize(search.value);
       const query = name.toLowerCase();
@@ -117,6 +126,7 @@ if (!globalThis.__keepallCreateToastCollections) {
 
     function setDisabled(value) {
       search.disabled = value;
+      clear.disabled = value;
       close.disabled = value;
       for (const control of [...switches, ...list.children]) control.disabled = value;
     }

@@ -66,7 +66,14 @@ if (!globalThis.__keepallPageUi) {
     .toast-organize-types button { flex: 1; min-height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--secondary); font-size: 12px; }
     .toast-organize-types button:hover { background: var(--raised); }
     .toast-organize-types button[aria-pressed="true"] { background: var(--selected); color: var(--primary); }
-    .toast-collections-search { display: block; flex: none; width: 100%; min-width: 0; min-height: 34px; margin: 4px 0 6px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--control); color: var(--primary); font-size: 12px; }
+    .toast-collections-search-wrap { position: relative; display: flex; align-items: center; height: 44px; margin: 4px 0 6px; }
+    .toast-collections-search { display: block; flex: none; width: 100%; min-width: 0; min-height: 40px; padding: 8px 44px 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--control); color: var(--primary); font-size: 12px; }
+    .toast-collections-search::-webkit-search-cancel-button { display: none; }
+    .toast-search-clear { position: absolute; right: 0; top: 0; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: var(--secondary); }
+    .toast-search-clear[hidden] { display: none; }
+    .toast-search-clear > span { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; }
+    .toast-search-clear svg { width: 16px; height: 16px; }
+    .toast-search-clear:hover:not(:disabled) > span { background: var(--raised); color: var(--primary); }
     .toast-collections-search::placeholder { color: var(--secondary); }
     .toast-collections-list { display: grid; align-content: start; flex: 1; gap: 2px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; scrollbar-gutter: stable; }
     .toast-collection { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 8px; border: 0; border-radius: 10px; background: transparent; color: var(--primary); text-align: left; font-size: 12px; }

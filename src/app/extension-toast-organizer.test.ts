@@ -210,3 +210,44 @@ test("retains Close and Escape after refresh fails and ignores a disposed move",
   await Promise.resolve();
   expect(onMoved).toHaveBeenCalledOnce();
 });
+
+test("clears only the active search, restores focus and choices, and preserves assignments", async () => {
+  const { panel, request, onClose } = await setup();
+  const search = panel.getByRole("searchbox");
+  expect(panel.queryByRole("button", { name: "Clear search" })).toBeNull();
+  fireEvent.input(search, { target: { value: "Read" } });
+  fireEvent.click(panel.getByRole("button", { name: "Tags" }));
+  fireEvent.click(panel.getByRole("button", { name: "Design" }));
+  await waitFor(() => expect(panel.getByRole("button", { name: "Design" })).toHaveAttribute("aria-pressed", "true"));
+  fireEvent.input(search, { target: { value: "New tag" } });
+  const calls = request.mock.calls.length;
+  fireEvent.click(panel.getByRole("button", { name: "Clear search" }));
+  expect(search).toHaveValue(""); expect(search).toHaveFocus();
+  expect(panel.queryByRole("button", { name: /Create/ })).toBeNull();
+  expect(panel.queryByRole("button", { name: "Clear search" })).toBeNull();
+  expect(panel.getByRole("button", { name: "Design" })).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(panel.getByRole("button", { name: "Collection" }));
+  expect(search).toHaveValue("Read");
+  fireEvent.click(panel.getByRole("button", { name: "Clear search" }));
+  expect(panel.getByRole("button", { name: "Unsorted" })).toBeVisible();
+  fireEvent.click(panel.getByRole("button", { name: "Tags" }));
+  expect(search).toHaveValue("");
+  expect(request).toHaveBeenCalledTimes(calls); expect(onClose).not.toHaveBeenCalled();
+});
+
+test("locks Clear search through saving and stale refresh until retry succeeds", async () => {
+  const { panel, request } = await setup();
+  fireEvent.input(panel.getByRole("searchbox"), { target: { value: "Read" } });
+  let complete!: (value: Awaited<ReturnType<typeof request>>) => void;
+  request.mockImplementationOnce(() => new Promise(resolve => { complete = resolve; })).mockRejectedValueOnce(new Error("Offline"));
+  fireEvent.click(panel.getByRole("button", { name: "Reading" }));
+  const clear = panel.getByRole("button", { name: "Clear search" });
+  expect(clear).toBeDisabled(); fireEvent.click(clear);
+  expect(panel.getByRole("searchbox")).toHaveValue("Read");
+  complete({ collectionName: "Reading", changed: true });
+  await panel.findByRole("alert"); expect(clear).toBeDisabled();
+  fireEvent.click(panel.getByRole("button", { name: "Retry" }));
+  expect(clear).toBeDisabled();
+  await waitFor(() => expect(clear).toBeEnabled());
+  fireEvent.click(clear); expect(panel.getByRole("searchbox")).toHaveValue("");
+});
