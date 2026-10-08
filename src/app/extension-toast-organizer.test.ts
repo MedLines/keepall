@@ -117,3 +117,96 @@ test("keeps a failed creation available for retry and renders names as text", as
   expect(document.querySelector("img")).toBeNull();
   expect(onMoved).not.toHaveBeenCalled();
 });
+
+test.each(["", "  rea  ", "  UNS  "])("only offers Create with zero collection matches: %s", async (value) => {
+  const { panel } = await setup();
+  fireEvent.input(panel.getByRole("searchbox"), { target: { value } });
+  expect(panel.queryByRole("button", { name: /Create/ })).toBeNull();
+});
+
+test("counts assigned tag substring matches", async () => {
+  const { panel } = await setup();
+  fireEvent.click(panel.getByRole("button", { name: "Tags" }));
+  fireEvent.click(panel.getByRole("button", { name: "Design" }));
+  await waitFor(() => expect(panel.getByRole("button", { name: "Design" })).toHaveAttribute("aria-pressed", "true"));
+  fireEvent.input(panel.getByRole("searchbox"), { target: { value: "  SIG  " } });
+  expect(panel.queryByRole("button", { name: /Create/ })).toBeNull();
+});
+
+const refreshed = {
+  collections: [{ id: "c1", name: "Reading" }, { id: "c2", name: "Side projects" }], collectionIds: ["c2"],
+  tags: [{ id: "t1", name: "Design" }], tagIds: [],
+};
+
+test("refreshes authoritative IDs after creation, repeated moves, and moving to Unsorted", async () => {
+  const { panel, request, onMoved, onClose } = await setup();
+  request.mockResolvedValueOnce({ collectionName: "Side projects", changed: true }).mockResolvedValueOnce(refreshed);
+  fireEvent.input(panel.getByRole("searchbox"), { target: { value: "Side projects" } });
+  fireEvent.click(panel.getByRole("button", { name: "Create “Side projects”" }));
+  await waitFor(() => expect(panel.getByRole("button", { name: "Side projects" })).toHaveFocus());
+  expect(onMoved).toHaveBeenCalledOnce();
+  expect(onClose).not.toHaveBeenCalled();
+  fireEvent.input(panel.getByRole("searchbox"), { target: { value: "" } });
+  request.mockResolvedValueOnce({ collectionName: "Reading", changed: true }).mockResolvedValueOnce({ ...refreshed, collectionIds: ["c1"] });
+  fireEvent.click(panel.getByRole("button", { name: "Reading" }));
+  await waitFor(() => expect(panel.getByRole("button", { name: "Reading" })).toHaveAttribute("aria-pressed", "true"));
+  expect(request).toHaveBeenCalledWith("move", { collectionId: "c1", expectedCollectionIds: ["c2"] });
+  request.mockResolvedValueOnce({ collectionName: "Unsorted", changed: true }).mockResolvedValueOnce({ ...refreshed, collectionIds: [] });
+  fireEvent.click(panel.getByRole("button", { name: "Unsorted" }));
+  await waitFor(() => expect(panel.getByRole("button", { name: "Unsorted" })).toHaveAttribute("aria-pressed", "true"));
+  expect(request).toHaveBeenCalledWith("move", { collectionId: null, expectedCollectionIds: ["c1"] });
+  fireEvent.click(panel.getByRole("button", { name: "Tags" }));
+  fireEvent.click(panel.getByRole("button", { name: "Design" }));
+  await waitFor(() => expect(request).toHaveBeenCalledWith("tag", { tagId: "t1", assigned: true, expectedTagIds: [] }));
+});
+
+test("notifies a no-op move and preserves independent queries", async () => {
+  const { panel, request, onMoved } = await setup();
+  fireEvent.click(panel.getByRole("button", { name: "Tags" }));
+  fireEvent.input(panel.getByRole("searchbox"), { target: { value: "Des" } });
+  fireEvent.click(panel.getByRole("button", { name: "Collection" }));
+  fireEvent.input(panel.getByRole("searchbox"), { target: { value: "Uns" } });
+  request.mockResolvedValueOnce({ collectionName: "Unsorted", changed: false }).mockResolvedValueOnce({ ...refreshed, collectionIds: [] });
+  fireEvent.click(panel.getByRole("button", { name: "Unsorted" }));
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(3));
+  expect(onMoved).toHaveBeenCalledExactlyOnceWith({ collectionName: "Unsorted", changed: false });
+  expect(panel.getByRole("searchbox")).toHaveValue("Uns");
+  fireEvent.click(panel.getByRole("button", { name: "Tags" }));
+  expect(panel.getByRole("searchbox")).toHaveValue("Des");
+});
+
+test("separates a successful move from refresh failure and retries only the read", async () => {
+  const { panel, request, onMoved, onClose } = await setup();
+  request.mockResolvedValueOnce({ collectionName: "Reading", changed: true }).mockRejectedValueOnce(new Error("Offline"));
+  fireEvent.click(panel.getByRole("button", { name: "Reading" }));
+  await waitFor(() => expect(panel.getByRole("alert")).toHaveTextContent(/Saved.*refresh/i));
+  expect(onMoved).toHaveBeenCalledOnce();
+  expect(panel.getByRole("button", { name: "Reading" })).toBeDisabled();
+  expect(panel.getByRole("searchbox")).toBeDisabled();
+  expect(panel.getByRole("button", { name: "Close organizer" })).not.toBeDisabled();
+  request.mockResolvedValueOnce({ ...refreshed, collectionIds: ["c1"] });
+  fireEvent.click(panel.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(panel.getByRole("button", { name: "Reading" })).not.toBeDisabled());
+  expect(request.mock.calls.filter(([operation]) => operation === "move")).toHaveLength(1);
+  expect(onMoved).toHaveBeenCalledOnce();
+  expect(onClose).not.toHaveBeenCalled();
+});
+
+test("retains Close and Escape after refresh fails and ignores a disposed move", async () => {
+  const { panel, request, onMoved, onClose } = await setup();
+  request.mockResolvedValueOnce({ collectionName: "Reading", changed: true }).mockRejectedValueOnce(new Error("Offline"));
+  fireEvent.click(panel.getByRole("button", { name: "Reading" }));
+  await panel.findByRole("alert");
+  fireEvent.keyDown(panel.getByRole("button", { name: "Close organizer" }), { key: "Escape" });
+  expect(onClose).toHaveBeenCalledWith(true);
+  request.mockResolvedValueOnce(refreshed);
+  fireEvent.click(panel.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(panel.getByRole("button", { name: "Reading" })).not.toBeDisabled());
+  let complete!: (value: Awaited<ReturnType<typeof request>>) => void;
+  request.mockImplementationOnce(() => new Promise((resolve) => { complete = resolve; }));
+  fireEvent.click(panel.getByRole("button", { name: "Reading" }));
+  dispose();
+  complete({ collectionName: "Reading", changed: true });
+  await Promise.resolve();
+  expect(onMoved).toHaveBeenCalledOnce();
+});

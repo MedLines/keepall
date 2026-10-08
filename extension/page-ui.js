@@ -185,11 +185,11 @@ if (!globalThis.__keepallPageUi) {
     .toast-collection-check { flex: none; width: 14px; }
     .toast-collection:hover { background: var(--raised); }
     .toast-collection[aria-pressed="true"] { background: var(--selected); }
-    .toast-create { justify-content: flex-start; min-height: 36px; border: 1px solid transparent; background: var(--action); color: var(--on-action); font-weight: 500; }
-    .toast-create:hover { background: color-mix(in srgb, var(--action) 90%, var(--toast)); }
+    .toast-create { justify-content: flex-start; min-height: 36px; border: 1px solid transparent; background: transparent; color: var(--primary); font-weight: 500; }
+    .toast-create:hover { background: var(--raised); }
     .toast-create-icon { display: flex; flex: none; width: 16px; height: 16px; }
     .toast-create-icon svg { width: 100%; height: 100%; }
-    .toast-create:active { background: color-mix(in srgb, var(--action) 80%, var(--toast)); }
+    .toast-create:active { background: var(--selected); }
     .toast-collections-footer { display: flex; flex: none; align-items: center; gap: 8px; min-height: 28px; margin-top: 4px; overflow-y: hidden; scrollbar-width: thin; scrollbar-gutter: stable; }
     .toast-collections-status { flex: 1; min-width: 0; margin: 0 6px; overflow-wrap: anywhere; font-size: 12px; color: var(--secondary); }
     .toast-collections-retry { flex: none; min-height: 28px; padding: 4px 8px; border: 0; border-radius: 8px; background: var(--action); color: var(--on-action); font-size: 12px; font-weight: 500; }
@@ -396,7 +396,6 @@ if (!globalThis.__keepallPageUi) {
                 node.setAttribute("role", "status");
                 setMark(true);
                 if (result.changed) buttons.querySelector('[data-action="undo"]')?.remove();
-                closeCollections(true);
               },
               onTagged: (result) => {
                 node.dataset.success = "true";

@@ -24,11 +24,12 @@ if (!globalThis.__keepallCreateToastCollections) {
     let saving = false;
     let loading = false;
     let disposed = false;
+    let stale = false;
     const normalize = (name) => name.trim().replace(/\s+/g, " ");
     close.addEventListener("click", () => { if (!saving) onClose(true); });
     for (const control of switches) {
       control.addEventListener("click", () => {
-        if (saving) return;
+        if (saving || loading || stale) return;
         queries[kind] = search.value;
         kind = control.dataset.kind;
         search.value = queries[kind];
@@ -66,11 +67,12 @@ if (!globalThis.__keepallCreateToastCollections) {
     };
     document.addEventListener("pointerdown", outside);
 
-    function choice(label, selected, action) {
+    function choice(label, selected, action, id) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "toast-collection";
-      button.disabled = saving;
+      button.disabled = saving || loading || stale;
+      if (id !== undefined) button.dataset.id = id ?? "unsorted";
       if (selected !== undefined) button.setAttribute("aria-pressed", String(selected));
       const name = document.createElement("span");
       name.className = "toast-collection-name";
@@ -100,13 +102,13 @@ if (!globalThis.__keepallCreateToastCollections) {
       const isTag = kind === "tag";
       const entries = isTag ? options.tags : [{ id: null, name: "Unsorted" }, ...options.collections];
       const selected = (id) => isTag ? options.tagIds.includes(id) : id === (options.collectionIds[0] ?? null);
-      const choices = entries.filter((entry) => entry.name.toLowerCase().includes(query))
+      const choices = entries.filter((entry) => normalize(entry.name).toLowerCase().includes(query))
         .sort((left, right) => Number(selected(right.id)) - Number(selected(left.id)));
       list.replaceChildren();
       for (const entry of choices) {
-        list.append(choice(entry.name, selected(entry.id), () => save(entry, false)));
+        list.append(choice(entry.name, selected(entry.id), () => save(entry, false), entry.id));
       }
-      if (name && !entries.some((entry) => entry.name.toLowerCase() === query)) {
+      if (name && choices.length === 0) {
         list.append(choice(`Create “${name}”`, undefined, () => save({ name }, true)));
       }
       status.setAttribute("role", "status");
@@ -120,12 +122,12 @@ if (!globalThis.__keepallCreateToastCollections) {
     }
 
     async function save(entry, creating) {
-      if (saving) return;
+      if (saving || loading || stale) return;
       saving = true;
       setDisabled(true);
       status.setAttribute("role", "status");
       status.textContent = creating ? "Creating…" : kind === "tag" ? "Updating tags…" : "Moving…";
-      let focusName;
+      let focusId;
       try {
         if (kind === "tag") {
           const result = await request("tag", {
@@ -137,7 +139,7 @@ if (!globalThis.__keepallCreateToastCollections) {
           options.tagIds = result.tagIds;
           if (!options.tags.some((tag) => tag.id === result.tag.id)) options.tags.push(result.tag);
           render();
-          focusName = result.tag.name;
+          focusId = result.tag.id;
           onTagged(result);
         } else {
           const result = await request("move", {
@@ -145,7 +147,12 @@ if (!globalThis.__keepallCreateToastCollections) {
             ...(creating ? { collectionName: entry.name } : {}),
             expectedCollectionIds: options.collectionIds,
           });
-          if (!disposed) onMoved(result);
+          if (disposed) return;
+          onMoved(result);
+          stale = true;
+          saving = false;
+          close.disabled = false;
+          await loadOptions({ entry, creating });
         }
       } catch (error) {
         if (disposed) return;
@@ -154,16 +161,23 @@ if (!globalThis.__keepallCreateToastCollections) {
       } finally {
         saving = false;
         if (!disposed) {
-          setDisabled(false);
-          if (focusName) [...list.children].find((button) => button.firstChild.textContent === focusName)?.focus();
+          setDisabled(stale);
+          close.disabled = false;
+          if (focusId) focusChoice(focusId);
         }
       }
     }
 
-    async function loadOptions() {
+    function focusChoice(id) {
+      const row = [...list.children].find((button) => button.dataset.id === (id ?? "unsorted"));
+      (row ?? search).focus();
+    }
+
+    async function loadOptions(selection) {
       if (loading || disposed) return;
       loading = true;
-      search.disabled = true;
+      setDisabled(true);
+      close.disabled = false;
       retry.hidden = true;
       retry.disabled = true;
       status.setAttribute("role", "status");
@@ -172,13 +186,16 @@ if (!globalThis.__keepallCreateToastCollections) {
         const result = await request("collections");
         if (disposed) return;
         options = result;
-        search.disabled = false;
+        stale = false;
         render();
-        search.focus();
+        setDisabled(false);
+        if (selection) focusChoice(selection.creating ? options.collectionIds[0] ?? null : selection.entry.id);
+        else search.focus();
       } catch (error) {
         if (disposed) return;
         status.setAttribute("role", "alert");
-        status.textContent = error.message || "Could not load collections and tags. Try again.";
+        status.textContent = stale ? "Saved. Could not refresh choices. Retry to continue organizing." : error.message || "Could not load collections and tags. Try again.";
+        if (!stale) for (const control of switches) control.disabled = false;
         retry.hidden = false;
         retry.disabled = false;
       } finally {
