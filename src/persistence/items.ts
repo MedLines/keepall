@@ -164,6 +164,8 @@ export async function replaceItemTagsByNames(
 }
 
 export async function createImage(input: {
+  id?: string;
+  tagIds?: string[];
   assets: { bytes: Uint8Array; mimeType: string }[];
   sourceUrl?: string;
   caption?: string;
@@ -196,9 +198,19 @@ export async function createImage(input: {
 
   const db = getDb();
   return cancellableWrite(db, [db.assets, db.items, db.thumbnails, db.collections, db.tags], input.signal, async () => {
+    if (input.id) {
+      const existing = await db.items.get(input.id);
+      if (existing) {
+        if (existing.type !== "image" || existing.deletedAt !== undefined || existing.sourceFileName !== input.sourceFileName || existing.assetIds.length !== preparedAssets.length) throw new Error("This file ID belongs to another item or an item in Trash.");
+        const originals = await db.assets.bulkGet(existing.assetIds);
+        if (originals.some((asset, index) => asset?.contentHash !== preparedAssets[index].contentHash)) throw new Error("This file ID belongs to different image content.");
+        return existing;
+      }
+    }
     const collectionIds = await resolveItemCollectionIds(input.collectionIds, input.collectionName);
     for (const id of collectionIds) if (!await db.collections.get(id)) throw new Error("The selected collection no longer exists.");
-    const tagIds = await resolveItemTagIds([], input.tagNames);
+    const tagIds = await resolveItemTagIds(input.tagIds, input.tagNames);
+    for (const id of tagIds) if (!await db.tags.get(id)) throw new Error("The selected tag no longer exists.");
     const assetIds: string[] = [];
     for (const payload of preparedAssets) {
       const asset = await putAsset(payload);
@@ -213,7 +225,7 @@ export async function createImage(input: {
       captionFormat: input.captionFormat,
       title: input.title,
       sourceFileName: input.sourceFileName,
-    });
+    }, { id: input.id });
     image.collectionIds = collectionIds;
     image.tagIds = tagIds;
     await db.items.add(image);

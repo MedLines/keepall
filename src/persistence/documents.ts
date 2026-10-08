@@ -12,7 +12,7 @@ export async function getDocumentRevision(): Promise<string> {
 }
 
 export async function createDocument(input: {
-  fileName: string; bytes: Uint8Array; title?: string; noteContent?: string;
+  id?: string; fileName: string; bytes: Uint8Array; title?: string; noteContent?: string; noteFormat?: "plain" | "markdown";
   tagIds?: string[]; collectionIds?: string[]; collectionName?: string; tagNames?: readonly string[];
   signal?: AbortSignal;
 }): Promise<DocumentItem> {
@@ -24,6 +24,13 @@ export async function createDocument(input: {
   const now = Date.now();
   const db = getDb();
   return cancellableWrite(db, [db.items, db.documentAssets, db.tags, db.collections], input.signal, async () => {
+    if (input.id) {
+      const existing = await db.items.get(input.id);
+      if (existing) {
+        if (existing.type !== "document" || existing.deletedAt !== undefined || existing.sourceFileName !== input.fileName || (await db.documentAssets.get(existing.assetId))?.contentHash !== contentHash) throw new Error("This file ID belongs to another item or an item in Trash.");
+        return existing;
+      }
+    }
     const tagIds = await resolveItemTagIds(input.tagIds, input.tagNames);
     const collectionIds = await resolveItemCollectionIds(input.collectionIds, input.collectionName);
     for (const id of tagIds) if (!await db.tags.get(id)) throw new Error("The selected tag no longer exists.");
@@ -34,9 +41,9 @@ export async function createDocument(input: {
       await db.documentAssets.add(original);
     }
     const item: DocumentItem = {
-      id: crypto.randomUUID(), type: "document", format, assetId: original.id,
+      id: input.id ?? crypto.randomUUID(), type: "document", format, assetId: original.id,
       sourceFileName: input.fileName, title: input.title?.trim() || input.fileName.replace(/\.(txt|md|pdf)$/i, "") || input.fileName,
-      noteContent: input.noteContent?.trim() ?? "", tagIds, collectionIds, createdAt: now, updatedAt: now,
+      noteContent: input.noteContent?.trim() ?? "", ...(input.noteFormat === "markdown" ? { noteFormat: "markdown" as const } : {}), tagIds, collectionIds, createdAt: now, updatedAt: now,
     };
     await db.items.add(item);
     return item;
