@@ -498,8 +498,23 @@ async function handleEditorFileAction(message, sender) {
   const record = (await chrome.storage.session.get(key))[key];
   if (!record || record.editorId !== message.editorId || record.tabId !== sender.tab.id || Date.now() - record.createdAt > EDITOR_LIFETIME_MS) throw new Error("This file editor has expired. Reopen it and try again.");
   const operation = message.operation;
-  if (!["begin", "chunk", "commit", "status", "cancel", "open-bulk-import"].includes(operation)) throw new Error("Unsupported file action.");
+  if (!["begin", "chunk", "commit", "status", "cancel", "open-bulk-import", "open-results"].includes(operation)) throw new Error("Unsupported file action.");
   await requireLibraryAccess(record.origin);
+  if (operation === "open-results") {
+    const ids = message.payload?.actionIds;
+    if (!Array.isArray(ids) || !ids.length || ids.length > 50 || !ids.every(fileUuid)) throw new Error("Invalid saved-file action.");
+    const actions = record.actions ?? {};
+    if (ids.some(id => !actions[id] || Date.now() - actions[id].createdAt > EDITOR_LIFETIME_MS)) throw new Error("This saved-file action has expired.");
+    const itemIds = [...new Set(ids.flatMap(id => actions[id].itemIds))];
+    const url = itemIds.length === 1 ? `${record.origin}/items/${itemIds[0]}?from=%2F` : `${record.origin}/`;
+    const tabs = await chrome.tabs.query({ url: `${record.origin}/*` });
+    const root = tabs.find(tab => tab.id && new URL(tab.url).pathname === "/");
+    if (root) {
+      await chrome.tabs.update(root.id, { url, active: true });
+      await chrome.windows.update(root.windowId, { focused: true });
+    } else await chrome.tabs.create({ url });
+    return { success: true };
+  }
   if (operation === "open-bulk-import") {
     const url = `${record.origin}/#keepall-bulk-import=${crypto.randomUUID()}`;
     const tabs = await chrome.tabs.query({ url: `${record.origin}/*` });
@@ -524,7 +539,21 @@ async function handleEditorFileAction(message, sender) {
   await ensureOffscreen(record.origin);
   const result = await chrome.runtime.sendMessage({ target: "offscreen", type: "file-action", origin: record.origin, editorId: record.editorId, tabId: record.tabId, operation, payload });
   if (!result || typeof result.success !== "boolean") throw new Error("Keepall did not confirm this file action. Check status before retrying.");
-  if (result.success && result.results?.some(item => item.status === "saved")) await notifyOpenKeepallTabs(record.origin).catch(() => {});
+  if (result.success && result.results?.some(item => item.status === "saved")) {
+    const itemIds = [...new Set(result.results.filter(item => item.status === "saved" && fileUuid(item.itemId)).map(item => item.itemId))];
+    if (itemIds.length) {
+      const current = (await chrome.storage.session.get(key))[key];
+      if (current?.editorId === record.editorId) {
+        const actions = current.actions ?? {};
+        const actionId = Object.keys(actions).find(id => actions[id].sessionId === result.sessionId) ?? crypto.randomUUID();
+        actions[actionId] = { sessionId: result.sessionId, itemIds, createdAt: Date.now() };
+        for (const id of Object.keys(actions).slice(0, Math.max(0, Object.keys(actions).length - 50))) delete actions[id];
+        await chrome.storage.session.set({ [key]: { ...current, actions, createdAt: Date.now() } });
+        result.actionId = actionId;
+      }
+    }
+    await notifyOpenKeepallTabs(record.origin).catch(() => {});
+  }
   return result;
 }
 
@@ -545,9 +574,14 @@ async function openEditor(tab) {
   }
   await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"] });
   const editorId = crypto.randomUUID();
+  const response = await chrome.tabs.sendMessage(tab.id, { type: "editor", editorId, origin, title: tab.title ?? "", url: tab.url, theme: await captureTheme() });
+  if (!response?.accepted) return;
   await pruneEditorSessions();
-  await chrome.storage.session.set({ [`file-editor:${tab.id}`]: { tabId: tab.id, editorId, origin, sourceUrl: tab.url, createdAt: Date.now() } });
-  await chrome.tabs.sendMessage(tab.id, { type: "editor", editorId, origin, title: tab.title ?? "", url: tab.url, theme: await captureTheme() });
+  const key = `file-editor:${tab.id}`;
+  const previous = (await chrome.storage.session.get(key))[key];
+  const actions = previous?.origin === origin && previous?.sourceUrl === tab.url
+    ? Object.fromEntries(Object.entries(previous.actions ?? {}).filter(([, action]) => Date.now() - action.createdAt <= EDITOR_LIFETIME_MS)) : {};
+  await chrome.storage.session.set({ [key]: { tabId: tab.id, editorId, origin, sourceUrl: tab.url, actions, createdAt: Date.now() } });
   try {
     await ensureOffscreen(origin);
     const result = await chrome.runtime.sendMessage({

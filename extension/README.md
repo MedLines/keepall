@@ -48,6 +48,31 @@ Feedback names a collection-only move, confirms other saved changes,
 or says “This link was already saved” when nothing changed. A failed save keeps
 the form open and shows an error toast.
 
+**Add files** selects local images, MP4/WebM, PDF, text, or Markdown files. Pasting
+an image into the drawer stages it too; text paste stays native. These save as
+independent library items, preserving the current page title and note draft.
+Multiple images require **One image item** or **Separate image items**. Image
+captions, video titles/notes, and text file contents can be edited before saving.
+The current page remains the read-only source for local images. Unchanged text
+keeps its original bytes; switching Plain text/Markdown changes the saved filename
+extension. PDF files retain their original bytes and open in Keepall.
+
+Notes and document contents offer **Plain text**/**Markdown** and **Edit**/**Preview**.
+Preview runs locally, treats HTML as text, disables unsafe links, and never loads
+remote images. It does not change the editable source. File objects stay in tab
+memory across Close/reopen; thumbnails are released on close and recreated on
+reopen. Discard draft or Remove all files clears staged files. Reloading the source
+page clears drafts. No file bytes or notes enter extension storage.
+
+Imports show confirmed results as they arrive. **Cancel import** waits for active
+writes to settle; **Retry failed files** retries remaining files, and **Continue
+import** checks an uncertain result before sending it again. Close is disabled
+while a write is unresolved. Saved files remain saved after partial failure. Open
+in Keepall opens one saved item; Open library shows multiple results. **Bulk import**
+opens Keepall's full importer while preserving the extension draft and existing
+item-detail tabs. File capture needs the matching app bridge; an older bridge shows
+an update error while existing link capture remains available.
+
 Closing the drawer with Close, Escape, or the backdrop keeps unfinished edits
 for that URL and library in the current tab. Reopening restores the title, note,
 Markdown choice, collection, and tags. A restored draft includes **Discard draft**
@@ -283,7 +308,7 @@ sessions expire after ten minutes; terminal cache eviction can expire them soone
 Polling refreshes idle expiry. Closing/reloading the bridge drops buffers and
 aborts pending work. The worker retains at most 64 editor registrations for ten
 minutes of inactivity in `storage.session`, containing only tab/editor IDs,
-library origin, page URL and timestamp. File bytes, manifests and notes are never
+library origin, page URL, timestamp, and up to 50 short-lived saved-result action IDs. File bytes, manifests and notes are never
 persisted in extension storage by this transport.
 
 Manifest filenames are at most 255 characters, MIME strings 128, titles 500,
@@ -302,3 +327,19 @@ open. Its only added URL data is `#keepall-bulk-import=<nonce>`. After mount or
 hashchange, the app consumes that intent once, removes only that hash with
 `history.replaceState`, and opens the existing Bulk import dialog. A busy capture
 keeps the hash until the dialog can open. The extension draft stays available.
+
+The worker adds an optional `actionId` to successful file status replies containing
+confirmed saved items. Send `request("open-results", { actionIds: [...] })` with
+those tokens; it returns `{ success: true }` or `{ success: false, error }`. Tokens
+are bound to the editor tab, source URL and library, expire after ten minutes, and
+survive reopening the same draft. The UI never supplies an item URL to this action.
+
+## Local preview bundle
+
+`pnpm build:extension` builds `src/extension/note-preview.js` into the unpacked
+extension and collects third-party licenses. `pnpm check:extension` verifies the
+committed output is deterministic, includes licenses, and contains no eval. The
+packaging script runs both before creating the ZIP and removes the development key.
+The builder uses the installed Next webpack and SWC APIs without adding a package;
+check these APIs and rerun the deterministic/security tests when upgrading Next.
+Only preview uses React; the drawer and its native text editing remain plain JS.

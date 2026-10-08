@@ -30,10 +30,10 @@ try {
   const packages = new Map();
   const pending = [...modules];
   while (pending.length) {
-    const module = pending.pop();
-    if (module.modules) pending.push(...module.modules);
-    if (!module.resource?.includes("node_modules")) continue;
-    let directory = path.dirname(module.resource);
+    const bundledModule = pending.pop();
+    if (bundledModule.modules) pending.push(...bundledModule.modules);
+    if (!bundledModule.resource?.includes("node_modules")) continue;
+    let directory = path.dirname(bundledModule.resource);
     while (directory !== path.dirname(directory)) {
       try {
         const info = JSON.parse(await readFile(path.join(directory, "package.json"), "utf8"));

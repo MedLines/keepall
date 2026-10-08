@@ -119,8 +119,8 @@ if (!globalThis.__keepallPageUi) {
     .note-markdown input[type="checkbox"] { width: 14px; min-height: 14px; margin-right: 6px; }
     .note-markdown a { color: inherit; text-decoration: underline; }
     .field[hidden], .file-staging[hidden], .file-layout[hidden], .file-actions button[hidden], .footer button[hidden] { display: none; }
-    .file-capture { display: grid; gap: 8px; }
-    .file-add { justify-self: start; min-height: 40px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 13px; font-size: 14px; }
+    .file-capture { min-width: 0; display: grid; gap: 8px; }
+    .file-add { display: inline-flex; align-items: center; gap: 8px; justify-self: start; min-height: 40px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 13px; font-size: 14px; }
     .file-staging { display: grid; gap: 12px; }
     .file-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
     .file-row { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 13px; background: var(--control); }
@@ -184,7 +184,7 @@ if (!globalThis.__keepallPageUi) {
     .org-create:hover { background: var(--raised); }
     :where(button, input, textarea):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
     :where(input, textarea):focus-visible { outline-width: 1px; }
-    .note-help { margin: 0; color: var(--secondary); font-size: 12px; font-weight: 400; }
+    .note-help { overflow-wrap: anywhere; min-width: 0; margin: 0; color: var(--secondary); font-size: 12px; font-weight: 400; }
     .note-help[hidden] { display: none; }
     .draft-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--secondary); font-size: 12px; }
     .discard-draft { min-height: 32px; padding: 4px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--danger); font-size: 12px; }
@@ -252,7 +252,7 @@ if (!globalThis.__keepallPageUi) {
     .toast-close { display: grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 19px; }
     .toast-close:hover { background: var(--raised); color: var(--primary); }
     @media (prefers-reduced-motion: reduce) { dialog, dialog::backdrop, dialog.is-closing, dialog.is-closing::backdrop, .browse, .browse.is-closing { animation: none; } .toast, .toast.is-visible { transform: none; transition: opacity 140ms ease-out; } .header, form, dialog[data-state="saved"] > .header, dialog[data-state="saved"] > form { transform: none; transition: opacity 120ms ease-out, visibility 0s linear 120ms; } .save-complete, dialog[data-state="saved"] .save-complete { transform: none; transition: opacity 140ms ease-out, visibility 0s linear 140ms; } .footer button, .close, .choice { transition: none; } .footer button:active:not(:disabled), .close:active:not(:disabled), .choice:active:not(:disabled) { transform: none; } }
-    @media (max-width: 480px) { .header { padding: 24px 20px; } .fields { padding: 12px 20px 20px; } .footer { padding: 20px; } .hint { display: none; } }
+    @media (max-width: 480px) { .header { padding: 24px 20px; } .fields { padding: 12px 20px 20px; } .footer { padding: 20px; } .hint, .footer-hint { display: none; } }
   `;
   shadow.append(style);
   document.documentElement.append(host);
@@ -874,12 +874,7 @@ if (!globalThis.__keepallPageUi) {
         toast("Couldn't save to Keepall", false);
       }
     };
-    fileCapture = globalThis.__keepallCreateFileCapture({
-      document, sourceUrl: url, draft: draft?.files,
-      request: (operation, payload) => chrome.runtime.sendMessage({ type: "editor-file-action", editorId, operation, payload }),
-      getOrganization: () => picker.selection(),
-      createNoteEditor: (options) => createNoteEditor({ document, ...options }),
-      onChange() {
+    function refreshFilePresentation() {
         if (!fileCapture) return;
         const mode = fileCapture.hasFiles;
         titleLabel.hidden = mode; noteLabel.hidden = mode;
@@ -887,7 +882,13 @@ if (!globalThis.__keepallPageUi) {
         cancel.textContent = mode && fileCapture.draft().entries.some(entry => entry.saved) ? "Done" : "Close";
         saveButton.hidden = mode && fileCapture.draft().entries.every(entry => entry.saved);
         saveButton.textContent = mode ? "Save files" : existingLink ? "Save changes" : "Save";
-      },
+    }
+    fileCapture = globalThis.__keepallCreateFileCapture({
+      document, sourceUrl: url, draft: draft?.files,
+      request: (operation, payload) => chrome.runtime.sendMessage({ type: "editor-file-action", editorId, operation, payload }),
+      getOrganization: () => picker.selection(),
+      createNoteEditor: (options) => createNoteEditor({ document, ...options }),
+      onChange: refreshFilePresentation,
       onBusy(value) {
         dialog.dataset.state = value ? "saving" : "editing";
         saveButton.disabled = value || !organizationReady;
@@ -897,8 +898,7 @@ if (!globalThis.__keepallPageUi) {
       onComplete() { rememberDraft?.(); },
     });
     fields.prepend(fileCapture.element);
-    titleLabel.hidden = fileCapture.hasFiles; noteLabel.hidden = fileCapture.hasFiles;
-    if (fileCapture.hasFiles) heading.textContent = "Save files to Keepall";
+    refreshFilePresentation();
     form.addEventListener("paste", (event) => fileCapture.paste(event));
     dialog.append(header, form, complete);
     const currentDialog = dialog;

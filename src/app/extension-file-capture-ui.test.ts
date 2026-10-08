@@ -132,3 +132,47 @@ test("waits for cancellation to settle and reports files committed before cancel
   fireEvent.click(panel.getByRole("button",{name:"Cancel import"}));expect(onBusy).toHaveBeenLastCalledWith(true);release();await saving;
   expect(panel.getByRole("status")).toHaveTextContent("1 file saved");expect(onBusy).toHaveBeenLastCalledWith(false);
 });
+
+test("keeps caption and format through single/gallery transitions and clears them with files", async () => {
+  const { ui, panel } = setup();
+  await ui.addFiles([file("one.png", "a", "image/png")]);
+  fireEvent.input(panel.getByRole("textbox", { name: "Caption (optional)" }), { target: { value: "Keep this caption" } });
+  await ui.addFiles([file("two.png", "b", "image/png")]);
+  fireEvent.click(panel.getByRole("button", { name: "One image item" }));
+  expect(panel.getByRole("textbox", { name: "Caption (optional)" })).toHaveValue("Keep this caption");
+  fireEvent.input(panel.getByRole("textbox", { name: "Caption (optional)" }), { target: { value: "Gallery caption" } });
+  fireEvent.click(panel.getByRole("button", { name: "Remove one.png" }));
+  expect(panel.getByRole("textbox", { name: "Caption (optional)" })).toHaveValue("Gallery caption");
+  fireEvent.click(panel.getByRole("button", { name: "Remove all files" }));
+  await ui.addFiles([file("new.png", "a", "image/png"), file("other.png", "b", "image/png")]);
+  fireEvent.click(panel.getByRole("button", { name: "One image item" }));
+  expect(panel.getByRole("textbox", { name: "Caption (optional)" })).toHaveValue("");
+});
+
+test("duplicate filenames retain independent saved and removable states", async () => {
+  let count = 0;
+  const { ui, panel } = setup(undefined, async operation => {
+    if (operation === "begin") return { success: true, sessionId: String(++count), stage: "receiving", results: [] };
+    if (operation === "chunk") return { success: true };
+    return { success: true, stage: "complete", results: [{ fileIndex: 0, status: count === 1 ? "saved" : "failed", error: "Try again" }] };
+  });
+  await ui.addFiles([file("same.txt", "first"), file("same.txt", "second")]);
+  await ui.save();
+  const buttons = panel.getAllByRole("button", { name: "Remove same.txt" });
+  expect(buttons[0]).toBeDisabled(); expect(buttons[1]).toBeEnabled();
+  fireEvent.click(buttons[1]); expect(panel.getAllByText("same.txt")).toHaveLength(1);
+});
+
+test("cancelling while the last chunk is acknowledged prevents commit", async () => {
+  let release!: () => void;
+  const { ui, panel, request } = setup(undefined, async operation => {
+    if (operation === "begin") return { success: true, sessionId: "session", stage: "receiving", results: [] };
+    if (operation === "chunk") { await new Promise<void>(resolve => { release = resolve; }); return { success: true }; }
+    return { success: true, stage: "cancelled", results: [{ fileIndex: 0, status: "cancelled" }] };
+  });
+  await ui.addFiles([file("cancel.txt")]); const saving = ui.save();
+  await waitFor(() => expect(release).toBeTypeOf("function"));
+  fireEvent.click(panel.getByRole("button", { name: "Cancel import" })); release(); await saving;
+  expect(request.mock.calls.some(([operation]) => operation === "commit")).toBe(false);
+  expect(panel.getByRole("status")).toHaveTextContent("0 of 1 files saved. Import cancelled.");
+});

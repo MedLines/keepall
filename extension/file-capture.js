@@ -21,6 +21,7 @@ if (!globalThis.__keepallCreateFileCapture) {
     const element = node("section", "file-capture");
     const input = node("input"); input.type = "file"; input.multiple = true; input.accept = ACCEPT; input.hidden = true; input.setAttribute("aria-label", "Choose files");
     const add = button("Add files", () => input.click(), "secondary file-add");
+    add.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.99994 17C2.99994 17.93 2.99994 18.395 3.10216 18.7765C3.37956 19.8117 4.18821 20.6204 5.22348 20.8978C5.60498 21 6.06997 21 6.99994 21L16.9999 21C17.9299 21 18.3949 21 18.7764 20.8978C19.8117 20.6204 20.6203 19.8117 20.8977 18.7765C20.9999 18.395 20.9999 17.93 20.9999 17M16.5 7.49993C16.5 7.49993 13.1858 2.99997 12 2.99996C10.8141 2.99995 7.50002 7.49996 7.50002 7.49996M12 3.99996V16"/></svg><span>Add files</span>';
     const help = node("p", "note-help", "Images, video, PDF, text, or Markdown. You can also paste an image.");
     const panel = node("div", "file-staging");
     const list = node("ul", "file-list"); list.setAttribute("aria-label", "Files to save");
@@ -30,7 +31,7 @@ if (!globalThis.__keepallCreateFileCapture) {
     }
     const explanation = node("p", "note-help");
     const details = node("div", "file-details");
-    const removeAll = button("Remove all files", () => { releaseUrls(); state.entries = []; state.units = []; state.imageMode = null; render(); });
+    const removeAll = button("Remove all files", () => { releaseUrls(); state.entries = []; state.units = []; state.imageMode = null; state.gallery = { content: "", format: "plain" }; render(); });
     const progress = node("p", "file-progress"); progress.setAttribute("role", "status");
     const error = node("p", "error"); error.setAttribute("role", "alert");
     const actions = node("div", "file-actions");
@@ -86,7 +87,8 @@ if (!globalThis.__keepallCreateFileCapture) {
       try {
         validate([...state.entries.map(entry => entry.file), ...files]);
         const additions = [];
-        for (const file of files) {
+        for (const selectedFile of files) {
+          const file = new File([selectedFile], selectedFile.name, { type: selectedFile.type, lastModified: selectedFile.lastModified });
           const kind = classify(file);
           const entry = { id: uuid(), file, kind, title: file.name.replace(/\.[^.]+$/, ""), content: "", format: kind === "md" ? "markdown" : "plain" };
           if (["txt", "md"].includes(kind)) {
@@ -99,6 +101,7 @@ if (!globalThis.__keepallCreateFileCapture) {
           additions.push(entry);
         }
         if (disposed) return;
+        if (state.entries.length === 1 && allImages()) state.gallery = { content: state.entries[0].content, format: state.entries[0].format };
         state.entries.push(...additions); invalidate(); render();
       } catch (reason) { error.textContent = reason.message || "Could not read this file."; panel.hidden = false; }
       finally { busy = false; if (!disposed) { onBusy(false); updateDisabled(); } }
@@ -132,8 +135,10 @@ if (!globalThis.__keepallCreateFileCapture) {
         const name = node("div", "file-name"); name.append(node("span", "", entry.file.name), node("small", "", `${entry.file.size < 1024 ? entry.file.size + " B" : (entry.file.size / 1024).toFixed(1) + " KiB"}${entry.saved ? " · Saved" : entry.error ? " · " + entry.error : ""}`));
         const remove = button("×", () => {
           if (urls.has(entry.id)) URL.revokeObjectURL(urls.get(entry.id)); urls.delete(entry.id);
-          state.entries = state.entries.filter(item => item !== entry); invalidate(); render();
-        }, "file-remove"); remove.setAttribute("aria-label", `Remove ${entry.file.name}`); remove.disabled = !!entry.saved;
+          state.entries = state.entries.filter(item => item !== entry);
+          if (state.imageMode === "gallery" && state.entries.length === 1) Object.assign(state.entries[0], state.gallery);
+          invalidate(); render();
+        }, "file-remove"); remove.setAttribute("aria-label", `Remove ${entry.file.name}`); remove.dataset.entryId = entry.id; remove.disabled = !!entry.saved;
         row.append(name, remove); list.append(row);
       }
       const single = state.entries.length === 1 ? state.entries[0] : undefined;
@@ -154,7 +159,7 @@ if (!globalThis.__keepallCreateFileCapture) {
       const locked = busy || uncertain || disabled;
       for (const control of element.querySelectorAll("input,button")) {
         if ([retry, cancel, open].includes(control)) continue;
-        control.disabled = locked || (control.classList.contains("file-remove") && state.entries.some(entry => entry.saved && control.getAttribute("aria-label") === `Remove ${entry.file.name}`));
+        control.disabled = locked || (control.classList.contains("file-remove") && state.entries.some(entry => entry.saved && control.dataset.entryId === entry.id));
       }
       for (const editor of editors) editor.setDisabled(locked);
       retry.disabled = busy;
@@ -237,6 +242,7 @@ if (!globalThis.__keepallCreateFileCapture) {
           progress.textContent = `Sending ${file.name} · ${Math.min(offset + CHUNK, file.size)} of ${file.size} bytes`;
         }
       }
+      if (cancelRequested) { await poll(unit, await send("cancel", { sessionId: unit.sessionId })); return; }
       await poll(unit, await send("commit", { sessionId: unit.sessionId }));
     }
     async function save() {

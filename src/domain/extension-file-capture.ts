@@ -19,10 +19,11 @@ export type EditorFileAction = { type: "editor-file-action"; editorId: string } 
   { operation: "begin"; payload: ExtensionFileManifest } |
   { operation: "chunk"; payload: { sessionId: string; fileIndex: number; offset: number; data: string } } |
   { operation: "commit" | "status" | "cancel"; payload: { sessionId: string } } |
-  { operation: "open-bulk-import"; payload?: Record<string, never> }
+  { operation: "open-bulk-import"; payload?: Record<string, never> } |
+  { operation: "open-results"; payload: { actionIds: string[] } }
 );
 export type BulkImportReply = { success: true } | { success: false; error: string };
-export type ExtensionFileReply = ({ success: true } & ExtensionTransferStatus) | { success: false; error: string };
+export type ExtensionFileReply = ({ success: true; actionId?: string } & ExtensionTransferStatus) | { success: false; error: string };
 
 export type ExtensionFileResult = { fileIndex: number; fileName: string } & (
   { status: "saved"; itemId: string } | { status: "failed"; error: string } | { status: "cancelled" }
