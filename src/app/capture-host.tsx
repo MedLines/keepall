@@ -55,7 +55,7 @@ import {
 } from "./capture-link-conflict-dialog";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
-import { getCaptureCollectionName, OPEN_CAPTURE_EVENT } from "./capture-events";
+import { consumeBulkImportIntent, getCaptureCollectionName, OPEN_CAPTURE_EVENT } from "./capture-events";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_ACTIVE, SHELL_TOP_BTN_IDLE } from "./shell-styles";
@@ -274,10 +274,25 @@ export function CaptureHost() {
     openCapture();
     if ((event as CustomEvent<{ bulkImport?: boolean }>).detail?.bulkImport) openBulkImport();
   });
+  const onBulkImportIntent = useEffectEvent(() => {
+    if (bulkImportLocked || !consumeBulkImportIntent()) return;
+    openCapture();
+    openBulkImport();
+  });
   useEffect(() => {
     window.addEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
-    return () => window.removeEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
+    window.addEventListener("hashchange", onBulkImportIntent);
+    return () => {
+      window.removeEventListener(OPEN_CAPTURE_EVENT, onOpenCapture);
+      window.removeEventListener("hashchange", onBulkImportIntent);
+    };
   }, []);
+
+  useEffect(() => {
+    if (bulkImportLocked) return;
+    const timer = window.setTimeout(() => onBulkImportIntent(), 0);
+    return () => window.clearTimeout(timer);
+  }, [bulkImportLocked]);
 
   const receiveClipboard = useEffectEvent(({ image, text }: Awaited<ReturnType<typeof readClipboardImageAndText>>) => {
     clipboardTextUntouchedRef.current = Boolean(text);

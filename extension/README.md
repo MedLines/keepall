@@ -190,3 +190,115 @@ KEEPALL_E2E_PORT=3117 pnpm exec playwright test e2e/extension-capture.spec.ts e2
 
 Build Keepall first with `pnpm build`. The test server and extension fixtures use
 the same chosen port.
+
+## Local file transport (app and extension development)
+
+The file transport requires an app bridge advertising `file-transfer-v1` in its
+`ready.capabilities`. An older app returns an explicit unsupported-version error.
+This protocol is implemented for the Add files/image-paste UI integration; it is
+not a release announcement. Reload the extension after deploying the matching app.
+No additional permissions or database migration are required.
+
+The editor receives its `editorId` from the worker. Keep original `File` objects in
+the page draft until each result is confirmed. Send sequential runtime requests:
+
+```js
+const request = (operation, payload) => chrome.runtime.sendMessage({
+  type: "editor-file-action", editorId, operation, payload,
+});
+const manifest = {
+  manifestId: crypto.randomUUID(),
+  itemIds: [crypto.randomUUID()],
+  files: [{ name: file.name, type: file.type, size: file.size }],
+  imageMode: "separate",
+  organization: { collectionId: null, tagIds: [], tagNames: [] },
+  metadata: { title: "Reference", noteContent: "My note", noteFormat: "plain" },
+};
+const begun = await request("begin", manifest);
+// Check success before accessing sessionId. Keep this manifest frozen for retries.
+const { sessionId } = begun;
+// For each file in manifest order, base64-encode at most 256 KiB of raw bytes.
+await request("chunk", { sessionId, fileIndex: 0, offset: 0, data: base64Chunk });
+// Continue at the next byte offset only after the prior request succeeds.
+await request("commit", { sessionId });
+const result = await request("status", { sessionId });
+```
+
+`begin`, `chunk`, `commit`, `status`, and `cancel` return either
+`{ success: false, error }` or a flattened status:
+
+```js
+{
+  success: true,
+  sessionId: "<upload UUID>",
+  stage: "complete", // receiving | saving | complete | cancelled
+  receivedBytes: 3,
+  totalBytes: 3,
+  results: [{ fileIndex: 0, fileName: "a.txt", status: "saved", itemId: "<item UUID>" }],
+}
+```
+
+While saving, `processing` can be `reading`, `preparing-video`, or `saving`, with
+`fileIndex` identifying the current file. Results are ordered by file index.
+Failed results contain `error`; cancelled results have neither `error` nor
+`itemId`. A complete transfer can contain failed files; check each result.
+`commit` acknowledges promptly with stage `saving`; poll `status` for completion.
+`cancel` uses `{ sessionId }`. While a write is settling it can still report
+`saving`; keep polling until terminal. Already committed results remain `saved`.
+
+Use one output item UUID per file for `separate`, or one UUID for an image-only
+`gallery`. A gallery saves atomically in manifest order. Metadata applies to each
+separate item, or to the gallery. Image notes become captions, and document/video
+notes preserve `noteFormat`. The worker supplies the registered page URL; callers
+may omit `metadata.sourceUrl`, or supply exactly that URL. File saves do not update
+the captured page link.
+
+Selected collection/tag IDs must still exist when saving. Existing IDs can be
+non-UUID strings restored from a backup. `collectionName` creates/reuses a collection
+only when no `collectionId` is supplied; `tagNames` are additional new tag choices.
+A retry reuses an existing output ID only when its active type, original content,
+filename where applicable, and gallery order match. It never reapplies metadata.
+Trash or mismatching IDs fail. Overlapping writes check IDs inside the same write
+transaction, so a second save cannot leave extra originals or organization rows.
+
+Recovery rules:
+
+- Retry an unacknowledged chunk with the same offset and bytes. Conflicting bytes,
+  gaps, oversize chunks, and out-of-order files fail.
+- Retry `begin` with the identical frozen manifest after a lost begin reply.
+- After a lost commit reply, poll status before retransmitting bytes.
+- An unknown/expired session requires a new begin and full upload using the same
+  manifest/item UUIDs. Completed items are reused without duplication.
+- To retry only failed/cancelled separate files, create a new manifest UUID containing
+  just those files and their original item UUIDs. For a cancelled gallery, retry
+  every gallery file with the original gallery item UUID and a new manifest UUID.
+- Editing file content or gallery order requires new output item UUIDs.
+
+Limits are checked before app-side buffer allocation: 50 files, 200 MiB per
+transfer and across active transfer buffers, 20 MiB per image, 10 MiB per text or
+Markdown document, 50 MiB per PDF, and 100 MiB per MP4/WebM. Raw chunks are at most
+256 KiB; the offscreen document transfers their ArrayBuffers to the app frame.
+There are at most four active transfers and 32 cached terminal results. Idle
+sessions expire after ten minutes; terminal cache eviction can expire them sooner.
+Polling refreshes idle expiry. Closing/reloading the bridge drops buffers and
+aborts pending work. The worker retains at most 64 editor registrations for ten
+minutes of inactivity in `storage.session`, containing only tab/editor IDs,
+library origin, page URL and timestamp. File bytes, manifests and notes are never
+persisted in extension storage by this transport.
+
+Manifest filenames are at most 255 characters, MIME strings 128, titles 500,
+notes 10,000, source URLs 8,192, organization names 120, and existing organization
+IDs 100. At most 100 selected tag IDs and 100 new tag names are accepted. UUIDs are
+required for manifest/output/session/editor IDs. Unknown manifest fields fail.
+TypeScript contracts and limits are exported by
+`src/domain/extension-file-capture.ts` (`EditorFileAction`, `ExtensionFileManifest`,
+`ExtensionFileReply`, `ExtensionTransferStatus`, `ExtensionFileResult`, and
+`BulkImportReply`).
+
+For Bulk import, send `request("open-bulk-import", {})`. Its reply is only
+`{ success: true }` or `{ success: false, error }`. The worker focuses a root
+Keepall tab, preserving its query, or creates one; existing item-detail tabs stay
+open. Its only added URL data is `#keepall-bulk-import=<nonce>`. After mount or
+hashchange, the app consumes that intent once, removes only that hash with
+`history.replaceState`, and opens the existing Bulk import dialog. A busy capture
+keeps the hash until the dialog can open. The extension draft stays available.

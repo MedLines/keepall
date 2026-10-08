@@ -1539,4 +1539,52 @@ describe("CaptureHost", () => {
     expect(vi.mocked(importFiles).mock.calls[1][0]).toEqual([files[1]]);
   });
 
+
+test("extension bulk import intent opens after mount, strips only its hash and consumes once", async () => {
+  const nonce = crypto.randomUUID();
+  window.history.replaceState({ keep: true }, "", `/?q=keep#keepall-bulk-import=${nonce}`);
+  render(<CaptureHost />);
+  const bulk = await screen.findByRole("dialog", { name: "Bulk import" });
+  expect(bulk).toBeVisible();
+  expect(window.location.search).toBe("?q=keep"); expect(window.location.hash).toBe("");
+  expect(window.history.state).toEqual({ keep: true });
+  fireEvent.click(within(bulk).getByRole("button", { name: "Done" }));
+  fireEvent(window, new HashChangeEvent("hashchange"));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Bulk import" })).toBeNull());
+  window.history.replaceState(null, "", `/?q=keep#keepall-bulk-import=${nonce}`);
+  fireEvent(window, new HashChangeEvent("hashchange"));
+  expect(screen.queryByRole("dialog", { name: "Bulk import" })).toBeNull();
+  window.history.replaceState(null, "", "/");
+});
+
+test("extension bulk intent handles hashchange and preserves ordinary or malformed hashes", async () => {
+  window.history.replaceState(null, "", "/#ordinary");
+  render(<CaptureHost />);
+  expect(window.location.hash).toBe("#ordinary");
+  expect(screen.queryByRole("dialog", { name: "Bulk import" })).toBeNull();
+  window.history.replaceState(null, "", "/#keepall-bulk-import=not-a-nonce");
+  fireEvent(window, new HashChangeEvent("hashchange"));
+  expect(window.location.hash).toBe("#keepall-bulk-import=not-a-nonce");
+  window.history.replaceState(null, "", `/#keepall-bulk-import=${crypto.randomUUID()}`);
+  fireEvent(window, new HashChangeEvent("hashchange"));
+  expect(await screen.findByRole("dialog", { name: "Bulk import" })).toBeVisible();
+  expect(window.location.hash).toBe("");
+});
+
+  test("extension bulk intent waits until pending file preparation unlocks", async () => {
+    await openDraft("");
+    const preparation = deferred<Blob>();
+    vi.mocked(prepareLocalVideo).mockReturnValue(preparation.promise);
+    pickVideo(new File(["video"], "clip.mp4", { type: "video/mp4" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Bulk import" })).toBeDisabled());
+    const hash = `#keepall-bulk-import=${crypto.randomUUID()}`;
+    window.history.replaceState(null, "", `/${hash}`);
+    fireEvent(window, new HashChangeEvent("hashchange"));
+    expect(window.location.hash).toBe(hash);
+    expect(screen.queryByRole("dialog", { name: "Bulk import" })).toBeNull();
+    await act(async () => preparation.resolve(new Blob(["poster"])));
+    expect(await screen.findByRole("dialog", { name: "Bulk import" })).toBeVisible();
+    expect(window.location.hash).toBe("");
+  });
+
 });
