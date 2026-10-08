@@ -10,6 +10,10 @@ type Save = (manifest: ExtensionFileManifest, bytes: Uint8Array[], options: Pick
 /** Created after mount. All uploaded bytes stay in this trusted frame. */
 export function createFileTransfer(save: Save) {
   const sessions = new Map<string, Session>();
+  function trimCompleted() {
+    const completed = [...sessions.values()].filter(session => session.status.stage === "complete" || session.status.stage === "cancelled").sort((a, b) => a.touched - b.touched);
+    for (const session of completed.slice(0, Math.max(0, completed.length - 32))) sessions.delete(session.status.sessionId);
+  }
   function prune() {
     for (const [id, session] of sessions) {
       if (Date.now() - session.touched <= TRANSFER_TTL_MS) continue;
@@ -38,8 +42,7 @@ export function createFileTransfer(save: Save) {
     }
     const active = [...sessions.values()].filter(session => session.status.stage === "receiving" || session.status.stage === "saving");
     if (active.length >= 4) throw new Error("Too many active file sessions. Finish or cancel another transfer.");
-    const completed = [...sessions.values()].filter(session => session.status.stage === "complete" || session.status.stage === "cancelled").sort((a, b) => a.touched - b.touched);
-    for (const session of completed.slice(0, Math.max(0, completed.length - 31))) sessions.delete(session.status.sessionId);
+    trimCompleted();
     const totalBytes = manifest.files.reduce((sum, file) => sum + file.size, 0);
     const reserved = [...sessions.values()].reduce((sum, session) => sum + (session.bytes.length ? session.status.totalBytes : 0), 0);
     if (reserved + totalBytes > MAX_TRANSFER_BYTES) throw new Error("Active transfers exceed 200 MiB. Finish or cancel another transfer.");
@@ -83,6 +86,7 @@ export function createFileTransfer(save: Save) {
       session.status.stage = session.controller.signal.aborted ? "cancelled" : "complete";
       delete session.status.processing; delete session.status.fileIndex;
       session.touched = Date.now();
+      trimCompleted();
     });
     return snapshot(session);
   }
@@ -94,6 +98,7 @@ export function createFileTransfer(save: Save) {
     if (session.status.stage === "receiving") {
       session.bytes = []; session.status.stage = "cancelled";
       session.status.results = session.manifest.files.map((file, fileIndex) => ({ fileIndex, fileName: file.name, status: "cancelled" }));
+      trimCompleted();
     }
     return snapshot(session);
   }
