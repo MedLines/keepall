@@ -3,11 +3,14 @@
 import json
 import os
 import sys
+import subprocess
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 
 extension = Path(__file__).resolve().parents[1] / "extension"
+subprocess.run(["pnpm", "run", "build:extension"], cwd=extension.parent, check=True)
+subprocess.run(["pnpm", "run", "check:extension"], cwd=extension.parent, check=True)
 manifest = json.loads((extension / "manifest.json").read_text())
 manifest.pop("key", None)  # Chrome assigns the Store item ID; key is for unpacked development.
 output = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(f"/tmp/keepall-capture-{manifest['version']}.zip")

@@ -14,7 +14,9 @@
     "test:watch": "vitest",
     "test:e2e": "pnpm build && playwright test",
     "test:pwa-update": "playwright test e2e/pwa-update.spec.ts --config playwright.pwa-update.config.ts && pnpm build",
-    "test:contact-db": "node scripts/test-contact-postgres.mjs"
+    "test:contact-db": "node scripts/test-contact-postgres.mjs",
+    "build:extension": "node scripts/build-extension-preview.mjs",
+    "check:extension": "node scripts/build-extension-preview.mjs --check"
   },
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
