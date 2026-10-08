@@ -4,6 +4,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
 
+const port = process.env.KEEPALL_E2E_PORT ?? "3100";
+const origin = `http://localhost:${port}`;
+const itemUrl = new RegExp(`localhost:${port}/items/[0-9a-f-]+\\?from=%2F$`);
+
 type ExtensionTab = { id: number; url?: string; title?: string };
 declare const chrome: {
   storage: { local: { set(values: Record<string, string>): Promise<void> } };
@@ -294,9 +298,9 @@ test("Chrome access management preserves library recovery and saving", async () 
   context = await launch();
   try {
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
-    await worker.evaluate(() => chrome.storage.local.set({ origin: "http://localhost:3100" }));
+    await worker.evaluate((origin) => chrome.storage.local.set({ origin }), origin);
     const library = await context.newPage();
-    await library.goto("http://localhost:3100/");
+    await library.goto(`${origin}/`);
     const options = await context.newPage();
     await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
     await options.getByRole("tab", { name: "Image access", exact: true }).click();
@@ -309,7 +313,7 @@ test("Chrome access management preserves library recovery and saving", async () 
     await expect.poll(() => management.url()).toBe(`chrome://extensions/?id=${extensionId}`);
     await management.close();
     const source = await context.newPage();
-    await source.goto("http://localhost:3100/help");
+    await source.goto(`${origin}/help`);
     const save = (url: string) => worker.evaluate(async (linkUrl) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await saveContext({ menuItemId: "save-to-keepall", linkUrl }, tab);
@@ -334,11 +338,11 @@ test("Chrome access management preserves library recovery and saving", async () 
     await source.bringToFront();
     expect(await save("https://example.com/after-reconnect")).toBe("Link saved to Keepall");
     await expect(library.locator(".library-card")).toHaveCount(2);
-    const imageMessage = await worker.evaluate(async () => {
+    const imageMessage = await worker.evaluate(async (origin) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      await saveContext({ menuItemId: "save-to-keepall", mediaType: "image", srcUrl: "http://localhost:3100/icons/icon-192.png" }, tab);
+      await saveContext({ menuItemId: "save-to-keepall", mediaType: "image", srcUrl: `${origin}/icons/icon-192.png` }, tab);
       return chrome.action.getTitle({ tabId: tab.id });
-    });
+    }, origin);
     expect(imageMessage).toBe("Image saved to Keepall");
     await expect(library.locator(".library-card")).toHaveCount(3);
     expect(await worker.evaluate(() => chrome.permissions.contains({ origins: ["*://*/*"] }))).toBe(false);
@@ -361,17 +365,17 @@ test("connection checks, selected text, and appearance work together", async ({}
   });
   try {
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
-    await worker.evaluate(() => chrome.storage.local.set({ origin: "http://localhost:3100" }));
+    await worker.evaluate((origin) => chrome.storage.local.set({ origin }), origin);
     const options = await context.newPage();
     await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
-    await expect(options.locator("#library-destination")).toContainText("localhost:3100");
+    await expect(options.locator("#library-destination")).toContainText(`localhost:${port}`);
     await options.locator("#connection-check").click();
     await expect(options.locator("#connection-status")).toHaveText("Connected to your library.");
     const library = await context.newPage();
-    await library.goto("http://localhost:3100/");
-    await expect(library.getByText("No items yet.", { exact: true })).toBeVisible();
+    await library.goto(`${origin}/`);
+    await expect(library.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     const source = await context.newPage();
-    await source.goto("http://localhost:3100/help");
+    await source.goto(`${origin}/help`);
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => {
@@ -379,10 +383,10 @@ test("connection checks, selected text, and appearance work together", async ({}
         Element.prototype.attachShadow = function (options) { return attach.call(this, { ...options, mode: "open" }); };
       } });
     });
-    const saveText = (text: string) => worker.evaluate(async (selectionText) => {
+    const saveText = (text: string) => worker.evaluate(async ({ selectionText, origin }) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      await saveContext({ menuItemId: "save-to-keepall", selectionText, pageUrl: "http://localhost:3100/help" }, tab);
-    }, text);
+      await saveContext({ menuItemId: "save-to-keepall", selectionText, pageUrl: `${origin}/help` }, tab);
+    }, { selectionText: text, origin });
     const toast = source.locator("#keepall-capture-ui .toast");
     await saveText("A useful passage");
     await expect(toast).toContainText("Text saved to Keepall");
@@ -404,7 +408,7 @@ test("connection checks, selected text, and appearance work together", async ({}
       };
     }));
     expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({ url: "http://localhost:3100/help", noteContent: "A useful passage\n\nAnother useful passage" });
+    expect(items[0]).toMatchObject({ url: `${origin}/help`, noteContent: "A useful passage\n\nAnother useful passage" });
 
     const appearance = options.getByRole("region", { name: "Appearance", exact: true });
     await options.bringToFront();
@@ -439,7 +443,7 @@ test("connection checks, selected text, and appearance work together", async ({}
     await options.locator("#connection-check").click();
     await expect(options.locator("#connection-status")).toContainText("Could not reach your local library", { timeout: 20_000 });
     await expect(options.getByRole("button", { name: "Try again", exact: true })).toBeEnabled();
-    await options.locator("#origin").fill("http://localhost:3100");
+    await options.locator("#origin").fill(origin);
     await options.getByRole("button", { name: "Save address", exact: true }).click();
     await options.locator("#connection-check").click();
     await expect(options.locator("#connection-status")).toHaveText("Connected to your library.");
@@ -464,7 +468,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
 
   try {
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
-    await worker.evaluate(() => chrome.storage.local.set({ origin: "http://localhost:3100" }));
+    await worker.evaluate((origin) => chrome.storage.local.set({ origin }), origin);
     expect(await worker.evaluate(() => chrome.commands.getAll())).toContainEqual(
       expect.objectContaining({ name: "open-editor", shortcut: "Alt+K" }),
     );
@@ -473,22 +477,22 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
     await expect(options.getByRole("heading", { name: "Capture settings" })).toBeVisible();
     await expect(options.getByRole("region", { name: "Library address" })).toBeVisible();
-    await options.getByLabel("Keepall address").fill("http://localhost:3100");
+    await options.getByLabel("Keepall address").fill(origin);
     await options.getByRole("button", { name: "Save address" }).click();
     await expect(options.locator("#status")).toHaveText("Address saved.");
-    await expect(options.getByRole("link", { name: "Open library" })).toHaveAttribute("href", "http://localhost:3100/");
+    await expect(options.getByRole("link", { name: "Open library" })).toHaveAttribute("href", `${origin}/`);
     await options.close();
 
     const openLibrary = await context.newPage();
-    await openLibrary.goto("http://localhost:3100/");
-    await expect(openLibrary.getByText("No items yet.", { exact: true })).toBeVisible();
+    await openLibrary.goto(`${origin}/`);
+    await expect(openLibrary.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
     const source = await context.newPage();
-    await source.route("http://localhost:3100/test-article", (route) => route.fulfill({
+    await source.route(`${origin}/test-article`, (route) => route.fulfill({
       contentType: "text/html",
       body: "<!doctype html><title>Example article</title><h1>Article outside Keepall</h1>",
     }));
-    await source.goto("http://localhost:3100/test-article");
+    await source.goto(`${origin}/test-article`);
     await source.setViewportSize({ width: 320, height: 640 });
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -539,7 +543,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await source.close();
 
     const organizationSetup = await context.newPage();
-    await organizationSetup.goto("http://localhost:3100/");
+    await organizationSetup.goto(`${origin}/`);
     await organizationSetup.evaluate(async () => {
       const database = await new Promise<IDBDatabase>((resolve, reject) => {
         const request = indexedDB.open("keepall");
@@ -558,11 +562,11 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await organizationSetup.close();
 
     const movedPage = await context.newPage();
-    await movedPage.route("http://localhost:3100/test-article", (route) => route.fulfill({
+    await movedPage.route(`${origin}/test-article`, (route) => route.fulfill({
       contentType: "text/html",
       body: "<!doctype html><title>Example article</title><h1>Article outside Keepall</h1>",
     }));
-    await movedPage.goto("http://localhost:3100/test-article");
+    await movedPage.goto(`${origin}/test-article`);
     const moved = await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await saveTab(tab, { collectionId: "collection-reading" });
@@ -617,7 +621,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await editorPage.screenshot({ path: testInfo.outputPath("drawer-saved.png"), animations: "disabled" });
     const pageCount = context.pages().length;
     await complete.getByRole("button", { name: "Open in Keepall", exact: true }).click();
-    await expect(openLibrary).toHaveURL(/localhost:3100\/items\/[0-9a-f-]+\?from=%2F$/);
+    await expect(openLibrary).toHaveURL(itemUrl);
     await expect(openLibrary.getByRole("heading", { name: "Chosen title", level: 1 })).toBeVisible();
     expect(context.pages()).toHaveLength(pageCount);
     await expect(editorHost.locator("dialog")).toHaveCount(0);
@@ -709,7 +713,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await newNamesPage.close();
 
     const library = await context.newPage();
-    await library.goto("http://localhost:3100/");
+    await library.goto(`${origin}/`);
     const items = await library.evaluate(() => new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
       const request = indexedDB.open("keepall");
       request.onerror = () => reject(request.error);
@@ -730,7 +734,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     }));
     const markdownLink = items.find((item) => item.url === "http://localhost:3200/note-article");
     expect(typeof markdownLink?.id).toBe("string");
-    await library.goto(`http://localhost:3100/items/${markdownLink?.id}`);
+    await library.goto(`${origin}/items/${markdownLink?.id}`);
     await expect(library.getByRole("heading", { name: "Revised note", level: 2 })).toBeVisible();
 
     const namedOrganization = await library.evaluate(() => new Promise<{
@@ -773,15 +777,15 @@ test("save notifications open the item and undo only new captures", async ({}, t
   });
   try {
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
-    await worker.evaluate(() => chrome.storage.local.set({ origin: "http://localhost:3100" }));
+    await worker.evaluate((origin) => chrome.storage.local.set({ origin }), origin);
     const library = await context.newPage();
-    await library.goto("http://localhost:3100/");
-    await expect(library.getByText("No items yet.", { exact: true })).toBeVisible();
+    await library.goto(`${origin}/`);
+    await expect(library.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     const source = await context.newPage();
-    await source.route("http://localhost:3100/action-article", (route) => route.fulfill({
+    await source.route(`${origin}/action-article`, (route) => route.fulfill({
       contentType: "text/html", body: "<!doctype html><title>Action article</title><h1>Article</h1>",
     }));
-    await source.goto("http://localhost:3100/action-article");
+    await source.goto(`${origin}/action-article`);
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => {
@@ -814,7 +818,7 @@ test("save notifications open the item and undo only new captures", async ({}, t
     }
     await toast.getByRole("button", { name: "Undo", exact: true }).click();
     await expect(toast).toContainText("Save undone");
-    await expect(library.getByText("No items yet.", { exact: true })).toBeVisible();
+    await expect(library.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
     await save();
     await save();
@@ -869,14 +873,16 @@ test("save notifications open the item and undo only new captures", async ({}, t
     await expect(toast.getByRole("button", { name: "Organize", exact: true })).toBeFocused();
     await toast.getByRole("button", { name: "Organize", exact: true }).click();
     await picker.getByRole("searchbox").fill("read");
+    await expect(picker.getByRole("button", { name: /Create/ })).toHaveCount(0);
     await picker.getByRole("button", { name: "Reading", exact: true }).click();
-    await expect(picker).toHaveCount(0);
+    await expect(picker).toBeVisible();
     await expect(toast).toContainText("Moved to Reading");
-    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Reading", exact: true })).toBeFocused();
+    await picker.getByRole("searchbox").fill("");
     await expect(picker.getByRole("button", { name: "Reading", exact: true })).toHaveAttribute("aria-pressed", "true");
     await picker.getByRole("button", { name: "Unsorted", exact: true }).click();
     await expect(toast).toContainText("Moved to Unsorted");
-    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Unsorted", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(picker).toHaveCSS("transform", "none");
     const panelBefore = (await picker.boundingBox())!;
     const inputBefore = (await picker.getByRole("searchbox").boundingBox())!;
@@ -896,9 +902,18 @@ test("save notifications open the item and undo only new captures", async ({}, t
       expect(bounds.width).toBe(inputBefore.width);
     }
     await picker.getByRole("searchbox").press("Enter");
-    await expect(picker).toHaveCount(0);
+    await expect(picker).toBeVisible();
     await expect(toast).toContainText("Moved to Side projects");
-    await toast.getByRole("button", { name: "Organize", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Side projects", exact: true })).toBeFocused();
+    await picker.getByRole("searchbox").fill("read");
+    await picker.getByRole("button", { name: "Reading", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Reading", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await picker.getByRole("searchbox").fill("Side");
+    await expect(picker.getByRole("button", { name: /Create/ })).toHaveCount(0);
+    await picker.getByRole("button", { name: "Side projects", exact: true }).click();
+    await expect(picker.getByRole("button", { name: "Side projects", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await source.clock.fastForward(35_000);
+    await expect(picker).toBeVisible();
     await picker.getByRole("searchbox").fill(" SIDE PROJECTS ");
     await expect(picker.getByRole("button", { name: /Create/ })).toHaveCount(0);
     await expect(picker.getByRole("button", { name: "Side projects", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -927,7 +942,7 @@ test("save notifications open the item and undo only new captures", async ({}, t
     await picker.getByRole("button", { name: "Close organizer" }).click();
     const pageCount = context.pages().length;
     await toast.getByRole("button", { name: "Open in Keepall" }).click();
-    await expect(library).toHaveURL(/localhost:3100\/items\/[0-9a-f-]+\?from=%2F$/);
+    await expect(library).toHaveURL(itemUrl);
     await expect(library.getByRole("heading", { name: "Action article", level: 1 })).toBeVisible();
     await expect(library.getByRole("link", { name: "Back to library" })).toHaveAttribute("href", "/");
     expect(context.pages()).toHaveLength(pageCount);
@@ -935,15 +950,15 @@ test("save notifications open the item and undo only new captures", async ({}, t
     await source.bringToFront();
     await save();
     await toast.getByRole("button", { name: "Open in Keepall" }).click();
-    await expect(library).toHaveURL(/localhost:3100\/items\/[0-9a-f-]+\?from=%2F$/);
+    await expect(library).toHaveURL(itemUrl);
     expect(context.pages()).toHaveLength(pageCount);
 
     // Image undo moves the image to Trash and retains its media without touching the saved link.
     await source.bringToFront();
-    await worker.evaluate(async () => {
+    await worker.evaluate(async (origin) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      await saveContext({ menuItemId: "save-to-keepall", mediaType: "image", srcUrl: "http://localhost:3100/icons/icon-192.png" }, tab);
-    });
+      await saveContext({ menuItemId: "save-to-keepall", mediaType: "image", srcUrl: `${origin}/icons/icon-192.png` }, tab);
+    }, origin);
     await expect(toast).toContainText("Image saved to Keepall");
     await toast.getByRole("button", { name: "Undo", exact: true }).click();
     await expect(toast).toContainText("Save undone");
@@ -967,16 +982,15 @@ test("save notifications open the item and undo only new captures", async ({}, t
       };
     }));
     expect(stored).toEqual({ types: ["link"], trashedTypes: ["image", "link"], assets: 1 });
-    await worker.evaluate(async () => {
+    await worker.evaluate(async (origin) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      await saveContext({ menuItemId: "save-to-keepall", mediaType: "image", srcUrl: "http://localhost:3100/icons/icon-192.png" }, tab);
-    });
+      await saveContext({ menuItemId: "save-to-keepall", mediaType: "image", srcUrl: `${origin}/icons/icon-192.png` }, tab);
+    }, origin);
     await expect(toast.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
     await toast.getByRole("button", { name: "Organize", exact: true }).click();
     await picker.getByRole("button", { name: "Inspiration", exact: true }).click();
     await expect(toast).toContainText("Moved to Inspiration");
     await expect(toast.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0);
-    await toast.getByRole("button", { name: "Organize", exact: true }).click();
     await expect(picker.getByRole("button", { name: "Inspiration", exact: true })).toHaveAttribute("aria-pressed", "true");
     await picker.getByRole("button", { name: "Tags", exact: true }).click();
     await picker.getByRole("button", { name: "Reference", exact: true }).click();
@@ -988,7 +1002,7 @@ test("save notifications open the item and undo only new captures", async ({}, t
     const newLibrary = context.waitForEvent("page");
     await toast.getByRole("button", { name: "Open in Keepall" }).click();
     const opened = await newLibrary;
-    await expect(opened).toHaveURL(/localhost:3100\/items\/[0-9a-f-]+\?from=%2F$/);
+    await expect(opened).toHaveURL(itemUrl);
     await expect(opened.getByRole("heading", { name: "Action article", level: 1 })).toBeVisible();
     await expect(opened.getByRole("link", { name: "Back to library" })).toHaveAttribute("href", "/");
   } finally {
@@ -1007,12 +1021,12 @@ test("notifications expire Undo and retry loading organizations without closing"
   });
   try {
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
-    await worker.evaluate(() => chrome.storage.local.set({ origin: "http://localhost:3100" }));
+    await worker.evaluate((origin) => chrome.storage.local.set({ origin }), origin);
     const source = await context.newPage();
-    await source.route("http://localhost:3100/retry-article", (route) => route.fulfill({
+    await source.route(`${origin}/retry-article`, (route) => route.fulfill({
       contentType: "text/html", body: "<!doctype html><title>Retry article</title><h1>Article</h1>",
     }));
-    await source.goto("http://localhost:3100/retry-article");
+    await source.goto(`${origin}/retry-article`);
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => {
@@ -1064,6 +1078,7 @@ test("notifications expire Undo and retry loading organizations without closing"
       const send = chrome.runtime.sendMessage.bind(chrome.runtime);
       let failLoad = true;
       let failMove = true;
+      let failRefresh = false;
       chrome.runtime.sendMessage = (message) => {
         if (message.target === "offscreen" && message.type === "capture-collections" && failLoad) {
           failLoad = false;
@@ -1072,6 +1087,13 @@ test("notifications expire Undo and retry loading organizations without closing"
         if (message.target === "offscreen" && message.type === "move-capture" && failMove) {
           failMove = false;
           return Promise.resolve({ error: "Could not move this item. Try again." });
+        }
+        if (message.target === "offscreen" && message.type === "capture-collections" && failRefresh) {
+          failRefresh = false;
+          return Promise.resolve({ error: "Could not refresh choices." });
+        }
+        if (message.target === "offscreen" && message.type === "move-capture") {
+          return send(message).then((result) => { failRefresh = !result.error; return result; });
         }
         return send(message);
       };
@@ -1093,7 +1115,13 @@ test("notifications expire Undo and retry loading organizations without closing"
     await expect(undo).toBeDisabled();
     await create.click();
     await expect(toast).toContainText("Moved to Retry collection");
-    await expect(picker).toHaveCount(0);
+    await expect(picker.getByRole("alert")).toHaveText("Saved. Could not refresh choices. Retry to continue organizing.");
+    await expect(picker.getByRole("searchbox")).toBeDisabled();
+    await expect(undo).toHaveCount(0);
+    await picker.getByRole("button", { name: "Retry", exact: true }).click();
+    await expect(picker.getByRole("searchbox")).toBeFocused();
+    await expect(picker.getByRole("button", { name: "Retry collection", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await picker.getByRole("button", { name: "Close organizer" }).click();
     const libraryPage = context.waitForEvent("page");
     await toast.getByRole("button", { name: "Open in Keepall" }).click();
     const library = await libraryPage;
@@ -1120,21 +1148,21 @@ test("extension saves a right-clicked image to the local library", async () => {
 
   try {
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
-    await worker.evaluate(() => chrome.storage.local.set({ origin: "http://localhost:3100" }));
+    await worker.evaluate((origin) => chrome.storage.local.set({ origin }), origin);
     const grantedOrigins = await worker.evaluate(() => chrome.permissions.getAll());
     expect(grantedOrigins.origins).not.toContain("https://*/*");
     expect(grantedOrigins.origins).not.toContain("http://*/*");
     expect(grantedOrigins.origins).not.toContain("*://*/*");
     const library = await context.newPage();
-    await library.goto("http://localhost:3100/");
-    await expect(library.getByText("No items yet.", { exact: true })).toBeVisible();
+    await library.goto(`${origin}/`);
+    await expect(library.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
     const source = await context.newPage();
-    await source.route("http://localhost:3100/test-image-source", (route) => route.fulfill({
+    await source.route(`${origin}/test-image-source`, (route) => route.fulfill({
       contentType: "text/html",
       body: '<!doctype html><title>Image source</title><img alt="Keepall logo" src="/icons/icon-192.png">',
     }));
-    await source.goto("http://localhost:3100/test-image-source");
+    await source.goto(`${origin}/test-image-source`);
     await expect(source.getByRole("img", { name: "Keepall logo" })).toBeVisible();
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -1145,7 +1173,7 @@ test("extension saves a right-clicked image to the local library", async () => {
         };
       } });
     });
-    const imageUrl = "http://localhost:3100/icons/icon-192.png";
+    const imageUrl = `${origin}/icons/icon-192.png`;
 
     const first = await worker.evaluate(async (url) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -1179,7 +1207,7 @@ test("extension saves a right-clicked image to the local library", async () => {
     }));
     expect(item).toMatchObject({
       type: "image",
-      sourceUrl: "http://localhost:3100/test-image-source",
+      sourceUrl: `${origin}/test-image-source`,
     });
     expect(item.bytes).toBeGreaterThan(0);
 
@@ -1191,11 +1219,11 @@ test("extension saves a right-clicked image to the local library", async () => {
     expect(second).toBe("This image was already saved");
     await expect(library.locator(".library-card")).toHaveCount(1);
 
-    const unsupported = await worker.evaluate(async () => {
+    const unsupported = await worker.evaluate(async (origin) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      await saveContext({ menuItemId: "save-to-keepall", mediaType: "image", srcUrl: "http://localhost:3100/icon.svg", linkUrl: "https://destination.example/unsupported-image" }, tab);
+      await saveContext({ menuItemId: "save-to-keepall", mediaType: "image", srcUrl: `${origin}/icon.svg`, linkUrl: "https://destination.example/unsupported-image" }, tab);
       return chrome.action.getTitle({ tabId: tab.id });
-    });
+    }, origin);
     expect(unsupported).toContain("PNG, JPEG, GIF, WebP, or AVIF");
     await expect(source.locator("#keepall-capture-ui .toast.is-visible"))
       .toContainText("PNG, JPEG, GIF, WebP, or AVIF");
@@ -1216,15 +1244,15 @@ test("extension saves a clicked link destination without opening it", async () =
   });
   try {
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
-    await worker.evaluate(() => chrome.storage.local.set({ origin: "http://localhost:3100" }));
+    await worker.evaluate((origin) => chrome.storage.local.set({ origin }), origin);
     const library = await context.newPage();
-    await library.goto("http://localhost:3100/");
+    await library.goto(`${origin}/`);
     const source = await context.newPage();
-    await source.route("http://localhost:3100/link-source", (route) => route.fulfill({
+    await source.route(`${origin}/link-source`, (route) => route.fulfill({
       contentType: "text/html",
       body: '<!doctype html><title>Source page title</title><a href="https://destination.example/article?ref=feed">An article to save</a>',
     }));
-    await source.goto("http://localhost:3100/link-source");
+    await source.goto(`${origin}/link-source`);
     const destination = await source.getByRole("link", { name: "An article to save" }).getAttribute("href");
     const save = () => worker.evaluate(async (url) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -1232,7 +1260,7 @@ test("extension saves a clicked link destination without opening it", async () =
       return chrome.action.getTitle({ tabId: tab.id });
     }, destination!);
     expect(await save()).toBe("Link saved to Keepall");
-    expect(source.url()).toBe("http://localhost:3100/link-source");
+    expect(source.url()).toBe(`${origin}/link-source`);
     await expect(library.locator(".library-card")).toHaveCount(1);
     const saved = await library.evaluate(() => new Promise<{ url: string; title: string; collectionIds: string[] }>((resolve, reject) => {
       const request = indexedDB.open("keepall");
@@ -1266,11 +1294,11 @@ test("extension saves a clicked link destination without opening it", async () =
 });
 
 test("extension drafts stay isolated, survive failed saves, and can be discarded", async ({ page }, testInfo) => {
-  await page.route("http://localhost:3100/draft-fixture", (route) => route.fulfill({
+  await page.route(`${origin}/draft-fixture`, (route) => route.fulfill({
     contentType: "text/html", body: "<!doctype html><title>Draft fixture</title>",
   }));
-  await page.goto("http://localhost:3100/draft-fixture");
-  const bridge = await page.evaluateHandle(() => {
+  await page.goto(`${origin}/draft-fixture`);
+  const bridge = await page.evaluateHandle((origin) => {
     let listener: (message: Record<string, unknown>) => void;
     let lastSave: unknown;
     const attach = Element.prototype.attachShadow;
@@ -1278,7 +1306,7 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
       return attach.call(this, { ...options, mode: "open" });
     };
     Object.assign(globalThis, { chrome: { runtime: {
-      getURL: (file: string) => `http://localhost:3100/${file}`,
+      getURL: (file: string) => `${origin}/${file}`,
       onMessage: { addListener: (callback: typeof listener) => { listener = callback; } },
       sendMessage: (message: unknown) => { lastSave = message; },
     } } });
@@ -1286,7 +1314,7 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
       send: (message: Record<string, unknown>) => listener(message),
       lastSave: () => lastSave,
     };
-  });
+  }, origin);
   for (const file of ["org-picker.js", "page-ui.js"]) {
     await page.addScriptTag({ content: await readFile(path.resolve("extension", file), "utf8") });
   }
@@ -1296,9 +1324,9 @@ test("extension drafts stay isolated, survive failed saves, and can be discarded
   const snapshot = { id: "saved-link", title: "Saved title", noteContent: "Saved note", noteFormat: "plain", collectionIds: [], tagIds: [] };
   const organizations = { type: "organizations", collections: [], tags: [], existingLink: snapshot, collectionId: null, tagIds: [] };
   let editorId = "";
-  const open = async (url = "https://example.com/article", origin = "http://localhost:3100", load = true) => {
+  const open = async (url = "https://example.com/article", libraryOrigin = origin, load = true) => {
     editorId = crypto.randomUUID();
-    await bridge.evaluate((value, message) => value.send(message), { type: "editor", url, origin, title: "Page title", editorId });
+    await bridge.evaluate((value, message) => value.send(message), { type: "editor", url, origin: libraryOrigin, title: "Page title", editorId });
     if (load) await bridge.evaluate((value, message) => value.send(message), { ...organizations, editorId });
   };
   const close = async (name = "Close") => {

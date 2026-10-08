@@ -10,8 +10,8 @@ afterEach(() => { dispose?.(); document.body.replaceChildren(); });
 async function setup(failInitialLoad = false) {
   const request = vi.fn(async (operation: string, payload?: Record<string, unknown>) => {
     if (operation === "collections") return {
-      collections: [{ id: "c1", name: "Reading" }], collectionIds: [],
-      tags: [{ id: "t1", name: "Design" }], tagIds: [],
+      collections: [{ id: "c1", name: "Reading" }], collectionIds: [] as string[],
+      tags: [{ id: "t1", name: "Design" }], tagIds: [] as string[],
     };
     if (operation === "move") return { collectionName: payload?.collectionName ?? "Reading", changed: true };
     return { tag: { id: "t1", name: "Design" }, tagIds: payload?.assigned ? ["t1"] : [], assigned: payload?.assigned, changed: true };
@@ -135,7 +135,7 @@ test("counts assigned tag substring matches", async () => {
 
 const refreshed = {
   collections: [{ id: "c1", name: "Reading" }, { id: "c2", name: "Side projects" }], collectionIds: ["c2"],
-  tags: [{ id: "t1", name: "Design" }], tagIds: [],
+  tags: [{ id: "t1", name: "Design" }], tagIds: [] as string[],
 };
 
 test("refreshes authoritative IDs after creation, repeated moves, and moving to Unsorted", async () => {

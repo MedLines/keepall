@@ -26,18 +26,22 @@ New quick saves identify the type: “Link saved to Keepall” or
 but it cannot offer Undo until the updated web app is deployed.
 
 **Organize** opens a compact panel with **Collection** and **Tags** switches.
-Search either list and choose **Create “name”** when there is no exact match.
-Creating a collection moves the saved item into it immediately. Tags can be
-created, added, or removed without closing the panel. Searches ignore case and
+Search either list and choose **Create “name”** only when no names contain the search text.
+Creating or choosing a collection moves the saved item immediately and keeps the
+panel open. Switch to Tags to create, add, or remove tags in the same session. Searches ignore case and
 reuse existing names. The panel keeps a fixed height while filtering, with
 scrolling inside the results and space reserved for its scrollbar.
 If collections and tags fail to load, **Retry** reloads them in the same panel
-and returns focus to the selected search field.
+and returns focus to the selected search field. After a collection move, choices
+refresh before another change. If that refresh fails, the item stays saved and
+Retry only reloads choices; Close and Escape remain available.
 
 Alt/Option+K opens a Keepall-style drawer over the current page for an optional
 title and personal note. It also loads collections and tags from your library.
 Six quick choices appear for each; **Browse all** searches the complete list,
-and the inputs can create new collections and tags. A successful drawer save
+and the inputs create names only when no existing or pending names match. Enter
+chooses an existing match before creating a name. Browse all closes after selection
+and keeps its height while filtering. A successful drawer save
 replaces the form with a centered checkmark, confirmation, and **Open in Keepall**
 button. The confirmation stays open until you open the item or choose **Close**.
 Feedback names a collection-only move, confirms other saved changes,
@@ -174,3 +178,15 @@ reload. Switching groups preserves unfinished address edits and brings the new
 panel back into view. On narrow screens the sidebar becomes an icon rail with
 accessible labels. Image screenshots stay visible alongside their instructions.
 Old tab URLs still open the corresponding group.
+
+## Browser tests
+
+The extension browser tests use port 3100 by default. If another local project
+uses that port, choose an unused one with `KEEPALL_E2E_PORT`, for example:
+
+```sh
+KEEPALL_E2E_PORT=3117 pnpm exec playwright test e2e/extension-capture.spec.ts e2e/extension-drawer-isolation.spec.ts e2e/extension-action-icons.spec.ts --project=chromium --workers=2
+```
+
+Build Keepall first with `pnpm build`. The test server and extension fixtures use
+the same chosen port.

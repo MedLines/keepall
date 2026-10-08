@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = process.env.KEEPALL_E2E_PORT ?? "3100";
+const origin = `http://localhost:${port}`;
+
 export default defineConfig({
   testDir: "./e2e",
   testIgnore: "**/pwa-update.spec.ts",
@@ -7,7 +10,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   use: {
-    baseURL: "http://localhost:3100",
+    baseURL: origin,
     trace: "on-first-retry",
   },
   projects: [
@@ -22,8 +25,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm exec next start --port 3100",
-    url: "http://localhost:3100",
+    command: `pnpm exec next start --port ${port}`,
+    url: origin,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
