@@ -1,0 +1,30 @@
+/* Native dialog/iframe structure; colors and controls come from globals.css. */
+html, body { margin: 0; background: transparent; }
+[hidden] { display: none !important; }
+.keepall-drawer { position: fixed; inset: 0 0 0 auto; width: min(30rem, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; }
+.keepall-drawer[open] { display: flex; flex-direction: column; }
+.fields { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+.description { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@source "../../extension/page-ui.js";
+@source "../../extension/org-picker.js";
+@source "../../extension/file-capture.js";
+.keepall-drawer { outline: none; }
+.browse { color: inherit; inset: 0; margin: auto; max-height: min(80dvh,36rem); max-width: min(28rem,calc(100vw - 2rem)); }
+.browse-search-wrap { @apply relative shrink-0 px-5 py-4; }
+.browse-search-wrap > .org-icon { @apply pointer-events-none absolute left-[2.125rem] top-1/2 -translate-y-1/2 text-text-secondary; }
+.browse-results { @apply min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3; }
+.browse-results > button + button { margin-top: .25rem; }
+.org-icon { display: inline-flex; flex: none; }
+.choice > .org-icon > svg { width: 13px; height: 13px; }
+.selected-tag > .choice-label { max-width: 10rem; }
+.file-capture:has(> .file-staging[hidden]) { display: none; }
+.draft-notice { @apply flex items-center justify-between gap-2 text-xs text-text-secondary; }
+.save-complete { display: none; }
+.keepall-drawer[data-state="saved"] > :is(.header, form) { display: none; }
+.keepall-drawer[data-state="saved"] > .save-complete { @apply flex min-h-0 flex-1 flex-col items-center justify-center gap-5 p-8 text-center; }
+.save-complete-mark { @apply flex size-24 items-center justify-center rounded-panel bg-action-primary text-text-on-action; }
+.save-complete-mark svg { width: 52px; height: 52px; }
+.save-complete-title { @apply text-2xl font-semibold tracking-tight; }
+.save-complete-actions { @apply flex flex-col items-center gap-3; }
+.save-complete-actions svg { width: 16px; height: 16px; }
+.fields, .browse-results { mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top, 0px), #000 calc(100% - var(--fade-bottom, 0px)), transparent); scrollbar-color: var(--color-border-subtle) transparent; scrollbar-width: thin; }

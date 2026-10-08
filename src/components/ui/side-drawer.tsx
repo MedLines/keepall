@@ -1,5 +1,6 @@
 "use client";
 
+import { captureStyles } from "@/app/capture-styles";
 import type { ComponentProps, ReactNode } from "react";
 import {
   Drawer,
@@ -58,13 +59,13 @@ export function SideDrawer({
             }`}
           >
             <Drawer.Content className="flex min-h-0 flex-1 flex-col">
-              <header className="flex shrink-0 items-start gap-4 px-7 py-6">
-                <div className="min-w-0 flex-1">
-                  <Drawer.Title className="[overflow-wrap:anywhere] text-[22px] font-semibold tracking-tight">
+              <header className={captureStyles["header"]}>
+                <div className={captureStyles["heading"]}>
+                  <Drawer.Title className={captureStyles["title"]}>
                     {title}
                   </Drawer.Title>
                   {description ? (
-                    <Drawer.Description className="mt-1 [overflow-wrap:anywhere] text-sm leading-relaxed text-text-secondary">
+                    <Drawer.Description className={captureStyles["description"]}>
                       {description}
                     </Drawer.Description>
                   ) : null}
@@ -72,7 +73,7 @@ export function SideDrawer({
                 <Drawer.Close
                   aria-label="Close drawer"
                   disabled={closeDisabled}
-                  className="ui-control flex size-10 shrink-0 items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
+                  className={captureStyles["close"]}
                 >
                   <CloseIcon />
                 </Drawer.Close>

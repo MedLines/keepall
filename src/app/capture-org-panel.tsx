@@ -1,5 +1,7 @@
 "use client";
 
+import { captureStyles } from "./capture-styles";
+
 import { type ReactNode, type KeyboardEvent, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CaptureOrgBrowser } from "./capture-org-browser";
@@ -34,14 +36,11 @@ type Props = {
   onClearCollection: () => void;
 };
 
-const PICK_CHIP =
-  "control-squircle squircle-panel inline-flex min-h-7 max-w-full shrink-0 items-center gap-1 rounded-control border px-2 py-0.5 text-xs disabled:opacity-60";
+const PICK_CHIP = captureStyles["choice"];
 
-const PICK_CHIP_OUTLINE =
-  "border-border-control bg-bg-control text-text-secondary hover:bg-bg-raised hover:text-text-primary";
+const PICK_CHIP_OUTLINE = captureStyles["choice-idle"];
 
-const PICK_CHIP_SELECTED =
-  "border-border-control bg-bg-active text-text-primary";
+const PICK_CHIP_SELECTED = captureStyles["choice-selected"];
 
 const COMPACT_CHOICE_LIMIT = 6;
 
@@ -104,11 +103,11 @@ function SectionHeader({
   browseControl,
 }: SectionHeaderProps) {
   return (
-    <div className="flex min-h-6 items-center justify-between gap-3">
+    <div className={captureStyles["org-head"]}>
       <h3>
         <label
           htmlFor={inputId}
-          className="flex items-center gap-2 text-sm font-semibold text-text-primary"
+          className={captureStyles["org-title"]}
         >
           {kind === "collection" ? <CollectionIcon className="size-4" /> : <HashIcon className="size-4" />}
           {label}
@@ -116,7 +115,7 @@ function SectionHeader({
       </h3>
       {browseControl ?? (showBrowse ? (
         <button
-          className="min-h-7 rounded-control px-2 text-xs font-medium text-text-secondary hover:bg-bg-raised hover:text-text-primary"
+          className={captureStyles["browse-trigger"]}
           type="button"
           disabled={disabled}
           onClick={event => onBrowse(event.currentTarget)}
@@ -233,7 +232,7 @@ function CreateButton({
   return (
     <button
       type="button"
-      className={inline ? "ui-control inline-flex h-7 max-w-full items-center gap-1.5 ps-1.5 pe-2 text-xs font-medium disabled:opacity-60" : "ui-control inline-flex min-h-9 max-w-full items-center gap-2 self-start px-3 py-1.5 text-left text-xs font-medium disabled:opacity-60"}
+      className={inline ? "ui-control inline-flex h-7 max-w-full items-center gap-1.5 ps-1.5 pe-2 text-xs font-medium disabled:opacity-60" : captureStyles["org-create"]}
       aria-label={inline ? `Create ${kind} “${query}”` : undefined}
       title={inline ? `Create ${kind} “${query}”` : undefined}
       disabled={disabled}
@@ -337,15 +336,15 @@ function CollectionSection({
   );
 
   return (
-    <section className="flex flex-col gap-2 rounded-panel border border-border-control p-3">
+    <section className={captureStyles["org-section"]}>
       {variant !== "review" ? <SectionHeader
         inputId={inputId} label="Collection" kind="collection" browseLabel="Browse all collections"
         showBrowse={collectionSuggestions.length > 0} disabled={disabled} onBrowse={onBrowse} browseControl={browseControl}
       /> : null}
-      <div className="flex min-h-7 min-w-0 items-center gap-2 text-text-secondary focus-within:text-text-primary">
+      <div className={captureStyles["org-search-wrap"]}>
         {variant === "review" ? <CollectionIcon className="size-4" /> : <PlusIcon className="size-4" />}
         <input autoComplete="off"
-          className="min-h-7 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-secondary disabled:opacity-60"
+          className={captureStyles["org-search"]}
           disabled={disabled} id={inputId} aria-label={collectionInputLabel}
           placeholder={variant === "review" ? "Find a collection…" : collectionSuggestions.length > 0 ? "Find or create a collection…" : "Collection name"}
           value={collectionInput} onChange={event => onCollectionInputChange(event.target.value)} onKeyDown={onKeyDown}
@@ -390,7 +389,7 @@ function SelectedTag({ name, disabled, selection, onAdd, onRemove }: {
           <span className="max-w-40 truncate">{name}</span>
         </>
       )}
-      <button className="flex size-6 shrink-0 items-center justify-center rounded-control text-text-secondary hover:bg-bg-danger hover:text-text-danger disabled:opacity-60"
+      <button className={captureStyles["remove-tag"]}
         type="button" disabled={disabled} aria-label={`Remove tag ${name}${selection ? " from selection" : ""}`} onClick={onRemove}>
         <CloseIcon className="size-4" />
       </button>
@@ -463,7 +462,7 @@ function TagSection({
   }
 
   return (
-    <section className="flex flex-col gap-2 rounded-panel border border-border-control p-3">
+    <section className={captureStyles["org-section"]}>
       {variant !== "review" ? <SectionHeader
         inputId={inputId}
         label="Tags"
@@ -474,11 +473,11 @@ function TagSection({
         onBrowse={onBrowse}
         browseControl={browseControl}
       /> : null}
-      <div className="flex min-h-7 min-w-0 items-center gap-2 text-text-secondary focus-within:text-text-primary">
+      <div className={captureStyles["org-search-wrap"]}>
         {variant === "review" ? <HashIcon className="size-4" /> : <PlusIcon className="size-4" />}
         <input
           autoComplete="off"
-          className="min-h-7 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-secondary disabled:opacity-60"
+          className={captureStyles["org-search"]}
           disabled={disabled}
           id={inputId}
           aria-label={tagInputLabel}

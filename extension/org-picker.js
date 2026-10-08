@@ -20,7 +20,7 @@ if (!globalThis.__keepallCreateOrgPicker) {
 
     function element(tag, className, text) {
       const node = document.createElement(tag);
-      if (className) node.className = className;
+      if (className) node.className = globalThis.__keepallDrawerUi?.className(className) ?? className;
       if (text !== undefined) node.textContent = text;
       return node;
     }
@@ -34,17 +34,9 @@ if (!globalThis.__keepallCreateOrgPicker) {
     }
 
     function icon(name) {
-      const paths = {
-        collection: '<path d="M8 7H16.75C18.8567 7 19.91 7 20.6667 7.50559C20.9943 7.72447 21.2755 8.00572 21.4944 8.33329C22 9.08996 22 10.1433 22 12.25C22 15.7612 22 17.5167 21.1573 18.7779C20.7926 19.3238 20.3238 19.7926 19.7779 20.1573C18.5167 21 16.7612 21 13.25 21H12C7.28595 21 4.92893 21 3.46447 19.5355C2 18.0711 2 15.714 2 11V7.94427C2 6.1278 2 5.21956 2.38032 4.53806C2.65142 4.05227 3.05227 3.65142 3.53806 3.38032C4.21956 3 5.1278 3 6.94427 3C8.10802 3 8.6899 3 9.19926 3.19101C10.3622 3.62712 10.8418 4.68358 11.3666 5.73313L12 7"/>',
-        tag: '<circle cx="17.5" cy="6.5" r="1.5"/><path d="M2.77423 11.1439C1.77108 12.2643 1.7495 13.9546 2.67016 15.1437C4.49711 17.5033 6.49674 19.5029 8.85633 21.3298C10.0454 22.2505 11.7357 22.2289 12.8561 21.2258C15.8979 18.5022 18.6835 15.6559 21.3719 12.5279C21.6377 12.2187 21.8039 11.8397 21.8412 11.4336C22.0062 9.63798 22.3452 4.46467 20.9403 3.05974C19.5353 1.65481 14.362 1.99377 12.5664 2.15876C12.1603 2.19608 11.7813 2.36233 11.472 2.62811C8.34412 5.31646 5.49781 8.10211 2.77423 11.1439Z"/><path d="M7 14L10 17"/>',
-        search: '<circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/>',
-        close: '<path d="M5 5l14 14M19 5L5 19"/>',
-        add: '<path d="M12.001 5V19.002M19.002 12.002H5"/>',
-        check: '<path d="M5 14L8.5 17.5L19 6.5"/>',
-      };
       const node = element("span", "org-icon");
       node.setAttribute("aria-hidden", "true");
-      node.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
+      if (globalThis.__keepallDrawerUi) node.innerHTML = globalThis.__keepallDrawerUi.icon(name);
       return node;
     }
 
@@ -90,8 +82,8 @@ if (!globalThis.__keepallCreateOrgPicker) {
     panel.append(collection.root, tags.root, status);
 
     function chip(name, selected, onClick) {
-      const node = button("", "choice", onClick);
-      if (selected) node.append(icon("check"));
+      const node = button("", `choice ${selected ? "choice-selected" : "choice-idle"}`, onClick);
+      if (selected && name !== "Unsorted") node.append(icon("check"));
       node.append(element("span", "choice-label", name));
       node.title = name;
       node.setAttribute("aria-pressed", String(selected));
@@ -188,11 +180,11 @@ if (!globalThis.__keepallCreateOrgPicker) {
       ];
       tags.selected.hidden = selected.length === 0;
       tags.selected.replaceChildren(...selected.map((entry) => {
-        const wrapper = element("span", "selected-tag");
+        const wrapper = element("span", "selected-tag choice choice-selected pr-0.5");
         wrapper.title = entry.name;
         wrapper.append(icon("check"), element("span", "choice-label", entry.name));
         const remove = button("", "remove-tag", (event) => removeTag(entry.name, entry.id, event.detail === 0));
-        remove.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>';
+        remove.append(icon("close"));
         remove.setAttribute("aria-label", `Remove tag ${entry.name}`);
         wrapper.append(remove);
         return wrapper;
@@ -266,13 +258,13 @@ if (!globalThis.__keepallCreateOrgPicker) {
       const entries = isCollection
         ? state.collections
         : state.tags.filter((entry) => !state.tagIds.has(entry.id));
-      browser = element("dialog", "browse");
+      browser = element("dialog", "browse ui-native-dialog");
       const header = element("header", "browse-header");
       const heading = element("div", "browse-heading");
-      const title = element("h2", "", isCollection ? "Choose a collection" : "Choose a tag");
-      const description = element("p", "", "Search the complete list.");
+      const title = element("h2", "browse-title", isCollection ? "Choose a collection" : "Choose a tag");
+      const description = element("p", "browse-description", "Search the complete list.");
       heading.append(title, description);
-      const close = button("", "close", dismissBrowser);
+      const close = button("", "browse-close", dismissBrowser);
       close.append(icon("close"));
       close.setAttribute("aria-label", "Close");
       header.append(heading, close);
@@ -292,7 +284,7 @@ if (!globalThis.__keepallCreateOrgPicker) {
         }
         results.replaceChildren(...filtered.map((entry) => {
           const selected = isCollection && state.collectionId === entry.id;
-          const row = button(entry.name, "browse-option", () => {
+          const row = button(entry.name, `browse-option ${selected ? "ui-selected" : ""}`, () => {
             if (isCollection) chooseCollection(entry);
             else addTag(entry);
             dismissBrowser();

@@ -16,7 +16,9 @@ try {
   const stats = await new Promise((resolve, reject) => {
     const compiler = webpack({
       mode: "production", target: "web", devtool: false, context: root,
-      entry: "./src/extension/note-preview.js",
+      entry: ["./src/extension/note-preview.js", "./src/extension/drawer-ui.tsx"],
+      resolve: { extensions: [".tsx", ".ts", ".js"], alias: { "@": path.join(root, "src") } },
+      module: { rules: [{ test: /\.tsx?$/, include: path.join(root, "src"), use: path.join(root, "scripts/extension-swc-loader.cjs") }] },
       output: { path: temporary, filename: "note-preview.js" },
       optimization: { minimize: false, moduleIds: "deterministic", chunkIds: "deterministic" },
     });
@@ -52,7 +54,12 @@ try {
     licenses.push(`${name}\n${license.trim()}`);
   }
   await loadBindings();
+  const tailwind = require("@tailwindcss/postcss");
+  const postcss = createRequire(require.resolve("@tailwindcss/postcss"))("postcss");
+  const cssInput = await readFile(path.join(root, "src/app/globals.css"), "utf8") + "\n" + await readFile(path.join(root, "src/extension/drawer.css"), "utf8");
+  const css = (await postcss([tailwind({ base: path.join(root, "src"), optimize: true })]).process(cssInput, { from: path.join(root, "src/app/globals.css"), map: false })).css;
   const outputs = {
+    "drawer-styles.js": "globalThis.__keepallDrawerStyles = " + JSON.stringify(css) + ";\n",
     "note-preview.js": (await minify(await readFile(path.join(temporary, "note-preview.js"), "utf8"), { compress: true, mangle: true, module: "unknown", output: { comments: false } })).code,
     "note-preview.LICENSE.txt": licenses.join("\n\n--------------------\n\n") + "\n",
   };

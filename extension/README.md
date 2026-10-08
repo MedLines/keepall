@@ -342,4 +342,8 @@ committed output is deterministic, includes licenses, and contains no eval. The
 packaging script runs both before creating the ZIP and removes the development key.
 The builder uses the installed Next webpack and SWC APIs without adding a package;
 check these APIs and rerun the deterministic/security tests when upgrading Next.
-Only preview uses React; the drawer and its native text editing remain plain JS.
+The bundle mounts the app’s actual note controls and safe preview. The drawer shell
+and native text editing remain plain JS. `drawer-styles.js` compiles the actual app
+`globals.css`; the app and extension consume shared capture class recipes. CSS and
+tooltip portals stay inside the owned iframe, with the outer Shadow DOM preserving
+website isolation. No remote styles or runtime compilation are used.

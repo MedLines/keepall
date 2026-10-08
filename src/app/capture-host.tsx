@@ -1,5 +1,7 @@
 "use client";
 
+import { captureStyles } from "./capture-styles";
+
 import { DEFAULT_SHORTCUTS, shortcutMatches } from "@/domain/keyboard-shortcuts";
 import { useAppShortcuts } from "./use-app-shortcuts";
 import { ScrollTextarea } from "@/components/ui/scroll-textarea";
@@ -58,7 +60,6 @@ import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { consumeBulkImportIntent, getCaptureCollectionName, OPEN_CAPTURE_EVENT } from "./capture-events";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
-import { SHELL_TOP_BTN, SHELL_TOP_BTN_ACTIVE, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 import {
   captureCollectionConflict,
   captureTagConflict,
@@ -82,7 +83,7 @@ import { CaptureImportProgressDialog, type CaptureImportProgress } from "./captu
 import { DocumentText } from "./document-content";
 
 
-const IMAGE_ACTION_BTN = `${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} h-8 px-3 text-xs disabled:opacity-60`;
+const IMAGE_ACTION_BTN = captureStyles["file-add"];
 const CAPTURE_PREVIEW_CLASS = "flex min-h-0 max-h-36 shrink-0 flex-col rounded-input border border-border-control bg-bg-control";
 const FILE_PREVIEW_CLASS = "flex min-h-0 shrink-0 flex-col rounded-input border border-border-control bg-bg-control";
 
@@ -1010,7 +1011,7 @@ export function CaptureHost() {
       }}
     >
       <form
-        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        className={captureStyles["form"]}
         onFocusCapture={dismissal.rememberFocus}
         onSubmit={onSubmit}
         onPaste={onPaste}
@@ -1027,7 +1028,7 @@ export function CaptureHost() {
           viewportClassName="scroll-fade overscroll-contain"
           data-testid="capture-scroll-region"
         >
-        <div className="flex flex-col gap-4 px-6 pb-5 pt-3">
+        <div className={captureStyles["body"]}>
         {documentReading ? <p role="status" className="text-sm text-text-secondary">Reading text file…</p> : null}
         {importSavedCount > 0 ? <p role="status" className="text-sm text-text-secondary">{importSavedCount} files saved. Your draft is still here.</p> : null}
         {documentDraft ? <div className="flex items-start gap-3 rounded-input border border-border-control bg-bg-raised p-3">
@@ -1134,7 +1135,7 @@ export function CaptureHost() {
         ) : null}
         {previewKind !== "note" && previewKind !== "image" && !hasFileBatch && !(savingImage && imageLayoutRequired) ? (
           <div className="flex flex-col gap-2">
-            {documentDraft ? <span className="text-sm font-medium text-text-primary">{videoDraft ? "Video title" : savingImage ? "Text beneath images" : noteFormat === "markdown" ? "Markdown content" : "Text content"}</span> : null}
+            {documentDraft ? <span className={captureStyles["field-label"]}>{videoDraft ? "Video title" : savingImage ? "Text beneath images" : noteFormat === "markdown" ? "Markdown content" : "Text content"}</span> : null}
             {kind === "link" && !savingImage && !videoDraft ? <span className="text-sm font-medium text-text-secondary">Link URL</span> : null}
             <label className="sr-only" htmlFor="capture-input">
               {videoDraft ? "Video title" : savingImage
@@ -1172,20 +1173,20 @@ export function CaptureHost() {
           </ScrollArea>
         ) : null}
         {videoDraft && !hasFileBatch ? (
-          <div className="flex flex-col gap-3">
-            {previewKind === "video" ? <span className="text-sm font-medium text-text-primary">Notes (optional)</span> : <label className="text-sm font-medium text-text-primary" htmlFor="capture-video-note">Notes (optional)</label>}
+          <div className={captureStyles["note-editor"]}>
+            {previewKind === "video" ? <span className={captureStyles["field-label"]}>Notes (optional)</span> : <label className={captureStyles["field-label"]} htmlFor="capture-video-note">Notes (optional)</label>}
             <NoteEditorControls format={noteFormat} preview={previewKind === "video"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "video" : null)} />
-            {previewKind !== "video" ? <ScrollTextarea id="capture-video-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm" placeholder="Add a note about this video" value={videoNoteDraft} disabled={composeLocked} onChange={(event) => setVideoNoteDraft(event.target.value)} /> : null}
+            {previewKind !== "video" ? <ScrollTextarea id="capture-video-note" className={captureStyles["note-input"]} placeholder="Add a note about this video" value={videoNoteDraft} disabled={composeLocked} onChange={(event) => setVideoNoteDraft(event.target.value)} /> : null}
             {previewKind === "video" ? <ScrollArea role="region" aria-label="Video note preview" className={CAPTURE_PREVIEW_CLASS} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4"><NoteContent content={videoNoteDraft} format={noteFormat} /></ScrollArea> : null}
           </div>
         ) : null}
         {kind === "link" && !savingImage && !videoDraft && !hasFileBatch ? (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className={captureStyles["note-editor"]}>
+            <div className={captureStyles["note-head"]}>
               {previewKind === "link" ? (
-                <span className="text-sm font-medium text-text-primary">Your note (optional)</span>
+                <span className={captureStyles["field-label"]}>Your note (optional)</span>
               ) : (
-                <label className="text-sm font-medium text-text-primary" htmlFor="capture-link-note">Your note (optional)</label>
+                <label className={captureStyles["field-label"]} htmlFor="capture-link-note">Your note (optional)</label>
               )}
               <NoteEditorControls format={noteFormat} preview={previewKind === "link"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "link" : null)} />
             </div>
@@ -1194,7 +1195,7 @@ export function CaptureHost() {
                 <NoteContent content={linkNoteDraft} format={noteFormat} />
               </ScrollArea>
             ) : (
-              <ScrollTextarea id="capture-link-note" className="ui-field min-h-28 resize-y px-3 py-2 text-sm" placeholder="Why are you saving this link?" value={linkNoteDraft} disabled={composeLocked} onChange={(event) => {
+              <ScrollTextarea id="capture-link-note" className={captureStyles["note-input"]} placeholder="Why are you saving this link?" value={linkNoteDraft} disabled={composeLocked} onChange={(event) => {
                 setLinkNoteDraft(event.target.value);
                 if (!event.target.value.trim()) setPreviewKind(null);
               }} />
@@ -1273,11 +1274,11 @@ export function CaptureHost() {
         </div>
         </ScrollArea>
         <div
-          className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border-control bg-bg-canvas px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5"
+          className={captureStyles["footer"]}
           data-testid="capture-footer"
         >
           <button
-            className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} mr-auto px-3 text-xs disabled:opacity-60`}
+            className={captureStyles["bulk-import"]}
             type="button"
             disabled={bulkImportLocked}
             onClick={openBulkImport}
@@ -1285,7 +1286,7 @@ export function CaptureHost() {
             Bulk import
           </button>
           <button
-            className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-4 disabled:opacity-60`}
+            className={captureStyles["secondary"]}
             type="button"
             disabled={dismissLocked}
             onClick={() => {
@@ -1296,7 +1297,7 @@ export function CaptureHost() {
             {fileResults.some((result) => result.status === "saved") ? "Done" : "Cancel"}
           </button>
           <button
-            className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} px-4 disabled:opacity-60`}
+            className={captureStyles["primary"]}
             type="submit"
             disabled={
               state.status === "saving" ||
@@ -1316,7 +1317,7 @@ export function CaptureHost() {
           {state.status === "saved" ? (
             <p className="text-xs text-text-secondary">Saved.</p>
           ) : (
-            <p className="order-first basis-full text-xs text-text-secondary">Ctrl/⌘ Enter to save</p>
+            <p className={captureStyles["footer-hint"]}>Ctrl/⌘ Enter to save</p>
           )}
         </div>
       </form>

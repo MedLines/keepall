@@ -10,7 +10,7 @@ if (!globalThis.__keepallPageUi) {
   function applyTheme(preference) {
     themePreference = ["light", "dark"].includes(preference) ? preference : "system";
     host.dataset.theme = themePreference === "system" ? (colorScheme.matches ? "dark" : "light") : themePreference;
-    if (editorSurface) editorSurface.host.dataset.theme = host.dataset.theme;
+    if (editorSurface) editorSurface.document.documentElement.dataset.theme = host.dataset.theme;
   }
   colorScheme.addEventListener("change", () => applyTheme(themePreference));
   applyTheme("system");
@@ -39,166 +39,9 @@ if (!globalThis.__keepallPageUi) {
     *, *::before, *::after { box-sizing: border-box; }
     button, input, textarea { font: inherit; }
     button { cursor: pointer; }
-    dialog {
-      position: fixed; inset: 0 0 0 auto; width: min(30rem, 100vw); max-width: 100vw;
-      height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; overflow: hidden;
-      border: 0; border-left: 1px solid var(--border); background: var(--canvas);
-      color: var(--primary); box-shadow: 0 4px 16px oklch(0 0 0 / 0.149019608);
-      font-size: 14px; line-height: 1.5;
-      animation: keepall-enter 300ms cubic-bezier(.32, .72, 0, 1) both;
-    }
-    dialog[open] { display: flex; flex-direction: column; }
-    .editor-surface[open] { inset: 0; width: 100vw; max-width: none; height: 100dvh; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; animation: none; }
+    .editor-surface[open] { inset: 0; width: 100vw; max-width: none; max-height: 100dvh; height: 100dvh; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; animation: none; }
     .editor-surface::backdrop { background: transparent; backdrop-filter: none; animation: none; }
     .editor-frame { display: block; width: 100%; height: 100%; border: 0; background: transparent; }
-    dialog::backdrop { background: var(--scrim); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: keepall-backdrop-in 200ms ease-out both; }
-    dialog.is-closing { animation: keepall-exit 180ms cubic-bezier(.32, .72, 0, 1) both; }
-    dialog.is-closing::backdrop { animation: keepall-backdrop-out 180ms ease-in both; }
-    @keyframes keepall-enter { from { transform: translateX(100%); } to { transform: translateX(0); } }
-    @keyframes keepall-exit { to { transform: translateX(100%); } }
-    @keyframes keepall-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes keepall-backdrop-out { to { opacity: 0; } }
-    .header { display: flex; align-items: flex-start; gap: 16px; flex: none; padding: 24px 28px; }
-    .header, form { transition: opacity 160ms cubic-bezier(.19, 1, .22, 1), transform 160ms cubic-bezier(.19, 1, .22, 1); }
-    dialog[data-state="saved"] > .header, dialog[data-state="saved"] > form { opacity: 0; transform: translateY(-8px); visibility: hidden; transition: opacity 160ms cubic-bezier(.19, 1, .22, 1), transform 160ms cubic-bezier(.19, 1, .22, 1), visibility 0s linear 160ms; }
-    .save-complete { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 20px; padding: 32px; text-align: center; visibility: hidden; opacity: 0; transform: translateY(10px) scale(.96); pointer-events: none; transition: opacity 180ms cubic-bezier(.19, 1, .22, 1), transform 220ms cubic-bezier(.19, 1, .22, 1), visibility 0s linear 220ms; }
-    dialog[data-state="saved"] .save-complete { visibility: visible; opacity: 1; transform: none; pointer-events: auto; transition-delay: 40ms, 40ms, 0s; }
-    .save-complete-mark { display: grid; place-items: center; width: 96px; height: 96px; border-radius: 32px; corner-shape: squircle; background: var(--action); color: var(--on-action); }
-    .save-complete-mark svg { width: 52px; height: 52px; }
-    .save-complete-title { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.025em; line-height: 1.3; }
-    .save-complete-actions { display: grid; justify-items: center; gap: 12px; }
-    .save-complete-actions[hidden] { display: none; }
-    .save-complete-actions button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px; font-size: 14px; font-weight: 500; }
-    .save-complete-actions svg { flex: none; width: 16px; height: 16px; }
-    .save-complete-actions button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-    .heading { min-width: 0; flex: 1; }
-    h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.025em; line-height: 1.35; }
-    .description { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 4px 0 0; max-width: 380px; overflow-wrap: anywhere; color: var(--secondary); line-height: 1.5; }
-    .close { display: grid; flex: none; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--border); border-radius: 13px; corner-shape: superellipse(1.5); background: var(--control); color: var(--secondary); transition: transform 150ms ease-out; }
-    .close:hover:not(:disabled), .secondary:hover:not(:disabled) { background: var(--raised); color: var(--primary); }
-    .close svg { width: 18px; height: 18px; }
-    form { display: flex; min-height: 0; flex: 1; flex-direction: column; }
-    .fields { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 16px; overflow-y: auto; overscroll-behavior: contain; padding: 12px 24px 20px; }
-    .fields, .browse-results { mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top, 0px), #000 calc(100% - var(--fade-bottom, 0px)), transparent); }
-    .fields, .browse-results, textarea { scrollbar-color: var(--scroll-thumb) transparent; scrollbar-width: thin; }
-    .fields::-webkit-scrollbar, .browse-results::-webkit-scrollbar { width: 6px; }
-    .fields::-webkit-scrollbar-track, .browse-results::-webkit-scrollbar-track { background: transparent; }
-    .fields::-webkit-scrollbar-thumb, .browse-results::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--scroll-thumb); }
-    .field { display: grid; gap: 8px; font-weight: 500; }
-    .note-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .markdown-toggle { position: relative; display: inline-flex; min-height: 30px; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--control); color: var(--secondary); font-size: 12px; font-weight: 400; cursor: pointer; }
-    .markdown-box { position: relative; display: grid; flex: none; width: 16px; height: 16px; }
-    .markdown-box input { position: absolute; inset: 0; z-index: 1; width: 16px; height: 16px; min-height: 0; margin: 0; padding: 0; opacity: 0; cursor: pointer; }
-    .markdown-check { display: grid; flex: none; place-items: center; width: 16px; height: 16px; border: 1px solid var(--secondary); border-radius: 5px; }
-    .markdown-check svg { width: 13px; height: 13px; opacity: 0; }
-    .markdown-toggle input:checked + .markdown-check { border-color: var(--action); background: var(--action); color: var(--on-action); }
-    .markdown-toggle input:checked + .markdown-check svg { opacity: 1; }
-    .markdown-toggle input:focus-visible + .markdown-check { outline: 2px solid var(--focus); outline-offset: 2px; }
-    input, textarea { width: 100%; border: 1px solid var(--border); border-radius: 13px; background: var(--control); color: var(--primary); font-size: 14px; font-weight: 400; }
-    input { min-height: 44px; padding: 10px 14px; }
-    textarea { min-height: 136px; padding: 12px 14px; resize: vertical; }
-    textarea::placeholder { color: var(--secondary); }
-    textarea[readonly] { background: var(--raised); }
-    .note-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .note-segment { display: flex; padding: 2px; border-radius: 13px; background: var(--raised); }
-    .note-segment button { min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--secondary); font-size: 12px; }
-    .note-segment button[aria-pressed="true"] { background: var(--control); color: var(--primary); box-shadow: 0 1px 3px var(--border); }
-    .note-views { margin-left: auto; }
-    .note-views button { display: grid; place-items: center; width: 42px; padding: 0; }
-    .note-views svg { width: 18px; height: 18px; }
-    .note-preview { min-height: 136px; max-height: 400px; overflow: auto; padding: 12px 14px; border: 1px solid var(--border); border-radius: 13px; background: var(--control); overflow-wrap: anywhere; font-weight: 400; }
-    .note-preview[hidden], .note-editor textarea[hidden] { display: none; }
-    .note-preview .note-plain { white-space: pre-wrap; margin: 0; }
-    .note-markdown :first-child { margin-top: 0; }
-    .note-markdown :last-child { margin-bottom: 0; }
-    .note-markdown h3 { font-size: 20px; } .note-markdown h4 { font-size: 18px; } .note-markdown h5, .note-markdown h6 { font-size: 16px; }
-    .note-markdown ul, .note-markdown ol { padding-left: 24px; }
-    .note-markdown pre { white-space: pre-wrap; padding: 12px; border-radius: 10px; background: var(--raised); }
-    .note-markdown blockquote { margin-left: 0; border-left: 3px solid var(--border); padding-left: 12px; color: var(--secondary); }
-    .note-markdown table { border-collapse: collapse; width: 100%; } .note-markdown td, .note-markdown th { padding: 6px; border: 1px solid var(--border); text-align: left; }
-    .note-markdown input[type="checkbox"] { width: 14px; min-height: 14px; margin-right: 6px; }
-    .note-markdown a { color: inherit; text-decoration: underline; }
-    .field[hidden], .file-staging[hidden], .file-layout[hidden], .file-actions button[hidden], .footer button[hidden] { display: none; }
-    .file-capture { min-width: 0; display: grid; gap: 8px; }
-    .file-add { display: inline-flex; align-items: center; gap: 8px; justify-self: start; min-height: 40px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 13px; font-size: 14px; }
-    .file-staging { display: grid; gap: 12px; }
-    .file-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-    .file-row { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 13px; background: var(--control); }
-    .file-thumbnail { width: 48px; height: 48px; flex: none; object-fit: cover; border-radius: 8px; }
-    .file-name { min-width: 0; flex: 1; display: grid; gap: 3px; }
-    .file-name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .file-name > small { color: var(--secondary); overflow-wrap: anywhere; }
-    .file-remove { display: grid; place-items: center; flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--secondary); font-size: 20px; }
-    .file-remove:hover:not(:disabled) { background: var(--raised); }
-    .file-layout, .file-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-    .file-layout button, .file-actions button, .file-staging > button { min-height: 36px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 12px; }
-    .file-layout button[aria-pressed="true"] { background: var(--active); color: var(--primary); }
-    .file-staging > button { justify-self: start; }
-    .file-details { display: grid; gap: 12px; }
-    .file-progress { margin: 0; font-size: 12px; color: var(--secondary); }
-    .file-progress:empty { display: none; }
-    .bulk-import { margin-right: auto; padding: 0 8px !important; background: transparent; color: var(--secondary); border-color: transparent !important; }
-    .bulk-import:hover:not(:disabled) { background: var(--raised); color: var(--primary); }
-    .footer-hint { flex-basis: 100%; text-align: right; }
-    .org-section { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 20px; }
-    .org-section[hidden], .selected-tags[hidden], .browse-trigger[hidden], .org-status[hidden], .org-create[hidden], .save-status[hidden] { display: none; }
-    .org-title { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--primary); font-weight: 600; }
-    .org-icon { display: inline-flex; width: 16px; height: 16px; flex: none; align-items: center; justify-content: center; }
-    .org-icon svg { width: 16px; height: 16px; }
-    .org-head { display: flex; min-height: 20px; align-items: center; justify-content: space-between; gap: 12px; }
-    .browse-trigger { min-height: 32px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 12px; font-weight: 500; }
-    .browse-trigger:hover { background: var(--raised); color: var(--primary); }
-    .org-search-wrap { display: flex; align-items: center; gap: 8px; padding: 4px 0; color: var(--secondary); }
-    .org-search { min-width: 0; min-height: 28px; padding: 0; border: 0; border-radius: 0; background: transparent; font-size: 13px; }
-    .choices, .selected-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-    .choice, .selected-tag { display: inline-flex; max-width: 100%; min-height: 28px; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 10px; corner-shape: superellipse(1.5); background: var(--control); color: var(--secondary); font-size: 12px; white-space: nowrap; transition: transform 150ms ease-out; }
-    .choice[hidden] { display: none; }
-    .choice-label { min-width: 0; max-width: 192px; overflow: hidden; text-overflow: ellipsis; }
-    .choice:hover:not(:disabled) { background: var(--raised); color: var(--primary); }
-    .choice[aria-pressed="true"], .selected-tag { background: var(--active); color: var(--primary); box-shadow: inset 0 1px 0 var(--active-edge); }
-    .remove-tag { display: grid; place-items: center; flex: none; width: 24px; height: 24px; margin: 0 -6px 0 0; border: 0; border-radius: 10px; corner-shape: superellipse(1.5); background: transparent; color: var(--secondary); }
-    .selected-tag .choice-label { max-width: 160px; }
-    .selected-tag > .org-icon, .selected-tag > .org-icon svg { width: 13px; height: 13px; }
-    .remove-tag svg { width: 16px; height: 16px; }
-    .remove-tag:hover { background: var(--raised); color: var(--danger); }
-    .org-panel { display: grid; gap: 16px; padding: 4px 0; }
-    .browse { inset: 0; width: min(28rem, calc(100vw - 32px)); max-width: calc(100vw - 32px); height: min(80dvh, 36rem); max-height: min(80dvh, 36rem); margin: auto; border: 1px solid var(--border); border-radius: 20px; background: var(--control); box-shadow: 0 16px 48px oklch(0 0 0 / 0.188235294); animation: keepall-browse-in 180ms cubic-bezier(.2, 0, 0, 1) both; }
-    .browse.is-closing { animation: keepall-browse-out 140ms ease-in both; }
-    @keyframes keepall-browse-in { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-    @keyframes keepall-browse-out { to { opacity: 0; transform: scale(.98) translateY(4px); } }
-    .browse-header { display: flex; flex: none; align-items: flex-start; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
-    .browse-heading { min-width: 0; flex: 1; }
-    .browse-heading h2 { font-size: 18px; }
-    .browse-heading p { margin: 4px 0 0; color: var(--secondary); }
-    .browse-search-wrap { position: relative; flex: none; padding: 16px 20px; }
-    .browse-search-wrap > .org-icon { position: absolute; left: 34px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--secondary); }
-    .browse-search { min-height: 44px; padding: 8px 12px 8px 40px; }
-    .browse-results { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 12px; }
-    .browse-option { display: flex; width: 100%; min-height: 40px; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--primary); text-align: left; font-size: 14px; }
-    .browse-option:hover { background: var(--active); }
-    .browse-option[aria-pressed="true"] { background: var(--active); box-shadow: inset 0 1px 0 var(--active-edge); }
-    .browse-selected { color: var(--secondary); font-size: 12px; }
-    .browse-empty { padding: 32px 12px; color: var(--secondary); text-align: center; }
-    .org-status { margin: 0; color: var(--secondary); font-size: 12px; }
-    .org-create { display: inline-flex; align-items: center; gap: 6px; justify-self: start; max-width: 100%; min-height: 28px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--control); color: var(--primary); text-align: left; overflow-wrap: anywhere; font-size: 12px; font-weight: 500; }
-    .org-create:hover { background: var(--raised); }
-    :where(button, input, textarea):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-    :where(input, textarea):focus-visible { outline-width: 1px; }
-    .note-help { overflow-wrap: anywhere; min-width: 0; margin: 0; color: var(--secondary); font-size: 12px; font-weight: 400; }
-    .note-help[hidden] { display: none; }
-    .draft-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--secondary); font-size: 12px; }
-    .discard-draft { min-height: 32px; padding: 4px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--danger); font-size: 12px; }
-    .discard-draft:hover { background: var(--raised); }
-    .error { margin: 0; color: var(--danger); }
-    .error:empty { display: none; }
-    .footer { display: flex; flex: none; justify-content: flex-end; align-items: center; gap: 12px; flex-wrap: wrap; padding: 20px 28px max(20px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
-    .footer button { min-height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: 13px; corner-shape: superellipse(1.5); font-size: 14px; font-weight: 500; transition: transform 150ms ease-out; }
-    .secondary { background: var(--control); color: var(--secondary); }
-    .primary { border-color: transparent !important; background: var(--action); color: var(--on-action); }
-    .primary:hover:not(:disabled) { background: var(--action-hover); }
-    .footer button:active:not(:disabled), .close:active:not(:disabled), .choice:active:not(:disabled) { transform: scale(.96); }
-    button:disabled { opacity: .55; cursor: not-allowed; }
-    .hint { margin-right: auto; color: var(--secondary); font-size: 12px; }
     .toast { --toast-offset: max(20px, env(safe-area-inset-right)); position: fixed; z-index: 2147483647; right: var(--toast-offset); top: max(20px, env(safe-area-inset-top)); display: grid; width: max-content; max-width: min(320px, calc(100vw - 40px)); border-radius: 28px; color: var(--primary); font-size: 14px; font-weight: 500; line-height: 1.4; opacity: 0; transform: translateX(calc(100% + var(--toast-offset))); transition: transform 260ms cubic-bezier(.32, .72, 0, 1), opacity 180ms cubic-bezier(.32, .72, 0, 1); }
     .toast-card { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 48px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 32px; corner-shape: superellipse(1.5); background: var(--toast); box-shadow: 0 12px 36px oklch(0 0 0 / 0.141176471), 0 2px 8px oklch(0 0 0 / 0.070588235); }
     .toast.is-visible { opacity: 1; transform: translateX(0); }
@@ -251,8 +94,7 @@ if (!globalThis.__keepallPageUi) {
     @media (prefers-reduced-motion: reduce) { .toast-collections { animation: none; } }
     .toast-close { display: grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 19px; }
     .toast-close:hover { background: var(--raised); color: var(--primary); }
-    @media (prefers-reduced-motion: reduce) { dialog, dialog::backdrop, dialog.is-closing, dialog.is-closing::backdrop, .browse, .browse.is-closing { animation: none; } .toast, .toast.is-visible { transform: none; transition: opacity 140ms ease-out; } .header, form, dialog[data-state="saved"] > .header, dialog[data-state="saved"] > form { transform: none; transition: opacity 120ms ease-out, visibility 0s linear 120ms; } .save-complete, dialog[data-state="saved"] .save-complete { transform: none; transition: opacity 140ms ease-out, visibility 0s linear 140ms; } .footer button, .close, .choice { transition: none; } .footer button:active:not(:disabled), .close:active:not(:disabled), .choice:active:not(:disabled) { transform: none; } }
-    @media (max-width: 480px) { .header { padding: 24px 20px; } .fields { padding: 12px 20px 20px; } .footer { padding: 20px; } .hint, .footer-hint { display: none; } }
+    @media (prefers-reduced-motion: reduce) { .toast, .toast.is-visible { transform: none; transition: opacity 140ms ease-out; } }
   `;
   shadow.append(style);
   document.documentElement.append(host);
@@ -299,12 +141,20 @@ if (!globalThis.__keepallPageUi) {
     for (const { node } of scrollStyles) node.style.setProperty("overflow", "hidden", "important");
     modal.showModal();
     const frameDocument = frame.contentDocument;
-    frameDocument.documentElement.style.cssText = "background: transparent; color-scheme: normal;";
-    frameDocument.body.style.cssText = "margin: 0; background: transparent;";
+    frameDocument.documentElement.dataset.theme = host.dataset.theme;
+    frameDocument.body.className = "text-text-primary antialiased";
+    for (const [name, value] of Object.entries(globalThis.__keepallDrawerUi.motionCssVariables)) frameDocument.body.style.setProperty(name, value);
+    const appStyle = frameDocument.createElement("style");
+    appStyle.textContent = globalThis.__keepallDrawerStyles;
+    const fontStyle = frameDocument.createElement("style");
+    fontStyle.textContent = `@font-face { font-family: "Inter Variable"; src: url("${chrome.runtime.getURL("inter-latin-wght-normal.woff2")}") format("woff2"); font-style: normal; font-weight: 100 900; font-display: swap; }`;
+    const toastStyle = frameDocument.createElement("style");
+    const toastRoles = { canvas: "bg-canvas", control: "bg-control", raised: "bg-raised", primary: "text-primary", secondary: "text-secondary", border: "border-control", focus: "border-focus", action: "action-primary", "action-hover": "action-primary-hover", "on-action": "text-on-action", danger: "text-danger", toast: "bg-surface", selected: "bg-active", "scroll-thumb": "border-subtle" };
+    toastStyle.textContent = ":root{" + Object.entries(toastRoles).map(([name, role]) => `--${name}:var(--color-${role});`).join("") + "}" + style.textContent.slice(style.textContent.indexOf("    .toast {"));
+    frameDocument.head.append(appStyle, fontStyle, toastStyle);
     const frameHost = frameDocument.createElement("div");
     frameHost.dataset.theme = host.dataset.theme;
-    const frameShadow = Element.prototype.attachShadow.call(frameHost, { mode: "closed" });
-    frameShadow.append(style.cloneNode(true));
+    const frameShadow = frameHost;
     frameDocument.body.append(frameHost);
     return {
       document: frameDocument,
@@ -545,47 +395,47 @@ if (!globalThis.__keepallPageUi) {
       return;
     }
     target.classList.add("is-closing");
-    closeTimer = setTimeout(() => target.close(), 180);
+    target.dataset.endingStyle = "";
+    closeTimer = setTimeout(() => target.close(), parseFloat(getComputedStyle(target).getPropertyValue("--motion-slow-exit")) || 160);
   }
 
+  const drawerClass = (name) => globalThis.__keepallDrawerUi.className(name);
   let noteEditorSequence = 0;
   function createNoteEditor({ document, label, content = "", format = "plain", onChange = () => {} }) {
-    const element = document.createElement("div"); element.className = "field note-editor";
-    const heading = document.createElement("label"); heading.textContent = label;
-    const input = document.createElement("textarea"); input.id = `keepall-note-${++noteEditorSequence}`; input.value = content;
+    const element = document.createElement("div"); element.className = drawerClass("note-editor");
+    const head = document.createElement("div"); head.className = drawerClass("note-head");
+    const heading = document.createElement("label"); heading.className = drawerClass("field-label"); heading.textContent = label;
+    const input = document.createElement("textarea"); input.className = drawerClass("note-input");
+    input.id = `keepall-note-${++noteEditorSequence}`; input.value = content;
     input.maxLength = label === "File contents" ? 10 * 1024 * 1024 : 10000; heading.htmlFor = input.id;
-    const controls = document.createElement("div"); controls.className = "note-controls";
-    const formats = document.createElement("div"); formats.className = "note-segment"; formats.setAttribute("role", "group"); formats.setAttribute("aria-label", "Note format");
-    const views = document.createElement("div"); views.className = "note-segment note-views"; views.setAttribute("role", "group"); views.setAttribute("aria-label", "Note editor view");
-    const preview = document.createElement("div"); preview.className = "note-preview"; preview.setAttribute("role", "region"); preview.setAttribute("aria-label", `${label} preview`); preview.tabIndex = 0; preview.hidden = true;
+    const controlsHost = document.createElement("div"); controlsHost.className = "min-w-0 max-w-full";
+    const preview = document.createElement("div"); preview.className = drawerClass("note-preview");
+    preview.setAttribute("role", "region"); preview.setAttribute("aria-label", `${label} preview`); preview.tabIndex = 0; preview.hidden = true;
     let showingPreview = false;
     let disabled = false;
     let renderer;
-    const make = (name, group, handler) => { const button = document.createElement("button"); button.type = "button"; button.textContent = name; button.title = name; button.addEventListener("click", handler); group.append(button); return button; };
-    const plain = make("Plain text", formats, () => { format = "plain"; update(); onChange(value()); });
-    const markdown = make("Markdown", formats, () => { format = "markdown"; update(); onChange(value()); });
-    const edit = make("Edit", views, () => { showingPreview = false; update(); input.focus(); });
-    const view = make("Preview", views, () => { showingPreview = true; update(); preview.focus(); });
-    const paths = { Edit: '<path d="m15 5 4 4M4 20l4-1L20 7a3 3 0 0 0-4-4L4 15v5Z"/>', Preview: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>' };
-    for (const button of [edit, view]) { const name = button.textContent; button.setAttribute("aria-label", name); button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`; }
-    controls.append(formats, views); element.append(heading, controls, input, preview);
+    let controls;
+    head.append(heading, controlsHost); element.append(head, input, preview);
     function value() { return { content, format }; }
     function update(next = {}) {
       if (next.content !== undefined) { content = next.content; input.value = content; }
       if (next.format) format = next.format;
-      plain.setAttribute("aria-pressed", String(format === "plain")); markdown.setAttribute("aria-pressed", String(format === "markdown"));
-      edit.setAttribute("aria-pressed", String(!showingPreview)); view.setAttribute("aria-pressed", String(showingPreview));
       input.hidden = showingPreview; preview.hidden = !showingPreview;
       if (showingPreview) {
         if (!renderer) renderer = globalThis.__keepallNotePreview.mount(preview, value());
         else renderer.update(value());
       }
-      input.disabled = disabled; edit.disabled = disabled; view.disabled = disabled;
-      plain.disabled = disabled || input.readOnly; markdown.disabled = disabled || input.readOnly;
+      input.disabled = disabled;
+      const props = { format, preview: showingPreview, disabled, formatDisabled: input.readOnly, portalContainer: dialog,
+        onFormatChange(nextFormat) { format = nextFormat; update(); onChange(value()); },
+        onPreviewChange(nextPreview) { showingPreview = nextPreview; update(); (showingPreview ? preview : input).focus(); },
+      };
+      if (controls) controls.update(props);
+      else controls = globalThis.__keepallDrawerUi.mountNoteControls(controlsHost, props);
     }
     input.addEventListener("input", () => { content = input.value; onChange(value()); });
     update();
-    return { element, input, value, update, setDisabled(value) { disabled = value; update(); }, destroy() { renderer?.destroy(); renderer = undefined; } };
+    return { element, input, value, update, setDisabled(value) { disabled = value; update(); }, destroy() { renderer?.destroy(); controls.destroy(); renderer = undefined; } };
   }
 
   function openEditor(url, title, editorId, origin) {
@@ -606,36 +456,42 @@ if (!globalThis.__keepallPageUi) {
     const shadow = surface.shadow;
     currentEditorId = editorId;
     dialog = document.createElement("dialog");
+    dialog.className = drawerClass("keepall-drawer ui-native-dialog ui-drawer-popup flex flex-col overflow-hidden border-l border-border-control bg-bg-canvas text-text-primary shadow-menu outline-none");
+    dialog.dataset.side = "right";
     dialog.setAttribute("aria-labelledby", "keepall-editor-title");
     dialog.setAttribute("aria-describedby", "keepall-editor-description");
     const header = document.createElement("header");
-    header.className = "header";
+    header.className = drawerClass("header");
     const headingBlock = document.createElement("div");
-    headingBlock.className = "heading";
+    headingBlock.className = drawerClass("heading");
     const heading = document.createElement("h2");
     heading.id = "keepall-editor-title";
+    heading.className = drawerClass("title");
     heading.textContent = "Save to Keepall";
     const description = document.createElement("p");
     description.id = "keepall-editor-description";
-    description.className = "description";
+    description.className = drawerClass("description");
     description.textContent = url;
     description.title = url;
     headingBlock.append(heading, description);
     const close = document.createElement("button");
     close.type = "button";
-    close.className = "close";
+    close.className = drawerClass("close");
     close.setAttribute("aria-label", "Close drawer");
-    close.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>';
+    close.innerHTML = globalThis.__keepallDrawerUi.icon("close", "size-[18px]");
     close.addEventListener("click", dismissEditor);
     header.append(headingBlock, close);
     const form = document.createElement("form");
+    form.className = drawerClass("form");
     const fields = document.createElement("div");
-    fields.className = "fields";
+    fields.className = drawerClass("fields body");
     const titleLabel = document.createElement("label");
-    titleLabel.className = "field";
+    titleLabel.className = drawerClass("field");
     const titleName = document.createElement("span");
     titleName.textContent = "Title";
     const titleInput = document.createElement("input");
+    titleInput.className = "ui-field min-h-11 w-full px-3 py-2 text-sm disabled:opacity-60";
+    titleName.className = drawerClass("field-label");
     titleInput.maxLength = 500;
     titleInput.value = title;
     titleLabel.append(titleName, titleInput);
@@ -643,7 +499,7 @@ if (!globalThis.__keepallPageUi) {
     const noteLabel = noteEditor.element;
     const noteInput = noteEditor.input;
     noteInput.placeholder = "Why are you saving this link?";
-    const noteHelp = document.createElement("p"); noteHelp.className = "note-help"; noteHelp.id = "keepall-note-help";
+    const noteHelp = document.createElement("p"); noteHelp.className = drawerClass("note-help"); noteHelp.id = "keepall-note-help";
     noteHelp.textContent = "This note includes local images. Edit its contents in Keepall."; noteHelp.hidden = true; noteLabel.append(noteHelp);
     const picker = globalThis.__keepallCreateOrgPicker(shadow, observeScrollEdges);
     currentPicker = picker;
@@ -714,18 +570,18 @@ if (!globalThis.__keepallPageUi) {
       saveButton.textContent = fileCapture?.hasFiles ? "Save files" : existingLink ? "Save changes" : "Save";
     };
     errorLine = document.createElement("p");
-    errorLine.className = "error";
+    errorLine.className = drawerClass("error");
     errorLine.setAttribute("role", "alert");
     fields.append(titleLabel, noteLabel, picker.element, errorLine);
     if (draft) {
       const notice = document.createElement("div");
-      notice.className = "draft-notice";
+      notice.className = drawerClass("draft-notice");
       const label = document.createElement("span");
       label.setAttribute("role", "status");
       label.textContent = "Draft restored";
       const discard = document.createElement("button");
       discard.type = "button";
-      discard.className = "discard-draft";
+      discard.className = drawerClass("discard-draft");
       discard.textContent = "Discard draft";
       discard.addEventListener("click", () => {
         if (dialog?.dataset.state === "saving") return false;
@@ -737,21 +593,21 @@ if (!globalThis.__keepallPageUi) {
       fields.prepend(notice);
     }
     const footer = document.createElement("div");
-    footer.className = "footer";
+    footer.className = drawerClass("footer");
     saveButton = document.createElement("button");
     saveButton.type = "submit";
-    saveButton.className = "primary";
+    saveButton.className = drawerClass("primary");
     saveButton.textContent = "Loading…";
     saveButton.disabled = true;
     const cancel = document.createElement("button");
     cancel.type = "button";
-    cancel.className = "secondary";
+    cancel.className = drawerClass("secondary");
     cancel.textContent = "Close";
     cancel.addEventListener("click", dismissEditor);
     const hint = document.createElement("span");
-    hint.className = "hint";
+    hint.className = drawerClass("hint");
     hint.textContent = "Ctrl/⌘ Enter to save";
-    const bulk = document.createElement("button"); bulk.type = "button"; bulk.className = "bulk-import"; bulk.textContent = "Bulk import"; bulk.disabled = true;
+    const bulk = document.createElement("button"); bulk.type = "button"; bulk.className = drawerClass("bulk-import"); bulk.textContent = "Bulk import"; bulk.disabled = true;
     bulk.addEventListener("click", async () => {
       if (bulk.disabled) return;
       rememberDraft?.(); bulk.disabled = true; errorLine.textContent = "";
@@ -762,35 +618,35 @@ if (!globalThis.__keepallPageUi) {
       finally { bulk.disabled = false; }
     });
     footer.append(bulk, cancel, saveButton);
-    const shortcut = document.createElement("div"); shortcut.className = "footer-hint"; shortcut.append(hint);
+    const shortcut = document.createElement("div"); shortcut.className = drawerClass("footer-hint"); shortcut.append(hint);
     footer.append(shortcut);
     form.append(fields, footer);
     const complete = document.createElement("div");
-    complete.className = "save-complete";
+    complete.className = drawerClass("save-complete");
     complete.setAttribute("role", "status");
     complete.setAttribute("aria-live", "polite");
     complete.setAttribute("aria-hidden", "true");
     complete.tabIndex = -1;
     const completeMark = document.createElement("div");
-    completeMark.className = "save-complete-mark";
+    completeMark.className = drawerClass("save-complete-mark");
     completeMark.setAttribute("aria-hidden", "true");
     completeMark.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>';
     const completeTitle = document.createElement("p");
-    completeTitle.className = "save-complete-title";
+    completeTitle.className = drawerClass("save-complete-title");
     const completeActions = document.createElement("div");
-    completeActions.className = "save-complete-actions";
+    completeActions.className = drawerClass("save-complete-actions");
     completeActions.hidden = true;
     const openSaved = document.createElement("button");
     openSaved.type = "button";
-    openSaved.className = "primary";
+    openSaved.className = drawerClass("primary");
     openSaved.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h10a4 4 0 0 0 4-4v-3M14 3h7v7M21 3l-9 9"/></svg><span>Open in Keepall</span>';
     const done = document.createElement("button");
     done.type = "button";
-    done.className = "secondary";
+    done.className = drawerClass("secondary");
     done.textContent = "Close";
     done.addEventListener("click", dismissEditor);
     const completeError = document.createElement("p");
-    completeError.className = "error";
+    completeError.className = drawerClass("error");
     completeError.setAttribute("role", "alert");
     let savedActionId;
     openSaved.addEventListener("click", async () => {
@@ -898,6 +754,7 @@ if (!globalThis.__keepallPageUi) {
       onComplete() { rememberDraft?.(); },
     });
     fields.prepend(fileCapture.element);
+    fields.insertBefore(fileCapture.addControl, picker.element);
     refreshFilePresentation();
     form.addEventListener("paste", (event) => fileCapture.paste(event));
     dialog.append(header, form, complete);
@@ -925,8 +782,10 @@ if (!globalThis.__keepallPageUi) {
       if (event.target === dialog && event.clientX < dialog.getBoundingClientRect().left) dismissEditor();
     });
     shadow.append(dialog);
+    dialog.dataset.startingStyle = "";
     dialog.showModal();
-    if (fileCapture.hasFiles) fileCapture.element.querySelector("button").focus();
+    requestAnimationFrame(() => requestAnimationFrame(() => { delete currentDialog.dataset.startingStyle; }));
+    if (fileCapture.hasFiles) (fileCapture.element.querySelector("button:not(:disabled), textarea") ?? fileCapture.addControl.querySelector("button")).focus();
     else { titleInput.focus(); titleInput.select(); }
     return true;
   }

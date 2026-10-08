@@ -7,10 +7,10 @@ const h = React.createElement;
 const components = {
   a({ href, children }) {
     return href && /^(https?:|mailto:)/i.test(href)
-      ? h("a", { href, target: "_blank", rel: "noopener noreferrer" }, children)
+      ? h("a", { href, target: "_blank", rel: "noopener noreferrer", className: "underline underline-offset-2" }, children)
       : h("span", null, children);
   },
-  img({ alt }) { return h("span", null, `Image: ${alt || "no description"}`); },
+  img({ alt }) { return h("span", { className: "text-text-secondary" }, `Image: ${alt || "no description"}`); },
   input({ checked }) {
     return h("input", { type: "checkbox", checked, disabled: true, readOnly: true,
       "aria-label": checked ? "Completed checklist item" : "Incomplete checklist item" });
@@ -22,8 +22,8 @@ const components = {
 
 export function NotePreview({ content, format }) {
   return format === "markdown"
-    ? h("div", { className: "note-markdown" }, h(Markdown, { remarkPlugins: [remarkGfm], urlTransform: defaultUrlTransform, components }, content))
-    : h("p", { className: "note-plain" }, content);
+    ? h("div", { className: "note-markdown min-w-0 break-words" }, h(Markdown, { remarkPlugins: [remarkGfm], urlTransform: defaultUrlTransform, components }, content))
+    : h("p", { className: "note-plain whitespace-pre-wrap break-words text-base leading-relaxed" }, content);
 }
 
 globalThis.__keepallNotePreview = {

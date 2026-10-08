@@ -24,6 +24,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "extension/note-preview.js",
+    "extension/drawer-styles.js",
     "coverage/**",
     "playwright-report/**",
     "test-results/**",

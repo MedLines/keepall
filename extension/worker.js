@@ -572,7 +572,7 @@ async function openEditor(tab) {
     });
     return;
   }
-  await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"] });
+  await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["drawer-styles.js", "note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"] });
   const editorId = crypto.randomUUID();
   const response = await chrome.tabs.sendMessage(tab.id, { type: "editor", editorId, origin, title: tab.title ?? "", url: tab.url, theme: await captureTheme() });
   if (!response?.accepted) return;

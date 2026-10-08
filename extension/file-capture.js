@@ -20,9 +20,9 @@ if (!globalThis.__keepallCreateFileCapture) {
     const urls = new Map();
     const element = node("section", "file-capture");
     const input = node("input"); input.type = "file"; input.multiple = true; input.accept = ACCEPT; input.hidden = true; input.setAttribute("aria-label", "Choose files");
-    const add = button("Add files", () => input.click(), "secondary file-add");
-    add.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.99994 17C2.99994 17.93 2.99994 18.395 3.10216 18.7765C3.37956 19.8117 4.18821 20.6204 5.22348 20.8978C5.60498 21 6.06997 21 6.99994 21L16.9999 21C17.9299 21 18.3949 21 18.7764 20.8978C19.8117 20.6204 20.6203 19.8117 20.8977 18.7765C20.9999 18.395 20.9999 17.93 20.9999 17M16.5 7.49993C16.5 7.49993 13.1858 2.99997 12 2.99996C10.8141 2.99995 7.50002 7.49996 7.50002 7.49996M12 3.99996V16"/></svg><span>Add files</span>';
-    const help = node("p", "note-help", "Images, video, PDF, text, or Markdown. You can also paste an image.");
+    const add = button("Add files", () => input.click(), "file-add");
+    if (globalThis.__keepallDrawerUi) add.innerHTML = globalThis.__keepallDrawerUi.icon("upload") + "<span>Add files</span>";
+
     const panel = node("div", "file-staging");
     const list = node("ul", "file-list"); list.setAttribute("aria-label", "Files to save");
     const layout = node("div", "file-layout"); layout.setAttribute("role", "group"); layout.setAttribute("aria-label", "Image layout");
@@ -45,12 +45,14 @@ if (!globalThis.__keepallCreateFileCapture) {
     }); open.hidden = true;
     actions.append(retry, cancel, open);
     panel.append(list, layout, explanation, details, removeAll, progress, error, actions);
-    element.append(add, input, help, panel);
+    const addControl = node("div", "file-add-control");
+    addControl.append(add, input);
+    element.append(panel);
     input.addEventListener("change", () => { const files = [...input.files]; input.value = ""; void addFiles(files); });
 
     function node(tag, className, text) {
       const result = document.createElement(tag);
-      if (className) result.className = className;
+      if (className) result.className = globalThis.__keepallDrawerUi?.className(className) ?? className;
       if (text !== undefined) result.textContent = text;
       return result;
     }
@@ -125,20 +127,24 @@ if (!globalThis.__keepallCreateFileCapture) {
       const images = allImages();
       if (state.entries.length < 2 || !images) state.imageMode = null;
       layout.hidden = !images || state.entries.length < 2 || state.entries.some(entry => entry.saved);
-      for (const control of layout.children) control.setAttribute("aria-pressed", String(state.imageMode === control.dataset.mode));
+      for (const control of layout.children) { const selected = state.imageMode === control.dataset.mode; control.setAttribute("aria-pressed", String(selected)); control.classList.toggle("ui-selected", selected); }
       for (const entry of state.entries) {
         const row = node("li", "file-row");
+        const visual = node("div", "file-icon");
         if (entry.kind === "image") {
           if (!urls.has(entry.id)) urls.set(entry.id, URL.createObjectURL(entry.file));
-          const thumbnail = node("img", "file-thumbnail"); thumbnail.src = urls.get(entry.id); thumbnail.alt = ""; row.append(thumbnail);
+          const thumbnail = node("img", "file-thumbnail"); thumbnail.src = urls.get(entry.id); thumbnail.alt = ""; visual.append(thumbnail);
         }
-        const name = node("div", "file-name"); name.append(node("span", "", entry.file.name), node("small", "", `${entry.file.size < 1024 ? entry.file.size + " B" : (entry.file.size / 1024).toFixed(1) + " KiB"}${entry.saved ? " · Saved" : entry.error ? " · " + entry.error : ""}`));
+        if (entry.kind !== "image" && globalThis.__keepallDrawerUi) visual.innerHTML = globalThis.__keepallDrawerUi.icon(entry.kind === "video" ? "video" : entry.kind === "pdf" ? "pdf" : "note", "size-[18px] text-text-secondary");
+        row.append(visual);
+        const name = node("div", "file-name"); name.append(node("span", "file-title", entry.file.name), node("small", "file-status block", `${entry.file.size < 1024 ? entry.file.size + " B" : (entry.file.size / 1024).toFixed(1) + " KiB"}${entry.saved ? " · Saved" : entry.error ? " · " + entry.error : ""}`));
         const remove = button("×", () => {
           if (urls.has(entry.id)) URL.revokeObjectURL(urls.get(entry.id)); urls.delete(entry.id);
           state.entries = state.entries.filter(item => item !== entry);
           if (state.imageMode === "gallery" && state.entries.length === 1) Object.assign(state.entries[0], state.gallery);
           invalidate(); render();
-        }, "file-remove"); remove.setAttribute("aria-label", `Remove ${entry.file.name}`); remove.dataset.entryId = entry.id; remove.disabled = !!entry.saved;
+        }, "file-remove"); remove.setAttribute("aria-label", `Remove ${entry.file.name}`); if (globalThis.__keepallDrawerUi) remove.innerHTML = globalThis.__keepallDrawerUi.icon("close");
+        remove.dataset.entryId = entry.id; remove.disabled = !!entry.saved;
         row.append(name, remove); list.append(row);
       }
       const single = state.entries.length === 1 ? state.entries[0] : undefined;
@@ -157,7 +163,7 @@ if (!globalThis.__keepallCreateFileCapture) {
     }
     function updateDisabled() {
       const locked = busy || uncertain || disabled;
-      for (const control of element.querySelectorAll("input,button")) {
+      for (const control of [...element.querySelectorAll("input,button"), ...addControl.querySelectorAll("input,button")]) {
         if ([retry, cancel, open].includes(control)) continue;
         control.disabled = locked || (control.classList.contains("file-remove") && state.entries.some(entry => entry.saved && control.dataset.entryId === entry.id));
       }
@@ -275,7 +281,7 @@ if (!globalThis.__keepallCreateFileCapture) {
     }
     render();
     return {
-      element, addFiles, paste, save,
+      element, addControl, addFiles, paste, save,
       get hasFiles() { return state.entries.length > 0; },
       get locked() { return busy || uncertain; },
       draft: () => state,

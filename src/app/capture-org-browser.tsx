@@ -1,5 +1,7 @@
 "use client";
 
+import { captureStyles } from "./capture-styles";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog } from "@base-ui/react/dialog";
 import { useMemo, useState } from "react";
@@ -69,18 +71,18 @@ export function CaptureOrgBrowser({
       <Dialog.Portal>
         <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[80]" />
         <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
-          <Dialog.Popup finalFocus={returnFocus} className="confirm-dialog-popup ui-popover flex h-[min(80dvh,36rem)] w-full max-w-[28rem] flex-col overflow-hidden p-0 outline-none">
-            <header className="flex shrink-0 items-start gap-4 border-b border-border-control px-5 py-4">
-              <div className="min-w-0 flex-1">
-                <Dialog.Title className="text-lg font-semibold text-text-primary">
+          <Dialog.Popup finalFocus={returnFocus} className={captureStyles["browse"]}>
+            <header className={captureStyles["browse-header"]}>
+              <div className={captureStyles["heading"]}>
+                <Dialog.Title className={captureStyles["browse-title"]}>
                   {title}
                 </Dialog.Title>
-                <Dialog.Description className="mt-1 text-sm text-text-secondary">
+                <Dialog.Description className={captureStyles["browse-description"]}>
                   Search the complete list.
                 </Dialog.Description>
               </div>
               <Dialog.Close
-                className="ui-control flex size-10 shrink-0 items-center justify-center"
+                className={captureStyles["browse-close"]}
                 aria-label="Close"
                 disabled={disabled}
               >
@@ -93,7 +95,7 @@ export function CaptureOrgBrowser({
                 <SearchIcon className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-text-secondary" />
                 <input
                   autoFocus
-                  className="ui-field h-11 w-full ps-10 pe-3 text-sm"
+                  className={captureStyles["browse-search"]}
                   id={`capture-browse-${kind}`}
                   type="search"
                   value={query}
@@ -123,7 +125,7 @@ export function CaptureOrgBrowser({
                         >
                           <span className="min-w-0 truncate">{entry.name}</span>
                           {selected ? (
-                            <span className="text-xs text-text-secondary">Selected</span>
+                            <span className={captureStyles["browse-selected"]}>Selected</span>
                           ) : null}
                         </button>
                       </li>
@@ -131,7 +133,7 @@ export function CaptureOrgBrowser({
                   })}
                 </ul>
               ) : (
-                <p className="px-3 py-8 text-center text-sm text-text-secondary">
+                <p className={captureStyles["browse-empty"]}>
                   No matches.
                 </p>
               )}
