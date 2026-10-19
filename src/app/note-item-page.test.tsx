@@ -36,7 +36,25 @@ describe("NoteItemPage", () => {
     vi.mocked(getItem).mockReturnValue(new Promise(() => {}));
     render(<NoteItemPage itemId={item.id} returnHref="/" initialSnapshot={{ item, tags: [], collections: [], animate: true }} />);
     expect(screen.queryByText(/Loading (item|image|note)/)).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Ready before navigation" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "Note" })).toBeVisible();
+    expect(screen.getByText("Ready before navigation")).toBeVisible();
+  });
+
+  test("reads the whole note once without using its first line as a title", async () => {
+    const longLine = "A long observation about how the image card should behave when the library gets crowded and the viewport narrows.";
+    vi.mocked(getItem).mockResolvedValue(buildNote({ content: `${longLine}\n\nA second paragraph.` }, { id: "long-first-line", now: 1 }));
+    render(<NoteItemPage itemId="long-first-line" returnHref="/" />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Note" })).toBeVisible();
+    const body = screen.getByText(longLine, { exact: false });
+    expect(body).toHaveTextContent(longLine);
+    expect(body).toHaveTextContent("A second paragraph.");
+  });
+
+  test("shows a saved title as the page heading", async () => {
+    vi.mocked(getItem).mockResolvedValue(buildNote({ title: "Sketch", content: "Body text" }, { id: "titled-note", now: 1 }));
+    render(<NoteItemPage itemId="titled-note" returnHref="/" />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Sketch" })).toBeVisible();
+    expect(screen.getByText("Body text")).toBeVisible();
   });
 
   test("uses a short item label in Trash and organize when a saved title contains an article", async () => {
@@ -107,7 +125,8 @@ describe("NoteItemPage", () => {
 
     render(<NoteItemPage itemId="n1" returnHref="/?tag=design" />);
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Image card redesign" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Note" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 2, name: "Image card redesign" })).toBeVisible();
     expect(screen.getByText("More content below.")).toBeVisible();
     expect(screen.getByRole("link", { name: "Back to library" })).toHaveAttribute("href", "/?tag=design");
 
@@ -121,7 +140,7 @@ describe("NoteItemPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save note" }));
 
     await waitFor(() => expect(saveNoteWithImages).toHaveBeenCalledWith("n1", { content: "# Revised card\n\nBetter spacing.", format: "markdown" }, []));
-    expect(await screen.findByRole("heading", { level: 1, name: "Revised card" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 2, name: "Revised card" })).toBeVisible();
   });
 
   test("inserts an image at the cursor and saves its bytes with the note", async () => {
@@ -139,7 +158,7 @@ describe("NoteItemPage", () => {
     URL.revokeObjectURL = revokeObjectURL;
     try {
       render(<NoteItemPage itemId="n-image" returnHref="/" />);
-      await screen.findByRole("heading", { name: "Heading" });
+      await screen.findByRole("button", { name: "Edit note" });
       fireEvent.click(screen.getByRole("button", { name: "Add image" }));
       const editor = screen.getByRole("textbox", { name: "Note content" }) as HTMLTextAreaElement;
       const cursor = editor.value.indexOf("After");
@@ -175,7 +194,7 @@ describe("NoteItemPage", () => {
     vi.mocked(saveNoteWithImages).mockImplementation(async (_id, input) => ({ ...note, content: input.content }));
 
     render(<NoteItemPage itemId={note.id} returnHref="/" />);
-    await screen.findByRole("heading", { name: "Heading" });
+    await screen.findByRole("button", { name: "Edit note" });
     fireEvent.click(screen.getByRole("button", { name: "Edit note" }));
     expect(screen.getByRole("region", { name: "Images in this note" })).toHaveTextContent("Image 1");
     fireEvent.click(screen.getByRole("button", { name: "Remove image 1" }));
@@ -190,7 +209,8 @@ describe("NoteItemPage", () => {
     vi.mocked(getItem).mockResolvedValue(buildNote({ content: "Quiet card" }, { id: "n2", now: 1 }));
     vi.mocked(deleteItem).mockResolvedValue();
     render(<NoteItemPage itemId="n2" returnHref="/" />);
-    await screen.findByRole("heading", { level: 1, name: "Quiet card" });
+    await screen.findByRole("button", { name: "Edit note" });
+    expect(screen.getByText("Quiet card")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Move note to Trash" }));
     expect(deleteItem).not.toHaveBeenCalled();

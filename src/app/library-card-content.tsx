@@ -9,7 +9,6 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { itemListTitle, type Item } from "@/domain/item";
 import { imageCardSecondary } from "@/domain/card-display";
-import { noteReadingBody } from "@/domain/note";
 import { CloseIcon, CollectionIcon, HashIcon } from "./shell-icons";
 import { LibraryDocumentCard } from "./library-document-card";
 import { LibraryReadingCard } from "./library-reading-card";
@@ -66,7 +65,7 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
     return wrap(<LibraryDocumentCard item={item} query={query} pinned={pinned} openHref={openHref} onOpen={onOpen} />);
   }
   if (item.type === "note") {
-    return wrap(<LibraryReadingCard item={item} text={noteReadingBody(item) || item.content} query={query} pinned={pinned} openHref={openHref} onOpen={onOpen} />);
+    return wrap(<LibraryReadingCard item={item} text={item.content} query={query} pinned={pinned} openHref={openHref} onOpen={onOpen} />);
   }
   const title = item.type === "link" && !item.title.trim() && !item.previewTitle.trim()
     ? item.url.replace(/^https?:\/\//, "")

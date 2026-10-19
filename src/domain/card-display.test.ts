@@ -8,6 +8,7 @@ import {
   noteCardSnippet,
   noteCardExcerpt,
   noteCardText,
+  noteListSecondary,
   NOTE_SNIPPET_MAX_LENGTH,
 } from "./card-display";
 import { buildLink } from "./link";
@@ -111,14 +112,38 @@ describe("noteCardExcerpt", () => {
   });
 });
 
+describe("noteListSecondary", () => {
+  test("does not repeat the untitled note's first line as the secondary line", () => {
+    const note = buildNote({ content: "Card layout\n\nLeave space below the image." });
+    expect(noteListSecondary(note)).toBe("Leave space below the image.");
+  });
+
+  test("leaves a single-line untitled note with no secondary line", () => {
+    const note = buildNote({ content: "hello world" }, { id: "n1", now: 1 });
+    expect(noteListSecondary(note)).toBe("");
+  });
+
+  test("shows a titled note's content below its saved title", () => {
+    const note = buildNote({ title: "Sketch", content: "hello world" }, { id: "n1", now: 1 });
+    expect(noteListSecondary(note)).toBe("hello world");
+  });
+
+  test("bounds a long remainder", () => {
+    const note = buildNote({ content: "Title line\n\n" + "a".repeat(NOTE_SNIPPET_MAX_LENGTH + 5) });
+    const secondary = noteListSecondary(note);
+    expect(secondary.endsWith("…")).toBe(true);
+    expect(secondary.length).toBe(NOTE_SNIPPET_MAX_LENGTH + 1);
+  });
+});
+
 describe("cardSecondaryLine", () => {
-  test("uses host for links and snippet for notes", () => {
+  test("uses host for links and the text after a note's title line", () => {
     const link = buildLink(
       { url: "https://example.com" },
       { id: "l1", now: 1 },
     );
-    const note = buildNote({ content: "hello world" }, { id: "n1", now: 1 });
+    const note = buildNote({ content: "hello world\n\nMore text" }, { id: "n1", now: 1 });
     expect(cardSecondaryLine(link)).toBe("example.com");
-    expect(cardSecondaryLine(note)).toBe("hello world");
+    expect(cardSecondaryLine(note)).toBe("More text");
   });
 });

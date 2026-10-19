@@ -2,7 +2,7 @@
 
 import { ItemOpenLink } from "./item-open-link";
 import { ItemViewTransition } from "./item-view-transition";
-import { cardSecondaryLine, noteCardText } from "@/domain/card-display";
+import { noteListSecondary, noteCardText } from "@/domain/card-display";
 import { itemListTitle, type Item } from "@/domain/item";
 import type { SearchExcerpt } from "@/domain/search";
 import { CardNote, CardPin, CardSource } from "./library-card-details";
@@ -22,7 +22,7 @@ export function LibraryListContent({ item, pinned, onOpen, openHref, query = "",
   const sourceUrl = item.type === "link" ? item.url : item.type === "image" ? item.sourceUrl : "";
   const personalNote = item.type === "image" ? { content: item.caption, format: item.captionFormat }
     : item.type === "link" || item.type === "document" ? { content: item.noteContent ?? "", format: item.noteFormat } : null;
-  const secondary = item.type === "note" ? cardSecondaryLine(item)
+  const secondary = item.type === "note" ? noteListSecondary(item)
     : item.type === "document" && ![item.sourceFileName, item.sourceFileName.replace(/\.(pdf|md|txt)$/i, "")]
       .some(name => name.toLocaleLowerCase() === title.toLocaleLowerCase()) ? item.sourceFileName
     : item.type === "image" && item.caption.trim() ? noteCardText({ content: item.caption.slice(0, 600), format: item.captionFormat })

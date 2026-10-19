@@ -53,13 +53,21 @@ describe("grid card content", () => {
 
   it("shows a readable note body and opens the note", () => {
     const content = "# Image card redesign\n\nThe image should lead.\n\n## Details\n\n" + "More ideas. ".repeat(60);
-    render(<LibraryCardContent item={{ ...base, type: "note", title: "", content, format: "markdown" }} onOpen={vi.fn()} openHref="/items/item?from=%2F" />);
-    expect(screen.getByRole("heading", { name: "Image card redesign" })).toBeVisible();
+    const { container } = render(<LibraryCardContent item={{ ...base, type: "note", title: "", content, format: "markdown" }} onOpen={vi.fn()} openHref="/items/item?from=%2F" />);
+    // An untitled note reads as its content; the first line is not also a card title.
+    expect(screen.queryByRole("heading", { name: "Image card redesign" })).toBeNull();
+    expect(container.querySelector(".library-text-preview")).toHaveTextContent("Image card redesign");
     expect(screen.queryByText("Untitled")).toBeNull();
     expect(screen.getByText("The image should lead.")).toBeVisible();
     expect(screen.getByText(/More ideas/)).toBeVisible();
     expect(screen.getByRole("link", { name: /Image card redesign/ })).toHaveAttribute("href", "/items/item?from=%2F");
     expect(screen.getByText(/Edited/)).toBeVisible();
+  });
+
+  it("shows a saved note title above the body", () => {
+    render(<LibraryCardContent item={{ ...base, type: "note", title: "Sketch", content: "Body text" }} onOpen={vi.fn()} openHref="/items/item?from=%2F" />);
+    expect(screen.getByRole("heading", { name: "Sketch" })).toBeVisible();
+    expect(screen.getByText("Body text")).toBeVisible();
   });
 
   it("keeps link metadata local and shows the source host", () => {

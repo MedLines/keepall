@@ -95,12 +95,23 @@ export function noteCardSnippet(
   note: NoteItem,
   maxLength = NOTE_SNIPPET_MAX_LENGTH,
 ): string {
-  const text = noteCardText(note).replace(/\s+/g, " ");
+  return snippet(noteCardText(note).replace(/\s+/g, " "), maxLength);
+}
+
+function snippet(text: string, maxLength = NOTE_SNIPPET_MAX_LENGTH): string {
   if (text.length <= maxLength) {
     return text;
   }
 
   return `${text.slice(0, maxLength).trimEnd()}…`;
+}
+
+/**
+ * The list's secondary line. A note's first line is already the list title, so
+ * untitled notes show the text after it instead of repeating the beginning.
+ */
+export function noteListSecondary(note: NoteItem): string {
+  return noteCardSnippet({ ...note, content: note.title ? note.content : noteReadingBody(note) });
 }
 
 /** Secondary line for image cards: caption, else source host, else empty. */
@@ -121,7 +132,7 @@ export function imageCardSecondary(image: ImageItem): string {
 /** Secondary line under the type chip. */
 export function cardSecondaryLine(item: Item): string {
   if (item.type === "note") {
-    return noteCardSnippet(item);
+    return noteListSecondary(item);
   }
   if (item.type === "image") {
     return imageCardSecondary(item);

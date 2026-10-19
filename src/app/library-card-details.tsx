@@ -6,8 +6,8 @@ import { DocumentIcon } from "./document-icon";
 import { SearchHighlight } from "./search-highlight";
 import { ExternalLinkIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
 
-export function CardPin() {
-  return <span role="img" aria-label="Pinned in this collection" className="library-card-pin flex size-4 shrink-0 items-center justify-center text-text-secondary"><PinIcon className="size-4" /><span className="sr-only">Pinned in this collection</span></span>;
+export function CardPin({ className = "flex size-4" }: { className?: string }) {
+  return <span role="img" aria-label="Pinned in this collection" className={`library-card-pin ${className} shrink-0 items-center justify-center text-text-secondary`}><PinIcon className="size-4" /><span className="sr-only">Pinned in this collection</span></span>;
 }
 
 function SourceFavicon({ url }: { url: string }) {

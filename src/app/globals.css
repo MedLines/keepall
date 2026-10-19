@@ -1093,6 +1093,7 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
   box-shadow: inset 0 0 0 1px var(--color-border-media);
 }
 .library-reading-title { margin-top: var(--card-content-top); }
+.library-reading-file { margin-top: var(--card-content-top); }
 .library-reading-empty { display: flex; height: var(--card-reading-body-height); flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; font-size: 0.8125rem; color: var(--color-text-secondary); }
 .item-type-icon--pdf { color: var(--color-item-pdf); }
 .item-type-icon--text { color: var(--color-item-text); }

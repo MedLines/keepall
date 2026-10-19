@@ -9,7 +9,7 @@ type Props = {
   titleAsHeading?: boolean;
 };
 
-const CONTROL = "ui-control inline-flex min-h-11 shrink-0 items-center justify-center gap-2 px-3 text-sm font-medium";
+const CONTROL = "ui-control inline-flex min-h-11 shrink-0 items-center justify-center px-3 text-sm font-medium";
 
 export function ItemPageHeader({ returnHref, title, sourceUrl, titleAsHeading = false }: Props) {
   const Title = titleAsHeading ? "h1" : "span";
@@ -17,8 +17,9 @@ export function ItemPageHeader({ returnHref, title, sourceUrl, titleAsHeading = 
   return (
     <header className="z-10 shrink-0 border-b border-border-control bg-bg-canvas">
       <div className="mx-auto flex min-h-16 w-full max-w-[100rem] items-center gap-3 px-3 sm:px-5">
-        <Link className={`${CONTROL} sm:ps-2.5`} href={returnHref} aria-label="Back to library">
-          <ArrowLeftIcon />
+        <Link className={`${CONTROL} gap-1.5 sm:ps-2`} href={returnHref} aria-label="Back to library">
+          {/* The chevron's ink fills ~4.5px of its 18px box; trim the dead space so the icon side reads slightly tighter than the label side. */}
+          <ArrowLeftIcon className="-mx-1" />
           <span className="hidden sm:inline">Library</span>
         </Link>
         <Title className="min-w-0 flex-1 truncate text-base font-semibold text-text-primary sm:text-lg" title={title}>
@@ -26,7 +27,7 @@ export function ItemPageHeader({ returnHref, title, sourceUrl, titleAsHeading = 
         </Title>
         <div className="ms-auto flex shrink-0 items-center gap-2">
           {sourceUrl ? (
-            <a className={`${CONTROL} xl:ps-2.5`} href={sourceUrl} target="_blank" rel="noopener noreferrer" aria-label="Source link">
+            <a className={`${CONTROL} gap-1.5 xl:ps-2`} href={sourceUrl} target="_blank" rel="noopener noreferrer" aria-label="Source link">
               <LinkIcon />
               <span className="hidden xl:inline">Source link</span>
             </a>

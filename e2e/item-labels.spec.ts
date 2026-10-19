@@ -4,7 +4,7 @@ test.use({ serviceWorkers: "block" });
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");
@@ -17,6 +17,7 @@ test.beforeEach(async ({ page }) => {
       const base = { type: "note", tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 1 };
       transaction.objectStore("items").put({ ...base, id: "article", title: article, content: article });
       transaction.objectStore("items").put({ ...base, id: "unbroken", title: "", content: "x".repeat(1000) });
+      transaction.objectStore("items").put({ ...base, id: "realistic", title: "", content: "there is a problem with standalone notes, it shows them truncated like a title and there is no way to see the full note\n\nSecond paragraph." });
       transaction.objectStore("items").put({ ...base, id: "trashed", title: article, content: article, deletedAt: 2 });
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
@@ -47,10 +48,11 @@ test("library menus and item pages use the same short labels", async ({ page }, 
     }
     await article.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Move to Trash", exact: true }).click();
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toContainText("Move “Component Playground” to Trash?");
-    await expect(dialog).not.toContainText("Long article body");
-    await dialog.getByRole("button", { name: "Cancel" }).click();
+    // Library rows move immediately and offer Undo; only the full item page keeps a confirmation dialog.
+    const undo = page.getByRole("button", { name: /^Undo moving/ });
+    await expect(undo).toBeVisible();
+    await undo.click();
+    await expect(article).toBeVisible();
   }
   await page.goto("/items/article?from=%2F");
   await page.getByRole("button", { name: "Organize", exact: true }).click();
@@ -85,4 +87,23 @@ test("unbroken labels keep dialogs and their actions inside a narrow viewport", 
   await organizer.getByRole("textbox", { name: "Add tag" }).scrollIntoViewIfNeeded();
   await expect(organizer.getByRole("textbox", { name: "Add tag" })).toBeInViewport();
   expect(await organizer.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
+test("an untitled note shows its complete text once on its card and page", async ({ page }, testInfo) => {
+  const opening = "there is a problem with standalone notes, it shows them truncated like a title and there is no way to see the full note";
+  await page.goto("/");
+  const card = page.locator('[data-item-id="realistic"]');
+  await expect(card.locator(".library-text-preview")).toContainText(opening);
+  await expect(card.locator(".library-text-preview")).toContainText("Second paragraph.");
+  await expect(card.getByRole("heading")).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath("untitled-note-card.png") });
+  await card.getByRole("link", { name: /^Open / }).click();
+  await expect(page).toHaveURL(/\/items\/realistic\?from=/);
+  await expect(page.getByRole("heading", { level: 1, name: "Note", exact: true })).toBeVisible();
+  await expect(page.locator("article")).toContainText(`${opening} Second paragraph.`);
+  await page.screenshot({ path: testInfo.outputPath("untitled-note-page.png") });
+  // A single-line note is fully readable too, not reduced to a shortened title.
+  await page.goto("/items/unbroken?from=%2F");
+  await expect(page.getByRole("heading", { level: 1, name: "Note", exact: true })).toBeVisible();
+  await expect(page.locator("article")).toHaveText("x".repeat(1000));
 });
