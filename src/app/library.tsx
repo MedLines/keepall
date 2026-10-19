@@ -123,6 +123,7 @@ import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
 import { type BulkPanel } from "./library-bulk-bar";
 import { LibraryTopBar } from "./library-top-bar";
+import { UndoNotice } from "./undo-notice";
 import { UnsortedReview } from "./unsorted-review";
 import { LibraryEmptyState, getEmptyStateKind, entireLibrarySearch } from "./library-empty-state";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
@@ -263,6 +264,8 @@ export function Library() {
   );
   const [error, setError] = useState<string | null>(null);
   const [trashUndoItems, setTrashUndoItems] = useState<Item[]>([]);
+  // A failed undo holds the notice open so the retry stays reachable.
+  const [trashUndoPaused, setTrashUndoPaused] = useState(false);
   const singleTrashPending = useRef(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -981,6 +984,7 @@ export function Library() {
         updateView({ item: null, slide: 0 });
       }
       setTrashUndoItems(previous => [...previous.filter(entry => entry.id !== id), item].slice(-5));
+      setTrashUndoPaused(false);
       setItems(previous => previous.filter(entry => entry.id !== id));
       if (startedNavigation === navigationGenerationRef.current && (document.activeElement === focusedBefore || document.activeElement === itemActions || actionMenu?.contains(document.activeElement) || document.activeElement === document.body)) libraryHeadingRef.current?.focus();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
@@ -992,19 +996,26 @@ export function Library() {
     }
   }
 
-  async function undoTrash(id: string) {
+  async function undoTrash() {
     if (mutationBusy || singleTrashPending.current) return;
+    const ids = trashUndoItems.map(item => item.id);
+    if (!ids.length) return;
     singleTrashPending.current = true;
     const focusedBefore = document.activeElement;
-    setPendingMutation({ op: "delete", id });
+    setPendingMutation({ op: "delete", id: ids[0] });
     setDeleteError(null);
     try {
-      const restored = await restoreItems([id]);
+      const restored = await restoreItems(ids);
+      const restoredIds = new Set(restored);
       if (document.activeElement === focusedBefore) libraryHeadingRef.current?.focus();
-      setTrashUndoItems(previous => previous.filter(item => item.id !== id));
-      if (!restored.includes(id)) setDeleteError("This item is no longer in Trash. Check your library or restore a backup.");
+      setTrashUndoPaused(false);
+      setTrashUndoItems(previous => previous.filter(item => !restoredIds.has(item.id)));
+      const missing = ids.filter(id => !restoredIds.has(id));
+      if (missing.length === ids.length) setDeleteError("This item is no longer in Trash. Check your library or restore a backup.");
+      else if (missing.length > 0) setDeleteError(`${missing.length} item${missing.length === 1 ? " is" : "s are"} no longer in Trash. Check your library or restore a backup.`);
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch {
+      setTrashUndoPaused(true);
       setDeleteError("Couldn't restore this item. Try Undo again or open Trash.");
     } finally {
       singleTrashPending.current = false;
@@ -1794,6 +1805,10 @@ export function Library() {
     );
   }
 
+  const trashUndoLatest = trashUndoItems.at(-1) ?? null;
+  const trashUndoCount = trashUndoItems.length;
+  const trashUndoLabel = trashUndoLatest ? itemActionLabel(trashUndoLatest) : "";
+
   const topBar = (
       <LibraryTopBar
         headingRef={libraryHeadingRef}
@@ -1830,6 +1845,18 @@ export function Library() {
         panelOpen={panelOpen}
         onPanelOpenChange={setPanelOpen}
         libraryLoading={loadState === "loading"}
+        notice={trashUndoLatest ? <UndoNotice
+          key={`${trashUndoLatest.id}:${trashUndoCount}`}
+          message={trashUndoCount === 1 ? `Moved “${trashUndoLabel}” to Trash.` : `Moved ${trashUndoCount} items to Trash.`}
+          undoLabel={trashUndoCount === 1 ? `Undo moving ${trashUndoLabel} to Trash` : `Undo moving ${trashUndoCount} items to Trash`}
+          busy={mutationBusy}
+          paused={trashUndoPaused}
+          onUndo={() => void undoTrash()}
+          onDismiss={() => {
+            setTrashUndoItems([]);
+            setTrashUndoPaused(false);
+          }}
+        /> : undefined}
         selection={view.collections || view.tags ? {
           count: selectedIds.size,
           hiddenCount: hiddenSelectedCount,
@@ -1987,17 +2014,6 @@ export function Library() {
                 {documentSearch.error ? "Couldn't search file contents. Titles, tags, and personal notes are still searchable." : `${documentSearch.unavailable} file${documentSearch.unavailable === 1 ? " couldn't" : "s couldn't"} be searched. Try again or restore missing files from a backup.`}
                 {" "}<button type="button" className="ui-control inline-flex min-h-8 items-center px-2 text-sm" onClick={documentSearch.retry}>Retry search</button>
               </p> : null}
-              {trashUndoItems.map(item => (
-                <div key={item.id} className="mb-3 flex flex-wrap items-center gap-2 text-sm text-text-secondary">
-                  <p role="status">Moved “{itemActionLabel(item)}” to Trash.</p>
-                  <button type="button" className="ui-control inline-flex min-h-10 items-center px-4"
-                    aria-label={`Undo moving ${itemActionLabel(item)} to Trash`} disabled={mutationBusy}
-                    onClick={() => void undoTrash(item.id)}>Undo</button>
-                  <button type="button" className="ui-control inline-flex min-h-10 items-center px-4"
-                    aria-label={`Dismiss Trash notice for ${itemActionLabel(item)}`} disabled={mutationBusy}
-                    onClick={() => setTrashUndoItems(previous => previous.filter(entry => entry.id !== item.id))}>Dismiss</button>
-                </div>
-              ))}
               {trashActions.notice ? <p role="status" className="mb-3 text-sm text-text-secondary">{trashActions.notice}</p> : null}
               {trashActions.error ? <p role="alert" className="mb-3 text-sm text-text-danger">{trashActions.error}</p> : null}
               {deleteError ? (

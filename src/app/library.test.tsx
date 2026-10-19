@@ -550,6 +550,38 @@ describe("Library", () => {
     expect(screen.queryByRole("button", { name: /^Undo moving/ })).not.toBeInTheDocument();
   });
 
+  test("offers Trash undo in the toolbar slot and dismisses it on request", async () => {
+    vi.mocked(listItems).mockResolvedValue([note]);
+    vi.mocked(deleteItem).mockImplementation(async () => { vi.mocked(listItems).mockResolvedValue([]); });
+    render(<Library />);
+    await screen.findByRole("listitem", { name: "A persisted note" });
+    await clickItemAction("Move to Trash");
+
+    const undo = await screen.findByRole("button", { name: /^Undo moving/ });
+    expect(undo.closest("[data-library-toolbar-row]")).not.toBeNull();
+    expect(within(screen.getByRole("main")).queryByText(/Moved “A persisted note” to Trash\./)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss Trash notice" }));
+    expect(screen.queryByRole("button", { name: /^Undo moving/ })).not.toBeInTheDocument();
+  });
+
+  test("groups rapid Trash moves into one notice and restores them together", async () => {
+    const other = buildNote({ content: "other note" }, { id: "n2", now: 2 });
+    vi.mocked(listItems).mockResolvedValue([note, other]);
+    vi.mocked(deleteItem).mockResolvedValue(undefined);
+    vi.mocked(restoreItems).mockResolvedValue(["n1", "n2"]);
+    render(<Library />);
+    await screen.findByRole("listitem", { name: "A persisted note" });
+    await clickItemAction("Move to Trash", screen.getByRole("listitem", { name: "A persisted note" }));
+    await waitFor(() => expect(screen.queryByRole("menuitem", { name: "Move to Trash" })).not.toBeInTheDocument());
+    await clickItemAction("Move to Trash", screen.getByRole("listitem", { name: "other note" }));
+
+    expect(await screen.findByText("Moved 2 items to Trash.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Undo moving 2 items to Trash" }));
+    await waitFor(() => expect(restoreItems).toHaveBeenCalledWith(["n1", "n2"]));
+    await waitFor(() => expect(screen.queryByRole("button", { name: /^Undo moving/ })).not.toBeInTheDocument());
+  });
+
   test("keeps Undo available when restoration fails", async () => {
     vi.mocked(listItems).mockResolvedValue([note]);
     vi.mocked(deleteItem).mockImplementation(async () => { vi.mocked(listItems).mockResolvedValue([]); });

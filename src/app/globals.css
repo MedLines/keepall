@@ -269,6 +269,15 @@
     .ui-control:active { transform: none; }
     .icon-segmented-thumb { transition: none; }
   }
+  /* Transient undo offer: control surface and corners shared with the action slot. */
+  .undo-notice { animation: undo-notice-in var(--motion-moderate-enter) cubic-bezier(0.2, 0, 0, 1); }
+  .undo-notice-timer { transform-origin: left; transition: transform 100ms linear; }
+  :dir(rtl) .undo-notice-timer { transform-origin: right; }
+  @keyframes undo-notice-in { from { opacity: 0; transform: translateY(4px); } }
+  @media (prefers-reduced-motion: reduce) {
+    .undo-notice { animation: none; }
+    .undo-notice-timer { transition: none; }
+  }
 }
 
 @media (pointer: coarse) {

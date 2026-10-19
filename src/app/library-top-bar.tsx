@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type Ref } from "react";
+import { useId, type ReactNode, type Ref } from "react";
 import { Tooltip } from "@base-ui/react/tooltip";
 import type {
   LibraryLayout,
@@ -69,13 +69,18 @@ type Props = {
   onPanelOpenChange: (open: boolean) => void;
   bulk?: LibraryBulkBarProps;
   selection?: LibraryBulkToolbarProps;
+  /** Transient notice (undo) that borrows the action slot while nothing is selected. */
+  notice?: ReactNode;
   collectionsView?: boolean;
   tagsView?: boolean;
   libraryLoading?: boolean;
 };
 
-function LibraryBulkActions({ bulk, selection }: { bulk: LibraryBulkBarProps | undefined; selection?: LibraryBulkToolbarProps }) {
+function LibraryBulkActions({ bulk, selection, notice }: { bulk: LibraryBulkBarProps | undefined; selection?: LibraryBulkToolbarProps; notice?: ReactNode }) {
   const toolbar = selection ?? bulk;
+  // Selection actions own the slot; a pending notice reappears once it clears.
+  if (toolbar && toolbar.count > 0) return <LibraryBulkToolbar {...toolbar} />;
+  if (notice) return <>{notice}</>;
   return toolbar ? <LibraryBulkToolbar {...toolbar} /> : null;
 }
 
@@ -84,7 +89,7 @@ export function LibraryTopBar({
   sort, onSortChange, layout, onLayoutChange, listColumns = "auto", onListColumnsChange, onPreview, previewDisabled = false, panelOpen, onPanelOpenChange,
   typeFilter, typeCounts, onTypeFilterChange, tagFilterName,
   searchPlaceholder, typeFilterName, onClearSearchFilter, onClearTypeFilter,
-  onClearTagFilter, onClearFilters, bulk, selection, collectionsView = false, tagsView = false, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
+  onClearTagFilter, onClearFilters, bulk, selection, notice, collectionsView = false, tagsView = false, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
 }: Props) {
   const tooltipId = useId();
   const shortcuts = useAppShortcuts({
@@ -273,7 +278,7 @@ export function LibraryTopBar({
         </div>
 
         <div className="flex h-10 w-full min-w-0 shrink-0 justify-end sm:w-[min(50%,32rem)]">
-          <LibraryBulkActions bulk={bulk} selection={selection} />
+          <LibraryBulkActions bulk={bulk} selection={selection} notice={notice} />
         </div>
       </div>
 

@@ -28,3 +28,7 @@ Local-first personal library. Phase 1 is a complete local product; later phases 
 - Do not add PWA, sync, tags, or collections unless the active slice authorizes them.
 - `src/domain` is pure types and rules. `src/persistence` talks to Dexie. UI must not import `dexie`. Domain must not import React or Dexie.
 - Open IndexedDB only in the browser after mount or in event handlers — never at module top level and never during Server Component render.
+
+## Architecture Decisions (CRITICAL)
+
+- **Transient confirmations**: Trash undo and similar transient notices live in the library top bar's action slot (`LibraryTopBar` `notice` prop), never inline above the cards. NEVER render an undo or status banner inside the library scroll content (it shifts layout). Undo withdraws after 6s, pauses on hover, focus, busy, or a hidden tab, and stays until dismissed after a failed undo. (ref: 2026-10-20-keepall-top-bar-undo-notice)
