@@ -780,7 +780,7 @@ describe("CaptureHost", () => {
       expect(createOrReuseLink).toHaveBeenCalledTimes(1);
     });
     expect(enrichLinkPreview).not.toHaveBeenCalled();
-    expect(await screen.findByText("Saved.")).toBeInTheDocument();
+    expect(await screen.findByText("Saved to your library.")).toBeInTheDocument();
   });
 
   test("reuses an existing image and asks when collection differs", async () => {

@@ -612,3 +612,27 @@ for (const width of [320, 1440]) {
     await expect(confirmation).toBeHidden();
   });
 }
+
+test("the footer morphs into a saved confirmation at the same height", async ({ page }, testInfo) => {
+  await page.goto("/");
+  await openCaptureFromShortcut(page);
+  const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+  const footer = page.getByTestId("capture-footer");
+  const actions = page.getByTestId("capture-actions");
+  const saved = page.getByTestId("capture-saved");
+  await capture.getByRole("textbox", { name: "Link, note, or image", exact: true }).fill("A note that confirms without shifting");
+  const before = await footer.boundingBox();
+  await expect(actions).toHaveCSS("opacity", "1");
+  await expect(saved).toHaveCSS("opacity", "0");
+
+  await capture.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(saved).toHaveCSS("opacity", "1");
+  await expect(actions).toHaveCSS("opacity", "0");
+  await expect(capture.getByText("Saved to your library.", { exact: true })).toBeVisible();
+  const after = await footer.boundingBox();
+
+  expect(Math.abs((after?.height ?? 0) - (before?.height ?? 0))).toBeLessThanOrEqual(0.5);
+  expect(await actions.locator('button[type="submit"]').evaluate((button) => button.closest("[inert]") !== null)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("capture-saved-footer.png") });
+  await expect(capture).toBeHidden();
+});

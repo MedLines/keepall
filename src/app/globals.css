@@ -83,8 +83,8 @@
   --color-border-control: light-dark(oklch(0 0 0 / 0.078431373), oklch(1 0 0 / 0.078431373));
   --color-border-focus: light-dark(oklch(0.52 0 0), oklch(0.60 0 0));
   --color-border-selected: light-dark(oklch(0.478112036 0.021030497 253.478913982), oklch(0.839078171 0.013548353 251.578187792));
-  --color-action-primary: light-dark(var(--neutral-850), var(--neutral-400));
-  --color-action-primary-hover: light-dark(var(--neutral-700), var(--paper));
+  --color-action-primary: light-dark(var(--neutral-850), var(--white));
+  --color-action-primary-hover: light-dark(var(--neutral-700), var(--neutral-150));
   --color-text-on-action: light-dark(var(--white), var(--neutral-900));
   --color-text-danger: light-dark(oklch(0.500335978 0.182051182 29.512714275), oklch(0.807689675 0.103485729 19.570623816));
   --color-bg-danger: light-dark(oklch(0.968586961 0.015409139 27.280066214), oklch(0.268012128 0.045783995 11.811931989));
@@ -107,6 +107,8 @@
   --corner-shape-control: superellipse(1.5);
   --shadow-edge: 0 0 0 1px light-dark(oklch(0 0 0 / 0.141176471), oklch(1 0 0 / 0.141176471));
   --shadow-menu: 0 4px 16px light-dark(oklch(0 0 0 / 0.058823529), oklch(0 0 0 / 0.250980392));
+  --shadow-action-primary: 0 1px 2px light-dark(oklch(0 0 0 / 0.1), oklch(0 0 0 / 0.32));
+  --shadow-action-primary-hover: 0 2px 8px light-dark(oklch(0 0 0 / 0.16), oklch(0 0 0 / 0.5));
   --shadow-panel: 0 3px 12px oklch(0 0 0 / 0.070588235);
   --shadow-image:
     0 1px 2px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.24)),
@@ -142,10 +144,10 @@
     border: 1px solid transparent;
     background: var(--color-action-primary);
     color: var(--color-text-on-action);
-    box-shadow: none;
-    transition: background-color 150ms ease, transform 150ms ease-out, opacity var(--motion-moderate-enter) ease-out;
+    box-shadow: var(--shadow-action-primary);
+    transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease-out, opacity var(--motion-moderate-enter) ease-out;
   }
-  .ui-primary:hover:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { background: var(--color-action-primary-hover); color: var(--color-text-on-action); }
+  .ui-primary:hover:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { background: var(--color-action-primary-hover); color: var(--color-text-on-action); box-shadow: var(--shadow-action-primary-hover); }
   .ui-selected {
     background: var(--color-bg-active);
     color: var(--color-text-primary);

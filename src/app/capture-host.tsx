@@ -70,7 +70,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useDirtyDismissal } from "./use-dirty-dismissal";
 import { NoteContent } from "./note-content";
 import { NoteEditorControls } from "./note-editor-controls";
-import { CloseIcon, UploadIcon, NoteIcon } from "./shell-icons";
+import { CheckIcon, CloseIcon, UploadIcon, NoteIcon } from "./shell-icons";
 import { BulkFileImport } from "./bulk-file-import";
 import { BookmarksImport } from "./bookmarks-import";
 import { importFiles, type FileImportResult } from "@/persistence/file-import";
@@ -224,6 +224,7 @@ export function CaptureHost() {
     savedItemId !== null ||
     imageUpload !== null || videoPreparing || documentReading || folderImportBusy || bookmarksImportBusy || fileResults.length > 0;
   const composeLocked = state.status === "reading" || bulkImportLocked;
+  const saved = state.status === "saved";
   const orgLocked = state.status === "saving" || state.status === "reading" || documentReading || folderImportBusy || bookmarksImportBusy || fileResults.some((result) => result.status === "saved");
   const dismissLocked = shouldBlockDialogDismiss(state.status) || folderImportBusy || bookmarksImportBusy || bulkImagesPreparing;
 
@@ -1277,48 +1278,62 @@ export function CaptureHost() {
           className={captureStyles["footer"]}
           data-testid="capture-footer"
         >
-          <button
-            className={captureStyles["bulk-import"]}
-            type="button"
-            disabled={bulkImportLocked}
-            onClick={openBulkImport}
-          >
-            Bulk import
-          </button>
-          <button
-            className={captureStyles["secondary"]}
-            type="button"
-            disabled={dismissLocked}
-            onClick={() => {
-              resetSession();
-              dispatch({ type: "dismiss" });
-            }}
-          >
-            {fileResults.some((result) => result.status === "saved") ? "Done" : "Cancel"}
-          </button>
-          <button
-            className={captureStyles["primary"]}
-            type="submit"
-            disabled={
-              state.status === "saving" ||
-              state.status === "reading" ||
-              state.status === "saved" ||
-              imageUpload !== null ||
-              videoPreparing ||
-              documentReading ||
-              folderImportBusy ||
-              imageLayoutRequired && !hasFileBatch && !imageLayout ||
-              bookmarksImportBusy ||
-              imageUploadError !== null
-            }
-          >
-            {state.status === "saving" ? "Saving…" : fileResults.some((result) => result.status === "cancelled") ? "Continue import" : fileResults.some((result) => result.status === "failed") ? "Retry failed files" : "Save"}
-          </button>
-          {state.status === "saved" ? (
-            <p className="text-xs text-text-secondary">Saved.</p>
-          ) : (
-            <p className={captureStyles["footer-hint"]}>Ctrl/⌘ Enter to save</p>
-          )}
+          <div className="relative grid min-h-16 w-full items-center">
+            <div
+              data-testid="capture-actions"
+              aria-hidden={saved}
+              inert={saved}
+              className={`col-start-1 row-start-1 flex w-full flex-wrap items-center justify-end gap-2 transition-[opacity,translate] duration-[var(--motion-moderate-exit)] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-[opacity] ${saved ? "-translate-y-1 opacity-0" : "translate-y-0 opacity-100"}`}
+            >
+              <button
+                className={captureStyles["bulk-import"]}
+                type="button"
+                disabled={bulkImportLocked}
+                onClick={openBulkImport}
+              >
+                Bulk import
+              </button>
+              <button
+                className={captureStyles["secondary"]}
+                type="button"
+                disabled={dismissLocked}
+                onClick={() => {
+                  resetSession();
+                  dispatch({ type: "dismiss" });
+                }}
+              >
+                {fileResults.some((result) => result.status === "saved") ? "Done" : "Cancel"}
+              </button>
+              <button
+                className={captureStyles["primary"]}
+                type="submit"
+                disabled={
+                  state.status === "saving" ||
+                  state.status === "reading" ||
+                  imageUpload !== null ||
+                  videoPreparing ||
+                  documentReading ||
+                  folderImportBusy ||
+                  imageLayoutRequired && !hasFileBatch && !imageLayout ||
+                  bookmarksImportBusy ||
+                  imageUploadError !== null
+                }
+              >
+                {state.status === "saving" ? "Saving…" : fileResults.some((result) => result.status === "cancelled") ? "Continue import" : fileResults.some((result) => result.status === "failed") ? "Retry failed files" : "Save"}
+              </button>
+              <p className={captureStyles["footer-hint"]}>Ctrl/⌘ Enter to save</p>
+            </div>
+            <div
+              data-testid="capture-saved"
+              aria-hidden={!saved}
+              className={`pointer-events-none col-start-1 row-start-1 flex w-full items-center justify-center gap-2.5 transition-[opacity,translate] delay-[60ms] duration-[var(--motion-moderate-enter)] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-[opacity] ${saved ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0"}`}
+            >
+              <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-action-primary text-text-on-action">
+                <CheckIcon className="size-[18px]" strokeWidth={2} />
+              </span>
+              {saved ? <p role="status" className="text-sm font-medium text-text-primary">Saved to your library.</p> : null}
+            </div>
+          </div>
         </div>
       </form>
       <CaptureImportProgressDialog onCancel={cancelCaptureImport} cancelling={importCancelling} progress={fileProgress ?? (bulkImagesPreparing && imageUpload
