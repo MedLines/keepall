@@ -34,6 +34,9 @@ type Props<T extends string> = {
   className?: string;
   disabled?: boolean;
   portalContainer?: HTMLElement | null;
+  /** Associate a visible <label htmlFor> with a full-width form field. */
+  id?: string;
+  variant?: "toolbar" | "field";
 };
 
 export function ShellTopMenu<T extends string>({
@@ -48,13 +51,15 @@ export function ShellTopMenu<T extends string>({
   className = "",
   disabled = false,
   portalContainer,
+  id,
+  variant = "toolbar",
 }: Props<T>) {
   const tooltipId = useId();
+  const field = variant === "field";
   const activeOption =
     options.find((option) => option.value === value) ?? options[0];
 
-  return (
-    <Tooltip.Root>
+  const menu = (
     <Select.Root<T>
       disabled={disabled}
       value={value}
@@ -63,10 +68,16 @@ export function ShellTopMenu<T extends string>({
       }}
     >
       <Select.Trigger
-        render={<Tooltip.Trigger delay={350} />}
-        className={`${iconOnly ? `ui-control flex size-11 items-center justify-center rounded-control-lg ${emphasized ? "ui-selected" : ""}` : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`} ${className}`}
-        aria-label={`${ariaLabel}: ${activeOption?.label ?? ""}`}
-        aria-describedby={tooltipId}
+        id={id}
+        {...(field
+          ? {}
+          : { render: <Tooltip.Trigger delay={350} />, "aria-describedby": tooltipId })}
+        className={
+          field
+            ? `flex w-full min-w-0 items-center justify-between gap-2 text-left ${className}`
+            : `${iconOnly ? `ui-control flex size-11 items-center justify-center rounded-control-lg ${emphasized ? "ui-selected" : ""}` : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`} ${className}`
+        }
+        aria-label={field ? undefined : `${ariaLabel}: ${activeOption?.label ?? ""}`}
       >
         {triggerIcon ?? activeOption?.icon}
         {iconOnly ? (
@@ -74,11 +85,11 @@ export function ShellTopMenu<T extends string>({
         ) : (
           <Select.Value>{activeOption?.label}</Select.Value>
         )}
-        {!iconOnly ? <ChevronDownIcon className="text-text-secondary" /> : null}
+        {!iconOnly ? <ChevronDownIcon className={field ? undefined : "text-text-secondary"} /> : null}
       </Select.Trigger>
       <Select.Portal container={portalContainer}>
         <Select.Positioner
-          align="end"
+          align={field ? "start" : "end"}
           alignItemWithTrigger={false}
           sideOffset={8}
           collisionPadding={8}
@@ -119,11 +130,18 @@ export function ShellTopMenu<T extends string>({
         </Select.Positioner>
       </Select.Portal>
     </Select.Root>
-    <Tooltip.Portal container={portalContainer}>
-      <Tooltip.Positioner side="bottom" sideOffset={8} collisionPadding={8} className="z-[100]">
-        <Tooltip.Popup id={tooltipId} role="tooltip" className={SHELL_TOOLTIP}>{ariaLabel}: {activeOption?.label}</Tooltip.Popup>
-      </Tooltip.Positioner>
-    </Tooltip.Portal>
+  );
+
+  if (field) return menu;
+
+  return (
+    <Tooltip.Root>
+      {menu}
+      <Tooltip.Portal container={portalContainer}>
+        <Tooltip.Positioner side="bottom" sideOffset={8} collisionPadding={8} className="z-[100]">
+          <Tooltip.Popup id={tooltipId} role="tooltip" className={SHELL_TOOLTIP}>{ariaLabel}: {activeOption?.label}</Tooltip.Popup>
+        </Tooltip.Positioner>
+      </Tooltip.Portal>
     </Tooltip.Root>
   );
 }

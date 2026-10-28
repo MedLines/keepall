@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowRightIcon, ChevronDownIcon } from "../shell-icons";
-import { contactLimits, contactReport, contactTopics, type ContactFields } from "./contact-fields";
+import { toast } from "@/components/ui/toaster";
+import { ArrowRightIcon } from "../shell-icons";
+import { ShellTopMenu } from "../shell-top-menu";
+import { contactLimits, contactReport, contactTopics, type ContactFields, type ContactTopic } from "./contact-fields";
 
 const emptyFields: ContactFields = {
   name: "", email: "", topic: "help", message: "", browser: "", steps: "", expected: "", actual: "", website: "",
 };
 const sendError = "We couldn't confirm your message was sent. Your draft is still here. Try again later or copy it for GitHub.";
+const submittedMessage = "Message sent.";
+const topicOptions = (Object.keys(contactTopics) as ContactTopic[]).map(value => ({ value, label: contactTopics[value] }));
 
 function submissionError(response: Response, result: unknown): string {
   if (response.status === 429) {
@@ -33,6 +37,7 @@ export function ContactForm() {
   const [showReport, setShowReport] = useState(false);
   const reportRef = useRef<HTMLTextAreaElement>(null);
   const sending = useRef(false);
+  const [topicMenuRoot, setTopicMenuRoot] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -69,6 +74,7 @@ export function ContactForm() {
       const result: unknown = await response.json();
       if (response.ok && !!result && typeof result === "object" && "accepted" in result && result.accepted === true) {
         setStatus("success");
+        toast.success(submittedMessage);
       } else {
         setError(submissionError(response, result));
         setStatus("error");
@@ -109,7 +115,7 @@ export function ContactForm() {
           <div className="kc-field"><label htmlFor="contact-name">Name</label><input id="contact-name" name="name" autoComplete="name" value={fields.name} required maxLength={contactLimits.name} onChange={event => updateField("name", event.target.value)} /></div>
           <div className="kc-field"><label htmlFor="contact-email">Email</label><input id="contact-email" name="email" type="email" autoComplete="email" value={fields.email} required maxLength={contactLimits.email} onChange={event => updateField("email", event.target.value)} /></div>
         </div>
-        <div className="kc-field"><label htmlFor="contact-topic">Topic</label><div className="kc-select"><select id="contact-topic" name="topic" value={fields.topic} onChange={event => updateField("topic", event.target.value)}>{Object.entries(contactTopics).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDownIcon aria-hidden="true" /></div></div>
+        <div className="kc-field"><label htmlFor="contact-topic">Topic</label><div className="kc-select" ref={setTopicMenuRoot}><ShellTopMenu<ContactTopic> id="contact-topic" variant="field" ariaLabel="Topic" value={fields.topic} options={topicOptions} onChange={value => updateField("topic", value)} portalContainer={topicMenuRoot} /></div></div>
         <div className="kc-field"><label htmlFor="contact-message">Message</label><textarea id="contact-message" name="message" value={fields.message} rows={6} required maxLength={contactLimits.message} aria-describedby="contact-message-hint" onChange={event => updateField("message", event.target.value)} /><span id="contact-message-hint" className="kc-hint">What can we help with? Up to 5,000 characters.</span></div>
         {fields.topic === "bug" && <fieldset className="kc-bug-fields"><legend>Help us reproduce the bug</legend><p className="kc-hint">These details are optional. Include what you know.</p>
           <div className="kc-field"><label htmlFor="contact-browser">Browser and device</label><input id="contact-browser" name="browser" placeholder="For example, Chrome 140 on Windows 11" value={fields.browser} maxLength={contactLimits.browser} onChange={event => updateField("browser", event.target.value)} /></div>
@@ -120,7 +126,6 @@ export function ContactForm() {
         <p id="contact-privacy" className="kc-hint">Up to 3 messages per hour. Sending stores these fields with Keepall support until manually deleted and sends an email notification through Resend. Your library is never attached. Please leave out private links, notes, and backups. <Link href="/privacy">Privacy details</Link>.</p>
         <button className="ka-button kc-send" type="submit" disabled={availability !== "ready" || status === "pending" || status === "success"}>{status === "pending" ? "Sending…" : status === "success" ? "Message submitted" : "Send message"}<ArrowRightIcon /></button>
       </fieldset>
-      {status === "success" && <p className="kc-result" role="status">Your message was submitted. We&apos;ll reply to the email you provided.</p>}
       {status === "error" && <p className="kc-result" role="alert">{error}</p>}
     </form>
     <aside className="kc-fallback" aria-labelledby="contact-github-title">

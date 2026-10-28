@@ -10,6 +10,7 @@ import { THEME_INIT_SCRIPT } from "./theme-preference";
 import { SHELL_INIT_SCRIPT } from "./shell-styles";
 import { MotionProvider } from "@/components/ui/motion-provider";
 import { motionCssVariables } from "@/components/ui/motion-tokens";
+import { Toaster } from "@/components/ui/toaster";
 import "@fontsource-variable/inter";
 import "./globals.css";
 
@@ -62,6 +63,7 @@ export default function RootLayout({ children, viewer }: LayoutProps<"/">) {
             <AutomaticBackupRunner />
           </PwaProvider>
           {process.env.NODE_ENV === "development" ? <DevToolsEntry /> : null}
+          <Toaster />
           <Analytics />
         </MotionProvider>
       </body>

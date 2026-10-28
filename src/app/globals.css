@@ -1238,6 +1238,31 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
   --overlay: 255 255 255;
   color-scheme: dark;
 }
+:root:has(.ka-page.ka-about, .ka-page.kh-page) .kc-toaster {
+  --normal-bg: oklch(0.262597222 0.005696969 301.143762134);
+  --normal-border: oklch(1 0 0 / 0.070588235);
+  --normal-text: oklch(0.938763728 0.007981954 73.741801476);
+  --success-bg: oklch(0.262597222 0.005696969 301.143762134);
+  --success-border: oklch(1 0 0 / 0.070588235);
+  --success-text: oklch(0.938763728 0.007981954 73.741801476);
+}
+
+.kc-toaster {
+  --normal-bg: var(--color-bg-surface);
+  --normal-border: var(--color-border-control);
+  --normal-text: var(--color-text-primary);
+  --success-bg: var(--color-bg-surface);
+  --success-border: var(--color-border-control);
+  --success-text: var(--color-text-primary);
+  font-family: inherit;
+}
+.kc-toast {
+  border: 1px solid var(--color-border-control) !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  box-shadow: var(--shadow-menu) !important;
+}
 
 /* Window scrolling and native fallbacks share the registry's overlay ramp. */
 @media (pointer: fine) {

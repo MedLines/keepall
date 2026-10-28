@@ -113,4 +113,30 @@ describe("ShellTopMenu", () => {
     fireEvent.keyDown(next, { key: "Enter" });
     expect(onChange).toHaveBeenCalledExactlyOnceWith("image");
   });
+
+  test("field variant uses a visible label and skips the toolbar tooltip", async () => {
+    const onChange = vi.fn();
+    render(
+      <div>
+        <label htmlFor="topic">Topic</label>
+        <ShellTopMenu
+          id="topic"
+          variant="field"
+          ariaLabel="Topic"
+          value="all"
+          options={options}
+          onChange={onChange}
+        />
+      </div>,
+    );
+    const trigger = screen.getByLabelText("Topic");
+    expect(trigger).toHaveAttribute("id", "topic");
+    fireEvent.focus(trigger);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    fireEvent.click(trigger);
+    const option = screen.getByRole("option", { name: "Images 4" });
+    fireEvent.pointerDown(option, { pointerType: "mouse", button: 0 });
+    fireEvent.click(option, { detail: 1 });
+    expect(onChange).toHaveBeenCalledExactlyOnceWith("image");
+  });
 });

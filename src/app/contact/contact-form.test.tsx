@@ -1,10 +1,17 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
+import { toast } from "@/components/ui/toaster";
 import { ContactForm } from "./contact-form";
+
+vi.mock("@/components/ui/toaster", () => ({
+  toast: { success: vi.fn() },
+  Toaster: () => null,
+}));
 
 const transport = vi.fn();
 beforeEach(() => {
   transport.mockReset();
+  vi.mocked(toast.success).mockClear();
   vi.stubGlobal("fetch", transport);
 });
 
@@ -14,13 +21,20 @@ function fillMessage() {
   fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Export fails" } });
 }
 
+function chooseTopic(label: string) {
+  fireEvent.click(screen.getByLabelText("Topic"));
+  const option = screen.getByRole("option", { name: label });
+  fireEvent.pointerDown(option, { pointerType: "mouse", button: 0 });
+  fireEvent.click(option, { detail: 1 });
+}
+
 test("unconfigured form remains editable with useful copy and GitHub reports", async () => {
   transport.mockResolvedValue(Response.json({ available: false }));
   render(<ContactForm />);
   await screen.findByText(/Email sending isn't available yet/);
   expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
   fillMessage();
-  fireEvent.change(screen.getByLabelText("Topic"), { target: { value: "bug" } });
+  chooseTopic("Bug report");
   fireEvent.change(screen.getByLabelText("Browser and device"), { target: { value: "Firefox on Linux" } });
   fireEvent.change(screen.getByLabelText("Steps to reproduce"), { target: { value: "Click export" } });
   const link = screen.getByRole("link", { name: "Open GitHub draft" });
@@ -56,8 +70,10 @@ test("only accepted delivery shows confirmation", async () => {
   await waitFor(() => expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled());
   fillMessage();
   fireEvent.click(screen.getByRole("button", { name: "Send message" }));
-  await screen.findByText(/Your message was submitted/);
+  await waitFor(() => expect(toast.success).toHaveBeenCalledExactlyOnceWith("Message sent."));
+  expect(screen.getByRole("button", { name: "Message submitted" })).toBeDisabled();
   expect(screen.getByLabelText("Message")).toHaveValue("Export fails");
+  expect(document.querySelector("select#contact-topic")).not.toBeInTheDocument();
 });
 
 test("clipboard failure opens a selectable report without losing its contents", async () => {
@@ -76,7 +92,7 @@ test("long reports remain available in full when they cannot fit a GitHub URL", 
   render(<ContactForm />);
   const message = "失敗".repeat(2400);
   fireEvent.change(screen.getByLabelText("Message"), { target: { value: message } });
-  fireEvent.change(screen.getByLabelText("Topic"), { target: { value: "bug" } });
+  chooseTopic("Bug report");
   fireEvent.change(screen.getByLabelText("Steps to reproduce"), { target: { value: "Repeat export. ".repeat(140) } });
   expect(screen.getByRole("link", { name: "Open GitHub issue" })).toHaveAttribute("href", "https://github.com/MedLines/keepall/issues/new");
   expect(screen.getByText(/too long for a GitHub link/)).toBeInTheDocument();
@@ -104,7 +120,7 @@ test("recorded message with uncertain email is explained without claiming submis
   fireEvent.click(screen.getByRole("button", { name: "Send message" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Your message was recorded");
   expect(screen.getByLabelText("Message")).toHaveValue("Export fails");
-  expect(screen.queryByText(/Your message was submitted/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Message sent/)).not.toBeInTheDocument();
 });
 
 test("temporary database failure preserves a retryable draft", async () => {
@@ -119,5 +135,6 @@ test("temporary database failure preserves a retryable draft", async () => {
   expect(screen.getByLabelText("Message")).toHaveValue("Export fails");
   expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
   fireEvent.click(screen.getByRole("button", { name: "Send message" }));
-  await screen.findByText(/Your message was submitted/);
+  await waitFor(() => expect(toast.success).toHaveBeenCalledExactlyOnceWith("Message sent."));
+  expect(screen.getByRole("button", { name: "Message submitted" })).toBeDisabled();
 });

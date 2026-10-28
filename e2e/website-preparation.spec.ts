@@ -108,17 +108,16 @@ test("Contact has an inset Topic arrow and matching report actions", async ({ pa
   const topic = page.getByLabel("Topic", { exact: true });
   const inset = await topic.evaluate(element => {
     const style = getComputedStyle(element);
-    const arrow = element.parentElement!.querySelector("svg")!.getBoundingClientRect();
+    const arrow = element.querySelector("svg")!.getBoundingClientRect();
     const select = element.getBoundingClientRect();
-    return { text: parseFloat(style.paddingLeft), arrow: select.right - arrow.right, pointerEvents: getComputedStyle(element.parentElement!.querySelector("svg")!).pointerEvents };
+    return { text: parseFloat(style.paddingLeft), arrow: select.right - arrow.right, pointerEvents: getComputedStyle(element.querySelector("svg")!).pointerEvents };
   });
   expect(Math.abs(inset.text - inset.arrow)).toBeLessThanOrEqual(1);
   expect(inset.arrow).toBeGreaterThanOrEqual(12);
   expect(inset.pointerEvents).toBe("none");
-  await topic.focus();
-  await page.keyboard.press("b");
-  await page.keyboard.press("Tab");
-  await expect(topic).toHaveValue("bug");
+  await topic.click();
+  await page.getByRole("option", { name: "Bug report", exact: true }).click();
+  await expect(topic).toContainText("Bug report");
   await expect(page.getByLabel("Browser and device")).toBeVisible();
   const copy = page.getByRole("button", { name: "Copy report" });
   const github = page.getByRole("link", { name: "Open GitHub draft" });
@@ -145,7 +144,8 @@ test("Contact keeps unsent bug reports available without email setup", async ({ 
   await expect(page.getByText("Email sending isn't available yet.", { exact: false })).toBeVisible();
   await page.getByLabel("Name", { exact: true }).fill("Preview tester");
   await page.getByLabel("Email", { exact: true }).fill("preview@example.com");
-  await page.getByLabel("Topic", { exact: true }).selectOption("bug");
+  await page.getByLabel("Topic", { exact: true }).click();
+  await page.getByRole("option", { name: "Bug report", exact: true }).click();
   await page.getByLabel("Message", { exact: true }).fill("The bookmark import stopped.");
   await page.getByLabel("Browser and device").fill("Firefox on Android");
   await page.getByLabel("Steps to reproduce").fill("Choose Bulk import and select a bookmarks file.");
@@ -184,7 +184,8 @@ test("Contact validates required fields and confirms only accepted submission", 
   await page.getByLabel("Email", { exact: true }).fill("preview@example.com");
   await page.getByLabel("Message", { exact: true }).fill("Thanks for adding bookmark imports.");
   await submit.click();
-  await expect(page.getByText("Your message was submitted. We'll reply to the email you provided.")).toBeVisible();
+  await expect(page.locator("[data-sonner-toast]")).toContainText("Message sent.");
+  await expect(page.getByRole("button", { name: "Message submitted" })).toBeDisabled();
   expect(posted).toMatchObject({ email: "preview@example.com", topic: "help", message: "Thanks for adding bookmark imports." });
 });
 
