@@ -3,6 +3,7 @@ import { deleteKeepallDatabase, getDb } from "./db";
 import { saveExtensionImage, saveExtensionLink } from "./extension-capture";
 import { getCaptureCollections, moveCaptureToCollection, updateCaptureTag } from "./extension-collections";
 import { undoExtensionCapture } from "./extension-capture-undo";
+import { createVideo } from "./videos";
 
 beforeEach(async () => {
   await deleteKeepallDatabase();
@@ -104,4 +105,12 @@ test("rejects stale selections and deleted items or collections", async () => {
   await getDb().items.delete(saved.itemId);
   await expect(getCaptureCollections(saved.itemId)).rejects.toThrow("no longer available");
   await expect(moveCaptureToCollection(saved.itemId, null, ["reading"])).rejects.toThrow("no longer available");
+});
+
+test("organizes a video saved from a page", async () => {
+  const video = await createVideo(new File([new Uint8Array([1, 2, 3])], "clip.mp4", { type: "video/mp4" }));
+  await expect(getCaptureCollections(video.id)).resolves.toMatchObject({ collectionIds: [], tagIds: [] });
+  await expect(moveCaptureToCollection(video.id, "reading", [])).resolves.toEqual({ collectionName: "Reading", changed: true });
+  const tagged = await updateCaptureTag(video.id, { tagName: "Motion", assigned: true, expectedTagIds: [] });
+  expect(await getDb().items.get(video.id)).toMatchObject({ collectionIds: ["reading"], tagIds: tagged.tagIds });
 });

@@ -60,7 +60,12 @@ test("extension registers distinct page-save and toolbar-library menu actions", 
     contexts: ["image", "link", "selection"],
     documentUrlPatterns: ["http://*/*", "https://*/*"],
     targetUrlPatterns: ["http://*/*", "https://*/*"],
-  }), { id: "open-keepall-library", title: "Open Keepall library", contexts: ["action"] }]);
+  }), {
+    id: "save-video-to-keepall",
+    title: "Save video to Keepall",
+    contexts: ["video"],
+    documentUrlPatterns: ["http://*/*", "https://*/*"],
+  }, { id: "open-keepall-library", title: "Open Keepall library", contexts: ["action"] }]);
 });
 
 test("toolbar library menu uses the configured origin without repurposing other tabs", async () => {

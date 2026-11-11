@@ -7,7 +7,7 @@ import { getLibraryPreferences } from "./library-preferences";
 
 async function captureItem(itemId: string) {
   const row = await getDb().items.get(itemId);
-  if (!row || row.deletedAt !== undefined || (row.type !== "link" && row.type !== "image")) {
+  if (!row || row.deletedAt !== undefined || !["link", "image", "video"].includes(row.type)) {
     throw new Error("This item is no longer available in Keepall.");
   }
   return normalizeItem(row);
