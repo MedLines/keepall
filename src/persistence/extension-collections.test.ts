@@ -16,7 +16,7 @@ test("organizes links and images without changing their content, and can return 
   ];
   for (const capture of captures) {
     const before = await getDb().items.get(capture.itemId);
-    expect(await getCaptureCollections(capture.itemId)).toEqual({ collections: [{ id: "reading", name: "Reading" }], collectionIds: [], tags: [], tagIds: [] });
+    expect(await getCaptureCollections(capture.itemId)).toEqual({ collections: [{ id: "reading", name: "Reading" }], collectionIds: [], tags: [], tagIds: [], recentCollectionIds: [], recentTagIds: [] });
     await expect(moveCaptureToCollection(capture.itemId, "reading", [])).resolves.toEqual({ collectionName: "Reading", changed: true });
     expect(await getDb().items.get(capture.itemId)).toEqual({ ...before, collectionIds: ["reading"], updatedAt: expect.any(Number) });
     await expect(undoExtensionCapture(capture.undoToken!)).rejects.toThrow("changed");
@@ -25,6 +25,20 @@ test("organizes links and images without changing their content, and can return 
     expect((await getDb().items.get(capture.itemId))?.collectionIds).toEqual([]);
   }
   expect(await getDb().assets.count()).toBe(1);
+});
+
+test("lists collections and tags from the newest other items as recent, skipping deleted ones", async () => {
+  await getDb().collections.bulkPut([{ id: "old", name: "Old", createdAt: 1, pinnedItemIds: [] }, { id: "gone", name: "Gone", createdAt: 1, pinnedItemIds: [] }]);
+  await getDb().tags.bulkPut([{ id: "t1", name: "One", createdAt: 1 }, { id: "t2", name: "Two", createdAt: 1 }]);
+  const older = await saveExtensionLink({ captureId: crypto.randomUUID(), url: "https://example.com/older", title: "Older" });
+  await getDb().items.update(older.itemId, { collectionIds: ["old"], tagIds: ["t1"], createdAt: 10 });
+  const newer = await saveExtensionLink({ captureId: crypto.randomUUID(), url: "https://example.com/newer", title: "Newer" });
+  await getDb().items.update(newer.itemId, { collectionIds: ["reading"], tagIds: ["t2", "t1"], createdAt: 20 });
+  const trashed = await saveExtensionLink({ captureId: crypto.randomUUID(), url: "https://example.com/trashed", title: "Trashed" });
+  await getDb().items.update(trashed.itemId, { collectionIds: ["gone"], deletedAt: 1, createdAt: 30 });
+  const current = await saveExtensionLink({ captureId: crypto.randomUUID(), url: "https://example.com/current", title: "Current" });
+  await getDb().items.update(current.itemId, { collectionIds: ["gone"], createdAt: 40 });
+  await expect(getCaptureCollections(current.itemId)).resolves.toMatchObject({ recentCollectionIds: ["reading", "old"], recentTagIds: ["t2", "t1"] });
 });
 
 test("creates a normalized collection and reuses names regardless of case", async () => {

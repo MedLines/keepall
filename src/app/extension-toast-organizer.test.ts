@@ -251,3 +251,34 @@ test("locks Clear search through saving and stale refresh until retry succeeds",
   await waitFor(() => expect(clear).toBeEnabled());
   fireEvent.click(clear); expect(panel.getByRole("searchbox")).toHaveValue("");
 });
+
+test("clears the tag search after adding from it and keeps focus there for the next tag", async () => {
+  const { request, panel } = await setup();
+  fireEvent.click(panel.getByRole("button", { name: "Tags" }));
+  const search = panel.getByRole("searchbox", { name: "Find a tag" });
+  fireEvent.input(search, { target: { value: "Des" } });
+  fireEvent.keyDown(search, { key: "Enter" });
+  await waitFor(() => expect(search).toHaveValue(""));
+  expect(search).toHaveFocus();
+  expect(panel.getByRole("button", { name: "Design" })).toHaveAttribute("aria-pressed", "true");
+  request.mockResolvedValueOnce({ tag: { id: "t2", name: "Later" }, tagIds: ["t1", "t2"], assigned: true, changed: true });
+  fireEvent.input(search, { target: { value: "Later" } });
+  fireEvent.keyDown(search, { key: "Enter" });
+  await waitFor(() => expect(search).toHaveValue(""));
+  expect(request).toHaveBeenLastCalledWith("tag", { tagName: "Later", assigned: true, expectedTagIds: ["t1"] });
+  expect(search).toHaveFocus();
+});
+
+test("groups recently used names under Recent only while the search is empty", async () => {
+  const { request, panel } = await setup();
+  request.mockResolvedValueOnce({ collectionName: "Reading", changed: false }).mockResolvedValueOnce({
+    collections: [{ id: "c1", name: "Alpha" }, { id: "c2", name: "Zeta" }], collectionIds: [],
+    tags: [], tagIds: [], recentCollectionIds: ["c2", "missing"],
+  } as Awaited<ReturnType<typeof request>>);
+  fireEvent.click(panel.getByRole("button", { name: "Unsorted" }));
+  await panel.findByRole("button", { name: "Zeta" });
+  const names = () => [...panel.getByRole("group", { name: "Collections" }).children].map((node) => node.textContent?.replace("✓", ""));
+  expect(names()).toEqual(["Unsorted", "Recent", "Zeta", "All collections", "Alpha"]);
+  fireEvent.input(panel.getByRole("searchbox"), { target: { value: "a" } });
+  expect(names()).toEqual(["Alpha", "Zeta"]);
+});

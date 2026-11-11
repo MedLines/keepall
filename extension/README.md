@@ -30,6 +30,9 @@ but it cannot offer Undo until the updated web app is deployed.
 
 **Organize** opens a compact panel with **Collection** and **Tags** switches.
 Search either list and choose **Create “name”** only when no names contain the search text.
+With an empty search, a **Recent** group lists up to four collections or tags used on your newest items.
+Adding a tag from the search clears it, so you can type the next tag right away. Keys typed in the search
+never reach the page's own keyboard shortcuts.
 Creating or choosing a collection moves the saved item immediately and keeps the
 panel open. Switch to Tags to create, add, or remove tags in the same session. Searches ignore case and
 reuse existing names. The panel keeps a fixed height while filtering, with
