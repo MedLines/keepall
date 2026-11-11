@@ -11,6 +11,7 @@ import {
   LINK_PREVIEW_PENDING_LEASE_MS,
   linkListTitle,
   linkNeedsPreviewRetry,
+  linkToNote,
   LinkValidationError,
   markLinkPreviewPending,
   normalizeLinkUrl,
@@ -90,6 +91,23 @@ describe("applyLinkEdit", () => {
     expect(() => applyLinkEdit(link, { url: "javascript:alert(1)" })).toThrow(
       LinkValidationError,
     );
+  });
+});
+
+describe("linkToNote", () => {
+  test("keeps the note's line breaks and the link's identity", () => {
+    const link = { ...buildLink({ url: "https://example.com", title: "Saved page", noteContent: "a" }, { id: "l1", now: 1 }), tagIds: ["t"], collectionIds: ["c"] };
+    expect(linkToNote(link, { noteContent: "  1. One\n2. Two  " }, { now: 5 })).toEqual({
+      id: "l1", type: "note", title: "Saved page", content: "1. One\n2. Two", tagIds: ["t"], collectionIds: ["c"], createdAt: 1, updatedAt: 5,
+    });
+  });
+  test("keeps Markdown content as written", () => {
+    const link = buildLink({ url: "https://example.com", noteContent: "# Hi", noteFormat: "markdown" });
+    expect(linkToNote(link, { noteContent: "# Hi\n" })).toMatchObject({ content: "# Hi\n", format: "markdown" });
+  });
+  test("refuses to drop both URL and note", () => {
+    const link = buildLink({ url: "https://example.com" });
+    expect(() => linkToNote(link, { noteContent: " " })).toThrow(LinkValidationError);
   });
 });
 

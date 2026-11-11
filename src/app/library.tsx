@@ -1070,7 +1070,7 @@ export function Library() {
       });
       clearEdit();
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-      if (previousUrl !== undefined && previousUrl !== updated.url) {
+      if (updated.type === "link" && previousUrl !== undefined && previousUrl !== updated.url) {
         void enrichLinkPreview(updated.id, updated.url);
       }
     } catch (caught) {

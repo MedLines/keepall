@@ -10,6 +10,7 @@ import { VideoItemPage } from "./video-item-page";
 import { DocumentItemPage } from "./document-item-page";
 
 import { readItemNavigation } from "./item-navigation-snapshot";
+import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { ItemPageLoading } from "./library-loading-content";
 
 export function ItemPageContent({ itemId, returnHref }: { itemId: string; returnHref: string }) {
@@ -36,8 +37,16 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
       .catch(() => {
         if (active) { setLoadedItemId(itemId); setType("error"); }
       });
+    // A link saved without its URL becomes a note; follow the new type.
+    const followType = () => {
+      void getItem(itemId).then((item) => {
+        if (active && (item?.type === "link" || item?.type === "note")) setType((current) => current === "link" || current === "note" ? item.type : current);
+      }).catch(() => {});
+    };
+    window.addEventListener(ITEMS_CHANGED_EVENT, followType);
     return () => {
       active = false;
+      window.removeEventListener(ITEMS_CHANGED_EVENT, followType);
     };
   }, [itemId, loadAttempt]);
 

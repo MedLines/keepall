@@ -105,6 +105,7 @@ test.each(["metadata", "image"] as const)("delayed preview %s cannot modify a ch
   const enrichment = enrichLinkPreview(item.id, item.url);
   await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(phase === "metadata" ? 1 : 2));
   const changed = await updateLink(item.id, { url: "https://new.example.com/", title: "New website", noteContent: "Keep my notes" });
+  if (changed.type !== "link") throw new Error("Expected a link");
   const saved = await saveLinkArticle(item.id, changed.url, { ...article, sourceUrl: changed.url });
   release({ ok: true, headers: new Headers({ "content-type": "image/png" }), blob: async () => new Blob([new Uint8Array([1, 2, 3])]), json: async () => ({ title: "Old website", imageUrl: "" }) } as Response);
   await enrichment;

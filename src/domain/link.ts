@@ -1,5 +1,6 @@
 import type { SavedArticle } from "./article";
 import { isHttpUrl } from "./classify";
+import type { NoteItem } from "./note";
 
 export type LinkPreviewStatus = "idle" | "pending" | "ready" | "failed";
 
@@ -254,6 +255,40 @@ export function applyLinkEdit(
       ? { noteFormat: input.noteFormat === "markdown" ? "markdown" as const : undefined }
       : {}),
     ...(urlChanged ? { ...EMPTY_LINK_PREVIEW, article: undefined } : {}),
+    updatedAt: options?.now ?? Date.now(),
+  };
+}
+
+/** True when a link edit clears the URL, which saves the link as a note. */
+export function isLinkToNoteEdit(input: { url: string }): boolean {
+  return !input.url.trim();
+}
+
+/**
+ * Turn a link into a note when its URL is removed. The note keeps the link's
+ * id, organization, and dates; page previews and saved articles are dropped.
+ */
+export function linkToNote(
+  link: LinkItem,
+  input: { title?: string; noteContent?: string; noteFormat?: "plain" | "markdown" },
+  options?: { now?: number },
+): NoteItem {
+  const markdown = (input.noteFormat ?? (link.noteFormat === "markdown" ? "markdown" : "plain")) === "markdown";
+  const raw = input.noteContent ?? link.noteContent ?? "";
+  if (!raw.trim()) {
+    throw new LinkValidationError("Add a URL, or write a note to save this without one");
+  }
+  const { collectionAddedAt } = link as LinkItem & { collectionAddedAt?: number };
+  return {
+    id: link.id,
+    type: "note",
+    title: (input.title ?? link.title).trim(),
+    content: markdown ? raw : raw.trim(),
+    ...(markdown ? { format: "markdown" as const } : {}),
+    tagIds: link.tagIds,
+    collectionIds: link.collectionIds,
+    ...(collectionAddedAt !== undefined ? { collectionAddedAt } : {}),
+    createdAt: link.createdAt,
     updatedAt: options?.now ?? Date.now(),
   };
 }

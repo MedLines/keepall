@@ -334,7 +334,7 @@ async function saveSelection(tab, info) {
   try {
     const url = info.frameUrl || info.pageUrl || tab.url;
     if (!/^https?:\/\//i.test(url ?? "")) throw new Error("This page cannot be saved to Keepall.");
-    const text = info.selectionText.trim();
+    const text = (await selectionWithLineBreaks(tab.id, info)).trim();
     if (text.length > 10000) throw new Error("This selection is too long. Select less text and try again.");
     const origin = await keepallOrigin();
     await ensureOffscreen(origin);
@@ -352,6 +352,28 @@ async function saveSelection(tab, info) {
     await showFeedback(tab.id, message, true, "toolbar", undefined, actions);
   } catch (error) {
     await showFeedback(tab.id, error.message || "Could not save this text to Keepall.", false);
+  }
+}
+
+/**
+ * Chrome flattens line breaks in selectionText. Read the same selection from
+ * the clicked frame instead, and use it only when it holds exactly the same
+ * words, so lists and paragraphs keep their lines without changing content.
+ */
+async function selectionWithLineBreaks(tabId, info) {
+  const fallback = info.selectionText;
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId, frameIds: [info.frameId ?? 0] },
+      func: () => String(globalThis.getSelection?.() ?? ""),
+    });
+    const text = typeof injection?.result === "string"
+      ? injection.result.replace(/\r\n?/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n")
+      : "";
+    const words = (value) => value.replace(/\s+/g, " ").trim();
+    return text && words(text) === words(fallback) ? text : fallback;
+  } catch {
+    return fallback;
   }
 }
 

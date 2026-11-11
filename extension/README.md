@@ -187,7 +187,10 @@ again. Selections and the resulting note are limited to 10,000 characters;
 exceeding the limit reports an error without truncating or replacing the note.
 When contexts overlap, images take priority, then selected text, then links.
 Text comes from Chrome's explicit right-click selection; there is no page-wide
-text scraping or new permission. Text is passed directly to the hidden bridge
+text scraping or new permission. Chrome's menu text drops line breaks, so the
+extension reads the same selection from the clicked frame and keeps its line
+breaks when the words match; otherwise it saves Chrome's text. A link saved
+from selected text can become a plain note by clearing its URL in Keepall. Text is passed directly to the hidden bridge
 and is not kept in pending extension storage. Retry a failed save with the same
 selection. Deploy the updated web bridge before using this with production.
 
