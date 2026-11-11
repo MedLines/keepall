@@ -9,6 +9,8 @@ function fingerprint(item: Item): string {
   // Automatic preview updates must not invalidate a user's chance to undo.
   if (item.type === "link") return JSON.stringify([...common, item.url, item.noteContent ?? "", item.noteFormat ?? "plain"]);
   if (item.type === "image") return JSON.stringify([...common, item.assetIds, item.sourceUrl, item.caption, item.captionFormat ?? "plain", item.sourceFileName]);
+  // A captured link saved as a note no longer matches its receipt.
+  if (item.type === "note") return JSON.stringify([...common, item.content]);
   throw new Error("Unsupported capture type");
 }
 

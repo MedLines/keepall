@@ -14,9 +14,14 @@ if (!globalThis.__keepallPageUi) {
   }
   colorScheme.addEventListener("change", () => applyTheme(themePreference));
   applyTheme("system");
+  // Chrome ignores @font-face inside a shadow root, so register the bundled Inter on the page itself.
+  try {
+    const inter = new FontFace("Keepall Inter", `url("${chrome.runtime.getURL("inter-latin-wght-normal.woff2")}") format("woff2")`, { style: "normal", weight: "100 900", display: "swap" });
+    document.fonts.add(inter);
+    void inter.load().catch(() => {});
+  } catch {}
   const style = document.createElement("style");
   style.textContent = `
-    @font-face { font-family: "Keepall Inter"; src: url("${chrome.runtime.getURL("inter-latin-wght-normal.woff2")}") format("woff2"); font-style: normal; font-weight: 100 900; font-display: swap; }
     :host {
       all: initial; color-scheme: light;
       --canvas: oklch(0.969593227 0.002647287 106.448873318); --control: oklch(0.993770382 0.001316042 106.423529177); --raised: oklch(0.924095637 0.004017056 106.477949299);
@@ -42,7 +47,7 @@ if (!globalThis.__keepallPageUi) {
     .editor-surface[open] { inset: 0; width: 100vw; max-width: none; max-height: 100dvh; height: 100dvh; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; animation: none; }
     .editor-surface::backdrop { background: transparent; backdrop-filter: none; animation: none; }
     .editor-frame { display: block; width: 100%; height: 100%; border: 0; background: transparent; }
-    .toast { --toast-offset: max(20px, env(safe-area-inset-right)); position: fixed; z-index: 2147483647; right: var(--toast-offset); top: max(20px, env(safe-area-inset-top)); display: grid; width: max-content; max-width: min(320px, calc(100vw - 40px)); border-radius: 28px; color: var(--primary); font-size: 14px; font-weight: 500; line-height: 1.4; opacity: 0; transform: translateX(calc(100% + var(--toast-offset))); transition: transform 260ms cubic-bezier(.32, .72, 0, 1), opacity 180ms cubic-bezier(.32, .72, 0, 1); }
+    .toast { font-family: "Keepall Inter", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-style: normal; letter-spacing: normal; text-transform: none; text-align: left; --toast-offset: max(20px, env(safe-area-inset-right)); position: fixed; z-index: 2147483647; right: var(--toast-offset); top: max(20px, env(safe-area-inset-top)); display: grid; width: max-content; max-width: min(320px, calc(100vw - 40px)); border-radius: 28px; color: var(--primary); font-size: 14px; font-weight: 500; line-height: 1.4; opacity: 0; transform: translateX(calc(100% + var(--toast-offset))); transition: transform 260ms cubic-bezier(.32, .72, 0, 1), opacity 180ms cubic-bezier(.32, .72, 0, 1); }
     .toast-card { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 48px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 32px; corner-shape: superellipse(1.5); background: var(--toast); box-shadow: 0 12px 36px oklch(0 0 0 / 0.141176471), 0 2px 8px oklch(0 0 0 / 0.070588235); }
     .toast.is-visible { opacity: 1; transform: translateX(0); }
     .toast.has-actions { width: min(320px, calc(100vw - 40px)); }
@@ -93,9 +98,14 @@ if (!globalThis.__keepallPageUi) {
     .toast-collections-retry[hidden] { display: none; }
     .toast-collections-status[role="alert"] { color: var(--danger); }
     .toast-collections-status[hidden] { display: none; }
+    .toast-collections-footer:has(.toast-collections-status:empty):has(.toast-collections-retry[hidden]) { min-height: 0; margin-top: 0; }
+    .toast-collections-group { padding: 6px 8px 2px; color: var(--secondary); font-size: 11px; font-weight: 500; }
+    .toast-collections-group:first-child { padding-top: 2px; }
     .toast button:focus-visible, .toast input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
     .toast .toast-collections-search:focus-visible { outline: none; border-color: var(--focus); }
     .toast-collections-controls button:focus-visible { outline-width: 1px; outline-offset: -2px; }
+    .toast .toast-collection:focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
+    .toast .toast-collection:focus-visible:not([aria-pressed="true"]) { background: var(--raised); }
     .toast button:disabled { cursor: default; opacity: .5; }
     @keyframes collection-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
     @media (prefers-reduced-motion: reduce) { .toast-collections { animation: none; } }
@@ -105,6 +115,17 @@ if (!globalThis.__keepallPageUi) {
   `;
   shadow.append(style);
   document.documentElement.append(host);
+
+  // Outside a closed shadow root, a keystroke in our search looks like one on a plain div, so site
+  // shortcuts (such as "d" for theme) would fire. Stop it at the earliest point we control and hand
+  // keydown to the organizer directly. Typing itself is a default action and is unaffected.
+  let organizerKeys;
+  const guardTyping = (event) => {
+    if (event.target !== host || !shadow.activeElement?.matches("input, textarea")) return;
+    event.stopImmediatePropagation();
+    if (event.type === "keydown") organizerKeys?.(event, shadow.activeElement);
+  };
+  for (const type of ["keydown", "keypress", "keyup"]) window.addEventListener(type, guardTyping, true);
 
   let dialog;
   let saveButton;
@@ -221,7 +242,7 @@ if (!globalThis.__keepallPageUi) {
     let collectionPicker;
     let undoTimer;
     const undoExpiresAt = Number.isFinite(actions?.undoExpiresAt) ? actions.undoExpiresAt : Date.now() + 60_000;
-    cleanupToast = () => { clearTimeout(undoTimer); collectionPicker?.destroy(); };
+    cleanupToast = () => { clearTimeout(undoTimer); collectionPicker?.destroy(); organizerKeys = undefined; };
     const duration = actions ? 8000 : 4000;
     const scheduleDismiss = () => {
       if (!node.isConnected) return;
@@ -310,6 +331,7 @@ if (!globalThis.__keepallPageUi) {
               },
             });
             node.append(collectionPicker.element);
+            organizerKeys = collectionPicker.handleKey;
             collectionPicker.focus();
             return;
           }
@@ -345,6 +367,7 @@ if (!globalThis.__keepallPageUi) {
         if (!collectionPicker) return;
         collectionPicker.destroy();
         collectionPicker = undefined;
+        organizerKeys = undefined;
         const trigger = buttons.querySelector('[data-action="organize"]');
         trigger.setAttribute("aria-expanded", "false");
         if (restoreFocus) trigger.focus();

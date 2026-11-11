@@ -18,6 +18,8 @@ import {
   applyLinkPreviewResult,
   applyLinkPreviewRetry,
   buildLink,
+  isLinkToNoteEdit,
+  linkToNote,
   markLinkPreviewPending,
   normalizeLinkUrl,
   type CreateLinkInput,
@@ -519,11 +521,25 @@ export class LinkPreviewStaleError extends Error {
   }
 }
 
+/** Save link details. Clearing the URL saves the link as a note with the same id. */
 export async function updateLink(
   id: string,
   input: { url: string; title?: string; noteContent?: string; noteFormat?: "plain" | "markdown" },
-): Promise<LinkItem> {
-  return mutateLink(id, current => applyLinkEdit(current, input));
+): Promise<LinkItem | NoteItem> {
+  if (!isLinkToNoteEdit(input)) return mutateLink(id, current => applyLinkEdit(current, input));
+  const db = getDb();
+  return db.transaction("rw", db.items, db.assets, db.thumbnails, async () => {
+    const row = await db.items.get(id);
+    if (!row || row.deletedAt !== undefined || row.type !== "link") throw new Error("Link not found");
+    const current = normalizeItem(row);
+    const next = { ...linkToNote(current, input), updatedAt: Math.max(Date.now(), current.updatedAt + 1) };
+    await db.items.put(next);
+    await deleteUnreferencedAssets([
+      ...(current.previewAssetId ? [current.previewAssetId] : []),
+      ...articleAssetIds(current.article),
+    ]);
+    return next;
+  });
 }
 
 export async function updateImage(

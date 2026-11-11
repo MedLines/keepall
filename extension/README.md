@@ -30,6 +30,9 @@ but it cannot offer Undo until the updated web app is deployed.
 
 **Organize** opens a compact panel with **Collection** and **Tags** switches.
 Search either list and choose **Create “name”** only when no names contain the search text.
+With an empty search, a **Recent** group lists up to four collections or tags used on your newest items.
+Adding a tag from the search clears it, so you can type the next tag right away. Keys typed in the search
+never reach the page's own keyboard shortcuts.
 Creating or choosing a collection moves the saved item immediately and keeps the
 panel open. Switch to Tags to create, add, or remove tags in the same session. Searches ignore case and
 reuse existing names. The panel keeps a fixed height while filtering, with
@@ -125,6 +128,20 @@ formats are PNG, JPEG, GIF, WebP, and AVIF, up to 20 MiB. Images that cannot
 be downloaded show an error toast. Saving the same image again reports that
 it was already saved.
 
+Right-click a video and choose **Save video to Keepall** to save it as a video item, titled with the
+page title. Keepall downloads MP4 or WebM files up to 100 MiB, reading the format from the file itself,
+and asks for access to the video host the same way as for images. For a streamed video (a `blob:`
+source), Keepall reads the player's real address from the page: `<source>` tags, attributes, or the
+player's React props. It downloads a direct MP4 or WebM if one is listed. Pinterest's 720p MP4 copy
+comes first because it has sound. If only an HLS stream exists and it keeps each track in one
+fragmented-MP4 file (CMAF byte ranges, as on Pinterest), Keepall saves the largest video track up
+to 1080p. Separate audio is left out, and the confirmation says "without sound". Streams split into
+many segment files, such as YouTube's, still show an explanation. A streamed video's host is only
+known after the page is read, when Chrome may no longer allow a permission prompt. If the host
+blocks the download, the error names it; choose **Allow access to all websites** in Options. The
+confirmation offers Open and Organize, but no Undo. This uses the same file transfer as **Add files**,
+so it works with the deployed app; organizing a saved video needs the matching app version.
+
 On X, an image linked to a tweet keeps that tweet's permalink as its source,
 including when saved from the home timeline or a profile. Photo numbers and
 tracking parameters are removed. If Chrome does not provide a tweet link,
@@ -187,7 +204,10 @@ again. Selections and the resulting note are limited to 10,000 characters;
 exceeding the limit reports an error without truncating or replacing the note.
 When contexts overlap, images take priority, then selected text, then links.
 Text comes from Chrome's explicit right-click selection; there is no page-wide
-text scraping or new permission. Text is passed directly to the hidden bridge
+text scraping or new permission. Chrome's menu text drops line breaks, so the
+extension reads the same selection from the clicked frame and keeps its line
+breaks when the words match; otherwise it saves Chrome's text. A link saved
+from selected text can become a plain note by clearing its URL in Keepall. Text is passed directly to the hidden bridge
 and is not kept in pending extension storage. Retry a failed save with the same
 selection. Deploy the updated web bridge before using this with production.
 

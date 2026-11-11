@@ -2,7 +2,7 @@ import Dexie from "dexie";
 import { buildVideo } from "@/domain/video";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildImage, ImageValidationError } from "@/domain/image";
-import { buildLink, LinkValidationError } from "@/domain/link";
+import { buildLink, LinkValidationError, type LinkItem } from "@/domain/link";
 import { buildNote, noteImageAssetIds, NoteValidationError } from "@/domain/note";
 import { deleteKeepallDatabase, getDb } from "./db";
 import { getAsset } from "./assets";
@@ -191,9 +191,7 @@ describe("items persistence", () => {
       url: "https://example.com/new",
     });
 
-    expect(updated.id).toBe(created.id);
-    expect(updated.createdAt).toBe(created.createdAt);
-    expect(updated.url).toBe("https://example.com/new");
+    expect(updated).toMatchObject({ id: created.id, createdAt: created.createdAt, url: "https://example.com/new" });
     expect(await listItems()).toEqual([updated]);
   });
 
@@ -202,8 +200,30 @@ describe("items persistence", () => {
     const withPreview = await saveLinkPreviewResult(link.id, { status: "ready", title: "Site title", description: "Website copy", imageUrl: "" });
     expect(withPreview.noteContent).toBe("## Mine");
     const edited = await updateLink(link.id, { url: link.url, noteContent: "## Revised", noteFormat: "markdown" });
-    expect(edited.previewDescription).toBe("Website copy");
+    expect(edited).toMatchObject({ previewDescription: "Website copy" });
     expect((await listItems())[0]).toMatchObject({ noteContent: "## Revised", noteFormat: "markdown", previewDescription: "Website copy" });
+  });
+
+  test("updateLink without a URL saves the link as a note with the same id and organization", async () => {
+    const link = await createLink({ url: "https://example.com/questions", title: "Questions", noteContent: "1. First?\n2. Second?" });
+    const db = getDb();
+    await db.items.put({ ...link, tagIds: ["t1"], collectionIds: ["c1"], previewAssetId: "preview-asset" } as LinkItem);
+    await db.assets.put({ id: "preview-asset", bytes: new Uint8Array([1]), mimeType: "image/png", contentHash: "h", createdAt: 1 } as never);
+
+    const saved = await updateLink(link.id, { url: "  ", title: "Interview questions", noteContent: "1. First?\n2. Second?", noteFormat: "plain" });
+
+    expect(saved).toEqual({
+      id: link.id, type: "note", title: "Interview questions", content: "1. First?\n2. Second?",
+      tagIds: ["t1"], collectionIds: ["c1"], createdAt: link.createdAt, updatedAt: expect.any(Number),
+    });
+    expect(await listItems()).toEqual([saved]);
+    expect(await db.assets.get("preview-asset")).toBeUndefined();
+  });
+
+  test("updateLink without a URL or note keeps the link", async () => {
+    const link = await createLink({ url: "https://example.com" });
+    await expect(updateLink(link.id, { url: "", noteContent: "  " })).rejects.toBeInstanceOf(LinkValidationError);
+    expect(await listItems()).toEqual([link]);
   });
 
   test("updateLink does not write javascript URLs", async () => {

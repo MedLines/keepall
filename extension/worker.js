@@ -20,6 +20,13 @@ chrome.runtime.onInstalled.addListener(() => {
       documentUrlPatterns: ["http://*/*", "https://*/*"],
       targetUrlPatterns: ["http://*/*", "https://*/*"],
     });
+    // Separate from the item above so blob: (streamed) videos still show it and get a clear explanation.
+    chrome.contextMenus.create({
+      id: "save-video-to-keepall",
+      title: "Save video to Keepall",
+      contexts: ["video"],
+      documentUrlPatterns: ["http://*/*", "https://*/*"],
+    });
     chrome.contextMenus.create({ id: "open-keepall-library", title: "Open Keepall library", contexts: ["action"] });
   });
 });
@@ -33,6 +40,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 function saveContext(info, tab) {
+  if (info.menuItemId === "save-video-to-keepall") return saveVideo(tab, info.srcUrl, info);
   if (info.menuItemId !== "save-to-keepall") return;
   if (info.mediaType === "image") {
     if (info.srcUrl) return saveImage(tab, info.srcUrl, info);
@@ -334,7 +342,7 @@ async function saveSelection(tab, info) {
   try {
     const url = info.frameUrl || info.pageUrl || tab.url;
     if (!/^https?:\/\//i.test(url ?? "")) throw new Error("This page cannot be saved to Keepall.");
-    const text = info.selectionText.trim();
+    const text = (await selectionWithLineBreaks(tab.id, info)).trim();
     if (text.length > 10000) throw new Error("This selection is too long. Select less text and try again.");
     const origin = await keepallOrigin();
     await ensureOffscreen(origin);
@@ -352,6 +360,28 @@ async function saveSelection(tab, info) {
     await showFeedback(tab.id, message, true, "toolbar", undefined, actions);
   } catch (error) {
     await showFeedback(tab.id, error.message || "Could not save this text to Keepall.", false);
+  }
+}
+
+/**
+ * Chrome flattens line breaks in selectionText. Read the same selection from
+ * the clicked frame instead, and use it only when it holds exactly the same
+ * words, so lists and paragraphs keep their lines without changing content.
+ */
+async function selectionWithLineBreaks(tabId, info) {
+  const fallback = info.selectionText;
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId, frameIds: [info.frameId ?? 0] },
+      func: () => String(globalThis.getSelection?.() ?? ""),
+    });
+    const text = typeof injection?.result === "string"
+      ? injection.result.replace(/\r\n?/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n")
+      : "";
+    const words = (value) => value.replace(/\s+/g, " ").trim();
+    return text && words(text) === words(fallback) ? text : fallback;
+  } catch {
+    return fallback;
   }
 }
 
@@ -380,9 +410,12 @@ async function imageBytes(url) {
   if (!response.ok || !response.body) throw new Error("Could not download this image.");
   const mimeType = (response.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
   if (!IMAGE_MIMES.has(mimeType)) throw new Error("Use a PNG, JPEG, GIF, WebP, or AVIF image.");
-  if (Number(response.headers.get("content-length")) > MAX_IMAGE_BYTES) {
-    throw new Error("Image must be 20 MiB or smaller.");
-  }
+  const bytes = await readLimited(response, MAX_IMAGE_BYTES, "Image must be 20 MiB or smaller.", "Image file is empty.");
+  return { bytes, mimeType };
+}
+
+async function readLimited(response, maxBytes, tooLarge, empty) {
+  if (Number(response.headers.get("content-length")) > maxBytes) throw new Error(tooLarge);
   const reader = response.body.getReader();
   const chunks = [];
   let size = 0;
@@ -390,20 +423,20 @@ async function imageBytes(url) {
     const { done, value } = await reader.read();
     if (done) break;
     size += value.byteLength;
-    if (size > MAX_IMAGE_BYTES) {
+    if (size > maxBytes) {
       await reader.cancel();
-      throw new Error("Image must be 20 MiB or smaller.");
+      throw new Error(tooLarge);
     }
     chunks.push(value);
   }
-  if (!size) throw new Error("Image file is empty.");
+  if (!size) throw new Error(empty);
   const bytes = new Uint8Array(size);
   let offset = 0;
   for (const chunk of chunks) {
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  return { bytes, mimeType };
+  return bytes;
 }
 
 function base64Image(bytes) {
@@ -483,6 +516,258 @@ async function saveImage(tab, srcUrl, context = {}) {
     const message = error instanceof Error && ["AbortError", "TimeoutError", "TypeError"].includes(error.name)
       ? "Could not download this image."
       : error instanceof Error ? error.message : "Could not save this image to Keepall.";
+    await feedback(message, false);
+  }
+}
+
+// Matches the web app's local video limit.
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+
+/** Reads the container from the bytes, since video hosts often send a generic content type. */
+function sniffVideo(bytes) {
+  if (bytes.length >= 12 && String.fromCharCode(...bytes.subarray(4, 8)) === "ftyp") return { mimeType: "video/mp4", extension: "mp4" };
+  if (bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) return { mimeType: "video/webm", extension: "webm" };
+  return undefined;
+}
+
+function videoFileName(url, extension) {
+  let base = "";
+  try { base = decodeURIComponent(url.pathname.split("/").at(-1) ?? ""); } catch {}
+  base = base.replace(/\.[^.]*$/, "").replace(/[\\/\u0000-\u001f\u007f]/g, "").trim().slice(0, 200);
+  return `${base || "video"}.${extension}`;
+}
+
+/** Saves through the same chunked file transfer the drawer uses for local files, so no new bridge is needed. */
+async function transferVideo(origin, tabId, manifest, bytes) {
+  const editorId = crypto.randomUUID();
+  const send = async (operation, payload) => {
+    const result = await chrome.runtime.sendMessage({ target: "offscreen", type: "file-action", origin, editorId, tabId, operation, payload });
+    if (!result?.success) throw new Error(result?.error || "Keepall did not confirm the video save.");
+    return result;
+  };
+  const { sessionId } = await send("begin", manifest);
+  for (let offset = 0; offset < bytes.length; offset += FILE_CHUNK_BYTES) {
+    await send("chunk", { sessionId, fileIndex: 0, offset, data: base64Image(bytes.subarray(offset, offset + FILE_CHUNK_BYTES)) });
+  }
+  let status = await send("commit", { sessionId });
+  const deadline = Date.now() + 120_000;
+  while (status.stage === "saving") {
+    if (Date.now() > deadline) throw new Error("Keepall is still saving this video. Check your library in a moment.");
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    status = await send("status", { sessionId });
+  }
+  const saved = status.results?.[0];
+  if (saved?.status !== "saved" || saved.itemId !== manifest.itemIds[0]) {
+    throw new Error(saved?.status === "failed" && saved.error ? saved.error : "Could not save this video to Keepall.");
+  }
+  return saved.itemId;
+}
+
+const STREAMED_VIDEO = "This video streams in pieces, so Keepall can't save it as a file.";
+
+/**
+ * Runs in the page (MAIN world) to find file addresses behind a blob: video. Players that stream
+ * through Media Source keep the real address in <source> tags, attributes, or React props.
+ * Self-contained because Chrome serializes it. The page controls the answer, so every address is
+ * still checked, permission-gated, and sniffed by the worker.
+ */
+function findVideoSources(blobUrl) {
+  const video = [...document.querySelectorAll("video")].find((element) => element.currentSrc === blobUrl || element.src === blobUrl);
+  if (!video) return [];
+  const urls = new Set();
+  const add = (value) => {
+    if (urls.size < 20 && typeof value === "string" && value.length <= 2048 &&
+        /^https?:\/\/[^\s"'<>]+\.(?:mp4|webm|m3u8)(?:[?#][^\s"'<>]*)?$/i.test(value)) urls.add(value);
+  };
+  for (const source of video.querySelectorAll("source")) add(source.src);
+  for (const attribute of video.attributes) add(attribute.value);
+  const key = Object.keys(video).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? video[key] : undefined;
+  // Players nest the address, such as Pinterest's src: [{ type, src }]. Look a few levels into
+  // plain props, skipping DOM nodes and React elements, with a cap on how much is read.
+  let budget = 2000;
+  const scan = (value, level) => {
+    if (--budget < 0) return;
+    if (typeof value === "string") { add(value); return; }
+    if (!value || typeof value !== "object" || level > 3 || value instanceof Node || value.$$typeof) return;
+    let values = [];
+    try { values = Array.isArray(value) ? value.slice(0, 20) : Object.values(value); } catch {}
+    for (const nested of values) scan(nested, level + 1);
+  };
+  // Walk outward from the element, so the nearest player's props come first in a feed.
+  for (let depth = 0; fiber && depth < 15; depth++, fiber = fiber.return) {
+    if (fiber.memoizedProps && typeof fiber.memoizedProps === "object") scan(fiber.memoizedProps, 0);
+  }
+  return [...urls];
+}
+
+const isPlaylist = (url) => /\.m3u8$/i.test(url.pathname);
+
+/**
+ * Orders what to try for a video: direct files, then playlists. Pinterest publishes a 720p MP4
+ * (with sound) beside many HLS streams, so that comes before its playlist.
+ */
+function videoDownloadCandidates(values) {
+  const candidates = [];
+  for (const value of values) {
+    let url;
+    try { url = new URL(value); } catch { continue; }
+    // The page supplies these, so accept only video file addresses.
+    if (!["http:", "https:"].includes(url.protocol) || !/\.(?:mp4|webm|m3u8)$/i.test(url.pathname)) continue;
+    if (!isPlaylist(url)) { candidates.push(url.href); continue; }
+    if (/(^|\.)pinimg\.com$/i.test(url.hostname) && url.pathname.includes("/hls/")) {
+      const master = url.pathname.replace(/_(?:\d+w|audio)\.m3u8$/i, ".m3u8");
+      candidates.push(`${url.origin}${master.replace("/hls/", "/720p/").replace(/\.m3u8$/i, ".mp4")}`, `${url.origin}${master}`);
+    } else candidates.push(url.href);
+  }
+  return [...new Set(candidates)].sort((left, right) => Number(isPlaylist(new URL(left))) - Number(isPlaylist(new URL(right))));
+}
+
+async function streamedVideoCandidates(tab, blobUrl, frameId) {
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id, frameIds: [frameId ?? 0] }, world: "MAIN", func: findVideoSources, args: [blobUrl],
+    });
+    const found = Array.isArray(injection?.result) ? injection.result.filter((value) => typeof value === "string") : [];
+    return videoDownloadCandidates(found).map((value) => new URL(value));
+  } catch {
+    return [];
+  }
+}
+
+/** After an await the click's gesture may be gone, so fall back to an existing grant. */
+async function videoHostAccess(videoUrl, pageOrigin, request) {
+  if (videoUrl.origin === pageOrigin) return true;
+  if (request) return request;
+  if (await chrome.permissions.contains({ origins: [`${videoUrl.origin}/*`] }).catch(() => false)) return true;
+  return chrome.permissions.request({ origins: [`${videoUrl.origin}/*`] }).catch(() => false);
+}
+
+async function fetchVideoResponse(url, access) {
+  try {
+    const response = await fetch(url.href, { credentials: "omit", referrerPolicy: "no-referrer", signal: AbortSignal.timeout(120_000) });
+    if (!response.ok || !response.body) throw new Error("Could not download this video.");
+    return response;
+  } catch (error) {
+    // Without a grant, only hosts that allow cross-origin reads work.
+    if (!access && error instanceof TypeError) {
+      throw new Error(`Allow Keepall to access ${url.hostname}: in Keepall Capture options, choose Allow access to all websites, then try again.`);
+    }
+    throw error;
+  }
+}
+
+async function fetchPlaylist(url, access) {
+  const bytes = await readLimited(await fetchVideoResponse(url, access), 1024 * 1024, "This video playlist is too large.", "This video playlist is empty.");
+  return new TextDecoder().decode(bytes);
+}
+
+/**
+ * HLS that stores each track as one fragmented MP4 read by byte ranges (CMAF, as on Pinterest)
+ * already has a playable file behind it. Pick the largest variant up to 1080p and return that
+ * file. Streams split into many segment files are refused. Separate audio is left out.
+ */
+async function hlsVideoFile(playlistUrl, access) {
+  let mediaUrl = playlistUrl;
+  let media = await fetchPlaylist(playlistUrl, access);
+  let silent = false;
+  if (media.includes("#EXT-X-STREAM-INF")) {
+    silent = /^#EXT-X-MEDIA:(?=[^\n]*TYPE=AUDIO)(?=[^\n]*URI=)/m.test(media);
+    const lines = media.split(/\r?\n/).map((line) => line.trim());
+    const variants = [];
+    lines.forEach((line, index) => {
+      if (!line.startsWith("#EXT-X-STREAM-INF:")) return;
+      const uri = lines.slice(index + 1).find((next) => next && !next.startsWith("#"));
+      // The shorter side, so portrait clips compare like landscape ones.
+      const [, width = 0, height = 0] = line.match(/RESOLUTION=(\d+)x(\d+)/) ?? [];
+      const size = Math.min(Number(width), Number(height));
+      const bandwidth = Number(line.match(/[:,]BANDWIDTH=(\d+)/)?.[1] ?? 0);
+      if (uri) variants.push({ uri, size, bandwidth });
+    });
+    const fitting = variants.filter((variant) => variant.size <= 1080);
+    const [best] = (fitting.length ? fitting : variants).sort((left, right) => right.size - left.size || right.bandwidth - left.bandwidth);
+    if (!best) throw new Error(STREAMED_VIDEO);
+    mediaUrl = new URL(best.uri, playlistUrl);
+    media = await fetchPlaylist(mediaUrl, access);
+  }
+  const map = media.match(/^#EXT-X-MAP:[^\n]*URI="([^"]+)"/m)?.[1];
+  const segments = media.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"));
+  if (!map || !segments.length || segments.some((segment) => segment !== map)) throw new Error(STREAMED_VIDEO);
+  const file = new URL(map, mediaUrl);
+  if (file.origin !== playlistUrl.origin) throw new Error(STREAMED_VIDEO);
+  return { url: file, silent };
+}
+
+async function downloadVideo(candidate, access) {
+  const { url, silent } = isPlaylist(candidate) ? await hlsVideoFile(candidate, access) : { url: candidate, silent: false };
+  const bytes = await readLimited(await fetchVideoResponse(url, access), MAX_VIDEO_BYTES, "Video must be 100 MiB or smaller.", "Video file is empty.");
+  const type = sniffVideo(bytes);
+  if (!type) throw new Error("Keepall can save MP4 or WebM videos. This one uses another format.");
+  return { bytes, type, url, silent };
+}
+
+async function saveVideo(tab, srcUrl, context = {}) {
+  if (!tab?.id) return;
+  const feedback = (message, success, actions) => showFeedback(tab.id, message, success, "toolbar", undefined, actions);
+  let sourcePage;
+  let videoUrl;
+  try {
+    sourcePage = new URL(context.pageUrl ?? tab.url ?? "");
+    if (!["http:", "https:"].includes(sourcePage.protocol)) throw new Error("This video cannot be saved to Keepall.");
+    videoUrl = new URL(srcUrl ?? "");
+    if (!["http:", "https:", "blob:"].includes(videoUrl.protocol)) throw new Error("Unsupported video address.");
+  } catch {
+    await feedback("This video cannot be saved to Keepall.", false);
+    return;
+  }
+
+  // Request a CDN grant while the context-menu click is still active, as for images.
+  const streamed = videoUrl.protocol === "blob:";
+  const request = streamed || videoUrl.origin === sourcePage.origin
+    ? undefined
+    : chrome.permissions.request({ origins: [`${videoUrl.origin}/*`] });
+  try {
+    await chrome.action.setBadgeText({ tabId: tab.id, text: "…" }).catch(() => {});
+    await chrome.action.setTitle({ tabId: tab.id, title: "Saving video to Keepall…" }).catch(() => {});
+    const candidates = streamed ? await streamedVideoCandidates(tab, videoUrl.href, context.frameId) : [videoUrl];
+    if (!candidates.length) throw new Error(STREAMED_VIDEO);
+    let video;
+    let failure;
+    const grants = new Map();
+    for (const candidate of candidates) {
+      if (!grants.has(candidate.origin)) grants.set(candidate.origin, await videoHostAccess(candidate, sourcePage.origin, request));
+      const access = grants.get(candidate.origin);
+      if (!access && !streamed) { failure ??= new Error("Allow access to this video host to save it."); continue; }
+      try {
+        video = await downloadVideo(candidate, access);
+        break;
+      } catch (error) {
+        // Keep the most useful reason: a missing grant or a size limit beats a missing alternative.
+        if (!failure || failure.message === STREAMED_VIDEO || failure.message === "Could not download this video.") failure = error;
+      }
+    }
+    if (!video) throw failure ?? new Error(STREAMED_VIDEO);
+    const { bytes, type, url, silent } = video;
+    const origin = await keepallOrigin();
+    await ensureOffscreen(origin);
+    const itemId = crypto.randomUUID();
+    const title = (tab.title ?? "").trim().slice(0, 500);
+    await transferVideo(origin, tab.id, {
+      manifestId: crypto.randomUUID(),
+      itemIds: [itemId],
+      files: [{ name: videoFileName(url, type.extension), type: type.mimeType, size: bytes.length }],
+      imageMode: "separate",
+      organization: {},
+      metadata: { ...(title ? { title } : {}), sourceUrl: sourcePage.href },
+    }, bytes);
+    await requireLibraryAccess(origin);
+    await notifyOpenKeepallTabs(origin).catch(() => {});
+    const actions = await captureFeedbackActions(tab.id, origin, { itemId, outcome: "created" }).catch(() => undefined);
+    await feedback(silent ? "Video saved to Keepall without sound" : "Video saved to Keepall", true, actions);
+  } catch (error) {
+    const message = error instanceof Error && ["AbortError", "TimeoutError", "TypeError"].includes(error.name)
+      ? "Could not download this video."
+      : error instanceof Error ? error.message : "Could not save this video to Keepall.";
     await feedback(message, false);
   }
 }

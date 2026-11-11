@@ -98,3 +98,24 @@ test("lost offscreen replies time out with recovery instructions", async () => {
   await vi.advanceTimersByTimeAsync(15001);
   await expect(reply).resolves.toMatchObject({ success: false, error: expect.stringContaining("Check status") });
 });
+
+test("selected text keeps the page's line breaks only when the words match Chrome's text", async () => {
+  const { chrome, context } = worker();
+  const save = (context as unknown as { saveContext: (info: object, tab: object) => Promise<void> }).saveContext;
+  const tab = { id: 1, url: "https://example.com/page", title: "Page" };
+  chrome.runtime.sendMessage.mockImplementation(async () => ({ error: "stop" }) as never);
+  const sentText = () => (chrome.runtime.sendMessage.mock.calls.at(-1) as unknown as [{ payload: { text: string } }])[0].payload.text;
+
+  chrome.scripting.executeScript.mockResolvedValueOnce([{ result: "1. One?\r\n2. Two?  \n\n\n\nEnd" }] as never);
+  await save({ menuItemId: "save-to-keepall", selectionText: "1. One? 2. Two? End", pageUrl: tab.url, frameId: 3 }, tab);
+  expect(chrome.scripting.executeScript).toHaveBeenLastCalledWith(expect.objectContaining({ target: { tabId: 1, frameIds: [3] } }));
+  expect(sentText()).toBe("1. One?\n2. Two?\n\nEnd");
+
+  chrome.scripting.executeScript.mockResolvedValueOnce([{ result: "Different words" }] as never);
+  await save({ menuItemId: "save-to-keepall", selectionText: "1. One? 2. Two?", pageUrl: tab.url }, tab);
+  expect(sentText()).toBe("1. One? 2. Two?");
+
+  chrome.scripting.executeScript.mockRejectedValueOnce(new Error("Cannot access frame"));
+  await save({ menuItemId: "save-to-keepall", selectionText: "Only Chrome text", pageUrl: tab.url }, tab);
+  expect(sentText()).toBe("Only Chrome text");
+});

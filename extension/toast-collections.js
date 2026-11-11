@@ -50,7 +50,8 @@ if (!globalThis.__keepallCreateToastCollections) {
       render();
       search.focus();
     });
-    panel.addEventListener("keydown", (event) => {
+    // page-ui calls this directly while the search has focus, because it stops typing from reaching site shortcuts.
+    function handleKey(event, target = event.target) {
       if (event.key === "Escape" && !saving) {
         event.preventDefault();
         event.stopPropagation();
@@ -58,18 +59,19 @@ if (!globalThis.__keepallCreateToastCollections) {
       }
       if (saving || !["ArrowDown", "ArrowUp", "Enter"].includes(event.key) || event.isComposing) return;
       const choices = [...list.querySelectorAll("button:not(:disabled)")];
-      if (event.target === search) {
+      if (target === search) {
         event.preventDefault();
         const target = event.key === "ArrowUp" ? choices.at(-1) : choices[0];
         if (event.key === "Enter") target?.click();
         else target?.focus();
-      } else if (event.key !== "Enter" && choices.includes(event.target)) {
+      } else if (event.key !== "Enter" && choices.includes(target)) {
         event.preventDefault();
-        const index = choices.indexOf(event.target) + (event.key === "ArrowDown" ? 1 : -1);
+        const index = choices.indexOf(target) + (event.key === "ArrowDown" ? 1 : -1);
         if (index < 0) search.focus();
         else choices[index % choices.length]?.focus();
       }
-    });
+    }
+    panel.addEventListener("keydown", (event) => handleKey(event));
     const outside = (event) => {
       if (!saving && !event.composedPath().includes(host)) onClose(false);
     };
@@ -113,15 +115,32 @@ if (!globalThis.__keepallCreateToastCollections) {
       const selected = (id) => isTag ? options.tagIds.includes(id) : id === (options.collectionIds[0] ?? null);
       const choices = entries.filter((entry) => normalize(entry.name).toLowerCase().includes(query))
         .sort((left, right) => Number(selected(right.id)) - Number(selected(left.id)));
+      // With no search, lift recently used names under their own heading so frequent choices stay one click away.
+      const recentIds = query ? [] : (isTag ? options.recentTagIds : options.recentCollectionIds) ?? [];
+      const recent = recentIds.map((id) => choices.find((entry) => entry.id === id && !selected(entry.id))).filter(Boolean).slice(0, 4);
+      const chosen = choices.filter((entry) => selected(entry.id));
+      const rest = choices.filter((entry) => !selected(entry.id) && !recent.includes(entry));
       list.replaceChildren();
-      for (const entry of choices) {
-        list.append(choice(entry.name, selected(entry.id), () => save(entry, false), entry.id));
+      const group = (label) => {
+        const heading = document.createElement("div");
+        heading.className = "toast-collections-group";
+        heading.setAttribute("aria-hidden", "true");
+        heading.textContent = label;
+        list.append(heading);
+      };
+      const append = (entry) => list.append(choice(entry.name, selected(entry.id), () => save(entry, false), entry.id));
+      chosen.forEach(append);
+      if (recent.length) {
+        group("Recent");
+        recent.forEach(append);
+        if (rest.length) group(isTag ? "All tags" : "All collections");
       }
+      rest.forEach(append);
       if (name && choices.length === 0) {
         list.append(choice(`Create “${name}”`, undefined, () => save({ name }, true)));
       }
       status.setAttribute("role", "status");
-      status.textContent = list.children.length ? "" : isTag ? "Type a name to create your first tag." : "No collections found";
+      status.textContent = choices.length || name ? "" : isTag ? "Type a name to create your first tag." : "No collections found";
     }
 
     function setDisabled(value) {
@@ -138,6 +157,7 @@ if (!globalThis.__keepallCreateToastCollections) {
       status.setAttribute("role", "status");
       status.textContent = creating ? "Creating…" : kind === "tag" ? "Updating tags…" : "Moving…";
       let focusId;
+      const typed = Boolean(normalize(search.value));
       try {
         if (kind === "tag") {
           const result = await request("tag", {
@@ -148,8 +168,12 @@ if (!globalThis.__keepallCreateToastCollections) {
           if (disposed) return;
           options.tagIds = result.tagIds;
           if (!options.tags.some((tag) => tag.id === result.tag.id)) options.tags.push(result.tag);
+          // After adding from a search, empty it so the next tag can be typed right away.
+          if (typed && result.assigned) {
+            search.value = "";
+            queries.tag = "";
+          } else focusId = result.tag.id;
           render();
-          focusId = result.tag.id;
           onTagged(result);
         } else {
           const result = await request("move", {
@@ -174,6 +198,7 @@ if (!globalThis.__keepallCreateToastCollections) {
           setDisabled(stale);
           close.disabled = false;
           if (focusId) focusChoice(focusId);
+          else if (kind === "tag" && !search.value) search.focus();
         }
       }
     }
@@ -217,6 +242,7 @@ if (!globalThis.__keepallCreateToastCollections) {
     return {
       element: panel,
       focus: () => search.focus(),
+      handleKey,
       destroy: () => {
         disposed = true;
         document.removeEventListener("pointerdown", outside);

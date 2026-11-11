@@ -62,7 +62,8 @@ export function LinkItemPage({ itemId, returnHref, initialSnapshot }: { itemId: 
     const reload = () => {
       void Promise.all([getItem(itemId), listTags(), listCollections()])
         .then(([item, tags, collections]) => {
-          if (active) setState(item?.type === "link" ? { status: "ready", link: item, tags, collections } : { status: "missing" });
+          // Another type means the link was saved as a note; the item page swaps views.
+          if (active && (!item || item.type === "link")) setState(item ? { status: "ready", link: item, tags, collections } : { status: "missing" });
         })
         .catch(() => {
           if (active) setState({ status: "error" });
@@ -166,8 +167,10 @@ export function LinkItemPage({ itemId, returnHref, initialSnapshot }: { itemId: 
     setEditError(null);
     try {
       const updated = await updateLink(itemId, draft);
-      applyLinkUpdate(updated);
       setEditing(false);
+      // Without a URL the link became a note; the event lets the item page swap views.
+      if (updated.type === "link") applyLinkUpdate(updated);
+      else window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
     } catch (error) {
       setEditError(error instanceof LinkValidationError ? error.message : "Couldn't save link details.");
     } finally {

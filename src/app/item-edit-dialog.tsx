@@ -96,6 +96,7 @@ function MediaItemEditDialog({
   const [preview, setPreview] = useState(false);
   const [baseline] = useState({ title: initialTitle, notes: initialNotes, format: initialFormat, sourceUrl: initialSourceUrl });
   const dismissal = useDirtyDismissal(title !== baseline.title || notes !== baseline.notes || format !== baseline.format || sourceUrl !== baseline.sourceUrl, () => onOpenChange(false));
+  const submitLabel = media === "link" && !sourceUrl.trim() ? "Save as note" : "Save changes";
 
   return (
     <ModalDialog
@@ -122,7 +123,7 @@ function MediaItemEditDialog({
           type="submit"
           disabled={busy}
         >
-          {busy ? "Saving…" : "Save changes"}
+          {busy ? "Saving…" : submitLabel}
         </button>
       </>}
     >
@@ -161,17 +162,7 @@ function MediaItemEditDialog({
           />
         )}
       </div>
-      {media === "image" || media === "link" ? (
-        <label className="grid gap-2 text-sm font-medium text-text-primary">
-          {media === "link" ? "URL" : "Source URL (optional)"}
-          <input
-            className="ui-field min-h-11 px-3 text-sm font-normal"
-            inputMode="url"
-            value={sourceUrl}
-            onChange={(event) => setSourceUrl(event.target.value)}
-          />
-        </label>
-      ) : null}
+      {media === "image" || media === "link" ? <SourceUrlField media={media} value={sourceUrl} onChange={setSourceUrl} /> : null}
       {error ? (
         <p className="text-sm text-text-danger" role="alert">
           {error}
@@ -179,6 +170,28 @@ function MediaItemEditDialog({
       ) : null}
       <ConfirmDialog {...dismissal.confirmationProps} />
     </ModalDialog>
+  );
+}
+
+function SourceUrlField({ media, value, onChange }: { media: "image" | "link"; value: string; onChange: (value: string) => void }) {
+  // A link without a URL is saved as a note (see updateLink).
+  const savesAsNote = media === "link" && !value.trim();
+  return (
+    <label className="grid gap-2 text-sm font-medium text-text-primary">
+      {media === "link" ? "URL" : "Source URL (optional)"}
+      <input
+        className="ui-field min-h-11 px-3 text-sm font-normal"
+        inputMode="url"
+        value={value}
+        aria-describedby={savesAsNote ? "item-edit-url-hint" : undefined}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {savesAsNote ? (
+        <span id="item-edit-url-hint" className="text-sm font-normal text-text-secondary">
+          Without a URL, this link is saved as a note.
+        </span>
+      ) : null}
+    </label>
   );
 }
 

@@ -7,21 +7,43 @@ import { getLibraryPreferences } from "./library-preferences";
 
 async function captureItem(itemId: string) {
   const row = await getDb().items.get(itemId);
-  if (!row || row.deletedAt !== undefined || (row.type !== "link" && row.type !== "image")) {
+  if (!row || row.deletedAt !== undefined || !["link", "image", "video"].includes(row.type)) {
     throw new Error("This item is no longer available in Keepall.");
   }
   return normalizeItem(row);
 }
 
+const RECENT_ITEMS_SCANNED = 200;
+const RECENT_LIMIT = 4;
+
+/** Collections and tags on the newest other items, most recent first. */
+async function recentOrganization(itemId: string) {
+  const items = await getDb().items.orderBy("createdAt").reverse()
+    .filter((item) => item.id !== itemId && item.deletedAt === undefined).limit(RECENT_ITEMS_SCANNED).toArray();
+  const collectionIds = new Set<string>();
+  const tagIds = new Set<string>();
+  for (const item of items) {
+    for (const id of item.collectionIds ?? []) if (collectionIds.size < RECENT_LIMIT) collectionIds.add(id);
+    for (const id of item.tagIds ?? []) if (tagIds.size < RECENT_LIMIT) tagIds.add(id);
+    if (collectionIds.size >= RECENT_LIMIT && tagIds.size >= RECENT_LIMIT) break;
+  }
+  return { recentCollectionIds: [...collectionIds], recentTagIds: [...tagIds] };
+}
+
 export async function getCaptureCollections(itemId: string) {
-  const [item, collections, tags, preferences] = await Promise.all([
+  const [item, collections, tags, preferences, recent] = await Promise.all([
     captureItem(itemId), getDb().collections.orderBy("name").toArray(), getDb().tags.orderBy("name").toArray(), getLibraryPreferences(),
+    recentOrganization(itemId),
   ]);
+  const collectionIdSet = new Set(collections.map(({ id }) => id));
+  const tagIdSet = new Set(tags.map(({ id }) => id));
   return {
     collections: orderCollectionsByPins(collections, preferences.pinnedCollectionIds).map(({ id, name }) => ({ id, name })),
     collectionIds: item.collectionIds,
     tags: tags.map(({ id, name }) => ({ id, name })),
     tagIds: item.tagIds,
+    recentCollectionIds: recent.recentCollectionIds.filter((id) => collectionIdSet.has(id)),
+    recentTagIds: recent.recentTagIds.filter((id) => tagIdSet.has(id)),
   };
 }
 
