@@ -43,7 +43,7 @@ export default function ChangelogPage() {
       <div className="kc-changelog">
         <nav className="kc-years" aria-label="Changelog months">
           <span>2026</span>
-          <a href="#2026-10-07-read-find-and-review">October</a>
+          <a href="#2026-10-19-trash-undo-and-untitled-notes">October</a>
           <a href="#2026-09-30-organize-and-restore">September</a>
           <a href="#2026-08-28-bookmarks-and-image-folders">August</a>
         </nav>

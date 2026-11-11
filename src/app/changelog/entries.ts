@@ -9,6 +9,39 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    id: "2026-10-19-trash-undo-and-untitled-notes",
+    date: "2026-10-19",
+    title: "Undo stays in the library bar",
+    summary: "A deleted item can come back from the same place you were working, and untitled notes stay readable.",
+    sections: [
+      { label: "Improved", notes: [
+        "After you move an item to Trash, Undo appears in the library top bar for a few seconds. It does not push the cards down. Hover, focus, a busy library, or a hidden tab keeps it available. If undo fails, the notice stays until you dismiss it.",
+      ] },
+      { label: "Fixed", notes: [
+        "A note without a title no longer repeats its first line as the title and the body.",
+      ] },
+    ],
+    guides: [{ label: "Restore items from Trash", href: "/help/collections-and-tags#trash" }],
+  },
+  {
+    id: "2026-10-08-capture-files-and-contact",
+    date: "2026-10-08",
+    title: "Save files from Chrome, and ask for help",
+    summary: "Keepall Capture can save local files from the page you are on. Contact is open for questions, bugs, and ideas.",
+    sections: [
+      { label: "New", notes: [
+        "In the Capture drawer, choose Add files for images, MP4 or WebM videos, PDFs, text, and Markdown, or paste an image. Those files become their own library items. Mixed files save separately, with progress, retry, and cancel. Bulk import opens Keepall's import dialog and keeps the drawer draft.",
+        "Right-click the extension icon and choose Open Keepall library to focus an open library tab or open a new one.",
+        "Contact accepts help requests, bug reports, and ideas. Bug reports ask for your browser, the steps you took, and what went wrong. GitHub issues remain available if you prefer a public report.",
+      ] },
+    ],
+    guides: [
+      { label: "Save files from Chrome", href: "/help/chrome-capture#local-files" },
+      { label: "Open your library from Capture", href: "/help/chrome-capture#find-saves" },
+      { label: "Contact Keepall", href: "/contact" },
+    ],
+  },
+  {
     id: "2026-10-07-read-find-and-review",
     date: "2026-10-07",
     title: "Read more. Find more. Clear your Unsorted.",

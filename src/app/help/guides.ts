@@ -164,7 +164,7 @@ export const guides: Guide[] = [
   },
   {
     slug: "chrome-capture", category: "Capture", title: "Save from Chrome",
-    summary: "Add the extension, then keep pages, links, images, and useful passages without leaving the website.", minutes: "5 min read",
+    summary: "Add the extension, then keep pages, links, images, passages, and local files without leaving the website.", minutes: "5 min read",
     sections: [
       {
         id: "install",
@@ -234,6 +234,22 @@ export const guides: Guide[] = [
         visual: { kind: "video", src: "/marketing/capture-notes-demo", poster: captureNotesPoster.src, caption: "Open the extension's save panel with Alt + K to add a note." },
       },
       {
+        id: "local-files",
+        title: "Save files from your computer",
+        paragraphs: [
+          "Add files selects images, MP4 or WebM videos, PDFs, text, and Markdown. These save as their own library items, not as attachments to the current page.",
+          "You can paste an image into the drawer. Mixed files save separately. Progress shows which files saved, with retry and cancel.",
+          "Bulk import opens Keepall's import dialog and keeps the extension draft.",
+        ],
+        steps: [
+          "Press Alt + K on Windows or Linux, or Option + K on Mac.",
+          "Select Add files, or paste an image.",
+          "Review the files.",
+          "Select Save.",
+        ],
+        note: "Right-click downloads of PDF or video files are not supported. Use Add files for local documents and videos.",
+      },
+      {
         id: "after-saving",
         title: "Open, organize, or undo a save",
         paragraphs: [
@@ -272,9 +288,12 @@ export const guides: Guide[] = [
         title: "Find extension saves",
         paragraphs: [
           "The extension normally saves to www.keepall.app in the same Chrome profile. Profiles such as Personal and Work have separate libraries.",
+          "Right-click the extension icon and choose Open Keepall library. It focuses an open library tab, or opens a new one.",
           "Check connection tests whether the extension can reach the selected library. It does not sync libraries.",
         ],
         steps: [
+          "To open the library without capturing the page, right-click the extension icon.",
+          "Select Open Keepall library.",
           "Open Keepall in the Chrome profile used for the save.",
           "To check the destination, right-click the extension icon.",
           "Select Options.",
@@ -301,7 +320,7 @@ export const guides: Guide[] = [
           "If Restore library access appears, select it.",
           "Retry the save.",
         ],
-        links: [{ label: "Get help with a problem", href: "https://github.com/MedLines/keepall/issues" }],
+        links: [{ label: "Get help with a problem", href: "/contact" }],
       },
     ],
     action: { label: "Open your library", href: "/" },
