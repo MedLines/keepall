@@ -140,6 +140,12 @@ chrome.storage.onChanged.addListener((changes, area) => {
   })().catch(() => {});
 });
 
+async function showSaving(tabId, title) {
+  clearTimeout(badgeTimers.get(tabId));
+  await chrome.action.setBadgeText({ tabId, text: "…" }).catch(() => {});
+  await chrome.action.setTitle({ tabId, title }).catch(() => {});
+}
+
 async function showFeedback(tabId, message, success, source = "toolbar", editorId, actions) {
   try {
     // Chrome's badge API rejects OKLCH strings and requires legacy RGBA here.
@@ -380,6 +386,7 @@ async function saveTab(tab, options = {}) {
   }
 
   try {
+    if (options.source !== "editor") await showSaving(tab.id, "Saving to Keepall…");
     const title = options.title ?? tab.title ?? "";
     const payload = await pendingCapture(tab.url, title, options.noteContent ?? "", options.noteFormat, options.existingLink, options.collectionId, options.tagIds, options.collectionName, options.tagNames) ?? {
       captureId: crypto.randomUUID(),
@@ -450,6 +457,7 @@ async function saveSelection(tab, info) {
     if (!/^https?:\/\//i.test(url ?? "")) throw new Error("This page cannot be saved to Keepall.");
     const text = (await selectionWithLineBreaks(tab.id, info)).trim();
     if (text.length > 10000) throw new Error("This selection is too long. Select less text and try again.");
+    await showSaving(tab.id, "Saving text to Keepall…");
     const origin = await keepallOrigin();
     await ensureOffscreen(origin);
     const captureId = crypto.randomUUID();
@@ -595,6 +603,7 @@ async function saveImage(tab, srcUrl, context = {}) {
     : chrome.permissions.request({ origins: [`${imageUrl.origin}/*`] });
   try {
     if (!await access) throw new Error("Allow access to this image host to save it.");
+    await showSaving(tab.id, "Saving image to Keepall…");
     const { bytes, mimeType } = await imageBytes(imageUrl.href);
     const origin = await keepallOrigin();
     await ensureOffscreen(origin);
@@ -833,8 +842,7 @@ async function saveVideo(tab, srcUrl, context = {}) {
     ? undefined
     : chrome.permissions.request({ origins: [`${videoUrl.origin}/*`] });
   try {
-    await chrome.action.setBadgeText({ tabId: tab.id, text: "…" }).catch(() => {});
-    await chrome.action.setTitle({ tabId: tab.id, title: "Saving video to Keepall…" }).catch(() => {});
+    await showSaving(tab.id, "Saving video to Keepall…");
     const candidates = streamed ? await streamedVideoCandidates(tab, videoUrl.href, context.frameId) : [videoUrl];
     if (!candidates.length) throw new Error(STREAMED_VIDEO);
     let video;
