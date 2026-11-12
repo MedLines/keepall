@@ -12,10 +12,12 @@ import { FocusedImageViewer, MediaViewerTrigger } from "./focused-image-viewer";
 import { LinkScreenshotStrip } from "./link-screenshot-strip";
 
 /** Screenshots captured from the page, with cover choice and removal. Hidden when there are none. */
-export function LinkScreenshotsSection({ link, disabled, onUpdated, className = "" }: {
+export function LinkScreenshotsSection({ link, disabled, onUpdated, onEmptied, className = "" }: {
   link: LinkItem;
   disabled: boolean;
   onUpdated: (link: LinkItem) => void;
+  /** Called after the last screenshot is removed; this section unmounts, so the page should move focus. */
+  onEmptied?: () => void;
   className?: string;
 }) {
   const headingId = useId();
@@ -55,6 +57,7 @@ export function LinkScreenshotsSection({ link, disabled, onUpdated, className = 
       setSelected(null);
       setRemoveOpen(false);
       onUpdated(updated);
+      if (!linkScreenshots(updated).length) onEmptied?.();
     } catch {
       setError("Couldn't remove the screenshot. Try again.");
     } finally {

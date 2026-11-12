@@ -82,12 +82,15 @@ test("item page chooses a screenshot as cover and removes screenshots", async ({
   await page.getByRole("button", { name: "Remove screenshot" }).click();
   await expect(section.getByRole("button", { name: /^Screenshot \d/ })).toHaveCount(1);
   await expect(section.getByText("1", { exact: true })).toBeVisible();
+  await expect(section.getByRole("button", { name: "Remove", exact: true })).toBeFocused();
   await expect(section.getByRole("button", { name: "Use automatic cover" })).toBeVisible();
 
   await section.getByRole("button", { name: "Use automatic cover" }).click();
   await section.getByRole("button", { name: "Remove", exact: true }).click();
   await page.getByRole("button", { name: "Remove screenshot" }).click();
   await expect(page.getByRole("region", { name: /Screenshots/ })).toHaveCount(0);
+  // The section is gone, so focus moves to the next section's heading instead of the page body.
+  await expect(page.getByRole("heading", { name: "My note" })).toBeFocused();
 });
 
 test("quick preview switches between the page preview and screenshots", async ({ page }) => {

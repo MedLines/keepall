@@ -7,7 +7,7 @@ import Link from "next/link";
 import { ItemPageLoading } from "./library-loading-content";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { itemActionLabel } from "@/domain/item-label";
 import { linkCardHost } from "@/domain/card-display";
 import { CollectionValidationError, type Collection } from "@/domain/collection";
@@ -59,6 +59,15 @@ export function LinkItemPage({ itemId, returnHref, initialSnapshot }: { itemId: 
   const [organizeMutation, setOrganizeMutation] = useState<"tag" | "collection" | null>(null);
   const [tagError, setTagError] = useState<string | null>(null);
   const [collectionError, setCollectionError] = useState<string | null>(null);
+  const noteHeadingRef = useRef<HTMLHeadingElement>(null);
+  const focusNoteAfterCommit = useRef(false);
+
+  // Runs after the screenshots section and its dialog unmount, so their focus cleanup can't override it.
+  useEffect(() => {
+    if (!focusNoteAfterCommit.current) return;
+    focusNoteAfterCommit.current = false;
+    noteHeadingRef.current?.focus();
+  });
 
   useEffect(() => {
     let active = true;
@@ -216,11 +225,11 @@ export function LinkItemPage({ itemId, returnHref, initialSnapshot }: { itemId: 
 
             <ArticleReader key={`${link.id}:${link.url}`} link={link} disabled={busy} onSaved={applyLinkUpdate} />
 
-            <LinkScreenshotsSection link={link} disabled={busy} onUpdated={applyLinkUpdate}
+            <LinkScreenshotsSection link={link} disabled={busy} onUpdated={applyLinkUpdate} onEmptied={() => { focusNoteAfterCommit.current = true; }}
               className={`mt-10 border-t border-border-control pt-7 ${link.article ? "mx-auto max-w-[46rem] px-2 sm:px-7" : ""}`} />
 
             <section aria-labelledby="personal-note-heading" className={`mt-10 border-t border-border-control pt-7 ${link.article ? "mx-auto max-w-[46rem] px-2 sm:px-7" : ""}`}>
-              <h2 id="personal-note-heading" className="text-xl font-semibold">My note</h2>
+              <h2 id="personal-note-heading" ref={noteHeadingRef} tabIndex={-1} className="text-xl font-semibold outline-none">My note</h2>
               {link.noteContent?.trim() ? (
                 <article className="mt-6"><NoteContent content={link.noteContent} format={link.noteFormat === "markdown" ? "markdown" : "plain"} headingStart={2} /></article>
               ) : (
