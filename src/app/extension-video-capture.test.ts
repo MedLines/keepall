@@ -40,7 +40,7 @@ function worker(routes: Routes, found: string[] = []) {
     return new Response((body ?? null) as BodyInit | null, init);
   });
   const feedback: Feedback[] = [];
-  const context: Record<string, unknown> = { chrome, crypto, URL, Response, AbortSignal, btoa, fetch, TextDecoder, setTimeout: (fn: () => void) => setTimeout(fn, 0) };
+  const context: Record<string, unknown> = { chrome, crypto, URL, Response, AbortSignal, btoa, fetch, TextDecoder, setTimeout: (fn: () => void) => setTimeout(fn, 0), clearTimeout };
   runInNewContext(workerSource, context);
   Object.assign(context, {
     keepallOrigin: async () => "https://www.keepall.app",
