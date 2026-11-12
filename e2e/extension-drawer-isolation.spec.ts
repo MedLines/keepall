@@ -3,7 +3,7 @@ import path from "node:path";
 
 const origin = `http://localhost:${process.env.KEEPALL_E2E_PORT ?? "3100"}`;
 
-async function openDrawerOnShortcutPage(page: Page, options: { fakeClock?: boolean } = {}) {
+async function openDrawerOnShortcutPage(page: Page, options: { fakeClock?: boolean; skipOrganizations?: boolean } = {}) {
   if (options.fakeClock) await page.clock.install();
   await page.addInitScript(() => {
     const attach = Element.prototype.attachShadow;
@@ -17,6 +17,7 @@ async function openDrawerOnShortcutPage(page: Page, options: { fakeClock?: boole
   const bridge = await page.evaluateHandle(() => {
     let listener: (message: Record<string, unknown>) => void;
     let lastSave: Record<string, unknown> | undefined;
+    const messages: Record<string, unknown>[] = [];
     const keys: string[] = [];
     let clicks = 0;
     document.documentElement.style.setProperty("overflow", "auto", "important");
@@ -45,6 +46,7 @@ async function openDrawerOnShortcutPage(page: Page, options: { fakeClock?: boole
       onMessage: { addListener: (callback: typeof listener) => { listener = callback; } },
       sendMessage: (message: Record<string, unknown>) => {
         lastSave = message;
+        messages.push(message);
         if (message.type === "save-from-editor" && (globalThis as { __rejectSave?: boolean }).__rejectSave) return Promise.reject(new Error("Extension context invalidated."));
         return Promise.resolve({ accepted: true });
       },
@@ -56,6 +58,7 @@ async function openDrawerOnShortcutPage(page: Page, options: { fakeClock?: boole
       keys: () => [...keys],
       clicks: () => clicks,
       lastSave: () => lastSave,
+      messages: () => [...messages],
     };
   });
   for (const file of ["drawer-styles.js", "note-preview.js", "file-capture.js", "org-picker.js", "page-ui.js"]) {
@@ -64,7 +67,7 @@ async function openDrawerOnShortcutPage(page: Page, options: { fakeClock?: boole
   await bridge.evaluate((value, origin) => value.send({
     type: "editor", url: "https://example.com/timeline", title: "Timeline", editorId: "isolation-editor", origin,
   }), origin);
-  await bridge.evaluate((value) => value.send({
+  if (!options.skipOrganizations) await bridge.evaluate((value) => value.send({
     type: "organizations", editorId: "isolation-editor",
     collections: Array.from({ length: 40 }, (_, index) => ({ id: `collection-${index}`, name: `Collection ${index}` })),
     tags: [{ id: "tag-jk", name: "jk reference" }],
@@ -314,4 +317,40 @@ test("a failed save shows one alert and returns focus", async ({ page }) => {
 test("the drawer document declares its language", async ({ page }) => {
   const { host } = await openDrawerOnShortcutPage(page);
   await expect(host.locator("iframe").first().contentFrame().locator("html")).toHaveAttribute("lang", "en");
+});
+
+const organizations = {
+  type: "organizations", editorId: "isolation-editor",
+  collections: [{ id: "collection-late", name: "Late collection" }], tags: [], collectionId: null, tagIds: [],
+};
+
+test("Save becomes available after 3 s without collections", async ({ page }) => {
+  const { editor } = await openDrawerOnShortcutPage(page, { fakeClock: true, skipOrganizations: true });
+  await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+  await page.clock.runFor(3000);
+  await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+});
+
+test("collections arriving during a save wait until a failed save finishes", async ({ page }) => {
+  const { bridge, editor } = await openDrawerOnShortcutPage(page, { fakeClock: true, skipOrganizations: true });
+  await page.clock.runFor(3000);
+  const title = editor.getByRole("textbox", { name: "Title", exact: true });
+  await title.focus();
+  await title.press("Control+Enter");
+  await expect(editor.getByRole("button", { name: "Saving…" })).toBeDisabled();
+  await bridge.evaluate((value, message) => value.send(message), organizations);
+  await expect(editor.getByRole("button", { name: "Saving…" })).toBeDisabled();
+  await bridge.evaluate((value) => value.send({ type: "editor-feedback", editorId: "isolation-editor", success: false, message: "Nope" }));
+  await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+  await expect(editor.getByText("Late collection").first()).toBeVisible();
+});
+
+test("a collections error offers Retry", async ({ page }) => {
+  const { bridge, editor } = await openDrawerOnShortcutPage(page, { skipOrganizations: true });
+  const text = "Could not reach Keepall, so collections and tags didn't load. Open Keepall in a tab, then choose Retry.";
+  await bridge.evaluate((value, message) => value.send({ type: "organization-error", editorId: "isolation-editor", message }), text);
+  await expect(editor.getByText(text)).toBeVisible();
+  await editor.getByRole("button", { name: "Retry", exact: true }).click();
+  expect(await bridge.evaluate((value) => value.messages())).toContainEqual({ type: "retry-editor-organizations", editorId: "isolation-editor" });
+  await expect(editor.getByRole("button", { name: "Retry", exact: true })).toBeHidden();
 });

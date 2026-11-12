@@ -644,7 +644,9 @@ if (!globalThis.__keepallPageUi) {
     noteInput.placeholder = "Why are you saving this link?";
     const noteHelp = document.createElement("p"); noteHelp.className = drawerClass("note-help"); noteHelp.id = "keepall-note-help";
     noteHelp.textContent = "This note includes local images. Edit its contents in Keepall."; noteHelp.hidden = true; noteLabel.append(noteHelp);
-    const picker = globalThis.__keepallCreateOrgPicker(shadow, observeScrollEdges);
+    const picker = globalThis.__keepallCreateOrgPicker(shadow, observeScrollEdges, {
+      onRetry: () => { void Promise.resolve(chrome.runtime.sendMessage({ type: "retry-editor-organizations", editorId })).catch(() => {}); },
+    });
     currentPicker = picker;
     let existingLink = draft?.existingLink;
     let snapshotLoaded = draft?.snapshotLoaded ?? false;
@@ -656,6 +658,8 @@ if (!globalThis.__keepallPageUi) {
     let saved = false;
     let fileCapture;
     let organizationReady = false;
+    let deferredOrganizations;
+    let organizationGrace;
     if (titleDirty) titleInput.value = draft.title;
     if (noteDirty) noteEditor.update({ content: draft.noteContent });
     if (markdownDirty) noteEditor.update({ format: draft.markdown ? "markdown" : "plain" });
@@ -682,6 +686,11 @@ if (!globalThis.__keepallPageUi) {
     noteInput.addEventListener("input", () => { noteDirty = true; });
     onOrganizationMessage = (message) => {
       if (message.editorId !== currentEditorId || !dialog?.open) return;
+      clearTimeout(organizationGrace);
+      if (dialog.dataset.state === "saving") {
+        deferredOrganizations = message;
+        return;
+      }
       // Retain a restored draft's original snapshot for the save conflict check.
       if (message.type === "organizations" && !snapshotLoaded) {
         existingLink = message.existingLink;
@@ -742,6 +751,12 @@ if (!globalThis.__keepallPageUi) {
     saveButton.className = drawerClass("primary");
     saveButton.textContent = "Loading…";
     saveButton.disabled = true;
+    organizationGrace = setTimeout(() => {
+      if (organizationReady || dialog?.dataset.state === "saving" || draft?.selection) return;
+      organizationReady = true;
+      saveButton.disabled = fileCapture?.locked ?? false;
+      saveButton.textContent = fileCapture?.hasFiles ? "Save files" : existingLink ? "Save changes" : "Save";
+    }, 3000);
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.className = drawerClass("secondary");
@@ -892,6 +907,11 @@ if (!globalThis.__keepallPageUi) {
         errorLine.textContent = message.message;
         const refocus = lastFocusBeforeSave?.isConnected && !lastFocusBeforeSave.disabled ? lastFocusBeforeSave : saveButton;
         refocus.focus({ preventScroll: true });
+        if (deferredOrganizations) {
+          const late = deferredOrganizations;
+          deferredOrganizations = undefined;
+          onOrganizationMessage(late);
+        }
       }
     };
     function refreshFilePresentation() {
@@ -928,6 +948,7 @@ if (!globalThis.__keepallPageUi) {
     const stopFades = observeScrollEdges(fields);
     stopFieldFades = stopFades;
     dialog.addEventListener("close", () => {
+      clearTimeout(organizationGrace);
       picker.destroy();
       stopFades();
       destroyContent();

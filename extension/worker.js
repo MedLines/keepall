@@ -1014,17 +1014,26 @@ async function openEditor(tab) {
   const actions = previous?.origin === origin && previous?.sourceUrl === tab.url
     ? Object.fromEntries(Object.entries(previous.actions ?? {}).filter(([, action]) => Date.now() - action.createdAt <= EDITOR_LIFETIME_MS)) : {};
   await chrome.storage.session.set({ [key]: { tabId: tab.id, editorId, origin, sourceUrl: tab.url, actions, createdAt: Date.now() } });
+  await sendEditorOrganizations(tab.id, editorId, origin, tab.url);
+}
+
+async function sendEditorOrganizations(tabId, editorId, origin, url) {
   try {
     await ensureOffscreen(origin);
     const result = await chrome.runtime.sendMessage({
-      target: "offscreen", type: "organizations", origin, url: tab.url,
+      target: "offscreen", type: "organizations", origin, url,
     });
     if (result?.error || !Array.isArray(result?.collections) || !Array.isArray(result?.tags)) {
       throw new Error(result?.error ?? "Could not load collections and tags.");
     }
-    await chrome.tabs.sendMessage(tab.id, { type: "organizations", editorId, ...result });
-  } catch {
-    await chrome.tabs.sendMessage(tab.id, { type: "organization-error", editorId, message: "Could not load collections and tags. You can still save without changing organization." }).catch(() => {});
+    await chrome.tabs.sendMessage(tabId, { type: "organizations", editorId, ...result });
+  } catch (error) {
+    const text = String(error?.message);
+    const unreachable = text.startsWith("Could not reach") || text.includes("Library access") || text.includes("lost access");
+    const message = unreachable
+      ? "Could not reach Keepall, so collections and tags didn't load. Open Keepall in a tab, then choose Retry."
+      : "Could not load collections and tags. You can save now and organize it later in Keepall.";
+    await chrome.tabs.sendMessage(tabId, { type: "organization-error", editorId, message }).catch(() => {});
   }
 }
 
@@ -1042,6 +1051,16 @@ chrome.commands.onCommand.addListener((command, tab) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "editor-file-action") {
     void handleEditorFileAction(message, sender).then(sendResponse).catch(error => sendResponse({ success: false, error: error.message || "Could not complete this file action." }));
+    return true;
+  }
+  if (message?.type === "retry-editor-organizations" && sender.tab?.id && typeof message.editorId === "string") {
+    void (async () => {
+      const key = `file-editor:${sender.tab.id}`;
+      const session = (await chrome.storage.session.get(key))[key];
+      if (session?.editorId !== message.editorId) return sendResponse({ success: false });
+      await sendEditorOrganizations(sender.tab.id, session.editorId, session.origin, session.sourceUrl);
+      sendResponse({ success: true });
+    })().catch(() => sendResponse({ success: false }));
     return true;
   }
   if (message?.type === "open-options" && sender.tab?.id && ["general", "saving", "images"].includes(message.section)) {
