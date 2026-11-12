@@ -13,7 +13,11 @@ async function openToastPage(page: Page, sendMessage: "ok" | "fail" = "ok") {
     Object.assign(globalThis, { chrome: { runtime: {
       getURL: () => "data:font/woff2;base64,",
       onMessage: { addListener: (callback: typeof listener) => { listener = callback; } },
-      sendMessage: async () => (mode === "fail" ? { success: false, error: "Nope" } : { success: true }),
+      sendMessage: async (message: unknown) => {
+        const sent = globalThis as { __sent?: unknown[] };
+        sent.__sent = [...(sent.__sent ?? []), message];
+        return mode === "fail" ? { success: false, error: "Nope" } : { success: true };
+      },
     } } });
     return { send: (message: Record<string, unknown>) => listener(message) };
   }, sendMessage);
@@ -61,5 +65,15 @@ test("a hidden tab pauses the dismiss timer", async ({ page }) => {
   await expect(toast).toBeVisible();
   await setHidden(false);
   await page.clock.runFor(9000);
+  await expect(toast).toHaveCount(0);
+});
+
+test("an access failure offers Open settings", async ({ page }) => {
+  const { bridge, toast } = await openToastPage(page);
+  await bridge.evaluate((value) => value.send({ type: "toast-feedback", message: "x", success: false, actions: { settings: "general" } }));
+  await expect(toast.getByRole("button", { name: "Open in Keepall" })).toHaveCount(0);
+  await toast.getByRole("button", { name: "Open settings" }).click();
+  expect(await page.evaluate(() => (globalThis as { __sent?: unknown[] }).__sent)).toContainEqual({ type: "open-options", section: "general" });
+  await page.clock.runFor(1000);
   await expect(toast).toHaveCount(0);
 });
