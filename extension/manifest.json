@@ -31,6 +31,10 @@
     "open-editor": {
       "suggested_key": "Alt+K",
       "description": "Open Keepall capture on this page"
+    },
+    "focus-notification": {
+      "suggested_key": { "default": "Alt+Shift+K" },
+      "description": "Move to the Keepall save notice"
     }
   }
 }

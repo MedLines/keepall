@@ -174,11 +174,13 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
     void chrome.action.setTitle({ tabId, title: "Save page to Keepall" }).catch(() => {});
   }, success ? 5000 : 15000));
   if (source === "badge") return;
+  let focusShortcut = "";
+  try { focusShortcut = (await chrome.commands.getAll()).find((command) => command.name === "focus-notification")?.shortcut ?? ""; } catch {}
   try {
     await chrome.scripting.executeScript({ target: { tabId }, files: ["toast-collections.js", "page-ui.js"] });
     await chrome.tabs.sendMessage(tabId, {
       type: source === "editor" ? "editor-feedback" : "toast-feedback",
-      message, success, editorId, actions, theme: await captureTheme(),
+      message, success, editorId, actions, focusShortcut, theme: await captureTheme(),
     });
   } catch {
     // The badge remains visible on restricted browser pages.
@@ -1038,6 +1040,13 @@ async function sendEditorOrganizations(tabId, editorId, origin, url) {
 }
 
 chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === "focus-notification") {
+    void (async () => {
+      const activeTab = tab ?? (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
+      if (activeTab?.id !== undefined) await chrome.tabs.sendMessage(activeTab.id, { type: "focus-toast" });
+    })().catch(() => {});
+    return;
+  }
   if (command !== "open-editor") return;
   let activeTab = tab;
   void (async () => {

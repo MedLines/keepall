@@ -25,7 +25,7 @@ function worker({ request = true, contains = true } = {}) {
     tabs: { create: vi.fn(async () => ({})), sendMessage: vi.fn(async () => undefined), query: vi.fn(async () => []), onUpdated: { addListener: vi.fn() }, onRemoved: { addListener: vi.fn() } },
     scripting: { executeScript: vi.fn(async () => {}) },
     action: { onClicked: { addListener: vi.fn() }, setBadgeText: vi.fn(async () => {}), setBadgeBackgroundColor: vi.fn(async () => {}), setTitle: vi.fn(async () => {}) },
-    commands: { onCommand: { addListener: vi.fn() } },
+    commands: { getAll: vi.fn(async () => []), onCommand: { addListener: vi.fn() } },
   };
   const context = { chrome, crypto, URL, setTimeout, clearTimeout, btoa } as Record<string, unknown>;
   runInNewContext(workerSource, context);

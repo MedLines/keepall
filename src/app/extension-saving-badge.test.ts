@@ -42,7 +42,7 @@ function worker() {
       setBadgeText: vi.fn(async (details: { tabId: number; text: string }) => { badges.push(details); }),
       setBadgeBackgroundColor: vi.fn(async () => {}), setTitle: vi.fn(async () => {}),
     },
-    commands: { onCommand: { addListener: vi.fn() } },
+    commands: { getAll: vi.fn(async () => []), onCommand: { addListener: vi.fn() } },
   };
   const context = { chrome, crypto, URL, setTimeout, clearTimeout, btoa, fetch: vi.fn() } as Record<string, unknown>;
   runInNewContext(workerSource, context);

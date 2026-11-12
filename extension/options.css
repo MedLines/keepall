@@ -93,9 +93,9 @@ button:not(:disabled):active { transform: scale(0.96); }
 .shortcut-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 20px; }
 .shortcut-current { display: flex; align-items: flex-start; flex-direction: column; justify-content: center; gap: 8px; min-width: 0; min-height: 64px; }
 .shortcut-label { color: var(--muted); font-size: 12px; }
-#shortcut-value, #shortcut-state { min-height: 32px; display: inline-flex; align-items: center; font-size: 14px; }
-#shortcut-value { max-width: 100%; padding: 4px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--control); color: var(--text); font-family: inherit; overflow-wrap: anywhere; }
-#shortcut-state { color: var(--muted); }
+#shortcut-value, #shortcut-state, #focus-shortcut-value, #focus-shortcut-state { min-height: 32px; display: inline-flex; align-items: center; font-size: 14px; }
+#shortcut-value, #focus-shortcut-value { max-width: 100%; padding: 4px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--control); color: var(--text); font-family: inherit; overflow-wrap: anywhere; }
+#shortcut-state, #focus-shortcut-state { color: var(--muted); }
 #shortcut-change { flex-shrink: 0; border: 1px solid var(--border); background: var(--raised); color: var(--text); }
 #shortcut-error { color: var(--danger); }
 #status { margin: 0; color: var(--muted); }

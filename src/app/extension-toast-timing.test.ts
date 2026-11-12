@@ -28,7 +28,7 @@ function worker() {
       setBadgeText: vi.fn(async (_details: { tabId?: number; text: string }) => {}),
       setTitle: vi.fn(async () => {}),
     },
-    commands: { onCommand: { addListener: vi.fn() } },
+    commands: { getAll: vi.fn(async () => []), onCommand: { addListener: vi.fn() } },
   };
   const context = { chrome, crypto, URL, setTimeout, clearTimeout, btoa } as Record<string, unknown>;
   runInNewContext(workerSource, context);

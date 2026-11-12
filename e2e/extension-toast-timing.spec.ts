@@ -132,3 +132,25 @@ test("focus returns to the page when a focused notice is dismissed", async ({ pa
   await expect(toast).toHaveCount(0);
   await expect(page.locator("#page-action")).toBeFocused();
 });
+
+test("the focus command moves to the notice actions and holds the notice", async ({ page }) => {
+  const { bridge, toast } = await openToastPage(page);
+  await page.locator("#page-action").focus();
+  await bridge.evaluate((value) => value.send({
+    type: "toast-feedback", message: "Link saved to Keepall", success: true, focusShortcut: "Alt+Shift+K",
+    actions: { id: "action", canUndo: false, canScreenshot: false },
+  }));
+  await expect(toast).toBeVisible();
+  await expect(toast.getByRole("group", { name: "Save actions" })).toHaveAccessibleDescription(/Alt\+Shift\+K/);
+  await bridge.evaluate((value) => value.send({ type: "focus-toast" }));
+  await expect(toast.getByRole("button", { name: "Open in Keepall" })).toBeFocused();
+  await page.clock.runFor(30_000);
+  await expect(toast).toBeVisible();
+});
+
+test("the focus command does nothing without a notice", async ({ page }) => {
+  const { bridge } = await openToastPage(page);
+  await page.locator("#page-action").focus();
+  await bridge.evaluate((value) => value.send({ type: "focus-toast" }));
+  await expect(page.locator("#page-action")).toBeFocused();
+});

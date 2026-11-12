@@ -19,7 +19,7 @@ function worker() {
     contextMenus: { onClicked: { addListener: vi.fn() } }, permissions: { contains: vi.fn(async () => true) },
     tabs: { onUpdated: { addListener: vi.fn() }, onRemoved: { addListener: vi.fn() }, query: vi.fn(async () => [] as object[]), create: vi.fn(async () => {}), update: vi.fn(async () => {}), sendMessage: vi.fn(async () => {}) },
     windows: { update: vi.fn(async () => {}) }, scripting: { executeScript: vi.fn(async () => {}) },
-    action: { onClicked: { addListener: vi.fn() }, setBadgeText: vi.fn(async () => {}), setTitle: vi.fn(async () => {}) }, commands: { onCommand: { addListener: vi.fn() } },
+    action: { onClicked: { addListener: vi.fn() }, setBadgeText: vi.fn(async () => {}), setTitle: vi.fn(async () => {}) }, commands: { getAll: vi.fn(async () => []), onCommand: { addListener: vi.fn() } },
   };
   const context = { chrome, crypto, URL, setTimeout, clearTimeout };
   runInNewContext(workerSource, context);

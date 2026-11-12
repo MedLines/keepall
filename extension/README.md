@@ -107,6 +107,11 @@ already saved link alone. If the shortcut is already claimed, assign it at
 `chrome://extensions/shortcuts`. Chrome does not allow injection on its internal
 pages, so those pages cannot be captured.
 
+After a save, press `Alt+Shift+K` (**Move to the Keepall save notice**) to move
+keyboard focus to the notice's actions. Focus pauses the notice's timer, and
+dismissing it returns focus to where you were. Change it at
+`chrome://extensions/shortcuts`.
+
 Right-click a normal HTTP(S) link and choose **Save to Keepall** to save
 its destination without opening it. New links go to Unsorted; duplicates keep
 their existing organization and report that they were already saved. This

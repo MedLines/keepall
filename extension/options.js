@@ -69,6 +69,8 @@ const LEGACY_IMAGE_HOSTS = { origins: ["https://*/*", "http://*/*"] };
 const shortcutValue = document.querySelector("#shortcut-value");
 const shortcutState = document.querySelector("#shortcut-state");
 const shortcutChange = document.querySelector("#shortcut-change");
+const focusShortcutValue = document.querySelector("#focus-shortcut-value");
+const focusShortcutState = document.querySelector("#focus-shortcut-state");
 const shortcutError = document.querySelector("#shortcut-error");
 let shortcutRefresh = 0;
 
@@ -82,12 +84,21 @@ async function refreshShortcut() {
     shortcutValue.hidden = !shortcut;
     shortcutState.hidden = Boolean(shortcut);
     shortcutState.textContent = shortcut ? "" : "No shortcut set";
+    const focusShortcut = commands.find((command) => command.name === "focus-notification")?.shortcut?.trim() ?? "";
+    focusShortcutValue.textContent = focusShortcut;
+    focusShortcutValue.hidden = !focusShortcut;
+    focusShortcutState.hidden = Boolean(focusShortcut);
+    focusShortcutState.textContent = focusShortcut ? "" : "No shortcut set";
   } catch {
     if (refresh !== shortcutRefresh) return;
     shortcutValue.hidden = true;
     shortcutValue.textContent = "";
     shortcutState.hidden = false;
     shortcutState.textContent = "Could not check your shortcut";
+    focusShortcutValue.hidden = true;
+    focusShortcutValue.textContent = "";
+    focusShortcutState.hidden = false;
+    focusShortcutState.textContent = "Could not check your shortcut";
   }
 }
 

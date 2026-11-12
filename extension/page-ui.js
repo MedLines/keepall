@@ -270,9 +270,9 @@ if (!globalThis.__keepallPageUi) {
     toastExitTimer = setTimeout(() => node.remove(), matchMedia("(prefers-reduced-motion: reduce)").matches ? 140 : 180);
   }
 
-  function toast(message, success, actions) {
+  function toast(message, success, actions, focusShortcut) {
     if (currentToastBusy() && (dialog?.open ? dialog : shadow).querySelector(".toast")) {
-      pendingToast = [message, success, actions];
+      pendingToast = [message, success, actions, focusShortcut];
       return;
     }
     dismissToast(true);
@@ -580,7 +580,17 @@ if (!globalThis.__keepallPageUi) {
     card.className = "toast-card";
     card.append(mark, content, close);
     node.append(card);
-    if (actionRow) node.append(actionRow);
+    if (actionRow) {
+      node.append(actionRow);
+      if (typeof focusShortcut === "string" && focusShortcut) {
+        const hint = document.createElement("span");
+        hint.className = "sr-only";
+        hint.id = "keepall-toast-shortcut";
+        hint.textContent = `Press ${focusShortcut} to reach these actions.`;
+        actionRow.setAttribute("aria-describedby", hint.id);
+        card.append(hint);
+      }
+    }
     container.append(node);
     void node.offsetWidth;
     node.classList.add("is-visible");
@@ -1079,7 +1089,11 @@ if (!globalThis.__keepallPageUi) {
     if (message?.type === "theme" || message?.theme !== undefined) applyTheme(message.theme);
     if (message?.type === "editor") { const accepted = openEditor(message.url, message.title, message.editorId, message.origin); respond?.({ accepted }); }
     if (message?.type === "organizations" || message?.type === "organization-error") onOrganizationMessage?.(message);
-    if (message?.type === "toast-feedback") toast(message.message, message.success, message.actions);
+    if (message?.type === "toast-feedback") toast(message.message, message.success, message.actions, message.focusShortcut);
+    if (message?.type === "focus-toast") {
+      const node = (dialog?.open ? dialog : shadow).querySelector(".toast:not(.is-leaving)");
+      (node?.querySelector(".toast-action:not(:disabled)") ?? node?.querySelector(".toast-close"))?.focus({ preventScroll: true });
+    }
     if (message?.type === "editor-feedback") onEditorFeedback?.(message);
     if (message?.type === "screenshot-hide") {
       host.style.setProperty("visibility", "hidden", "important");

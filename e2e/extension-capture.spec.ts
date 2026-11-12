@@ -335,7 +335,7 @@ test("Options shows the actual shortcut and refreshes after Chrome changes", asy
     await settings.getByRole("button", { name: "Clear", exact: true }).last().click();
     await expect.poll(getShortcut).toBe("");
     await options.bringToFront();
-    await expect(card.getByText("No shortcut set", { exact: true })).toBeVisible();
+    await expect(card.locator("#shortcut-state").getByText("No shortcut set", { exact: true })).toBeVisible();
     await expect(value).toBeHidden();
     expect((await card.boundingBox())!.height).toBe(initialHeight);
     await options.setViewportSize({ width: 375, height: 812 });
@@ -347,10 +347,10 @@ test("Options shows the actual shortcut and refreshes after Chrome changes", asy
       chrome.commands.getAll = async () => { throw new Error("Test API failure"); };
       window.dispatchEvent(new Event("focus"));
     });
-    await expect(card.getByText("Could not check your shortcut", { exact: true })).toBeVisible();
-    await expect(card.getByText("No shortcut set", { exact: true })).toBeHidden();
+    await expect(card.locator("#shortcut-state").getByText("Could not check your shortcut", { exact: true })).toBeVisible();
+    await expect(card.locator("#shortcut-state").getByText("No shortcut set", { exact: true })).toBeHidden();
     await options.reload();
-    await expect(card.getByText("No shortcut set", { exact: true })).toBeVisible();
+    await expect(card.locator("#shortcut-state").getByText("No shortcut set", { exact: true })).toBeVisible();
     expect(errors).toEqual([]);
   } finally {
     await context.close();
@@ -557,6 +557,9 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await worker.evaluate((origin) => chrome.storage.local.set({ origin }), origin);
     expect(await worker.evaluate(() => chrome.commands.getAll())).toContainEqual(
       expect.objectContaining({ name: "open-editor", shortcut: "Alt+K" }),
+    );
+    expect(await worker.evaluate(() => chrome.commands.getAll())).toContainEqual(
+      expect.objectContaining({ name: "focus-notification", shortcut: "Alt+Shift+K" }),
     );
 
     const options = await context.newPage();
