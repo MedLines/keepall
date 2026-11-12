@@ -1,6 +1,5 @@
 "use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { Menu } from "@base-ui/react/menu";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -161,7 +160,7 @@ export function LibraryBulkToolbar({
                 ? document.getElementById("library-search")
                 : restoreTriggerFocus.current ? triggerRef.current : false}
             >
-              <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
+              <div className="ui-scrollbar flex min-h-0 flex-col overflow-y-auto overscroll-contain">
               {!allVisibleSelected ? (
                 <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={onSelectAllVisible}>
                   Select all
@@ -190,7 +189,7 @@ export function LibraryBulkToolbar({
               <Menu.Item className={menuItemClassName({ tone: "danger", layout: "none", className: "items-center gap-2 text-left" })} onClick={() => runWithoutTriggerRestore(destructiveAction)}>
                 <DeleteIcon className="size-4" />{destructiveLabel}
               </Menu.Item>
-              </ScrollArea>
+              </div>
             </Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>

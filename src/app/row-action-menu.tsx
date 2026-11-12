@@ -1,6 +1,5 @@
 "use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ContextMenu } from "@base-ui/react/context-menu";
 import { Menu } from "@base-ui/react/menu";
 import { useRef, useState, type ReactElement, type ReactNode, type RefObject } from "react";
@@ -33,9 +32,10 @@ export function RowActionMenu({ children, trigger, menu, label, disabled, trigge
             return (finalFocus ?? triggerRef).current;
           }}
         >
-          <ScrollArea className="row-action-scroll flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
+          {/* A native scroller keeps the menuitems owned by role="menu"; ScrollArea's focusable viewport would sit between them. */}
+          <div className="row-action-scroll ui-scrollbar flex min-h-0 flex-col overflow-y-auto overscroll-contain">
             <RowMenuContent renderMenu={menu} />
-          </ScrollArea>
+          </div>
         </Menu.Popup>
       </Menu.Positioner>
     </Menu.Portal>
