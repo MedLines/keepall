@@ -97,9 +97,10 @@ new permissions, and disappear when the page reloads or the tab closes.
 
 When the page is already saved, the drawer loads its title, note, Markdown
 choice, collection, and tags. You can edit the title and note there. If the
-link changes in Keepall while the drawer is open, its conflict check still applies
-to restored drafts. Copy any unfinished text you want to keep, then discard the
-draft and reopen to load the latest version. Notes containing local images show their text read-only; edit those
+link changes in Keepall while the drawer is open, saving is refused rather than
+overwriting the newer version. The drawer then loads the latest version, keeps
+your typed text and your collection and tag choices, and asks you to review and
+save again. Notes containing local images show their text read-only; edit those
 notes in Keepall so their image assets stay intact. Without a collection choice,
 a new link goes to Unsorted. A toolbar click leaves the organization of an
 already saved link alone. If the shortcut is already claimed, assign it at

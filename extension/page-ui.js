@@ -650,6 +650,8 @@ if (!globalThis.__keepallPageUi) {
     currentPicker = picker;
     let existingLink = draft?.existingLink;
     let snapshotLoaded = draft?.snapshotLoaded ?? false;
+    let refreshingAfterConflict = false;
+    let keptSelection;
     let titleDirty = draft?.title !== undefined;
     let noteDirty = draft?.noteContent !== undefined;
     let markdownDirty = draft?.markdown !== undefined;
@@ -678,7 +680,7 @@ if (!globalThis.__keepallPageUi) {
         ...(markdownDirty ? { markdown: noteEditor.value().format === "markdown" } : {}),
         ...(organizationDirty ? { selection } : {}),
         existingLink,
-        snapshotLoaded,
+        snapshotLoaded: snapshotLoaded && !refreshingAfterConflict,
         ...(fileDraft ? { files: fileDraft } : {}),
       });
     };
@@ -708,10 +710,20 @@ if (!globalThis.__keepallPageUi) {
         if (!markdownDirty) noteEditor.update({ format: message.existingLink.noteFormat ?? "plain" });
         noteEditor.update();
       }
+      if (refreshingAfterConflict && message.type === "organizations") {
+        if (message.existingLink) errorLine.textContent = "Loaded the latest version from Keepall. Review your changes, then save again.";
+        else {
+          heading.textContent = "Save to Keepall";
+          errorLine.textContent = "This link is no longer in Keepall. Saving will add it again.";
+          saveButton.textContent = "Save";
+        }
+      }
       picker.load(message);
       initialSelection = picker.selection();
-      if (draft?.selection && picker.loaded) picker.restore(draft.selection);
-      if (draft?.selection && !picker.loaded) {
+      if (refreshingAfterConflict && keptSelection && picker.loaded) picker.restore(keptSelection);
+      else if (draft?.selection && picker.loaded) picker.restore(draft.selection);
+      if (message.type === "organizations" && picker.loaded) { refreshingAfterConflict = false; keptSelection = undefined; }
+      if (draft?.selection && !picker.loaded && !refreshingAfterConflict) {
         errorLine.textContent = "Could not restore your collection and tags. Close and reopen the drawer to try again.";
         saveButton.textContent = "Save";
         return;
@@ -905,6 +917,13 @@ if (!globalThis.__keepallPageUi) {
         fileCapture.setDisabled(false);
         bulk.disabled = false;
         errorLine.textContent = message.message;
+        if (typeof message.message === "string" && message.message.includes("changed in Keepall")) {
+          keptSelection = picker.loaded ? picker.selection() : keptSelection;
+          snapshotLoaded = false;
+          refreshingAfterConflict = true;
+          errorLine.textContent = "This link changed in Keepall. Loading the latest version… Your text is kept.";
+          void Promise.resolve(chrome.runtime.sendMessage({ type: "retry-editor-organizations", editorId })).catch(() => {});
+        }
         const refocus = lastFocusBeforeSave?.isConnected && !lastFocusBeforeSave.disabled ? lastFocusBeforeSave : saveButton;
         refocus.focus({ preventScroll: true });
         if (deferredOrganizations) {

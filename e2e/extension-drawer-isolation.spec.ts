@@ -354,3 +354,34 @@ test("a collections error offers Retry", async ({ page }) => {
   expect(await bridge.evaluate((value) => value.messages())).toContainEqual({ type: "retry-editor-organizations", editorId: "isolation-editor" });
   await expect(editor.getByRole("button", { name: "Retry", exact: true })).toBeHidden();
 });
+
+test("a changed link reloads in place and keeps what you typed", async ({ page }) => {
+  const { bridge, editor } = await openDrawerOnShortcutPage(page, { skipOrganizations: true });
+  const link = (title: string, noteContent: string) => ({ id: "l1", title, noteContent, noteFormat: "plain", collectionIds: [], tagIds: [] });
+  const fresh = (existingLink: ReturnType<typeof link>) => ({
+    type: "organizations", editorId: "isolation-editor",
+    collections: [{ id: "c-reading", name: "Reading" }], tags: [], collectionId: null, tagIds: [], existingLink,
+  });
+  await bridge.evaluate((value, message) => value.send(message), fresh(link("Old", "")));
+  const title = editor.getByRole("textbox", { name: "Title", exact: true });
+  await expect(editor.getByRole("button", { name: "Save changes", exact: true })).toBeEnabled();
+  await title.fill("Mine");
+  await editor.getByRole("button", { name: "Reading", exact: true }).click();
+  await expect(editor.getByRole("button", { name: "Reading", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await title.press("Control+Enter");
+  await bridge.evaluate((value) => value.send({
+    type: "editor-feedback", editorId: "isolation-editor", success: false,
+    message: "This link changed in Keepall. Reopen capture and try again.",
+  }));
+  await expect(editor.getByRole("alert")).toContainText("Loading the latest version");
+  expect(await bridge.evaluate((value) => value.messages())).toContainEqual({ type: "retry-editor-organizations", editorId: "isolation-editor" });
+  await bridge.evaluate((value, message) => value.send(message), fresh(link("Changed elsewhere", "Their note")));
+  await expect(editor.getByRole("alert")).toContainText("Review your changes, then save again");
+  await expect(title).toHaveValue("Mine");
+  await expect(editor.getByRole("textbox", { name: "Your note (optional)" })).toHaveValue("Their note");
+  await expect(editor.getByRole("button", { name: "Reading", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await title.press("Control+Enter");
+  expect(await bridge.evaluate((value) => value.lastSave())).toMatchObject({
+    type: "save-from-editor", existingLink: { title: "Changed elsewhere" },
+  });
+});
