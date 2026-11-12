@@ -32,12 +32,15 @@ are separate from submitting it for review.
 Save pages, links, images, useful passages, and local files to your personal Keepall library. Keepall Capture works with the Keepall web app in this Chrome profile; you do not need to keep a library tab open to save.
 
 SAVE FROM THE WEB
-Click the toolbar icon to save the current page. Right-click a link to save its destination without opening it. Right-click an image to save the image itself. Highlight text and choose Save to Keepall to add the passage to the source link's note. Repeated selections do not add duplicate passages.
+Click the toolbar icon to save the current page. Right-click a link to save its destination without opening it. Right-click an image to save the image itself. Right-click a video and choose Save video to Keepall (MP4 or WebM up to 100 MB; if a streamed video can't be handed over by the page, Keepall explains why). Highlight text and choose Save to Keepall to add the passage to the source link's note. Repeated selections do not add duplicate passages.
 
 ADD CONTEXT AND FILES
 Press Alt+K (Option+K on Mac) to open the capture drawer, using the same controls and appearance as the Keepall app. Edit the page title, write a plain-text or Markdown note, preview it, and choose collections and tags. Close keeps unfinished edits in that tab until you reload or close the tab; Discard draft removes them.
 
 Use Add files for PNG, JPEG, GIF, WebP, AVIF, MP4, WebM, TXT, Markdown, or PDF files. You can also paste an image into the drawer. Save multiple images as one gallery or separate items, add an image caption or video note, and inspect or edit text-file contents. These become independent library items rather than attachments to the current page. Mixed files save separately. Progress and results show which files saved, with retry and cancellation controls. Bulk import opens the app's import dialog while preserving the extension draft.
+
+SCREENSHOTS OF THE PAGE
+After saving a page, the camera button in the confirmation adds a screenshot of what's on screen to the saved link. Scroll and add more, up to eight. You can also right-click an empty part of a page and choose Save page with screenshot. Screenshots are taken only when you click, and they stay in your local library.
 
 KEEP ORGANIZING
 After a quick save, open the item, organize it, or undo a new save. The organizer stays open after choosing a collection so you can add tags immediately. Search collection and tag lists, create a name when there are no matches, and clear the search with an easy-to-hit button. Already-saved links keep their organization unless you change it.
@@ -48,10 +51,10 @@ Right-click the extension icon and choose Open Keepall library. It focuses an ex
 YOUR LIBRARY, ON YOUR DEVICE
 No Keepall account is needed. Saved items and local file contents live in the Keepall website's IndexedDB in this Chrome profile. Each profile has its own library. The extension passes selected files locally to the app in your browser; it does not upload those files to cloud storage. Markdown preview runs locally and does not load remote images. Back up your library in Keepall Settings before clearing browser data.
 
-IMAGE PERMISSIONS, YOUR CHOICE
-A right-clicked image hosted on another website may need permission for that image host. Allow sites as needed, or optionally allow all websites from Options. Explicit local file selection and image paste do not need image-host permission. Options also includes a library connection check, shortcut help, and System, Light, or Dark appearance.
+IMAGE AND VIDEO PERMISSIONS, YOUR CHOICE
+A right-clicked image or video hosted on another website may need permission for that host. Allow sites as needed, or optionally allow all websites from Options. Explicit local file selection and image paste do not need host permission. Options also includes a library connection check, shortcut help, and System, Light, or Dark appearance.
 
-Page capture works on ordinary HTTP and HTTPS pages, not Chrome's internal pages. Right-click downloads of PDF or video files and standalone empty-note capture are not supported; use Add files for local documents and videos. The default library is https://www.keepall.app; Options also supports a locally running Keepall instance. Link previews in the app may send saved URLs to Keepall's preview service. See the privacy policy for network-request details.
+Page capture works on ordinary HTTP and HTTPS pages, not Chrome's internal pages. Right-click downloads of PDF files and standalone empty-note capture are not supported; use Add files for local documents. The default library is https://www.keepall.app; Options also supports a locally running Keepall instance. Link previews in the app may send saved URLs to Keepall's preview service. See the privacy policy for network-request details.
 ```
 
 - **Category:** Tools
@@ -76,20 +79,20 @@ Save user-selected pages, links, images, text passages, and local files to the u
 
 | Permission | Paste-ready explanation |
 | --- | --- |
-| `activeTab` | Read the current page URL and title after the user clicks the toolbar icon, invokes the capture shortcut, or selects Save to Keepall. Temporary access also lets the extension display capture controls and save feedback on that page. |
+| `activeTab` | Read the current page URL and title after the user clicks the toolbar icon, invokes the capture shortcut, or selects Save to Keepall. Temporary access also lets the extension display capture controls and save feedback on that page. After the user clicks the camera action or Save page with screenshot, the same temporary access is used to capture the visible tab as an image for that saved link, with Keepall's own UI hidden during capture. |
 | `scripting` | Display the capture drawer, local file controls, packaged note preview, save-result toast, and organizer on the page where the user invokes Keepall. Notify an open Keepall tab after confirmed library changes. |
 | `offscreen` | Hold an invisible Keepall bridge page so explicit saves, local file transfers, and organization changes reach the app origin's local IndexedDB without opening a visible tab. The connection check reads organization through the same bridge without creating an item. File bytes pass through browser messages, not a server upload. |
 | `storage` | Store the chosen Keepall address and appearance. Pending link retries may include the URL, title, entered note, and organization; they expire after ten minutes and are removed on confirmation or cleanup. Browser-session storage holds save-action identifiers and temporary editor records containing tab/editor IDs, source/library URLs, saved item IDs, and action tokens. File bytes, file-note contents, and directly selected passages are not written to extension storage. |
 | `alarms` | Periodically remove expired pending link captures and temporary editor-session records. |
-| `contextMenus` | Provide Save to Keepall for images, links, and selected text in webpage menus, and Open Keepall library in the extension icon's menu. The save action reads the chosen target and source context; the library action opens or focuses the user's library without capturing the current page. |
+| `contextMenus` | Provide Save to Keepall for images, links, and selected text, Save video to Keepall for videos, and Save page with screenshot for pages in webpage menus, and Open Keepall library in the extension icon's menu. The save actions read the chosen target and source context; the library action opens or focuses the user's library without capturing the current page. |
 | `https://www.keepall.app/*` | Load the hidden Keepall bridge and notify open library tabs after changes. Saved content lives in this website origin's local IndexedDB in the user's browser profile. |
 | `http://localhost/*` | Support users who choose a locally running Keepall address in Options. The default destination remains https://www.keepall.app. |
-| Optional `*://*/*` | Download an image from its host only after the user chooses Save to Keepall. Request permission for individual image hosts, or let users optionally allow all websites from Options. This access is not needed for ordinary page links, selected text, explicitly chosen local files, or image paste. |
+| Optional `*://*/*` | Download an image or video from its host only after the user chooses Save to Keepall or Save video to Keepall. Request permission for individual hosts, or let users optionally allow all websites from Options. This access is not needed for ordinary page links, selected text, explicitly chosen local files, or image paste. |
 
 **Host permission justification:**
 
 ```text
-https://www.keepall.app/* loads the hidden Keepall bridge and lets explicit captures, local file transfers, and organization changes reach that website origin's local IndexedDB. It also allows open library tabs to refresh after changes. http://localhost/* supports a locally running Keepall address chosen in Options. Optional *://*/* access downloads only images the user explicitly selects through Save to Keepall; users can allow individual hosts or optionally all websites. Local files are selected through the file picker or an explicit paste and do not need host-download access. The extension does not automatically collect page content or browsing history.
+https://www.keepall.app/* loads the hidden Keepall bridge and lets explicit captures, local file transfers, and organization changes reach that website origin's local IndexedDB. It also allows open library tabs to refresh after changes. http://localhost/* supports a locally running Keepall address chosen in Options. Optional *://*/* access downloads only images or videos the user explicitly selects through Save to Keepall or Save video to Keepall; users can allow individual hosts or optionally all websites. Local files are selected through the file picker or an explicit paste and do not need host-download access. The extension does not automatically collect page content or browsing history; a page screenshot is taken only after an explicit click on the camera action or Save page with screenshot.
 ```
 
 **Remote code:** Retain **Yes** for the disclosed isolated website iframe:
