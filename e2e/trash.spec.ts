@@ -43,9 +43,10 @@ test("card deletion moves to Trash and restore preserves search, tags and collec
   const card = page.locator('[data-item-id="link"]');
   await card.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Move to Trash", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText("restore it later");
-  await page.getByRole("button", { name: "Move to Trash" }).click();
+  // A single library card moves at once and offers Undo instead of a confirmation (1de298e).
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(card).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Undo moving/ })).toBeVisible();
   await page.goto("/?q=Unique+recoverable+phrase&collection=reading&tag=tag");
   await expect(page.locator('[data-item-id="link"]')).toHaveCount(0);
   await page.getByRole("button", { name: "Trash", exact: true }).click();
@@ -77,7 +78,7 @@ test("bulk deletion and permanent deletion work across reloads, with cancellatio
   for (const id of ["link", "note"]) {
     const card = page.locator(`[data-item-id="${id}"]`);
     await card.hover();
-    await card.locator("[data-selection-indicator]").click();
+    await card.locator("label:has([data-selection-indicator])").click();
   }
   await clickSelectionAction(page, "Move to Trash");
   await page.getByRole("button", { name: "Move to Trash" }).click();
@@ -139,6 +140,7 @@ for (const layout of ["Grid", "List"]) {
     });
     await page.goto("/?trash=1");
     await page.getByRole("button", { name: `${layout} view` }).click();
+    if (layout === "List") await expect(page).toHaveURL(/layout=list/);
     const search = page.getByRole("searchbox", { name: "Search", exact: true });
     await search.fill("Chosen");
     await expect(page.locator("[data-item-id]")).toHaveCount(2);
@@ -166,7 +168,7 @@ for (const layout of ["Grid", "List"]) {
     for (const id of ["chosen-a", "chosen-b"]) {
       const card = page.locator(`[data-item-id="${id}"]`);
       await card.hover();
-      await card.locator("[data-selection-indicator]").click();
+      await card.locator("label:has([data-selection-indicator])").click();
     }
     await page.screenshot({ path: testInfo.outputPath(`trash-${layout.toLowerCase()}-selection.png`) });
     const dangerColor = await page.getByRole("button", { name: "Empty Trash", exact: true }).evaluate((button) => getComputedStyle(button).color);

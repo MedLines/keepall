@@ -100,7 +100,7 @@ test("gallery videos autoplay, restart on selection, advance, and respect manual
 test("extension examples are recorded videos with responsive controls", async ({ page }) => {
   await page.goto("/about#extension");
   const capture = page.locator("#extension");
-  await expect(capture.getByText("See it in action", { exact: true })).toBeVisible();
+  await expect(capture.getByRole("group", { name: "Choose a capture video", exact: true })).toBeVisible();
   await expect(capture.getByText("Interactive demo", { exact: true })).toHaveCount(0);
   await expect(capture.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0);
   for (const width of [320, 390, 2134]) {

@@ -146,6 +146,9 @@ test("compound filters stay visible, clear with keyboard focus, and return with 
 });
 
 test("rapid row-edge switches leave the last collection selected", async ({ page }) => {
+  // At the default 720px height the Collections section (which shares the column with Tags and
+  // the "All collections" footer) clips the second row, so its bottom edge sits under the footer.
+  await page.setViewportSize({ width: 1280, height: 900 });
   for (let i = 0; i < 12; i++) {
     const name = i % 2 === 0 ? "Design Inspiration" : "Reading";
     const row = page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name, exact: true }).locator("..");

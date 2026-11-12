@@ -47,13 +47,14 @@ for (const layout of ["Grid", "List"]) {
       const originalUrl = page.url();
       const note = page.locator('[data-item-id="note"]');
       await note.hover();
-      await note.locator("[data-selection-indicator]").click();
+      await note.locator("label:has([data-selection-indicator])").click();
       await expect(note.getByRole("checkbox")).toBeChecked();
       for (const id of ["link", "image", "video"]) {
         const card = page.locator(`[data-item-id="${id}"]`);
         await clickCardArea(page, card.locator(layout === "Grid" ? ".library-card-media" : ".library-list-thumbnail"));
         await expect(card.getByRole("checkbox")).toBeChecked();
-        await clickCardArea(page, card.getByTitle(id === "link" ? "Article" : id === "image" ? "Image" : "Video", { exact: true }));
+        // Card titles no longer carry native title attributes (2112cc1).
+        await clickCardArea(page, card.locator(layout === "Grid" ? ".library-card-title" : ".library-list-title"));
         await expect(card.getByRole("checkbox")).not.toBeChecked();
         const bounds = await card.boundingBox();
         await card.click({ position: { x: 4, y: bounds!.height / 2 } });
@@ -61,7 +62,7 @@ for (const layout of ["Grid", "List"]) {
         expect(page.url()).toBe(originalUrl);
         expect(context.pages()).toHaveLength(1);
       }
-      const noteTitle = layout === "Grid" ? note.locator("h2") : note.getByTitle("Note", { exact: true });
+      const noteTitle = layout === "Grid" ? note.locator("h2") : note.locator(".library-list-title");
       await clickCardArea(page, noteTitle);
       await expect(note.getByRole("checkbox")).not.toBeChecked();
       await page.keyboard.press("Escape");
@@ -158,10 +159,11 @@ for (const layout of ["Grid", "List"]) {
     await page.getByRole("button", { name: `${layout} view`, exact: true }).click();
     const note = page.locator('[data-item-id="note"]');
     await note.hover();
-    await note.locator("[data-selection-indicator]").click();
+    await note.locator("label:has([data-selection-indicator])").click();
     const image = page.locator('[data-item-id="image"]');
-    const folder = image.locator('button[title="Folder"]').first();
-    const tag = layout === "Grid" ? image.locator(".library-card-tag-control button") : image.locator('ul[aria-label="Tags"] button').first();
+    // Metadata pills use aria-labels with Tooltip instead of native titles, and both layouts share the tag control (2112cc1).
+    const folder = image.getByRole("button", { name: "Folder", exact: true }).first();
+    const tag = image.locator(".library-card-tag-control button");
     for (const control of [folder, tag]) {
       await expect(control).toHaveCSS("pointer-events", "none");
       const background = await control.evaluate(element => getComputedStyle(element).backgroundColor);
@@ -175,13 +177,13 @@ for (const layout of ["Grid", "List"]) {
     await page.goto("/?trash=1");
     const trashed = page.locator('[data-item-id="trashed"]');
     await trashed.hover();
-    await trashed.locator("[data-selection-indicator]").click();
+    await trashed.locator("label:has([data-selection-indicator])").click();
     const restore = trashed.locator("button").filter({ hasText: /^Restore$/ });
     await expect(restore).toHaveCSS("pointer-events", "none");
     await clickCardArea(page, restore);
     await expect(trashed.getByRole("checkbox")).not.toBeChecked();
     await expect(trashed).toBeVisible();
-    await trashed.locator("[data-selection-indicator]").click();
+    await trashed.locator("label:has([data-selection-indicator])").click();
     await clickCardArea(page, trashed.locator("button").filter({ hasText: /^Delete permanently$/ }));
     await expect(trashed.getByRole("checkbox")).not.toBeChecked();
     await expect(page.getByRole("dialog")).toHaveCount(0);

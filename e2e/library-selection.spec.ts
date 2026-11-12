@@ -52,10 +52,11 @@ for (const layout of ["Grid", "List"]) {
     await page.screenshot({ path: testInfo.outputPath(`${layout.toLowerCase()}-hidden-selection.png`) });
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileNavigation = page.getByRole("dialog", { name: "Sidebar navigation" });
-    if (await mobileNavigation.isVisible()) {
-      await page.keyboard.press("Escape");
-      await expect(mobileNavigation).toHaveCount(0);
-    }
+    // Below 768px the open sidebar becomes a modal after the resize settles (6990e73); an instant
+    // isVisible() check races it, and the modal then hides the bulk bar.
+    await expect(mobileNavigation).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(mobileNavigation).toHaveCount(0);
     await expect(bulk).toContainText("1 hidden");
     await page.screenshot({ path: testInfo.outputPath(`${layout.toLowerCase()}-hidden-selection-mobile.png`) });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

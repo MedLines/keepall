@@ -8,11 +8,13 @@ async function setZoom(page: Page, label: string) {
   await expect(page.getByRole("region", { name: "PDF viewer", exact: true }).locator('[aria-busy="true"]')).toHaveCount(0);
 }
 
+// The page canvas sits inside ScrollPanel wrappers (8152650); aria-busy lives on the nearest panel, not a fixed ancestor.
 async function expectAlignedPage(canvas: Locator) {
   await expect.poll(() => canvas.evaluate(node => {
     const viewer = node.closest('[aria-label="PDF viewer"]')!;
     const toolbar = viewer.querySelector("[data-pdf-toolbar]")!;
-    const surface = node.closest(".ui-scrollbar")!;
+    // Each PDF page scrolls in its own ScrollPanel (8152650), not a native .ui-scrollbar box.
+    const surface = node.closest('[data-slot="scroll-area"]')!;
     const gap = Number.parseFloat(getComputedStyle(viewer).rowGap);
     return Math.abs(surface.getBoundingClientRect().top - toolbar.getBoundingClientRect().bottom - gap);
   })).toBeLessThan(1);
@@ -38,7 +40,8 @@ test("page navigation never clears a painted canvas that is still visible", asyn
   await expect(preview.getByRole("img", { name: "PDF page 1", exact: true })).toBeVisible();
   const previewViewer = preview.getByRole("region", { name: "PDF viewer", exact: true });
   const previewScroll = preview.locator("[data-document-scroll]");
-  await expect(previewViewer.locator("[data-pdf-toolbar]")).toHaveCSS("background-color", await preview.evaluate(node => getComputedStyle(node).backgroundColor));
+  // The toolbar sits on the preview's card surface (d19a2e1), not on the dialog background.
+  await expect(previewViewer.locator("[data-pdf-toolbar]")).toHaveCSS("background-color", await preview.locator(".library-preview-surface").first().evaluate(node => getComputedStyle(node).backgroundColor));
   await previewViewer.getByRole("button", { name: "Next page", exact: true }).click();
   await expect(previewViewer.getByRole("textbox", { name: "PDF page number", exact: true })).toHaveValue("2");
   await expectAlignedPage(previewViewer.getByRole("img", { name: "PDF page 2", exact: true }));
@@ -57,7 +60,7 @@ test("page navigation never clears a painted canvas that is still visible", asyn
   await viewer.getByRole("button", { name: "Pages", exact: true }).click();
   const first = viewer.getByRole("img", { name: "PDF page 1", exact: true });
   await expect(first).toBeVisible();
-  await expect(first.locator("../..")).toHaveAttribute("aria-busy", "false");
+  await expect(first.locator("xpath=ancestor::*[@aria-busy][1]")).toHaveAttribute("aria-busy", "false");
   await page.evaluate(() => {
     const resets: string[] = [];
     Reflect.set(window, "visiblePdfResets", resets);
@@ -78,15 +81,15 @@ test("page navigation never clears a painted canvas that is still visible", asyn
     const expected = name === "Previous page" ? 1 : 2;
     const canvas = viewer.getByRole("img", { name: `PDF page ${expected}`, exact: true });
     await expect(canvas).toBeVisible();
-    await expect(canvas.locator("../..")).toHaveAttribute("aria-busy", "false");
+    await expect(canvas.locator("xpath=ancestor::*[@aria-busy][1]")).toHaveAttribute("aria-busy", "false");
     await expectAlignedPage(canvas);
   }
   await viewer.getByRole("button", { name: "Previous page", exact: true }).click();
-  await expect(viewer.getByRole("img", { name: "PDF page 1", exact: true }).locator("../..")).toHaveAttribute("aria-busy", "false");
+  await expect(viewer.getByRole("img", { name: "PDF page 1", exact: true }).locator("xpath=ancestor::*[@aria-busy][1]")).toHaveAttribute("aria-busy", "false");
   await viewer.getByRole("button", { name: "Next page", exact: true }).click({ clickCount: 2, delay: 20 });
   const third = viewer.getByRole("img", { name: "PDF page 3", exact: true });
   await expect(third).toBeVisible();
-  await expect(third.locator("../..")).toHaveAttribute("aria-busy", "false");
+  await expect(third.locator("xpath=ancestor::*[@aria-busy][1]")).toHaveAttribute("aria-busy", "false");
   await expect(viewer.locator(".keepall-pdf-text:visible")).toHaveText("Third chapter");
   await expectAlignedPage(third);
   expect(await page.evaluate(() => Reflect.get(window, "visiblePdfResets"))).toEqual([]);
@@ -190,10 +193,10 @@ test("PDF imports search all pages, render locally, edit notes, and download exa
   const review = page.getByRole("dialog", { name: "Import backup", exact: true });
   await review.getByRole("button", { name: "Replace library", exact: true }).click();
   await page.getByRole("dialog", { name: "Replace library?", exact: true }).getByRole("button", { name: "Confirm replacement", exact: true }).click();
-  await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Library replaced from backup");
+  await expect(page.locator('div.sr-only[role="status"][aria-atomic="true"]')).toContainText("Library replaced from backup");
   await input.setInputFiles(archive);
   await review.getByRole("button", { name: "Merge", exact: true }).click();
-  await expect(page.locator('div[role="status"][aria-atomic="true"]')).toContainText("Merged:");
+  await expect(page.locator('div.sr-only[role="status"][aria-atomic="true"]')).toContainText("Merged:");
   await page.goto("/?q=" + encodeURIComponent("Unicorn café"));
   await expect(page.locator("[data-item-id]")).toHaveCount(1);
   await expect(page.locator(".search-excerpt mark")).toHaveText(["Unicorn", "café"]);
@@ -228,9 +231,10 @@ test("continuous PDF reading uses the item scrollbar, bounds canvases, and prese
   await page.setViewportSize({ width: 1897, height: 917 });
   await expect(viewer.getByRole("button", { name: "Scroll", exact: true })).toHaveAttribute("aria-pressed", "true");
   const toolbar = viewer.locator("[data-pdf-toolbar]");
+  const details = page.getByRole("complementary", { name: "Document details", exact: true });
+  // Measure after the resize settles: a single read right after setViewportSize is load-sensitive.
+  await expect.poll(async () => Math.abs(await toolbar.evaluate(node => node.getBoundingClientRect().top) - await details.evaluate(node => node.getBoundingClientRect().top))).toBeLessThan(1);
   const toolbarTop = await toolbar.evaluate(node => node.getBoundingClientRect().top);
-  const detailsTop = await page.getByRole("complementary", { name: "Document details", exact: true }).evaluate(node => node.getBoundingClientRect().top);
-  expect(Math.abs(toolbarTop - detailsTop)).toBeLessThan(1);
   await expect(page.getByRole("heading", { name: "continuous", exact: true, level: 1 })).toHaveCount(1);
   const first = viewer.getByRole("img", { name: "PDF page 1", exact: true });
   await expect(first).toBeVisible();
@@ -260,7 +264,8 @@ test("continuous PDF reading uses the item scrollbar, bounds canvases, and prese
   await expect(viewer.locator(".keepall-pdf-text:visible")).toHaveText(`Chapter ${number}`);
   await expectAlignedPage(viewer.locator("canvas:visible"));
   expect(await viewer.locator("canvas:visible").evaluate(canvas => {
-    const page = canvas.closest("main")!.getBoundingClientRect();
+    // The item page's main landmark is a ScrollPanel with role="main" (8152650).
+    const page = canvas.closest('main, [role="main"]')!.getBoundingClientRect();
     const bounds = canvas.getBoundingClientRect();
     return bounds.top >= page.top && bounds.top < page.bottom;
   })).toBe(true);

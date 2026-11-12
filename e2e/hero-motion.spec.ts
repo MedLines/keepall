@@ -39,7 +39,7 @@ test("switching between hero icons never replays the previous phrase entrance", 
     element.getAnimations().length === 0 && getComputedStyle(element).opacity === "1",
   ))).toBe(true);
   for (const name of ["links", "notes", "images", "videos", "links"]) {
-    await page.getByRole("button", { name, exact: true }).click();
+    await page.getByRole("heading", { level: 1 }).getByRole("button", { name, exact: true }).click();
     const samples = await phrases.evaluateAll(async elements => {
       const samples: number[][] = [];
       for (let frame = 0; frame < 12; frame++) {
@@ -67,7 +67,7 @@ for (const width of [1440, 390, 320]) {
     await page.goto("/about");
     const description = page.locator(".ka-hero-description");
     const actions = page.locator(".ka-hero-actions");
-    await expect(description).toContainText("Find anything with search.");
+    await expect(description).toContainText("Keep them in a personal library on your device.");
     await expect(actions.getByRole("link", { name: "Start your library" })).toBeVisible();
     await expect(actions.locator(".ka-fine-print")).toContainText("No account needed.");
     const blocks = await page.locator(".ka-hero-phrase, .ka-hero-description, .ka-hero-actions").evaluateAll(elements => elements.map(element => {

@@ -75,11 +75,14 @@ test("cards, bulk actions, folders, tags, and Trash share the same confirmation 
         await note.getByRole("button", { name: "Actions for Note", exact: true }).click();
       }
       await page.getByRole("menuitem", { name: "Move to Trash", exact: true }).click();
-      await verifyAndCancel(page, "Move to Trash");
+      // A single library card moves at once and offers Undo instead of a confirmation (1de298e).
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(note).toHaveCount(0);
+      await page.getByRole("button", { name: /^Undo moving/ }).click();
       await expect(note).toBeVisible();
     }
     await note.hover();
-    await note.locator("[data-selection-indicator]").click();
+    await note.locator("label:has([data-selection-indicator])").click();
     const bulk = page.getByRole("region", { name: "Bulk actions" });
     await bulkAction(page, "Move to Trash");
     await page.screenshot({ path: testInfo.outputPath(`bulk-trash-${layout.toLowerCase()}.png`) });
@@ -98,7 +101,7 @@ test("cards, bulk actions, folders, tags, and Trash share the same confirmation 
   await trashed.getByRole("button", { name: "Delete permanently", exact: true }).click();
   await verifyAndCancel(page, "Delete permanently");
   await trashed.hover();
-  await trashed.locator("[data-selection-indicator]").click();
+  await trashed.locator("label:has([data-selection-indicator])").click();
   await bulkAction(page, "Delete permanently");
   await verifyAndCancel(page, "Delete permanently");
   await bulkAction(page, "Deselect all");

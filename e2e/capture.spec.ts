@@ -1,4 +1,12 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+// ScrollTextarea (8152650) insets the native textarea inside the visible field box.
+async function fieldBox(field: Locator) {
+  return field.evaluate((element) => {
+    const box = (element.closest(".scroll-textarea") ?? element).getBoundingClientRect();
+    return { x: box.x, width: box.width };
+  });
+}
 
 async function openCaptureFromShortcut(page: Page) {
   const closeNavigation = page.getByRole("button", { name: "Close navigation", exact: true });
@@ -42,28 +50,31 @@ for (const width of [320, 1024]) {
     await capture.getByRole("button", { name: "Save", exact: true }).click();
     await expect(capture).toBeHidden();
     await page.reload();
-    const title = page.getByRole("heading", { name: url, exact: true });
-    await expect(title).toBeVisible();
+    // An untitled note shows its text once as the card excerpt, with no title heading (c3da33a).
+    const open = page.getByRole("link", { name: `Open ${url}`, exact: true });
+    const excerpt = open.locator(".library-text-preview");
+    await expect(excerpt).toContainText(url);
     await page.screenshot({ path: testInfo.outputPath("url-note-card.png") });
-    expect(await title.evaluate((heading) => heading.scrollWidth <= heading.clientWidth + 1)).toBe(true);
+    expect(await excerpt.evaluate((preview) => preview.scrollWidth <= preview.clientWidth + 1)).toBe(true);
     const search = page.getByRole("searchbox", { name: "Search", exact: true });
     await search.fill("atulchaurasia");
-    await expect(title.locator("mark")).toHaveText("atulchaurasia");
-    expect(await title.evaluate((heading) => heading.scrollWidth <= heading.clientWidth + 1)).toBe(true);
+    await expect(excerpt.locator("mark")).toHaveText("atulchaurasia");
+    expect(await excerpt.evaluate((preview) => preview.scrollWidth <= preview.clientWidth + 1)).toBe(true);
     await search.fill("");
-    await title.click();
+    await open.click();
     await expect(page.getByRole("button", { name: "Edit note", exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("url-note-page.png") });
-    expect(await title.evaluate((heading) => heading.scrollWidth <= heading.clientWidth + 1)).toBe(true);
+    const body = page.locator("article").filter({ hasText: url });
+    expect(await body.evaluate((article) => article.scrollWidth <= article.clientWidth + 1)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole("button", { name: "Edit note", exact: true }).click();
     const editor = page.getByRole("dialog", { name: "Edit note", exact: true });
     const content = editor.getByRole("textbox", { name: "Note content", exact: true });
     await expect(content).toHaveValue(`${url}\n\nSaved as a note`);
     await expect.poll(async () => {
-      const fieldBox = (await content.boundingBox())!;
+      const field = await fieldBox(content);
       const viewBox = (await editor.getByRole("group", { name: "Note editor view", exact: true }).boundingBox())!;
-      return Math.abs(fieldBox.x + fieldBox.width - viewBox.x - viewBox.width);
+      return Math.abs(field.x + field.width - viewBox.x - viewBox.width);
     }).toBeLessThan(1);
     await editor.screenshot({ path: testInfo.outputPath("note-edit-controls.png") });
   });
@@ -77,9 +88,9 @@ for (const width of [320, 1024]) {
     await input.fill("A note to preview");
     const view = capture.getByRole("group", { name: "Note editor view", exact: true });
     await expect.poll(async () => {
-      const fieldBox = (await input.boundingBox())!;
+      const field = await fieldBox(input);
       const viewBox = (await view.boundingBox())!;
-      return Math.abs(fieldBox.x + fieldBox.width - viewBox.x - viewBox.width);
+      return Math.abs(field.x + field.width - viewBox.x - viewBox.width);
     }).toBeLessThan(1);
     await capture.getByRole("button", { name: "Preview", exact: true }).click();
     await expect(capture.getByRole("region", { name: "Note preview", exact: true })).toBeVisible();
@@ -181,6 +192,11 @@ test("Save item and Alt+K open the capture flow from the side", async ({ page },
   await expect(capture).toBeHidden();
 
   await page.setViewportSize({ width: 390, height: 844 });
+  // Narrow widths show the expanded sidebar as a modal dialog (6990e73); close it before the shortcut.
+  const navigation = page.getByRole("dialog", { name: "Sidebar navigation", exact: true });
+  await expect(navigation).toBeVisible();
+  await navigation.getByRole("button", { name: "Close navigation", exact: true }).click();
+  await expect(navigation).toBeHidden();
   await openCaptureFromShortcut(page);
   await expect.poll(async () => {
     const box = await capture.boundingBox();
@@ -283,6 +299,8 @@ test("switching note format does not move collection or tag controls", async ({ 
     { width: 320, height: 768, text: "https://example.com/article" },
   ]) {
     await page.setViewportSize({ width, height });
+    // Narrow widths open the sidebar as a modal dialog (6990e73), which hides the library.
+    if (width < 768) await page.addInitScript(() => localStorage.setItem("keepall-shell-panel-open", "closed"));
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     await openCaptureFromShortcut(page);
@@ -290,7 +308,8 @@ test("switching note format does not move collection or tag controls", async ({ 
     await capture.getByLabel("Link, note, or image").fill(text);
     const markdown = capture.getByRole("button", { name: "Markdown" });
     const positions = () => capture.evaluate((drawer) => {
-      const region = drawer.querySelector('[data-testid="capture-scroll-region"]')!;
+      // The test id is on the ScrollArea root (8152650); its viewport is the element that scrolls.
+      const region = drawer.querySelector('[data-testid="capture-scroll-region"] [data-slot="scroll-area-viewport"]')!;
       const collection = Array.from(drawer.querySelectorAll("label")).find(label => label.textContent?.trim() === "Collection")!.control!;
       const tags = Array.from(drawer.querySelectorAll("label")).find(label => label.textContent?.trim() === "Tags")!.control!;
       const y = (element: Element) => Math.round(element.getBoundingClientRect().top - region.getBoundingClientRect().top + region.scrollTop);
@@ -315,16 +334,16 @@ test("saving a note with Alt+K survives a reload", async ({ page }) => {
   await page.getByLabel("Link, note, or image").fill("Soft side light, hard rim.");
   await page.getByRole("button", { name: "Save" }).click();
 
-  await expect(page.getByRole("dialog").getByText("Saved.")).toBeVisible();
+  await expect(page.getByRole("dialog").getByText("Saved to your library.", { exact: true })).toBeVisible();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(
-    page.getByRole("heading", { name: "Soft side light, hard rim.", exact: true }),
+    page.getByRole("link", { name: "Open Soft side light, hard rim.", exact: true }),
   ).toBeVisible();
 
   await page.reload();
 
   await expect(
-    page.getByRole("heading", { name: "Soft side light, hard rim.", exact: true }),
+    page.getByRole("link", { name: "Open Soft side light, hard rim.", exact: true }),
   ).toBeVisible();
 });
 
@@ -344,9 +363,10 @@ test("a Markdown note keeps its source and formatting after offline reload", asy
   await page.reload();
   await page.getByRole("link", { name: /Card idea/ }).click();
   await expect(page).toHaveURL(/\/items\//);
-  await expect(page.getByRole("heading", { level: 1, name: "Card idea" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Card idea" })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Completed checklist item" })).toBeDisabled();
-  await expect(page.getByText("const gap = 8;")).toBeVisible();
+  // The library stays mounted beneath the item page, and the card excerpt renders the same code.
+  await expect(page.getByTestId("item-page-scroll").getByText("const gap = 8;")).toBeVisible();
 
   await expect.poll(() => page.evaluate(async () => {
     await navigator.serviceWorker.ready;
@@ -354,7 +374,7 @@ test("a Markdown note keeps its source and formatting after offline reload", asy
   }), { timeout: 20_000 }).toBe(true);
   await context.setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { level: 1, name: "Card idea" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Card idea" })).toBeVisible();
 });
 
 test("a long note scrolls to the end on its own page", async ({ page }) => {
@@ -366,7 +386,7 @@ test("a long note scrolls to the end on its own page", async ({ page }) => {
   await page.getByRole("button", { name: "Markdown" }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.getByRole("link", { name: /Long note/ }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Long note" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Long note" })).toBeVisible();
 
   const scrollRegion = page.locator(".ui-scrollbar").first();
   await expect.poll(() => scrollRegion.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
@@ -385,13 +405,13 @@ test("saving a link with Alt+K survives a reload", async ({ page }) => {
     page.getByRole("heading", { name: "example.com" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "example.com", exact: true }),
+    page.getByRole("link", { name: "example.com", exact: true }).first(),
   ).toHaveAttribute("href", "https://example.com/path");
 
   await page.reload();
 
   await expect(
-    page.getByRole("link", { name: "example.com", exact: true }),
+    page.getByRole("link", { name: "example.com", exact: true }).first(),
   ).toHaveAttribute("href", "https://example.com/path");
 });
 
@@ -438,7 +458,7 @@ test("Markdown preview is optional, bounded, and keeps the drawer width stable",
   const note = capture.getByRole("textbox", { name: "Your note (optional)" });
   await capture.getByRole("button", { name: "Markdown" }).click();
   await note.fill(Array.from({ length: 20 }, (_, index) => `## Section ${index + 1}\n\nNotes about this page.`).join("\n\n"));
-  const before = await note.boundingBox();
+  const before = await fieldBox(note);
   const preview = capture.getByLabel("Personal note preview");
   const scrollRegion = capture.getByTestId("capture-scroll-region");
   const beforeContentHeight = await scrollRegion.evaluate((element) => element.scrollHeight);
@@ -452,7 +472,7 @@ test("Markdown preview is optional, bounded, and keeps the drawer width stable",
     scrollHeight: element.scrollHeight,
     clientHeight: element.clientHeight,
   }));
-  expect(scroll.gutter).toBe("stable");
+  expect(scroll.gutter).toBe("auto");
   expect(scroll.scrollHeight).toBeGreaterThan(scroll.clientHeight);
   expect(scroll.scrollHeight).toBeLessThanOrEqual(beforeContentHeight + 1);
   expect(after!.height).toBeLessThanOrEqual(160);
@@ -477,17 +497,18 @@ test("deleting a note after confirm survives a reload", async ({ page }) => {
   await page.getByLabel("Link, note, or image").fill("Remove this note.");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(
-    page.getByRole("heading", { name: "Remove this note.", exact: true }),
+    page.getByRole("link", { name: "Open Remove this note.", exact: true }),
   ).toBeVisible();
 
   const removable = page.locator(".library-card").filter({ hasText: "Remove this note." });
   await removable.hover();
   await removable.locator("button.library-card-actions").click();
   await page.getByRole("menuitem", { name: "Move to Trash" }).click();
-  await page.getByRole("button", { name: "Move to Trash" }).click();
+  // Single library moves apply immediately and offer Undo instead of a confirmation (1de298e).
+  await expect(page.getByRole("button", { name: /^Undo moving/ })).toBeVisible();
 
   await expect(
-    page.getByRole("heading", { name: "Remove this note.", exact: true }),
+    page.getByRole("link", { name: "Open Remove this note.", exact: true }),
   ).toBeHidden();
   await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
@@ -495,7 +516,7 @@ test("deleting a note after confirm survives a reload", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Remove this note.", exact: true }),
+    page.getByRole("link", { name: "Open Remove this note.", exact: true }),
   ).toBeHidden();
 });
 
@@ -505,7 +526,7 @@ test("editing a note survives a reload", async ({ page }) => {
   await page.getByLabel("Link, note, or image").fill("Original note body.");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(
-    page.getByRole("heading", { name: "Original note body.", exact: true }),
+    page.getByRole("link", { name: "Open Original note body.", exact: true }),
   ).toBeVisible();
 
   const editableNote = page.locator(".library-card").filter({ hasText: "Original note body." });
@@ -516,16 +537,16 @@ test("editing a note survives a reload", async ({ page }) => {
   await page.getByRole("button", { name: "Save note" }).click();
 
   await expect(
-    page.getByRole("heading", { name: "Edited note body.", exact: true }),
+    page.getByRole("link", { name: "Open Edited note body.", exact: true }),
   ).toBeVisible();
 
   await page.reload();
 
   await expect(
-    page.getByRole("heading", { name: "Edited note body.", exact: true }),
+    page.getByRole("link", { name: "Open Edited note body.", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Original note body.", exact: true }),
+    page.getByRole("link", { name: "Open Original note body.", exact: true }),
   ).toBeHidden();
 });
 
@@ -535,7 +556,7 @@ test("editing a link URL survives a reload", async ({ page }) => {
   await page.getByLabel("Link, note, or image").fill("https://example.com/old");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(
-    page.getByRole("link", { name: "example.com", exact: true }),
+    page.getByRole("link", { name: "example.com", exact: true }).first(),
   ).toHaveAttribute("href", "https://example.com/old");
 
   const editableLink = page.locator(".library-card").filter({ hasText: "example.com" });
@@ -553,13 +574,13 @@ test("editing a link URL survives a reload", async ({ page }) => {
   await editor.getByRole("button", { name: "Save changes" }).click();
 
   await expect(
-    page.getByRole("link", { name: "example.com", exact: true }),
+    page.getByRole("link", { name: "example.com", exact: true }).first(),
   ).toHaveAttribute("href", "https://example.com/new");
 
   await page.reload();
 
   await expect(
-    page.getByRole("link", { name: "example.com", exact: true }),
+    page.getByRole("link", { name: "example.com", exact: true }).first(),
   ).toHaveAttribute("href", "https://example.com/new");
   await expect(
     page.locator('a[href="https://example.com/old"]'),
@@ -573,7 +594,7 @@ test("Ctrl+Enter saves a note from the textarea", async ({ page }) => {
   await page.getByLabel("Link, note, or image").press("Control+Enter");
 
   await expect(
-    page.getByRole("heading", { name: "From keyboard shortcut", exact: true }),
+    page.getByRole("link", { name: "Open From keyboard shortcut", exact: true }),
   ).toBeVisible();
 });
 
@@ -626,13 +647,24 @@ test("the footer morphs into a saved confirmation at the same height", async ({ 
   await expect(saved).toHaveCSS("opacity", "0");
 
   await capture.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(saved).toHaveCSS("opacity", "1");
-  await expect(actions).toHaveCSS("opacity", "0");
-  await expect(capture.getByText("Saved to your library.", { exact: true })).toBeVisible();
-  const after = await footer.boundingBox();
+  // The confirmation dismisses itself after 800ms (capture-host), which is shorter than a few
+  // retrying expects, so sample the settled saved state on every frame inside the page.
+  const settled = await page.waitForFunction(() => {
+    const savedNode = document.querySelector<HTMLElement>('[data-testid="capture-saved"]');
+    const actionsNode = document.querySelector<HTMLElement>('[data-testid="capture-actions"]');
+    const footerNode = document.querySelector<HTMLElement>('[data-testid="capture-footer"]');
+    if (!savedNode || !actionsNode || !footerNode) return null;
+    if (getComputedStyle(savedNode).opacity !== "1" || getComputedStyle(actionsNode).opacity !== "0") return null;
+    if (savedNode.querySelector('[role="status"]')?.textContent !== "Saved to your library.") return null;
+    return {
+      height: footerNode.getBoundingClientRect().height,
+      submitInert: actionsNode.querySelector('button[type="submit"]')?.closest("[inert]") !== null,
+    };
+  }, null, { polling: "raf" });
+  const after = await settled.jsonValue();
 
-  expect(Math.abs((after?.height ?? 0) - (before?.height ?? 0))).toBeLessThanOrEqual(0.5);
-  expect(await actions.locator('button[type="submit"]').evaluate((button) => button.closest("[inert]") !== null)).toBe(true);
+  expect(Math.abs(after!.height - (before?.height ?? 0))).toBeLessThanOrEqual(0.5);
+  expect(after!.submitInert).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("capture-saved-footer.png") });
   await expect(capture).toBeHidden();
 });

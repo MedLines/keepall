@@ -64,7 +64,11 @@ test("browse controls follow Search while filters and selection actions share th
   await page.reload();
   const search = page.getByRole("searchbox", { name: "Search" });
   await page.setViewportSize({ width: 320, height: 900 });
+  const navigation = page.getByRole("dialog", { name: "Sidebar navigation" });
+  await expect(navigation).toBeVisible();
   await page.keyboard.press("Escape");
+  // Let the closing dialog return focus before the test moves focus itself.
+  await expect(navigation).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Expand", exact: true })).toBeVisible();
   await search.fill("needle");
   await expect(page.getByRole("heading", { name: "All items" })).toBeVisible();

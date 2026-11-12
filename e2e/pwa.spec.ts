@@ -27,7 +27,7 @@ test.describe("PWA / offline shell", () => {
     await page.getByLabel("Link, note, or image").fill("Offline survival note.");
     await page.getByRole("button", { name: "Save" }).click();
     await expect(
-      page.getByLabel("Library").getByText("Offline survival note."),
+      page.getByLabel("Library").getByText("Offline survival note.", { exact: true }),
     ).toBeVisible();
 
     await expect
@@ -54,14 +54,14 @@ test.describe("PWA / offline shell", () => {
       )
       .toBe(true);
     await expect(
-      page.getByLabel("Library").getByText("Offline survival note."),
+      page.getByLabel("Library").getByText("Offline survival note.", { exact: true }),
     ).toBeVisible();
 
     await context.setOffline(true);
     await page.reload({ waitUntil: "domcontentloaded" });
 
     await expect(
-      page.getByLabel("Library").getByText("Offline survival note."),
+      page.getByLabel("Library").getByText("Offline survival note.", { exact: true }),
     ).toBeVisible({ timeout: 15_000 });
   });
 

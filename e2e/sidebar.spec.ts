@@ -118,9 +118,10 @@ test("collection actions remain inside the same hovered sidebar row", async ({ p
 
   await sidebar.getByRole("button", { name: "Typography actions" }).click();
   const deleteTag = page.getByRole("menuitem", { name: "Delete" });
-  await expect(deleteTag).toHaveCSS("border-radius", "999px");
+  // Row action menu items are concentric with the menu panel (radius-panel - 0.5rem - 1px), not pills.
+  await expect(deleteTag).toHaveCSS("border-radius", "11px");
   if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
-    await expect(deleteTag).toHaveCSS("corner-shape", "superellipse(1.5)");
+    await expect(deleteTag).toHaveCSS("corner-shape", "round");
   }
   await deleteTag.click();
   const tagDialog = page.getByRole("dialog", { name: "Delete tag?" });
@@ -130,7 +131,7 @@ test("collection actions remain inside the same hovered sidebar row", async ({ p
   await collectionActions.click();
   await page.getByRole("menuitem", { name: "Delete" }).click();
   const collectionDialog = page.getByRole("dialog", { name: "Delete collection?" });
-  await expect(collectionDialog).toContainText("items stay in your library");
+  await expect(collectionDialog).toContainText("Items stay in your library");
   await collectionDialog.getByRole("button", { name: "Cancel" }).click();
 });
 
@@ -173,7 +174,9 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
   await page.reload();
 
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
-  const sectionScrolls = sidebar.locator(".library-sidebar-section-scroll");
+  // Each section is a ScrollPanel (8152650): its viewport child is the element that scrolls.
+  const sectionRoots = sidebar.locator(".library-sidebar-section-scroll");
+  const sectionScrolls = sectionRoots.locator(':scope > [data-slot="scroll-area-viewport"]');
   const markers = sidebar.locator(".bg-collection-marker");
   await expect(markers).toHaveCount(36);
   const colors = await markers.evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor));
@@ -189,8 +192,8 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
   await expect(sectionScrolls).toHaveCount(2);
   const collectionsScroll = sectionScrolls.nth(0);
   const tagsScroll = sectionScrolls.nth(1);
-  await expect(collectionsScroll).toHaveCSS("scrollbar-width", "thin");
-  await expect(tagsScroll).toHaveCSS("scrollbar-width", "thin");
+  await expect(sectionRoots.nth(0)).toHaveCSS("scrollbar-width", "thin");
+  await expect(sectionRoots.nth(1)).toHaveCSS("scrollbar-width", "thin");
   await expect.poll(() => collectionsScroll.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
   await expect.poll(() => tagsScroll.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
   expect(await sidebar.evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
@@ -264,7 +267,7 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
     for (const edge of ["bottom", "top"] as const) {
       await sidebar.getByRole("button", { name: "All items", exact: true }).click();
       await row.evaluate((element, edge) => {
-        const container = element.closest(".library-sidebar-section-scroll")!;
+        const container = element.closest('.library-sidebar-section-scroll > [data-slot="scroll-area-viewport"]')!;
         const rect = element.getBoundingClientRect();
         const bounds = container.getBoundingClientRect();
         container.scrollTop += edge === "bottom" ? rect.bottom - bounds.bottom : rect.top - bounds.top;
@@ -272,7 +275,7 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
       await row.click();
       await expect(row).toHaveAttribute("aria-current", "page");
       await expect.poll(() => row.evaluate(element => {
-        const container = element.closest(".library-sidebar-section-scroll")!;
+        const container = element.closest('.library-sidebar-section-scroll > [data-slot="scroll-area-viewport"]')!;
         const rect = element.getBoundingClientRect();
         const bounds = container.getBoundingClientRect();
         const margin = Math.min(container.clientHeight * 0.12, 40);
@@ -285,7 +288,7 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
 
   const topActions = sidebar.getByRole("button", { name: "Collection 20 actions" });
   await topActions.evaluate(element => {
-    const container = element.closest(".library-sidebar-section-scroll")!;
+    const container = element.closest('.library-sidebar-section-scroll > [data-slot="scroll-area-viewport"]')!;
     container.scrollTop += element.getBoundingClientRect().top - container.getBoundingClientRect().top;
   });
   await topActions.click();
@@ -302,6 +305,9 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
 });
 
 test("pinned collections persist, reorder, and lead compact capture", async ({ page }) => {
+  // At the default 720px height the Collections section clips its second row (7261bae added the
+  // "All collections" footer), so the drag would start from the wrong row.
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 

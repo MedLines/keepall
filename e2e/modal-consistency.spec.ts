@@ -3,6 +3,12 @@ import sharp from "sharp";
 import { mkdir, writeFile } from "node:fs/promises";
 
 test.use({ serviceWorkers: "block" });
+// Below 768px a fresh load opens the sidebar as a modal navigation dialog, which hides the library.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (innerWidth < 768) localStorage.setItem("keepall-shell-panel-open", "closed");
+  });
+});
 const title = "UI comparison test";
 const content = `${title}\n\n${Array.from({ length: 70 }, (_, i) => `Paragraph ${i + 1}. Testing a long note.`).join("\n\n")}`;
 
@@ -29,7 +35,8 @@ async function createNote(page: Page, keyboard = false) {
   await assertOrder(page, drawer, "Cancel", "Save");
   await drawer.getByRole("button", { name: "Save", exact: true }).click();
   await expect(drawer).toBeHidden();
-  return page.locator("[data-item-id]").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+  // Untitled notes have no card heading; their text is the reading excerpt.
+  return page.locator("[data-item-id]").filter({ hasText: title });
 }
 
 async function cardAction(page: Page, card: Locator, name: string) {
@@ -100,7 +107,9 @@ for (const width of [320, 768, 1024, 1440]) {
     await dialog.getByRole("button", { name: "Save note", exact: true }).click();
     await expect(dialog).toBeHidden();
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    // An untitled note's page heading is "Note"; its first line stays in the body (c3da33a).
+    await expect(page.getByRole("heading", { level: 1, name: "Note", exact: true })).toBeVisible();
+    await expect(page.locator("article")).toContainText(title);
     await expect(page.getByRole("img", { name: "Image", exact: true })).toHaveCount(0);
   });
 
@@ -116,7 +125,7 @@ for (const width of [320, 768, 1024, 1440]) {
     await drawer.getByRole("button", { name: "Done", exact: true }).click();
     await expect(drawer).toBeHidden();
     await card.hover();
-    await card.locator("[data-selection-indicator]").click();
+    await card.locator("label:has([data-selection-indicator])").click();
     const bulk = page.getByRole("region", { name: "Bulk actions", exact: true });
     await chooseSelectionAction(page, bulk, 1, "Organize");
     drawer = page.getByRole("dialog", { name: "Organize 1 selected item", exact: true });
@@ -306,7 +315,7 @@ for (const clearHidden of [false, true]) {
     const before = await readUnsortedOrganization(page);
     for (const card of await page.locator("[data-item-id]").all()) {
       await card.hover();
-      await card.locator("[data-selection-indicator]").click();
+      await card.locator("label:has([data-selection-indicator])").click();
     }
     await page.getByRole("searchbox", { name: "Search", exact: true }).fill("Visible");
     const bulk = page.getByRole("region", { name: "Bulk actions", exact: true });
@@ -366,8 +375,10 @@ for (const width of [320, 1440]) {
     await editor.press("Control+Enter");
     await expect(dialog).toBeHidden();
     await expect(confirmation).toBeHidden();
-    await expect(page.getByRole("heading", { name: "Unsaved revised note", exact: true })).toHaveCount(1);
+    // Untitled note cards show their text as an excerpt, not a heading (c3da33a).
+    const revised = page.locator("[data-item-id]").filter({ hasText: "Unsaved revised note" });
+    await expect(revised).toHaveCount(1);
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Unsaved revised note", exact: true })).toHaveCount(1);
+    await expect(revised).toHaveCount(1);
   });
 }
