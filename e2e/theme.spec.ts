@@ -148,7 +148,7 @@ for (const width of [320, 768, 1024, 1440]) {
     const typeFilter = page.getByRole("combobox", { name: /^Filter by type:/ });
     await typeFilter.click();
     await page.getByRole("option", { name: /Images/ }).click();
-    await expect(typeFilter).toHaveAttribute("title", "Filter by type: Images");
+    await expect(typeFilter).toHaveAttribute("aria-label", "Filter by type: Images");
     await page.getByRole("combobox", { name: /^Sort library:/ }).click();
     await expect(page.getByRole("option", { name: "Oldest first" })).toBeVisible();
     await page.keyboard.press("Escape");

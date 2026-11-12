@@ -59,7 +59,7 @@ export function SideDrawer({
             }`}
           >
             <Drawer.Content className="flex min-h-0 flex-1 flex-col">
-              <div className={captureStyles["header"]}>
+              <div data-drawer-header className={captureStyles["header"]}>
                 <div className={captureStyles["heading"]}>
                   <Drawer.Title className={captureStyles["title"]}>
                     {title}

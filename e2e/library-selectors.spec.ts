@@ -49,7 +49,8 @@ test("library selectors support tab, arrow, home/end, selection, and Escape", as
   await page.keyboard.press("Escape");
   await expect(typeList).toHaveCount(0);
   await expect(selectedFilter).toBeFocused();
-  await expect(selectedFilter).toHaveAttribute("title", "Filter by type: Images");
+  await expect(selectedFilter).toHaveAttribute("aria-label", "Filter by type: Images");
+  await expect(selectedFilter).not.toHaveAttribute("title");
 });
 
 test("selector popup stays inside a 320px viewport", async ({ page }) => {
