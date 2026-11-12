@@ -80,11 +80,11 @@ test("toolbar library menu uses the configured origin without repurposing other 
   let failQuery = false;
   let tabs: Array<{ id: number; windowId: number; url?: string }> = [];
   const calls: Array<[string, unknown, unknown?]> = [];
-  const scope = { URL, chrome: {
+  const scope = { URL, setTimeout, clearTimeout, chrome: {
     storage: { local: { setAccessLevel: async () => {}, get: async () => ({ origin: configuredOrigin }) }, onChanged: event("storage") },
     alarms: { create: async () => {}, onAlarm: event("alarm") },
     runtime: { onInstalled: event("install"), onMessage: event("message") },
-    contextMenus: { onClicked: event("menu") }, action: { onClicked: event("toolbar"), setBadgeText: async (value: object) => { calls.push(["badge", value]); } }, commands: { onCommand: event("command") },
+    contextMenus: { onClicked: event("menu") }, action: { onClicked: event("toolbar"), setBadgeBackgroundColor: async () => {}, setTitle: async () => {}, setBadgeText: async (value: object) => { calls.push(["badge", value]); } }, commands: { onCommand: event("command") },
     tabs: { onUpdated: event("tab"), onRemoved: event("removed"), query: async () => { if (failQuery) throw new Error("Browser unavailable"); return tabs; },
       create: async (value: object) => { calls.push(["create", value]); },
       update: async (id: number, value: object) => { calls.push(["update", id, value]); } },
@@ -116,8 +116,8 @@ test("toolbar library menu uses the configured origin without repurposing other 
   await openLibrary();
   expect(calls).toEqual([["update", 4, { active: true }], ["window", 7, { focused: true }]]);
   calls.length = 0; failQuery = true;
-  listeners.get("menu")!({ menuItemId: "open-keepall-library" });
-  await expect.poll(() => calls).toEqual([["badge", { text: "!" }]]);
+  listeners.get("menu")!({ menuItemId: "open-keepall-library" }, { id: 9, url: "https://example.com/" });
+  await expect.poll(() => calls).toEqual([["badge", { tabId: 9, text: "!" }]]);
 });
 
 test("unpacked extension opens and reuses the library root without losing its draft", async () => {
@@ -188,7 +188,7 @@ test("extension uses the canonical production library address", async () => {
 
     const options = await context.newPage();
     await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
-    await expect(options.getByLabel("Keepall address")).toHaveValue("https://www.keepall.app");
+    await expect(options.locator("#origin")).toHaveValue("https://www.keepall.app");
     await options.getByRole("tab", { name: "Image access", exact: true }).click();
     await expect(options.getByRole("region", { name: "Image saving" })).toBeVisible();
     await expect(options.getByText("Your current choice. No setup needed.", { exact: true })).toBeVisible();
@@ -219,11 +219,38 @@ test("extension uses the canonical production library address", async () => {
     expect(await options.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
     await expect(options.getByRole("link", { name: "Open library" })).toHaveAttribute("href", "https://www.keepall.app/");
     await options.getByRole("tab", { name: "General", exact: true }).click();
-    await options.getByLabel("Keepall address").fill("https://keepall.app");
+    await options.getByText("Use a local library (for development)").click();
+    await options.locator("#origin").fill("https://keepall.app");
     await options.getByRole("button", { name: "Save address" }).click();
     await expect(options.locator("#status")).toHaveText("Address saved.");
-    await expect(options.getByLabel("Keepall address")).toHaveValue("https://www.keepall.app");
+    await expect(options.locator("#origin")).toHaveValue("https://www.keepall.app");
     expect(await worker.evaluate(() => keepallOrigin())).toBe("https://www.keepall.app");
+  } finally {
+    await context.close();
+    await rm(profile, { recursive: true, force: true });
+  }
+});
+
+test("Options explains the connection, flags bad addresses, and describes the right menu item", async () => {
+  const profile = await mkdtemp(path.join(tmpdir(), "keepall-options-everyday-"));
+  const extensionPath = path.resolve("extension");
+  const context = await chromium.launchPersistentContext(profile, {
+    channel: "chromium", headless: true,
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+  try {
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
+    const options = await context.newPage();
+    await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
+    await expect(options.locator("#connection-status")).not.toHaveText("Not checked yet", { timeout: 5_000 });
+    await options.getByText("Use a local library (for development)").click();
+    await options.locator("#origin").fill("https://example.com");
+    await options.getByRole("button", { name: "Save address", exact: true }).click();
+    await expect(options.locator("#origin")).toHaveAttribute("aria-invalid", "true");
+    await expect(options.locator("#origin")).toBeFocused();
+    const alt = await options.locator('img[src="image-context-menu.png"]').getAttribute("alt");
+    expect(alt).toContain("Save to Keepall.");
+    expect(alt).not.toContain("Save image");
   } finally {
     await context.close();
     await rm(profile, { recursive: true, force: true });
@@ -246,8 +273,9 @@ test("Options tabs reveal one group, preserve edits, and support keyboard naviga
     await page.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
     await expect(page.getByRole("tabpanel")).toHaveCount(1);
     await expect(page.getByRole("tab", { name: "General", exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("button", { name: "Save address", exact: true })).toBeInViewport();
-    await page.getByLabel("Keepall address").fill("http://localhost:3001");
+    await expect(page.locator("#library-destination")).toBeInViewport();
+    await page.getByText("Use a local library (for development)").click();
+    await page.locator("#origin").fill("http://localhost:3001");
     await page.getByRole("tab", { name: "General", exact: true }).focus();
     await page.keyboard.press("ArrowDown");
     await expect(page.getByRole("tabpanel", { name: "Saving", exact: true })).toBeVisible();
@@ -255,7 +283,7 @@ test("Options tabs reveal one group, preserve edits, and support keyboard naviga
     await page.keyboard.press("End");
     await expect(page.getByRole("tabpanel", { name: "Image access", exact: true })).toBeVisible();
     await page.keyboard.press("Home");
-    await expect(page.getByLabel("Keepall address")).toHaveValue("http://localhost:3001");
+    await expect(page.locator("#origin")).toHaveValue("http://localhost:3001");
     await page.keyboard.press("ArrowUp");
     await expect(page.getByRole("tab", { name: "Image access", exact: true })).toBeFocused();
     await page.reload();
@@ -287,7 +315,7 @@ test("Options tabs reveal one group, preserve edits, and support keyboard naviga
     await page.evaluate(() => window.scrollTo(0, 650));
     await expect(page.getByRole("tab", { name: "General", exact: true })).toBeInViewport();
     await page.getByRole("tab", { name: "General", exact: true }).click();
-    await expect(page.getByLabel("Keepall address")).toBeInViewport();
+    await expect(page.locator("#library-destination")).toBeInViewport();
     await page.goto(page.url().replace("#general", "#permissions"));
     await expect(page.getByRole("tab", { name: "Image access", exact: true })).toHaveAttribute("aria-selected", "true");
     expect(errors).toEqual([]);
@@ -335,7 +363,7 @@ test("Options shows the actual shortcut and refreshes after Chrome changes", asy
     await settings.getByRole("button", { name: "Clear", exact: true }).last().click();
     await expect.poll(getShortcut).toBe("");
     await options.bringToFront();
-    await expect(card.getByText("No shortcut set", { exact: true })).toBeVisible();
+    await expect(card.locator("#shortcut-state").getByText("No shortcut set", { exact: true })).toBeVisible();
     await expect(value).toBeHidden();
     expect((await card.boundingBox())!.height).toBe(initialHeight);
     await options.setViewportSize({ width: 375, height: 812 });
@@ -347,10 +375,10 @@ test("Options shows the actual shortcut and refreshes after Chrome changes", asy
       chrome.commands.getAll = async () => { throw new Error("Test API failure"); };
       window.dispatchEvent(new Event("focus"));
     });
-    await expect(card.getByText("Could not check your shortcut", { exact: true })).toBeVisible();
-    await expect(card.getByText("No shortcut set", { exact: true })).toBeHidden();
+    await expect(card.locator("#shortcut-state").getByText("Could not check your shortcut", { exact: true })).toBeVisible();
+    await expect(card.locator("#shortcut-state").getByText("No shortcut set", { exact: true })).toBeHidden();
     await options.reload();
-    await expect(card.getByText("No shortcut set", { exact: true })).toBeVisible();
+    await expect(card.locator("#shortcut-state").getByText("No shortcut set", { exact: true })).toBeVisible();
     expect(errors).toEqual([]);
   } finally {
     await context.close();
@@ -412,7 +440,7 @@ test("Chrome access management preserves library recovery and saving", async () 
     await worker.evaluate((tab) => {
       void saveContext({ menuItemId: "save-to-keepall", linkUrl: "https://example.com/missing-connection" }, tab);
     }, sourceTab);
-    await expect.poll(() => worker.evaluate((tabId) => chrome.action.getTitle({ tabId }), sourceTab.id)).toContain("Library access is missing");
+    await expect.poll(() => worker.evaluate((tabId) => chrome.action.getTitle({ tabId }), sourceTab.id)).toContain("lost access to your library");
     await expect(library.locator(".library-card")).toHaveCount(1);
     await options.reload();
     await options.getByRole("tab", { name: "General", exact: true }).click();
@@ -473,7 +501,7 @@ test("connection checks, selected text, and appearance work together", async ({}
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await saveContext({ menuItemId: "save-to-keepall", selectionText, pageUrl: `${origin}/help` }, tab);
     }, { selectionText: text, origin });
-    const toast = source.locator("#keepall-capture-ui .toast");
+    const toast = source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast");
     await saveText("A useful passage");
     await expect(toast).toContainText("Text saved to Keepall");
     await expect(toast.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
@@ -558,12 +586,15 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     expect(await worker.evaluate(() => chrome.commands.getAll())).toContainEqual(
       expect.objectContaining({ name: "open-editor", shortcut: "Alt+K" }),
     );
+    expect(await worker.evaluate(() => chrome.commands.getAll())).toContainEqual(
+      expect.objectContaining({ name: "focus-notification", shortcut: "Alt+Shift+K" }),
+    );
 
     const options = await context.newPage();
     await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
     await expect(options.getByRole("heading", { name: "Capture settings" })).toBeVisible();
     await expect(options.getByRole("region", { name: "Library address" })).toBeVisible();
-    await options.getByLabel("Keepall address").fill(origin);
+    await options.locator("#origin").fill(origin);
     await options.getByRole("button", { name: "Save address" }).click();
     await expect(options.locator("#status")).toHaveText("Address saved.");
     await expect(options.getByRole("link", { name: "Open library" })).toHaveAttribute("href", `${origin}/`);
@@ -596,11 +627,13 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       return chrome.action.getTitle({ tabId: tab.id });
     });
     expect(first).toBe("Link saved to Keepall");
-    await expect(source.locator("#keepall-capture-ui .toast.is-visible")).toContainText("Link saved to Keepall");
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast.is-visible")).toContainText("Link saved to Keepall");
     await expect(openLibrary.getByText("Example article", { exact: true })).toBeVisible();
-    await expect(source.locator("#keepall-capture-ui .toast")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
-    await expect(source.locator("#keepall-capture-ui .toast-card")).toHaveCSS("border-radius", "32px");
-    const toastBounds = await source.locator("#keepall-capture-ui .toast").boundingBox();
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast-card")).toHaveCSS("border-radius", "32px");
+    // The frame carries its own styles; a toolbar save has no app stylesheet to fall back on.
+    expect(await source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast-card").evaluate((card) => getComputedStyle(card).backgroundColor)).not.toMatch(/^rgba\(0, 0, 0, 0\)$|^transparent$/);
+    const toastBounds = await source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast").boundingBox();
     expect(toastBounds).not.toBeNull();
     expect(toastBounds!.x).toBeGreaterThanOrEqual(0);
     expect(toastBounds!.x + toastBounds!.width).toBeLessThanOrEqual(320);
@@ -624,8 +657,8 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       return chrome.action.getTitle({ tabId: tab.id });
     });
     expect(conflict).toContain("already has a personal note");
-    await expect(source.locator("#keepall-capture-ui .toast.is-visible")).toContainText("already has a personal note");
-    await expect(source.locator("#keepall-capture-ui .toast")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast.is-visible")).toContainText("already has a personal note");
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
     await source.close();
 
     const organizationSetup = await context.newPage();
@@ -884,7 +917,7 @@ test("save notifications open the item and undo only new captures", async ({}, t
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await saveTab(tab);
     });
-    const toast = source.locator("#keepall-capture-ui .toast");
+    const toast = source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast");
     await save();
     await expect(toast.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
     await expect(library.getByText("Action article", { exact: true })).toBeVisible();
@@ -1145,7 +1178,7 @@ test("notifications expire Undo and retry loading organizations without closing"
       } });
       await saveTab(tab);
     });
-    const toast = source.locator("#keepall-capture-ui .toast");
+    const toast = source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast");
     const undo = toast.getByRole("button", { name: "Undo", exact: true });
     const organize = toast.getByRole("button", { name: "Organize", exact: true });
     await expect(undo).toBeEnabled();
@@ -1269,7 +1302,7 @@ test("extension saves a right-clicked image to the local library", async () => {
       return chrome.action.getTitle({ tabId: tab.id });
     }, imageUrl);
     expect(first).toBe("Image saved to Keepall");
-    await expect(source.locator("#keepall-capture-ui .toast.is-visible")).toContainText("Image saved to Keepall");
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast.is-visible")).toContainText("Image saved to Keepall");
     await expect(library.locator(".library-card")).toHaveCount(1);
 
     const item = await library.evaluate(() => new Promise<{ type: string; sourceUrl: string; assetIds: string[]; bytes: number }>((resolve, reject) => {
@@ -1313,7 +1346,7 @@ test("extension saves a right-clicked image to the local library", async () => {
       return chrome.action.getTitle({ tabId: tab.id });
     }, origin);
     expect(unsupported).toContain("PNG, JPEG, GIF, WebP, or AVIF");
-    await expect(source.locator("#keepall-capture-ui .toast.is-visible"))
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast.is-visible"))
       .toContainText("PNG, JPEG, GIF, WebP, or AVIF");
     await expect(library.locator(".library-card")).toHaveCount(1);
   } finally {

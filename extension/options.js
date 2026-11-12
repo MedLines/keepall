@@ -28,13 +28,13 @@ function setDestination(origin) {
   connectionRevision++;
   connectionStatus.textContent = "Not checked yet";
   connectionStatus.dataset.state = "idle";
-  connectionCheck.disabled = false;
+  connectionCheck.removeAttribute("aria-disabled");
   connectionCheck.textContent = "Check connection";
 }
 
 async function checkConnection() {
   const revision = ++connectionRevision;
-  connectionCheck.disabled = true;
+  connectionCheck.setAttribute("aria-disabled", "true");
   connectionStatus.textContent = "Checking your library…";
   connectionStatus.dataset.state = "checking";
   try {
@@ -54,10 +54,13 @@ async function checkConnection() {
     connectionStatus.dataset.state = "error";
     connectionCheck.textContent = "Try again";
   } finally {
-    if (revision === connectionRevision) connectionCheck.disabled = false;
+    if (revision === connectionRevision) connectionCheck.removeAttribute("aria-disabled");
   }
 }
-connectionCheck.addEventListener("click", () => { void checkConnection(); });
+connectionCheck.addEventListener("click", () => {
+  if (connectionCheck.getAttribute("aria-disabled") === "true") return;
+  void checkConnection();
+});
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.origin) {
     setDestination(changes.origin.newValue);
@@ -69,6 +72,8 @@ const LEGACY_IMAGE_HOSTS = { origins: ["https://*/*", "http://*/*"] };
 const shortcutValue = document.querySelector("#shortcut-value");
 const shortcutState = document.querySelector("#shortcut-state");
 const shortcutChange = document.querySelector("#shortcut-change");
+const focusShortcutValue = document.querySelector("#focus-shortcut-value");
+const focusShortcutState = document.querySelector("#focus-shortcut-state");
 const shortcutError = document.querySelector("#shortcut-error");
 let shortcutRefresh = 0;
 
@@ -82,12 +87,21 @@ async function refreshShortcut() {
     shortcutValue.hidden = !shortcut;
     shortcutState.hidden = Boolean(shortcut);
     shortcutState.textContent = shortcut ? "" : "No shortcut set";
+    const focusShortcut = commands.find((command) => command.name === "focus-notification")?.shortcut?.trim() ?? "";
+    focusShortcutValue.textContent = focusShortcut;
+    focusShortcutValue.hidden = !focusShortcut;
+    focusShortcutState.hidden = Boolean(focusShortcut);
+    focusShortcutState.textContent = focusShortcut ? "" : "No shortcut set";
   } catch {
     if (refresh !== shortcutRefresh) return;
     shortcutValue.hidden = true;
     shortcutValue.textContent = "";
     shortcutState.hidden = false;
     shortcutState.textContent = "Could not check your shortcut";
+    focusShortcutValue.hidden = true;
+    focusShortcutValue.textContent = "";
+    focusShortcutState.hidden = false;
+    focusShortcutState.textContent = "Could not check your shortcut";
   }
 }
 
@@ -127,6 +141,7 @@ async function refreshLibraryAccess() {
   const origin = savedOrigin;
   const connected = await chrome.permissions.contains({ origins: [`${new URL(origin).protocol}//${new URL(origin).hostname}/*`] });
   if (origin !== savedOrigin || restoringLibraryAccess) return;
+  if (connected && document.activeElement === libraryAccessRestore) connectionStatus.focus();
   libraryAccessRestore.hidden = connected;
   libraryAccessStatus.hidden = connected;
   libraryAccessStatus.textContent = connected ? "" : "The extension has lost access to your library. Restore it before saving.";
@@ -136,7 +151,7 @@ async function refreshLibraryAccess() {
     connectionRevision++;
     connectionStatus.textContent = "Library access is missing. Choose Restore library access below.";
     connectionStatus.dataset.state = "access";
-    connectionCheck.disabled = false;
+    connectionCheck.removeAttribute("aria-disabled");
     connectionCheck.textContent = "Check connection";
   } else if (connectionStatus.dataset.state === "access") {
     setDestination(savedOrigin);
@@ -173,6 +188,7 @@ void refreshLibraryAccess().catch(() => {
 
 async function refreshImageAccess() {
   const granted = await hasAllWebsiteAccess();
+  if (granted && document.activeElement === imageAccessEnable) imageAccessStatus.focus();
   imageAccessEnable.disabled = granted;
   imageAccessEnable.textContent = granted ? "Access to all websites enabled" : "Allow access to all websites";
   imageAccessDefault.textContent = granted ? "Manage website access in Chrome below." : "Your current choice. No setup needed.";
@@ -222,7 +238,9 @@ chrome.permissions.onRemoved.addListener(() => { void refreshAccessState(); });
 chrome.storage.local.get("origin").then(({ origin }) => {
   input.value = origin === "https://keepall.app" ? PRODUCTION_ORIGIN : origin ?? PRODUCTION_ORIGIN;
   setDestination(input.value);
+  if (normalizeOrigin(input.value) !== PRODUCTION_ORIGIN) document.querySelector("#developer-address").open = true;
   void refreshLibraryAccess();
+  void checkConnection();
 });
 
 form.addEventListener("submit", async (event) => {
@@ -237,12 +255,17 @@ form.addEventListener("submit", async (event) => {
     }
     await chrome.storage.local.set({ origin });
     input.value = origin;
+    input.removeAttribute("aria-invalid");
+    input.setAttribute("aria-describedby", "origin-hint");
     status.textContent = "Address saved.";
     status.dataset.state = "success";
     setDestination(origin);
   } catch (error) {
     status.textContent = error.message;
     status.dataset.state = "error";
+    input.setAttribute("aria-invalid", "true");
+    input.setAttribute("aria-describedby", "origin-hint status");
+    input.focus();
   }
 });
 

@@ -1,6 +1,7 @@
 const DEFAULT_ORIGIN = "https://www.keepall.app";
 const PENDING_LIFETIME_MS = 10 * 60 * 1000;
 let creatingOffscreen;
+const badgeTimers = new Map();
 
 void chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
 void chrome.alarms.create("pending-cleanup", { periodInMinutes: 1 });
@@ -39,7 +40,9 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "open-keepall-library") {
-    void openKeepallLibrary().catch(() => { void chrome.action.setBadgeText({ text: "!" }).catch(() => {}); });
+    void openKeepallLibrary().catch(() => {
+      if (tab?.id !== undefined) void showFeedback(tab.id, "Could not open your Keepall library. Try again.", false, "badge");
+    });
     return;
   }
   void saveContext(info, tab);
@@ -83,7 +86,7 @@ async function openKeepallLibrary() {
 async function requireLibraryAccess(origin) {
   const url = new URL(origin);
   if (!await chrome.permissions.contains({ origins: [`${url.protocol}//${url.hostname}/*`] })) {
-    throw new Error("Library access is missing. Open Keepall extension Options and restore library access.");
+    throw new Error("Keepall Capture lost access to your library. Open settings and choose Restore library access.");
   }
 }
 
@@ -137,7 +140,25 @@ chrome.storage.onChanged.addListener((changes, area) => {
   })().catch(() => {});
 });
 
+async function showSaving(tabId, title) {
+  clearTimeout(badgeTimers.get(tabId));
+  await chrome.action.setBadgeText({ tabId, text: "…" }).catch(() => {});
+  await chrome.action.setTitle({ tabId, title }).catch(() => {});
+}
+
+/** Which Options tab helps with this failure, or null when settings cannot. */
+function settingsSectionFor(message) {
+  if (typeof message !== "string") return null;
+  if (message.includes("to save this image") || message.includes("to save this video")) return "images";
+  if (message.includes("Could not reach Keepall") || message.includes("lost access to your library")) return "general";
+  return null;
+}
+
 async function showFeedback(tabId, message, success, source = "toolbar", editorId, actions) {
+  if (!success && !actions) {
+    const section = settingsSectionFor(message);
+    if (section) actions = { settings: section };
+  }
   try {
     // Chrome's badge API rejects OKLCH strings and requires legacy RGBA here.
     await chrome.action.setBadgeBackgroundColor({ tabId, color: success ? [22, 128, 60, 255] : [180, 35, 24, 255] });
@@ -146,16 +167,20 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
   } catch {
     return;
   }
-  setTimeout(() => {
+  clearTimeout(badgeTimers.get(tabId));
+  badgeTimers.set(tabId, setTimeout(() => {
+    badgeTimers.delete(tabId);
     void chrome.action.setBadgeText({ tabId, text: "" }).catch(() => {});
     void chrome.action.setTitle({ tabId, title: "Save page to Keepall" }).catch(() => {});
-  }, 5000);
+  }, success ? 5000 : 15000));
   if (source === "badge") return;
+  let focusShortcut = "";
+  try { focusShortcut = (await chrome.commands.getAll()).find((command) => command.name === "focus-notification")?.shortcut ?? ""; } catch {}
   try {
     await chrome.scripting.executeScript({ target: { tabId }, files: ["toast-collections.js", "page-ui.js"] });
     await chrome.tabs.sendMessage(tabId, {
       type: source === "editor" ? "editor-feedback" : "toast-feedback",
-      message, success, editorId, actions, theme: await captureTheme(),
+      message, success, editorId, actions, focusShortcut, theme: await captureTheme(),
     });
   } catch {
     // The badge remains visible on restricted browser pages.
@@ -375,6 +400,7 @@ async function saveTab(tab, options = {}) {
   }
 
   try {
+    if (options.source !== "editor") await showSaving(tab.id, "Saving to Keepall…");
     const title = options.title ?? tab.title ?? "";
     const payload = await pendingCapture(tab.url, title, options.noteContent ?? "", options.noteFormat, options.existingLink, options.collectionId, options.tagIds, options.collectionName, options.tagNames) ?? {
       captureId: crypto.randomUUID(),
@@ -419,8 +445,9 @@ async function saveTab(tab, options = {}) {
     // Only a page saved from this tab can be captured; right-clicked links and drawer saves cannot.
     const pageUrl = !options.source && !options.linkTarget ? payload.url : undefined;
     const actions = await captureFeedbackActions(tab.id, origin, result, pageUrl).catch(() => undefined);
-    if (options.screenshot) message = await screenshotAfterSave(tab.id, message, actions);
-    await feedback(message, true, actions);
+    let success = true;
+    if (options.screenshot) ({ message, success } = await screenshotAfterSave(tab.id, message, actions));
+    await feedback(message, success, actions);
   } catch (error) {
     await feedback(error instanceof Error ? error.message : "Could not save to Keepall", false);
   }
@@ -431,9 +458,9 @@ async function screenshotAfterSave(tabId, savedMessage, actions) {
     if (!actions?.canScreenshot) throw new Error("Update Keepall to save screenshots.");
     const key = `save-feedback:${tabId}`;
     const { count } = await saveScreenshot(tabId, (await chrome.storage.session.get(key))[key]);
-    return count === 1 ? "Page and screenshot saved" : `Screenshot added (${count})`;
+    return { message: count === 1 ? "Page and screenshot saved" : `Screenshot added (${count})`, success: true };
   } catch (error) {
-    return `${savedMessage}. Screenshot failed: ${error instanceof Error ? error.message : "Try again."}`;
+    return { message: `${savedMessage}. Screenshot failed: ${error instanceof Error ? error.message : "Try again."}`, success: false };
   }
 }
 
@@ -444,6 +471,7 @@ async function saveSelection(tab, info) {
     if (!/^https?:\/\//i.test(url ?? "")) throw new Error("This page cannot be saved to Keepall.");
     const text = (await selectionWithLineBreaks(tab.id, info)).trim();
     if (text.length > 10000) throw new Error("This selection is too long. Select less text and try again.");
+    await showSaving(tab.id, "Saving text to Keepall…");
     const origin = await keepallOrigin();
     await ensureOffscreen(origin);
     const captureId = crypto.randomUUID();
@@ -588,10 +616,11 @@ async function saveImage(tab, srcUrl, context = {}) {
     ? Promise.resolve(true)
     : chrome.permissions.request({ origins: [`${imageUrl.origin}/*`] });
   try {
-    if (!await access) throw new Error("Allow access to this image host to save it.");
-    const { bytes, mimeType } = await imageBytes(imageUrl.href);
+    if (!await access) throw new Error(`Keepall needs permission for ${imageUrl.hostname} to save this image. Right-click it again and choose Allow, or allow all websites in settings.`);
+    await showSaving(tab.id, "Saving image to Keepall…");
     const origin = await keepallOrigin();
     await ensureOffscreen(origin);
+    const { bytes, mimeType } = await imageBytes(imageUrl.href);
     const captureId = crypto.randomUUID();
     const result = await chrome.runtime.sendMessage({
       target: "offscreen",
@@ -827,8 +856,7 @@ async function saveVideo(tab, srcUrl, context = {}) {
     ? undefined
     : chrome.permissions.request({ origins: [`${videoUrl.origin}/*`] });
   try {
-    await chrome.action.setBadgeText({ tabId: tab.id, text: "…" }).catch(() => {});
-    await chrome.action.setTitle({ tabId: tab.id, title: "Saving video to Keepall…" }).catch(() => {});
+    await showSaving(tab.id, "Saving video to Keepall…");
     const candidates = streamed ? await streamedVideoCandidates(tab, videoUrl.href, context.frameId) : [videoUrl];
     if (!candidates.length) throw new Error(STREAMED_VIDEO);
     let video;
@@ -837,7 +865,7 @@ async function saveVideo(tab, srcUrl, context = {}) {
     for (const candidate of candidates) {
       if (!grants.has(candidate.origin)) grants.set(candidate.origin, await videoHostAccess(candidate, sourcePage.origin, request));
       const access = grants.get(candidate.origin);
-      if (!access && !streamed) { failure ??= new Error("Allow access to this video host to save it."); continue; }
+      if (!access && !streamed) { failure ??= new Error(`Keepall needs permission for ${new URL(candidate.origin).hostname} to save this video. Right-click it again and choose Allow, or allow all websites in settings.`); continue; }
       try {
         video = await downloadVideo(candidate, access);
         break;
@@ -988,31 +1016,65 @@ async function openEditor(tab) {
   const actions = previous?.origin === origin && previous?.sourceUrl === tab.url
     ? Object.fromEntries(Object.entries(previous.actions ?? {}).filter(([, action]) => Date.now() - action.createdAt <= EDITOR_LIFETIME_MS)) : {};
   await chrome.storage.session.set({ [key]: { tabId: tab.id, editorId, origin, sourceUrl: tab.url, actions, createdAt: Date.now() } });
+  await sendEditorOrganizations(tab.id, editorId, origin, tab.url);
+}
+
+async function sendEditorOrganizations(tabId, editorId, origin, url) {
   try {
     await ensureOffscreen(origin);
     const result = await chrome.runtime.sendMessage({
-      target: "offscreen", type: "organizations", origin, url: tab.url,
+      target: "offscreen", type: "organizations", origin, url,
     });
     if (result?.error || !Array.isArray(result?.collections) || !Array.isArray(result?.tags)) {
       throw new Error(result?.error ?? "Could not load collections and tags.");
     }
-    await chrome.tabs.sendMessage(tab.id, { type: "organizations", editorId, ...result });
-  } catch {
-    await chrome.tabs.sendMessage(tab.id, { type: "organization-error", editorId, message: "Could not load collections and tags. You can still save without changing organization." }).catch(() => {});
+    await chrome.tabs.sendMessage(tabId, { type: "organizations", editorId, ...result });
+  } catch (error) {
+    const text = String(error?.message);
+    const unreachable = text.startsWith("Could not reach") || text.includes("Library access") || text.includes("lost access");
+    const message = unreachable
+      ? "Could not reach Keepall, so collections and tags didn't load. Open Keepall in a tab, then choose Retry."
+      : "Could not load collections and tags. You can save now and organize it later in Keepall.";
+    await chrome.tabs.sendMessage(tabId, { type: "organization-error", editorId, message }).catch(() => {});
   }
 }
 
 chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === "focus-notification") {
+    void (async () => {
+      const activeTab = tab ?? (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
+      if (activeTab?.id !== undefined) await chrome.tabs.sendMessage(activeTab.id, { type: "focus-toast" });
+    })().catch(() => {});
+    return;
+  }
   if (command !== "open-editor") return;
+  let activeTab = tab;
   void (async () => {
-    const activeTab = tab ?? (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
+    activeTab ??= (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
     await openEditor(activeTab);
-  })().catch(() => { void chrome.action.setBadgeText({ text: "!" }); });
+  })().catch(() => {
+    if (activeTab?.id !== undefined) void showFeedback(activeTab.id, "Keepall can't open on this page. Chrome blocks extensions here.", false, "badge");
+  });
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "editor-file-action") {
     void handleEditorFileAction(message, sender).then(sendResponse).catch(error => sendResponse({ success: false, error: error.message || "Could not complete this file action." }));
+    return true;
+  }
+  if (message?.type === "retry-editor-organizations" && sender.tab?.id && typeof message.editorId === "string") {
+    void (async () => {
+      const key = `file-editor:${sender.tab.id}`;
+      const session = (await chrome.storage.session.get(key))[key];
+      if (session?.editorId !== message.editorId) return sendResponse({ success: false });
+      await sendEditorOrganizations(sender.tab.id, session.editorId, session.origin, session.sourceUrl);
+      sendResponse({ success: true });
+    })().catch(() => sendResponse({ success: false }));
+    return true;
+  }
+  if (message?.type === "open-options" && sender.tab?.id && ["general", "saving", "images"].includes(message.section)) {
+    void chrome.tabs.create({ url: chrome.runtime.getURL(`options.html#${message.section}`) })
+      .then(() => sendResponse({ success: true }), (error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
   if (message?.type === "check-connection" && sender.url?.split("#")[0] === chrome.runtime.getURL("options.html")) {
@@ -1027,6 +1089,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type !== "save-from-editor" || !sender.tab) return;
+  sendResponse({ accepted: true });
   void saveTab(sender.tab, {
     title: typeof message.title === "string" ? message.title : sender.tab.title,
     noteContent: typeof message.noteContent === "string" ? message.noteContent : "",

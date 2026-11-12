@@ -1,6 +1,6 @@
 if (!globalThis.__keepallCreateToastCollections) {
-  globalThis.__keepallCreateToastCollections = function ({ request, onClose, onMoved, onTagged, host }) {
-    const panel = document.createElement("section");
+  globalThis.__keepallCreateToastCollections = function ({ request, onClose, onMoved, onTagged, host, document: panelDocument = document }) {
+    const panel = panelDocument.createElement("section");
     panel.className = "toast-collections";
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-label", "Organize item");
@@ -50,7 +50,6 @@ if (!globalThis.__keepallCreateToastCollections) {
       render();
       search.focus();
     });
-    // page-ui calls this directly while the search has focus, because it stops typing from reaching site shortcuts.
     function handleKey(event, target = event.target) {
       if (event.key === "Escape" && !saving) {
         event.preventDefault();
@@ -72,30 +71,36 @@ if (!globalThis.__keepallCreateToastCollections) {
       }
     }
     panel.addEventListener("keydown", (event) => handleKey(event));
+    // The notice lives in its own frame, so a press in the page never reaches it and the reverse.
     const outside = (event) => {
       if (!saving && !event.composedPath().includes(host)) onClose(false);
     };
+    const outsideFrame = (event) => {
+      // The toast's other controls manage the organizer themselves.
+      if (!saving && !panel.parentElement?.contains(event.target)) onClose(false);
+    };
     document.addEventListener("pointerdown", outside);
+    if (panelDocument !== document) panelDocument.addEventListener("pointerdown", outsideFrame);
 
     function choice(label, selected, action, id) {
-      const button = document.createElement("button");
+      const button = panelDocument.createElement("button");
       button.type = "button";
       button.className = "toast-collection";
       button.disabled = saving || loading || stale;
       if (id !== undefined) button.dataset.id = id ?? "unsorted";
       if (selected !== undefined) button.setAttribute("aria-pressed", String(selected));
-      const name = document.createElement("span");
+      const name = panelDocument.createElement("span");
       name.className = "toast-collection-name";
       name.textContent = label;
       if (selected === undefined) {
         button.classList.add("toast-create");
-        const plus = document.createElement("span");
+        const plus = panelDocument.createElement("span");
         plus.className = "toast-create-icon";
         plus.setAttribute("aria-hidden", "true");
         plus.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
         button.append(plus, name);
       } else {
-        const check = document.createElement("span");
+        const check = panelDocument.createElement("span");
         check.className = "toast-collection-check";
         check.setAttribute("aria-hidden", "true");
         check.textContent = selected ? "✓" : "";
@@ -122,7 +127,7 @@ if (!globalThis.__keepallCreateToastCollections) {
       const rest = choices.filter((entry) => !selected(entry.id) && !recent.includes(entry));
       list.replaceChildren();
       const group = (label) => {
-        const heading = document.createElement("div");
+        const heading = panelDocument.createElement("div");
         heading.className = "toast-collections-group";
         heading.setAttribute("aria-hidden", "true");
         heading.textContent = label;
@@ -246,6 +251,7 @@ if (!globalThis.__keepallCreateToastCollections) {
       destroy: () => {
         disposed = true;
         document.removeEventListener("pointerdown", outside);
+        panelDocument.removeEventListener("pointerdown", outsideFrame);
         panel.remove();
       },
     };

@@ -30,7 +30,7 @@ function worker(routes: Routes, found: string[] = []) {
     scripting: { executeScript: vi.fn(async () => [{ result: found }]) },
     tabs: { onUpdated: { addListener: vi.fn() }, onRemoved: { addListener: vi.fn() } },
     action: { onClicked: { addListener: vi.fn() }, setBadgeText: vi.fn(async () => {}), setTitle: vi.fn(async () => {}) },
-    commands: { onCommand: { addListener: vi.fn() } },
+    commands: { getAll: vi.fn(async () => []), onCommand: { addListener: vi.fn() } },
   };
   const fetch = vi.fn(async (url: string) => {
     const route = routes[url];
@@ -40,7 +40,7 @@ function worker(routes: Routes, found: string[] = []) {
     return new Response((body ?? null) as BodyInit | null, init);
   });
   const feedback: Feedback[] = [];
-  const context: Record<string, unknown> = { chrome, crypto, URL, Response, AbortSignal, btoa, fetch, TextDecoder, setTimeout: (fn: () => void) => setTimeout(fn, 0) };
+  const context: Record<string, unknown> = { chrome, crypto, URL, Response, AbortSignal, btoa, fetch, TextDecoder, setTimeout: (fn: () => void) => setTimeout(fn, 0), clearTimeout };
   runInNewContext(workerSource, context);
   Object.assign(context, {
     keepallOrigin: async () => "https://www.keepall.app",
@@ -127,7 +127,7 @@ test("rejects a video over 100 MiB from its declared size", async () => {
 });
 
 test("finds the clicked player's address in nested React props and ignores other players", () => {
-  const context: Record<string, unknown> = { chrome: { storage: { local: { setAccessLevel: async () => {} }, onChanged: { addListener() {} } }, alarms: { create() {}, onAlarm: { addListener() {} } }, runtime: { onInstalled: { addListener() {} }, onMessage: { addListener() {} } }, contextMenus: { onClicked: { addListener() {} } }, tabs: { onUpdated: { addListener() {} }, onRemoved: { addListener() {} } }, action: { onClicked: { addListener() {} } }, commands: { onCommand: { addListener() {} } } }, crypto, URL };
+  const context: Record<string, unknown> = { chrome: { storage: { local: { setAccessLevel: async () => {} }, onChanged: { addListener() {} } }, alarms: { create() {}, onAlarm: { addListener() {} } }, runtime: { onInstalled: { addListener() {} }, onMessage: { addListener() {} } }, contextMenus: { onClicked: { addListener() {} } }, tabs: { onUpdated: { addListener() {} }, onRemoved: { addListener() {} } }, action: { onClicked: { addListener() {} } }, commands: { getAll: async () => [], onCommand: { addListener() {} } } }, crypto, URL };
   runInNewContext(workerSource, context);
   // Chrome serializes the function into the page, so run its source against this document.
   const find = new Function(`return ${String(context.findVideoSources)}`)() as (blobUrl: string) => string[];

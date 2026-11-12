@@ -1,5 +1,5 @@
 if (!globalThis.__keepallCreateOrgPicker) {
-  globalThis.__keepallCreateOrgPicker = function createOrgPicker(shadow, observeScrollEdges = () => () => {}) {
+  globalThis.__keepallCreateOrgPicker = function createOrgPicker(shadow, observeScrollEdges = () => () => {}, options = {}) {
     const document = shadow.ownerDocument;
     const LIMIT = 6;
     const normalize = (name) => name.trim().replace(/\s+/g, " ");
@@ -79,7 +79,17 @@ if (!globalThis.__keepallCreateOrgPicker) {
     collection.selected.hidden = true;
     collection.input.placeholder = "Collection name";
     tags.input.placeholder = "Tag name";
-    panel.append(collection.root, tags.root, status);
+    const retry = element("button", "secondary", "Retry");
+    retry.type = "button";
+    retry.hidden = true;
+    retry.style.alignSelf = "flex-start";
+    retry.style.justifyContent = "center";
+    retry.addEventListener("click", () => {
+      retry.hidden = true;
+      status.textContent = "Loading collections and tags…";
+      options.onRetry?.();
+    });
+    panel.append(collection.root, tags.root, status, retry);
 
     function chip(name, selected, onClick) {
       const node = button("", `choice ${selected ? "choice-selected" : "choice-idle"}`, onClick);
@@ -346,7 +356,8 @@ if (!globalThis.__keepallCreateOrgPicker) {
       },
       load(message) {
         if (message.type === "organization-error") {
-          status.textContent = "Could not load collections and tags. You can still save without changing organization.";
+          status.textContent = message.message || "Could not load collections and tags. You can save now and organize it later in Keepall.";
+          retry.hidden = !options.onRetry;
           return;
         }
         state.loaded = true;
@@ -362,6 +373,7 @@ if (!globalThis.__keepallCreateOrgPicker) {
         tags.input.placeholder = state.tags.length ? "Find or create a tag…" : "Tag name";
         status.textContent = "";
         status.hidden = true;
+        retry.hidden = true;
         renderCollections();
         renderTags();
       },

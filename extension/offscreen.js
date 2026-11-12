@@ -24,7 +24,7 @@ function ensureFrame(origin) {
       frame?.remove();
       frame = undefined;
       frameOrigin = undefined;
-      reject(new Error("Keepall did not load"));
+      reject(new Error("Could not reach Keepall. Open your library, then try again."));
     }, 15000);
   });
   frame = document.createElement("iframe");
