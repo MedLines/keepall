@@ -17,7 +17,7 @@ Use `Button` and `IconButton` from `src/components/ui/button.tsx` for new button
 Other shared pieces live beside it in `src/components/ui/`:
 - **Tooltip** (`tooltip.tsx`): wraps any trigger element. Toolbar controls use the default 350ms delay; folder and tag previews use 100ms. Set `describe={false}` when the tooltip repeats the accessible name. Select triggers that compose their own Base UI tooltip use `TooltipContent`. Never add a native `title` to a control.
 - **SegmentedControl**: two-choice switches. The `icon` variant serves the library layout and note edit/preview; the `text` variant serves the viewers, note format and gallery mode.
-- **RadioCard** for selectable radio options, **TextField** for labelled single-line inputs, and `menuItemClassName()` for menu, select and context-menu items.
+- **RadioCard** for selectable radio options (pill-shaped in every dialog; don't override its radius), **TextField** for labelled single-line inputs, and `menuItemClassName()` for menu, select and context-menu items.
 
 Action menus (`role="menu"`) scroll in a native `ui-scrollbar` container, not the registry ScrollArea: its focusable viewport would sit between the menu and its items. Select popups keep ScrollArea, because their `role="listbox"` element sits inside the viewport.
 

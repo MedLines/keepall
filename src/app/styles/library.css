@@ -41,14 +41,6 @@
   corner-shape: round;
 }
 
-.bookmark-import-option {
-  border-radius: var(--radius-control-xs);
-}
-
-.collection-delete-option {
-  border-radius: 8px;
-}
-
 .collection-delete-option:active {
   transform: none;
 }
