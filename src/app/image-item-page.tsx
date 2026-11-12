@@ -825,7 +825,7 @@ function ImageWorkspace({
               onEdit={onEdit}
               onDelete={onDelete}
               mediaAction={
-                <button className={ITEM_DETAILS_CONTROL} type="button" aria-label={galleryMutation === "add" ? "Adding images" : "Add images"} title="Add images" disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
+                <button className={ITEM_DETAILS_CONTROL} type="button" aria-label={galleryMutation === "add" ? "Adding images" : "Add images"} disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
                   <PlusIcon className="size-4" />
                   <span>{galleryMutation === "add" ? "Adding…" : "Add images"}</span>
                 </button>

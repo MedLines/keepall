@@ -16,6 +16,7 @@ import { LibraryQuickPreview } from "./library-quick-preview";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { SHELL_DESTRUCTIVE_BTN } from "./shell-styles";
 import { buttonClassName } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 
 type Props = {
   items: Item[];
@@ -111,7 +112,7 @@ export function UnsortedReview({ items, collections, tags, onClose, onOpenItem, 
     <div className="library-review-controls">
       <div className="library-review-navigation" role="group" aria-label="Review navigation">
         <button type="button" className={buttonClassName({ size: "none", className: "min-h-11 gap-2 ps-2 pe-3 text-sm disabled:opacity-50" })} aria-label="Previous item" disabled={busy || neighbor(-1) === null} onClick={() => move(-1)}><ArrowLeftIcon className="size-4 rtl:rotate-180" />Back</button>
-        <button type="button" className={buttonClassName({ size: "none", className: "min-h-11 gap-2 ps-3 pe-2 text-sm disabled:opacity-50" })} aria-label="Next item" title="Next item" disabled={busy || neighbor(1) === null} onClick={() => move(1)}>Next<ArrowRightIcon className="size-4 rtl:rotate-180" /></button>
+        <Tooltip content="Next item" describe={false}><button type="button" className={buttonClassName({ size: "none", className: "min-h-11 gap-2 ps-3 pe-2 text-sm disabled:opacity-50" })} aria-label="Next item" disabled={busy || neighbor(1) === null} onClick={() => move(1)}>Next<ArrowRightIcon className="size-4 rtl:rotate-180" /></button></Tooltip>
       </div>
       <div className="library-review-confirm">
         {item ? <button type="button" disabled={busy || !collectionName} className={buttonClassName({ variant: "primary", size: "none", className: "library-review-file min-h-11 gap-2 ps-2 pe-3 text-sm font-medium" })}
@@ -121,8 +122,8 @@ export function UnsortedReview({ items, collections, tags, onClose, onOpenItem, 
         {done ? <button type="button" disabled={busy} className={buttonClassName({ variant: "primary", size: "none", className: "library-review-file min-h-11 gap-2 ps-2 pe-3 text-sm font-medium" })} onClick={onClose}><ArrowLeftIcon className="size-4 rtl:rotate-180" />Back to Unsorted</button> : null}
       </div>
       <div className="library-review-actions" role="group" aria-label="Item actions">
-        <button type="button" disabled={busy || history.length === 0} className={buttonClassName({ size: "none", className: "min-h-11 gap-2 ps-2 pe-3 text-sm disabled:opacity-50" })} title={history.at(-1)?.notice} onClick={() => void undo()}><UndoIcon className="size-4 rtl:rotate-180" />Undo</button>
-        {item ? <button ref={deleteTrigger} type="button" disabled={busy} className={buttonClassName({ size: "none", className: `library-review-delete min-h-11 gap-2 ps-2 pe-3 text-sm font-medium ${SHELL_DESTRUCTIVE_BTN}` })} title="Move this item to Trash" onClick={() => { setError(null); setDeleteTarget(item); }}><DeleteIcon className="size-4" />Delete</button> : null}
+        <Tooltip content={history.at(-1)?.notice} disabled={!history.length}><button type="button" disabled={busy || history.length === 0} className={buttonClassName({ size: "none", className: "min-h-11 gap-2 ps-2 pe-3 text-sm disabled:opacity-50" })} onClick={() => void undo()}><UndoIcon className="size-4 rtl:rotate-180" />Undo</button></Tooltip>
+        {item ? <Tooltip content="Move this item to Trash"><button ref={deleteTrigger} type="button" disabled={busy} className={buttonClassName({ size: "none", className: `library-review-delete min-h-11 gap-2 ps-2 pe-3 text-sm font-medium ${SHELL_DESTRUCTIVE_BTN}` })} onClick={() => { setError(null); setDeleteTarget(item); }}><DeleteIcon className="size-4" />Delete</button></Tooltip> : null}
       </div>
     </div>
     <p role="status" aria-live="polite" className="sr-only">{notice}</p>

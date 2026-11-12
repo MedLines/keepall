@@ -56,6 +56,7 @@ import { collectionMarkerStyle } from "./collection-marker";
 import { LogoContextMenu } from "./logo-context-menu";
 import { SidebarResizeHandle } from "./sidebar-resize-handle";
 import { menuItemClassName } from "@/components/ui/menu-item";
+import { Tooltip } from "@/components/ui/tooltip";
 
 const COLLECTION_REORDER_MIME = "application/x-keepall-pinned-collection";
 
@@ -487,9 +488,9 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onClose, onGoHome }: {
         </Link>
       </LogoContextMenu>
       {mobileSidebarOpen ? (
-        <button type="button" aria-label="Close navigation" title="Close sidebar" className="ml-auto flex size-8 shrink-0 items-center justify-center hover:bg-bg-raised" onClick={onClose}>
+        <Tooltip content="Close sidebar" describe={false}><button type="button" aria-label="Close navigation" className="ml-auto flex size-8 shrink-0 items-center justify-center hover:bg-bg-raised" onClick={onClose}>
           <ShellPanelIcon open />
-        </button>
+        </button></Tooltip>
       ) : null}
     </div>
   );
@@ -502,6 +503,7 @@ function ShellNavLink({ expanded, label, href, icon }: {
   icon: ReactNode;
 }) {
   return (
+<Tooltip content={label} disabled={expanded} side="right" describe={false}>
     <Link
       href={href}
       className={cn(`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_IDLE} ${
@@ -511,13 +513,12 @@ function ShellNavLink({ expanded, label, href, icon }: {
       }`)}
       aria-label={label}
       data-sidebar-anchor={label}
-      title={!expanded ? label : undefined}
     >
       <span data-sidebar-icon className="flex size-[18px] shrink-0 items-center justify-center">
         {icon}
       </span>
       {expanded ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
-    </Link>
+    </Link></Tooltip>
   );
 }
 
@@ -1145,6 +1146,7 @@ function ShellNavItem({
   onDrop?: (event: DragEvent<HTMLButtonElement>) => void;
 }) {
   return (
+<Tooltip content={label} disabled={expanded} side="right" describe={false}>
     <button
       type="button"
       className={cn(`${SHELL_NAV_ITEM} ${
@@ -1157,7 +1159,6 @@ function ShellNavItem({
       aria-label={ariaLabel ?? label}
       data-sidebar-anchor={icon ? label : undefined}
       aria-current={active ? "page" : undefined}
-      title={!expanded ? label : undefined}
       onClick={onClick}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -1170,7 +1171,7 @@ function ShellNavItem({
           {count !== undefined ? <NavCount value={count} /> : null}
         </>
       ) : null}
-    </button>
+    </button></Tooltip>
   );
 }
 
@@ -1214,11 +1215,11 @@ function CollapsibleSection({
   return (
     <div className={`library-sidebar-section ${open ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} pt-4`}>
       <div className="mb-1 flex h-10 shrink-0 items-center">
+<Tooltip content={rail?.label} disabled={!rail} side="right" describe={false}>
         <button
           type="button"
           data-sidebar-anchor={title}
           aria-label={rail?.label ?? title}
-          title={rail?.label}
           aria-current={rail?.active ? "page" : undefined}
           data-sidebar-section-toggle
           className={`flex h-10 min-w-0 flex-1 items-center gap-2.5 px-3 text-left text-text-primary hover:bg-bg-raised ${rail?.active ? SHELL_NAV_ITEM_ACTIVE : ""}`}
@@ -1232,7 +1233,7 @@ function CollapsibleSection({
               open ? "" : "-rotate-90"
             }`}
           />
-        </button>
+        </button></Tooltip>
       </div>
       {open ? (
         <div

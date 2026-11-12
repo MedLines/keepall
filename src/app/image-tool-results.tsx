@@ -30,9 +30,9 @@ function ResultSection({ title, icon, action, children }: {
     <div className="flex items-center gap-2">
       <h2 className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-text-primary">{icon}<span>{title}</span></h2>
       {action}
-      <button type="button" aria-label={title} title={`${expanded ? "Collapse" : "Expand"} ${title}`} aria-expanded={expanded} aria-controls={contentId} onClick={() => setExpanded(value => !value)} className={styles.sectionToggle}>
+      <Tooltip content={`${expanded ? "Collapse" : "Expand"} ${title}`} describe={false}><button type="button" aria-label={title} aria-expanded={expanded} aria-controls={contentId} onClick={() => setExpanded(value => !value)} className={styles.sectionToggle}>
         <ChevronDownIcon className={`size-4 ${expanded ? "" : "-rotate-90"}`} />
-      </button>
+      </button></Tooltip>
     </div>
     <div id={contentId} hidden={!expanded} className="space-y-3 pt-2">{children}</div>
   </div>;
@@ -100,7 +100,7 @@ export function ScreenshotTextSection({ ocr, slide, copied, onCopy }: {
   copied: boolean;
   onCopy: (value: string, key: string) => void;
 }) {
-  return <ResultSection title="Screenshot text" icon={<OcrIcon className="size-4" />} action={ocr.text ? <button type="button" className={iconButtonClassName({ size: "lg" })} aria-label="Copy text" title="Copy text" onClick={() => onCopy(ocr.text, "ocr")}><CopyFeedback copied={copied} /></button> : null}>
+  return <ResultSection title="Screenshot text" icon={<OcrIcon className="size-4" />} action={ocr.text ? <Tooltip content="Copy text" describe={false}><button type="button" className={iconButtonClassName({ size: "lg" })} aria-label="Copy text" onClick={() => onCopy(ocr.text, "ocr")}><CopyFeedback copied={copied} /></button></Tooltip> : null}>
     <p className="text-xs text-text-secondary" title="Recognized text may contain mistakes.">English · {Math.round(ocr.confidence)}% confidence</p>
     {ocr.text ? <ScrollPanel role="region" aria-label={`Extracted text from image ${slide + 1}`} className={styles.text} viewportClassName="max-h-64 px-4 py-3" viewportProps={{ tabIndex: 0 }}>
       <p className="select-text whitespace-pre-wrap break-words text-sm leading-6 text-text-primary [overflow-wrap:anywhere]">{ocr.text}</p>

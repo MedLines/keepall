@@ -117,11 +117,11 @@ describe("image tools", () => {
     const collapse = screen.getByRole("button", { name: "Screenshot text" });
     expect(copy.parentElement?.lastElementChild).toBe(collapse);
     expect(copy.nextElementSibling).toBe(collapse);
-    expect(collapse).toHaveAttribute("title", "Collapse Screenshot text");
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(copy);
     expect(collapse).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(collapse);
-    expect(collapse).toHaveAttribute("title", "Expand Screenshot text");
+    expect(collapse).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: "Palette" }).parentElement?.lastElementChild).toBe(screen.getByRole("button", { name: "Palette" }));
   });
 

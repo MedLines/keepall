@@ -101,10 +101,10 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
             <footer className={`${review ? "library-review-footer" : "library-preview-footer"} shrink-0`}>
               {review ? review.footer : <>
               <div className="library-preview-navigation flex items-center gap-2">
-                <button type="button" className={buttonClassName({ size: "none", className: "min-h-11 shrink-0 gap-2 ps-2 pe-3 text-sm disabled:opacity-50" })} aria-label="Previous item" title="Previous item" disabled={index <= 0} onClick={() => onMove(-1)}><ArrowLeftIcon className="size-4 rtl:rotate-180" />Back</button>
+                <Tooltip content="Previous item" describe={false}><button type="button" className={buttonClassName({ size: "none", className: "min-h-11 shrink-0 gap-2 ps-2 pe-3 text-sm disabled:opacity-50" })} aria-label="Previous item" disabled={index <= 0} onClick={() => onMove(-1)}><ArrowLeftIcon className="size-4 rtl:rotate-180" />Back</button></Tooltip>
               </div>
               <div className="library-preview-confirm"><button type="button" className={buttonClassName({ variant: "primary", size: "none", className: "min-h-11 gap-2 ps-2 pe-3 text-sm font-medium" })} onClick={event => openFullItem(event.detail > 0)}><FullScreenIcon className="size-4" />Open full item</button></div>
-              <div className="library-preview-next"><button type="button" className={buttonClassName({ size: "none", className: "min-h-11 shrink-0 gap-2 ps-3 pe-2 text-sm disabled:opacity-50" })} aria-label="Next item" title="Next item" disabled={index >= count - 1} onClick={() => onMove(1)}>Next<ArrowRightIcon className="size-4 rtl:rotate-180" /></button></div>
+              <div className="library-preview-next"><Tooltip content="Next item" describe={false}><button type="button" className={buttonClassName({ size: "none", className: "min-h-11 shrink-0 gap-2 ps-3 pe-2 text-sm disabled:opacity-50" })} aria-label="Next item" disabled={index >= count - 1} onClick={() => onMove(1)}>Next<ArrowRightIcon className="size-4 rtl:rotate-180" /></button></Tooltip></div>
               </>}
             </footer>
           </> : review ? <>
@@ -196,9 +196,9 @@ function ImagePreview({ item, onGalleryStep }: { item: Extract<Item, { type: "im
     <MediaViewerToolbar view={<SegmentedControl label="Image sizing" value={imageSizing} onChange={setImageSizing} className="w-40"
       choices={[{ value: "fit", label: "Fit", ariaLabel: "Fit image" }, { value: "scroll", label: "Scroll", ariaLabel: "Scroll image" }]} />}
       navigation={item.assetIds.length === 1 ? null : <div className="flex items-center justify-center gap-1.5">
-        <button type="button" className={iconButtonClassName({ size: "md", className: "size-[var(--viewer-control-size,2.75rem)] disabled:opacity-40" })} aria-label="Previous gallery image" title="Previous gallery image" disabled={slide === 0} onClick={() => { onGalleryStep(); setSlide(slide - 1); }}><ArrowLeftIcon className="size-4 rtl:rotate-180" /></button>
+        <Tooltip content="Previous gallery image" describe={false}><button type="button" className={iconButtonClassName({ size: "md", className: "size-[var(--viewer-control-size,2.75rem)] disabled:opacity-40" })} aria-label="Previous gallery image" disabled={slide === 0} onClick={() => { onGalleryStep(); setSlide(slide - 1); }}><ArrowLeftIcon className="size-4 rtl:rotate-180" /></button></Tooltip>
         <span className="whitespace-nowrap text-xs tabular-nums text-text-secondary"><span className="sr-only">Image </span>{slide + 1} of {item.assetIds.length}</span>
-        <button type="button" className={iconButtonClassName({ size: "md", className: "size-[var(--viewer-control-size,2.75rem)] disabled:opacity-40" })} aria-label="Next gallery image" title="Next gallery image" disabled={slide >= item.assetIds.length - 1} onClick={() => { onGalleryStep(); setSlide(slide + 1); }}><ArrowRightIcon className="size-4 rtl:rotate-180" /></button>
+        <Tooltip content="Next gallery image" describe={false}><button type="button" className={iconButtonClassName({ size: "md", className: "size-[var(--viewer-control-size,2.75rem)] disabled:opacity-40" })} aria-label="Next gallery image" disabled={slide >= item.assetIds.length - 1} onClick={() => { onGalleryStep(); setSlide(slide + 1); }}><ArrowRightIcon className="size-4 rtl:rotate-180" /></button></Tooltip>
       </div>} />
     <ScrollPanel key={slide} orientation="both" className="min-h-0 min-w-0 flex-1"
       viewportProps={{ "data-preview-media": "", "data-image-sizing": imageSizing, "data-preview-scroll": imageSizing === "scroll" ? "" : undefined, tabIndex: imageSizing === "scroll" ? 0 : -1, role: "region", "aria-label": "Image viewport" }}>

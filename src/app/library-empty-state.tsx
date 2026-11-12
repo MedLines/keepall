@@ -7,6 +7,7 @@ import { LibraryFolderArtwork } from "./library-collections";
 import { SearchIcon, DeleteIcon } from "./shell-icons";
 import "./library-empty-state.css";
 import { buttonClassName } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export type LibraryEmptyStateKind = "library" | "collection" | "unsorted" | "trash" | "filtered" | "first-save";
 
@@ -58,7 +59,7 @@ export function LibraryEmptyState({ kind, message, query, scope, onClearFilters,
       <p className="library-empty-description text-text-secondary">{description}</p>
       <div className="library-empty-actions">
         {canSave ? <button type="button" className={buttonClassName({ variant: "primary", size: "none", className: "inline-block library-empty-action" })} onClick={openCaptureDialog}>{firstSave ? "Save first item" : "Save an item"}</button> : null}
-        {firstSave ? <button type="button" className={buttonClassName({ size: "none", className: "inline-block library-empty-action" })} onClick={openBulkImportDialog} title="Import bookmarks or files">Import items</button> : null}
+        {firstSave ? <Tooltip content="Import bookmarks or files"><button type="button" className={buttonClassName({ size: "none", className: "inline-block library-empty-action" })} onClick={openBulkImportDialog}>Import items</button></Tooltip> : null}
         {kind === "filtered" ? <>
           {onSearchEntireLibrary ? <button type="button" className={buttonClassName({ variant: "primary", size: "none", className: "inline-block library-empty-action" })} onClick={onSearchEntireLibrary}>Search entire library</button> : null}
           <button type="button" className={buttonClassName({ size: "none", className: "inline-block library-empty-action" })} onClick={onClearFilters}>Clear filters</button>

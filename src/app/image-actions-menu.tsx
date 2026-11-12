@@ -6,6 +6,7 @@ import { useImageToolActions } from "./image-tools-panel";
 import { CloseIcon, DeleteIcon, ImageIcon, MoreIcon, OcrIcon, PaletteIcon, RefreshIcon } from "./shell-icons";
 import { iconButtonClassName } from "@/components/ui/button";
 import { menuItemClassName } from "@/components/ui/menu-item";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export function CurrentImageMenu({ busy, canRemove, onReplace, onRemove, label = "Current image actions" }: {
   busy: boolean;
@@ -18,9 +19,9 @@ export function CurrentImageMenu({ busy, canRemove, onReplace, onRemove, label =
   const tools = useImageToolActions();
   return (
     <Menu.Root modal={false} onOpenChange={(open) => { if (open) openingDialog.current = false; }}>
-      <Menu.Trigger className={iconButtonClassName({ size: "lg", className: "pointer-events-auto bg-bg-surface" })} aria-label={label} title={label} disabled={busy}>
+      <Tooltip content={label} describe={false}><Menu.Trigger className={iconButtonClassName({ size: "lg", className: "pointer-events-auto bg-bg-surface" })} aria-label={label} disabled={busy}>
         <MoreIcon />
-      </Menu.Trigger>
+      </Menu.Trigger></Tooltip>
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
           <Menu.Popup aria-label={label} className="ui-menu-popup ui-popover w-56 max-w-[calc(100vw-1rem)] outline-none" finalFocus={() => openingDialog.current ? false : true}>
