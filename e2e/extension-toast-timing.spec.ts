@@ -77,3 +77,58 @@ test("an access failure offers Open settings", async ({ page }) => {
   await page.clock.runFor(1000);
   await expect(toast).toHaveCount(0);
 });
+
+const savedWithActions = { canUndo: true, canScreenshot: false };
+
+test("save notices are announced in a live region without button names", async ({ page }) => {
+  const { bridge, toast } = await openToastPage(page);
+  await bridge.evaluate((value, actions) => value.send({ type: "toast-feedback", message: "Link saved to Keepall", success: true, actions: { id: "a", ...actions } }), savedWithActions);
+  await page.clock.runFor(100);
+  await expect(page.locator("#keepall-capture-ui [role=status]")).toHaveText("Link saved to Keepall");
+  await expect(toast).not.toHaveAttribute("role", /.*/);
+});
+
+test("a failure is announced in the alert region", async ({ page }) => {
+  const { bridge } = await openToastPage(page);
+  await bridge.evaluate((value) => value.send({ type: "toast-feedback", message: "Could not save", success: false }));
+  await page.clock.runFor(100);
+  await expect(page.locator("#keepall-capture-ui [role=alert]")).toHaveText("Could not save");
+});
+
+test("Undo updates the notice in place and keeps focus", async ({ page }) => {
+  const { bridge, toast } = await openToastPage(page);
+  await bridge.evaluate((value, actions) => value.send({ type: "toast-feedback", message: "Link saved to Keepall", success: true, actions: { id: "a", ...actions } }), savedWithActions);
+  await toast.getByRole("button", { name: "Undo" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(toast.locator(".toast-label")).toHaveText("Save undone");
+  await expect(toast.locator(".toast-actions")).toHaveCount(0);
+  await expect(toast.getByRole("button", { name: "Dismiss notification" })).toBeFocused();
+  await page.clock.runFor(100);
+  await expect(page.locator("#keepall-capture-ui [role=status]")).toHaveText("Save undone");
+});
+
+test("a new notice waits for a running action", async ({ page }) => {
+  const { bridge, toast } = await openToastPage(page);
+  await page.evaluate(() => {
+    const runtime = (globalThis as unknown as { chrome: { runtime: { sendMessage: unknown } } }).chrome.runtime;
+    runtime.sendMessage = () => new Promise((resolve) => { (globalThis as { __resolve?: unknown }).__resolve = resolve; });
+  });
+  await bridge.evaluate((value, actions) => value.send({ type: "toast-feedback", message: "Link saved to Keepall", success: true, actions: { id: "a", ...actions } }), savedWithActions);
+  await toast.getByRole("button", { name: "Undo" }).click();
+  await bridge.evaluate((value) => value.send({ type: "toast-feedback", message: "Text saved to Keepall", success: true }));
+  await expect(toast.locator(".toast-label")).toHaveText("Undoing save…");
+  await page.evaluate(() => (globalThis as unknown as { __resolve: (value: unknown) => void }).__resolve({ success: true }));
+  await expect(toast.locator(".toast-label")).toHaveText("Text saved to Keepall");
+});
+
+test("focus returns to the page when a focused notice is dismissed", async ({ page }) => {
+  const { bridge, toast } = await openToastPage(page);
+  await page.locator("#page-action").focus();
+  await bridge.evaluate((value) => value.send({ type: "toast-feedback", message: "Could not save", success: false }));
+  await page.keyboard.press("Tab");
+  await toast.getByRole("button", { name: "Dismiss notification" }).focus();
+  await page.keyboard.press("Enter");
+  await page.clock.runFor(1000);
+  await expect(toast).toHaveCount(0);
+  await expect(page.locator("#page-action")).toBeFocused();
+});

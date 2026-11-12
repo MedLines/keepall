@@ -52,6 +52,7 @@ if (!globalThis.__keepallPageUi) {
     .toast.is-visible { opacity: 1; transform: translateX(0); }
     .toast.has-actions { width: min(320px, calc(100vw - 40px)); }
     dialog .toast { position: absolute; top: 88px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
     .toast.is-leaving { pointer-events: none; transition-duration: 180ms, 140ms; }
     .toast-mark { display: grid; flex: none; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--action); color: var(--on-action); font-size: 12px; }
     .toast-mark svg { width: 16px; height: 16px; }
@@ -138,6 +139,9 @@ if (!globalThis.__keepallPageUi) {
   let toastTimer;
   let toastExitTimer;
   let cleanupToast;
+  let currentToastBusy = () => false;
+  let pendingToast;
+  let toastReturnFocus;
   let closeTimer;
   let currentPicker;
   let stopFieldFades;
@@ -205,13 +209,58 @@ if (!globalThis.__keepallPageUi) {
     };
   }
 
+  // Persistent, initially empty live regions: screen readers announce text added to an existing
+  // region far more reliably than a region inserted already filled in.
+  function liveRegions(container) {
+    const find = (role) => Array.from(container.children).find((child) => child.classList.contains("sr-only") && child.getAttribute("role") === role);
+    let polite = find("status");
+    let urgent = find("alert");
+    if (!polite) {
+      polite = document.createElement("div");
+      polite.className = "sr-only";
+      polite.setAttribute("role", "status");
+      polite.setAttribute("aria-live", "polite");
+      polite.setAttribute("aria-atomic", "true");
+      container.append(polite);
+    }
+    if (!urgent) {
+      urgent = document.createElement("div");
+      urgent.className = "sr-only";
+      urgent.setAttribute("role", "alert");
+      urgent.setAttribute("aria-atomic", "true");
+      container.append(urgent);
+    }
+    return { polite, urgent };
+  }
+
+  function announce(container, text, urgent) {
+    const regions = liveRegions(container);
+    const region = urgent ? regions.urgent : regions.polite;
+    region.textContent = "";
+    requestAnimationFrame(() => { region.textContent = text; });
+  }
+
+  function showPendingToast() {
+    currentToastBusy = () => false;
+    const next = pendingToast;
+    pendingToast = undefined;
+    if (next) toast(...next);
+  }
+
   function dismissToast(immediate = false) {
     cleanupToast?.();
     cleanupToast = undefined;
+    currentToastBusy = () => false;
+    if (immediate) pendingToast = undefined;
     clearTimeout(toastTimer);
     clearTimeout(toastExitTimer);
     const node = shadow.querySelector(".toast");
     if (!node) return;
+    if (node.contains(node.getRootNode().activeElement)) {
+      const target = toastReturnFocus;
+      toastReturnFocus = undefined;
+      if (target?.isConnected) target.focus({ preventScroll: true });
+    }
     if (immediate) {
       node.remove();
       return;
@@ -222,11 +271,16 @@ if (!globalThis.__keepallPageUi) {
   }
 
   function toast(message, success, actions) {
+    if (currentToastBusy() && (dialog?.open ? dialog : shadow).querySelector(".toast")) {
+      pendingToast = [message, success, actions];
+      return;
+    }
     dismissToast(true);
+    toastReturnFocus = undefined;
+    const container = dialog?.open ? dialog : shadow;
     const node = document.createElement("div");
     node.className = "toast";
     node.dataset.success = String(success);
-    node.setAttribute("role", success ? "status" : "alert");
     const mark = document.createElement("span");
     mark.className = "toast-mark";
     mark.setAttribute("aria-hidden", "true");
@@ -243,6 +297,7 @@ if (!globalThis.__keepallPageUi) {
     content.append(label);
     let actionRow;
     let busy = false;
+    currentToastBusy = () => busy;
     let collectionPicker;
     let undoTimer;
     let undoDeadline = Number.isFinite(actions?.undoExpiresAt) ? actions.undoExpiresAt : Date.now() + 60_000;
@@ -270,7 +325,7 @@ if (!globalThis.__keepallPageUi) {
       collectionPicker?.destroy();
       organizerKeys = undefined;
     };
-    const duration = actions ? 8000 : 4000;
+    let duration = actions ? 8000 : 4000;
     const scheduleDismiss = () => {
       if (!node.isConnected) return;
       clearTimeout(toastTimer);
@@ -300,11 +355,14 @@ if (!globalThis.__keepallPageUi) {
           const result = await chrome.runtime.sendMessage({ type: "open-options", section: actions.settings });
           if (!result?.success) throw new Error(result?.error || "Could not open settings. Try again.");
           dismissToast();
+          showPendingToast();
         } catch (error) {
           if (!node.isConnected) return;
           label.textContent = error.message || "Could not open settings. Try again.";
+          announce(container, label.textContent, true);
           busy = false;
           button.disabled = false;
+          showPendingToast();
         }
       });
       buttons.append(button);
@@ -348,7 +406,7 @@ if (!globalThis.__keepallPageUi) {
           failed = false;
           label.textContent = result.count === 1 ? "Screenshot added" : `Screenshot added (${result.count})`;
           node.dataset.success = "true";
-          node.setAttribute("role", "status");
+          announce(container, label.textContent, false);
           setMark(true);
           screenshotLimitReached = Number.isInteger(result.limit) && result.count >= result.limit;
         } catch (error) {
@@ -356,7 +414,7 @@ if (!globalThis.__keepallPageUi) {
           failed = true;
           label.textContent = error.message || "Could not save the screenshot. Try again.";
           node.dataset.success = "false";
-          node.setAttribute("role", "alert");
+          announce(container, label.textContent, true);
           setMark(false);
         } finally {
           busy = false;
@@ -364,6 +422,7 @@ if (!globalThis.__keepallPageUi) {
             setActionsDisabled(false);
             scheduleDismiss();
           }
+          showPendingToast();
         }
       }
       // Hugeicons, matching the app's icon family.
@@ -415,6 +474,7 @@ if (!globalThis.__keepallPageUi) {
                     busy = false;
                     setActionsDisabled(false);
                     scheduleDismiss();
+                    showPendingToast();
                   }
                 }
               },
@@ -423,14 +483,13 @@ if (!globalThis.__keepallPageUi) {
                 failed = false;
                 label.textContent = result.changed ? `Moved to ${result.collectionName}` : `Already in ${result.collectionName}`;
                 node.dataset.success = "true";
-                node.setAttribute("role", "status");
+                announce(container, label.textContent, false);
                 setMark(true);
                 if (result.changed) buttons.querySelector('[data-action="undo"]')?.remove();
               },
               onTagged: (result) => {
                 failed = false;
                 node.dataset.success = "true";
-                node.setAttribute("role", "status");
                 setMark(true);
                 if (result.changed) buttons.querySelector('[data-action="undo"]')?.remove();
               },
@@ -441,26 +500,43 @@ if (!globalThis.__keepallPageUi) {
             return;
           }
           closeCollections(false);
+          const hadFocus = node.contains(node.getRootNode().activeElement);
           busy = true;
           clearTimeout(toastTimer);
           setActionsDisabled(true);
-          if (action === "undo") label.textContent = "Undoing save…";
+          if (action === "undo") {
+            label.textContent = "Undoing save…";
+            announce(container, label.textContent, false);
+          }
           try {
             const result = await chrome.runtime.sendMessage({ type: "capture-feedback-action", action, actionId: actions.id });
             if (!result?.success) throw new Error(result?.error ?? "Could not complete this action. Try again.");
             if (!node.isConnected) return;
-            if (action === "undo") toast("Save undone", true);
-            else dismissToast();
+            if (action === "undo") {
+              failed = false;
+              label.textContent = "Save undone";
+              node.dataset.success = "true";
+              setMark(true);
+              buttons.remove();
+              node.classList.remove("has-actions");
+              announce(container, "Save undone", false);
+              duration = 4000;
+              busy = false;
+              if (hadFocus) close.focus();
+              scheduleDismiss();
+            } else dismissToast();
+            showPendingToast();
           } catch (error) {
             if (!node.isConnected) return;
             failed = true;
             label.textContent = error.message || "Could not complete this action. Try again.";
             node.dataset.success = "false";
-            node.setAttribute("role", "alert");
+            announce(container, label.textContent, true);
             setMark(false);
             busy = false;
             setActionsDisabled(false);
             scheduleDismiss();
+            showPendingToast();
           }
         });
         buttons.append(button);
@@ -492,19 +568,23 @@ if (!globalThis.__keepallPageUi) {
     close.className = "toast-close";
     close.setAttribute("aria-label", "Dismiss notification");
     close.textContent = "×";
-    close.addEventListener("click", () => dismissToast());
+    close.addEventListener("click", () => { dismissToast(); showPendingToast(); });
     node.addEventListener("mouseenter", () => clearTimeout(toastTimer));
     node.addEventListener("mouseleave", scheduleDismiss);
-    node.addEventListener("focusin", () => clearTimeout(toastTimer));
+    node.addEventListener("focusin", (event) => {
+      clearTimeout(toastTimer);
+      if (event.relatedTarget instanceof Node && !node.contains(event.relatedTarget)) toastReturnFocus = event.relatedTarget;
+    });
     node.addEventListener("focusout", () => queueMicrotask(scheduleDismiss));
     const card = document.createElement("div");
     card.className = "toast-card";
     card.append(mark, content, close);
     node.append(card);
     if (actionRow) node.append(actionRow);
-    (dialog?.open ? dialog : shadow).append(node);
+    container.append(node);
     void node.offsetWidth;
     node.classList.add("is-visible");
+    announce(container, message, !success);
     scheduleDismiss();
   }
 
