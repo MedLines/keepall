@@ -259,7 +259,7 @@ export function LibraryTopBar({
           ) : null}
         </div>
 
-        <div className="flex h-10 w-full min-w-0 shrink-0 justify-end sm:w-[min(50%,32rem)]">
+        <div className="flex h-10 w-full min-w-0 shrink-0 justify-end sm:w-[min(55%,37rem)]">
           <LibraryBulkActions bulk={bulk} selection={selection} notice={notice} />
         </div>
       </div>

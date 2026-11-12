@@ -211,11 +211,11 @@ function ImagePreview({ item, onGalleryStep }: { item: Extract<Item, { type: "im
         <span className="whitespace-nowrap text-xs tabular-nums text-text-secondary"><span className="sr-only">Image </span>{slide + 1} of {item.assetIds.length}</span>
         <Tooltip content="Next gallery image" describe={false}><button type="button" className={iconButtonClassName({ size: "md", className: "size-[var(--viewer-control-size,2.75rem)] disabled:opacity-40" })} aria-label="Next gallery image" disabled={slide >= item.assetIds.length - 1} onClick={() => { onGalleryStep(); setSlide(slide + 1); }}><ArrowRightIcon className="size-4 rtl:rotate-180" /></button></Tooltip>
       </div>} />
-    <ScrollPanel key={slide} orientation="both" className="min-h-0 min-w-0 flex-1"
+    <ScrollPanel key={slide} orientation="both" className="min-h-[min(6rem,20dvh)] min-w-0 flex-1"
       viewportProps={{ "data-preview-media": "", "data-image-sizing": imageSizing, "data-preview-scroll": imageSizing === "scroll" ? "" : undefined, tabIndex: imageSizing === "scroll" ? 0 : -1, role: "region", "aria-label": "Image viewport" }}>
       <LibraryItemMedia item={item} variant="preview" assetId={item.assetIds[slide]} />
     </ScrollPanel>
-    {item.caption ? <ScrollPanel className="flex max-h-[35%] shrink-0 flex-col" viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain" viewportProps={{ "data-preview-scroll": "", tabIndex: 0, role: "region", "aria-label": "Image notes" }}>
+    {item.caption ? <ScrollPanel className="flex min-h-0 max-h-[35%] shrink flex-col" viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain" viewportProps={{ "data-preview-scroll": "", tabIndex: 0, role: "region", "aria-label": "Image notes" }}>
       <NoteContent className="library-preview-document mx-auto max-w-[65ch]" content={item.caption} format={item.captionFormat ?? "plain"} />
     </ScrollPanel> : null}
   </div>;
