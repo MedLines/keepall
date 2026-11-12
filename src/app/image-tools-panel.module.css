@@ -35,7 +35,7 @@
   top: 50%;
   transform: translateY(-50%);
   opacity: 0;
-  transition: opacity 150ms ease-out;
+  transition: opacity var(--motion-quick) ease-out;
 }
 
 .swatch:hover .swatchFeedback,
