@@ -1,0 +1,93 @@
+"use client";
+
+import { useId, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import type { LinkItem } from "@/domain/link";
+import { linkCoverAssetId, linkScreenshots } from "@/domain/link-screenshot";
+import { removeLinkScreenshotImage, setLinkCoverImage } from "@/persistence/items";
+import { LibraryItemMedia } from "./library-item-media";
+import { LinkScreenshotStrip } from "./link-screenshot-strip";
+
+/** Screenshots captured from the page, with cover choice and removal. Hidden when there are none. */
+export function LinkScreenshotsSection({ link, disabled, onUpdated, className = "" }: {
+  link: LinkItem;
+  disabled: boolean;
+  onUpdated: (link: LinkItem) => void;
+  className?: string;
+}) {
+  const headingId = useId();
+  const [selected, setSelected] = useState<string | null>(null);
+  const [mutation, setMutation] = useState<"cover" | "remove" | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const shots = linkScreenshots(link);
+  const current = shots.find((shot) => shot.assetId === selected) ?? shots[0];
+  if (!current) return null;
+
+  const busy = disabled || mutation !== null;
+  const chosen = link.coverAssetId === current.assetId;
+  const isCover = linkCoverAssetId(link) === current.assetId;
+  const index = shots.indexOf(current);
+
+  async function toggleCover() {
+    if (busy || !current) return;
+    setMutation("cover");
+    setError(null);
+    try {
+      onUpdated(await setLinkCoverImage(link.id, chosen ? null : current.assetId));
+    } catch {
+      setError("Couldn't change the cover.");
+    } finally {
+      setMutation(null);
+    }
+  }
+
+  async function remove() {
+    if (mutation || !current) return;
+    setMutation("remove");
+    setError(null);
+    try {
+      const updated = await removeLinkScreenshotImage(link.id, current.assetId);
+      setSelected(null);
+      setRemoveOpen(false);
+      onUpdated(updated);
+    } catch {
+      setError("Couldn't remove the screenshot.");
+    } finally {
+      setMutation(null);
+    }
+  }
+
+  return <section aria-labelledby={headingId} className={className}>
+    <h2 id={headingId} className="flex items-baseline gap-2 text-xl font-semibold">
+      Screenshots <span className="text-sm font-normal tabular-nums text-text-secondary">{shots.length}</span>
+    </h2>
+    <p className="mt-2 text-sm text-text-secondary">Captured from the page with the Keepall extension.</p>
+    <figure className="mt-6 overflow-hidden rounded-panel border border-border-control bg-bg-surface p-2">
+      <LibraryItemMedia item={link} assetId={current.assetId} variant="inspect" sharedTransition={false} />
+      <figcaption className="sr-only">Screenshot {index + 1} of {shots.length}</figcaption>
+    </figure>
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+      <LinkScreenshotStrip link={link} selected={current.assetId} onSelect={setSelected} />
+      <div className="flex shrink-0 gap-2">
+        <Button disabled={busy || (isCover && !chosen)} onClick={() => void toggleCover()}>
+          {chosen ? "Use automatic cover" : isCover ? "Current cover" : "Use as cover"}
+        </Button>
+        <Button disabled={busy} onClick={() => { setError(null); setRemoveOpen(true); }}>Remove</Button>
+      </div>
+    </div>
+    {error && !removeOpen ? <p role="alert" className="mt-3 text-sm text-text-danger">{error}</p> : null}
+    <ConfirmDialog
+      open={removeOpen}
+      title="Remove screenshot?"
+      description="This screenshot is deleted from the link. You can capture the page again with the Keepall extension."
+      confirmLabel="Remove screenshot"
+      pendingLabel="Removing…"
+      busy={mutation === "remove"}
+      error={removeOpen ? error : null}
+      onConfirm={() => void remove()}
+      onOpenChange={setRemoveOpen}
+    />
+  </section>;
+}

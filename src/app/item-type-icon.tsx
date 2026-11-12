@@ -1,4 +1,5 @@
 import type { Item } from "@/domain/item";
+import { linkScreenshots } from "@/domain/link-screenshot";
 import { DocumentIcon } from "./document-icon";
 import { ImageIcon, ImagesIcon, LinkIcon, NoteIcon, VideoIcon } from "./shell-icons";
 
@@ -14,10 +15,12 @@ export function ItemTypeIcon({ item, className = "size-5" }: { item: Item; class
   return <Icon className={iconClassName} />;
 }
 
-/** One colored identity glyph; only gallery counts add text. */
+/** One colored identity glyph; only gallery and screenshot counts add text. */
 export function ItemTypeBadge({ item, variant = "card" }: { item: Item; variant?: "card" | "list" }) {
-  const count = item.type === "image" && item.assetIds.length > 1 ? item.assetIds.length : null;
-  const label = count ? `${count} images` : item.type === "note" && item.format === "markdown" ? "Markdown note" : typeLabels[item.type === "document" ? item.format : item.type];
+  const screenshots = item.type === "link" ? linkScreenshots(item).length : 0;
+  const count = item.type === "image" && item.assetIds.length > 1 ? item.assetIds.length : screenshots || null;
+  const label = screenshots ? `Link with ${screenshots} ${screenshots === 1 ? "screenshot" : "screenshots"}`
+    : count ? `${count} images` : item.type === "note" && item.format === "markdown" ? "Markdown note" : typeLabels[item.type === "document" ? item.format : item.type];
   return <span className={variant === "list" ? "library-list-type-icon pointer-events-none inline-flex shrink-0 items-center gap-1 text-xs tabular-nums" : "library-card-media-chrome library-item-type-badge pointer-events-none absolute z-10 flex h-8 min-w-8 items-center justify-center gap-1.5 px-2 text-xs font-medium tabular-nums"} role="img" aria-label={label}>
     {variant === "card" ? count : null}<ItemTypeIcon item={item} className="size-4" />
   </span>;

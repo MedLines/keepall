@@ -1,4 +1,5 @@
 import type { Item } from "@/domain/item";
+import { linkCoverAssetId } from "@/domain/link-screenshot";
 import type { LibraryListColumns } from "@/domain/library-view";
 import { itemPreviewAssetId, peekPreviewLayout } from "@/persistence/preview-layouts";
 
@@ -52,7 +53,7 @@ export function estimateLibraryGridItemHeight(
   }
 
   if (item.type === "link") {
-    const mediaHeight = item.previewAssetId ? width / ratio : 0;
+    const mediaHeight = linkCoverAssetId(item) ? width / ratio : 0;
     const title = item.title.trim() || item.previewTitle.trim() || item.url;
     const descriptionLines = item.previewDescription.trim()
       ? estimatedLines(item.previewDescription, width, 2)

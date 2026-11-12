@@ -1,5 +1,6 @@
 import type { Item } from "@/domain/item";
 import { noteImageAssetIds } from "@/domain/note";
+import { linkCoverAssetId } from "@/domain/link-screenshot";
 import { getDb, type PreviewLayout } from "./db";
 
 const layouts = new Map<string, PreviewLayout>();
@@ -11,7 +12,7 @@ export function peekPreviewLayout(assetId: string | null | undefined) {
 
 export function itemPreviewAssetId(item: Item): string | null {
   if (item.type === "image") return item.assetIds[0] ?? null;
-  if (item.type === "link") return item.previewAssetId;
+  if (item.type === "link") return linkCoverAssetId(item);
   if (item.type === "video" || item.type === "document") return item.assetId;
   return null;
 }

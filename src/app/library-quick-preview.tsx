@@ -16,6 +16,9 @@ import { ArrowLeftIcon, ArrowRightIcon, CloseIcon, ExternalLinkIcon, FullScreenI
 import { ItemTypeIcon } from "./item-type-icon";
 import { MediaViewerToolbar } from "./media-viewer-toolbar";
 import { linkCardHost } from "@/domain/card-display";
+import type { LinkItem } from "@/domain/link";
+import { linkCoverAssetId } from "@/domain/link-screenshot";
+import { LinkScreenshotStrip, linkStripOptions } from "./link-screenshot-strip";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { VideoPlayer } from "./video-player";
 import { ItemPreviewContentTransition, ItemPreviewTransition, ItemViewTransition } from "./item-view-transition";
@@ -176,15 +179,23 @@ function PreviewContent({ item, onGalleryStep, reviewing }: { item: Item; onGall
     <ItemViewTransition itemId={item.id} assetId={item.assetId} kind="document" source preview><div className={item.format === "pdf" ? "min-w-0" : "library-preview-document mx-auto max-w-[65ch]"}><DocumentContent item={item} /></div></ItemViewTransition>
     {item.noteContent ? <section aria-label="Document notes" className="mx-auto mt-5 max-w-[65ch] border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
   </ScrollPanel>;
+  return <LinkPreview key={item.id} item={item} reviewing={reviewing} />;
+}
+
+function LinkPreview({ item, reviewing }: { item: LinkItem; reviewing: boolean }) {
+  const cover = linkCoverAssetId(item);
+  const [selected, setSelected] = useState(cover);
+  const shown = selected && linkStripOptions(item, true).some(option => option.assetId === selected) ? selected : cover;
   const details = <ItemPreviewContentTransition itemId={item.id} source><div className={`flex w-full flex-col gap-4 ${reviewing ? "" : "mx-auto max-w-[65ch]"}`}>
     <a href={item.url} target="_blank" rel="noreferrer" aria-label={`Open source: ${item.url}`} className={buttonClassName({ size: "none", className: "min-h-11 max-w-full self-start gap-2 px-3 text-sm text-text-secondary justify-start" })}><LinkIcon className="size-4" /><span className="truncate">{linkCardHost(item)}</span><ExternalLinkIcon className="size-4" /></a>
     {item.previewDescription ? <p className="whitespace-pre-wrap break-words text-text-secondary">{item.previewDescription}</p> : null}
     {item.noteContent ? <section aria-label="Link notes" className="border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent className="library-preview-document" content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
   </div></ItemPreviewContentTransition>;
-  return item.previewAssetId ? <div className="flex h-full min-h-0 flex-col gap-4 px-4 pb-4">
+  return shown ? <div className="flex h-full min-h-0 flex-col gap-4 px-4 pb-4">
     <div className="grid min-h-0 min-w-0 flex-1 place-items-center" data-preview-media>
-      <LibraryItemMedia item={item} variant="preview" />
+      <LibraryItemMedia item={item} assetId={shown === cover ? undefined : shown} variant="preview" />
     </div>
+    <LinkScreenshotStrip link={item} selected={shown} onSelect={setSelected} includePreview label="Link images" className="shrink-0 justify-center" />
     <ScrollPanel className="flex max-h-[35%] shrink-0 flex-col" viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain" viewportProps={{ "data-preview-scroll": "", tabIndex: 0, role: "region", "aria-label": "Link details" }}>{details}</ScrollPanel>
   </div> : <ScrollPanel className="h-full min-h-0" viewportClassName="scroll-fade overscroll-contain px-4" contentClassName="!flex min-h-full" viewportProps={{ "data-preview-scroll": "", tabIndex: 0 }}><div className="m-auto w-full shrink-0 pb-4">{details}</div></ScrollPanel>;
 }

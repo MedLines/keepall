@@ -4,6 +4,7 @@ import { cardInitial, linkFaviconUrls } from "@/domain/card-display";
 import { imageCoverAssetId } from "@/domain/image";
 import type { Item } from "@/domain/item";
 import type { LinkItem } from "@/domain/link";
+import { linkCoverAssetId } from "@/domain/link-screenshot";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { useState } from "react";
@@ -124,7 +125,7 @@ function LinkFavicon({ item, variant, compact, className, dimensions }: {
 
 function resolveAssetId(item: Item, assetId?: string | null) {
   if (assetId !== undefined) return assetId;
-  if (item.type === "link") return item.previewAssetId;
+  if (item.type === "link") return linkCoverAssetId(item);
   if (item.type === "image") return imageCoverAssetId(item);
   if (item.type === "video") return item.assetId;
   return null;

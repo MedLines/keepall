@@ -13,6 +13,7 @@ import { linkCardHost } from "@/domain/card-display";
 import { CollectionValidationError, type Collection } from "@/domain/collection";
 import { resolveItemCollections, resolveItemTags } from "@/domain/item";
 import { LinkValidationError, type LinkItem } from "@/domain/link";
+import { linkCoverAssetId } from "@/domain/link-screenshot";
 import { TagValidationError, type Tag } from "@/domain/tag";
 import { createCollection, listCollections } from "@/persistence/collections";
 import {
@@ -29,6 +30,7 @@ import { ItemLibraryDetails } from "./item-library-details";
 import { ItemOrganizerDrawer } from "./item-organizer-drawer";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { LibraryItemMedia } from "./library-item-media";
+import { LinkScreenshotsSection } from "./link-screenshots-section";
 import { NoteContent } from "./note-content";
 import { LinkItemEditDialog, type LinkDetailsDraft } from "./item-edit-dialog";
 import { LinkIcon } from "./shell-icons";
@@ -203,7 +205,7 @@ export function LinkItemPage({ itemId, returnHref, initialSnapshot }: { itemId: 
           <ItemPreviewContentTransition itemId={itemId}>
           <div className="row-start-1 min-w-0 lg:col-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
             {!link.article ? <div className="overflow-hidden rounded-panel border border-border-control bg-bg-surface">
-              {link.previewAssetId ? <LibraryItemMedia item={link} variant="card" className="max-h-96 w-full" /> : null}
+              {linkCoverAssetId(link) ? <LibraryItemMedia item={link} variant="card" className="max-h-96 w-full" /> : null}
               <div className="px-5 pb-6 pt-5 sm:px-7">
                 <div className="flex min-w-0 items-center gap-2 text-sm text-text-secondary"><LinkIcon className="size-4" />{linkCardHost(link)}</div>
                 <h1 className="mt-3 break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{title}</h1>
@@ -213,6 +215,9 @@ export function LinkItemPage({ itemId, returnHref, initialSnapshot }: { itemId: 
             </div> : null}
 
             <ArticleReader key={`${link.id}:${link.url}`} link={link} disabled={busy} onSaved={applyLinkUpdate} />
+
+            <LinkScreenshotsSection link={link} disabled={busy} onUpdated={applyLinkUpdate}
+              className={`mt-10 border-t border-border-control pt-7 ${link.article ? "mx-auto max-w-[46rem] px-2 sm:px-7" : ""}`} />
 
             <section aria-labelledby="personal-note-heading" className={`mt-10 border-t border-border-control pt-7 ${link.article ? "mx-auto max-w-[46rem] px-2 sm:px-7" : ""}`}>
               <h2 id="personal-note-heading" className="text-xl font-semibold">My note</h2>
