@@ -9,7 +9,7 @@ const videoFile = join(__dirname, "fixtures", "tiny.mp4");
 
 test("captures, plays, and backs up a local video", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Save item", exact: true }).click();
   const capture = page.getByRole("dialog", { name: "Save to Keepall" });
   await capture.locator('input[data-capture-files]').setInputFiles(videoFile);

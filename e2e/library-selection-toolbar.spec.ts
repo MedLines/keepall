@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("toolbar controls stay clickable across narrow panels and sidebar resizing", async ({ page }, testInfo) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   const header = page.locator(".library-top-bar");
   for (const width of [320, 640, 768, 900, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -36,7 +36,7 @@ test("toolbar controls stay clickable across narrow panels and sidebar resizing"
 
 test("browse controls follow Search while filters and selection actions share the lower row", async ({ page }, testInfo) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");

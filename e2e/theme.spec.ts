@@ -4,7 +4,7 @@ test.use({ serviceWorkers: "block" });
 
 test("toolbar dropdowns separate hovered and selected options", async ({ page }, testInfo) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   for (const theme of ["light", "dark"]) {
     if (await page.locator("html").getAttribute("data-theme") !== theme) await page.getByRole("button", { name: "Theme", exact: true }).click();
     for (const name of ["Sort library", "Filter by type"]) {
@@ -29,7 +29,7 @@ test("toolbar dropdowns separate hovered and selected options", async ({ page },
 test("layout switch slides one inset thumb and respects reduced motion", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   const control = page.getByRole("group", { name: "Library layout" });
   const thumb = control.locator(".library-layout-thumb");
   await expect(thumb).toHaveCount(1);
@@ -65,7 +65,7 @@ test("layout switch slides one inset thumb and respects reduced motion", async (
 test("shared controls use flat surfaces in both themes", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   for (const theme of ["light", "dark"]) {
     const toggle = page.getByRole("button", { name: "Theme", exact: true });
     if ((await toggle.getAttribute("aria-pressed")) !== String(theme === "dark")) await toggle.click();
@@ -138,7 +138,7 @@ for (const width of [320, 768, 1024, 1440]) {
   test(`shell controls remain reachable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     const close = page.getByRole("button", { name: width < 768 ? "Close navigation" : "Collapse", exact: true });
     if (await close.isVisible()) await close.click();
     const theme = page.getByRole("button", { name: "Theme" });
@@ -182,7 +182,7 @@ test("a populated grid fits the narrow content panel", async ({ page }) => {
 test("desktop shell keeps search and view controls inside the inset panel", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1120 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   const panel = page.getByRole("main").locator("..");
   const bounds = await panel.boundingBox();
   // Runtime storage/offline notices sit above the shell, outside the design frame.

@@ -17,7 +17,7 @@ async function openCapture(page: Page, text: string, keyboard = false) {
 
 async function createNote(page: Page, keyboard = false) {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   const closeSidebar = page.getByRole("button", { name: "Close navigation", exact: true });
   if (await closeSidebar.isVisible()) {
     await page.keyboard.press("Escape");
@@ -217,7 +217,7 @@ test("duplicate links and every import dialog share close, footer and backdrop b
 
 async function seedUnsortedOrganization(page: Page) {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");

@@ -15,7 +15,7 @@ async function clickSelectionAction(page: Page, label: string) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   // Seed only the disposable test browser's database.
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -81,7 +81,7 @@ test("bulk deletion and permanent deletion work across reloads, with cancellatio
   }
   await clickSelectionAction(page, "Move to Trash");
   await page.getByRole("button", { name: "Move to Trash" }).click();
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Trash", exact: true }).click();
   await expect(page.locator("[data-item-id]")).toHaveCount(2);
   await page.setViewportSize({ width: 390, height: 844 });
