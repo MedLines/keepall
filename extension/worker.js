@@ -27,6 +27,12 @@ chrome.runtime.onInstalled.addListener(() => {
       contexts: ["video"],
       documentUrlPatterns: ["http://*/*", "https://*/*"],
     });
+    chrome.contextMenus.create({
+      id: "save-page-with-screenshot",
+      title: "Save page with screenshot",
+      contexts: ["page"],
+      documentUrlPatterns: ["http://*/*", "https://*/*"],
+    });
     chrome.contextMenus.create({ id: "open-keepall-library", title: "Open Keepall library", contexts: ["action"] });
   });
 });
@@ -41,6 +47,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 function saveContext(info, tab) {
   if (info.menuItemId === "save-video-to-keepall") return saveVideo(tab, info.srcUrl, info);
+  if (info.menuItemId === "save-page-with-screenshot") return saveTab(tab, { screenshot: true });
   if (info.menuItemId !== "save-to-keepall") return;
   if (info.mediaType === "image") {
     if (info.srcUrl) return saveImage(tab, info.srcUrl, info);
@@ -155,17 +162,95 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
   }
 }
 
-async function captureFeedbackActions(tabId, origin, result) {
+/** `pageUrl` is set only when the saved link is the page in this tab, so it can be captured. */
+async function captureFeedbackActions(tabId, origin, result, pageUrl) {
   const id = crypto.randomUUID();
   const undoExpiresAt = Number.isFinite(result.undoExpiresAt) ? result.undoExpiresAt : Date.now() + 60_000;
   const canUndo = result.outcome === "created" && typeof result.undoToken === "string" && undoExpiresAt > Date.now();
+  const canScreenshot = typeof pageUrl === "string" && Array.isArray(result.capabilities) && result.capabilities.includes("link-screenshot-v1");
   // Keep actions until the next save or tab close. In-page navigation can report
   // "loading" while the notification and its organizer are still open.
   await chrome.storage.session.set({ [`save-feedback:${tabId}`]: {
     id, origin, itemId: result.itemId,
     ...(canUndo ? { undoToken: result.undoToken } : {}),
+    ...(canScreenshot ? { pageUrl } : {}),
   } });
-  return { id, canUndo, ...(canUndo ? { undoExpiresAt } : {}) };
+  return { id, canUndo, canScreenshot, ...(canUndo ? { undoExpiresAt } : {}) };
+}
+
+const SCREENSHOT_MAX_WIDTH = 2000;
+
+function samePage(first, second) {
+  try {
+    const a = new URL(first);
+    const b = new URL(second);
+    a.hash = "";
+    b.hash = "";
+    return a.href === b.href;
+  } catch {
+    return false;
+  }
+}
+
+/** Downscales a visible-tab PNG and encodes it as WebP (PNG where WebP encoding is unavailable). */
+async function encodeScreenshot(dataUrl) {
+  const bitmap = await createImageBitmap(await (await fetch(dataUrl)).blob());
+  const scale = Math.min(1, SCREENSHOT_MAX_WIDTH / bitmap.width);
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = new OffscreenCanvas(width, height);
+  canvas.getContext("2d").drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+  const blob = await canvas.convertToBlob({ type: "image/webp", quality: 0.85 });
+  return { bytes: new Uint8Array(await blob.arrayBuffer()), mimeType: blob.type || "image/png", width, height };
+}
+
+/** Chrome allows about two captures per second; wait out the quota instead of failing. */
+async function captureWithinQuota(windowId, attempt = 0) {
+  try {
+    return await chrome.tabs.captureVisibleTab(windowId, { format: "png" });
+  } catch (error) {
+    if (attempt >= 2 || !String(error?.message).includes("MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND")) throw error;
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    return captureWithinQuota(windowId, attempt + 1);
+  }
+}
+
+/** Hides Keepall's own page UI for the capture so it never appears in the screenshot. */
+async function captureVisiblePage(tab) {
+  const hidden = await chrome.tabs.sendMessage(tab.id, { type: "screenshot-hide" }).then((reply) => reply?.hidden === true, () => false);
+  try {
+    return await captureWithinQuota(tab.windowId);
+  } finally {
+    if (hidden) await chrome.tabs.sendMessage(tab.id, { type: "screenshot-show" }).catch(() => {});
+  }
+}
+
+async function saveScreenshot(tabId, record) {
+  if (!record?.pageUrl) throw new Error("Screenshots can be added to saved pages only.");
+  const tab = await chrome.tabs.get(tabId);
+  if (!samePage(tab.url ?? "", record.pageUrl)) throw new Error("This page changed. Save it again to add screenshots.");
+  if (!tab.active) throw new Error("Switch back to this tab to capture it.");
+  let dataUrl;
+  try {
+    dataUrl = await captureVisiblePage(tab);
+  } catch {
+    throw new Error("Can't capture this page.");
+  }
+  const image = await encodeScreenshot(dataUrl);
+  await ensureOffscreen(record.origin);
+  const captureId = crypto.randomUUID();
+  const result = await chrome.runtime.sendMessage({
+    target: "offscreen", type: "capture-screenshot", origin: record.origin,
+    payload: { captureId, itemId: record.itemId, url: record.pageUrl, mimeType: image.mimeType, width: image.width, height: image.height, data: base64Image(image.bytes) },
+  });
+  if (result?.error) throw new Error(result.error);
+  if (result?.captureId !== captureId || result.itemId !== record.itemId || !Number.isInteger(result.count)) {
+    throw new Error("Keepall did not confirm the screenshot. Try again.");
+  }
+  await requireLibraryAccess(record.origin);
+  await notifyOpenKeepallTabs(record.origin).catch(() => {});
+  return { success: true, count: result.count, limit: result.limit };
 }
 
 async function handleFeedbackAction(message, tabId) {
@@ -188,6 +273,7 @@ async function handleFeedbackAction(message, tabId) {
   if (message.action === "collections" || message.action === "move" || message.action === "tag") {
     return organizeCapture(message, record);
   }
+  if (message.action === "screenshot") return saveScreenshot(tabId, record);
   if (message.action !== "undo" || !record.undoToken) throw new Error("This save cannot be undone from this notification.");
   await ensureOffscreen(record.origin);
   const captureId = crypto.randomUUID();
@@ -330,10 +416,24 @@ async function saveTab(tab, options = {}) {
     }
     if (result.outcome === "updated") message = result.movedTo ? `Moved to ${result.movedTo}` : "Your changes were saved";
     if (result.outcome === "unchanged") message = "This link was already saved";
-    const actions = await captureFeedbackActions(tab.id, origin, result).catch(() => undefined);
+    // Only a page saved from this tab can be captured; right-clicked links and drawer saves cannot.
+    const pageUrl = !options.source && !options.linkTarget ? payload.url : undefined;
+    const actions = await captureFeedbackActions(tab.id, origin, result, pageUrl).catch(() => undefined);
+    if (options.screenshot) message = await screenshotAfterSave(tab.id, message, actions);
     await feedback(message, true, actions);
   } catch (error) {
     await feedback(error instanceof Error ? error.message : "Could not save to Keepall", false);
+  }
+}
+
+async function screenshotAfterSave(tabId, savedMessage, actions) {
+  try {
+    if (!actions?.canScreenshot) throw new Error("Update Keepall to save screenshots.");
+    const key = `save-feedback:${tabId}`;
+    const { count } = await saveScreenshot(tabId, (await chrome.storage.session.get(key))[key]);
+    return count === 1 ? "Page and screenshot saved" : `Screenshot added (${count})`;
+  } catch (error) {
+    return `${savedMessage}. Screenshot failed: ${error instanceof Error ? error.message : "Try again."}`;
   }
 }
 
@@ -395,7 +495,7 @@ async function saveLink(tab, linkUrl) {
     await showFeedback(tab.id, "This link cannot be saved to Keepall.", false);
     return;
   }
-  await saveTab({ ...tab, url: url.href }, { title: "" });
+  await saveTab({ ...tab, url: url.href }, { title: "", linkTarget: true });
 }
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -920,7 +1020,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type === "capture-feedback-action" && sender.tab?.id &&
-      typeof message.actionId === "string" && ["open", "undo", "collections", "move", "tag"].includes(message.action)) {
+      typeof message.actionId === "string" && ["open", "undo", "collections", "move", "tag", "screenshot"].includes(message.action)) {
     void handleFeedbackAction(message, sender.tab.id)
       .then(sendResponse)
       .catch((error) => sendResponse({ success: false, error: error.message || "Could not complete this action. Try again." }));

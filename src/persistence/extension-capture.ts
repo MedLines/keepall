@@ -5,7 +5,8 @@ import { buildTag } from "@/domain/tag";
 import { noteImageAssetIds } from "@/domain/note";
 import { captureOrgDrafts, rankCaptureOrganizations } from "@/domain/capture-org";
 import { getDb, type KeepallDB } from "./db";
-import { createOrReuseImage, listItems } from "./items";
+import { addLinkScreenshotImage, createOrReuseImage, listItems } from "./items";
+import { linkScreenshots, MAX_LINK_SCREENSHOTS } from "@/domain/link-screenshot";
 import { getLibraryPreferences } from "./library-preferences";
 import { createCaptureUndo } from "./extension-capture-undo";
 
@@ -320,4 +321,35 @@ export async function saveExtensionLink(
     await db.items.add(createdLink);
     return { itemId: link.id, created: true, outcome: "created", ...createCaptureUndo(createdLink) };
   });
+}
+
+export type ExtensionScreenshotCapture = {
+  captureId: string;
+  itemId: string;
+  url: string;
+  mimeType: string;
+  bytes: Uint8Array;
+  width: number;
+  height: number;
+};
+
+export type ExtensionScreenshotResult = { itemId: string; count: number; limit: number };
+
+const SCREENSHOT_MIMES = new Set(["image/webp", "image/png", "image/jpeg"]);
+
+/** Append a page capture taken by the extension to the link it just saved. */
+export async function saveExtensionScreenshot(input: ExtensionScreenshotCapture): Promise<ExtensionScreenshotResult> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.captureId)) {
+    throw new Error("Invalid capture ID");
+  }
+  if (!input.itemId || input.itemId.length > 100 || !input.url || input.url.length > 8192) {
+    throw new Error("Invalid screenshot target");
+  }
+  if (!SCREENSHOT_MIMES.has(input.mimeType) || input.bytes.byteLength === 0 || input.bytes.byteLength > 20 * 1024 * 1024) {
+    throw new Error("Invalid screenshot image");
+  }
+  const link = await addLinkScreenshotImage(input.itemId, input.url, {
+    bytes: input.bytes, mimeType: input.mimeType, width: input.width, height: input.height,
+  });
+  return { itemId: link.id, count: linkScreenshots(link).length, limit: MAX_LINK_SCREENSHOTS };
 }

@@ -65,6 +65,11 @@ test("extension registers distinct page-save and toolbar-library menu actions", 
     title: "Save video to Keepall",
     contexts: ["video"],
     documentUrlPatterns: ["http://*/*", "https://*/*"],
+  }, {
+    id: "save-page-with-screenshot",
+    title: "Save page with screenshot",
+    contexts: ["page"],
+    documentUrlPatterns: ["http://*/*", "https://*/*"],
   }, { id: "open-keepall-library", title: "Open Keepall library", contexts: ["action"] }]);
 });
 
@@ -895,7 +900,8 @@ test("save notifications open the item and undo only new captures", async ({}, t
       const actions = await toast.getByRole("group", { name: "Save actions" }).boundingBox();
       expect(actions!.y).toBeGreaterThan(card!.y + card!.height);
       await expect(toast.locator(".toast-card .toast-action")).toHaveCount(0);
-      await expect(toast.locator(".toast-action svg")).toHaveCount(3);
+      await expect(toast.locator(".toast-action svg")).toHaveCount(4);
+      await expect(toast.getByRole("button", { name: "Add screenshot" })).toBeInViewport();
       await source.screenshot({ path: testInfo.outputPath(`save-actions-${colorScheme}.png`) });
     }
     await toast.getByRole("button", { name: "Undo", exact: true }).click();

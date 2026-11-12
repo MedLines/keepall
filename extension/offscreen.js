@@ -7,6 +7,7 @@ const waiting = new Map();
 const organizationWaiting = new Map();
 const fileWaiting = new Map();
 let fileTransferSupported = false;
+let capabilities = [];
 
 function ensureFrame(origin) {
   if (frame && frameOrigin === origin) return frameReady;
@@ -14,6 +15,7 @@ function ensureFrame(origin) {
   clearTimeout(readyTimer);
   frameOrigin = origin;
   fileTransferSupported = false;
+  capabilities = [];
   frameReady = new Promise((resolve, reject) => {
     resolveReady = resolve;
     readyTimer = setTimeout(() => {
@@ -37,7 +39,8 @@ window.addEventListener("message", (event) => {
   if (event.data?.channel !== "keepall-extension") return;
   if (event.data.type === "ready") {
     clearTimeout(readyTimer);
-    fileTransferSupported = event.data.capabilities?.includes("file-transfer-v1") === true;
+    capabilities = Array.isArray(event.data.capabilities) ? event.data.capabilities.filter((value) => typeof value === "string") : [];
+    fileTransferSupported = capabilities.includes("file-transfer-v1");
     resolveReady?.();
     resolveReady = undefined;
     return;
@@ -59,7 +62,7 @@ async function capture(origin, payload, type = "capture") {
     const timer = setTimeout(() => {
       waiting.delete(payload.captureId);
       reject(new Error("Keepall did not confirm the save"));
-    }, type === "capture-image" ? 45000 : 15000);
+    }, type === "capture-image" || type === "capture-screenshot" ? 45000 : 15000);
     finish = (result) => {
       clearTimeout(timer);
       waiting.delete(payload.captureId);
@@ -100,6 +103,22 @@ function imageCapture(origin, payload) {
     mimeType: payload.mimeType,
     bytes,
   }, "capture-image");
+}
+
+async function screenshotCapture(origin, payload) {
+  await ensureFrame(origin);
+  if (!capabilities.includes("link-screenshot-v1")) throw new Error("This Keepall app does not support screenshots yet. Deploy the matching app version, then reload the extension.");
+  const binary = atob(payload.data);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return capture(origin, {
+    captureId: payload.captureId,
+    itemId: payload.itemId,
+    url: payload.url,
+    mimeType: payload.mimeType,
+    width: payload.width,
+    height: payload.height,
+    bytes,
+  }, "capture-screenshot");
 }
 
 async function fileAction(message) {
@@ -143,10 +162,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       ? organizations(message.origin, message.url)
       : message.type === "capture-image"
         ? imageCapture(message.origin, message.payload)
-        : null;
+        : message.type === "capture-screenshot"
+          ? screenshotCapture(message.origin, message.payload)
+          : null;
   if (!operation) return;
   operation
-    .then((result) => sendResponse(result))
+    // Link saves report what the connected app supports, so the toast offers only working actions.
+    .then((result) => sendResponse(message.type === "capture" && result && !result.error ? { ...result, capabilities } : result))
     .catch((error) => sendResponse({ error: error.message, retryable: true }));
   return true;
 });

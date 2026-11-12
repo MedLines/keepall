@@ -61,6 +61,7 @@ if (!globalThis.__keepallPageUi) {
     .toast-actions { display: flex; flex-wrap: wrap; justify-self: center; gap: 2px; max-width: 100%; margin-top: 6px; padding: 2px; border: 1px solid var(--border); border-radius: 24px; corner-shape: superellipse(1.5); background: var(--toast); box-shadow: 0 4px 12px oklch(0 0 0 / 0.078431373), 0 1px 3px oklch(0 0 0 / 0.050980392); }
     .toast-action { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 28px; padding: 3px 8px; border: 0; border-radius: 999px; background: transparent; color: var(--secondary); font-size: 12px; font-weight: 500; transition: transform 150ms ease-out; }
     .toast-action svg { width: 14px; height: 14px; flex: none; }
+    .toast-action[data-action="screenshot"] { min-width: 28px; padding: 3px 7px; }
     .toast-action:hover { background: var(--raised); color: var(--primary); }
     .toast-action:active { transform: scale(.96); }
     @media (prefers-reduced-motion: reduce) { .toast-action { transition: none; } .toast-action:active { transform: none; } }
@@ -266,32 +267,72 @@ if (!globalThis.__keepallPageUi) {
         undo.setAttribute("aria-description", undo.title);
         if (wasFocused && !busy) buttons.querySelector('[data-action="organize"]')?.focus();
       }
+      let screenshotLimitReached = false;
       function setActionsDisabled(value) {
         for (const control of buttons.children) control.disabled = value;
         if (Date.now() >= undoExpiresAt) expireUndo();
+        const screenshot = buttons.querySelector('[data-action="screenshot"]');
+        if (screenshot && screenshotLimitReached) {
+          screenshot.disabled = true;
+          screenshot.title = "This link has the most screenshots it can hold.";
+          screenshot.setAttribute("aria-description", screenshot.title);
+        }
+      }
+      async function takeScreenshot() {
+        closeCollections(false);
+        busy = true;
+        clearTimeout(toastTimer);
+        setActionsDisabled(true);
+        try {
+          // The worker hides this UI for the capture, then shows it again.
+          const result = await chrome.runtime.sendMessage({ type: "capture-feedback-action", action: "screenshot", actionId: actions.id });
+          if (!result?.success) throw new Error(result?.error || "Could not save the screenshot. Try again.");
+          if (!node.isConnected) return;
+          label.textContent = result.count === 1 ? "Screenshot added" : `Screenshot added (${result.count})`;
+          node.dataset.success = "true";
+          node.setAttribute("role", "status");
+          setMark(true);
+          screenshotLimitReached = Number.isInteger(result.limit) && result.count >= result.limit;
+        } catch (error) {
+          if (!node.isConnected) return;
+          label.textContent = error.message || "Could not save the screenshot. Try again.";
+          node.dataset.success = "false";
+          node.setAttribute("role", "alert");
+          setMark(false);
+        } finally {
+          busy = false;
+          if (node.isConnected) {
+            setActionsDisabled(false);
+            scheduleDismiss();
+          }
+        }
       }
       // Hugeicons, matching the app's icon family.
       const actionIcons = {
         open: '<path d="M11.0991 3.00012C7.45013 3.00669 5.53932 3.09629 4.31817 4.31764C3.00034 5.63568 3.00034 7.75704 3.00034 11.9997C3.00034 16.2424 3.00034 18.3638 4.31817 19.6818C5.63599 20.9999 7.75701 20.9999 11.9991 20.9999C16.241 20.9999 18.3621 20.9999 19.6799 19.6818C20.901 18.4605 20.9906 16.5493 20.9972 12.8998"/><path d="M20.556 3.49612L11.0487 13.0586M20.556 3.49612C20.062 3.00151 16.7343 3.04761 16.0308 3.05762M20.556 3.49612C21.05 3.99074 21.0039 7.32273 20.9939 8.02714"/>',
         organize: '<path d="M8.64298 3.14559L6.93816 3.93362C4.31272 5.14719 3 5.75397 3 6.75C3 7.74603 4.31272 8.35281 6.93817 9.56638L8.64298 10.3544C10.2952 11.1181 11.1214 11.5 12 11.5C12.8786 11.5 13.7048 11.1181 15.357 10.3544L17.0618 9.56638C19.6873 8.35281 21 7.74603 21 6.75C21 5.75397 19.6873 5.14719 17.0618 3.93362L15.357 3.14559C13.7048 2.38186 12.8786 2 12 2C11.1214 2 10.2952 2.38186 8.64298 3.14559Z"/><path d="M20.788 11.0972C20.9293 11.2959 21 11.5031 21 11.7309C21 12.7127 19.6873 13.3109 17.0618 14.5072L15.357 15.284C13.7048 16.0368 12.8786 16.4133 12 16.4133C11.1214 16.4133 10.2952 16.0368 8.64298 15.284L6.93817 14.5072C4.31272 13.3109 3 12.7127 3 11.7309C3 11.5031 3.07067 11.2959 3.212 11.0972"/><path d="M20.3767 16.2661C20.7922 16.5971 21 16.927 21 17.3176C21 18.2995 19.6873 18.8976 17.0618 20.0939L15.357 20.8707C13.7048 21.6236 12.8786 22 12 22C11.1214 22 10.2952 21.6236 8.64298 20.8707L6.93817 20.0939C4.31272 18.8976 3 18.2995 3 17.3176C3 16.927 3.20778 16.5971 3.62334 16.2661"/>',
+        screenshot: '<path d="M7 6C6.39 6.01 5.86 6.08 5.4 6.27C3.7 6.97 3 8.48 3 11.2V14.8C3 18.19 3 19.88 4.05 20.94C5.11 22 6.81 22 10.2 22H13.8C17.19 22 18.89 22 19.95 20.94C21 19.88 21 18.19 21 14.8V11.2C21 8.48 20.3 6.97 18.6 6.27C18.14 6.08 17.61 6.01 17 6"/><path d="M17 7L16.11 4.79C15.73 3.83 15.37 3 14.17 3H9.83C8.63 3 8.27 3.83 7.89 4.79L7 7"/><circle cx="12" cy="14" r="3.5"/>',
         undo: '<path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C8.66873 3 5.76018 4.80989 4.20404 7.5"/><path d="M3 3V4.27816C3 6.47004 3 7.56599 3.70725 8.16512C4.4145 8.76425 5.49553 8.58408 7.6576 8.22373L9 8"/>',
       };
-      for (const [action, text] of [["open", "Open"], ["organize", "Organize"], ...(actions.canUndo ? [["undo", "Undo"]] : [])]) {
+      // Screenshot is icon-only and last, so four actions still fit on one row.
+      for (const [action, text] of [["open", "Open"], ["organize", "Organize"], ...(actions.canUndo ? [["undo", "Undo"]] : []), ...(actions.canScreenshot ? [["screenshot", ""]] : [])]) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "toast-action";
         button.dataset.action = action;
-        button.setAttribute("aria-label", action === "open" ? "Open in Keepall" : text);
-        button.title = action === "open" ? "Open in Keepall" : text;
+        const description = action === "open" ? "Open in Keepall" : action === "screenshot" ? "Add a screenshot of what's on screen" : text;
+        button.setAttribute("aria-label", action === "screenshot" ? "Add screenshot" : description);
+        button.title = description;
         if (action === "organize") {
           button.setAttribute("aria-expanded", "false");
           button.setAttribute("aria-haspopup", "dialog");
         }
         button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${actionIcons[action]}</svg>`;
-        button.append(document.createTextNode(text));
+        if (text) button.append(document.createTextNode(text));
         button.addEventListener("click", async () => {
           if (busy) return;
           if (action === "undo" && Date.now() >= undoExpiresAt) { expireUndo(); return; }
+          if (action === "screenshot") { await takeScreenshot(); return; }
           if (action === "organize") {
             if (collectionPicker) { closeCollections(true); return; }
             clearTimeout(toastTimer);
@@ -826,5 +867,12 @@ if (!globalThis.__keepallPageUi) {
     if (message?.type === "organizations" || message?.type === "organization-error") onOrganizationMessage?.(message);
     if (message?.type === "toast-feedback") toast(message.message, message.success, message.actions);
     if (message?.type === "editor-feedback") onEditorFeedback?.(message);
+    if (message?.type === "screenshot-hide") {
+      host.style.setProperty("visibility", "hidden", "important");
+      // Two frames let the page repaint without Keepall before the capture.
+      requestAnimationFrame(() => requestAnimationFrame(() => respond?.({ hidden: true })));
+      return true;
+    }
+    if (message?.type === "screenshot-show") host.style.removeProperty("visibility");
   });
 }

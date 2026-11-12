@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { linkScreenshotAssetIds, MAX_LINK_SCREENSHOTS } from "@/domain/link-screenshot";
 import { exportKeepallBackup, importKeepallBackupMerge, importKeepallBackupReplace } from "./backup";
 import { deleteKeepallDatabase, getDb } from "./db";
+import { saveExtensionScreenshot, type ExtensionScreenshotCapture } from "./extension-capture";
 import {
   addLinkScreenshotImage,
   createLink,
@@ -112,6 +113,33 @@ describe("link screenshots", () => {
     expect(await assetExists(assetId!)).toBe(true);
     await permanentlyDeleteItem(link.id);
     expect(await assetExists(assetId!)).toBe(false);
+  });
+});
+
+describe("saveExtensionScreenshot", () => {
+  beforeEach(async () => {
+    await deleteKeepallDatabase();
+  });
+
+  const input = (itemId: string, overrides: Partial<ExtensionScreenshotCapture> = {}): ExtensionScreenshotCapture => ({
+    captureId: crypto.randomUUID(), itemId, url: URL, mimeType: "image/webp", bytes: new Uint8Array([1, 2, 3]), width: 1600, height: 1000, ...overrides,
+  });
+
+  test("appends the capture and reports the count and limit", async () => {
+    const link = await createLink({ url: URL });
+    expect(await saveExtensionScreenshot(input(link.id))).toEqual({ itemId: link.id, count: 1, limit: MAX_LINK_SCREENSHOTS });
+    expect(await saveExtensionScreenshot(input(link.id, { bytes: new Uint8Array([4, 5, 6]) }))).toMatchObject({ count: 2 });
+  });
+
+  test("rejects malformed captures before touching the library", async () => {
+    const link = await createLink({ url: URL });
+    for (const bad of [
+      { captureId: "not-a-uuid" }, { itemId: "" }, { url: "" }, { mimeType: "image/gif" },
+      { bytes: new Uint8Array() }, { width: 0 }, { height: 1.5 },
+    ]) {
+      await expect(saveExtensionScreenshot(input(link.id, bad))).rejects.toThrow();
+    }
+    expect(await getDb().assets.count()).toBe(0);
   });
 });
 
