@@ -32,7 +32,7 @@ export function LinkScreenshotStrip({ link, selected, onSelect, includePreview =
 function StripThumb({ option, selected, onSelect }: { option: StripOption; selected: boolean; onSelect: (assetId: string) => void }) {
   const url = useThumbnailObjectUrl(option.assetId);
   return <button type="button" aria-pressed={selected} aria-label={option.label} onClick={() => onSelect(option.assetId)}
-    className={`relative h-14 w-[5.5rem] shrink-0 overflow-hidden rounded-input border bg-bg-surface outline-none transition-[border-color,opacity] focus-visible:ring-2 focus-visible:ring-border-focus ${selected ? "border-border-selected" : "border-border-control opacity-70 hover:opacity-100"}`}>
+    className={`relative h-14 w-[5.5rem] shrink-0 overflow-hidden rounded-input border bg-bg-surface transition-[border-color,opacity] ${selected ? "border-border-selected ring-1 ring-border-selected" : "border-border-control opacity-70 hover:opacity-100"}`}>
     {/* eslint-disable-next-line @next/next/no-img-element -- local IndexedDB object URL */}
     {url ? <img alt="" src={url} className="size-full object-cover object-top" /> : null}
   </button>;

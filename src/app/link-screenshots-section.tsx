@@ -6,6 +6,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { LinkItem } from "@/domain/link";
 import { linkCoverAssetId, linkScreenshots } from "@/domain/link-screenshot";
 import { removeLinkScreenshotImage, setLinkCoverImage } from "@/persistence/items";
+import { ItemMediaFrame } from "./item-media-frame";
+import { ITEM_MEDIA_HEIGHT } from "./item-page-styles";
 import { LibraryItemMedia } from "./library-item-media";
 import { LinkScreenshotStrip } from "./link-screenshot-strip";
 
@@ -37,7 +39,7 @@ export function LinkScreenshotsSection({ link, disabled, onUpdated, className = 
     try {
       onUpdated(await setLinkCoverImage(link.id, chosen ? null : current.assetId));
     } catch {
-      setError("Couldn't change the cover.");
+      setError("Couldn't change the cover. Try again.");
     } finally {
       setMutation(null);
     }
@@ -53,7 +55,7 @@ export function LinkScreenshotsSection({ link, disabled, onUpdated, className = 
       setRemoveOpen(false);
       onUpdated(updated);
     } catch {
-      setError("Couldn't remove the screenshot.");
+      setError("Couldn't remove the screenshot. Try again.");
     } finally {
       setMutation(null);
     }
@@ -64,16 +66,21 @@ export function LinkScreenshotsSection({ link, disabled, onUpdated, className = 
       Screenshots <span className="text-sm font-normal tabular-nums text-text-secondary">{shots.length}</span>
     </h2>
     <p className="mt-2 text-sm text-text-secondary">Captured from the page with the Keepall extension.</p>
-    <figure className="mt-6 overflow-hidden rounded-panel border border-border-control bg-bg-surface p-2">
-      <LibraryItemMedia item={link} assetId={current.assetId} variant="inspect" sharedTransition={false} />
+    {/* The shared frame clips with a transparent inset border, so its inner radius stays concentric. */}
+    <figure className={`mt-6 ${ITEM_MEDIA_HEIGHT}`}>
+      <ItemMediaFrame>
+        <div className="flex size-full min-h-0 min-w-0 items-center justify-center p-3 sm:p-5">
+          <LibraryItemMedia item={link} assetId={current.assetId} variant="canvas" sharedTransition={false} />
+        </div>
+      </ItemMediaFrame>
       <figcaption className="sr-only">Screenshot {index + 1} of {shots.length}</figcaption>
     </figure>
     <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
       <LinkScreenshotStrip link={link} selected={current.assetId} onSelect={setSelected} />
-      <div className="flex shrink-0 gap-2">
-        <Button disabled={busy || (isCover && !chosen)} onClick={() => void toggleCover()}>
-          {chosen ? "Use automatic cover" : isCover ? "Current cover" : "Use as cover"}
-        </Button>
+      <div className="flex shrink-0 items-center gap-2">
+        {isCover && !chosen
+          ? <span className="px-2 text-sm text-text-secondary">Shown as the card cover</span>
+          : <Button disabled={busy} onClick={() => void toggleCover()}>{chosen ? "Use automatic cover" : "Use as cover"}</Button>}
         <Button disabled={busy} onClick={() => { setError(null); setRemoveOpen(true); }}>Remove</Button>
       </div>
     </div>
