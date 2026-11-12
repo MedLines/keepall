@@ -188,7 +188,7 @@ test("extension uses the canonical production library address", async () => {
 
     const options = await context.newPage();
     await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
-    await expect(options.getByLabel("Keepall address")).toHaveValue("https://www.keepall.app");
+    await expect(options.locator("#origin")).toHaveValue("https://www.keepall.app");
     await options.getByRole("tab", { name: "Image access", exact: true }).click();
     await expect(options.getByRole("region", { name: "Image saving" })).toBeVisible();
     await expect(options.getByText("Your current choice. No setup needed.", { exact: true })).toBeVisible();
@@ -219,11 +219,38 @@ test("extension uses the canonical production library address", async () => {
     expect(await options.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
     await expect(options.getByRole("link", { name: "Open library" })).toHaveAttribute("href", "https://www.keepall.app/");
     await options.getByRole("tab", { name: "General", exact: true }).click();
-    await options.getByLabel("Keepall address").fill("https://keepall.app");
+    await options.getByText("Use a local library (for development)").click();
+    await options.locator("#origin").fill("https://keepall.app");
     await options.getByRole("button", { name: "Save address" }).click();
     await expect(options.locator("#status")).toHaveText("Address saved.");
-    await expect(options.getByLabel("Keepall address")).toHaveValue("https://www.keepall.app");
+    await expect(options.locator("#origin")).toHaveValue("https://www.keepall.app");
     expect(await worker.evaluate(() => keepallOrigin())).toBe("https://www.keepall.app");
+  } finally {
+    await context.close();
+    await rm(profile, { recursive: true, force: true });
+  }
+});
+
+test("Options explains the connection, flags bad addresses, and describes the right menu item", async () => {
+  const profile = await mkdtemp(path.join(tmpdir(), "keepall-options-everyday-"));
+  const extensionPath = path.resolve("extension");
+  const context = await chromium.launchPersistentContext(profile, {
+    channel: "chromium", headless: true,
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+  try {
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
+    const options = await context.newPage();
+    await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
+    await expect(options.locator("#connection-status")).not.toHaveText("Not checked yet", { timeout: 5_000 });
+    await options.getByText("Use a local library (for development)").click();
+    await options.locator("#origin").fill("https://example.com");
+    await options.getByRole("button", { name: "Save address", exact: true }).click();
+    await expect(options.locator("#origin")).toHaveAttribute("aria-invalid", "true");
+    await expect(options.locator("#origin")).toBeFocused();
+    const alt = await options.locator('img[src="image-context-menu.png"]').getAttribute("alt");
+    expect(alt).toContain("Save to Keepall.");
+    expect(alt).not.toContain("Save image");
   } finally {
     await context.close();
     await rm(profile, { recursive: true, force: true });
@@ -246,8 +273,9 @@ test("Options tabs reveal one group, preserve edits, and support keyboard naviga
     await page.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
     await expect(page.getByRole("tabpanel")).toHaveCount(1);
     await expect(page.getByRole("tab", { name: "General", exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("button", { name: "Save address", exact: true })).toBeInViewport();
-    await page.getByLabel("Keepall address").fill("http://localhost:3001");
+    await expect(page.locator("#library-destination")).toBeInViewport();
+    await page.getByText("Use a local library (for development)").click();
+    await page.locator("#origin").fill("http://localhost:3001");
     await page.getByRole("tab", { name: "General", exact: true }).focus();
     await page.keyboard.press("ArrowDown");
     await expect(page.getByRole("tabpanel", { name: "Saving", exact: true })).toBeVisible();
@@ -255,7 +283,7 @@ test("Options tabs reveal one group, preserve edits, and support keyboard naviga
     await page.keyboard.press("End");
     await expect(page.getByRole("tabpanel", { name: "Image access", exact: true })).toBeVisible();
     await page.keyboard.press("Home");
-    await expect(page.getByLabel("Keepall address")).toHaveValue("http://localhost:3001");
+    await expect(page.locator("#origin")).toHaveValue("http://localhost:3001");
     await page.keyboard.press("ArrowUp");
     await expect(page.getByRole("tab", { name: "Image access", exact: true })).toBeFocused();
     await page.reload();
@@ -287,7 +315,7 @@ test("Options tabs reveal one group, preserve edits, and support keyboard naviga
     await page.evaluate(() => window.scrollTo(0, 650));
     await expect(page.getByRole("tab", { name: "General", exact: true })).toBeInViewport();
     await page.getByRole("tab", { name: "General", exact: true }).click();
-    await expect(page.getByLabel("Keepall address")).toBeInViewport();
+    await expect(page.locator("#library-destination")).toBeInViewport();
     await page.goto(page.url().replace("#general", "#permissions"));
     await expect(page.getByRole("tab", { name: "Image access", exact: true })).toHaveAttribute("aria-selected", "true");
     expect(errors).toEqual([]);
@@ -566,7 +594,7 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
     await options.goto(await worker.evaluate(() => chrome.runtime.getURL("options.html")));
     await expect(options.getByRole("heading", { name: "Capture settings" })).toBeVisible();
     await expect(options.getByRole("region", { name: "Library address" })).toBeVisible();
-    await options.getByLabel("Keepall address").fill(origin);
+    await options.locator("#origin").fill(origin);
     await options.getByRole("button", { name: "Save address" }).click();
     await expect(options.locator("#status")).toHaveText("Address saved.");
     await expect(options.getByRole("link", { name: "Open library" })).toHaveAttribute("href", `${origin}/`);

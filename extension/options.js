@@ -28,13 +28,13 @@ function setDestination(origin) {
   connectionRevision++;
   connectionStatus.textContent = "Not checked yet";
   connectionStatus.dataset.state = "idle";
-  connectionCheck.disabled = false;
+  connectionCheck.removeAttribute("aria-disabled");
   connectionCheck.textContent = "Check connection";
 }
 
 async function checkConnection() {
   const revision = ++connectionRevision;
-  connectionCheck.disabled = true;
+  connectionCheck.setAttribute("aria-disabled", "true");
   connectionStatus.textContent = "Checking your library…";
   connectionStatus.dataset.state = "checking";
   try {
@@ -54,10 +54,13 @@ async function checkConnection() {
     connectionStatus.dataset.state = "error";
     connectionCheck.textContent = "Try again";
   } finally {
-    if (revision === connectionRevision) connectionCheck.disabled = false;
+    if (revision === connectionRevision) connectionCheck.removeAttribute("aria-disabled");
   }
 }
-connectionCheck.addEventListener("click", () => { void checkConnection(); });
+connectionCheck.addEventListener("click", () => {
+  if (connectionCheck.getAttribute("aria-disabled") === "true") return;
+  void checkConnection();
+});
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.origin) {
     setDestination(changes.origin.newValue);
@@ -138,6 +141,7 @@ async function refreshLibraryAccess() {
   const origin = savedOrigin;
   const connected = await chrome.permissions.contains({ origins: [`${new URL(origin).protocol}//${new URL(origin).hostname}/*`] });
   if (origin !== savedOrigin || restoringLibraryAccess) return;
+  if (connected && document.activeElement === libraryAccessRestore) connectionStatus.focus();
   libraryAccessRestore.hidden = connected;
   libraryAccessStatus.hidden = connected;
   libraryAccessStatus.textContent = connected ? "" : "The extension has lost access to your library. Restore it before saving.";
@@ -147,7 +151,7 @@ async function refreshLibraryAccess() {
     connectionRevision++;
     connectionStatus.textContent = "Library access is missing. Choose Restore library access below.";
     connectionStatus.dataset.state = "access";
-    connectionCheck.disabled = false;
+    connectionCheck.removeAttribute("aria-disabled");
     connectionCheck.textContent = "Check connection";
   } else if (connectionStatus.dataset.state === "access") {
     setDestination(savedOrigin);
@@ -184,6 +188,7 @@ void refreshLibraryAccess().catch(() => {
 
 async function refreshImageAccess() {
   const granted = await hasAllWebsiteAccess();
+  if (granted && document.activeElement === imageAccessEnable) imageAccessStatus.focus();
   imageAccessEnable.disabled = granted;
   imageAccessEnable.textContent = granted ? "Access to all websites enabled" : "Allow access to all websites";
   imageAccessDefault.textContent = granted ? "Manage website access in Chrome below." : "Your current choice. No setup needed.";
@@ -233,7 +238,9 @@ chrome.permissions.onRemoved.addListener(() => { void refreshAccessState(); });
 chrome.storage.local.get("origin").then(({ origin }) => {
   input.value = origin === "https://keepall.app" ? PRODUCTION_ORIGIN : origin ?? PRODUCTION_ORIGIN;
   setDestination(input.value);
+  if (normalizeOrigin(input.value) !== PRODUCTION_ORIGIN) document.querySelector("#developer-address").open = true;
   void refreshLibraryAccess();
+  void checkConnection();
 });
 
 form.addEventListener("submit", async (event) => {
@@ -248,12 +255,17 @@ form.addEventListener("submit", async (event) => {
     }
     await chrome.storage.local.set({ origin });
     input.value = origin;
+    input.removeAttribute("aria-invalid");
+    input.setAttribute("aria-describedby", "origin-hint");
     status.textContent = "Address saved.";
     status.dataset.state = "success";
     setDestination(origin);
   } catch (error) {
     status.textContent = error.message;
     status.dataset.state = "error";
+    input.setAttribute("aria-invalid", "true");
+    input.setAttribute("aria-describedby", "origin-hint status");
+    input.focus();
   }
 });
 
