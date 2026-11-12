@@ -54,6 +54,7 @@ import { ShellPanelIcon } from "./shell-panel-icon";
 import { collectionMarkerStyle } from "./collection-marker";
 import { LogoContextMenu } from "./logo-context-menu";
 import { SidebarResizeHandle } from "./sidebar-resize-handle";
+import { menuItemClassName } from "@/components/ui/menu-item";
 
 const COLLECTION_REORDER_MIME = "application/x-keepall-pinned-collection";
 
@@ -360,7 +361,7 @@ export function LibraryShell({
               {(trigger) => contentExpanded ? (
                 <div className={`group ${SHELL_NAV_SURFACE} min-h-10 w-full text-sm ${browseTrash ? SHELL_NAV_ITEM_ACTIVE : `${SHELL_NAV_ITEM_IDLE} focus-within:bg-bg-raised`}`}>
                   <button type="button" aria-label="Trash" aria-current={browseTrash ? "page" : undefined} data-sidebar-anchor="Trash"
-                    className="flex min-h-10 min-w-0 flex-1 self-stretch items-center gap-2.5 rounded-control-md px-3 py-2 text-left transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
+                    className="flex min-h-10 min-w-0 flex-1 self-stretch items-center gap-2.5 px-3 py-2 text-left transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
                     onClick={() => { onGoTrash?.(); closeOnMobile(); }}>
                     <span data-sidebar-icon className="flex size-[18px] shrink-0 items-center justify-center"><DeleteIcon className="size-[18px]" /></span>
                     <span className="min-w-0 flex-1 truncate">Trash</span>
@@ -416,7 +417,7 @@ export function LibraryShell({
               <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-50 transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
               <Dialog.Viewport className="fixed inset-0 z-50 flex overflow-hidden">
                 <Dialog.Popup
-                  className={`${SHELL_ASIDE} ${SHELL_SIDEBAR_EXPANDED} border-r border-border-control shadow-menu outline-none transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full motion-reduce:transition-none`}
+                  className={`${SHELL_ASIDE} ${SHELL_SIDEBAR_EXPANDED} border-r border-border-control shadow-menu outline-none transition-transform duration-300 ease-standard data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full motion-reduce:transition-none`}
                   initialFocus={() => document.querySelector<HTMLElement>('#library-sidebar [data-sidebar-anchor="All items"]')}
                   finalFocus={() => {
                     if (mobileOpener.current?.isConnected) return mobileOpener.current;
@@ -478,14 +479,14 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onClose, onGoHome }: {
           }}
           aria-label="Keepall home"
           data-sidebar-anchor="logo"
-          className={`keepall-logo-link flex h-10 min-w-0 items-center gap-0 rounded-control text-text-primary ${expanded ? "w-fit px-3" : "w-10 justify-center"}`}
+          className={`keepall-logo-link flex h-10 min-w-0 items-center gap-0 text-text-primary ${expanded ? "w-fit px-3" : "w-10 justify-center"}`}
         >
           <span data-sidebar-icon className="flex shrink-0 items-center justify-center"><LogoIcon className="size-9" /></span>
           {expanded ? <span data-sidebar-copy className="shrink-0 text-xl font-medium leading-7">keepall</span> : null}
         </Link>
       </LogoContextMenu>
       {mobileSidebarOpen ? (
-        <button type="button" aria-label="Close navigation" title="Close sidebar" className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-control hover:bg-bg-raised" onClick={onClose}>
+        <button type="button" aria-label="Close navigation" title="Close sidebar" className="ml-auto flex size-8 shrink-0 items-center justify-center hover:bg-bg-raised" onClick={onClose}>
           <ShellPanelIcon open />
         </button>
       ) : null}
@@ -879,7 +880,7 @@ function TagNavRow({
         <div className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${active ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary` : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`}`}>
           <button
             type="button"
-            className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 pl-12 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+            className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 py-2 pl-12 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
             aria-label={`Tag ${tag.name}`}
             aria-current={active ? "page" : undefined}
             onClick={onNavigate}
@@ -955,7 +956,7 @@ function CollectionNavRow({
         }}
       >
         <input
-          className="min-w-0 flex-1 rounded-[6px] border border-border-edge/80 bg-bg-surface px-1.5 py-0.5 text-sm outline-none focus:border-border-focus"
+          className="min-w-0 flex-1 border border-border-edge/80 bg-bg-surface px-1.5 py-0.5 text-sm outline-none focus:border-border-focus"
           autoFocus
           value={renameDraft}
           disabled={mutationBusy}
@@ -1014,7 +1015,7 @@ function CollectionNavRow({
         >
           <button
             type="button"
-            className="squircle-panel flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 rounded-control-md py-2 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+            className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 py-2 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
             aria-label={collection.name}
             aria-current={active ? "page" : undefined}
             onClick={onNavigate}
@@ -1072,7 +1073,7 @@ function SidebarRowMenu({
   const trigger = (
     <button
       type="button"
-      className="absolute right-0 flex size-7 shrink-0 items-center justify-center rounded-[6px] text-text-secondary hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[popup-open]:bg-bg-raised data-[popup-open]:opacity-100 disabled:cursor-default"
+      className="absolute right-0 flex size-7 shrink-0 items-center justify-center text-text-secondary hover:bg-bg-raised/70 focus-visible:bg-bg-raised/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[popup-open]:bg-bg-raised data-[popup-open]:opacity-100 disabled:cursor-default"
       aria-label={actionsLabel}
       disabled={mutationBusy}
     >
@@ -1087,26 +1088,26 @@ function SidebarRowMenu({
       menu={() =>
         <>
           {onTogglePin ? (
-            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onTogglePin}>
+            <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={onTogglePin}>
               {pinned ? "Unpin" : "Pin to top"}
             </Menu.Item>
           ) : null}
           {pinned && onMoveUp ? (
-            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onMoveUp}>
+            <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={onMoveUp}>
               Move up
             </Menu.Item>
           ) : null}
           {pinned && onMoveDown ? (
-            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onMoveDown}>
+            <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={onMoveDown}>
               Move down
             </Menu.Item>
           ) : null}
           {onRename ? (
-            <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => openDialog(onRename)}>
+            <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={() => openDialog(onRename)}>
               Rename
             </Menu.Item>
           ) : null}
-          <Menu.Item disabled={deleteDisabled} className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-danger hover:bg-bg-danger data-[highlighted]:bg-bg-danger data-[disabled]:opacity-50" onClick={() => openDialog(onDelete)}>
+          <Menu.Item disabled={deleteDisabled} className={menuItemClassName({ tone: "danger", layout: "none", className: "items-center gap-2 text-left hover:bg-bg-danger data-[disabled]:opacity-50" })} onClick={() => openDialog(onDelete)}>
             <DeleteIcon className="size-4" /><span className="leading-none">{deleteLabel}</span>
           </Menu.Item>
         </>
@@ -1176,7 +1177,7 @@ function NavCount({ value }: { value: number }) {
   return (
     <span
       aria-hidden
-      className="library-sidebar-count ml-auto shrink-0 pl-2 text-[11px] tabular-nums text-text-secondary group-hover:opacity-0 group-focus-within:opacity-0"
+      className="library-sidebar-count ml-auto shrink-0 pl-2 text-meta tabular-nums text-text-secondary group-hover:opacity-0 group-focus-within:opacity-0"
     >
       {value}
     </span>
@@ -1219,14 +1220,14 @@ function CollapsibleSection({
           title={rail?.label}
           aria-current={rail?.active ? "page" : undefined}
           data-sidebar-section-toggle
-          className={`squircle-panel flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-control-md px-3 text-left text-text-primary hover:bg-bg-raised ${rail?.active ? SHELL_NAV_ITEM_ACTIVE : ""}`}
+          className={`flex h-10 min-w-0 flex-1 items-center gap-2.5 px-3 text-left text-text-primary hover:bg-bg-raised ${rail?.active ? SHELL_NAV_ITEM_ACTIVE : ""}`}
           aria-expanded={rail ? false : open}
           onClick={() => rail ? rail.onExpand() : onOpenChange(!open)}
         >
           <span data-sidebar-icon className="flex size-[18px] shrink-0 items-center justify-center">{icon}</span>
-          <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{title}</span>
+          <span className="min-w-0 flex-1 truncate text-md font-medium">{title}</span>
           <ChevronDownIcon
-            className={`size-3.5 text-text-secondary transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
+            className={`size-3.5 text-text-secondary transition-transform duration-200 ease-standard motion-reduce:transition-none ${
               open ? "" : "-rotate-90"
             }`}
           />
@@ -1242,7 +1243,7 @@ function CollapsibleSection({
         >
           {children}
           {onSeeAll ? <div className="library-sidebar-overview-footer shrink-0 px-3 pt-1">
-            <button type="button" aria-current={overviewActive ? "page" : undefined} onClick={onSeeAll} className={`flex min-h-8 w-full items-center gap-2 rounded-control-md px-3 text-xs font-medium outline-none hover:bg-bg-active focus-visible:outline-1 focus-visible:outline-border-focus ${overviewActive ? "bg-bg-selected text-text-primary" : "bg-bg-raised text-text-secondary"}`}>
+            <button type="button" aria-current={overviewActive ? "page" : undefined} onClick={onSeeAll} className={`flex min-h-8 w-full items-center gap-2 px-3 text-xs font-medium outline-none hover:bg-bg-active focus-visible:outline-1 focus-visible:outline-border-focus ${overviewActive ? "bg-bg-selected text-text-primary" : "bg-bg-raised text-text-secondary"}`}>
               {overviewLabel === "All collections" ? <CollectionIcon className="size-3.5" /> : <HashIcon className="size-3.5" />}<span className="min-w-0 truncate">{overviewLabel}</span>
               <ArrowRightIcon className="ml-auto size-3.5" />
             </button>
@@ -1268,7 +1269,7 @@ function SidebarSearch({
         <span className="sr-only">{label}</span>
         <SearchIcon className="pointer-events-none absolute left-[19px] top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
         <input
-          className="h-7 w-full rounded-control border border-transparent bg-transparent pl-9 pr-2 text-xs"
+          className="h-7 w-full border border-transparent bg-transparent pl-9 pr-2 text-xs"
           placeholder={label === "Search collections" ? "Search folders" : label}
           aria-label={label}
           value={value}

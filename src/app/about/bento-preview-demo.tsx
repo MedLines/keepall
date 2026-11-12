@@ -29,7 +29,7 @@ function PreviewImage({ sample }: { sample: Sample }) {
 }
 
 function SampleCard({ sample, onOpen }: { sample: Sample; onOpen: () => void }) {
-  return <div className="library-card squircle-panel kd-sample-card">
+  return <div className="library-card kd-sample-card">
     {sample.image && <div className="library-card-media"><button type="button" className="kd-preview-media-open" aria-label={`Preview ${sample.item.title}`} onClick={onOpen}><PreviewImage sample={sample} /></button><ItemTypeBadge item={sample.item} /></div>}
     <div className={`library-card-footer ${sample.image ? "library-card-footer-with-media" : "kd-preview-note-card"}`}><LibraryCardContent item={sample.item} onOpen={onOpen} /></div>
   </div>;

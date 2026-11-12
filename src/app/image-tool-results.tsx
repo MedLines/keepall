@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Tooltip } from "@base-ui/react/tooltip";
+import { Tooltip, TooltipProvider } from "@/components/ui/tooltip";
 import { ContextMenu } from "@base-ui/react/context-menu";
 import { motion, useReducedMotion } from "motion/react";
 import { useId, useState, type ReactNode } from "react";
 import { ScrollPanel } from "@/components/ui/scroll-panel";
 import type { ImageAnalysis } from "@/domain/image-analysis";
 import { CheckIcon, ChevronDownIcon, CopyIcon, OcrIcon, PaletteIcon, SearchIcon } from "./shell-icons";
-import { SHELL_TOOLTIP } from "./shell-styles";
 import styles from "./image-tools-panel.module.css";
+import { iconButtonClassName } from "@/components/ui/button";
+import { menuItemClassName } from "@/components/ui/menu-item";
 
 function swatchTextColor(hex: string) {
   const rgb = [1, 3, 5].map(offset => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255)
@@ -25,7 +26,7 @@ function ResultSection({ title, icon, action, children }: {
 }) {
   const [expanded, setExpanded] = useState(true);
   const contentId = useId();
-  return <div className="library-panel squircle-panel min-w-0 rounded-panel border border-border-control bg-bg-image-viewer p-4 sm:p-5">
+  return <div className="library-panel min-w-0 border border-border-control bg-bg-image-viewer p-4 sm:p-5">
     <div className="flex items-center gap-2">
       <h2 className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-text-primary">{icon}<span>{title}</span></h2>
       {action}
@@ -57,29 +58,28 @@ export function PaletteSection({ palette, copied, onCopy, allowLibrarySearch = t
   onCopy: (value: string, key: string) => void;
 }) {
   return <ResultSection title="Palette" icon={<PaletteIcon className="size-4" />}>
-    {palette.length ? <Tooltip.Provider delay={250}>
+    {palette.length ? <TooltipProvider delay={250}>
         <ul className={styles.palette} aria-label="Image colors">
           {palette.map(hex => <li key={hex}><PaletteSwatch portalContainer={portalContainer} allowLibrarySearch={allowLibrarySearch} hex={hex} copied={copied === hex} onCopy={() => onCopy(hex, hex)} /></li>)}
         </ul>
-      </Tooltip.Provider> : <p className="text-sm text-text-secondary">No opaque colors found.</p>}
+      </TooltipProvider> : <p className="text-sm text-text-secondary">No opaque colors found.</p>}
   </ResultSection>;
 }
 
 export function PaletteSwatch({ hex, copied, onCopy, allowLibrarySearch, portalContainer }: { hex: string; copied: boolean; onCopy: () => void; allowLibrarySearch: boolean; portalContainer?: HTMLElement | null }) {
-  const menuItem = "ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active";
+  const menuItem = menuItemClassName();
   return <ContextMenu.Root>
-    <Tooltip.Root>
-      <Tooltip.Trigger render={<ContextMenu.Trigger render={<button type="button" />} onKeyDown={event => {
+    <Tooltip content={hex} side="top" container={portalContainer} delay={600} describe={false}>
+      <ContextMenu.Trigger render={<button type="button" />} onKeyDown={event => {
         if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
         event.preventDefault();
         const bounds = event.currentTarget.getBoundingClientRect();
         event.currentTarget.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: bounds.left + bounds.width / 2, clientY: bounds.bottom }));
-      }} />} className={`ui-control ${styles.swatch}`} style={{ backgroundColor: hex, color: swatchTextColor(hex) }} aria-label={`Copy color ${hex}`} onClick={onCopy}>
+      }} className={`ui-control ${styles.swatch}`} style={{ backgroundColor: hex, color: swatchTextColor(hex) }} aria-label={`Copy color ${hex}`} onClick={onCopy}>
         <span className="font-mono text-xs tabular-nums">{hex}</span>
         <span className={styles.swatchFeedback} data-copied={copied}><CopyFeedback copied={copied} /></span>
-      </Tooltip.Trigger>
-      <Tooltip.Portal container={portalContainer}><Tooltip.Positioner side="top" sideOffset={8} className="z-[100]"><Tooltip.Popup className={SHELL_TOOLTIP}>{hex}</Tooltip.Popup></Tooltip.Positioner></Tooltip.Portal>
-    </Tooltip.Root>
+      </ContextMenu.Trigger>
+    </Tooltip>
     <ContextMenu.Portal container={portalContainer}>
       <ContextMenu.Positioner sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60]">
         <ContextMenu.Popup aria-label={`Color ${hex}`} className="ui-menu-popup ui-popover w-72 max-w-[calc(100vw-1rem)] outline-none">
@@ -100,7 +100,7 @@ export function ScreenshotTextSection({ ocr, slide, copied, onCopy }: {
   copied: boolean;
   onCopy: (value: string, key: string) => void;
 }) {
-  return <ResultSection title="Screenshot text" icon={<OcrIcon className="size-4" />} action={ocr.text ? <button type="button" className="ui-control flex size-11 shrink-0 items-center justify-center" aria-label="Copy text" title="Copy text" onClick={() => onCopy(ocr.text, "ocr")}><CopyFeedback copied={copied} /></button> : null}>
+  return <ResultSection title="Screenshot text" icon={<OcrIcon className="size-4" />} action={ocr.text ? <button type="button" className={iconButtonClassName({ size: "lg" })} aria-label="Copy text" title="Copy text" onClick={() => onCopy(ocr.text, "ocr")}><CopyFeedback copied={copied} /></button> : null}>
     <p className="text-xs text-text-secondary" title="Recognized text may contain mistakes.">English · {Math.round(ocr.confidence)}% confidence</p>
     {ocr.text ? <ScrollPanel role="region" aria-label={`Extracted text from image ${slide + 1}`} className={styles.text} viewportClassName="max-h-64 px-4 py-3" viewportProps={{ tabIndex: 0 }}>
       <p className="select-text whitespace-pre-wrap break-words text-sm leading-6 text-text-primary [overflow-wrap:anywhere]">{ocr.text}</p>

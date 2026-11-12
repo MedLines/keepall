@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask, TextLayer } from "pdfjs-dist";
 import "./pdf-viewer.css";
 import { PdfLoadingPaper } from "./document-loading-content";
+import { buttonClassName } from "@/components/ui/button";
 
 export function PdfPage({ document, number, zoom, viewportSize }: { document: PDFDocumentProxy; number: number; zoom: string; viewportSize?: { width: number; height: number } }) {
   const frame = useRef<HTMLDivElement>(null);
@@ -79,7 +80,7 @@ export function PdfPage({ document, number, zoom, viewportSize }: { document: PD
 
   const error = rendered?.key === key && rendered.error;
   return <div ref={frame} data-pdf-ready={rendered && !rendered.error ? number : undefined} className="relative min-w-0">
-    {error ? <div role="alert" className="mb-3 text-sm text-text-danger">Couldn&apos;t display this page. Try another page or download the file. <button type="button" className="ui-control min-h-9 px-3" onClick={() => setAttempt(value => value + 1)}>Retry page</button></div> : null}
+    {error ? <div role="alert" className="mb-3 text-sm text-text-danger">Couldn&apos;t display this page. Try another page or download the file. <button type="button" className={buttonClassName({ size: "none", className: "inline-block min-h-9 px-3" })} onClick={() => setAttempt(value => value + 1)}>Retry page</button></div> : null}
     <ScrollPanel orientation="both" className="max-w-full rounded-input border border-border-control bg-bg-raised" aria-busy={rendered?.key !== key}>
       {!rendered && !viewportSize ? <PdfLoadingPaper /> : null}
       <div ref={display} className="relative mx-auto w-fit bg-white" style={viewportSize} />

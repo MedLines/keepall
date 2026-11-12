@@ -5,6 +5,7 @@ import { CAPTURE_FILE_ACCEPT, classifyCaptureFile } from "@/domain/capture-file"
 import { readImageDirectory as readDirectory, type ImageDirectoryPicker } from "./read-image-directory";
 import { storageQuotaWarningForImport } from "./storage-quota-warning";
 import { abortable } from "@/lib/abortable";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   buttonClassName: string;
@@ -116,8 +117,8 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
         <p role="status" className="mt-2 text-sm text-text-secondary">
           Reading {reading.name}… {reading.count} {reading.count === 1 ? "file" : "files"} found{reading.currentName ? ` · ${reading.currentName}` : ""}
         </p>
-        <button type="button" className="ui-control mt-2 min-h-10 px-4 text-sm font-medium disabled:opacity-60" disabled={cancelling}
-          onClick={() => { setCancelling(true); abortRef.current?.abort(); }}>{cancelling ? "Canceling…" : "Cancel reading"}</button>
+        <Button className="mt-2" disabled={cancelling}
+          onClick={() => { setCancelling(true); abortRef.current?.abort(); }}>{cancelling ? "Canceling…" : "Cancel reading"}</Button>
       </div> : null}
       {error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : null}
       {!locked && status ? <p role="status" className="text-sm text-text-secondary">{status}</p> : null}

@@ -10,6 +10,7 @@ import { usePdfDocument } from "./use-pdf-document";
 import { PdfScroll, type PdfScrollHandle } from "./pdf-scroll";
 import { usePdfPageSizes } from "./use-pdf-page-sizes";
 import { PdfLoadingPaper, PdfViewerLoading } from "./document-loading-content";
+import { Button, buttonClassName } from "@/components/ui/button";
 
 
 export function PdfViewer({ item }: { item: DocumentItem }) {
@@ -18,8 +19,8 @@ export function PdfViewer({ item }: { item: DocumentItem }) {
   if (state.status === "error") return <div className="grid justify-items-start gap-3">
     <p role="alert">{state.message}</p>
     <div className="flex flex-wrap gap-2">
-      <button type="button" className="ui-control min-h-11 px-4 text-sm font-medium" onClick={retry}>Retry document</button>
-      <Link href="/settings#storage" className="ui-control inline-flex min-h-11 items-center px-4 text-sm font-medium">Open backups</Link>
+      <Button size="lg" onClick={retry}>Retry document</Button>
+      <Link href="/settings#storage" className={buttonClassName({ size: "lg" })}>Open backups</Link>
     </div>
   </div>;
   return <LoadedPdf key={state.key} document={state.document} noText={state.noText} />;
@@ -60,7 +61,7 @@ function LoadedPdf({ document, noText }: { document: PDFDocumentProxy; noText: b
       onPageFocus={() => setPageDraft(String(page))} onPageDraftChange={setPageDraft} onPageCommit={jumpToPage} />
     {layout.status === "ready" ? <PdfScroll key={zoom} document={document} sizes={layout.sizes} zoom={zoom} view={view} startPage={page} onPageChange={setPage} ref={scroll} />
       : view === "pages" ? <div ref={pageFrame} className="min-w-0"><PdfPage document={document} number={page} zoom={zoom} /></div>
-      : layout.status === "error" ? <div role="alert" className="flex flex-wrap items-center gap-3 text-sm">Couldn&apos;t prepare the scroll view. Try again or use Pages.<button type="button" className="ui-control min-h-10 px-3" onClick={retry}>Retry scroll view</button></div>
+      : layout.status === "error" ? <div role="alert" className="flex flex-wrap items-center gap-3 text-sm">Couldn&apos;t prepare the scroll view. Try again or use Pages.<button type="button" className={buttonClassName({ size: "none", className: "inline-block min-h-10 px-3" })} onClick={retry}>Retry scroll view</button></div>
       : <PdfLoadingPaper />}
 
     {noText ? <p className="rounded-input border border-border-control bg-bg-raised p-3 text-sm text-text-secondary">This PDF has no selectable text. Search can find its title, filename, tags, and your notes. Text in scanned pages needs OCR.</p> : null}

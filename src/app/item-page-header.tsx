@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeftIcon, LinkIcon } from "./shell-icons";
 import { ThemeControl } from "./theme-control";
+import { buttonClassName } from "@/components/ui/button";
 
 type Props = {
   returnHref: string;
@@ -9,7 +10,7 @@ type Props = {
   titleAsHeading?: boolean;
 };
 
-const CONTROL = "ui-control inline-flex min-h-11 shrink-0 items-center justify-center px-3 text-sm font-medium";
+const CONTROL = buttonClassName({ size: "none", className: "min-h-11 shrink-0 px-3 text-sm font-medium" });
 
 export function ItemPageHeader({ returnHref, title, sourceUrl, titleAsHeading = false }: Props) {
   const Title = titleAsHeading ? "h1" : "span";

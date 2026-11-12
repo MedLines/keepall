@@ -8,6 +8,7 @@ import {
   observeBackupFolderStatus, saveFolderBackup, supportsFolderBackups,
   type BackupFolderHandle, type BackupFolderSettings,
 } from "@/persistence/backup-settings";
+import { buttonClassName } from "@/components/ui/button";
 
 type View = { supported: boolean; settings?: BackupFolderSettings; permission: PermissionState; hasPendingChanges?: boolean };
 type Action = "choose" | "save" | "reconnect";
@@ -137,7 +138,7 @@ function FolderBackupDetails({ settings, hasPendingChanges }: { settings: Backup
   </dl>;
 }
 
-const buttonClass = "ui-control min-h-10 px-4 py-2 text-sm font-medium disabled:opacity-60";
+const buttonClass = buttonClassName({ className: "py-2" });
 
 function FolderBackupButtons({ settings, needsAccess, disabled, actions }: {
   settings?: BackupFolderSettings;

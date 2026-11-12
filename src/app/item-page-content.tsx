@@ -12,6 +12,7 @@ import { DocumentItemPage } from "./document-item-page";
 import { readItemNavigation } from "./item-navigation-snapshot";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { ItemPageLoading } from "./library-loading-content";
+import { buttonClassName } from "@/components/ui/button";
 
 export function ItemPageContent({ itemId, returnHref }: { itemId: string; returnHref: string }) {
   const [initialSnapshot] = useState(() => readItemNavigation(itemId));
@@ -64,14 +65,14 @@ export function ItemPageContent({ itemId, returnHref }: { itemId: string; return
     <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5">
       <div className="text-center">
         <p role={type === "error" ? "alert" : "status"} className="text-text-secondary">{message}</p>
-        {type === "error" ? <button type="button" className="ui-control mt-5 inline-flex min-h-10 items-center px-4" onClick={() => { setType("loading"); setLoadAttempt(attempt => attempt + 1); }}>Retry</button> : null}
+        {type === "error" ? <button type="button" className={buttonClassName({ size: "none", className: "mt-5 min-h-10 px-4 justify-start" })} onClick={() => { setType("loading"); setLoadAttempt(attempt => attempt + 1); }}>Retry</button> : null}
         <Link
           href={returnHref}
-          className="ui-control mt-5 inline-flex min-h-10 items-center px-4"
+          className={buttonClassName({ size: "none", className: "mt-5 min-h-10 px-4 justify-start" })}
         >
           Return to library
         </Link>
-        {type === "missing" ? <Link href="/trash" className="ui-control ml-2 inline-flex min-h-10 items-center px-4">Open Trash</Link> : null}
+        {type === "missing" ? <Link href="/trash" className={buttonClassName({ size: "none", className: "ml-2 min-h-10 px-4 justify-start" })}>Open Trash</Link> : null}
       </div>
     </main>
   );

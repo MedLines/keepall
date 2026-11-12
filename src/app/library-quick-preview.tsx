@@ -4,14 +4,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScrollPanel } from "@/components/ui/scroll-panel";
 
 import { Dialog } from "@base-ui/react/dialog";
-import { Tooltip } from "@base-ui/react/tooltip";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { itemListTitle, type Item } from "@/domain/item";
 import { LibraryItemMedia } from "./library-item-media";
 import { NoteContent } from "./note-content";
 import { DocumentContent } from "./document-content";
 import { getVideoBlob } from "@/persistence/videos";
-import { SegmentedControl } from "./segmented-control";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ArrowLeftIcon, ArrowRightIcon, CloseIcon, ExternalLinkIcon, FullScreenIcon, LinkIcon, NoteIcon } from "./shell-icons";
 import { ItemTypeIcon } from "./item-type-icon";
 import { MediaViewerToolbar } from "./media-viewer-toolbar";
@@ -19,6 +19,7 @@ import { linkCardHost } from "@/domain/card-display";
 import { useThumbnailObjectUrl } from "./use-thumbnail-object-url";
 import { VideoPlayer } from "./video-player";
 import { ItemPreviewContentTransition, ItemPreviewTransition, ItemViewTransition } from "./item-view-transition";
+import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 
 type Props = {
   item: Item | null;
@@ -81,7 +82,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
           {item ? <>
             <div className={`library-preview-surface relative flex min-h-[min(12rem,35dvh)] flex-1 flex-col overflow-hidden rounded-panel border border-border-edge bg-bg-card ${review ? "library-review-content" : ""}`}>
             <header className="flex shrink-0 items-start gap-4 p-4">
-              <span className="grid size-10 shrink-0 place-items-center rounded-control bg-bg-raised text-text-secondary">
+              <span className="grid size-10 shrink-0 place-items-center rounded-control-xs bg-bg-raised text-text-secondary">
                 <ItemTypeIcon item={item} className="size-6" />
               </span>
               <div className="min-w-0 flex-1">
@@ -89,7 +90,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
                 <p className="mt-1 truncate text-xs text-text-secondary">{review ? "Unsorted review · " : ""}{item.type === "document" ? item.sourceFileName : item.type === "link" ? linkCardHost(item) : item.type === "image" ? `${item.assetIds.length} ${item.assetIds.length === 1 ? "image" : "images"}` : item.type === "video" ? "Local video" : item.format === "markdown" ? "Markdown" : "Plain text"}</p>
               </div>
               <Dialog.Description className="sr-only">{review ? "Unsorted review. Left and right arrows browse items. Collection and tag controls open the shared picker. Next leaves the item in Unsorted. Escape closes review." : "Quick preview. Arrows browse items. Enter opens the full item."}</Dialog.Description>
-              <Dialog.Close disabled={review?.busy} aria-label="Close preview" className="ui-control flex size-11 shrink-0 items-center justify-center"><CloseIcon /></Dialog.Close>
+              <Dialog.Close disabled={review?.busy} aria-label="Close preview" className={iconButtonClassName({ size: "lg" })}><CloseIcon /></Dialog.Close>
             </header>
             <div key={item.id} className={`${review ? "min-h-[min(6rem,15dvh)]" : "min-h-0"} flex-1 overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus`} tabIndex={0} role="region" aria-label="Preview content">
               <PreviewContent item={item} reviewing={reviewing} onGalleryStep={() => popupRef.current?.focus({ preventScroll: true })} />
@@ -100,17 +101,17 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
             <footer className={`${review ? "library-review-footer" : "library-preview-footer"} shrink-0`}>
               {review ? review.footer : <>
               <div className="library-preview-navigation flex items-center gap-2">
-                <button type="button" className="ui-control inline-flex min-h-11 shrink-0 items-center justify-center gap-2 ps-2 pe-3 text-sm disabled:opacity-50" aria-label="Previous item" title="Previous item" disabled={index <= 0} onClick={() => onMove(-1)}><ArrowLeftIcon className="size-4 rtl:rotate-180" />Back</button>
+                <button type="button" className={buttonClassName({ size: "none", className: "min-h-11 shrink-0 gap-2 ps-2 pe-3 text-sm disabled:opacity-50" })} aria-label="Previous item" title="Previous item" disabled={index <= 0} onClick={() => onMove(-1)}><ArrowLeftIcon className="size-4 rtl:rotate-180" />Back</button>
               </div>
-              <div className="library-preview-confirm"><button type="button" className="ui-control ui-primary inline-flex min-h-11 items-center justify-center gap-2 ps-2 pe-3 text-sm font-medium" onClick={event => openFullItem(event.detail > 0)}><FullScreenIcon className="size-4" />Open full item</button></div>
-              <div className="library-preview-next"><button type="button" className="ui-control inline-flex min-h-11 shrink-0 items-center justify-center gap-2 ps-3 pe-2 text-sm disabled:opacity-50" aria-label="Next item" title="Next item" disabled={index >= count - 1} onClick={() => onMove(1)}>Next<ArrowRightIcon className="size-4 rtl:rotate-180" /></button></div>
+              <div className="library-preview-confirm"><button type="button" className={buttonClassName({ variant: "primary", size: "none", className: "min-h-11 gap-2 ps-2 pe-3 text-sm font-medium" })} onClick={event => openFullItem(event.detail > 0)}><FullScreenIcon className="size-4" />Open full item</button></div>
+              <div className="library-preview-next"><button type="button" className={buttonClassName({ size: "none", className: "min-h-11 shrink-0 gap-2 ps-3 pe-2 text-sm disabled:opacity-50" })} aria-label="Next item" title="Next item" disabled={index >= count - 1} onClick={() => onMove(1)}>Next<ArrowRightIcon className="size-4 rtl:rotate-180" /></button></div>
               </>}
             </footer>
           </> : review ? <>
             <div className="library-preview-surface library-review-content relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-border-edge bg-bg-card">
             <header className="flex shrink-0 items-center justify-between gap-4 p-4">
               <Dialog.Title className="text-lg font-semibold">Unsorted review</Dialog.Title>
-              <Dialog.Close disabled={review.busy} aria-label="Close preview" className="ui-control flex size-11 items-center justify-center"><CloseIcon /></Dialog.Close>
+              <Dialog.Close disabled={review.busy} aria-label="Close preview" className={iconButtonClassName({ size: "lg" })}><CloseIcon /></Dialog.Close>
             </header>
             <Dialog.Description className="sr-only">Unsorted review. Undo returns to the previous review action.</Dialog.Description>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-16">{review.emptyState}</div>
@@ -133,7 +134,6 @@ function previewTitle(item: Item): string {
 
 function PreviewTitle({ title }: { title: string }) {
   const titleRef = useRef<HTMLElement>(null);
-  const tooltipId = useId();
   const [truncated, setTruncated] = useState(false);
   useEffect(() => {
     const node = titleRef.current;
@@ -146,17 +146,14 @@ function PreviewTitle({ title }: { title: string }) {
     return () => { cancelAnimationFrame(frame); observer?.disconnect(); window.removeEventListener("resize", measure); };
   }, []);
   return <Dialog.Title className="min-w-0 flex-1 text-lg font-semibold text-text-primary">
-    <Tooltip.Root disabled={!truncated}>
-      <Tooltip.Trigger ref={(node: HTMLElement | null) => { titleRef.current = node; }} render={<span />} tabIndex={truncated ? 0 : -1} aria-describedby={truncated ? tooltipId : undefined} delay={350}
+    <Tooltip content={<ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1 whitespace-pre-wrap break-words">{title}</ScrollArea>}
+      disabled={!truncated} side="bottom" align="start" collisionPadding={16} layerClassName="z-[90]" unstyled
+      className="ui-popover flex max-h-[min(16rem,40dvh)] max-w-[min(32rem,calc(100vw-2rem))] flex-col overflow-hidden px-3 py-2 text-sm font-normal">
+      <span ref={(node: HTMLElement | null) => { titleRef.current = node; }} tabIndex={truncated ? 0 : -1}
         className="block truncate rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-border-focus">
         {title}
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Positioner side="bottom" align="start" sideOffset={8} collisionPadding={16} className="z-[90]">
-          <Tooltip.Popup id={tooltipId} role="tooltip" className="ui-popover flex max-h-[min(16rem,40dvh)] max-w-[min(32rem,calc(100vw-2rem))] flex-col overflow-hidden px-3 py-2 text-sm font-normal"><ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1 whitespace-pre-wrap break-words">{title}</ScrollArea></Tooltip.Popup>
-        </Tooltip.Positioner>
-      </Tooltip.Portal>
-    </Tooltip.Root>
+      </span>
+    </Tooltip>
   </Dialog.Title>;
 }
 
@@ -180,7 +177,7 @@ function PreviewContent({ item, onGalleryStep, reviewing }: { item: Item; onGall
     {item.noteContent ? <section aria-label="Document notes" className="mx-auto mt-5 max-w-[65ch] border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
   </ScrollPanel>;
   const details = <ItemPreviewContentTransition itemId={item.id} source><div className={`flex w-full flex-col gap-4 ${reviewing ? "" : "mx-auto max-w-[65ch]"}`}>
-    <a href={item.url} target="_blank" rel="noreferrer" aria-label={`Open source: ${item.url}`} className="ui-control inline-flex min-h-11 max-w-full self-start items-center gap-2 px-3 text-sm text-text-secondary"><LinkIcon className="size-4" /><span className="truncate">{linkCardHost(item)}</span><ExternalLinkIcon className="size-4" /></a>
+    <a href={item.url} target="_blank" rel="noreferrer" aria-label={`Open source: ${item.url}`} className={buttonClassName({ size: "none", className: "min-h-11 max-w-full self-start gap-2 px-3 text-sm text-text-secondary justify-start" })}><LinkIcon className="size-4" /><span className="truncate">{linkCardHost(item)}</span><ExternalLinkIcon className="size-4" /></a>
     {item.previewDescription ? <p className="whitespace-pre-wrap break-words text-text-secondary">{item.previewDescription}</p> : null}
     {item.noteContent ? <section aria-label="Link notes" className="border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent className="library-preview-document" content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
   </div></ItemPreviewContentTransition>;
@@ -199,9 +196,9 @@ function ImagePreview({ item, onGalleryStep }: { item: Extract<Item, { type: "im
     <MediaViewerToolbar view={<SegmentedControl label="Image sizing" value={imageSizing} onChange={setImageSizing} className="w-40"
       choices={[{ value: "fit", label: "Fit", ariaLabel: "Fit image" }, { value: "scroll", label: "Scroll", ariaLabel: "Scroll image" }]} />}
       navigation={item.assetIds.length === 1 ? null : <div className="flex items-center justify-center gap-1.5">
-        <button type="button" className="ui-control flex size-[var(--viewer-control-size,2.75rem)] shrink-0 items-center justify-center disabled:opacity-40" aria-label="Previous gallery image" title="Previous gallery image" disabled={slide === 0} onClick={() => { onGalleryStep(); setSlide(slide - 1); }}><ArrowLeftIcon className="size-4 rtl:rotate-180" /></button>
+        <button type="button" className={iconButtonClassName({ size: "md", className: "size-[var(--viewer-control-size,2.75rem)] disabled:opacity-40" })} aria-label="Previous gallery image" title="Previous gallery image" disabled={slide === 0} onClick={() => { onGalleryStep(); setSlide(slide - 1); }}><ArrowLeftIcon className="size-4 rtl:rotate-180" /></button>
         <span className="whitespace-nowrap text-xs tabular-nums text-text-secondary"><span className="sr-only">Image </span>{slide + 1} of {item.assetIds.length}</span>
-        <button type="button" className="ui-control flex size-[var(--viewer-control-size,2.75rem)] shrink-0 items-center justify-center disabled:opacity-40" aria-label="Next gallery image" title="Next gallery image" disabled={slide >= item.assetIds.length - 1} onClick={() => { onGalleryStep(); setSlide(slide + 1); }}><ArrowRightIcon className="size-4 rtl:rotate-180" /></button>
+        <button type="button" className={iconButtonClassName({ size: "md", className: "size-[var(--viewer-control-size,2.75rem)] disabled:opacity-40" })} aria-label="Next gallery image" title="Next gallery image" disabled={slide >= item.assetIds.length - 1} onClick={() => { onGalleryStep(); setSlide(slide + 1); }}><ArrowRightIcon className="size-4 rtl:rotate-180" /></button>
       </div>} />
     <ScrollPanel key={slide} orientation="both" className="min-h-0 min-w-0 flex-1"
       viewportProps={{ "data-preview-media": "", "data-image-sizing": imageSizing, "data-preview-scroll": imageSizing === "scroll" ? "" : undefined, tabIndex: imageSizing === "scroll" ? 0 : -1, role: "region", "aria-label": "Image viewport" }}>

@@ -60,7 +60,7 @@ export function NotesDemo() {
   const [editing, setEditing] = useState(false);
   const [format, setFormat] = useState<"plain" | "markdown">("markdown");
   const [content, setContent] = useState(sampleNote);
-  return <div className="kd-demo kd-notes squircle-panel" data-feature-demo="notes">
+  return <div className="kd-demo kd-notes" data-feature-demo="notes">
     <div className="kd-note-heading"><NoteFormatControl format={format} onChange={value => { setFormat(value); setEditing(false); }} /><button type="button" className="ui-control kd-button" onClick={() => setEditing(value => !value)}>{editing ? "Preview" : "Edit"}</button></div>
     {editing ? <DemoNoteEditor content={content} onChange={setContent} />
       : <ScrollPanel className="kd-note-body" viewportProps={{ tabIndex: 0, "aria-label": "Sample note content" }}><NoteContent content={content} format={format} allowLocalImages={false} /></ScrollPanel>}

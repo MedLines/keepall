@@ -26,6 +26,7 @@ import { NoteContent } from "./note-content";
 import { DownloadIcon } from "./shell-icons";
 import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
 import { ItemViewTransition } from "./item-view-transition";
+import { Button, buttonClassName } from "@/components/ui/button";
 
 type State = { itemId: string } & (
   | { status: "loading" | "missing" | "error" }
@@ -95,7 +96,7 @@ export function DocumentItemPage({ itemId, returnHref, initialSnapshot }: { item
   if (state.itemId !== itemId || state.status === "loading") return <ItemPageLoading returnHref={returnHref} />;
   if (state.status !== "ready") return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5">
     <div className="text-center"><p className="text-text-secondary">{state.status === "missing" ? "Document not found. It may be in Trash." : "Couldn't load this document."}</p>
-      <Link href={returnHref} className="ui-control mt-5 inline-flex min-h-11 items-center px-4">Return to library</Link>
+      <Link href={returnHref} className={buttonClassName({ size: "none", className: "mt-5 min-h-11 px-4 justify-start" })}>Return to library</Link>
     </div>
   </main>;
 
@@ -113,7 +114,7 @@ export function DocumentItemPage({ itemId, returnHref, initialSnapshot }: { item
           </ItemViewTransition>
           <section aria-label="Personal note" className="mt-9 border-t border-border-control pt-8">
             <h2 className="mb-4 text-lg font-semibold">My note</h2>
-            {item.noteContent ? <NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /> : <button type="button" className="ui-control min-h-11 px-4 text-sm font-medium" disabled={busy} onClick={() => { setError(null); setEditing(true); }}>Add a personal note</button>}
+            {item.noteContent ? <NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /> : <Button size="lg" disabled={busy} onClick={() => { setError(null); setEditing(true); }}>Add a personal note</Button>}
           </section>
         </div>
         <ItemLibraryDetails label="Document details" summary={{ label: "Format", value: item.format === "pdf" ? "PDF" : item.format === "markdown" ? "Markdown" : "Plain text" }}

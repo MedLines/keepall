@@ -118,6 +118,7 @@ import {
   subscribePreviewEnrichProgress,
   type PreviewEnrichProgress,
 } from "./preview-enrich-coordinator";
+import { buttonClassName } from "@/components/ui/button";
 import { wakeLinkPreviewRetries } from "./wake-link-preview-retries";
 import { LibraryItem, type PendingMutation } from "./library-item";
 import { LibraryInspect } from "./library-inspect";
@@ -1990,10 +1991,10 @@ export function Library() {
           }}
         />
 
-        <div data-library-panel className="library-panel squircle-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-panel bg-bg-canvas shadow-panel">
+        <div data-library-panel className="library-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-bg-canvas shadow-panel">
         {topBar}
         {browseUnsorted && !view.trash && !view.collections && !view.tags ? <div className="px-3 pb-4 sm:px-6">
-          <button ref={reviewButtonRef} type="button" aria-haspopup="dialog" disabled={loadState !== "ready" || mutationBusy || previewOpen || items.every(item => item.collectionIds.length > 0)} className="ui-control min-h-11 px-4 text-sm disabled:opacity-50" onClick={() => setReviewOpen(true)}>Review Unsorted</button>
+          <button ref={reviewButtonRef} type="button" aria-haspopup="dialog" disabled={loadState !== "ready" || mutationBusy || previewOpen || items.every(item => item.collectionIds.length > 0)} className={buttonClassName({ size: "none", className: "inline-block min-h-11 px-4 text-sm disabled:opacity-50" })} onClick={() => setReviewOpen(true)}>Review Unsorted</button>
           <p className="mt-2 text-xs text-text-secondary">Review all items without a collection, one at a time.</p>
         </div> : null}
         {reviewOpen ? <UnsortedReview items={items} collections={collections} tags={tags} onClose={() => setReviewOpen(false)} onOpenItem={openInspect} returnFocus={() => reviewButtonRef.current ?? libraryHeadingRef.current} /> : null}
@@ -2005,14 +2006,14 @@ export function Library() {
           {loadState === "error" ? (
             <p className="text-sm text-text-danger" role="alert">
               {error ?? "Couldn't load items."} Try loading again.
-              {" "}<button type="button" className="ui-control inline-flex min-h-10 items-center px-4" onClick={() => setLoadAttempt(attempt => attempt + 1)}>Retry</button>
+              {" "}<button type="button" className={buttonClassName({ size: "none", className: "min-h-10 px-4 justify-start" })} onClick={() => setLoadAttempt(attempt => attempt + 1)}>Retry</button>
             </p>
           ) : (
             <LibraryLayoutTransition><LibraryStartupContent loading={loadState === "loading"} layout={browseLayout} columns={view.listColumns ?? "auto"}
               kind={view.collections ? "collections" : view.tags ? "tags" : "items"}>
               {documentSearch.error || documentSearch.unavailable > 0 ? <p role="status" className="mb-3 text-sm text-text-secondary">
                 {documentSearch.error ? "Couldn't search file contents. Titles, tags, and personal notes are still searchable." : `${documentSearch.unavailable} file${documentSearch.unavailable === 1 ? " couldn't" : "s couldn't"} be searched. Try again or restore missing files from a backup.`}
-                {" "}<button type="button" className="ui-control inline-flex min-h-8 items-center px-2 text-sm" onClick={documentSearch.retry}>Retry search</button>
+                {" "}<button type="button" className={buttonClassName({ size: "none", className: "min-h-8 px-2 text-sm justify-start" })} onClick={documentSearch.retry}>Retry search</button>
               </p> : null}
               {trashActions.notice ? <p role="status" className="mb-3 text-sm text-text-secondary">{trashActions.notice}</p> : null}
               {trashActions.error ? <p role="alert" className="mb-3 text-sm text-text-danger">{trashActions.error}</p> : null}

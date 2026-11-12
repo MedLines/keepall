@@ -30,6 +30,7 @@ import {
   type KeyboardEvent,
   useState,
 } from "react";
+import { buttonClassName } from "@/components/ui/button";
 
 type Props = {
   item: Item | null;
@@ -85,7 +86,7 @@ type Props = {
 };
 
 const BTN =
-  "rounded-md border border-border-edge bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60";
+  "border border-border-edge bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-transform duration-(--motion-quick) ease-out active:scale-[0.96] disabled:opacity-60";
 
 export function LibraryInspect({
   item,
@@ -471,7 +472,7 @@ export function LibraryInspect({
                     </div>
                   ) : null}
 
-                  <button type="button" className="ui-control mt-4 inline-flex min-h-10 items-center gap-2 px-3 text-sm font-medium disabled:opacity-60"
+                  <button type="button" className={buttonClassName({ size: "none", className: "mt-4 min-h-10 gap-2 px-3 text-sm font-medium justify-start" })}
                     disabled={mutationBusy} onClick={() => {
                       setOrganizerSide(document.documentElement.dir === "rtl" ? "left" : "right");
                       setOrganizerOpen(true);
@@ -570,7 +571,7 @@ export function LibraryInspect({
                     </button>
                     <button
                       type="button"
-                      className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm font-medium text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger disabled:opacity-60"
+                      className={buttonClassName({ size: "none", className: "min-h-10 gap-2 px-3 text-sm font-medium text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger justify-start" })}
                       disabled={mutationBusy}
                       onClick={onStartDelete}
                     >
@@ -684,7 +685,7 @@ function EditLink({
       ) : null}
       <div className="flex flex-wrap gap-2">
         <button
-          className="rounded-md bg-action-primary px-3 py-1.5 text-sm font-medium text-text-on-action disabled:opacity-60"
+          className="bg-action-primary px-3 py-1.5 text-sm font-medium text-text-on-action disabled:opacity-60"
           type="button"
           disabled={mutationBusy}
           onClick={onSaveLink}
@@ -792,7 +793,7 @@ function EditImage({
       ) : null}
       <div className="flex flex-wrap gap-2">
         <button
-          className="rounded-md bg-action-primary px-3 py-1.5 text-sm font-medium text-text-on-action disabled:opacity-60"
+          className="bg-action-primary px-3 py-1.5 text-sm font-medium text-text-on-action disabled:opacity-60"
           type="button"
           disabled={mutationBusy}
           onClick={onSaveImage}

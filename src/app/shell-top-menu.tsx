@@ -3,6 +3,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select } from "@base-ui/react/select";
 import { Tooltip } from "@base-ui/react/tooltip";
+import { TooltipContent } from "@/components/ui/tooltip";
 import { useId, type ReactNode } from "react";
 import { MenuHoverList } from "@/components/ui/menu-hover-list";
 import { CheckIcon, ChevronDownIcon } from "./shell-icons";
@@ -10,8 +11,9 @@ import {
   SHELL_TOP_BTN,
   SHELL_TOP_BTN_ACTIVE,
   SHELL_TOP_BTN_IDLE,
-  SHELL_TOOLTIP,
 } from "./shell-styles";
+import { iconButtonClassName } from "@/components/ui/button";
+import { menuItemClassName } from "@/components/ui/menu-item";
 
 type Option<T extends string> = {
   value: T;
@@ -75,7 +77,7 @@ export function ShellTopMenu<T extends string>({
         className={
           field
             ? `flex w-full min-w-0 items-center justify-between gap-2 text-left ${className}`
-            : `${iconOnly ? `ui-control flex size-11 items-center justify-center rounded-control-lg ${emphasized ? "ui-selected" : ""}` : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`} ${className}`
+            : `${iconOnly ? iconButtonClassName({ size: "lg", className: emphasized ? "ui-selected" : "" }) : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`} ${className}`
         }
         aria-label={field ? undefined : `${ariaLabel}: ${activeOption?.label ?? ""}`}
       >
@@ -105,11 +107,7 @@ export function ShellTopMenu<T extends string>({
                     key={option.value}
                     value={option.value}
                     label={option.label}
-                    className={`shell-select-option ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active ${
-                      option.value === value
-                        ? "font-medium"
-                        : ""
-                    }`}
+                    className={menuItemClassName({ className: `shell-select-option ${option.value === value ? "font-medium" : ""}` })}
                   >
                     {option.icon}
                     <Select.ItemText className="flex-1 whitespace-nowrap">{option.label}</Select.ItemText>
@@ -137,11 +135,7 @@ export function ShellTopMenu<T extends string>({
   return (
     <Tooltip.Root>
       {menu}
-      <Tooltip.Portal container={portalContainer}>
-        <Tooltip.Positioner side="bottom" sideOffset={8} collisionPadding={8} className="z-[100]">
-          <Tooltip.Popup id={tooltipId} role="tooltip" className={SHELL_TOOLTIP}>{ariaLabel}: {activeOption?.label}</Tooltip.Popup>
-        </Tooltip.Positioner>
-      </Tooltip.Portal>
+      <TooltipContent id={tooltipId} container={portalContainer} collisionPadding={8}>{ariaLabel}: {activeOption?.label}</TooltipContent>
     </Tooltip.Root>
   );
 }

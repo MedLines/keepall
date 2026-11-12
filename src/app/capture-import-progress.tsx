@@ -2,6 +2,7 @@
 
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import type { FileImportStage } from "@/domain/capture-file";
+import { Button } from "@/components/ui/button";
 
 export type CaptureImportProgress = {
   stage: FileImportStage | "preparing-images" | "saving-gallery";
@@ -27,7 +28,7 @@ export function CaptureImportProgressDialog({ progress, onCancel, cancelling }: 
   return <ModalDialog open={progress !== null} busy title="Importing files"
     description={gallery ? "Saving these images together as one library item." : preparing ? "Reading images before you choose how to save them." : "Saving each file as a separate library item."}
     onOpenChange={() => {}}
-    footer={<button type="button" onClick={onCancel} disabled={cancelling} className="ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60">{cancelling ? "Canceling…" : "Cancel import"}</button>}>
+    footer={<Button onClick={onCancel} disabled={cancelling}>{cancelling ? "Canceling…" : "Cancel import"}</Button>}>
     {progress ? <div className="space-y-3">
       <div role="status" aria-live="polite" aria-atomic="true" className="space-y-2 text-sm text-text-primary">
         <p className="flex items-center gap-2 font-medium">

@@ -2,6 +2,7 @@
 
 import { Menu } from "@base-ui/react/menu";
 import { ChevronDownIcon, LinkIcon, NoteIcon, SelectionCheckedIcon } from "./shell-icons";
+import { iconButtonClassName } from "@/components/ui/button";
 
 type Props = {
   value: "link" | "note";
@@ -12,7 +13,7 @@ type Props = {
 export function CaptureTypeMenu({ value, disabled, onChange }: Props) {
   return (
     <Menu.Root modal={false} disabled={disabled}>
-      <Menu.Trigger className="ui-control flex size-8 shrink-0 items-center justify-center disabled:opacity-60" aria-label="Change type" title="Change type">
+      <Menu.Trigger className={iconButtonClassName({ size: "sm" })} aria-label="Change type" title="Change type">
         <ChevronDownIcon className="size-4" />
       </Menu.Trigger>
       <Menu.Portal>

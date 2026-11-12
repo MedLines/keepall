@@ -14,6 +14,7 @@ import { countCurrentLibrary } from "@/persistence/backup";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
 import { abortable } from "@/lib/abortable";
 import { BackupIcon, ChevronDownIcon, CloseIcon, CollectionIcon, DownloadIcon, HashIcon, ImageIcon, ImagesIcon, LinkIcon, NoteIcon, UploadIcon, VideoIcon } from "./shell-icons";
+import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 
 type ImportMode = "merge" | "replace";
 type Operation = "export" | "read-backup" | "restore";
@@ -251,7 +252,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   );
 
   const dialogButtonClass =
-    "ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60";
+    buttonClassName();
   const restoring = operation === "restore";
   const operationLabel = cancelling ? "Canceling import…" : restoring && importMode === "merge" ? "Merging backup…" : operation ? operationLabels[operation] : null;
 
@@ -275,13 +276,13 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             <BackupIcon className="mt-0.5 text-text-secondary" />
             <div className="min-w-0 flex-1">
               <p className="[overflow-wrap:anywhere] text-base font-semibold"><bdi>{prepared.backup.name}</bdi></p>
-              <p className="mt-1 text-[13px] leading-5 text-text-secondary">{formatFileSize(prepared.backup.size)} · Exported {new Date(prepared.backup.exportedAt).toLocaleString()}</p>
+              <p className="mt-1 text-compact leading-5 text-text-secondary">{formatFileSize(prepared.backup.size)} · Exported {new Date(prepared.backup.exportedAt).toLocaleString()}</p>
             </div>
           </div>
           <div>
             <table className="w-full table-fixed tabular-nums" aria-label="Backup contents comparison">
               <colgroup><col className="w-[48%]" /><col className="w-[26%]" /><col className="w-[26%]" /></colgroup>
-              <thead><tr className="text-[13px] text-text-secondary">
+              <thead><tr className="text-compact text-text-secondary">
                 <th scope="col" className="pb-2 text-start font-medium">Contents</th>
                 <th scope="col" className="pb-2 text-end font-medium">Current</th>
                 <th scope="col" className="pb-2 text-end font-medium">Backup</th>
@@ -292,7 +293,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
                   {[prepared.current, prepared.backup.counts].map((counts, index) => (
                     <td key={index} className="py-2 text-end">
                       <span className="block text-[26px] font-semibold leading-none">{counts.total}</span>
-                      <span className="mt-1 block text-[13px] text-text-secondary">{counts.active} active</span>
+                      <span className="mt-1 block text-compact text-text-secondary">{counts.active} active</span>
                     </td>
                   ))}
                 </tr>
@@ -310,14 +311,14 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-[13px] leading-5 text-text-secondary">Item counts include Trash.</p>
+            <p className="mt-2 text-compact leading-5 text-text-secondary">Item counts include Trash.</p>
             {prepared.backup.counts.total === 0 ? <p className="mt-2 text-sm leading-5">This backup has no items. Replacing will remove your current library.</p> : null}
           </div>
           <details className="group">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-2 text-sm font-medium focus-visible:rounded-lg focus-visible:outline-1 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-2 text-sm font-medium focus-visible:outline-1 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
               Organization and media details <ChevronDownIcon className="group-open:rotate-180" />
             </summary>
-            <div className="grid grid-cols-[48%_26%_26%] text-[13px] font-medium text-text-secondary" aria-hidden="true">
+            <div className="grid grid-cols-[48%_26%_26%] text-compact font-medium text-text-secondary" aria-hidden="true">
               <span>Details</span><span className="text-end">Current</span><span className="text-end">Backup</span>
             </div>
             <dl className="space-y-1 pb-1 text-sm tabular-nums">
@@ -365,7 +366,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       {onClose ? (
         <button
           type="button"
-          className="ui-control flex size-9 items-center justify-center"
+          className={iconButtonClassName({ size: "md", className: "size-9 shrink" })}
           aria-label="Close backup"
           disabled={busy}
           onClick={onClose}
@@ -378,8 +379,8 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
 
   const buttonClass =
     variant === "sidebar"
-      ? "ui-control min-h-10 px-3 py-2 text-sm font-medium disabled:opacity-60"
-      : "ui-control inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2 text-sm font-medium disabled:opacity-60";
+      ? buttonClassName({ size: "none", className: "inline-block min-h-10 px-3 py-2 text-sm font-medium" })
+      : buttonClassName({ size: "lg", className: "gap-2 py-2" });
 
   const actions = (
     <div
@@ -438,7 +439,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     variant === "sidebar" ? (
       <p className="mt-2 text-xs leading-relaxed text-text-secondary">
         <strong className="font-medium">Keepall</strong> backup: export or import
-        a <code className="text-[11px]">.keepall.zip</code> file.{" "}
+        a <code className="text-meta">.keepall.zip</code> file.{" "}
         <strong className="font-medium">Browser</strong>: HTML bookmarks.{" "}
         <strong className="font-medium">Images</strong>: a folder of files (20 MiB
         each max).

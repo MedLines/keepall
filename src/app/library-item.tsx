@@ -45,6 +45,7 @@ import {
   type VideoDetailsDraft,
   type DocumentDetailsDraft,
 } from "./item-edit-dialog";
+import { buttonClassName } from "@/components/ui/button";
 
 export type PendingMutation =
   | { op: "save-note"; id: string }
@@ -232,8 +233,8 @@ export function LibraryItem({
       data-kind={isList ? item.type : undefined}
       className={
         isList
-          ? "library-list-thumbnail squircle-panel relative shrink-0 overflow-hidden bg-bg-reading"
-          : "library-card-media squircle-panel relative"
+          ? "library-list-thumbnail relative shrink-0 overflow-hidden bg-bg-reading"
+          : "library-card-media relative"
       }
     >
       {inspected ? (
@@ -476,8 +477,8 @@ export function LibraryItem({
         data-selected={selected || undefined}
         className={
           isList
-            ? "library-list-row squircle-panel group relative flex items-start gap-3"
-            : `library-card squircle-panel group relative flex flex-col rounded-card pt-[8px] pr-[8px] pl-[8px] ${hasGridFooter ? "pb-[2px]" : "pb-[8px]"}`
+            ? "library-list-row group relative flex items-start gap-3"
+            : `library-card group relative flex flex-col rounded-card pt-[8px] pr-[8px] pl-[8px] ${hasGridFooter ? "pb-[2px]" : "pb-[8px]"}`
         }
       >
       {trigger}
@@ -576,8 +577,8 @@ export function LibraryItem({
         {trashActions ? <>
           {(collections.length > 0 || tagNames.length > 0) ? <p className="mt-2 truncate text-xs text-text-secondary">{[...collections, ...tagNames].map((entry) => entry.name).join(" · ")}</p> : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" disabled={mutationBusy} onClick={trashActions.onRestore} className="ui-control inline-flex min-h-10 items-center justify-center px-3 text-sm disabled:opacity-50">Restore</button>
-            <button type="button" disabled={mutationBusy} onClick={trashActions.onDelete} className="ui-control inline-flex min-h-10 items-center justify-center gap-2 px-3 text-sm text-text-danger disabled:opacity-50"><DeleteIcon className="size-4" /><span className="leading-none">Delete permanently</span></button>
+            <button type="button" disabled={mutationBusy} onClick={trashActions.onRestore} className={buttonClassName({ size: "none", className: "min-h-10 px-3 text-sm disabled:opacity-50" })}>Restore</button>
+            <button type="button" disabled={mutationBusy} onClick={trashActions.onDelete} className={buttonClassName({ variant: "danger-ghost", size: "none", className: "min-h-10 gap-2 px-3 text-sm disabled:opacity-50" })}><DeleteIcon className="size-4" /><span className="leading-none">Delete permanently</span></button>
           </div>
         </> : null}
       </motion.div>

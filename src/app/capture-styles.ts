@@ -1,12 +1,13 @@
+import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_ACTIVE, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 
 /** Shared by the app and the isolated extension drawer. */
 export const captureStyles = {
   header: "flex shrink-0 items-start gap-4 px-7 py-6",
   heading: "min-w-0 flex-1",
-  title: "[overflow-wrap:anywhere] text-[22px] font-semibold tracking-tight",
+  title: "[overflow-wrap:anywhere] text-heading font-semibold tracking-tight",
   description: "mt-1 [overflow-wrap:anywhere] text-sm leading-relaxed text-text-secondary",
-  close: "ui-control flex size-10 shrink-0 items-center justify-center disabled:cursor-not-allowed disabled:opacity-50",
+  close: iconButtonClassName({ className: "disabled:cursor-not-allowed" }),
   form: "flex min-h-0 flex-1 flex-col overflow-hidden",
   body: "flex flex-col gap-4 px-6 pb-5 pt-3",
   footer: "flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border-control bg-bg-canvas px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5",
@@ -25,13 +26,13 @@ export const captureStyles = {
   "org-section": "flex flex-col gap-2 rounded-panel border border-border-control p-3",
   "org-head": "flex min-h-6 items-center justify-between gap-3",
   "org-title": "flex items-center gap-2 text-sm font-semibold text-text-primary",
-  "browse-trigger": "min-h-7 rounded-control px-2 text-xs font-medium text-text-secondary hover:bg-bg-raised hover:text-text-primary",
+  "browse-trigger": "min-h-7 px-2 text-xs font-medium text-text-secondary hover:bg-bg-raised hover:text-text-primary",
   "org-search-wrap": "flex min-h-7 min-w-0 items-center gap-2 text-text-secondary focus-within:text-text-primary",
   "org-search": "min-h-7 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-secondary disabled:opacity-60",
-  choice: "control-squircle squircle-panel inline-flex min-h-7 max-w-full shrink-0 items-center gap-1 rounded-control border px-2 py-0.5 text-xs disabled:opacity-60",
+  choice: "control-squircle inline-flex min-h-7 max-w-full shrink-0 items-center gap-1 border px-2 py-0.5 text-xs disabled:opacity-60",
   "choice-idle": "border-border-control bg-bg-control text-text-secondary hover:bg-bg-raised hover:text-text-primary",
   "choice-selected": "border-border-control bg-bg-active text-text-primary",
-  "remove-tag": "flex size-6 shrink-0 items-center justify-center rounded-control text-text-secondary hover:bg-bg-danger hover:text-text-danger disabled:opacity-60",
+  "remove-tag": "flex size-6 shrink-0 items-center justify-center text-text-secondary hover:bg-bg-danger hover:text-text-danger disabled:opacity-60",
   browse: "confirm-dialog-popup ui-popover flex h-[min(80dvh,36rem)] w-full max-w-[28rem] flex-col overflow-hidden p-0 outline-none",
   "browse-header": "flex shrink-0 items-start gap-4 border-b border-border-control px-5 py-4",
   "browse-search": "ui-field h-11 w-full ps-10 pe-3 text-sm",
@@ -43,7 +44,7 @@ export const captureStyles = {
   "file-name": "min-w-0 flex-1",
   "file-title": "break-all text-sm font-medium",
   "file-status": "mt-1 text-xs text-text-secondary",
-  "file-remove": "ui-control flex size-8 shrink-0 items-center justify-center",
+  "file-remove": iconButtonClassName({ size: "sm" }),
   "browse-heading": "min-w-0 flex-1",
   "browse-title": "text-lg font-semibold text-text-primary",
   "browse-description": "mt-1 text-sm text-text-secondary",
@@ -62,7 +63,7 @@ export const captureStyles = {
   "org-status": "text-sm text-text-secondary",
   "error": "text-sm text-text-danger",
   "field": "flex flex-col gap-2",
-  "org-create": "ui-control inline-flex min-h-9 max-w-full items-center gap-2 self-start px-3 py-1.5 text-left text-xs font-medium disabled:opacity-60",
-  "discard-draft": "ui-control px-3 py-1 text-xs",
-  "browse-close": "ui-control flex size-10 shrink-0 items-center justify-center",
+  "org-create": buttonClassName({ size: "none", className: "min-h-9 max-w-full gap-2 self-start px-3 py-1.5 text-left text-xs font-medium justify-start" }),
+  "discard-draft": buttonClassName({ size: "none", className: "inline-block px-3 py-1 text-xs" }),
+  "browse-close": iconButtonClassName({ size: "md" }),
 } as const;

@@ -4,6 +4,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import type { FocusEventHandler, KeyboardEventHandler, ReactNode, RefObject } from "react";
 import { ScrollArea } from "./scroll-area";
 import { CloseIcon } from "@/app/shell-icons";
+import { iconButtonClassName } from "./button";
 
 export function ModalDialog({
   open, onOpenChange, title, description, busy = false, closeLabel = "Close",
@@ -51,7 +52,7 @@ export function ModalDialog({
                 <Dialog.Title className="[overflow-wrap:anywhere] text-xl font-semibold text-text-primary">{title}</Dialog.Title>
                 <Dialog.Description className="mt-1 [overflow-wrap:anywhere] text-sm leading-relaxed text-text-secondary">{description}</Dialog.Description>
               </div>
-              <Dialog.Close aria-label={closeLabel} disabled={busy} className="ui-control flex size-10 shrink-0 items-center justify-center disabled:opacity-60"><CloseIcon /></Dialog.Close>
+              <Dialog.Close aria-label={closeLabel} disabled={busy} className={iconButtonClassName()}><CloseIcon /></Dialog.Close>
             </header>
             {onSubmit ? (
               <form className="flex min-h-0 flex-1 flex-col"

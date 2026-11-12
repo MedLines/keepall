@@ -2,6 +2,7 @@ import { ScrollPanel } from "@/components/ui/scroll-panel";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeftIcon, LogoIcon } from "../shell-icons";
+import { buttonClassName } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Keepall Capture privacy · Keepall",
@@ -20,7 +21,7 @@ export default function ExtensionPrivacyPage() {
         </header>
 
         <article className="mx-auto mt-12 w-full max-w-3xl pb-16 sm:mt-16">
-          <Link href="/" className="ui-control inline-flex min-h-10 items-center gap-2 px-3 text-sm font-medium">
+          <Link href="/" className={buttonClassName({ size: "none", className: "min-h-10 gap-2 px-3 text-sm font-medium justify-start" })}>
             <ArrowLeftIcon className="size-4" />
             Back to library
           </Link>

@@ -11,6 +11,7 @@ import { PdfViewerLoading, TextDocumentLoading } from "./document-loading-conten
 import { LibraryStartupContent } from "./library-loading-content";
 import { peekPdfThumbnail } from "@/persistence/pdf-thumbnail";
 import { peekPreviewLayout } from "@/persistence/preview-layouts";
+import { Button, buttonClassName } from "@/components/ui/button";
 
 // Bound Markdown's DOM size; the original download always includes the entire file.
 const PREVIEW_CHARACTERS = 200_000;
@@ -83,8 +84,8 @@ function TextDocumentContent({ item, initialText }: { item: DocumentItem; initia
   return <div className="grid justify-items-start gap-3">
     <p role="alert">{state.status === "missing" ? "The saved file is missing. Restore it from a backup." : "Couldn't read this document. Try again or restore a backup."}</p>
     <div className="flex flex-wrap gap-2">
-      <button type="button" className="ui-control min-h-11 px-4 text-sm font-medium" onClick={retry}>Retry document</button>
-      <Link href="/settings#storage" className="ui-control inline-flex min-h-11 items-center px-4 text-sm font-medium">Open backups</Link>
+      <Button size="lg" onClick={retry}>Retry document</Button>
+      <Link href="/settings#storage" className={buttonClassName({ size: "lg" })}>Open backups</Link>
     </div>
   </div>;
 }

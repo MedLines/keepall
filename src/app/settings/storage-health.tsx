@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { RefreshIcon } from "../shell-icons";
+import { buttonClassName } from "@/components/ui/button";
 
 type StorageHealthSnapshot = {
   usage: number | null;
@@ -98,7 +99,7 @@ export function StorageHealth() {
           Browser storage health
         </p>
         <button
-          className="ui-control inline-flex min-h-11 items-center gap-2 px-3 text-sm font-medium"
+          className={buttonClassName({ size: "none", className: "min-h-11 gap-2 px-3 text-sm font-medium justify-start" })}
           type="button"
           disabled={loading}
           onClick={() => void refresh()}

@@ -81,6 +81,7 @@ import { CAPTURE_FILE_ACCEPT, classifyCaptureFile } from "@/domain/capture-file"
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { CaptureImportProgressDialog, type CaptureImportProgress } from "./capture-import-progress";
 import { DocumentText } from "./document-content";
+import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 
 
 const IMAGE_ACTION_BTN = captureStyles["file-add"];
@@ -1065,7 +1066,7 @@ export function CaptureHost() {
                     <button
                       type="button"
                       aria-label={`Remove image ${index + 1}`}
-                      className="ui-control absolute right-0.5 top-0.5 flex size-6 items-center justify-center rounded-full shadow-sm disabled:opacity-60"
+                      className={iconButtonClassName({ size: "md", className: "absolute right-0.5 top-0.5 size-6 rounded-full shadow-sm shrink" })}
                       disabled={composeLocked}
                       onClick={() => removeImageDraft(draft)}
                     >
@@ -1092,7 +1093,7 @@ export function CaptureHost() {
               <p className="mt-1 text-xs text-text-secondary">No images from this selection were added.</p>
             </div>
             <button
-              className="ui-control shrink-0 px-2 py-1 text-xs"
+              className={buttonClassName({ size: "none", className: "inline-block shrink-0 px-2 py-1 text-xs" })}
               type="button"
               onClick={() => {
                 imageUploadErrorRef.current = null;
@@ -1283,7 +1284,7 @@ export function CaptureHost() {
               data-testid="capture-actions"
               aria-hidden={saved}
               inert={saved}
-              className={`col-start-1 row-start-1 flex w-full flex-wrap items-center justify-end gap-2 transition-[opacity,translate] duration-[var(--motion-moderate-exit)] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-[opacity] ${saved ? "-translate-y-1 opacity-0" : "translate-y-0 opacity-100"}`}
+              className={`col-start-1 row-start-1 flex w-full flex-wrap items-center justify-end gap-2 transition-[opacity,translate] duration-[var(--motion-moderate-exit)] ease-standard motion-reduce:transition-[opacity] ${saved ? "-translate-y-1 opacity-0" : "translate-y-0 opacity-100"}`}
             >
               <button
                 className={captureStyles["bulk-import"]}
@@ -1326,7 +1327,7 @@ export function CaptureHost() {
             <div
               data-testid="capture-saved"
               aria-hidden={!saved}
-              className={`pointer-events-none col-start-1 row-start-1 flex w-full items-center justify-center gap-2.5 transition-[opacity,translate] delay-[60ms] duration-[var(--motion-moderate-enter)] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-[opacity] ${saved ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0"}`}
+              className={`pointer-events-none col-start-1 row-start-1 flex w-full items-center justify-center gap-2.5 transition-[opacity,translate] delay-[60ms] duration-[var(--motion-moderate-enter)] ease-standard motion-reduce:transition-[opacity] ${saved ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0"}`}
             >
               <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-action-primary text-text-on-action">
                 <CheckIcon className="size-[18px]" strokeWidth={2} />
@@ -1349,7 +1350,7 @@ export function CaptureHost() {
           busy={folderImportBusy || bookmarksImportBusy}
           footer={(
             <button
-              className="ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60"
+              className={buttonClassName()}
               type="button"
               disabled={folderImportBusy || bookmarksImportBusy}
               onClick={() => setBulkImportOpen(false)}
@@ -1367,13 +1368,13 @@ export function CaptureHost() {
                 setFileQuotaWarning(quotaWarning);
                 void stageFiles(files, true);
               }}
-              buttonClassName="ui-control min-h-11 w-full px-4 text-left text-sm font-medium disabled:opacity-60"
+              buttonClassName={buttonClassName({ size: "lg", className: "inline-block w-full text-left" })}
               disabled={composeLocked}
               defaultCollectionName={draftCollectionName ?? collectionInput.trim()}
               onBusyChange={setFolderImportBusy}
             />
             <BookmarksImport
-              buttonClassName="ui-control min-h-11 w-full px-4 text-left text-sm font-medium disabled:opacity-60"
+              buttonClassName={buttonClassName({ size: "lg", className: "inline-block w-full text-left" })}
               label="Import browser bookmarks"
               description="Choose the bookmarks HTML file exported from your browser."
               disabled={composeLocked}

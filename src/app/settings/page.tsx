@@ -6,6 +6,7 @@ import { LogoContextMenu } from "../logo-context-menu";
 import { GeneralSettings, InstallationSettings, StorageSettings } from "./settings-sections";
 import { SettingsTabs } from "./settings-tabs";
 import { SettingsLink } from "./settings-link";
+import { buttonClassName } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Settings · Keepall",
@@ -27,7 +28,7 @@ export default function SettingsPage() {
             </Link>
           </LogoContextMenu>
           <div className="flex shrink-0 items-center gap-2">
-            <Link href="/" aria-label="Back to library" className="ui-control inline-flex min-h-11 items-center gap-2 px-3 text-sm font-medium">
+            <Link href="/" aria-label="Back to library" className={buttonClassName({ size: "none", className: "min-h-11 gap-2 px-3 text-sm font-medium justify-start" })}>
               <ArrowLeftIcon className="size-4" />
               <span className="hidden sm:inline">Back to library</span>
             </Link>

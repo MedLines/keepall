@@ -3,6 +3,7 @@
 import { ContextMenu } from "@base-ui/react/context-menu";
 import Link from "next/link";
 import type { ReactElement } from "react";
+import { menuItemClassName } from "@/components/ui/menu-item";
 
 export function LogoContextMenu({ children }: { children: ReactElement }) {
   return (
@@ -22,7 +23,7 @@ export function LogoContextMenu({ children }: { children: ReactElement }) {
                 key={href}
                 render={<Link href={href} />}
                 closeOnClick
-                className="ui-menu-item flex w-full text-sm text-text-primary data-[highlighted]:bg-bg-active"
+                className={menuItemClassName({ layout: "none" })}
               >
                 {label}
               </ContextMenu.LinkItem>

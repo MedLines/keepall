@@ -1,11 +1,12 @@
 "use client";
 
 import { ArrowLeftIcon, ArrowRightIcon } from "./shell-icons";
-import { SegmentedControl } from "./segmented-control";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ShellTopMenu } from "./shell-top-menu";
 import { MediaViewerToolbar } from "./media-viewer-toolbar";
+import { buttonClassName } from "@/components/ui/button";
 
-const BUTTON = "ui-control inline-flex size-[var(--viewer-control-size,2.75rem)] shrink-0 items-center justify-center disabled:opacity-40";
+const BUTTON = buttonClassName({ size: "none", className: "size-[var(--viewer-control-size,2.75rem)] shrink-0 disabled:opacity-40" });
 
 export function PdfViewerControls({ view = "scroll", page = 1, pageText, pageCount, zoom = "fit", onViewChange, onZoomChange, onPreviousPage, onNextPage, onPageFocus, onPageDraftChange, onPageCommit, portalContainer }: {
   portalContainer?: HTMLElement | null;

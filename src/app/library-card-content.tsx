@@ -1,7 +1,7 @@
 "use client";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip } from "@base-ui/react/tooltip";
+import { Tooltip } from "@/components/ui/tooltip";
 
 import { SearchHighlight, SearchResult } from "./search-highlight";
 import type { SearchExcerpt } from "@/domain/search";
@@ -13,7 +13,6 @@ import { CloseIcon, CollectionIcon, HashIcon } from "./shell-icons";
 import { LibraryDocumentCard } from "./library-document-card";
 import { LibraryReadingCard } from "./library-reading-card";
 import { CardNote, CardPin, CardSource } from "./library-card-details";
-import { SHELL_TOOLTIP } from "./shell-styles";
 
 function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
   id: string;
@@ -39,9 +38,9 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
       <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
       <ul aria-label="Tags" className="flex min-w-0 flex-col gap-1">
         {tags.map(tag => {
-          return <li key={tag.id} className="library-tag-row squircle-panel flex min-w-0 items-center rounded-control-sm hover:bg-bg-active focus-within:bg-bg-active">
+          return <li key={tag.id} className="library-tag-row flex min-w-0 items-center hover:bg-bg-active focus-within:bg-bg-active">
             <button type="button" className="ui-menu-item min-w-0 flex-1 truncate text-start text-sm text-text-primary hover:bg-transparent" onClick={() => onBrowseTag(tag.id)}>{tag.name}</button>
-            <button type="button" aria-label={`Remove tag ${tag.name}`} className="library-tag-remove squircle-panel flex size-7 shrink-0 items-center justify-center rounded-control-sm text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => onRemoveTag(tag.id)}><CloseIcon className="size-4" /></button>
+            <button type="button" aria-label={`Remove tag ${tag.name}`} className="library-tag-remove flex size-7 shrink-0 items-center justify-center text-text-secondary hover:bg-bg-danger hover:text-text-danger focus-visible:bg-bg-danger focus-visible:text-text-danger" onClick={() => onRemoveTag(tag.id)}><CloseIcon className="size-4" /></button>
           </li>;
         })}
       </ul>
@@ -126,30 +125,21 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
     <div className={`library-card-metadata text-xs text-text-secondary ${className}`}>
       <div className="flex min-h-8 items-center justify-between gap-2">
         {collections.length ? <ul aria-label="Collections" className="min-w-0 flex-1">
-          {collections.map(collection => <li key={collection.id} className="min-w-0"><Tooltip.Root>
-            <Tooltip.Trigger type="button" delay={100} className="library-card-metadata-pill max-w-full rounded-full" aria-label={collection.name} aria-describedby={`${id}-collection-${collection.id}`} onClick={() => onBrowseCollection(collection.id)}>
-              <CollectionIcon className="size-4 shrink-0" />
-              <span className="truncate">{collection.name}</span>
-            </Tooltip.Trigger>
-            <Tooltip.Portal>
-              <Tooltip.Positioner side="top" sideOffset={8} className="z-[100]">
-                <Tooltip.Popup id={`${id}-collection-${collection.id}`} role="tooltip" className={SHELL_TOOLTIP}>{collection.name}</Tooltip.Popup>
-              </Tooltip.Positioner>
-            </Tooltip.Portal>
-          </Tooltip.Root>
+          {collections.map(collection => <li key={collection.id} className="min-w-0">
+            <Tooltip content={collection.name} delay={100} side="top">
+              <button type="button" className="library-card-metadata-pill max-w-full rounded-full" aria-label={collection.name} onClick={() => onBrowseCollection(collection.id)}>
+                <CollectionIcon className="size-4 shrink-0" />
+                <span className="truncate">{collection.name}</span>
+              </button>
+            </Tooltip>
           </li>)}
         </ul> : <span />}
         {tags.length ? <div ref={rootRef} className="library-card-tag-control relative shrink-0">
-          <Tooltip.Root disabled={expanded}>
-          <Tooltip.Trigger ref={triggerRef} type="button" delay={100} closeDelay={100} aria-label={`${tags.length} ${tags.length === 1 ? "tag" : "tags"}`} aria-describedby={`${id}-tag-preview`} aria-expanded={expanded} aria-controls={id} className="library-card-metadata-pill rounded-full" onClick={() => {
-            setExpanded(!expanded);
-          }}><HashIcon className="size-4" /><span>{tags.length}<span className="library-card-tag-label"> {tags.length === 1 ? "tag" : "tags"}</span></span></Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Positioner side="top" align="end" sideOffset={8} collisionPadding={8} className="z-[100]">
-              <Tooltip.Popup id={`${id}-tag-preview`} role="tooltip" className={`${SHELL_TOOLTIP} max-w-72 whitespace-normal [overflow-wrap:anywhere]`}>{tags.map(tag => tag.name).join(", ")}</Tooltip.Popup>
-            </Tooltip.Positioner>
-          </Tooltip.Portal>
-          </Tooltip.Root>
+          <Tooltip content={tags.map(tag => tag.name).join(", ")} disabled={expanded} delay={100} closeDelay={100} side="top" align="end" collisionPadding={8} className="max-w-72 whitespace-normal [overflow-wrap:anywhere]">
+            <button ref={triggerRef} type="button" aria-label={`${tags.length} ${tags.length === 1 ? "tag" : "tags"}`} aria-expanded={expanded} aria-controls={id} className="library-card-metadata-pill rounded-full" onClick={() => {
+              setExpanded(!expanded);
+            }}><HashIcon className="size-4" /><span>{tags.length}<span className="library-card-tag-label"> {tags.length === 1 ? "tag" : "tags"}</span></span></button>
+          </Tooltip>
           <AnimatePresence>
             {expanded ? <TagPopover
               key="tags"

@@ -11,13 +11,15 @@ import { DocumentText } from "./document-content";
 import { NoteFormatControl } from "./note-format-control";
 import { useDocumentText } from "./use-document-text";
 import { useDirtyDismissal } from "./use-dirty-dismissal";
+import { buttonClassName } from "@/components/ui/button";
+import { TextField } from "@/components/ui/text-field";
 
 type Props = {
   item: DocumentItem; open: boolean; busy: boolean; error: string | null;
   onOpenChange: (open: boolean) => void;
   onSave: (draft: DocumentDetailsDraft) => void;
 };
-const BUTTON = "ui-control inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium disabled:opacity-60";
+const BUTTON = buttonClassName({ size: "lg" });
 
 export function DocumentEditDialog(props: Props) {
   const { state, retry } = useDocumentText(props.item);
@@ -47,11 +49,9 @@ function LoadedDocumentEditor({ item, initialContent, open, busy, error, onOpenC
       onSubmit={() => onSave({ title, content, expectedAssetId: item.assetId, noteContent: notes, noteFormat })}
       footer={<>
         <button type="button" className={BUTTON} disabled={busy} onClick={() => dismissal.requestDismiss({ cancel: () => {} })}>Cancel</button>
-        <button type="submit" className={`${BUTTON} ui-primary`} disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
+        <button type="submit" className={buttonClassName({ variant: "primary", size: "lg" })} disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
       </>}>
-      <label className="grid gap-2 text-sm font-medium">Title
-        <input className="ui-field min-h-11 px-3 font-normal" value={title} disabled={busy} onChange={(event) => setTitle(event.target.value)} />
-      </label>
+      <TextField label="Title" value={title} disabled={busy} onChange={(event) => setTitle(event.target.value)} />
       <div className="grid gap-2">
         <div className="flex items-center justify-between gap-3">
           <label htmlFor="document-edit-content" className="text-sm font-medium">{item.format === "markdown" ? "Markdown content" : "Text content"}</label>
