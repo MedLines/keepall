@@ -3,6 +3,7 @@
 import { useId, type ReactNode } from "react";
 import { Select } from "@base-ui/react/select";
 import { Tooltip } from "@base-ui/react/tooltip";
+import { TooltipContent } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MenuHoverList } from "@/components/ui/menu-hover-list";
 import { libraryTypeSelectionLabel, parseLibraryType, selectedLibraryTypes, type LibraryTypeFilter, type LibraryTypeSelection } from "@/domain/library-view";
@@ -16,7 +17,8 @@ import {
   VideoIcon,
   CheckIcon,
 } from "./shell-icons";
-import { SHELL_TOOLTIP } from "./shell-styles";
+import { buttonClassName } from "@/components/ui/button";
+import { menuItemClassName } from "@/components/ui/menu-item";
 
 type MenuValue = LibraryTypeFilter | "all";
 
@@ -86,9 +88,8 @@ export function LibraryTypeFilterMenu({
         <Select.Trigger
           render={<Tooltip.Trigger delay={350} />}
           aria-label={label}
-          title={label}
           aria-describedby={tooltipId}
-          className={`ui-control inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-control-lg px-3 ${selected.length ? "ui-selected" : ""}`}
+          className={buttonClassName({ size: "toolbar", className: `min-w-11 px-3 ${selected.length ? "ui-selected" : ""}` })}
         >
           <span aria-hidden="true" className="inline-flex items-center gap-2">
             {selected.length ? options.filter(option => option.value !== "all" && selected.includes(option.value)).map(option => <span key={option.value} className="inline-flex shrink-0">{option.icon}</span>) : <FilterIcon />}
@@ -101,7 +102,7 @@ export function LibraryTypeFilterMenu({
               <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
                 <Select.List aria-label="Filter by type">
                   <MenuHoverList>
-                    {options.map(option => <Select.Item key={option.value} value={option.value} label={option.label} className="shell-select-option ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active">
+                    {options.map(option => <Select.Item key={option.value} value={option.value} label={option.label} className={menuItemClassName({ className: "shell-select-option" })}>
                       {option.icon}
                       <Select.ItemText className="flex-1 whitespace-nowrap">{option.label}</Select.ItemText>
                       {option.count !== undefined ? <span className="pl-2 text-xs tabular-nums text-text-secondary">{option.count}</span> : null}
@@ -114,7 +115,7 @@ export function LibraryTypeFilterMenu({
           </Select.Positioner>
         </Select.Portal>
       </Select.Root>
-      <Tooltip.Portal><Tooltip.Positioner side="bottom" sideOffset={8} collisionPadding={8} className="z-[100]"><Tooltip.Popup id={tooltipId} role="tooltip" className={SHELL_TOOLTIP}>{label}</Tooltip.Popup></Tooltip.Positioner></Tooltip.Portal>
+      <TooltipContent id={tooltipId} collisionPadding={8}>{label}</TooltipContent>
     </Tooltip.Root>
   );
 }

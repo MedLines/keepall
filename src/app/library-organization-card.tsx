@@ -9,6 +9,7 @@ import { LibraryTagArtwork } from "./library-tags";
 import { LibrarySelectionControl } from "./library-selection-control";
 import { RowActionMenu } from "./row-action-menu";
 import { DeleteIcon, LinkIcon, MoreIcon } from "./shell-icons";
+import { menuItemClassName } from "@/components/ui/menu-item";
 
 type Props = {
   entry: OrganizationPreview;
@@ -32,9 +33,9 @@ export function LibraryOrganizationCard({ entry: { organization, count, previews
       trigger={<button type="button" aria-label={`${organization.name} actions`} className="organization-actions library-card-actions library-card-media-chrome absolute end-4 top-4 z-30 flex size-11 items-center justify-center"><MoreIcon className="size-4" /></button>} triggerRef={triggerRef}
       disabled={busy}
       menu={() => <>
-        <Menu.Item className="ui-menu-item flex items-center gap-2 text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active" render={<a href={href} target="_blank" rel="noopener noreferrer" />}><LinkIcon />Open in new tab</Menu.Item>
+        <Menu.Item className={menuItemClassName({ layout: "none", className: "w-auto items-center gap-2 outline-none" })} render={<a href={href} target="_blank" rel="noopener noreferrer" />}><LinkIcon />Open in new tab</Menu.Item>
         <Menu.Separator className="my-1 border-t border-border-edge" />
-        <Menu.Item className="ui-menu-item flex items-center gap-2 text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger" disabled={busy} onClick={onDelete}><DeleteIcon />Delete {folder ? "folder" : "tag"}</Menu.Item>
+        <Menu.Item className={menuItemClassName({ tone: "danger", layout: "none", className: "w-auto items-center gap-2 outline-none" })} disabled={busy} onClick={onDelete}><DeleteIcon />Delete {folder ? "folder" : "tag"}</Menu.Item>
       </>}
     >
       {trigger => <li className="organization-card library-card relative min-w-0" data-kind={kind} data-selected={selected} data-selection-active={selectionActive}

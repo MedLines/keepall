@@ -61,7 +61,7 @@ test("Escape dismisses the top sidebar overlay while preserving the underlying s
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => localStorage.setItem("keepall-shell-panel-open", "closed"));
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");

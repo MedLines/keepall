@@ -1,0 +1,237 @@
+/* Shared control primitives (.ui-control, .ui-primary, .ui-field, .ui-popover, menus, drawers, backdrops),
+   base focus styles, and the control/panel corner shapes. */
+
+@layer components {
+  .search-highlight {
+    border-radius: 2px;
+    background: var(--color-bg-search-match);
+    color: var(--color-text-search-match);
+  }
+
+  .ui-control, .ui-field {
+    border: 1px solid var(--color-border-control);
+    background: var(--color-bg-control);
+    box-shadow: none;
+  }
+  /* Controls take the pill shape below; fields keep a rounded rectangle unless they sit in the top bar. */
+  .ui-field { border-radius: var(--radius-control-md); }
+  .ui-control {
+    color: var(--color-text-secondary);
+    transition: transform var(--motion-quick) ease-out, opacity var(--motion-moderate-enter) ease-out;
+  }
+  .ui-control:not(.ui-primary):hover:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { background: var(--color-bg-raised); color: var(--color-text-primary); }
+  .ui-control:active:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { transform: scale(0.96); }
+  .ui-primary {
+    border: 1px solid transparent;
+    background: var(--color-action-primary);
+    color: var(--color-text-on-action);
+    box-shadow: var(--shadow-action-primary);
+    transition: background-color var(--motion-quick) ease, box-shadow var(--motion-quick) ease, transform var(--motion-quick) ease-out, opacity var(--motion-moderate-enter) ease-out;
+  }
+  .ui-primary:hover:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { background: var(--color-action-primary-hover); color: var(--color-text-on-action); box-shadow: var(--shadow-action-primary-hover); }
+  .ui-selected {
+    background: var(--color-bg-active);
+    color: var(--color-text-primary);
+    box-shadow: inset 0 1px 0 var(--color-border-active);
+  }
+  .ui-field:focus-visible,
+  .scroll-textarea.ui-field:has(textarea:focus-visible) { outline: var(--focus-ring-width) solid var(--color-border-focus); outline-offset: var(--focus-offset-inset); }
+  .ui-popover {
+    border: 1px solid var(--color-border-control);
+    border-radius: var(--radius-panel);
+    background: var(--color-bg-control);
+    padding: 0.5rem;
+    box-shadow: var(--shadow-menu);
+  }
+  .confirm-dialog-popup {
+    transform-origin: center;
+    transition: opacity var(--motion-slow-enter) var(--ease-standard),
+      transform var(--motion-slow-enter) var(--ease-standard);
+  }
+  .confirm-dialog-popup:is([data-starting-style], [data-ending-style]) {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  .confirm-dialog-popup[data-ending-style] { transition-duration: var(--motion-slow-exit); }
+  .library-quick-preview[data-shared-opening][data-starting-style] { opacity: 1; transform: none; }
+  .ui-menu-popup {
+    --popup-slide-y: 4px;
+    --popup-slide-x: 0px;
+    transform-origin: var(--transform-origin, center);
+    transition: opacity var(--motion-fast-enter) ease-out,
+      transform var(--motion-fast-enter) var(--ease-standard);
+  }
+  .ui-menu-popup[data-side="top"] { --popup-slide-y: -4px; }
+  .ui-menu-popup[data-side="left"] { --popup-slide-y: 0px; --popup-slide-x: 4px; }
+  .ui-menu-popup[data-side="right"] { --popup-slide-y: 0px; --popup-slide-x: -4px; }
+  .ui-menu-popup:is([data-starting-style], [data-ending-style]) {
+    opacity: 0;
+    transform: translate(var(--popup-slide-x), var(--popup-slide-y)) scale(0.96);
+  }
+  .ui-menu-popup[data-ending-style] { transition-duration: var(--motion-fast-exit); }
+  .ui-drawer-popup { transform: translateX(0); transition: transform var(--motion-slow-enter) cubic-bezier(0.32, 0.72, 0, 1); }
+  .ui-drawer-popup[data-ending-style] { transition-duration: var(--motion-slow-exit); }
+  .ui-drawer-popup[data-side="right"]:is([data-starting-style], [data-ending-style]) { transform: translateX(100%); }
+  .ui-drawer-popup[data-side="left"]:is([data-starting-style], [data-ending-style]) { transform: translateX(-100%); }
+  .ui-backdrop.ui-drawer-backdrop { transition-duration: var(--motion-slow-enter); transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1); }
+  .ui-backdrop.ui-drawer-backdrop[data-ending-style] { transition-duration: var(--motion-slow-exit); }
+  @media (prefers-reduced-motion: reduce) {
+    .confirm-dialog-popup, .ui-menu-popup { transition-property: opacity; }
+    .confirm-dialog-popup:is([data-starting-style], [data-ending-style]) {
+      transform: none;
+    }
+    .ui-menu-popup:is([data-starting-style], [data-ending-style]) { transform: none; }
+    .ui-drawer-popup { transition: opacity var(--motion-fast-enter) ease; }
+    .ui-drawer-popup[data-ending-style] { transition-duration: var(--motion-fast-exit); }
+    .ui-drawer-popup[data-side]:is([data-starting-style], [data-ending-style]) { transform: none; opacity: 0; }
+    .ui-backdrop.ui-drawer-backdrop { transition-duration: var(--motion-fast-enter); }
+    .ui-backdrop.ui-drawer-backdrop[data-ending-style] { transition-duration: var(--motion-fast-exit); }
+  }
+  .ui-backdrop {
+    opacity: 1;
+    transition: opacity var(--motion-moderate-enter) ease-out;
+    background: var(--backdrop-scrim);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  .ui-backdrop:is([data-starting-style], [data-ending-style]) { opacity: 0; }
+  .ui-backdrop[data-ending-style] { transition-duration: var(--motion-moderate-exit); }
+  .focused-image-backdrop {
+    background: light-dark(oklch(0 0 0 / 0.6), oklch(0 0 0 / 0.86));
+    -webkit-backdrop-filter: blur(36px) saturate(0.35);
+    backdrop-filter: blur(36px) saturate(0.35);
+  }
+  .focused-image-backdrop[data-zoomed="true"] {
+    background: oklch(0 0 0 / 0.92);
+    -webkit-backdrop-filter: blur(48px) saturate(0.25);
+    backdrop-filter: blur(48px) saturate(0.25);
+  }
+  .ui-native-dialog::backdrop {
+    background: var(--backdrop-scrim);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  .ui-menu-item {
+    cursor: pointer;
+    user-select: none;
+    min-height: 2.5rem;
+    padding: 0.625rem 0.75rem;
+  }
+  .ui-menu-item[data-disabled], .ui-menu-item:disabled { cursor: default; }
+  .ui-menu-item:hover { background: var(--color-bg-active); }
+  .media-outline, .ka-page img:not(.keepall-logo-layer) {
+    outline: 1px solid var(--color-border-media);
+    outline-offset: -1px;
+  }
+  .media-elevated {
+    box-shadow: var(--shadow-image);
+  }
+  .media-squircle {
+    border-radius: var(--radius-card);
+  }
+  .media-squircle-inset {
+    border-radius: calc(var(--radius-card) - var(--spacing-card-inset));
+  }
+  .icon-segmented-thumb {
+    transform: translateX(0);
+    transition: transform var(--motion-glide) var(--ease-standard);
+  }
+  .icon-segmented-switch[data-selected="end"] .icon-segmented-thumb { transform: translateX(100%); }
+  .icon-segmented-switch:dir(rtl)[data-selected="start"] .icon-segmented-thumb { transform: translateX(100%); }
+  .icon-segmented-switch:dir(rtl)[data-selected="end"] .icon-segmented-thumb { transform: translateX(0); }
+  .icon-segmented-switch > button { transition: opacity var(--motion-moderate-enter) ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-control, .icon-segmented-switch > button { transition: opacity var(--motion-fast-enter) ease-out; }
+    .ui-control:active { transform: none; }
+    .icon-segmented-thumb { transition: none; }
+  }
+  /* Transient undo offer: control surface and corners shared with the action slot. */
+  .undo-notice { animation: undo-notice-in var(--motion-moderate-enter) var(--ease-standard); }
+  .undo-notice-timer { transform-origin: left; transition: transform 100ms linear; }
+  :dir(rtl) .undo-notice-timer { transform-origin: right; }
+  @keyframes undo-notice-in { from { opacity: 0; transform: translateY(4px); } }
+  @media (prefers-reduced-motion: reduce) {
+    .undo-notice { animation: none; }
+    .undo-notice-timer { transition: none; }
+  }
+}
+
+@media (pointer: coarse) {
+  :is(input, textarea, select):is(.text-xs, .text-sm) { font-size: 1rem; }
+}
+
+@layer base {
+  body { position: relative; font-family: var(--font-sans); }
+  button:not(:disabled), select { cursor: pointer; }
+  :where(button, a, input, textarea, select, summary):focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-border-focus);
+    outline-offset: var(--focus-offset);
+  }
+  input::placeholder, textarea::placeholder { color: var(--color-text-secondary); }
+  select option { background: var(--color-bg-surface); color: var(--color-text-primary); }
+}
+
+.library-sidebar-navigation :where(button, a, input):focus-visible {
+  outline-offset: -1px;
+}
+
+.library-sidebar-interactive:has(> button:focus-visible) {
+  outline: 1px solid var(--color-border-focus);
+  outline-offset: -1px;
+}
+.library-sidebar-interactive > button:focus-visible { outline: none; }
+.library-sidebar-interactive > button.absolute:focus-visible {
+  background: var(--color-bg-active);
+}
+
+@supports (corner-shape: squircle) {
+  :root {
+    --radius-card: 4rem;
+  }
+  .library-panel, .library-card, .library-card-media, .item-workspace-media {
+    corner-shape: var(--corner-shape-panel);
+  }
+  .media-squircle, .media-squircle-inset {
+    corner-shape: var(--corner-shape-panel);
+  }
+  :where(
+    button:not(.ui-backdrop):not(.control-shape-none),
+    summary,
+    .ui-control,
+    .ui-primary,
+    .ui-menu-item,
+    .control-squircle
+  ),
+  .library-top-bar :is(input, .library-layout-switch, .library-layout-thumb),
+  .icon-segmented-switch,
+  .icon-segmented-thumb,
+  .library-card-tag-control :is(button, li),
+  #library-sidebar :is(input, a, form, .library-sidebar-interactive) {
+    corner-shape: var(--corner-shape-control);
+  }
+  .library-card-media-chrome {
+    corner-shape: var(--corner-shape-panel);
+  }
+}
+
+
+/* Control shape: buttons, menu items, segmented switches, top-bar inputs and sidebar rows are pills
+   (999px with the superellipse(1.5) corner shape above). It lives in the components layer so an
+   explicit rounded-* utility on an element wins; .control-shape-none opts a button out entirely. */
+@layer components {
+  :where(
+    button:not(.ui-backdrop):not(.control-shape-none),
+    summary,
+    .ui-control,
+    .ui-primary,
+    .ui-menu-item,
+    .control-squircle
+  ),
+  .library-top-bar :is(input, .library-layout-switch, .library-layout-thumb),
+  .icon-segmented-switch,
+  .icon-segmented-thumb,
+  .library-card-tag-control :is(button, li),
+  #library-sidebar :is(input, a, form, .library-sidebar-interactive) {
+    border-radius: 999px;
+  }
+}

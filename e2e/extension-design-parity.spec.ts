@@ -81,7 +81,7 @@ for (const theme of ["light", "dark"] as const) {
       const focusedNote = await style(drawer.locator(".scroll-textarea").filter({ has: app.getByRole("textbox", { name: "Your note (optional)" }) }), ["outlineColor", "outlineWidth", "outlineOffset"]);
       await extensionNote.focus();
       await expect.poll(() => style(extensionNote, ["outlineColor", "outlineWidth", "outlineOffset"])).toEqual(focusedNote);
-      await same(drawer.locator("header"), frame.locator(".header"), "Header", ["paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "gap"]);
+      await same(drawer.locator("[data-drawer-header]"), frame.locator(".header"), "Header", ["paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "gap"]);
       const backdropKeys = ["backgroundImage", "backdropFilter"];
       const appBackdrop = await style(app.locator(".ui-drawer-backdrop"), backdropKeys);
       const extensionBackdrop = await frame.locator(".keepall-drawer").evaluate((node, keys) => { const css = getComputedStyle(node, "::backdrop"); return Object.fromEntries(keys.map(key => [key, css[key as keyof CSSStyleDeclaration]])); }, backdropKeys);

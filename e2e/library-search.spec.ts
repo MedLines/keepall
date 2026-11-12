@@ -6,7 +6,7 @@ test("search matches remembered words, highlights them, and preserves best match
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   // Fixtures live only in this test's disposable browser context.
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {

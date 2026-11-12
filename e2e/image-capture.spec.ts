@@ -313,7 +313,7 @@ for (const width of [320, 1024]) {
     const review = page.getByRole("dialog", { name: "Import browser bookmarks" });
     await expect(review.getByRole("radio", { name: /Browser folder → Unsorted only/ })).toBeChecked();
     const radii = await review.locator(".bookmark-import-option").evaluateAll((rows) => rows.map((row) => getComputedStyle(row).borderTopLeftRadius));
-    expect(radii).toEqual(["10px", "10px", "10px"]);
+    expect(radii).toEqual(["999px", "999px", "999px"]);
     await review.screenshot({ path: testInfo.outputPath(`bookmark-import-options-${entry}.png`) });
     await review.getByRole("button", { name: "Import bookmarks", exact: true }).click();
     await expect(review).toBeHidden();

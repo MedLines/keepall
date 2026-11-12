@@ -47,7 +47,7 @@ test("review and preview share inset content cards, centered actions and transpa
       await expect(dialog).toHaveCSS("transform", "none");
       await expect(dialog.getByRole("button", { name: "Skip", exact: true })).toHaveCount(0);
       const surface = dialog.locator(".library-preview-surface");
-      const header = surface.locator("header");
+      const header = surface.locator("[data-review-header]");
       await expect(header.getByRole("heading", { name: "Review item 1", exact: true })).toBeVisible();
       await expect(header.getByRole("button", { name: "Close preview", exact: true })).toBeVisible();
       const style = await surface.evaluate(node => {
@@ -599,7 +599,7 @@ test("review content card includes its header with equal insets and compact imag
     const card = (await surface.boundingBox())!;
     const footer = (await dialog.locator("footer").boundingBox())!;
     for (const distance of [card.x - bounds.x, bounds.x + bounds.width - card.x - card.width, card.y - bounds.y, bounds.y + bounds.height - footer.y - footer.height]) expect(distance).toBeCloseTo(17, 0);
-    const icon = (await surface.locator("header > span").boundingBox())!;
+    const icon = (await surface.locator("[data-review-header] > span").boundingBox())!;
     const close = (await surface.getByRole("button", { name: "Close preview", exact: true }).boundingBox())!;
     expect(icon.x - card.x).toBeCloseTo(17, 0);
     expect(icon.y - card.y).toBeCloseTo(17, 0);

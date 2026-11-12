@@ -80,7 +80,7 @@
   inset: 1.25rem 0 auto;
   color: oklch(0.62 0 0 / 0.65);
   font-family: ui-monospace, monospace;
-  font-size: 1.375rem;
+  font-size: var(--text-heading);
   line-height: 1.2;
   font-weight: 600;
   text-align: center;
@@ -100,7 +100,7 @@
 }
 .library-empty-title {
   max-width: 100%;
-  font-size: 1rem;
+  font-size: var(--text-base);
   line-height: 1.5;
   font-weight: 500;
   overflow-wrap: anywhere;
@@ -109,7 +109,7 @@
 .library-empty-scope {
   max-width: 20rem;
   margin-block-start: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-compact);
   line-height: 1.65;
   overflow-wrap: anywhere;
 }
@@ -124,7 +124,7 @@
 .library-empty-action {
   min-height: 2.5rem;
   padding: 0.5rem 0.875rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-compact);
   line-height: 1.5;
   font-weight: 500;
 }
@@ -150,7 +150,7 @@
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .library-empty-light {
-    transition: transform 260ms cubic-bezier(0.2, 0.75, 0.25, 1), opacity 150ms ease-out;
+    transition: transform var(--motion-flourish) cubic-bezier(0.2, 0.75, 0.25, 1), opacity var(--motion-quick) ease-out;
   }
   .library-empty-illustration:hover .library-empty-light { transform: scaleX(1.08); }
 }

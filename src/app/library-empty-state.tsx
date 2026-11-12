@@ -6,6 +6,8 @@ import { openBulkImportDialog, openCaptureDialog } from "./capture-events";
 import { LibraryFolderArtwork } from "./library-collections";
 import { SearchIcon, DeleteIcon } from "./shell-icons";
 import "./library-empty-state.css";
+import { buttonClassName } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export type LibraryEmptyStateKind = "library" | "collection" | "unsorted" | "trash" | "filtered" | "first-save";
 
@@ -56,11 +58,11 @@ export function LibraryEmptyState({ kind, message, query, scope, onClearFilters,
       {query?.trim() && scope ? <p className="library-empty-scope text-text-secondary">Searching {scope}</p> : null}
       <p className="library-empty-description text-text-secondary">{description}</p>
       <div className="library-empty-actions">
-        {canSave ? <button type="button" className="ui-control ui-primary library-empty-action" onClick={openCaptureDialog}>{firstSave ? "Save first item" : "Save an item"}</button> : null}
-        {firstSave ? <button type="button" className="ui-control library-empty-action" onClick={openBulkImportDialog} title="Import bookmarks or files">Import items</button> : null}
+        {canSave ? <button type="button" className={buttonClassName({ variant: "primary", size: "none", className: "inline-block library-empty-action" })} onClick={openCaptureDialog}>{firstSave ? "Save first item" : "Save an item"}</button> : null}
+        {firstSave ? <Tooltip content="Import bookmarks or files"><button type="button" className={buttonClassName({ size: "none", className: "inline-block library-empty-action" })} onClick={openBulkImportDialog}>Import items</button></Tooltip> : null}
         {kind === "filtered" ? <>
-          {onSearchEntireLibrary ? <button type="button" className="ui-control ui-primary library-empty-action" onClick={onSearchEntireLibrary}>Search entire library</button> : null}
-          <button type="button" className="ui-control library-empty-action" onClick={onClearFilters}>Clear filters</button>
+          {onSearchEntireLibrary ? <button type="button" className={buttonClassName({ variant: "primary", size: "none", className: "inline-block library-empty-action" })} onClick={onSearchEntireLibrary}>Search entire library</button> : null}
+          <button type="button" className={buttonClassName({ size: "none", className: "inline-block library-empty-action" })} onClick={onClearFilters}>Clear filters</button>
         </> : null}
       </div>
       {firstSave ? <div className="mt-3 flex max-w-full flex-wrap items-center justify-center gap-x-4 text-xs text-text-secondary">

@@ -92,12 +92,12 @@ export function RecordedDemo({ active, name, src, poster, onComplete }: { active
       <source src={`${src}.mp4`} type="video/mp4" />
     </video>
     <div className="ka-recording-controls">
-      <button type="button" className="ui-control ui-primary squircle-panel" onClick={togglePlayback} aria-busy={state === "loading"} aria-label={`${action} ${name} demo`}>
+      <button type="button" className="ui-control ui-primary" onClick={togglePlayback} aria-busy={state === "loading"} aria-label={`${action} ${name} demo`}>
         {playing ? <PauseIcon /> : <PlayIcon />}
         {state === "loading" ? "Loading…" : `${action} demo`}
       </button>
       <span className="ka-recording-caption">{error ? "Couldn’t load. Try again." : "Recorded in Keepall"}</span>
-      <a className="ka-recording-expand ui-control squircle-panel" href={`${src}.mp4`} target="_blank" rel="noreferrer" aria-label={`Open ${name} demo full size`} onClick={() => { manuallyPaused.current = true; video.current?.pause(); }}><FullScreenIcon /></a>
+      <a className="ka-recording-expand ui-control" href={`${src}.mp4`} target="_blank" rel="noreferrer" aria-label={`Open ${name} demo full size`} onClick={() => { manuallyPaused.current = true; video.current?.pause(); }}><FullScreenIcon /></a>
     </div>
     <div className="ka-recording-progress" aria-hidden="true"><span style={{ transform: `scaleX(${progress.value})`, transitionDuration: progress.reset ? "0ms" : undefined }} /></div>
   </div>;

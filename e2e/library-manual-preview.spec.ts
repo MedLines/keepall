@@ -23,7 +23,7 @@ test("manually enriches links from both card menus and searches the saved metada
     body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1sAAAAASUVORK5CYII=", "base64"),
   }));
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");

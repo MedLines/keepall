@@ -195,7 +195,7 @@ test("Save item and Alt+K open the capture flow from the side", async ({ page },
 test("large organization lists keep capture compact and actions visible", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 560 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");
@@ -284,7 +284,7 @@ test("switching note format does not move collection or tag controls", async ({ 
   ]) {
     await page.setViewportSize({ width, height });
     await page.goto("/");
-    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     await openCaptureFromShortcut(page);
     const capture = page.getByRole("dialog", { name: "Save to Keepall" });
     await capture.getByLabel("Link, note, or image").fill(text);
@@ -489,11 +489,11 @@ test("deleting a note after confirm survives a reload", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Remove this note.", exact: true }),
   ).toBeHidden();
-  await expect(page.getByText("No items yet.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
   await page.reload();
 
-  await expect(page.getByText("No items yet.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Remove this note.", exact: true }),
   ).toBeHidden();
@@ -604,7 +604,7 @@ for (const width of [320, 1440]) {
     await input.press("Escape");
     await confirmation.getByRole("button", { name: "Discard changes", exact: true }).click();
     await expect(drawer).toBeHidden();
-    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     await openCaptureFromShortcut(page);
     await expect(input).toHaveValue("");
     await input.press("Escape");

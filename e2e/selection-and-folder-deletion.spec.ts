@@ -10,7 +10,7 @@ async function clickCardArea(page: Page, area: Locator) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");
@@ -119,7 +119,7 @@ for (const entry of ["sidebar", "overview", "bulk"]) {
       const initialHeight = await dialog.evaluate(element => (element as HTMLElement).offsetHeight);
       await dialog.getByRole("radio", { name: new RegExp(`Move to ${destination}`) }).check();
       const options = dialog.locator(".collection-delete-option");
-      await expect(options.first()).toHaveCSS("border-radius", "8px");
+      await expect(options.first()).toHaveCSS("border-radius", "999px");
       const optionHeights = await options.evaluateAll(elements => elements.map(element => (element as HTMLElement).offsetHeight));
       expect(optionHeights[0]).toBe(optionHeights[1]);
       expect(await dialog.evaluate(element => (element as HTMLElement).offsetHeight)).toBe(initialHeight);

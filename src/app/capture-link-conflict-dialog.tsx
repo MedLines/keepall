@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_ACTIVE, SHELL_TOP_BTN_IDLE } from "./shell-styles";
+import { RadioCard } from "@/components/ui/radio-card";
 
 export type CaptureLinkConflict = {
   itemId: string;
@@ -66,35 +67,19 @@ function LinkConflictChoices({
               <legend className="text-xs font-medium text-text-primary">
                 Collection
               </legend>
-              <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm text-text-primary has-[:checked]:bg-bg-active">
-                <input
-                  className="mt-1"
-                  type="radio"
-                  name="capture-conflict-collection"
-                  checked={collectionChoice === "keep"}
-                  disabled={busy}
-                  onChange={() => setCollectionChoice("keep")}
-                />
+              <RadioCard className="text-text-primary" name="capture-conflict-collection" checked={collectionChoice === "keep"} disabled={busy} onChange={() => setCollectionChoice("keep")}>
                 <span>
                   Keep in “{conflict.existingCollectionName}”
                 </span>
-              </label>
-              <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm text-text-primary has-[:checked]:bg-bg-active">
-                <input
-                  className="mt-1"
-                  type="radio"
-                  name="capture-conflict-collection"
-                  checked={collectionChoice === "move"}
-                  disabled={busy}
-                  onChange={() => setCollectionChoice("move")}
-                />
+              </RadioCard>
+              <RadioCard className="text-text-primary" name="capture-conflict-collection" checked={collectionChoice === "move"} disabled={busy} onChange={() => setCollectionChoice("move")}>
                 <span>
                   Move to{" "}
                   {conflict.nextCollectionName
                     ? `“${conflict.nextCollectionName}”`
                     : "Unsorted"}
                 </span>
-              </label>
+              </RadioCard>
             </fieldset>
           ) : null}
 
@@ -103,43 +88,19 @@ function LinkConflictChoices({
               <legend className="text-xs font-medium text-text-primary">
                 Tags
               </legend>
-              <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm text-text-primary has-[:checked]:bg-bg-active">
-                <input
-                  className="mt-1"
-                  type="radio"
-                  name="capture-conflict-tags"
-                  checked={tagChoice === "keep"}
-                  disabled={busy}
-                  onChange={() => setTagChoice("keep")}
-                />
+              <RadioCard className="text-text-primary" name="capture-conflict-tags" checked={tagChoice === "keep"} disabled={busy} onChange={() => setTagChoice("keep")}>
                 <span>
                   Keep existing ({formatList(conflict.existingTagNames)})
                 </span>
-              </label>
-              <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm text-text-primary has-[:checked]:bg-bg-active">
-                <input
-                  className="mt-1"
-                  type="radio"
-                  name="capture-conflict-tags"
-                  checked={tagChoice === "replace"}
-                  disabled={busy}
-                  onChange={() => setTagChoice("replace")}
-                />
+              </RadioCard>
+              <RadioCard className="text-text-primary" name="capture-conflict-tags" checked={tagChoice === "replace"} disabled={busy} onChange={() => setTagChoice("replace")}>
                 <span>
                   Use new only ({formatList(conflict.nextTagNames)})
                 </span>
-              </label>
-              <label className="ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm text-text-primary has-[:checked]:bg-bg-active">
-                <input
-                  className="mt-1"
-                  type="radio"
-                  name="capture-conflict-tags"
-                  checked={tagChoice === "merge"}
-                  disabled={busy}
-                  onChange={() => setTagChoice("merge")}
-                />
+              </RadioCard>
+              <RadioCard className="text-text-primary" name="capture-conflict-tags" checked={tagChoice === "merge"} disabled={busy} onChange={() => setTagChoice("merge")}>
                 <span>Merge both</span>
-              </label>
+              </RadioCard>
             </fieldset>
           ) : null}
 

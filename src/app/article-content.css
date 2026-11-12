@@ -32,7 +32,7 @@
 .article-content a { text-decoration: underline; text-underline-offset: 0.2em; }
 .article-content a:hover { color: var(--color-text-secondary); }
 .article-content :not(pre) > code {
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-control-xs);
   background: var(--color-bg-raised);
   padding: 0.125rem 0.25rem;
   font-size: 0.875em;
@@ -41,7 +41,7 @@
   max-width: 100%;
   overflow-x: auto;
   border: 1px solid var(--color-border-control);
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-control-xs);
   background: var(--color-bg-control);
   padding: 1rem;
   font-size: 0.875rem;

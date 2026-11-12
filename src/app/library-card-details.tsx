@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { useId, useState, type ReactElement } from "react";
-import { Tooltip } from "@base-ui/react/tooltip";
+import { useState, type ReactElement } from "react";
+import { Tooltip } from "@/components/ui/tooltip";
 import { linkFaviconUrls, noteCardText } from "@/domain/card-display";
 import { DocumentIcon } from "./document-icon";
 import { SearchHighlight } from "./search-highlight";
@@ -43,19 +43,11 @@ export function CardNote({ content, format, title, openHref, onOpen, readOnly = 
 }
 
 function NoteExcerptTooltip({ trigger, text, format }: { trigger: ReactElement; text: string; format?: "markdown" }) {
-  const id = useId();
   const normalized = text.replace(/\s+/g, " ").trim();
   const cutoff = normalized.slice(0, 240).lastIndexOf(" ");
   const excerpt = normalized.length > 240 ? `${normalized.slice(0, cutoff > 180 ? cutoff : 240).trimEnd()}…` : normalized;
-  return <Tooltip.Root>
-    <Tooltip.Trigger render={trigger} delay={100} closeDelay={100} aria-describedby={id} />
-    <Tooltip.Portal>
-      <Tooltip.Positioner side="top" align="end" sideOffset={8} collisionPadding={12} className="z-[90]">
-        <Tooltip.Popup id={id} role="tooltip" className="library-note-tooltip ui-popover w-72 max-w-[calc(100vw-2rem)] p-3">
-          <p className="mb-2 text-xs font-medium text-text-secondary">{format === "markdown" ? "Markdown note" : "Note"}</p>
-          <p className="library-note-excerpt" data-truncated={normalized.length > 200 || undefined}>{excerpt}</p>
-        </Tooltip.Popup>
-      </Tooltip.Positioner>
-    </Tooltip.Portal>
-  </Tooltip.Root>;
+  return <Tooltip content={<>
+    <p className="mb-2 text-xs font-medium text-text-secondary">{format === "markdown" ? "Markdown note" : "Note"}</p>
+    <p className="library-note-excerpt" data-truncated={normalized.length > 200 || undefined}>{excerpt}</p>
+  </>} delay={100} closeDelay={100} side="top" align="end" collisionPadding={12} layerClassName="z-[90]" unstyled className="library-note-tooltip ui-popover w-72 max-w-[calc(100vw-2rem)] p-3">{trigger}</Tooltip>;
 }

@@ -2,6 +2,8 @@
 
 import { Menu } from "@base-ui/react/menu";
 import { ChevronDownIcon, LinkIcon, NoteIcon, SelectionCheckedIcon } from "./shell-icons";
+import { iconButtonClassName } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 
 type Props = {
   value: "link" | "note";
@@ -12,9 +14,9 @@ type Props = {
 export function CaptureTypeMenu({ value, disabled, onChange }: Props) {
   return (
     <Menu.Root modal={false} disabled={disabled}>
-      <Menu.Trigger className="ui-control flex size-8 shrink-0 items-center justify-center disabled:opacity-60" aria-label="Change type" title="Change type">
+      <Tooltip content="Change type" describe={false}><Menu.Trigger className={iconButtonClassName({ size: "sm" })} aria-label="Change type">
         <ChevronDownIcon className="size-4" />
-      </Menu.Trigger>
+      </Menu.Trigger></Tooltip>
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[80] data-[anchor-hidden]:invisible">
           <Menu.Popup aria-label="Save as" className="ui-menu-popup ui-popover w-44 max-w-[calc(100vw-1rem)] outline-none">

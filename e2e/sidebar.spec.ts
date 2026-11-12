@@ -36,7 +36,7 @@ test("persisted collapsed sections hydrate without replacing the sidebar", async
 test("collection actions remain inside the same hovered sidebar row", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -137,7 +137,7 @@ test("collection actions remain inside the same hovered sidebar row", async ({ p
 test("long collection and tag lists scroll inside separate sidebar sections", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 760 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -303,7 +303,7 @@ test("long collection and tag lists scroll inside separate sidebar sections", as
 
 test("pinned collections persist, reorder, and lead compact capture", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {

@@ -1,3 +1,4 @@
+import { buttonClassName } from "@/components/ui/button";
 const SHELL_PANEL_KEY = "keepall-shell-panel-open";
 export const SIDEBAR_WIDTH_KEY = "keepall-shell-sidebar-width";
 export const SIDEBAR_DEFAULT_WIDTH = 256;
@@ -62,7 +63,7 @@ export const SHELL_NAV_GUTTER = "px-4";
 
 /** Visual surface shared by composite nav rows and interactive nav items. */
 export const SHELL_NAV_SURFACE =
-  "library-sidebar-interactive squircle-panel relative flex items-center rounded-control-md text-text-secondary";
+  "library-sidebar-interactive relative flex items-center text-text-secondary";
 
 /** Interactive sidebar nav item — icon always; label when expanded. */
 export const SHELL_NAV_ITEM =
@@ -74,20 +75,8 @@ export const SHELL_NAV_ITEM_ACTIVE =
 export const SHELL_NAV_ITEM_IDLE =
   "hover:bg-bg-raised";
 
-/** @deprecated use SHELL_NAV_ITEM */
-export const SHELL_RAIL_BTN = SHELL_NAV_ITEM;
-
-/** @deprecated use SHELL_NAV_ITEM_ACTIVE */
-export const SHELL_RAIL_BTN_ACTIVE = SHELL_NAV_ITEM_ACTIVE;
-
-/** @deprecated use SHELL_NAV_ITEM */
-export const SHELL_PANEL_ROW = SHELL_NAV_ITEM;
-
-/** @deprecated use SHELL_NAV_ITEM_ACTIVE */
-export const SHELL_PANEL_ROW_ACTIVE = SHELL_NAV_ITEM_ACTIVE;
-
 export const SHELL_TOP_BTN =
-  "ui-control inline-flex h-10 items-center gap-1.5 px-3 text-sm font-medium disabled:opacity-60";
+  buttonClassName({ size: "none", className: "h-10 gap-1.5 px-3 text-sm font-medium justify-start" });
 
 export const SHELL_DESTRUCTIVE_BTN =
   "text-text-danger hover:bg-bg-danger focus-visible:bg-bg-danger";
@@ -98,9 +87,6 @@ export const SHELL_TOP_BTN_ACTIVE =
 export const SHELL_TOP_BTN_IDLE =
   "text-text-secondary";
 
-export const SHELL_TOOLTIP =
-  "rounded-control-sm border border-border-control bg-bg-surface px-2.5 py-1.5 text-xs font-medium text-text-primary shadow-menu transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0";
-
 /** Sidebar sits behind the inset content panel. */
 export const SHELL_ASIDE =
   "flex h-full max-h-full min-h-0 shrink-0 flex-col overflow-hidden bg-bg-shell";
@@ -109,7 +95,7 @@ export const SHELL_BACKDROP =
   "ui-backdrop fixed inset-y-0 right-0 left-14 z-40 transition-[opacity] duration-200 ease-out md:hidden";
 
 export const SHELL_FORM_SURFACE =
-  "squircle-panel rounded-control-sm bg-bg-canvas p-3";
+  "rounded-control-sm bg-bg-canvas p-3";
 
 export const SHELL_MANAGE_SURFACE =
-  "squircle-panel rounded-control-sm bg-bg-surface p-3";
+  "rounded-control-sm bg-bg-surface p-3";

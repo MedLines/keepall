@@ -14,6 +14,7 @@ import {
   ArrowRightIcon, CheckIcon, CollectionIcon, DeleteIcon, DownloadIcon, EditIcon, EyeIcon, FullScreenIcon, HashIcon, LayersIcon, LinkIcon,
   PinIcon, PlusIcon, RefreshIcon, SearchIcon,
 } from "./shell-icons";
+import { menuItemClassName } from "@/components/ui/menu-item";
 
 type NamedEntry = { id: string; name: string };
 
@@ -52,8 +53,8 @@ type Props = {
   onOpen?: () => void;
 };
 
-const MENU_ITEM = "ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary outline-none data-[highlighted]:bg-bg-active";
-const ORGANIZATION_ITEM = `${MENU_ITEM} organization-choice rounded-control-md`;
+const MENU_ITEM = menuItemClassName();
+const ORGANIZATION_ITEM = `${MENU_ITEM} organization-choice`;
 
 function SelectionMark({ checked }: { checked: boolean }) {
   const reduceMotion = useReducedMotion();
@@ -98,7 +99,7 @@ export function ItemContextMenu({
       menu={() => trashActions ? <>
         <Menu.Item className={MENU_ITEM} disabled={busy} onClick={() => openDialog(trashActions.onRestore)}><ArrowRightIcon className="size-4" /><span className="leading-none">Restore</span></Menu.Item>
         <Menu.Separator className="my-1 border-t border-border-edge" />
-        <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none data-[highlighted]:bg-bg-danger" disabled={busy} onClick={() => openDialog(trashActions.onDelete)}><DeleteIcon className="size-4" /><span className="leading-none">Delete permanently</span></Menu.Item>
+        <Menu.Item className={menuItemClassName({ tone: "danger", layout: "none", className: "items-center gap-2 outline-none" })} disabled={busy} onClick={() => openDialog(trashActions.onDelete)}><DeleteIcon className="size-4" /><span className="leading-none">Delete permanently</span></Menu.Item>
       </> :
         <>
           {onOpenFullItem ? <Menu.Item className={MENU_ITEM} onClick={() => openDialog(onOpenFullItem)}>
@@ -136,7 +137,7 @@ export function ItemContextMenu({
             <LayersIcon />Organize
           </ContextMenu.Item>
           <ContextMenu.Separator className="my-1 border-t border-border-edge" />
-          <ContextMenu.Item className="ui-menu-item flex w-full items-center gap-2 text-sm text-text-danger outline-none hover:bg-bg-danger data-[highlighted]:bg-bg-danger" disabled={busy} onClick={() => { movingToTrash.current = true; onDelete(); }}>
+          <ContextMenu.Item className={menuItemClassName({ tone: "danger", layout: "none", className: "items-center gap-2 outline-none hover:bg-bg-danger" })} disabled={busy} onClick={() => { movingToTrash.current = true; onDelete(); }}>
             <DeleteIcon className="size-4" /><span className="leading-none">Move to Trash</span>
           </ContextMenu.Item>
         </>

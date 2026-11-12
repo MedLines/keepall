@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CaptureOrgBrowser } from "./capture-org-browser";
 import { CheckIcon, CloseIcon, CollectionIcon, HashIcon, PlusIcon } from "./shell-icons";
 import type { OrgNameSuggestion } from "./org-name-suggest";
+import { buttonClassName } from "@/components/ui/button";
 
 type Props = {
   tagNames: string[];
@@ -232,7 +233,7 @@ function CreateButton({
   return (
     <button
       type="button"
-      className={inline ? "ui-control inline-flex h-7 max-w-full items-center gap-1.5 ps-1.5 pe-2 text-xs font-medium disabled:opacity-60" : captureStyles["org-create"]}
+      className={inline ? buttonClassName({ size: "none", className: "h-7 max-w-full gap-1.5 ps-1.5 pe-2 text-xs font-medium justify-start" }) : captureStyles["org-create"]}
       aria-label={inline ? `Create ${kind} “${query}”` : undefined}
       title={inline ? `Create ${kind} “${query}”` : undefined}
       disabled={disabled}

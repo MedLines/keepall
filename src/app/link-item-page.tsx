@@ -36,6 +36,7 @@ import { ItemPageHeader } from "./item-page-header";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
 import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
 import { ItemPreviewContentTransition } from "./item-view-transition";
+import { buttonClassName } from "@/components/ui/button";
 
 type LoadState =
   | { status: "loading" | "missing" | "error" }
@@ -201,7 +202,7 @@ export function LinkItemPage({ itemId, returnHref, initialSnapshot }: { itemId: 
         <div className={ITEM_PAGE_GRID}>
           <ItemPreviewContentTransition itemId={itemId}>
           <div className="row-start-1 min-w-0 lg:col-start-1 lg:mx-auto lg:w-full lg:max-w-5xl">
-            {!link.article ? <div className="squircle-panel overflow-hidden rounded-panel border border-border-control bg-bg-surface">
+            {!link.article ? <div className="overflow-hidden rounded-panel border border-border-control bg-bg-surface">
               {link.previewAssetId ? <LibraryItemMedia item={link} variant="card" className="max-h-96 w-full" /> : null}
               <div className="px-5 pb-6 pt-5 sm:px-7">
                 <div className="flex min-w-0 items-center gap-2 text-sm text-text-secondary"><LinkIcon className="size-4" />{linkCardHost(link)}</div>
@@ -286,7 +287,7 @@ function LinkPageUnavailable({ status, returnHref }: { status: "loading" | "miss
   return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5">
     <div className="text-center">
       <p className="text-text-secondary">{message}</p>
-      <Link href={returnHref} className="ui-control mt-5 inline-flex min-h-10 items-center px-4">Return to library</Link>
+      <Link href={returnHref} className={buttonClassName({ size: "none", className: "mt-5 min-h-10 px-4 justify-start" })}>Return to library</Link>
     </div>
   </main>;
 }

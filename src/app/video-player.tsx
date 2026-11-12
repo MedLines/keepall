@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Menu } from "@base-ui/react/menu";
 import { CheckIcon, ChevronDownIcon, ExitFullScreenIcon, ForwardIcon, FullScreenIcon, MuteIcon, PauseIcon, PlayIcon, RewindIcon, VolumeIcon } from "./shell-icons";
 import styles from "./video-player.module.css";
+import { menuItemClassName } from "@/components/ui/menu-item";
 
 function formatTime(value: number) {
   const seconds = Math.floor(Number.isFinite(value) ? Math.max(0, value) : 0);
@@ -157,7 +158,7 @@ export function VideoPlayer({ src, poster, title, onError }: { src: string; post
                 <p className="px-3 py-2 text-xs text-text-secondary">Playback speed</p>
                 <Menu.RadioGroup value={String(rate)} onValueChange={value => { if (videoRef.current) videoRef.current.playbackRate = Number(value); }}>
                   {[0.5, 0.75, 1, 1.25, 1.5, 2].map(value => <Menu.RadioItem key={value} value={String(value)} closeOnClick
-                    className="ui-menu-item flex w-full items-center justify-between px-3 text-sm tabular-nums text-text-primary outline-none data-[highlighted]:bg-bg-active">
+                    className={menuItemClassName({ layout: "none", className: "items-center justify-between px-3 tabular-nums outline-none" })}>
                     <span>{value}x</span><Menu.RadioItemIndicator><CheckIcon className="size-4" /></Menu.RadioItemIndicator>
                   </Menu.RadioItem>)}
                 </Menu.RadioGroup>

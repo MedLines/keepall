@@ -7,8 +7,9 @@ import { getLibraryPreferences, putKeyboardShortcut, putKeyboardShortcuts } from
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
 import { SHORTCUTS_CHANGED_EVENT } from "../use-app-shortcuts";
+import { buttonClassName } from "@/components/ui/button";
 
-const CONTROL = "ui-control inline-flex min-h-11 items-center justify-center gap-2 px-3 text-sm font-medium disabled:opacity-50";
+const CONTROL = buttonClassName({ size: "none", className: "min-h-11 gap-2 px-3 text-sm font-medium disabled:opacity-50" });
 const MODIFIER_KEYS = ["Alt", "Control", "Meta", "Shift"];
 
 function hasModifiers(event: KeyboardEvent<HTMLElement>) {

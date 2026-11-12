@@ -4,7 +4,7 @@ test.use({ serviceWorkers: "block" });
 
 async function seed(page: Page, documents: { id: string; title: string; text?: string }[]) {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async documents => {
     const request = indexedDB.open("keepall");
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -36,7 +36,7 @@ test("imported file contents produce highlighted results through filters, editin
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+k");
   const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
   const chooser = page.waitForEvent("filechooser");

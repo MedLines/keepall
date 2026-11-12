@@ -66,6 +66,8 @@ type LoadState =
     };
 
 import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 
 type Props = {
   itemId: string;
@@ -74,7 +76,7 @@ type Props = {
 };
 
 const CONTROL =
-  "ui-control inline-flex min-h-11 items-center justify-center gap-2 px-3 text-sm font-medium disabled:cursor-default disabled:opacity-40";
+  buttonClassName({ size: "none", className: "min-h-11 gap-2 px-3 text-sm font-medium disabled:cursor-default disabled:opacity-40" });
 const MAX_VISIBLE_GALLERY_PREVIEWS = 15;
 type GalleryMode = "slides" | "scroll";
 
@@ -534,7 +536,7 @@ function ItemPageMessage({
 }) {
   return (
     <main className="grid min-h-dvh place-items-center bg-bg-shell p-5">
-      <section className="library-panel squircle-panel w-full max-w-lg rounded-panel bg-bg-surface p-8 text-center shadow-panel">
+      <section className="library-panel w-full max-w-lg bg-bg-surface p-8 text-center shadow-panel">
         {title ? <h1 className="text-2xl font-semibold">{title}</h1> : null}
         <p className={title ? "mt-3 text-sm text-text-secondary" : "text-sm text-text-secondary"}>{message}</p>
         {returnHref ? (
@@ -660,17 +662,17 @@ function ImageWorkspace({
 
   const galleryControls = (
     <div className="grid gap-2">
-      <div className="icon-segmented-switch squircle-panel relative isolate flex h-11 w-full rounded-control-lg bg-bg-control p-0.5" role="group" aria-label="Gallery view" data-selected={galleryMode === "scroll" ? "end" : "start"}>
-        <span aria-hidden="true" className="icon-segmented-thumb squircle-panel ui-selected pointer-events-none absolute left-0.5 top-0.5 h-10 w-[calc(50%_-_2px)] rounded-control-sm" />
-        {(["slides", "scroll"] as const).map(mode => (
-          <button key={mode} type="button" aria-label={`${mode === "slides" ? "Slides" : "Scroll"} view`}
-            aria-pressed={galleryMode === mode}
-            className={`squircle-panel relative flex h-10 min-w-0 flex-1 items-center justify-center rounded-control-sm px-2 text-xs font-medium ${galleryMode === mode ? "text-text-primary" : "text-text-secondary hover:text-text-primary"}`}
-            onClick={() => onGalleryModeChange(mode)}>
-            {mode === "slides" ? "Slides" : "Scroll"}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        label="Gallery view"
+        className="h-11 w-full bg-bg-control"
+        thumbClassName="h-10"
+        value={galleryMode}
+        onChange={onGalleryModeChange}
+        choices={[
+          { value: "slides", label: "Slides", ariaLabel: "Slides view" },
+          { value: "scroll", label: "Scroll", ariaLabel: "Scroll view" },
+        ]}
+      />
     </div>
   );
 
@@ -735,7 +737,7 @@ function ImageWorkspace({
                     assetId={currentAssetId}
                     sharedTransition={false}
                   />
-                  <span className="ui-control pointer-events-none absolute bottom-3 right-3 flex size-11 items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">
+                  <span className={iconButtonClassName({ size: "lg", className: "pointer-events-none absolute bottom-3 right-3 shrink opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100" })}>
                     <FullScreenIcon />
                   </span>
                 </button>
@@ -823,7 +825,7 @@ function ImageWorkspace({
               onEdit={onEdit}
               onDelete={onDelete}
               mediaAction={
-                <button className={ITEM_DETAILS_CONTROL} type="button" aria-label={galleryMutation === "add" ? "Adding images" : "Add images"} title="Add images" disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
+                <button className={ITEM_DETAILS_CONTROL} type="button" aria-label={galleryMutation === "add" ? "Adding images" : "Add images"} disabled={galleryMutation !== null} onClick={() => addInputRef.current?.click()}>
                   <PlusIcon className="size-4" />
                   <span>{galleryMutation === "add" ? "Adding…" : "Add images"}</span>
                 </button>
@@ -1057,15 +1059,15 @@ function FocusedImageViewer({
             ) : null}
             {slideCount > 1 ? (
               <>
-                <button className="ui-control fixed left-3 top-1/2 z-10 flex size-14 -translate-y-1/2 items-center justify-center bg-bg-surface/95 backdrop-blur-sm disabled:cursor-default disabled:opacity-40" type="button" aria-label="Previous full-screen image" disabled={currentSlide === 0} onClick={() => changeSlide(currentSlide - 1)}>
+                <button className={iconButtonClassName({ size: "md", className: "fixed left-3 top-1/2 z-10 size-14 -translate-y-1/2 bg-bg-surface/95 backdrop-blur-sm disabled:cursor-default disabled:opacity-40 shrink" })} type="button" aria-label="Previous full-screen image" disabled={currentSlide === 0} onClick={() => changeSlide(currentSlide - 1)}>
                   <ArrowLeftIcon className="size-6" />
                 </button>
-                <button className="ui-control fixed right-3 top-1/2 z-10 flex size-14 -translate-y-1/2 items-center justify-center bg-bg-surface/95 backdrop-blur-sm disabled:cursor-default disabled:opacity-40" type="button" aria-label="Next full-screen image" disabled={currentSlide === slideCount - 1} onClick={() => changeSlide(currentSlide + 1)}>
+                <button className={iconButtonClassName({ size: "md", className: "fixed right-3 top-1/2 z-10 size-14 -translate-y-1/2 bg-bg-surface/95 backdrop-blur-sm disabled:cursor-default disabled:opacity-40 shrink" })} type="button" aria-label="Next full-screen image" disabled={currentSlide === slideCount - 1} onClick={() => changeSlide(currentSlide + 1)}>
                   <ArrowRightIcon className="size-6" />
                 </button>
               </>
             ) : null}
-            <p className="pointer-events-none fixed bottom-3 left-1/2 -translate-x-1/2 rounded-control bg-bg-overlay/70 px-3 py-2 text-sm tabular-nums text-text-on-media" aria-label={`Image ${currentSlide + 1} of ${slideCount}`}>
+            <p className="pointer-events-none fixed bottom-3 left-1/2 -translate-x-1/2 rounded-control-xs bg-bg-overlay/70 px-3 py-2 text-sm tabular-nums text-text-on-media" aria-label={`Image ${currentSlide + 1} of ${slideCount}`}>
               {currentSlide + 1} / {slideCount}
             </p>
           </Dialog.Popup>

@@ -6,6 +6,7 @@ import { flushSync } from "react-dom";
 import Link from "next/link";
 import { ArrowRightIcon, BackupIcon, GridIcon, HelpIcon, SettingsIcon } from "../shell-icons";
 import { useShellMobile } from "../use-shell-mobile";
+import { buttonClassName } from "@/components/ui/button";
 
 const sections = [
   { value: "general", label: "General", icon: SettingsIcon },
@@ -106,7 +107,7 @@ export function SettingsTabs(content: Record<Section, ReactNode>) {
             requestRef.current += 1;
             transitionRef.current.skipTransition();
           }}
-          className="settings-tab relative z-10 flex min-h-11 items-center justify-center gap-2 rounded-control-lg border border-transparent px-2 py-2 text-center text-xs font-medium text-text-secondary hover:text-text-primary data-[active]:text-text-primary sm:text-sm md:justify-start md:px-3 md:text-left"
+          className="settings-tab relative z-10 flex min-h-11 items-center justify-center gap-2 border border-transparent px-2 py-2 text-center text-xs font-medium text-text-secondary hover:text-text-primary data-[active]:text-text-primary sm:text-sm md:justify-start md:px-3 md:text-left"
         >
           <Icon className="hidden size-4 shrink-0 md:block" />
           <span className="md:whitespace-nowrap">{label}</span>
@@ -125,7 +126,7 @@ export function SettingsTabs(content: Record<Section, ReactNode>) {
 }
 
 function HelpLink() {
-  return <Link href="/help" className="ui-control flex min-h-11 w-full items-center gap-2 px-3 py-2 text-sm font-medium">
+  return <Link href="/help" className={buttonClassName({ size: "none", className: "flex min-h-11 w-full items-center gap-2 px-3 py-2 text-sm font-medium justify-start" })}>
     <HelpIcon className="size-4" />
     <span>Help & guides</span>
     <ArrowRightIcon className="ml-auto size-4" />

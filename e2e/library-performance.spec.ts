@@ -101,7 +101,7 @@ test("sidebar reveals without scaling text or repeatedly resizing the library", 
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await seedMeasuredLibrary(page);
   await expect(page.locator(".library-item-root").first()).toBeVisible();
 
@@ -206,7 +206,7 @@ test("sidebar animation respects reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
   await expect(sidebar.locator("[data-sidebar-panel]")).toHaveCSS(
@@ -225,7 +225,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
   test(`sidebar icons remain stationary at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/");
-    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     const sidebar = page.getByRole("complementary", { name: "Sidebar" });
 
     // Exercise every section-open combination without changing flags mid-toggle.
@@ -297,7 +297,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
 test("collection switches keep one stable card for every rendered item", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await seedMeasuredLibrary(page);
 
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
@@ -351,7 +351,7 @@ test("virtualized cards share one object URL for the same local asset", async ({
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await seedMeasuredLibrary(page, { imageOnly: true });
 
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
@@ -376,7 +376,7 @@ test("cards load only a favicon when local preview bytes are missing", async ({ 
     await route.abort();
   });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");
@@ -424,7 +424,7 @@ test("cards load only a favicon when local preview bytes are missing", async ({ 
 test("sidebar dragging keeps a populated library virtualized and its cards within the grid", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await seedMeasuredLibrary(page);
   await expect(page.locator(".library-item-root").first()).toBeVisible();
   const errors: string[] = [];
@@ -458,7 +458,7 @@ for (const layout of ["Grid", "List"] as const) {
   test(`${layout} cards keep their layout throughout a sidebar drag and reflow on release`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     await seedMeasuredLibrary(page);
     await page.getByRole("button", { name: `${layout} view`, exact: true }).click();
     const cards = page.locator(".library-item-root");

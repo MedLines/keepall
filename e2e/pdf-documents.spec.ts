@@ -22,7 +22,7 @@ test.use({ serviceWorkers: "block" });
 
 test("page navigation never clears a painted canvas that is still visible", async ({ page }, testInfo) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+k");
   const drawer = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
   const chooser = page.waitForEvent("filechooser");
@@ -97,7 +97,7 @@ test("PDF imports search all pages, render locally, edit notes, and download exa
   page.on("pageerror", error => errors.push(error.message));
   const bytes = pdfFixture(["First page", "Unicorn animation café"]);
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+k");
   const drawer = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
   const chooser = page.waitForEvent("filechooser");
@@ -211,7 +211,7 @@ test("continuous PDF reading uses the item scrollbar, bounds canvases, and prese
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+k");
   const drawer = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
   const sizes = Array.from({ length: 20 }, (_, index) => index % 2 ? { width: 792, height: 612 } : { width: 595, height: 842 });
@@ -308,7 +308,7 @@ test("continuous PDF reading uses the item scrollbar, bounds canvases, and prese
 
 test("unreadable and locked PDFs leave no saved originals or organization", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+k");
   const drawer = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
   const chooser = page.waitForEvent("filechooser");

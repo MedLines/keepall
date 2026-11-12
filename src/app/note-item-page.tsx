@@ -38,6 +38,7 @@ import { ItemPageLoading } from "./library-loading-content";
 import { ITEM_DETAILS_POSITION, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL, ITEM_DETAILS_CONTROL } from "./item-page-styles";
 
 import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
+import { buttonClassName } from "@/components/ui/button";
 
 type LoadState =
   | { status: "loading" | "missing" | "error" }
@@ -103,7 +104,7 @@ export function NoteItemPage({
           <p className="text-text-secondary">{message}</p>
           <Link
             href={returnHref}
-            className="ui-control mt-5 inline-flex min-h-10 items-center px-4"
+            className={buttonClassName({ size: "none", className: "mt-5 min-h-10 px-4 justify-start" })}
           >
             Return to library
           </Link>

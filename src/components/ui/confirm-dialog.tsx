@@ -3,6 +3,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import type { ReactNode, RefObject } from "react";
 import { CloseIcon } from "@/app/shell-icons";
+import { Button, buttonClassName, iconButtonClassName } from "./button";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -61,7 +62,7 @@ export function ConfirmDialog({
             initialFocus={cancelRef ?? confirmRef}
             finalFocus={returnFocusRef ? () => returnFocusRef.current?.isConnected ? returnFocusRef.current : true : undefined}
           >
-            <header className="flex items-start gap-4 border-b border-border-control px-6 py-5">
+            <div className="flex items-start gap-4 border-b border-border-control px-6 py-5">
               <div className="min-w-0 flex-1">
                 <Dialog.Title className="[overflow-wrap:anywhere] text-xl font-semibold text-text-primary">
                   {title}
@@ -71,32 +72,25 @@ export function ConfirmDialog({
                 </Dialog.Description>
               </div>
               <Dialog.Close
-                className="ui-control flex size-10 shrink-0 items-center justify-center"
+                className={iconButtonClassName()}
                 aria-label="Close"
                 disabled={busy}
               >
                 <CloseIcon />
               </Dialog.Close>
-            </header>
+            </div>
             <div className="flex flex-col gap-4 px-6 py-5">
               {children}
               {error ? <p className="text-sm text-text-danger" role="alert">{error}</p> : null}
               <div className="flex flex-wrap justify-end gap-2">
-                {busy && onCancelWhileBusy ? <button type="button" onClick={onCancelWhileBusy} disabled={cancelPending}
-                  className="ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60">
+                {busy && onCancelWhileBusy ? <Button onClick={onCancelWhileBusy} disabled={cancelPending}>
                   {cancelPending ? "Canceling…" : cancelLabel}
-                </button> : <Dialog.Close ref={cancelRef} className="ui-control min-h-10 px-4 text-sm font-medium" disabled={busy}>
+                </Button> : <Dialog.Close ref={cancelRef} className={buttonClassName()} disabled={busy}>
                   {cancelLabel}
                 </Dialog.Close>}
-                <button
-                  ref={confirmRef}
-                  className="ui-control min-h-10 border-border-danger bg-bg-danger px-4 text-sm font-medium text-text-danger disabled:opacity-60"
-                  type="button"
-                  disabled={busy}
-                  onClick={onConfirm}
-                >
+                <Button ref={confirmRef} variant="danger" disabled={busy} onClick={onConfirm}>
                   {busy ? pendingLabel : confirmLabel}
-                </button>
+                </Button>
               </div>
             </div>
           </Dialog.Popup>

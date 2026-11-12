@@ -5,7 +5,7 @@ test.use({ serviceWorkers: "block" });
 test.beforeEach(async ({ page }) => {
   await page.route(/https:\/\/.*example\.com/, route => route.abort());
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");
@@ -131,7 +131,7 @@ test("preview frame and controls stay fixed across media, captions, long notes, 
   await notes.evaluate(node => node.scrollTop = node.scrollHeight);
   await expect(notes.getByText(/End of image notes/)).toBeVisible();
   await dialog.getByRole("button", { name: "Next item" }).click();
-  const title = dialog.locator("header h2 span");
+  const title = dialog.locator("[data-review-header] h2 span");
   expect(await title.evaluate(node => node.scrollWidth > node.clientWidth && getComputedStyle(node).whiteSpace === "nowrap")).toBe(true);
   await title.hover();
   await expect(page.getByRole("tooltip")).toHaveText(/A deliberately long title.*whole title/);
@@ -189,7 +189,7 @@ test("preview survives RTL and expanded labels while title tooltips remain condi
   await page.evaluate(() => document.documentElement.dir = "rtl");
   await page.getByRole("button", { name: "Preview", exact: true }).click();
   const dialog = page.locator(".library-quick-preview[role=dialog]");
-  await dialog.locator("header h2 span").hover();
+  await dialog.locator("[data-review-header] h2 span").hover();
   await expect(page.getByRole("tooltip")).toHaveCount(0);
   await dialog.getByRole("button", { name: "Open full item" }).evaluate(node => node.textContent = "Vollständigen Eintrag öffnen");
   expect(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);

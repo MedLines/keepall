@@ -1,6 +1,5 @@
 "use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { Menu } from "@base-ui/react/menu";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -10,6 +9,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import { SHELL_DESTRUCTIVE_BTN, SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
 import { ArrowRightIcon, ChevronDownIcon, DeleteIcon, LayersIcon, SelectionCheckedIcon } from "./shell-icons";
+import { buttonClassName } from "@/components/ui/button";
+import { menuItemClassName } from "@/components/ui/menu-item";
 
 export type BulkPanel = null | "delete" | "organize";
 
@@ -139,7 +140,7 @@ export function LibraryBulkToolbar({
         <Menu.Trigger
           ref={triggerRef}
           type="button"
-          className="ui-control inline-flex h-10 min-w-0 shrink-0 items-center gap-1.5 rounded-control px-2.5 text-xs font-medium tabular-nums text-text-primary sm:px-3"
+          className={buttonClassName({ size: "none", className: "h-10 min-w-0 shrink-0 gap-1.5 px-2.5 text-xs font-medium tabular-nums text-text-primary sm:px-3 justify-start" })}
           aria-label={`Selection actions: ${count} selected`}
           disabled={busy || count === 0}
         >
@@ -159,36 +160,36 @@ export function LibraryBulkToolbar({
                 ? document.getElementById("library-search")
                 : restoreTriggerFocus.current ? triggerRef.current : false}
             >
-              <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
+              <div className="ui-scrollbar flex min-h-0 flex-col overflow-y-auto overscroll-contain">
               {!allVisibleSelected ? (
-                <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={onSelectAllVisible}>
+                <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={onSelectAllVisible}>
                   Select all
                 </Menu.Item>
               ) : null}
-              <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(() => {
+              <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={() => runWithoutTriggerRestore(() => {
                 focusSearchAfterClose.current = true;
                 onClearSelection();
               })}>
                 Deselect all
               </Menu.Item>
-              {hiddenCount > 0 ? <Menu.Item className="ui-menu-item flex w-full text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(() => {
+              {hiddenCount > 0 ? <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={() => runWithoutTriggerRestore(() => {
                 focusSearchAfterClose.current = true;
                 onClearHidden?.();
               })}>
                 Clear hidden selection
               </Menu.Item> : null}
               {onOpenPanel && !onDeletePermanently && !onDelete ? (
-                <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(() => onOpenPanel("organize"))}>
+                <Menu.Item className={menuItemClassName({ layout: "none", className: "items-center gap-2 text-left" })} onClick={() => runWithoutTriggerRestore(() => onOpenPanel("organize"))}>
                   <LayersIcon className="size-4" />Organize
                 </Menu.Item>
               ) : null}
-              {onRestoreSelected && count > 0 ? <Menu.Item disabled={busy} className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-primary data-[highlighted]:bg-bg-active" onClick={() => runWithoutTriggerRestore(onRestoreSelected)}>
+              {onRestoreSelected && count > 0 ? <Menu.Item disabled={busy} className={menuItemClassName({ layout: "none", className: "items-center gap-2 text-left" })} onClick={() => runWithoutTriggerRestore(onRestoreSelected)}>
                 <ArrowRightIcon className="size-4" />Restore selected
               </Menu.Item> : null}
-              <Menu.Item className="ui-menu-item flex w-full items-center gap-2 text-left text-sm text-text-danger data-[highlighted]:bg-bg-danger" onClick={() => runWithoutTriggerRestore(destructiveAction)}>
+              <Menu.Item className={menuItemClassName({ tone: "danger", layout: "none", className: "items-center gap-2 text-left" })} onClick={() => runWithoutTriggerRestore(destructiveAction)}>
                 <DeleteIcon className="size-4" />{destructiveLabel}
               </Menu.Item>
-              </ScrollArea>
+              </div>
             </Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>

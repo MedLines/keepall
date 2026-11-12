@@ -10,7 +10,7 @@ test("enriches old links automatically after opening their folder without a relo
     await route.fulfill({ json: { title: "Fetched title", description: "Fetched description", imageUrl: "" } });
   });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");

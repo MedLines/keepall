@@ -1,5 +1,5 @@
 import { MarkdownIcon, PlainTextIcon } from "./shell-icons";
-import { SegmentedControl } from "./segmented-control";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
 type Props = {
   format: "plain" | "markdown";

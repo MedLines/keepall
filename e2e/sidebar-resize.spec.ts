@@ -132,7 +132,7 @@ for (const preference of ["open", "closed"] as const) {
       releaseScripts();
     }
     await page.waitForLoadState("load");
-    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     await page.waitForTimeout(400);
     const samples = await page.evaluate(() => (window as unknown as { sidebarStartup: { widths: number[]; clips: string[] } }).sidebarStartup);
     expect(samples.widths.length).toBeGreaterThan(2);

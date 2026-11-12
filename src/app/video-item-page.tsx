@@ -29,6 +29,7 @@ import { VideoPlayer } from "./video-player";
 import { ITEM_DETAILS_CONTROL, ITEM_DETAILS_POSITION, ITEM_MEDIA_HEIGHT, ITEM_PAGE_GRID, ITEM_PAGE_SCROLL } from "./item-page-styles";
 import type { ItemNavigationSnapshot } from "./item-navigation-snapshot";
 import { ItemPreviewContentTransition } from "./item-view-transition";
+import { buttonClassName } from "@/components/ui/button";
 
 type VideoState =
   | { itemId: string; status: "loading" | "missing" | "error" }
@@ -46,7 +47,7 @@ function VideoPlayback({ title, poster, media, onRetry, onError }: { title: stri
         {media.status === "loading" ? <span>Loading video…</span> : <>
           <p role="alert" className="text-sm">{media.status === "missing" ? "The saved video file is missing." : media.status === "unsupported" ? "This browser couldn't play the saved video. Try a browser that supports this video format." : "Couldn't load video. Try reading the saved file again."}</p>
           {media.status === "missing" ? <Link href="/settings#backup-heading" className="text-sm underline underline-offset-2">Check backups in Settings</Link> : null}
-          <button type="button" className="ui-control mx-auto min-h-10 px-3 text-sm text-text-primary" onClick={onRetry}>Retry video</button>
+          <button type="button" className={buttonClassName({ size: "none", className: "inline-block mx-auto min-h-10 px-3 text-sm text-text-primary" })} onClick={onRetry}>Retry video</button>
         </>}
       </div>}
   </ItemMediaFrame>;
@@ -101,7 +102,7 @@ export function VideoItemPage({ itemId, returnHref, initialSnapshot }: { itemId:
   if (currentState.status !== "ready") {
     return <main className="grid min-h-dvh place-items-center bg-bg-canvas p-5 text-text-secondary">
       {currentState.status === "missing" ? "Video not found." : "Couldn't load video."}
-      <Link href={returnHref} className="ui-control mt-4 min-h-10 px-4">Return to library</Link>
+      <Link href={returnHref} className={buttonClassName({ size: "none", className: "inline mt-4 min-h-10 px-4" })}>Return to library</Link>
     </main>;
   }
 

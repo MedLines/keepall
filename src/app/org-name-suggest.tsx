@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { buttonClassName } from "@/components/ui/button";
 
 export type OrgNameSuggestion = { id: string; name: string };
 
@@ -155,8 +156,8 @@ export function OrgNameSuggest({
     : "ui-field min-h-11 px-3 py-2 disabled:opacity-60";
 
   const buttonClass = compact
-    ? "ui-control relative flex h-10 min-w-10 shrink-0 items-center justify-center px-3 text-xs font-medium disabled:opacity-60"
-    : "ui-control min-h-11 px-3 py-2 text-sm font-medium disabled:opacity-60";
+    ? buttonClassName({ size: "none", className: "relative flex h-10 min-w-10 shrink-0 items-center justify-center px-3 text-xs font-medium" })
+    : buttonClassName({ size: "none", className: "inline-block min-h-11 px-3 py-2 text-sm font-medium" });
 
   const fields = (
     <>

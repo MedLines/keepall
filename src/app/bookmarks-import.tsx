@@ -6,6 +6,8 @@ import type { BookmarksHtmlCollectionPolicy } from "@/domain/bookmarks-html";
 import { BookmarksHtmlParseError, formatSkippedBookmarksLog, importBookmarksHtmlMerge, type BookmarksHtmlImportSummary } from "@/persistence/bookmarks-html-import";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
 import { abortable } from "@/lib/abortable";
+import { buttonClassName as controlButtonClassName } from "@/components/ui/button";
+import { RadioCard } from "@/components/ui/radio-card";
 
 function downloadTextFile(filename: string, text: string) {
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
@@ -154,7 +156,7 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
     />
   );
 
-  const dialogButtonClass = "ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60";
+  const dialogButtonClass = controlButtonClassName();
 
   const bookmarksDialog = (
     <ModalDialog
@@ -195,15 +197,7 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
         Browser tags are always added. This choice only controls browser
         folders and Keepall collections.
       </p>
-      <label className="bookmark-import-option ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
-        <input
-          type="radio"
-          name="collection-policy"
-          disabled={busy}
-          className="mt-0.5"
-          checked={collectionPolicy === "unsorted-only"}
-          onChange={() => setCollectionPolicy("unsorted-only")}
-        />
+      <RadioCard className="bookmark-import-option" inputClassName="mt-0.5" name="collection-policy" disabled={busy} checked={collectionPolicy === "unsorted-only"} onChange={() => setCollectionPolicy("unsorted-only")}>
         <span>
           <span className="font-medium">Browser folder → Unsorted only</span>
           <span className="mt-0.5 block text-xs text-text-secondary">
@@ -211,16 +205,8 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
             → file using the browser folder name.
           </span>
         </span>
-      </label>
-      <label className="bookmark-import-option ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
-        <input
-          type="radio"
-          name="collection-policy"
-          disabled={busy}
-          className="mt-0.5"
-          checked={collectionPolicy === "keep"}
-          onChange={() => setCollectionPolicy("keep")}
-        />
+      </RadioCard>
+      <RadioCard className="bookmark-import-option" inputClassName="mt-0.5" name="collection-policy" disabled={busy} checked={collectionPolicy === "keep"} onChange={() => setCollectionPolicy("keep")}>
         <span>
           <span className="font-medium">Keep Keepall collections</span>
           <span className="mt-0.5 block text-xs text-text-secondary">
@@ -228,16 +214,8 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
             Keepall links keep their collection.
           </span>
         </span>
-      </label>
-      <label className="bookmark-import-option ui-control flex cursor-pointer items-start gap-3 px-4 py-3 text-sm has-[:checked]:bg-bg-active">
-        <input
-          type="radio"
-          name="collection-policy"
-          disabled={busy}
-          className="mt-0.5"
-          checked={collectionPolicy === "apply"}
-          onChange={() => setCollectionPolicy("apply")}
-        />
+      </RadioCard>
+      <RadioCard className="bookmark-import-option" inputClassName="mt-0.5" name="collection-policy" disabled={busy} checked={collectionPolicy === "apply"} onChange={() => setCollectionPolicy("apply")}>
         <span>
           <span className="font-medium">Browser folders win</span>
           <span className="mt-0.5 block text-xs text-text-secondary">
@@ -245,7 +223,7 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
             that collection — even when already filed.
           </span>
         </span>
-      </label>
+      </RadioCard>
     </fieldset>
     </ModalDialog>
   );

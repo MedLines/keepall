@@ -13,7 +13,7 @@ for (const extension of ["txt", "md"]) {
       } });
     });
     await page.goto("/");
-    await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     await page.keyboard.press("Alt+k");
     const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
     await expect(capture.getByRole("textbox", { name: "Link, note, or image", exact: true })).toHaveValue("Old clipboard text");
@@ -32,7 +32,7 @@ for (const extension of ["txt", "md"]) {
 
 test("a successful batch closes the empty drawer and a plain-text file opens with editable content", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   const review = await chooseDocuments(page, [
     { name: "plain.txt", mimeType: "text/plain", buffer: Buffer.from("Plain file content") },
     { name: "second.md", mimeType: "text/markdown", buffer: Buffer.from("# Second note") },
@@ -55,7 +55,7 @@ test("a successful batch closes the empty drawer and a plain-text file opens wit
 
 test("images and Markdown save together, close the drawer, and remain editable after reload", async ({ page }, testInfo) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   const capture = await chooseDocuments(page, [
     { name: "plan.md", mimeType: "text/markdown", buffer: Buffer.from("# Imported text\n\nWith the photo.") },
   ]);
@@ -93,7 +93,7 @@ test("images and Markdown save together, close the drawer, and remain editable a
 
 test("one Add files picker detects mixed media and text without replacing an unfinished note", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   const review = await chooseDocuments(page, [
     { name: "photo.png", mimeType: "image/png", buffer: await sharp({ create: { width: 4, height: 4, channels: 3, background: "#336699" } }).png().toBuffer() },
     { name: "clip.mp4", mimeType: "video/mp4", buffer: await readFile(join(__dirname, "fixtures", "tiny.mp4")) },
@@ -144,7 +144,7 @@ test("Alt+K imports Markdown safely, edits personal notes, and downloads the unc
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route("https://document-fixture.invalid/**", (route) => { externalRequests.push(route.request().url()); return route.abort(); });
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   const bytes = Buffer.from('\uFEFF# Architecture\r\n\n- [x] Unicode café مرحبا\n\n| File | Saved |\n| --- | --- |\n| plan.md | Yes |\n\n![Remote](https://document-fixture.invalid/pixel.png)\n\n![Local](keepall-image:secret)\n\n<iframe src="https://document-fixture.invalid/frame"></iframe><script>window.documentExecuted=true</script>\n\n[Unsafe](javascript:alert(1))');
   await importAndOpen(page, { name: "plan.md", mimeType: "application/octet-stream", buffer: bytes });
   await expect(page.getByRole("heading", { name: "Architecture", exact: true })).toBeVisible();
@@ -203,7 +203,7 @@ test("Alt+K imports Markdown safely, edits personal notes, and downloads the unc
 
 test("multi-file import reports invalid UTF-8 and supports empty files, preview, filtering and Trash recovery", async ({ page }, testInfo) => {
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   const literal = '<script>literal text</script>\nمرحبا';
   const review = await chooseDocuments(page, [
     { name: "literal.TXT", mimeType: "", buffer: Buffer.from(literal) },
@@ -247,7 +247,7 @@ test("bulk files keep images, TXT, and Markdown separate in one collection after
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+k");
   const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
   await capture.getByRole("button", { name: "Bulk import", exact: true }).click();

@@ -28,7 +28,7 @@ test.use({ serviceWorkers: "block" });
 test.beforeEach(async ({ page }) => {
   await page.route("https://www.google.com/s2/favicons**", route => route.abort());
   await page.goto("/");
-  await expect(page.getByText("No items yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   // This database belongs to Playwright's disposable browser context.
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {

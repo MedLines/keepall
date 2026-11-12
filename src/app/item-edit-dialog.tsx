@@ -18,6 +18,8 @@ import type { DocumentItem } from "@/domain/document";
 import { NoteContent } from "./note-content";
 import { NoteEditorControls } from "./note-editor-controls";
 import { DocumentEditDialog } from "./document-edit-dialog";
+import { Button } from "@/components/ui/button";
+import { TextField } from "@/components/ui/text-field";
 
 export type ImageDetailsDraft = {
   title: string;
@@ -111,30 +113,23 @@ function MediaItemEditDialog({
           : "Change the URL, title, or your note."}
       onSubmit={() => onSave({ title, notes, format, sourceUrl })}
       footer={<>
-        <button
-          type="button" onClick={() => onOpenChange(false)}
-          className="ui-control flex min-h-10 items-center justify-center px-4 text-sm font-medium"
-          disabled={busy}
-        >
+        <Button onClick={() => onOpenChange(false)} disabled={busy}>
           Cancel
-        </button>
-        <button
-          className="ui-primary flex min-h-10 items-center justify-center px-4 rounded-control-md text-sm font-medium disabled:opacity-60"
+        </Button>
+        <Button
+          variant="primary"
           type="submit"
           disabled={busy}
         >
           {busy ? "Saving…" : submitLabel}
-        </button>
+        </Button>
       </>}
     >
-      <label className="grid gap-2 text-sm font-medium text-text-primary">
-        {media === "image" ? "Title (optional)" : "Title"}
-        <input
-          className="ui-field min-h-11 px-3 text-sm font-normal"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-        />
-      </label>
+      <TextField
+        label={media === "image" ? "Title (optional)" : "Title"}
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+      />
       <div className="flex min-h-[19rem] flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           {preview ? (
@@ -177,21 +172,13 @@ function SourceUrlField({ media, value, onChange }: { media: "image" | "link"; v
   // A link without a URL is saved as a note (see updateLink).
   const savesAsNote = media === "link" && !value.trim();
   return (
-    <label className="grid gap-2 text-sm font-medium text-text-primary">
-      {media === "link" ? "URL" : "Source URL (optional)"}
-      <input
-        className="ui-field min-h-11 px-3 text-sm font-normal"
-        inputMode="url"
-        value={value}
-        aria-describedby={savesAsNote ? "item-edit-url-hint" : undefined}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      {savesAsNote ? (
-        <span id="item-edit-url-hint" className="text-sm font-normal text-text-secondary">
-          Without a URL, this link is saved as a note.
-        </span>
-      ) : null}
-    </label>
+    <TextField
+      label={media === "link" ? "URL" : "Source URL (optional)"}
+      inputMode="url"
+      value={value}
+      hint={savesAsNote ? "Without a URL, this link is saved as a note." : undefined}
+      onChange={(event) => onChange(event.target.value)}
+    />
   );
 }
 
@@ -338,8 +325,8 @@ export function NoteItemEditDialog({ item, onSave, open, busy, error, onOpenChan
       title="Edit note" description="Change the note, its format, or images." size="editor"
       onSubmit={save}
       footer={<>
-        <button type="button" className="ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60" disabled={disabled} onClick={() => onOpenChange(false)}>Cancel edit</button>
-        <button type="submit" className="ui-primary min-h-10 rounded-control-md px-4 text-sm font-medium disabled:opacity-60" disabled={disabled}>{busy ? "Saving…" : "Save note"}</button>
+        <Button disabled={disabled} onClick={() => onOpenChange(false)}>Cancel edit</Button>
+        <Button variant="primary" type="submit" disabled={disabled}>{busy ? "Saving…" : "Save note"}</Button>
       </>}
     >
       <NoteEditor

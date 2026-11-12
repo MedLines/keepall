@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { observeBackupFolderSettings, supportsFolderBackups, type BackupFolderSettings } from "@/persistence/backup-settings";
+import { buttonClassName } from "@/components/ui/button";
 
 type Issue = { key: string; needsAccess: boolean };
 
@@ -51,9 +52,9 @@ export function BackupStatusNotice() {
     <p role="status" className="min-w-0 flex-1 basis-48 text-text-secondary">
       {issue.needsAccess ? "Folder backups paused. Reconnect your folder to resume." : "Folder backup failed. Check folder access and disk space, then try again or export a backup."}
     </p>
-    <Link href="/settings#backup-heading" className="ui-control inline-flex min-h-10 items-center px-3 font-medium">
+    <Link href="/settings#backup-heading" className={buttonClassName({ size: "none", className: "min-h-10 px-3 font-medium justify-start" })}>
       {issue.needsAccess ? "Reconnect folder" : "Review backups"}
     </Link>
-    <button type="button" className="ui-control min-h-10 px-3" onClick={() => setDismissed(issue.key)}>Dismiss</button>
+    <button type="button" className={buttonClassName({ size: "none", className: "inline-block min-h-10 px-3" })} onClick={() => setDismissed(issue.key)}>Dismiss</button>
   </aside>;
 }

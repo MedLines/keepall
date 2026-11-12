@@ -12,6 +12,7 @@ import { ITEMS_CHANGED_EVENT } from "./items-events";
 import { CollectionIcon, RefreshIcon, SelectionCheckedIcon } from "./shell-icons";
 import { storageQuotaWarningForImport, sumImportableFolderBytes } from "./storage-quota-warning";
 import { readImageDirectory, type ImageDirectoryPicker } from "./read-image-directory";
+import { buttonClassName as controlButtonClassName } from "@/components/ui/button";
 
 type Operation = "read-images" | "import-images" | "open-folder";
 type ImportProgress = { done: number; total: number; currentName: string; added: number; reused: number };
@@ -172,7 +173,7 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
     }
   }
 
-  const dialogButtonClass = "ui-control min-h-10 px-4 text-sm font-medium disabled:opacity-60";
+  const dialogButtonClass = controlButtonClassName();
   const importing = imageImportProgress !== null;
   const completed = completion !== null;
 
@@ -250,7 +251,7 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
                   className="h-2 overflow-hidden rounded-full bg-bg-active"
                 >
                   <div
-                    className="h-full origin-left bg-action-primary transition-transform duration-150 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none"
+                    className="h-full origin-left bg-action-primary transition-transform duration-(--motion-quick) ease-standard motion-reduce:transition-none"
                     style={{ transform: `scaleX(${imageImportProgress.done / imageImportProgress.total})` }}
                   />
                 </div>

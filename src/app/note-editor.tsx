@@ -8,6 +8,7 @@ import { noteImageMarkers, removeNoteImageMarkerAt } from "@/domain/note";
 import { NoteContent } from "./note-content";
 import { NoteEditorControls } from "./note-editor-controls";
 import { useAssetObjectUrl } from "./use-asset-object-url";
+import { buttonClassName } from "@/components/ui/button";
 
 type Props = {
   itemId: string;
@@ -43,14 +44,14 @@ function NoteEditorImageRow({ assetId, index, pendingImageUrls, busy, onRemove }
     <li className="flex items-center gap-3 border-t border-border-control py-2 first:border-t-0">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element -- local IndexedDB object URL
-        <img src={url} alt="" className="media-outline size-12 shrink-0 rounded-control object-cover" />
+        <img src={url} alt="" className="media-outline size-12 shrink-0 rounded-control-xs object-cover" />
       ) : (
-        <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-control border border-border-control bg-bg-control text-xs text-text-secondary">Image</span>
+        <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-control-xs border border-border-control bg-bg-control text-xs text-text-secondary">Image</span>
       )}
       <span className="min-w-0 flex-1 text-sm">Image {index + 1}</span>
       <button
         type="button"
-        className="ui-control min-h-9 rounded-control px-3 text-sm"
+        className={buttonClassName({ size: "none", className: "inline-block min-h-9 px-3 text-sm" })}
         aria-label={`Remove image ${index + 1}`}
         disabled={busy}
         onClick={onRemove}
@@ -111,7 +112,7 @@ export function NoteEditor({
           />
           <button
             type="button"
-            className="ui-control min-h-9 rounded-control px-3 text-sm"
+            className={buttonClassName({ size: "none", className: "inline-block min-h-9 px-3 text-sm" })}
             disabled={busy || showPreview}
             onClick={() => {
               const textarea = textareaRef.current;
@@ -166,8 +167,8 @@ export function NoteEditor({
       )}
       {error ? <p className="text-sm text-text-danger" role="alert">{error}</p> : null}
       {showActions ? <div className="flex flex-wrap justify-end gap-2">
-        <button type="button" className="ui-control min-h-10 rounded-control px-4 text-sm font-medium disabled:opacity-60" disabled={busy} onClick={onCancel}>Cancel edit</button>
-        <button type="button" className="ui-primary min-h-10 rounded-control px-4 text-sm font-medium disabled:opacity-60" disabled={busy} onClick={onSave}>{saving ? "Saving…" : "Save note"}</button>
+        <button type="button" className={buttonClassName()} disabled={busy} onClick={onCancel}>Cancel edit</button>
+        <button type="button" className="ui-primary min-h-10 px-4 text-sm font-medium disabled:opacity-60" disabled={busy} onClick={onSave}>{saving ? "Saving…" : "Save note"}</button>
       </div> : null}
     </div>
   );

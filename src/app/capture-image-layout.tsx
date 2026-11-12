@@ -7,6 +7,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import { NoteEditorControls } from "./note-editor-controls";
 import { NoteContent } from "./note-content";
 import { ImagesIcon, GridIcon } from "./shell-icons";
+import { buttonClassName } from "@/components/ui/button";
 
 /* ANIMATION STORYBOARD
  *   0ms  a layout choice swaps layers in the same reserved space
@@ -71,7 +72,7 @@ export function CaptureImageLayout({ mode, disabled, value, format, preview, lab
       aria-hidden={stage === 0} inert={stage === 0} style={layer(stage === 1)}>
       <div className="flex min-h-8 items-center justify-between gap-2">
         <label htmlFor="capture-image-caption" className="text-sm font-medium">Caption (optional)</label>
-        <button type="button" className="ui-control min-h-8 shrink-0 px-2 text-xs" disabled={disabled} onClick={() => changeMode(null)}>Change image layout</button>
+        <button type="button" className={buttonClassName({ size: "none", className: "inline-block min-h-8 shrink-0 px-2 text-xs" })} disabled={disabled} onClick={() => changeMode(null)}>Change image layout</button>
       </div>
       <NoteEditorControls format={format} preview={preview} disabled={disabled} onFormatChange={onFormatChange} onPreviewChange={onPreviewChange} />
       {preview ? <ScrollArea role="region" aria-label="Image note preview" className="ui-field min-h-0 flex-1 rounded-input" viewportClassName="scroll-fade"><div className="p-3"><NoteContent content={value} format={format} /></div></ScrollArea>
