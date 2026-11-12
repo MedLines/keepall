@@ -81,7 +81,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
         >
           {item ? <>
             <div className={`library-preview-surface relative flex min-h-[min(12rem,35dvh)] flex-1 flex-col overflow-hidden rounded-panel border border-border-edge bg-bg-card ${review ? "library-review-content" : ""}`}>
-            <header className="flex shrink-0 items-start gap-4 p-4">
+            <div data-review-header className="flex shrink-0 items-start gap-4 p-4">
               <span className="grid size-10 shrink-0 place-items-center rounded-control-xs bg-bg-raised text-text-secondary">
                 <ItemTypeIcon item={item} className="size-6" />
               </span>
@@ -91,7 +91,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
               </div>
               <Dialog.Description className="sr-only">{review ? "Unsorted review. Left and right arrows browse items. Collection and tag controls open the shared picker. Next leaves the item in Unsorted. Escape closes review." : "Quick preview. Arrows browse items. Enter opens the full item."}</Dialog.Description>
               <Dialog.Close disabled={review?.busy} aria-label="Close preview" className={iconButtonClassName({ size: "lg" })}><CloseIcon /></Dialog.Close>
-            </header>
+            </div>
             <div key={item.id} className={`${review ? "min-h-[min(6rem,15dvh)]" : "min-h-0"} flex-1 overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus`} tabIndex={0} role="region" aria-label="Preview content">
               <PreviewContent item={item} reviewing={reviewing} onGalleryStep={() => popupRef.current?.focus({ preventScroll: true })} />
             </div>
@@ -109,10 +109,10 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
             </footer>
           </> : review ? <>
             <div className="library-preview-surface library-review-content relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-border-edge bg-bg-card">
-            <header className="flex shrink-0 items-center justify-between gap-4 p-4">
+            <div data-review-header className="flex shrink-0 items-center justify-between gap-4 p-4">
               <Dialog.Title className="text-lg font-semibold">Unsorted review</Dialog.Title>
               <Dialog.Close disabled={review.busy} aria-label="Close preview" className={iconButtonClassName({ size: "lg" })}><CloseIcon /></Dialog.Close>
-            </header>
+            </div>
             <Dialog.Description className="sr-only">Unsorted review. Undo returns to the previous review action.</Dialog.Description>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-16">{review.emptyState}</div>
             <div className="pointer-events-none absolute inset-x-4 bottom-4 flex justify-center">{review.progress}</div>

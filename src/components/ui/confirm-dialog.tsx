@@ -62,7 +62,7 @@ export function ConfirmDialog({
             initialFocus={cancelRef ?? confirmRef}
             finalFocus={returnFocusRef ? () => returnFocusRef.current?.isConnected ? returnFocusRef.current : true : undefined}
           >
-            <header className="flex items-start gap-4 border-b border-border-control px-6 py-5">
+            <div className="flex items-start gap-4 border-b border-border-control px-6 py-5">
               <div className="min-w-0 flex-1">
                 <Dialog.Title className="[overflow-wrap:anywhere] text-xl font-semibold text-text-primary">
                   {title}
@@ -78,7 +78,7 @@ export function ConfirmDialog({
               >
                 <CloseIcon />
               </Dialog.Close>
-            </header>
+            </div>
             <div className="flex flex-col gap-4 px-6 py-5">
               {children}
               {error ? <p className="text-sm text-text-danger" role="alert">{error}</p> : null}

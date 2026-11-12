@@ -59,7 +59,7 @@ export function SideDrawer({
             }`}
           >
             <Drawer.Content className="flex min-h-0 flex-1 flex-col">
-              <header className={captureStyles["header"]}>
+              <div className={captureStyles["header"]}>
                 <div className={captureStyles["heading"]}>
                   <Drawer.Title className={captureStyles["title"]}>
                     {title}
@@ -77,7 +77,7 @@ export function SideDrawer({
                 >
                   <CloseIcon />
                 </Drawer.Close>
-              </header>
+              </div>
               {children}
             </Drawer.Content>
           </Drawer.Popup>

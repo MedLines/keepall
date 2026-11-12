@@ -72,7 +72,7 @@ export function CaptureOrgBrowser({
         <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-[80]" />
         <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
           <Dialog.Popup finalFocus={returnFocus} className={captureStyles["browse"]}>
-            <header className={captureStyles["browse-header"]}>
+            <div className={captureStyles["browse-header"]}>
               <div className={captureStyles["heading"]}>
                 <Dialog.Title className={captureStyles["browse-title"]}>
                   {title}
@@ -88,7 +88,7 @@ export function CaptureOrgBrowser({
               >
                 <CloseIcon />
               </Dialog.Close>
-            </header>
+            </div>
             <div className="shrink-0 px-5 py-4">
               <label className="relative block" htmlFor={`capture-browse-${kind}`}>
                 <span className="sr-only">{searchLabel}</span>
