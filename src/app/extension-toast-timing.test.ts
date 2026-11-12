@@ -25,7 +25,7 @@ function worker() {
     action: {
       onClicked: { addListener: vi.fn() },
       setBadgeBackgroundColor: vi.fn(async () => {}),
-      setBadgeText: vi.fn(async () => {}),
+      setBadgeText: vi.fn(async (_details: { tabId?: number; text: string }) => {}),
       setTitle: vi.fn(async () => {}),
     },
     commands: { onCommand: { addListener: vi.fn() } },
@@ -36,7 +36,7 @@ function worker() {
 }
 
 const clears = (chrome: ReturnType<typeof worker>["chrome"]) =>
-  chrome.action.setBadgeText.mock.calls.filter(([arg]) => (arg as unknown as { text: string }).text === "");
+  chrome.action.setBadgeText.mock.calls.filter(([arg]) => arg.text === "");
 
 test("a newer save keeps its badge for a full 5 seconds", async () => {
   const { api, chrome } = worker();
