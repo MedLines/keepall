@@ -3,7 +3,8 @@ import path from "node:path";
 
 const origin = `http://localhost:${process.env.KEEPALL_E2E_PORT ?? "3100"}`;
 
-async function openDrawerOnShortcutPage(page: Page) {
+async function openDrawerOnShortcutPage(page: Page, options: { fakeClock?: boolean } = {}) {
+  if (options.fakeClock) await page.clock.install();
   await page.addInitScript(() => {
     const attach = Element.prototype.attachShadow;
     Element.prototype.attachShadow = function (options) {
@@ -42,7 +43,11 @@ async function openDrawerOnShortcutPage(page: Page) {
     Object.assign(globalThis, { chrome: { runtime: {
       getURL: () => "data:font/woff2;base64,",
       onMessage: { addListener: (callback: typeof listener) => { listener = callback; } },
-      sendMessage: (message: Record<string, unknown>) => { lastSave = message; },
+      sendMessage: (message: Record<string, unknown>) => {
+        lastSave = message;
+        if (message.type === "save-from-editor" && (globalThis as { __rejectSave?: boolean }).__rejectSave) return Promise.reject(new Error("Extension context invalidated."));
+        return Promise.resolve({ accepted: true });
+      },
     } } });
     (document.querySelector("#page-action") as HTMLButtonElement).focus();
     window.scrollTo(0, 400);
@@ -264,3 +269,49 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 360, height: 740 
     });
   }
 }
+
+test("plain Enter in the title does not save and the title locks while saving", async ({ page }) => {
+  const { bridge, editor } = await openDrawerOnShortcutPage(page);
+  const title = editor.getByRole("textbox", { name: "Title", exact: true });
+  await title.focus();
+  await title.press("Enter");
+  expect(await bridge.evaluate((value) => value.lastSave())).toBeUndefined();
+  await title.press("Control+Enter");
+  expect(await bridge.evaluate((value) => value.lastSave())).toMatchObject({ type: "save-from-editor" });
+  await expect(title).toBeDisabled();
+});
+
+test("a save with no answer recovers after the watchdog", async ({ page }) => {
+  const { editor } = await openDrawerOnShortcutPage(page, { fakeClock: true });
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(editor.getByRole("button", { name: "Saving…" })).toBeDisabled();
+  await page.clock.runFor(40000);
+  await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+  await expect(editor.getByRole("alert")).toContainText("did not answer");
+  await expect(editor.getByRole("button", { name: "Close", exact: true }).first()).toBeEnabled();
+});
+
+test("a rejected save message reports the restarted extension", async ({ page }) => {
+  const { editor } = await openDrawerOnShortcutPage(page);
+  await page.evaluate(() => { (globalThis as { __rejectSave?: boolean }).__rejectSave = true; });
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(editor.getByRole("alert")).toContainText("updated or restarted");
+  await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+});
+
+test("a failed save shows one alert and returns focus", async ({ page }) => {
+  const { bridge, editor } = await openDrawerOnShortcutPage(page);
+  const title = editor.getByRole("textbox", { name: "Title", exact: true });
+  await title.focus();
+  await title.press("Control+Enter");
+  await bridge.evaluate((value) => value.send({ type: "editor-feedback", editorId: "isolation-editor", success: false, message: "Nope" }));
+  await expect(editor.getByRole("alert")).toHaveCount(1);
+  await expect(editor.getByRole("alert")).toHaveText("Nope");
+  await expect(editor.locator(".toast")).toHaveCount(0);
+  await expect(title).toBeFocused();
+});
+
+test("the drawer document declares its language", async ({ page }) => {
+  const { host } = await openDrawerOnShortcutPage(page);
+  await expect(host.locator("iframe").first().contentFrame().locator("html")).toHaveAttribute("lang", "en");
+});

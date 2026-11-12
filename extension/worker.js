@@ -1061,6 +1061,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type !== "save-from-editor" || !sender.tab) return;
+  sendResponse({ accepted: true });
   void saveTab(sender.tab, {
     title: typeof message.title === "string" ? message.title : sender.tab.title,
     noteContent: typeof message.noteContent === "string" ? message.noteContent : "",

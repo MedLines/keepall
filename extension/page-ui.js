@@ -172,6 +172,8 @@ if (!globalThis.__keepallPageUi) {
     modal.showModal();
     const frameDocument = frame.contentDocument;
     frameDocument.documentElement.dataset.theme = host.dataset.theme;
+    frameDocument.documentElement.lang = "en";
+    frameDocument.documentElement.dir = "ltr";
     frameDocument.body.className = "text-text-primary antialiased";
     for (const [name, value] of Object.entries(globalThis.__keepallDrawerUi.motionCssVariables)) frameDocument.body.style.setProperty(name, value);
     const appStyle = frameDocument.createElement("style");
@@ -597,7 +599,8 @@ if (!globalThis.__keepallPageUi) {
     currentEditorId = editorId;
     dialog = document.createElement("dialog");
     dialog.className = drawerClass("keepall-drawer ui-native-dialog ui-drawer-popup flex flex-col overflow-hidden border-l border-border-control bg-bg-canvas text-text-primary shadow-menu outline-none");
-    dialog.dataset.side = "right";
+    const rtl = getComputedStyle(globalThis.document.documentElement).direction === "rtl";
+    dialog.dataset.side = rtl ? "left" : "right";
     dialog.setAttribute("aria-labelledby", "keepall-editor-title");
     dialog.setAttribute("aria-describedby", "keepall-editor-description");
     const header = document.createElement("header");
@@ -807,19 +810,25 @@ if (!globalThis.__keepallPageUi) {
     });
     completeActions.append(openSaved, done, completeError);
     complete.append(completeMark, completeTitle, completeActions);
+    let saveWatchdog;
+    let lastFocusBeforeSave;
     form.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
         form.requestSubmit();
+      } else if (event.key === "Enter" && event.target instanceof event.target.ownerDocument.defaultView.HTMLInputElement) {
+        event.preventDefault();
       }
     });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       if (saveButton.disabled) return;
       if (fileCapture?.hasFiles) { void fileCapture.save(); return; }
+      const focusBeforeSave = document.activeElement;
       saveButton.disabled = true;
       saveButton.textContent = "Saving…";
       dialog.dataset.state = "saving";
+      titleInput.disabled = true;
       close.disabled = true;
       cancel.disabled = true;
       picker.setDisabled(true);
@@ -827,18 +836,31 @@ if (!globalThis.__keepallPageUi) {
       fileCapture.setDisabled(true);
       bulk.disabled = true;
       errorLine.textContent = "";
-      chrome.runtime.sendMessage({
-        type: "save-from-editor",
-        editorId,
-        title: titleInput.value,
-        noteContent: noteInput.value,
-        noteFormat: noteEditor.value().format,
-        ...(existingLink ? { existingLink } : {}),
-        ...picker.selection(),
-      });
+      lastFocusBeforeSave = focusBeforeSave;
+      const failSave = (text) => onEditorFeedback?.({ editorId, success: false, message: text });
+      const restarted = "Keepall Capture was updated or restarted. Copy your text, reload this page, and try again.";
+      saveWatchdog = setTimeout(() => failSave("Keepall did not answer. Your text is still here. Try again."), 40000);
+      try {
+        Promise.resolve(chrome.runtime.sendMessage({
+          type: "save-from-editor",
+          editorId,
+          title: titleInput.value,
+          noteContent: noteInput.value,
+          noteFormat: noteEditor.value().format,
+          ...(existingLink ? { existingLink } : {}),
+          ...picker.selection(),
+        })).catch(() => {
+          clearTimeout(saveWatchdog);
+          failSave(restarted);
+        });
+      } catch {
+        clearTimeout(saveWatchdog);
+        failSave(restarted);
+      }
     });
     onEditorFeedback = (message) => {
       if (message.editorId !== currentEditorId || !dialog?.open) return;
+      clearTimeout(saveWatchdog);
       if (message.success) {
         saved = true;
         drafts.delete(draftKey);
@@ -860,6 +882,7 @@ if (!globalThis.__keepallPageUi) {
         dialog.dataset.state = "error";
         saveButton.disabled = false;
         saveButton.textContent = existingLink ? "Save changes" : "Save";
+        titleInput.disabled = false;
         close.disabled = false;
         cancel.disabled = false;
         picker.setDisabled(false);
@@ -867,7 +890,8 @@ if (!globalThis.__keepallPageUi) {
         fileCapture.setDisabled(false);
         bulk.disabled = false;
         errorLine.textContent = message.message;
-        toast("Couldn't save to Keepall", false);
+        const refocus = lastFocusBeforeSave?.isConnected && !lastFocusBeforeSave.disabled ? lastFocusBeforeSave : saveButton;
+        refocus.focus({ preventScroll: true });
       }
     };
     function refreshFilePresentation() {
@@ -919,7 +943,8 @@ if (!globalThis.__keepallPageUi) {
       dismissEditor();
     });
     dialog.addEventListener("click", (event) => {
-      if (event.target === dialog && event.clientX < dialog.getBoundingClientRect().left) dismissEditor();
+      const rect = dialog.getBoundingClientRect();
+      if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right)) dismissEditor();
     });
     shadow.append(dialog);
     dialog.dataset.startingStyle = "";
