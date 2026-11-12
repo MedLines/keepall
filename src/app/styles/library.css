@@ -317,6 +317,10 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
 .ui-scrollbar-hidden { scrollbar-width: none; }
 .ui-scrollbar-hidden::-webkit-scrollbar { display: none; }
 
+/* Counts on the current destination follow the row's primary text so they keep 4.5:1 on bg-active. */
+[aria-current="page"] .library-sidebar-count,
+.library-sidebar-interactive:has([aria-current="page"]) .library-sidebar-count { color: inherit; }
+
 .library-sidebar-interactive[data-popup-open] .library-sidebar-count,
 .library-sidebar-interactive:has([data-popup-open]) .library-sidebar-count {
   opacity: 0;

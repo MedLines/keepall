@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { ScrollPanel } from "@/components/ui/scroll-panel";
 import { Dialog } from "@base-ui/react/dialog";
 import { Menu } from "@base-ui/react/menu";
@@ -359,7 +360,7 @@ export function LibraryShell({
           <div className={`flex flex-col gap-1 ${contentExpanded ? "library-sidebar-footer-nav overflow-hidden" : ""}`}>
             <SidebarRowMenu label="Trash" mutationBusy={mutationBusy || libraryLoading} deleteLabel="Empty Trash" deleteDisabled={trashCount === 0} onDelete={() => onEmptyTrash?.()}>
               {(trigger) => contentExpanded ? (
-                <div className={`group ${SHELL_NAV_SURFACE} min-h-10 w-full text-sm ${browseTrash ? SHELL_NAV_ITEM_ACTIVE : `${SHELL_NAV_ITEM_IDLE} focus-within:bg-bg-raised`}`}>
+                <div className={cn(`group ${SHELL_NAV_SURFACE} min-h-10 w-full text-sm ${browseTrash ? SHELL_NAV_ITEM_ACTIVE : `${SHELL_NAV_ITEM_IDLE} focus-within:bg-bg-raised`}`)}>
                   <button type="button" aria-label="Trash" aria-current={browseTrash ? "page" : undefined} data-sidebar-anchor="Trash"
                     className="flex min-h-10 min-w-0 flex-1 self-stretch items-center gap-2.5 px-3 py-2 text-left transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
                     onClick={() => { onGoTrash?.(); closeOnMobile(); }}>
@@ -503,11 +504,11 @@ function ShellNavLink({ expanded, label, href, icon }: {
   return (
     <Link
       href={href}
-      className={`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_IDLE} ${
+      className={cn(`${SHELL_NAV_ITEM} ${SHELL_NAV_ITEM_IDLE} ${
         expanded
           ? "min-h-10 w-full gap-2.5 px-3 py-2 text-left text-sm"
           : "mx-auto size-10 justify-center px-0"
-      }`}
+      }`)}
       aria-label={label}
       data-sidebar-anchor={label}
       title={!expanded ? label : undefined}
@@ -877,7 +878,7 @@ function TagNavRow({
       onDelete={onDelete}
     >
       {(trigger) => (
-        <div className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${active ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary` : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`}`}>
+        <div className={cn(`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${active ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary` : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`}`)}>
           <button
             type="button"
             className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 py-2 pl-12 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
@@ -949,7 +950,7 @@ function CollectionNavRow({
   if (renaming) {
     return (
       <form
-        className={`${SHELL_NAV_SURFACE} ${SHELL_NAV_ITEM_ACTIVE} w-full gap-2 py-1.5 pl-12 pr-2`}
+        className={cn(`${SHELL_NAV_SURFACE} ${SHELL_NAV_ITEM_ACTIVE} w-full gap-2 py-1.5 pl-12 pr-2`)}
         onSubmit={(event) => {
           event.preventDefault();
           onSubmitRename();
@@ -994,11 +995,11 @@ function CollectionNavRow({
     >
       {(trigger) => (
         <div
-          className={`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${
+          className={cn(`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${
             active
               ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary`
               : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`
-          } ${dropHighlight ? "ring-2 ring-border-focus" : ""}`}
+          } ${dropHighlight ? "ring-2 ring-border-focus" : ""}`)}
           draggable={pinned && !mutationBusy}
           onDragStart={onReorderDragStart}
           onDragOver={(event) => {
@@ -1146,13 +1147,13 @@ function ShellNavItem({
   return (
     <button
       type="button"
-      className={`${SHELL_NAV_ITEM} ${
+      className={cn(`${SHELL_NAV_ITEM} ${
         expanded
           ? icon ? "min-h-10 w-full gap-2.5 px-3 py-2 text-left text-sm" : "min-h-8 w-full gap-2.5 ps-[38px] pe-3 py-1 text-left text-xs"
           : "mx-auto size-10 justify-center px-0"
       } ${active ? SHELL_NAV_ITEM_ACTIVE : SHELL_NAV_ITEM_IDLE} ${
         dropHighlight ? "ring-2 ring-border-focus" : ""
-      }`}
+      }`)}
       aria-label={ariaLabel ?? label}
       data-sidebar-anchor={icon ? label : undefined}
       aria-current={active ? "page" : undefined}
