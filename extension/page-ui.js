@@ -243,17 +243,41 @@ if (!globalThis.__keepallPageUi) {
     let busy = false;
     let collectionPicker;
     let undoTimer;
-    const undoExpiresAt = Number.isFinite(actions?.undoExpiresAt) ? actions.undoExpiresAt : Date.now() + 60_000;
-    cleanupToast = () => { clearTimeout(undoTimer); collectionPicker?.destroy(); organizerKeys = undefined; };
+    let undoDeadline = Number.isFinite(actions?.undoExpiresAt) ? actions.undoExpiresAt : Date.now() + 60_000;
+    let failed = !success;
+    let hiddenAt = 0;
+    let pauseUndo = () => {};
+    let resumeUndo = () => {};
+    const onVisibility = () => {
+      if (!node.isConnected) return;
+      if (document.hidden) {
+        if (!hiddenAt) hiddenAt = Date.now();
+        clearTimeout(toastTimer);
+        pauseUndo();
+        return;
+      }
+      if (hiddenAt) undoDeadline += Date.now() - hiddenAt;
+      hiddenAt = 0;
+      resumeUndo();
+      scheduleDismiss();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    cleanupToast = () => {
+      clearTimeout(undoTimer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      collectionPicker?.destroy();
+      organizerKeys = undefined;
+    };
     const duration = actions ? 8000 : 4000;
     const scheduleDismiss = () => {
       if (!node.isConnected) return;
       clearTimeout(toastTimer);
+      if (failed || document.hidden) return;
       if (!busy && !collectionPicker && !node.matches(":hover") && !node.contains(node.getRootNode().activeElement)) {
         toastTimer = setTimeout(() => dismissToast(), duration);
       }
     };
-    if (success && actions) {
+    if (actions) {
       node.classList.add("has-actions");
       const buttons = document.createElement("div");
       buttons.className = "toast-actions";
@@ -271,7 +295,7 @@ if (!globalThis.__keepallPageUi) {
       let screenshotLimitReached = false;
       function setActionsDisabled(value) {
         for (const control of buttons.children) control.disabled = value;
-        if (Date.now() >= undoExpiresAt) expireUndo();
+        if (Date.now() >= undoDeadline) expireUndo();
         const screenshot = buttons.querySelector('[data-action="screenshot"]');
         if (screenshot && screenshotLimitReached) {
           screenshot.disabled = true;
@@ -289,6 +313,7 @@ if (!globalThis.__keepallPageUi) {
           const result = await chrome.runtime.sendMessage({ type: "capture-feedback-action", action: "screenshot", actionId: actions.id });
           if (!result?.success) throw new Error(result?.error || "Could not save the screenshot. Try again.");
           if (!node.isConnected) return;
+          failed = false;
           label.textContent = result.count === 1 ? "Screenshot added" : `Screenshot added (${result.count})`;
           node.dataset.success = "true";
           node.setAttribute("role", "status");
@@ -296,6 +321,7 @@ if (!globalThis.__keepallPageUi) {
           screenshotLimitReached = Number.isInteger(result.limit) && result.count >= result.limit;
         } catch (error) {
           if (!node.isConnected) return;
+          failed = true;
           label.textContent = error.message || "Could not save the screenshot. Try again.";
           node.dataset.success = "false";
           node.setAttribute("role", "alert");
@@ -332,7 +358,7 @@ if (!globalThis.__keepallPageUi) {
         if (text) button.append(document.createTextNode(text));
         button.addEventListener("click", async () => {
           if (busy) return;
-          if (action === "undo" && Date.now() >= undoExpiresAt) { expireUndo(); return; }
+          if (action === "undo" && Date.now() >= undoDeadline) { expireUndo(); return; }
           if (action === "screenshot") { await takeScreenshot(); return; }
           if (action === "organize") {
             if (collectionPicker) { closeCollections(true); return; }
@@ -349,6 +375,9 @@ if (!globalThis.__keepallPageUi) {
                   const result = await chrome.runtime.sendMessage({ type: "capture-feedback-action", action: operation, actionId: actions.id, ...payload });
                   if (!result?.success) throw new Error(result?.error || "Could not organize this item. Try again.");
                   return result;
+                } catch (error) {
+                  failed = true;
+                  throw error;
                 } finally {
                   if (operation === "move" || operation === "tag") {
                     busy = false;
@@ -359,6 +388,7 @@ if (!globalThis.__keepallPageUi) {
               },
               onClose: closeCollections,
               onMoved: (result) => {
+                failed = false;
                 label.textContent = result.changed ? `Moved to ${result.collectionName}` : `Already in ${result.collectionName}`;
                 node.dataset.success = "true";
                 node.setAttribute("role", "status");
@@ -366,6 +396,7 @@ if (!globalThis.__keepallPageUi) {
                 if (result.changed) buttons.querySelector('[data-action="undo"]')?.remove();
               },
               onTagged: (result) => {
+                failed = false;
                 node.dataset.success = "true";
                 node.setAttribute("role", "status");
                 setMark(true);
@@ -390,6 +421,7 @@ if (!globalThis.__keepallPageUi) {
             else dismissToast();
           } catch (error) {
             if (!node.isConnected) return;
+            failed = true;
             label.textContent = error.message || "Could not complete this action. Try again.";
             node.dataset.success = "false";
             node.setAttribute("role", "alert");
@@ -402,8 +434,14 @@ if (!globalThis.__keepallPageUi) {
         buttons.append(button);
       }
       if (actions.canUndo) {
-        if (Date.now() >= undoExpiresAt) expireUndo();
-        else undoTimer = setTimeout(expireUndo, undoExpiresAt - Date.now());
+        if (Date.now() >= undoDeadline) expireUndo();
+        else undoTimer = setTimeout(expireUndo, undoDeadline - Date.now());
+        pauseUndo = () => clearTimeout(undoTimer);
+        resumeUndo = () => {
+          clearTimeout(undoTimer);
+          if (Date.now() >= undoDeadline) expireUndo();
+          else undoTimer = setTimeout(expireUndo, undoDeadline - Date.now());
+        };
       }
       function closeCollections(restoreFocus) {
         if (!collectionPicker) return;

@@ -80,11 +80,11 @@ test("toolbar library menu uses the configured origin without repurposing other 
   let failQuery = false;
   let tabs: Array<{ id: number; windowId: number; url?: string }> = [];
   const calls: Array<[string, unknown, unknown?]> = [];
-  const scope = { URL, chrome: {
+  const scope = { URL, setTimeout, clearTimeout, chrome: {
     storage: { local: { setAccessLevel: async () => {}, get: async () => ({ origin: configuredOrigin }) }, onChanged: event("storage") },
     alarms: { create: async () => {}, onAlarm: event("alarm") },
     runtime: { onInstalled: event("install"), onMessage: event("message") },
-    contextMenus: { onClicked: event("menu") }, action: { onClicked: event("toolbar"), setBadgeText: async (value: object) => { calls.push(["badge", value]); } }, commands: { onCommand: event("command") },
+    contextMenus: { onClicked: event("menu") }, action: { onClicked: event("toolbar"), setBadgeBackgroundColor: async () => {}, setTitle: async () => {}, setBadgeText: async (value: object) => { calls.push(["badge", value]); } }, commands: { onCommand: event("command") },
     tabs: { onUpdated: event("tab"), onRemoved: event("removed"), query: async () => { if (failQuery) throw new Error("Browser unavailable"); return tabs; },
       create: async (value: object) => { calls.push(["create", value]); },
       update: async (id: number, value: object) => { calls.push(["update", id, value]); } },
@@ -116,8 +116,8 @@ test("toolbar library menu uses the configured origin without repurposing other 
   await openLibrary();
   expect(calls).toEqual([["update", 4, { active: true }], ["window", 7, { focused: true }]]);
   calls.length = 0; failQuery = true;
-  listeners.get("menu")!({ menuItemId: "open-keepall-library" });
-  await expect.poll(() => calls).toEqual([["badge", { text: "!" }]]);
+  listeners.get("menu")!({ menuItemId: "open-keepall-library" }, { id: 9, url: "https://example.com/" });
+  await expect.poll(() => calls).toEqual([["badge", { tabId: 9, text: "!" }]]);
 });
 
 test("unpacked extension opens and reuses the library root without losing its draft", async () => {

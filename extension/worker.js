@@ -1,6 +1,7 @@
 const DEFAULT_ORIGIN = "https://www.keepall.app";
 const PENDING_LIFETIME_MS = 10 * 60 * 1000;
 let creatingOffscreen;
+const badgeTimers = new Map();
 
 void chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
 void chrome.alarms.create("pending-cleanup", { periodInMinutes: 1 });
@@ -39,7 +40,9 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "open-keepall-library") {
-    void openKeepallLibrary().catch(() => { void chrome.action.setBadgeText({ text: "!" }).catch(() => {}); });
+    void openKeepallLibrary().catch(() => {
+      if (tab?.id !== undefined) void showFeedback(tab.id, "Could not open your Keepall library. Try again.", false, "badge");
+    });
     return;
   }
   void saveContext(info, tab);
@@ -146,10 +149,12 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
   } catch {
     return;
   }
-  setTimeout(() => {
+  clearTimeout(badgeTimers.get(tabId));
+  badgeTimers.set(tabId, setTimeout(() => {
+    badgeTimers.delete(tabId);
     void chrome.action.setBadgeText({ tabId, text: "" }).catch(() => {});
     void chrome.action.setTitle({ tabId, title: "Save page to Keepall" }).catch(() => {});
-  }, 5000);
+  }, success ? 5000 : 15000));
   if (source === "badge") return;
   try {
     await chrome.scripting.executeScript({ target: { tabId }, files: ["toast-collections.js", "page-ui.js"] });
@@ -419,8 +424,9 @@ async function saveTab(tab, options = {}) {
     // Only a page saved from this tab can be captured; right-clicked links and drawer saves cannot.
     const pageUrl = !options.source && !options.linkTarget ? payload.url : undefined;
     const actions = await captureFeedbackActions(tab.id, origin, result, pageUrl).catch(() => undefined);
-    if (options.screenshot) message = await screenshotAfterSave(tab.id, message, actions);
-    await feedback(message, true, actions);
+    let success = true;
+    if (options.screenshot) ({ message, success } = await screenshotAfterSave(tab.id, message, actions));
+    await feedback(message, success, actions);
   } catch (error) {
     await feedback(error instanceof Error ? error.message : "Could not save to Keepall", false);
   }
@@ -431,9 +437,9 @@ async function screenshotAfterSave(tabId, savedMessage, actions) {
     if (!actions?.canScreenshot) throw new Error("Update Keepall to save screenshots.");
     const key = `save-feedback:${tabId}`;
     const { count } = await saveScreenshot(tabId, (await chrome.storage.session.get(key))[key]);
-    return count === 1 ? "Page and screenshot saved" : `Screenshot added (${count})`;
+    return { message: count === 1 ? "Page and screenshot saved" : `Screenshot added (${count})`, success: true };
   } catch (error) {
-    return `${savedMessage}. Screenshot failed: ${error instanceof Error ? error.message : "Try again."}`;
+    return { message: `${savedMessage}. Screenshot failed: ${error instanceof Error ? error.message : "Try again."}`, success: false };
   }
 }
 
@@ -1004,10 +1010,13 @@ async function openEditor(tab) {
 
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command !== "open-editor") return;
+  let activeTab = tab;
   void (async () => {
-    const activeTab = tab ?? (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
+    activeTab ??= (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
     await openEditor(activeTab);
-  })().catch(() => { void chrome.action.setBadgeText({ text: "!" }); });
+  })().catch(() => {
+    if (activeTab?.id !== undefined) void showFeedback(activeTab.id, "Keepall can't open on this page. Chrome blocks extensions here.", false, "badge");
+  });
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
