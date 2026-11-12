@@ -1,3 +1,19 @@
+# Design tokens and controls
+
+Styles live in `src/app/styles/`, imported in order by `globals.css`: `tokens.css`, `components.css`, `library.css`, `library-content.css`, `overlays.css`, `transitions.css`. Order matters; add new rules to the file that owns the surface.
+
+Components use semantic roles (`--color-bg-*`, `--color-text-*`, `--color-border-*`, `--color-action-*`, `--color-item-*`), never the `--neutral-*` primitives. The primitives are ordered from light to dark. Put any new literal color in `tokens.css` as a named role before using it.
+
+Type sizes come from the theme: `text-2xs` (10px), `text-meta` (11px), `text-xs` (12px), `text-compact` (13px), `text-sm` (14px), `text-md` (15px), `text-base` (16px), `text-heading` (22px), `text-display` (28px). CSS uses the matching `var(--text-*)`. Long-form reading content (articles, Markdown notes) keeps its own relative scale.
+
+Motion uses the `uiMotion` tiers (`--motion-fast|moderate|slow-enter|exit`) plus `--motion-quick` (150ms press and quick fades), `--motion-glide` (180ms indicators and reveals), `--motion-flourish` (260ms logo, folder art and settings transitions) and `--delay-placeholder` (150ms). Use `--ease-standard` / `ease-standard` for the shared cubic-bezier(0.2, 0, 0, 1).
+
+Disabled controls use `--opacity-disabled` (0.6). Focus rings are `--focus-ring-width` with `--focus-offset` outside the element or `--focus-offset-inset` inside fields.
+
+Radius tokens ascend: `control-xs` 10px, `control-sm` 12px, `control-md` 13px (fields), `control-lg` 14px (settings tabs), `input` 16px, `panel` 20px, `library-panel` 32px, `card` 64px. Buttons, menu items, segmented switches, top-bar inputs and sidebar rows are pills: the control-shape rule in the components layer gives them 999px with the `superellipse(1.5)` corner shape. Don't add `rounded-*` to those elements unless you mean to change the shape; a utility now wins. Use `control-shape-none` to opt a button out.
+
+Use `Button` and `IconButton` from `src/components/ui/button.tsx` for new buttons. Variants are `secondary` (default), `primary`, `danger` and `danger-ghost`. Text sizes are `md` (40px), `lg` (44px) and `toolbar` (44px top bar; padding stays with the caller). Icon sizes are `sm` (32px), `md` (40px) and `lg` (44px). Base UI triggers that render their own button take `buttonClassName()` or `iconButtonClassName()` instead.
+
 # Library cards and media controls
 
 Use `ItemTypeIcon` for item identity and `ItemTypeBadge` for grid previews. Put the badge at the bottom-end of the preview: bottom-right in English, matching the image-count badge. Use one glyph; do not repeat PDF, TXT, MD, or another type as adjacent text. A gallery count is the exception: show its number beside the images glyph. Keep selection and action buttons at the top of the card.
@@ -14,7 +30,7 @@ Use `MediaViewerToolbar` for image quick previews and PDF viewers. Keep view cho
 
 ## Card content
 
-Grid cards share the `--card-*` tokens in `globals.css`. Keep the 64px outer curve, 8px card inset, and 56px inner curve. Bare image cards keep the full 8px bottom inset; cards with footer content use 2px outer bottom padding in addition to the footer's own padding. Footers use 16px horizontal padding, 10px above their title, 12px below their content, and 6px between rows. Titles are 16px medium with a 22px line height. Truncate to one line; link cards without an OG asset may show two lines. Website descriptions are 12px secondary text, one line with an OG asset or two without one. Source hosts and file metadata are 11px muted text with a 16px line height.
+Grid cards share the `--card-*` tokens in `src/app/styles/` (control geometry in `tokens.css`, footer spacing in `library-content.css`). Keep the 64px outer curve, 8px card inset, and 56px inner curve. Bare image cards keep the full 8px bottom inset; cards with footer content use 2px outer bottom padding in addition to the footer's own padding. Footers use 16px horizontal padding, 10px above their title, 12px below their content, and 6px between rows. Titles are 16px medium with a 22px line height. Truncate to one line; link cards without an OG asset may show two lines. Website descriptions are 12px secondary text, one line with an OG asset or two without one. Source hosts and file metadata are 11px muted text with a 16px line height.
 
 Use `CardSource` for external source hosts on links and images, including images with captions. It always includes the external-arrow glyph. A local filename has no external arrow. PDFs retain their original filename when it differs from their title beyond the extension.
 
