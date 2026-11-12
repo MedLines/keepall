@@ -82,6 +82,8 @@ if (!globalThis.__keepallCreateOrgPicker) {
     const retry = element("button", "secondary", "Retry");
     retry.type = "button";
     retry.hidden = true;
+    retry.style.alignSelf = "flex-start";
+    retry.style.justifyContent = "center";
     retry.addEventListener("click", () => {
       retry.hidden = true;
       status.textContent = "Loading collections and tags…";
