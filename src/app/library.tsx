@@ -125,6 +125,8 @@ import { LibraryInspect } from "./library-inspect";
 import { type BulkPanel } from "./library-bulk-bar";
 import { LibraryTopBar } from "./library-top-bar";
 import { UndoNotice } from "./undo-notice";
+import { ContextPackDialog, type ContextPackRequest } from "./context-pack-dialog";
+import { contextPackSourceForSelection, contextPackSourceForView } from "@/domain/context-pack-view";
 import { UnsortedReview } from "./unsorted-review";
 import { LibraryEmptyState, getEmptyStateKind, entireLibrarySearch } from "./library-empty-state";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
@@ -295,6 +297,7 @@ export function Library() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [contextPackRequest, setContextPackRequest] = useState<ContextPackRequest | null>(null);
   const [organizationDelete, setOrganizationDelete] = useState<{
     kind: "collections" | "tags";
     ids: string[];
@@ -1829,6 +1832,12 @@ export function Library() {
         onListColumnsChange={(listColumns) => updateView({ listColumns }, "replace")}
         onPreview={() => libraryGridRef.current?.openPreview()}
         previewDisabled={previewBusy || loadState !== "ready" || visibleItems.length === 0}
+        onExport={() => setContextPackRequest({
+          itemIds: visibleItems.map((item) => item.id),
+          defaultName: viewTitle,
+          source: contextPackSourceForView(view, { collection: browseCollection?.name, tag: browseTagName }),
+          pinnedItemIds: browseCollection?.pinnedItemIds,
+        })}
         collectionsView={Boolean(view.collections)}
         tagsView={Boolean(view.tags)}
         typeFilter={browseType}
@@ -1870,6 +1879,16 @@ export function Library() {
           deleteLabel: view.collections ? "Delete folders" : "Delete tags",
         } : undefined}
         bulk={{
+          onExport: view.trash ? undefined : () => {
+            // Visible order first; selections hidden by search or filters follow in library order.
+            const visibleIds = visibleItems.map((item) => item.id).filter((id) => selectedIds.has(id));
+            const hiddenIds = items.map((item) => item.id).filter((id) => selectedIds.has(id) && !visibleIds.includes(id));
+            setContextPackRequest({
+              itemIds: [...visibleIds, ...hiddenIds],
+              defaultName: viewTitle,
+              source: contextPackSourceForSelection(selectedIds.size, viewTitle),
+            });
+          },
           allVisibleSelected,
           busy: mutationBusy,
           collectionDraft: bulkCollectionDraft,
@@ -2236,6 +2255,7 @@ export function Library() {
         />
         </div>
         {trashActions.dialog}
+        {contextPackRequest ? <ContextPackDialog request={contextPackRequest} onClose={() => setContextPackRequest(null)} /> : null}
         <ConfirmDialog
           open={organizationDeleteOpen}
           title={`Delete ${organizationDeleteCount} ${organizationDeleteNoun}?`}
