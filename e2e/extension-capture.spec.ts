@@ -412,7 +412,7 @@ test("Chrome access management preserves library recovery and saving", async () 
     await worker.evaluate((tab) => {
       void saveContext({ menuItemId: "save-to-keepall", linkUrl: "https://example.com/missing-connection" }, tab);
     }, sourceTab);
-    await expect.poll(() => worker.evaluate((tabId) => chrome.action.getTitle({ tabId }), sourceTab.id)).toContain("Library access is missing");
+    await expect.poll(() => worker.evaluate((tabId) => chrome.action.getTitle({ tabId }), sourceTab.id)).toContain("lost access to your library");
     await expect(library.locator(".library-card")).toHaveCount(1);
     await options.reload();
     await options.getByRole("tab", { name: "General", exact: true }).click();

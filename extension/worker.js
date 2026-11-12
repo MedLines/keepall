@@ -86,7 +86,7 @@ async function openKeepallLibrary() {
 async function requireLibraryAccess(origin) {
   const url = new URL(origin);
   if (!await chrome.permissions.contains({ origins: [`${url.protocol}//${url.hostname}/*`] })) {
-    throw new Error("Library access is missing. Open Keepall extension Options and restore library access.");
+    throw new Error("Keepall Capture lost access to your library. Open settings and choose Restore library access.");
   }
 }
 
@@ -146,7 +146,19 @@ async function showSaving(tabId, title) {
   await chrome.action.setTitle({ tabId, title }).catch(() => {});
 }
 
+/** Which Options tab helps with this failure, or null when settings cannot. */
+function settingsSectionFor(message) {
+  if (typeof message !== "string") return null;
+  if (message.includes("to save this image") || message.includes("to save this video")) return "images";
+  if (message.includes("Could not reach Keepall") || message.includes("lost access to your library")) return "general";
+  return null;
+}
+
 async function showFeedback(tabId, message, success, source = "toolbar", editorId, actions) {
+  if (!success && !actions) {
+    const section = settingsSectionFor(message);
+    if (section) actions = { settings: section };
+  }
   try {
     // Chrome's badge API rejects OKLCH strings and requires legacy RGBA here.
     await chrome.action.setBadgeBackgroundColor({ tabId, color: success ? [22, 128, 60, 255] : [180, 35, 24, 255] });
@@ -602,11 +614,11 @@ async function saveImage(tab, srcUrl, context = {}) {
     ? Promise.resolve(true)
     : chrome.permissions.request({ origins: [`${imageUrl.origin}/*`] });
   try {
-    if (!await access) throw new Error("Allow access to this image host to save it.");
+    if (!await access) throw new Error(`Keepall needs permission for ${imageUrl.hostname} to save this image. Right-click it again and choose Allow, or allow all websites in settings.`);
     await showSaving(tab.id, "Saving image to Keepall…");
-    const { bytes, mimeType } = await imageBytes(imageUrl.href);
     const origin = await keepallOrigin();
     await ensureOffscreen(origin);
+    const { bytes, mimeType } = await imageBytes(imageUrl.href);
     const captureId = crypto.randomUUID();
     const result = await chrome.runtime.sendMessage({
       target: "offscreen",
@@ -851,7 +863,7 @@ async function saveVideo(tab, srcUrl, context = {}) {
     for (const candidate of candidates) {
       if (!grants.has(candidate.origin)) grants.set(candidate.origin, await videoHostAccess(candidate, sourcePage.origin, request));
       const access = grants.get(candidate.origin);
-      if (!access && !streamed) { failure ??= new Error("Allow access to this video host to save it."); continue; }
+      if (!access && !streamed) { failure ??= new Error(`Keepall needs permission for ${new URL(candidate.origin).hostname} to save this video. Right-click it again and choose Allow, or allow all websites in settings.`); continue; }
       try {
         video = await downloadVideo(candidate, access);
         break;
@@ -1030,6 +1042,11 @@ chrome.commands.onCommand.addListener((command, tab) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "editor-file-action") {
     void handleEditorFileAction(message, sender).then(sendResponse).catch(error => sendResponse({ success: false, error: error.message || "Could not complete this file action." }));
+    return true;
+  }
+  if (message?.type === "open-options" && sender.tab?.id && ["general", "saving", "images"].includes(message.section)) {
+    void chrome.tabs.create({ url: chrome.runtime.getURL(`options.html#${message.section}`) })
+      .then(() => sendResponse({ success: true }), (error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
   if (message?.type === "check-connection" && sender.url?.split("#")[0] === chrome.runtime.getURL("options.html")) {
