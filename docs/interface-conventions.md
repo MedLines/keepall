@@ -14,6 +14,15 @@ Radius tokens ascend: `control-xs` 10px, `control-sm` 12px, `control-md` 13px (f
 
 Use `Button` and `IconButton` from `src/components/ui/button.tsx` for new buttons. Variants are `secondary` (default), `primary`, `danger` and `danger-ghost`. Text sizes are `md` (40px), `lg` (44px) and `toolbar` (44px top bar; padding stays with the caller). Icon sizes are `sm` (32px), `md` (40px) and `lg` (44px). Base UI triggers that render their own button take `buttonClassName()` or `iconButtonClassName()` instead.
 
+Other shared pieces live beside it in `src/components/ui/`:
+- **Tooltip** (`tooltip.tsx`): wraps any trigger element. Toolbar controls use the default 350ms delay; folder and tag previews use 100ms. Set `describe={false}` when the tooltip repeats the accessible name. Select triggers that compose their own Base UI tooltip use `TooltipContent`. Never add a native `title` to a control.
+- **SegmentedControl**: two-choice switches. The `icon` variant serves the library layout and note edit/preview; the `text` variant serves the viewers, note format and gallery mode.
+- **RadioCard** for selectable radio options, **TextField** for labelled single-line inputs, and `menuItemClassName()` for menu, select and context-menu items.
+
+Action menus (`role="menu"`) scroll in a native `ui-scrollbar` container, not the registry ScrollArea: its focusable viewport would sit between the menu and its items. Select popups keep ScrollArea, because their `role="listbox"` element sits inside the viewport.
+
+Headers inside dialogs, drawers and previews are plain `div`s, so the library top bar stays the page's only banner landmark.
+
 # Library cards and media controls
 
 Use `ItemTypeIcon` for item identity and `ItemTypeBadge` for grid previews. Put the badge at the bottom-end of the preview: bottom-right in English, matching the image-count badge. Use one glyph; do not repeat PDF, TXT, MD, or another type as adjacent text. A gallery count is the exception: show its number beside the images glyph. Keep selection and action buttons at the top of the card.
