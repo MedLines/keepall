@@ -73,10 +73,10 @@ test("toast and page menu add screenshots of the visible page without Keepall's 
     await expect(library.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
 
     const source = await context.newPage();
-    for (const route of ["design-site", "second-site"]) {
+    for (const route of ["design-site", "second-site", "dialog-site"]) {
       await source.route(`${origin}/${route}`, (request) => request.fulfill({
         contentType: "text/html",
-        body: `<!doctype html><title>${route}</title><body style="margin:0;background:rgb(220,30,30);height:3000px"><h1>${route}</h1><a href="${origin}/linked-page">Linked page</a></body>`,
+        body: `<!doctype html><title>${route}</title><body style="margin:0;background:rgb(220,30,30);height:3000px"><h1>${route}</h1><a href="${origin}/linked-page">Linked page</a>${route === "dialog-site" ? "<style>dialog::backdrop { background: transparent }</style><dialog id='lightbox'><p>Photo</p></dialog><script>document.getElementById('lightbox').showModal()</script>" : ""}</body>`,
       }));
     }
     await source.goto(`${origin}/design-site`);
@@ -91,7 +91,7 @@ test("toast and page menu add screenshots of the visible page without Keepall's 
       await saveTab(tab);
     });
 
-    const toast = source.locator("#keepall-capture-ui .toast.is-visible");
+    const toast = source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast.is-visible");
     await expect(toast).toContainText("Link saved to Keepall");
     const screenshot = toast.getByRole("button", { name: "Add screenshot" });
     await expect(screenshot).toBeVisible();
@@ -134,6 +134,21 @@ test("toast and page menu add screenshots of the visible page without Keepall's 
     expect(title).toBe("Page and screenshot saved");
     saved = (await storedLinks(library)).find((link) => link.url === `${origin}/second-site`)!;
     expect(saved.shots).toHaveLength(1);
+
+    // Under a page's modal dialog the notice sits inside that dialog, outside our host, and must be hidden too.
+    await source.goto(`${origin}/dialog-site`);
+    await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await saveTab(tab);
+    });
+    const dialogFrame = source.locator("dialog#lightbox iframe[data-keepall-toast-frame]").contentFrame();
+    await expect(dialogFrame.locator(".toast.is-visible")).toContainText("Link saved to Keepall");
+    await dialogFrame.getByRole("button", { name: "Add screenshot" }).click();
+    await expect(dialogFrame.locator(".toast")).toContainText("Screenshot added");
+    saved = (await storedLinks(library)).find((link) => link.url === `${origin}/dialog-site`)!;
+    expect(saved.shots).toHaveLength(1);
+    expect(saved.shots[0].corner[0]).toBeGreaterThan(200);
+    expect(saved.shots[0].corner[1]).toBeLessThan(60);
   } finally {
     await context.close();
     await rm(profile, { recursive: true, force: true });

@@ -26,7 +26,7 @@ test("extension Organize uses the app icon and still opens its collection and ta
   });
   for (const file of ["toast-collections.js", "page-ui.js"]) await page.addScriptTag({ path: path.resolve("extension", file) });
   await bridge.evaluate(value => value.send({ type: "toast-feedback", message: "Saved to Keepall", success: true, actions: { id: "saved-note", canUndo: true } }));
-  const toast = page.locator("#keepall-capture-ui .toast");
+  const toast = page.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast");
   const organize = toast.getByRole("button", { name: "Organize", exact: true });
   await expect(organize).toBeVisible();
   expect(await organize.locator("path").evaluateAll(paths => paths.map(node => node.getAttribute("d")))).toEqual(appPaths);
@@ -47,7 +47,7 @@ test("extension Organize uses the app icon and still opens its collection and ta
     await expect(picker.getByRole("button", { name: "Research", exact: true })).toBeHidden();
     const bounds = await clear.boundingBox();
     expect(bounds!.width).toBeGreaterThanOrEqual(40); expect(bounds!.height).toBeGreaterThanOrEqual(40);
-    expect(await search.evaluate(node => [...(node.getRootNode() as ShadowRoot).querySelectorAll("style")].flatMap(style => [...(style.sheet?.cssRules ?? [])]).some(rule => rule instanceof CSSStyleRule && rule.selectorText === ".toast-collections-search::-webkit-search-cancel-button" && rule.style.display === "none"))).toBe(true);
+    expect(await search.evaluate(node => [...(node.getRootNode() as ShadowRoot).querySelectorAll("style")].flatMap(style => [...(style.sheet?.cssRules ?? [])]).some(rule => (rule as CSSStyleRule).selectorText === ".toast-collections-search::-webkit-search-cancel-button" && (rule as CSSStyleRule).style.display === "none"))).toBe(true);
     await toast.screenshot({ path: testInfo.outputPath(`extension-organize-${theme}.png`) });
     await clear.click({ position: { x: 3, y: 3 } });
     await expect(search).toHaveValue(""); await expect(search).toBeFocused();

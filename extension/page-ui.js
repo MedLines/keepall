@@ -5,12 +5,14 @@ if (!globalThis.__keepallPageUi) {
   host.id = "keepall-capture-ui";
   const shadow = host.attachShadow({ mode: "closed" });
   let editorSurface;
+  let toastSurface;
   const colorScheme = matchMedia("(prefers-color-scheme: dark)");
   let themePreference = "system";
   function applyTheme(preference) {
     themePreference = ["light", "dark"].includes(preference) ? preference : "system";
     host.dataset.theme = themePreference === "system" ? (colorScheme.matches ? "dark" : "light") : themePreference;
     if (editorSurface) editorSurface.document.documentElement.dataset.theme = host.dataset.theme;
+    toastSurface?.setTheme(host.dataset.theme);
   }
   colorScheme.addEventListener("change", () => applyTheme(themePreference));
   applyTheme("system");
@@ -119,17 +121,6 @@ if (!globalThis.__keepallPageUi) {
   shadow.append(style);
   document.documentElement.append(host);
 
-  // Outside a closed shadow root, a keystroke in our search looks like one on a plain div, so site
-  // shortcuts (such as "d" for theme) would fire. Stop it at the earliest point we control and hand
-  // keydown to the organizer directly. Typing itself is a default action and is unaffected.
-  let organizerKeys;
-  const guardTyping = (event) => {
-    if (event.target !== host || !shadow.activeElement?.matches("input, textarea")) return;
-    event.stopImmediatePropagation();
-    if (event.type === "keydown") organizerKeys?.(event, shadow.activeElement);
-  };
-  for (const type of ["keydown", "keypress", "keyup"]) window.addEventListener(type, guardTyping, true);
-
   let dialog;
   let saveButton;
   let errorLine;
@@ -142,6 +133,8 @@ if (!globalThis.__keepallPageUi) {
   let currentToastBusy = () => false;
   let pendingToast;
   let toastReturnFocus;
+  let toastNode;
+  let lastPageFocus;
   let closeTimer;
   let currentPicker;
   let stopFieldFades;
@@ -209,6 +202,109 @@ if (!globalThis.__keepallPageUi) {
     };
   }
 
+  // A save notice renders in its own same-origin frame, like the editor: site key listeners never see
+  // typing in it, and the frame can sit inside a page's modal dialog, which makes everything else inert.
+  const toastPad = { x: 24, top: 24, bottom: 48 };
+  function toastParent() {
+    const modals = document.querySelectorAll("dialog:modal");
+    return modals.length ? modals[modals.length - 1] : shadow;
+  }
+
+  function createToastSurface(parent) {
+    const container = document.createElement("div");
+    container.style.cssText = `all: initial; position: fixed; top: calc(max(20px, env(safe-area-inset-top)) - ${toastPad.top}px); right: calc(max(20px, env(safe-area-inset-right)) - ${toastPad.x}px); z-index: 2147483647; pointer-events: none; visibility: inherit;`;
+    const frame = document.createElement("iframe");
+    frame.title = "Keepall save notice";
+    frame.setAttribute("data-keepall-toast-frame", "");
+    frame.style.cssText = "all: initial; display: block; width: 0; height: 0; border: 0; background: transparent; pointer-events: auto; visibility: inherit;";
+    // A frame whose color scheme differs from its document's gets an opaque backdrop.
+    frame.style.colorScheme = host.dataset.theme;
+    container.append(frame);
+    parent.append(container);
+    const frameDocument = frame.contentDocument;
+    const root = frameDocument.documentElement;
+    root.lang = "en";
+    root.dir = "ltr";
+    root.dataset.theme = host.dataset.theme;
+    const setPageSize = () => {
+      // The notice's width and organizer height follow the page's viewport, not the small frame.
+      root.style.setProperty("--page-vw", `${innerWidth}px`);
+      root.style.setProperty("--page-dvh", `${innerHeight}px`);
+    };
+    setPageSize();
+    const fontStyle = frameDocument.createElement("style");
+    try {
+      fontStyle.textContent = `@font-face { font-family: "Keepall Inter"; src: url("${chrome.runtime.getURL("inter-latin-wght-normal.woff2")}") format("woff2"); font-style: normal; font-weight: 100 900; font-display: swap; }`;
+    } catch {}
+    const toastStyle = frameDocument.createElement("style");
+    toastStyle.textContent = style.textContent
+      .replaceAll(':host([data-theme="dark"])', ':root[data-theme="dark"]')
+      .replaceAll(":host", ":root")
+      .replaceAll("100vw", "var(--page-vw)")
+      .replaceAll("100dvh", "var(--page-dvh)") + `
+    html, body { margin: 0; background: transparent; overflow: hidden; }
+    body { padding: ${toastPad.top}px ${toastPad.x}px ${toastPad.bottom}px; }
+    .toast { position: relative; right: auto; top: auto; margin-left: auto; }
+  `;
+    frameDocument.head.append(fontStyle, toastStyle);
+    const fit = () => {
+      const node = frameDocument.querySelector(".toast");
+      if (!node) return;
+      const { width, height } = node.getBoundingClientRect();
+      frame.style.width = `${Math.ceil(width) + toastPad.x * 2}px`;
+      frame.style.height = `${Math.ceil(height) + toastPad.top + toastPad.bottom}px`;
+    };
+    const onResize = () => { setPageSize(); fit(); };
+    window.addEventListener("resize", onResize);
+    // The frame's padding is transparent, so let the page have those clicks: the frame ignores the
+    // pointer while it is outside the notice, and the page document hands it back when it is over it.
+    const leavePadding = (event) => { if (!event.target.closest?.(".toast")) frame.style.pointerEvents = "none"; };
+    frameDocument.addEventListener("pointermove", leavePadding, { passive: true });
+    frameDocument.addEventListener("pointerdown", leavePadding, { capture: true, passive: true });
+    const enterNotice = (event) => {
+      if (frame.style.pointerEvents !== "none") return;
+      const node = frameDocument.querySelector(".toast");
+      if (!node) return;
+      const origin = frame.getBoundingClientRect();
+      const box = node.getBoundingClientRect();
+      const x = event.clientX - origin.left;
+      const y = event.clientY - origin.top;
+      if (x >= box.left && x <= box.right && y >= box.top && y <= box.bottom) frame.style.pointerEvents = "auto";
+    };
+    document.addEventListener("pointermove", enterNotice, { capture: true, passive: true });
+    const observer = new ResizeObserver(fit);
+    return {
+      document: frameDocument,
+      container,
+      fit,
+      observe: (node) => observer.observe(node),
+      setTheme(theme) {
+        root.dataset.theme = theme;
+        frame.style.colorScheme = theme;
+      },
+      destroy() {
+        window.removeEventListener("resize", onResize);
+        document.removeEventListener("pointermove", enterNotice, { capture: true });
+        observer.disconnect();
+        container.remove();
+      },
+    };
+  }
+
+  // The page's focused element, looking through open shadow roots, ignoring our own UI.
+  function pageFocus() {
+    let element = document.activeElement;
+    while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
+    if (!element || element === document.body || element === document.documentElement || element === host || toastSurface?.container.contains(element)) return undefined;
+    return element;
+  }
+
+  // relatedTarget does not cross a frame boundary, so remember where the page's focus was ourselves.
+  function rememberPageFocus(event) {
+    const target = event.composedPath()[0];
+    if (target instanceof Element && target !== host && !toastSurface?.container.contains(target)) lastPageFocus = target;
+  }
+
   // Persistent, initially empty live regions: screen readers announce text added to an existing
   // region far more reliably than a region inserted already filled in.
   function liveRegions(container) {
@@ -216,7 +312,7 @@ if (!globalThis.__keepallPageUi) {
     let polite = find("status");
     let urgent = find("alert");
     if (!polite) {
-      polite = document.createElement("div");
+      polite = container.ownerDocument.createElement("div");
       polite.className = "sr-only";
       polite.setAttribute("role", "status");
       polite.setAttribute("aria-live", "polite");
@@ -224,7 +320,7 @@ if (!globalThis.__keepallPageUi) {
       container.append(polite);
     }
     if (!urgent) {
-      urgent = document.createElement("div");
+      urgent = container.ownerDocument.createElement("div");
       urgent.className = "sr-only";
       urgent.setAttribute("role", "alert");
       urgent.setAttribute("aria-atomic", "true");
@@ -254,34 +350,47 @@ if (!globalThis.__keepallPageUi) {
     if (immediate) pendingToast = undefined;
     clearTimeout(toastTimer);
     clearTimeout(toastExitTimer);
-    const node = shadow.querySelector(".toast");
+    const node = toastNode;
     if (!node) return;
+    const surface = toastSurface;
+    const remove = () => {
+      node.remove();
+      surface?.destroy();
+      if (toastNode === node) toastNode = undefined;
+      if (toastSurface === surface) toastSurface = undefined;
+    };
     if (node.contains(node.getRootNode().activeElement)) {
       const target = toastReturnFocus;
       toastReturnFocus = undefined;
       if (target?.isConnected) target.focus({ preventScroll: true });
     }
     if (immediate) {
-      node.remove();
+      remove();
       return;
     }
     node.classList.add("is-leaving");
     node.classList.remove("is-visible");
-    toastExitTimer = setTimeout(() => node.remove(), matchMedia("(prefers-reduced-motion: reduce)").matches ? 140 : 180);
+    toastExitTimer = setTimeout(remove, matchMedia("(prefers-reduced-motion: reduce)").matches ? 140 : 180);
   }
 
   function toast(message, success, actions, focusShortcut) {
-    if (currentToastBusy() && (dialog?.open ? dialog : shadow).querySelector(".toast")) {
+    if (currentToastBusy() && toastNode?.isConnected) {
       pendingToast = [message, success, actions, focusShortcut];
       return;
     }
     dismissToast(true);
     toastReturnFocus = undefined;
-    const container = dialog?.open ? dialog : shadow;
-    const node = document.createElement("div");
+    lastPageFocus = pageFocus();
+    // In the editor's own frame the notice stays beside the editor; otherwise it gets a frame of its own.
+    const surface = dialog?.open ? undefined : createToastSurface(toastParent());
+    toastSurface = surface;
+    const doc = surface ? surface.document : dialog.ownerDocument;
+    const container = surface ? doc.body : dialog;
+    if (surface) document.addEventListener("focusin", rememberPageFocus, true);
+    const node = doc.createElement("div");
     node.className = "toast";
     node.dataset.success = String(success);
-    const mark = document.createElement("span");
+    const mark = doc.createElement("span");
     mark.className = "toast-mark";
     mark.setAttribute("aria-hidden", "true");
     function setMark(value) {
@@ -289,10 +398,10 @@ if (!globalThis.__keepallPageUi) {
       mark.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
     }
     setMark(success);
-    const label = document.createElement("span");
+    const label = doc.createElement("span");
     label.className = "toast-label";
     label.textContent = message;
-    const content = document.createElement("div");
+    const content = doc.createElement("div");
     content.className = "toast-content";
     content.append(label);
     let actionRow;
@@ -322,8 +431,8 @@ if (!globalThis.__keepallPageUi) {
     cleanupToast = () => {
       clearTimeout(undoTimer);
       document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("focusin", rememberPageFocus, true);
       collectionPicker?.destroy();
-      organizerKeys = undefined;
     };
     let duration = actions ? 8000 : 4000;
     const scheduleDismiss = () => {
@@ -336,17 +445,17 @@ if (!globalThis.__keepallPageUi) {
     };
     if (actions?.settings) {
       node.classList.add("has-actions");
-      const buttons = document.createElement("div");
+      const buttons = doc.createElement("div");
       buttons.className = "toast-actions";
       buttons.setAttribute("role", "group");
       buttons.setAttribute("aria-label", "Settings");
-      const button = document.createElement("button");
+      const button = doc.createElement("button");
       button.type = "button";
       button.className = "toast-action";
       button.dataset.action = "settings";
       button.title = "Open Keepall settings";
       button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.3175 7.14139L20.8239 6.28479C20.4506 5.63696 20.264 5.31305 19.9464 5.18388C19.6288 5.05472 19.2696 5.15664 18.5513 5.36048L17.3311 5.70418C16.8725 5.80994 16.3913 5.74994 15.9726 5.53479L15.6357 5.34042C15.2766 5.11043 15.0004 4.77133 14.8475 4.37274L14.5136 3.37536C14.294 2.71534 14.1842 2.38533 13.9228 2.19657C13.6615 2.00781 13.3143 2.00781 12.6199 2.00781H11.5051C10.8108 2.00781 10.4636 2.00781 10.2022 2.19657C9.94085 2.38533 9.83106 2.71534 9.61149 3.37536L9.27753 4.37274C9.12465 4.77133 8.84845 5.11043 8.48937 5.34042L8.15249 5.53479C7.73374 5.74994 7.25259 5.80994 6.79398 5.70418L5.57375 5.36048C4.85541 5.15664 4.49625 5.05472 4.17867 5.18388C3.86109 5.31305 3.67445 5.63696 3.30115 6.28479L2.80757 7.14139C2.45766 7.74864 2.2827 8.05227 2.31666 8.37549C2.35061 8.69871 2.58483 8.95918 3.05326 9.48012L4.0843 10.6328C4.3363 10.9518 4.51521 11.5078 4.51521 12.0077C4.51521 12.5078 4.33636 13.0636 4.08433 13.3827L3.05326 14.5354C2.58483 15.0564 2.35062 15.3168 2.31666 15.6401C2.2827 15.9633 2.45766 16.2669 2.80757 16.8741L3.30114 17.7307C3.67443 18.3785 3.86109 18.7025 4.17867 18.8316C4.49625 18.9608 4.85542 18.8589 5.57377 18.655L6.79394 18.3113C7.25263 18.2055 7.73387 18.2656 8.15267 18.4808L8.4895 18.6752C8.84851 18.9052 9.12464 19.2442 9.2775 19.6428L9.61149 20.6403C9.83106 21.3003 9.94085 21.6303 10.2022 21.8191C10.4636 22.0078 10.8108 22.0078 11.5051 22.0078H12.6199C13.3143 22.0078 13.6615 22.0078 13.9228 21.8191C14.1842 21.6303 14.294 21.3003 14.5136 20.6403L14.8476 19.6428C15.0004 19.2442 15.2765 18.9052 15.6356 18.6752L15.9724 18.4808C16.3912 18.2656 16.8724 18.2055 17.3311 18.3113L18.5513 18.655C19.2696 18.8589 19.6288 18.9608 19.9464 18.8316C20.264 18.7025 20.4506 18.3785 20.8239 17.7307L21.3175 16.8741C21.6674 16.2669 21.8423 15.9633 21.8084 15.6401C21.7744 15.3168 21.5402 15.0564 21.0718 14.5354L20.0407 13.3827C19.7887 13.0636 19.6098 12.5078 19.6098 12.0077C19.6098 11.5078 19.7888 10.9518 20.0407 10.6328L21.0718 9.48012C21.5402 8.95918 21.7744 8.69871 21.8084 8.37549C21.8423 8.05227 21.6674 7.74864 21.3175 7.14139Z"/><path d="M15.5195 12C15.5195 13.933 13.9525 15.5 12.0195 15.5C10.0865 15.5 8.51953 13.933 8.51953 12C8.51953 10.067 10.0865 8.5 12.0195 8.5C13.9525 8.5 15.5195 10.067 15.5195 12Z"/></svg>';
-      button.append(document.createTextNode("Open settings"));
+      button.append(doc.createTextNode("Open settings"));
       button.addEventListener("click", async () => {
         if (busy) return;
         busy = true;
@@ -369,7 +478,7 @@ if (!globalThis.__keepallPageUi) {
       actionRow = buttons;
     } else if (actions) {
       node.classList.add("has-actions");
-      const buttons = document.createElement("div");
+      const buttons = doc.createElement("div");
       buttons.className = "toast-actions";
       buttons.setAttribute("role", "group");
       buttons.setAttribute("aria-label", "Save actions");
@@ -434,7 +543,7 @@ if (!globalThis.__keepallPageUi) {
       };
       // Screenshot is icon-only and last, so four actions still fit on one row.
       for (const [action, text] of [["open", "Open"], ["organize", "Organize"], ...(actions.canUndo ? [["undo", "Undo"]] : []), ...(actions.canScreenshot ? [["screenshot", ""]] : [])]) {
-        const button = document.createElement("button");
+        const button = doc.createElement("button");
         button.type = "button";
         button.className = "toast-action";
         button.dataset.action = action;
@@ -446,7 +555,7 @@ if (!globalThis.__keepallPageUi) {
           button.setAttribute("aria-haspopup", "dialog");
         }
         button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${actionIcons[action]}</svg>`;
-        if (text) button.append(document.createTextNode(text));
+        if (text) button.append(doc.createTextNode(text));
         button.addEventListener("click", async () => {
           if (busy) return;
           if (action === "undo" && Date.now() >= undoDeadline) { expireUndo(); return; }
@@ -457,6 +566,7 @@ if (!globalThis.__keepallPageUi) {
             button.setAttribute("aria-expanded", "true");
             collectionPicker = globalThis.__keepallCreateToastCollections({
               host,
+              document: doc,
               request: async (operation, payload = {}) => {
                 if (operation === "move" || operation === "tag") {
                   busy = true;
@@ -495,7 +605,7 @@ if (!globalThis.__keepallPageUi) {
               },
             });
             node.append(collectionPicker.element);
-            organizerKeys = collectionPicker.handleKey;
+            surface?.fit();
             collectionPicker.focus();
             return;
           }
@@ -555,7 +665,6 @@ if (!globalThis.__keepallPageUi) {
         if (!collectionPicker) return;
         collectionPicker.destroy();
         collectionPicker = undefined;
-        organizerKeys = undefined;
         const trigger = buttons.querySelector('[data-action="organize"]');
         trigger.setAttribute("aria-expanded", "false");
         if (restoreFocus) trigger.focus();
@@ -563,7 +672,7 @@ if (!globalThis.__keepallPageUi) {
       }
       actionRow = buttons;
     }
-    const close = document.createElement("button");
+    const close = doc.createElement("button");
     close.type = "button";
     close.className = "toast-close";
     close.setAttribute("aria-label", "Dismiss notification");
@@ -573,17 +682,20 @@ if (!globalThis.__keepallPageUi) {
     node.addEventListener("mouseleave", scheduleDismiss);
     node.addEventListener("focusin", (event) => {
       clearTimeout(toastTimer);
-      if (event.relatedTarget instanceof Node && !node.contains(event.relatedTarget)) toastReturnFocus = event.relatedTarget;
+      const from = event.relatedTarget;
+      if (from) {
+        if (!node.contains(from)) toastReturnFocus = from;
+      } else if (surface && lastPageFocus) toastReturnFocus = lastPageFocus;
     });
     node.addEventListener("focusout", () => queueMicrotask(scheduleDismiss));
-    const card = document.createElement("div");
+    const card = doc.createElement("div");
     card.className = "toast-card";
     card.append(mark, content, close);
     node.append(card);
     if (actionRow) {
       node.append(actionRow);
       if (typeof focusShortcut === "string" && focusShortcut) {
-        const hint = document.createElement("span");
+        const hint = doc.createElement("span");
         hint.className = "sr-only";
         hint.id = "keepall-toast-shortcut";
         hint.textContent = `Press ${focusShortcut} to reach these actions.`;
@@ -592,6 +704,9 @@ if (!globalThis.__keepallPageUi) {
       }
     }
     container.append(node);
+    toastNode = node;
+    surface?.observe(node);
+    surface?.fit();
     void node.offsetWidth;
     node.classList.add("is-visible");
     announce(container, message, !success);
@@ -1091,16 +1206,23 @@ if (!globalThis.__keepallPageUi) {
     if (message?.type === "organizations" || message?.type === "organization-error") onOrganizationMessage?.(message);
     if (message?.type === "toast-feedback") toast(message.message, message.success, message.actions, message.focusShortcut);
     if (message?.type === "focus-toast") {
-      const node = (dialog?.open ? dialog : shadow).querySelector(".toast:not(.is-leaving)");
+      const node = toastNode?.matches(".toast:not(.is-leaving)") ? toastNode : undefined;
+      // Focus is about to move into the notice's frame, so note where it is on the page.
+      lastPageFocus = pageFocus() ?? lastPageFocus;
       (node?.querySelector(".toast-action:not(:disabled)") ?? node?.querySelector(".toast-close"))?.focus({ preventScroll: true });
     }
     if (message?.type === "editor-feedback") onEditorFeedback?.(message);
     if (message?.type === "screenshot-hide") {
       host.style.setProperty("visibility", "hidden", "important");
+      // A notice inside a page dialog is outside our host.
+      toastSurface?.container.style.setProperty("visibility", "hidden", "important");
       // Two frames let the page repaint without Keepall before the capture.
       requestAnimationFrame(() => requestAnimationFrame(() => respond?.({ hidden: true })));
       return true;
     }
-    if (message?.type === "screenshot-show") host.style.removeProperty("visibility");
+    if (message?.type === "screenshot-show") {
+      host.style.removeProperty("visibility");
+      toastSurface?.container.style.removeProperty("visibility");
+    }
   });
 }

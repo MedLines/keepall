@@ -24,7 +24,9 @@ async function openToastPage(page: Page, sendMessage: "ok" | "fail" = "ok") {
   for (const file of ["drawer-styles.js", "note-preview.js", "file-capture.js", "org-picker.js", "toast-collections.js", "page-ui.js"]) {
     await page.addScriptTag({ path: path.resolve("extension", file) });
   }
-  return { bridge, toast: page.locator("#keepall-capture-ui .toast") };
+  // The notice renders in its own frame, so every locator reaches into it.
+  const frame = page.locator("iframe[data-keepall-toast-frame]").contentFrame();
+  return { bridge, frame, toast: frame.locator(".toast") };
 }
 
 test("a failure notice stays on screen", async ({ page }) => {
@@ -81,22 +83,22 @@ test("an access failure offers Open settings", async ({ page }) => {
 const savedWithActions = { canUndo: true, canScreenshot: false };
 
 test("save notices are announced in a live region without button names", async ({ page }) => {
-  const { bridge, toast } = await openToastPage(page);
+  const { bridge, frame, toast } = await openToastPage(page);
   await bridge.evaluate((value, actions) => value.send({ type: "toast-feedback", message: "Link saved to Keepall", success: true, actions: { id: "a", ...actions } }), savedWithActions);
   await page.clock.runFor(100);
-  await expect(page.locator("#keepall-capture-ui [role=status]")).toHaveText("Link saved to Keepall");
+  await expect(frame.locator("[role=status]")).toHaveText("Link saved to Keepall");
   await expect(toast).not.toHaveAttribute("role", /.*/);
 });
 
 test("a failure is announced in the alert region", async ({ page }) => {
-  const { bridge } = await openToastPage(page);
+  const { bridge, frame } = await openToastPage(page);
   await bridge.evaluate((value) => value.send({ type: "toast-feedback", message: "Could not save", success: false }));
   await page.clock.runFor(100);
-  await expect(page.locator("#keepall-capture-ui [role=alert]")).toHaveText("Could not save");
+  await expect(frame.locator("[role=alert]")).toHaveText("Could not save");
 });
 
 test("Undo updates the notice in place and keeps focus", async ({ page }) => {
-  const { bridge, toast } = await openToastPage(page);
+  const { bridge, frame, toast } = await openToastPage(page);
   await bridge.evaluate((value, actions) => value.send({ type: "toast-feedback", message: "Link saved to Keepall", success: true, actions: { id: "a", ...actions } }), savedWithActions);
   await toast.getByRole("button", { name: "Undo" }).focus();
   await page.keyboard.press("Enter");
@@ -104,7 +106,7 @@ test("Undo updates the notice in place and keeps focus", async ({ page }) => {
   await expect(toast.locator(".toast-actions")).toHaveCount(0);
   await expect(toast.getByRole("button", { name: "Dismiss notification" })).toBeFocused();
   await page.clock.runFor(100);
-  await expect(page.locator("#keepall-capture-ui [role=status]")).toHaveText("Save undone");
+  await expect(frame.locator("[role=status]")).toHaveText("Save undone");
 });
 
 test("a new notice waits for a running action", async ({ page }) => {

@@ -473,7 +473,7 @@ test("connection checks, selected text, and appearance work together", async ({}
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await saveContext({ menuItemId: "save-to-keepall", selectionText, pageUrl: `${origin}/help` }, tab);
     }, { selectionText: text, origin });
-    const toast = source.locator("#keepall-capture-ui .toast");
+    const toast = source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast");
     await saveText("A useful passage");
     await expect(toast).toContainText("Text saved to Keepall");
     await expect(toast.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
@@ -599,11 +599,13 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       return chrome.action.getTitle({ tabId: tab.id });
     });
     expect(first).toBe("Link saved to Keepall");
-    await expect(source.locator("#keepall-capture-ui .toast.is-visible")).toContainText("Link saved to Keepall");
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast.is-visible")).toContainText("Link saved to Keepall");
     await expect(openLibrary.getByText("Example article", { exact: true })).toBeVisible();
-    await expect(source.locator("#keepall-capture-ui .toast")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
-    await expect(source.locator("#keepall-capture-ui .toast-card")).toHaveCSS("border-radius", "32px");
-    const toastBounds = await source.locator("#keepall-capture-ui .toast").boundingBox();
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast-card")).toHaveCSS("border-radius", "32px");
+    // The frame carries its own styles; a toolbar save has no app stylesheet to fall back on.
+    expect(await source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast-card").evaluate((card) => getComputedStyle(card).backgroundColor)).not.toMatch(/^rgba\(0, 0, 0, 0\)$|^transparent$/);
+    const toastBounds = await source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast").boundingBox();
     expect(toastBounds).not.toBeNull();
     expect(toastBounds!.x).toBeGreaterThanOrEqual(0);
     expect(toastBounds!.x + toastBounds!.width).toBeLessThanOrEqual(320);
@@ -627,8 +629,8 @@ test("extension saves and edits links through the hidden Keepall bridge", async 
       return chrome.action.getTitle({ tabId: tab.id });
     });
     expect(conflict).toContain("already has a personal note");
-    await expect(source.locator("#keepall-capture-ui .toast.is-visible")).toContainText("already has a personal note");
-    await expect(source.locator("#keepall-capture-ui .toast")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast.is-visible")).toContainText("already has a personal note");
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
     await source.close();
 
     const organizationSetup = await context.newPage();
@@ -887,7 +889,7 @@ test("save notifications open the item and undo only new captures", async ({}, t
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await saveTab(tab);
     });
-    const toast = source.locator("#keepall-capture-ui .toast");
+    const toast = source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast");
     await save();
     await expect(toast.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
     await expect(library.getByText("Action article", { exact: true })).toBeVisible();
@@ -1148,7 +1150,7 @@ test("notifications expire Undo and retry loading organizations without closing"
       } });
       await saveTab(tab);
     });
-    const toast = source.locator("#keepall-capture-ui .toast");
+    const toast = source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast");
     const undo = toast.getByRole("button", { name: "Undo", exact: true });
     const organize = toast.getByRole("button", { name: "Organize", exact: true });
     await expect(undo).toBeEnabled();
@@ -1272,7 +1274,7 @@ test("extension saves a right-clicked image to the local library", async () => {
       return chrome.action.getTitle({ tabId: tab.id });
     }, imageUrl);
     expect(first).toBe("Image saved to Keepall");
-    await expect(source.locator("#keepall-capture-ui .toast.is-visible")).toContainText("Image saved to Keepall");
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast.is-visible")).toContainText("Image saved to Keepall");
     await expect(library.locator(".library-card")).toHaveCount(1);
 
     const item = await library.evaluate(() => new Promise<{ type: string; sourceUrl: string; assetIds: string[]; bytes: number }>((resolve, reject) => {
@@ -1316,7 +1318,7 @@ test("extension saves a right-clicked image to the local library", async () => {
       return chrome.action.getTitle({ tabId: tab.id });
     }, origin);
     expect(unsupported).toContain("PNG, JPEG, GIF, WebP, or AVIF");
-    await expect(source.locator("#keepall-capture-ui .toast.is-visible"))
+    await expect(source.locator("iframe[data-keepall-toast-frame]").contentFrame().locator(".toast.is-visible"))
       .toContainText("PNG, JPEG, GIF, WebP, or AVIF");
     await expect(library.locator(".library-card")).toHaveCount(1);
   } finally {
