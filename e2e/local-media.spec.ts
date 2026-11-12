@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import sharp from "sharp";
@@ -6,6 +6,8 @@ import sharp from "sharp";
 test.use({ serviceWorkers: "block" });
 
 const videoFile = join(__dirname, "fixtures", "tiny.mp4");
+// The custom player (b963928) replaced native controls with its own "Video player" region.
+const playerVideo = (page: Page) => page.getByRole("region", { name: "Video player" }).locator("video");
 
 test("captures, plays, and backs up a local video", async ({ page }) => {
   await page.goto("/");
@@ -25,8 +27,9 @@ test("captures, plays, and backs up a local video", async ({ page }) => {
   await capture.getByRole("button", { name: "Save", exact: true }).click();
   await expect(capture).toBeHidden();
   await expect(page.getByText("Local test video", { exact: true })).toBeVisible();
-  await expect(page.getByTestId("video-play-overlay")).toBeVisible();
   const card = page.locator(".library-card").filter({ hasText: "Local test video" });
+  // Grid cards mark videos with the shared type badge; the play overlay is list-only (68115a3).
+  await expect(card.getByRole("img", { name: "Video", exact: true })).toBeVisible();
   await card.hover();
   await card.locator("button.library-card-actions").click();
   await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
@@ -37,7 +40,7 @@ test("captures, plays, and backs up a local video", async ({ page }) => {
   await expect(cardEditor).toBeHidden();
   await page.getByText("Local test video", { exact: true }).click();
   await expect(page).toHaveURL(/\/items\//);
-  const player = page.locator("video[controls]");
+  const player = playerVideo(page);
   await expect(player).toBeVisible();
   await expect.poll(() => player.evaluate((element: HTMLVideoElement) => element.duration)).toBeGreaterThan(0);
   await expect(player).toHaveAttribute("poster", /^blob:/);
@@ -73,8 +76,8 @@ test("captures, plays, and backs up a local video", async ({ page }) => {
   await page.getByRole("link", { name: "Back to library" }).click();
   await expect(page.getByText("Local test video", { exact: true })).toBeVisible();
   await page.getByText("Local test video", { exact: true }).click();
-  await expect(page.locator("video[controls]")).toBeVisible();
-  await expect(page.locator("video[controls]")).toHaveAttribute("poster", /^blob:/);
+  await expect(playerVideo(page)).toBeVisible();
+  await expect(playerVideo(page)).toHaveAttribute("poster", /^blob:/);
   await expect(page.getByRole("article", { name: "Notes" }).getByRole("heading", { name: "Watch this soon" })).toBeVisible();
 });
 
@@ -118,8 +121,8 @@ test("video details keep actions reachable and link metadata across widths", asy
   await capture.getByRole("button", { name: "Save", exact: true }).click();
   await expect(capture).toBeHidden();
   await page.getByText("A very long local video title about a collection of favorite scenes and edits", { exact: true }).click();
-  await expect(page.locator("video[controls]")).toBeVisible();
-  await expect.poll(() => page.locator("video[controls]").evaluate((video: HTMLVideoElement) => video.duration)).toBeGreaterThan(0);
+  await expect(playerVideo(page)).toBeVisible();
+  await expect.poll(() => playerVideo(page).evaluate((video: HTMLVideoElement) => video.duration)).toBeGreaterThan(0);
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");
@@ -173,7 +176,7 @@ test("missing local video ends loading and offers a retry", async ({ page }) => 
   await capture.getByRole("button", { name: "Save", exact: true }).click();
   await expect(capture).toBeHidden();
   await page.getByText("Missing video example", { exact: true }).click();
-  await expect(page.locator("video[controls]")).toBeVisible();
+  await expect(playerVideo(page)).toBeVisible();
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("keepall");

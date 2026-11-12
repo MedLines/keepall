@@ -196,6 +196,9 @@ test("Alt+K imports Markdown safely, edits personal notes, and downloads the unc
   await page.getByRole("button", { name: "Download file", exact: true }).click();
   expect(await readFile((await (await editedDownloadPromise).path())!)).toEqual(Buffer.from("# Edited from the library\nمرحبا"));
   await page.getByRole("link", { name: "Back to library", exact: true }).click();
+  // App shortcuts ignore keys while any dialog is open (2f22acd); wait for the item page to close.
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Save item", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+k");
   await expect(page.getByRole("dialog", { name: "Save to Keepall" }).getByRole("button", { name: "Bulk import", exact: true })).toBeEnabled();
   expect(errors).toEqual([]);

@@ -710,8 +710,12 @@ test("single keys, Ctrl, Shift and function keys can be recorded and used withou
     await expect(save.locator("kbd")).toHaveCount(0);
     await save.focus();
     await page.keyboard.press(keys);
-    await expect(page.getByRole("dialog", { name: "Save to Keepall", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Cancel", exact: true }).press("Enter");
+    const capture = page.getByRole("dialog", { name: "Save to Keepall", exact: true });
+    await expect(capture).toBeVisible();
+    // The drawer moves focus to its input once open; pressing Enter on Cancel before that lands in the input.
+    await expect(capture.getByLabel("Link, note, or image")).toBeFocused();
+    await capture.getByRole("button", { name: "Cancel", exact: true }).press("Enter");
+    await expect(capture).toBeHidden();
     const search = page.getByRole("searchbox", { name: "Search", exact: true });
     await search.focus();
     await page.keyboard.press(keys);

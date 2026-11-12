@@ -3,6 +3,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 
+// Folder import has nothing to do with the service worker. When it is installing, a later
+// page.goto("/") can get ChunkLoadError from SW-served chunks and stay on "Loading…".
+test.use({ serviceWorkers: "block" });
+
 async function storedGalleryHashes(page: Page): Promise<string[]> {
   return page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {

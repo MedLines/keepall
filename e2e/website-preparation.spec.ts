@@ -33,6 +33,10 @@ const test = base.extend<{ browserErrors: string[]; expectedContactRateLimit: bo
   }, { auto: true }],
 });
 
+// The production service worker fetches subresources itself, which bypasses
+// page.route (and the Vercel script stub above).
+test.use({ serviceWorkers: "block" });
+
 for (const width of [320, 390, 580, 768, 1024, 1440]) {
   test(`header links fit and Contact works by keyboard at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
@@ -105,7 +109,7 @@ test("About and Contact buttons leave less space beside their icons", async ({ p
 test("Contact has an inset Topic arrow and matching report actions", async ({ page }) => {
   await page.setViewportSize({ width: 1707, height: 825 });
   await page.goto("/contact");
-  const topic = page.getByLabel("Topic", { exact: true });
+  const topic = page.getByRole("combobox", { name: "Topic", exact: true });
   const inset = await topic.evaluate(element => {
     const style = getComputedStyle(element);
     const arrow = element.querySelector("svg")!.getBoundingClientRect();
@@ -144,7 +148,7 @@ test("Contact keeps unsent bug reports available without email setup", async ({ 
   await expect(page.getByText("Email sending isn't available yet.", { exact: false })).toBeVisible();
   await page.getByLabel("Name", { exact: true }).fill("Preview tester");
   await page.getByLabel("Email", { exact: true }).fill("preview@example.com");
-  await page.getByLabel("Topic", { exact: true }).click();
+  await page.getByRole("combobox", { name: "Topic", exact: true }).click();
   await page.getByRole("option", { name: "Bug report", exact: true }).click();
   await page.getByLabel("Message", { exact: true }).fill("The bookmark import stopped.");
   await page.getByLabel("Browser and device").fill("Firefox on Android");

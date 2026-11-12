@@ -72,7 +72,8 @@ test("search matches remembered words, highlights them, and preserves best match
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "Expand", exact: true }).click();
-  await expect.poll(() => page.locator("[data-sidebar-panel]").evaluate(node => getComputedStyle(node).clipPath)).toBe("inset(0px)");
+  await expect(page.locator("[data-sidebar-panel]")).toHaveAttribute("data-state", "open");
+  await expect(page.getByRole("complementary", { name: "Sidebar" })).toHaveCSS("width", "256px");
   await page.screenshot({ path: testInfo.outputPath("search-and-sidebar-arrows.png") });
   expect(errors).toEqual([]);
 });

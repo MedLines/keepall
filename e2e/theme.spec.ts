@@ -12,14 +12,25 @@ test("toolbar dropdowns separate hovered and selected options", async ({ page },
       await trigger.click();
       const menu = page.getByRole("listbox", { name });
       const options = menu.getByRole("option");
-      await options.nth(1).click();
-      await trigger.click();
+      // Filter by type is multi-select (cd584e5): it stays open and a second click would toggle
+      // the option off again. Sort closes, so reopen it only after the closing popup has
+      // unmounted, or the click lands mid-exit.
+      if (name === "Sort library") {
+        await options.nth(1).click();
+        await expect(menu).toBeHidden();
+        await trigger.click();
+      } else if (await options.nth(1).getAttribute("aria-selected") !== "true") {
+        await options.nth(1).click();
+      }
       await options.first().hover();
       await expect(options.nth(1)).toHaveAttribute("aria-selected", "true");
+      // Measure after the popup's scale-in entrance settles.
+      await expect.poll(() => menu.evaluate(element => element.closest(".ui-menu-popup")!.getAnimations().length)).toBe(0);
       const first = (await options.first().boundingBox())!;
       const second = (await options.nth(1).boundingBox())!;
       expect(second.y - first.y - first.height).toBe(4);
-      expect(first.height).toBeGreaterThanOrEqual(40);
+      // Toolbar select options are compact (28px) on fine pointers and 40px on coarse ones.
+      await expect(options.first()).toHaveCSS("min-height", "28px");
       await menu.screenshot({ path: testInfo.outputPath(`${theme}-${name}.png`) });
       await page.keyboard.press("Escape");
     }
@@ -74,7 +85,10 @@ test("shared controls use flat surfaces in both themes", async ({ page }) => {
       const button = name === "Filter by type" || name === "Sort library"
         ? page.getByRole("combobox", { name: new RegExp(`^${name}:`) })
         : page.getByRole("button", { name, exact: true });
-      await expect(button).toHaveCSS("box-shadow", "none");
+      // The primary action keeps its small resting shadow (see AGENTS.md "Primary action color").
+      await expect(button).toHaveCSS("box-shadow", name === "Save item"
+        ? `oklch(0 0 0 / ${theme === "light" ? "0.1" : "0.32"}) 0px 1px 2px 0px`
+        : "none");
       await expect(button).toHaveCSS("border-radius", "999px");
       if (await page.evaluate(() => CSS.supports("corner-shape", "squircle"))) {
         await expect(button).toHaveCSS("corner-shape", "superellipse(1.5)");
@@ -138,9 +152,11 @@ for (const width of [320, 768, 1024, 1440]) {
   test(`shell controls remain reachable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
+    // Below 768px a fresh load opens the sidebar as a modal navigation dialog, which hides the library.
+    if (width < 768) await page.getByRole("dialog", { name: "Sidebar navigation" }).getByRole("button", { name: "Close navigation", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
-    const close = page.getByRole("button", { name: width < 768 ? "Close navigation" : "Collapse", exact: true });
-    if (await close.isVisible()) await close.click();
+    const close = page.getByRole("button", { name: "Collapse", exact: true });
+    if (width >= 768 && await close.isVisible()) await close.click();
     const theme = page.getByRole("button", { name: "Theme" });
     if ((await theme.getAttribute("aria-pressed")) === "false") await theme.click();
     await theme.focus();

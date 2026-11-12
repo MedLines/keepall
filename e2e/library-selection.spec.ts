@@ -52,10 +52,11 @@ for (const layout of ["Grid", "List"]) {
     await page.screenshot({ path: testInfo.outputPath(`${layout.toLowerCase()}-hidden-selection.png`) });
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileNavigation = page.getByRole("dialog", { name: "Sidebar navigation" });
-    if (await mobileNavigation.isVisible()) {
-      await page.keyboard.press("Escape");
-      await expect(mobileNavigation).toHaveCount(0);
-    }
+    // Below 768px the open sidebar becomes a modal after the resize settles (6990e73); an instant
+    // isVisible() check races it, and the modal then hides the bulk bar.
+    await expect(mobileNavigation).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(mobileNavigation).toHaveCount(0);
     await expect(bulk).toContainText("1 hidden");
     await page.screenshot({ path: testInfo.outputPath(`${layout.toLowerCase()}-hidden-selection-mobile.png`) });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -72,6 +73,9 @@ for (const layout of ["Grid", "List"]) {
     const move = page.getByRole("dialog", { name: "Move 2 selected items to Trash" });
     await expect(move).toContainText("1 selected item is hidden");
     await move.getByRole("button", { name: "Move to Trash" }).click();
+    // The modal hides the bulk bar from the accessibility tree, so toHaveCount(0) alone can pass
+    // before the move is stored. The dialog closes only after the writes finish.
+    await expect(move).toBeHidden();
     await expect(bulk).toHaveCount(0);
     await page.goto("/?trash=1");
     await expect(page.locator("[data-item-id]")).toHaveCount(2);
@@ -117,7 +121,10 @@ test("Trash Clear hidden keeps the excluded item after permanent deletion and re
     }
   };
   await choose("Move to Trash");
-  await page.getByRole("dialog", { name: "Move 2 selected items to Trash" }).getByRole("button", { name: "Move to Trash" }).click();
+  const move = page.getByRole("dialog", { name: "Move 2 selected items to Trash" });
+  await move.getByRole("button", { name: "Move to Trash" }).click();
+  // Wait for the dialog to close (after the writes) before navigating; see the test above.
+  await expect(move).toBeHidden();
   await expect(bulk).toHaveCount(0);
   await page.goto("/?trash=1");
   await select("Alpha note");

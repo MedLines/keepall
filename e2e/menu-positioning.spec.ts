@@ -107,8 +107,8 @@ for (const kind of ["Tags", "Collections"] as const) {
       const inputBefore = (await search.boundingBox())!;
       expect(before.height).toBeLessThanOrEqual(360);
       expect(Math.abs(before.y - (await trigger.boundingBox())!.y)).toBeLessThanOrEqual(8);
-      const results = popup.locator(".ui-scrollbar");
-      await expect(results).toHaveCSS("scrollbar-gutter", "stable");
+      const results = popup.locator('[data-slot="scroll-area-viewport"]');
+      await expect(results).toHaveCSS("scrollbar-gutter", "auto");
       expect(await results.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
       const prefix = kind === "Tags" ? "Tag" : "Collection";
       for (const query of [`${prefix} 29`, "A new destination", ""]) {

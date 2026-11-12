@@ -72,8 +72,16 @@ export function PdfScroll({ document, sizes, zoom, view, startPage, onPageChange
     const node = frame.current;
     const scroll = node?.closest<HTMLElement>("[data-document-scroll]");
     if (!node || !scroll) return;
-    const toolbar = scroll.querySelector<HTMLElement>("[data-pdf-toolbar]");
+    let toolbar: HTMLElement | null = null;
+    const observer = new ResizeObserver(() => measure());
     const measure = () => {
+      // The loading toolbar is removed after the reveal, so follow whichever toolbar is connected.
+      const current = scroll.querySelector<HTMLElement>("[data-pdf-toolbar]");
+      if (current !== toolbar) {
+        if (toolbar) observer.unobserve(toolbar);
+        toolbar = current;
+        if (toolbar) observer.observe(toolbar);
+      }
       const next = {
         width: Math.floor(node.getBoundingClientRect().width),
         offset: node.getBoundingClientRect().top - scroll.getBoundingClientRect().top + scroll.scrollTop,
@@ -83,10 +91,8 @@ export function PdfScroll({ document, sizes, zoom, view, startPage, onPageChange
       setGeometry(previous => previous.width === next.width && previous.offset === next.offset && previous.contentInset === next.contentInset && previous.scrollbarSize === next.scrollbarSize ? previous : next);
     };
     measure();
-    const observer = new ResizeObserver(measure);
     observer.observe(node);
     observer.observe(scroll);
-    if (toolbar) observer.observe(toolbar);
     return () => observer.disconnect();
   }, [view]);
 

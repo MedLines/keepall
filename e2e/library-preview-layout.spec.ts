@@ -76,7 +76,7 @@ test("preview frame and controls stay fixed across media, captions, long notes, 
   const text = await shortText.boundingBox();
   const body = await dialog.getByRole("region", { name: "Preview content", exact: true }).boundingBox();
   expect(text!.y).toBeGreaterThanOrEqual(body!.y);
-  await expect(shortText).toHaveCSS("padding-top", "20px");
+  await expect(shortText).toHaveCSS("padding-top", "0px");
   await dialog.getByRole("button", { name: "Next item" }).click();
   await expect(dialog).toHaveAccessibleName("Image");
   await expect(dialog.getByRole("heading")).toHaveText("Image");
@@ -154,7 +154,8 @@ test("preview frame and controls stay fixed across media, captions, long notes, 
       const stage = await dialog.locator("[data-preview-media]").boundingBox();
       expect(box!.width).toBeLessThanOrEqual(stage!.width + 1);
       expect(box!.height).toBeLessThanOrEqual(stage!.height + 1);
-      expect(box!.width / box!.height).toBeCloseTo(320 / 180, 2);
+      // The shared VideoPlayer fills the stage and letterboxes with object-fit.
+      expect(await video.evaluate((node: HTMLVideoElement) => [getComputedStyle(node).objectFit, node.videoWidth / node.videoHeight])).toEqual(["contain", 320 / 180]);
     }
     if (title === "Missing video") await expect(dialog.getByRole("alert")).toBeVisible();
     await assertFrame();

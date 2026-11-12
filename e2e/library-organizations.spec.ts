@@ -176,9 +176,9 @@ test("folder context menu opens the actual collection in a new tab", async ({ pa
 test("bulk folder deletion preserves its items and supports cancel", async ({ page }) => {
   await page.getByRole("button", { name: "All collections", exact: true }).click();
   const folders = page.getByRole("list", { name: "Library collections", exact: true });
-  await folders.getByRole("checkbox", { name: "Select Design", exact: true }).locator("..").hover();
+  await folders.locator(".organization-card").filter({ has: page.getByRole("checkbox", { name: "Select Design", exact: true }) }).hover();
   await folders.getByRole("checkbox", { name: "Select Design", exact: true }).locator("..").click();
-  await folders.getByRole("checkbox", { name: "Select Reading", exact: true }).locator("..").hover();
+  await folders.locator(".organization-card").filter({ has: page.getByRole("checkbox", { name: "Select Reading", exact: true }) }).hover();
   await folders.getByRole("checkbox", { name: "Select Reading", exact: true }).locator("..").click();
   await page.getByRole("button", { name: "Delete folders", exact: true }).click();
   const confirm = page.getByRole("dialog", { name: "Delete 2 folders?", exact: true });
@@ -199,9 +199,9 @@ test("bulk folder deletion preserves its items and supports cancel", async ({ pa
 test("bulk tag deletion keeps the items and their folder memberships", async ({ page }) => {
   await page.getByRole("button", { name: "All tags", exact: true }).click();
   const tags = page.getByRole("list", { name: "Library tags", exact: true });
-  await tags.getByRole("checkbox", { name: "Select design", exact: true }).locator("..").hover();
+  await tags.locator(".organization-card").filter({ has: page.getByRole("checkbox", { name: "Select design", exact: true }) }).hover();
   await tags.getByRole("checkbox", { name: "Select design", exact: true }).locator("..").click();
-  await tags.getByRole("checkbox", { name: "Select reading", exact: true }).locator("..").hover();
+  await tags.locator(".organization-card").filter({ has: page.getByRole("checkbox", { name: "Select reading", exact: true }) }).hover();
   await tags.getByRole("checkbox", { name: "Select reading", exact: true }).locator("..").click();
   await page.getByRole("button", { name: "Delete tags", exact: true }).click();
   await page.getByRole("dialog", { name: "Delete 2 tags?", exact: true }).getByRole("button", { name: "Delete tags", exact: true }).click();
@@ -244,8 +244,16 @@ test("organization selection matches library cards and uses their top-bar action
     return { background: card.backgroundColor, checkbox: checkbox.backgroundColor, color: checkbox.color };
   });
   const toolbar = page.getByRole('region', { name: 'Bulk actions', exact: true });
+  // The toolbar collapses its actions into a menu when they do not fit; Export (953578f) widened it.
+  const selectionAction = async (name: string) => {
+    const trigger = toolbar.getByRole('button', { name: /^Selection actions:/ });
+    if (await trigger.isVisible()) {
+      await trigger.click();
+      await page.getByRole('menuitem', { name, exact: true }).click();
+    } else await toolbar.getByRole('button', { name, exact: true }).click();
+  };
   await expect(page.locator('.library-top-bar').getByRole('region', { name: 'Bulk actions' })).toBeVisible();
-  await toolbar.getByRole('button', { name: 'Deselect all', exact: true }).click();
+  await selectionAction('Deselect all');
 
   for (const kind of ['collections', 'tags'] as const) {
     await page.getByRole('button', { name: `All ${kind}`, exact: true }).click();
@@ -264,12 +272,12 @@ test("organization selection matches library cards and uses their top-bar action
       const checkbox = getComputedStyle(element.querySelector('label')!);
       return { background: card.backgroundColor, checkbox: checkbox.backgroundColor, color: checkbox.color };
     })).toEqual(libraryColors);
-    await toolbar.getByRole('button', { name: 'Select all', exact: true }).click();
+    await selectionAction('Select all');
     await expect(list.locator('input:checked')).toHaveCount(3);
     await expect(toolbar).toContainText('3 selected');
     await expect(toolbar.getByRole('button', { name: 'Select all', exact: true })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath(`${kind}-selected.png`) });
-    await toolbar.getByRole('button', { name: 'Deselect all', exact: true }).click();
+    await selectionAction('Deselect all');
     await expect(list.locator('input:checked')).toHaveCount(0);
     await expect(toolbar).toHaveCount(0);
     // Keyboard selection and Escape use the same native checkbox behavior.
@@ -285,6 +293,8 @@ test("organization selection matches library cards and uses their top-bar action
 test("overview deletion and scoped item actions use the right controls at wide and narrow widths", async ({ page }) => {
   for (const width of [1440, 320]) {
     await page.setViewportSize({ width, height: 900 });
+    // Below 768px a fresh load opens the sidebar as a modal navigation dialog.
+    if (width < 768) await page.evaluate(() => localStorage.setItem("keepall-shell-panel-open", "closed"));
     for (const kind of ["collections", "tags"] as const) {
       await page.goto(`/?${kind}=1`);
       const list = page.getByRole("list", { name: `Library ${kind}`, exact: true });

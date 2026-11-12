@@ -4,7 +4,7 @@ type SidebarMotionMeasurements = {
   sidebarWidths: number[];
   mainWidths: number[];
   copyScaleRatios: number[];
-  clipPaths: string[];
+  panelWidths: number[];
   transforms: string[];
 };
 
@@ -120,7 +120,7 @@ test("sidebar reveals without scaling text or repeatedly resizing the library", 
   await sidebar.evaluate((element) => {
     const panel = element.querySelector<HTMLElement>("[data-sidebar-panel]");
     const copy = element.querySelector<HTMLElement>("[data-sidebar-copy]");
-    const main = document.querySelector<HTMLElement>(".library-panel");
+    const main = document.querySelector<HTMLElement>("[data-library-panel] > main");
     if (!panel || !copy || !main) {
       throw new Error("Sidebar motion probes are missing");
     }
@@ -128,7 +128,7 @@ test("sidebar reveals without scaling text or repeatedly resizing the library", 
       sidebarWidths: [element.getBoundingClientRect().width],
       mainWidths: [main.getBoundingClientRect().width],
       copyScaleRatios: [copy.getBoundingClientRect().width / copy.offsetWidth],
-      clipPaths: [getComputedStyle(panel).clipPath],
+      panelWidths: [panel.getBoundingClientRect().width],
       transforms: [] as string[],
     };
     const resizeObserver = new ResizeObserver(([entry]) => {
@@ -136,7 +136,7 @@ test("sidebar reveals without scaling text or repeatedly resizing the library", 
     });
     resizeObserver.observe(element);
 
-    const stopAt = performance.now() + 300;
+    let stopAt = 0;
     const sampleFrame = () => {
       const currentPanel = element.querySelector<HTMLElement>("[data-sidebar-panel]");
       const currentCopy = element.querySelector<HTMLElement>("[data-sidebar-copy]");
@@ -145,9 +145,8 @@ test("sidebar reveals without scaling text or repeatedly resizing the library", 
         measurements.copyScaleRatios.push(
           currentCopy.getBoundingClientRect().width / currentCopy.offsetWidth,
         );
-        const style = getComputedStyle(currentPanel);
-        measurements.clipPaths.push(style.clipPath);
-        measurements.transforms.push(style.transform);
+        measurements.panelWidths.push(currentPanel.getBoundingClientRect().width);
+        measurements.transforms.push(getComputedStyle(currentPanel).transform);
       }
       if (performance.now() < stopAt) {
         requestAnimationFrame(sampleFrame);
@@ -155,14 +154,19 @@ test("sidebar reveals without scaling text or repeatedly resizing the library", 
         resizeObserver.disconnect();
       }
     };
-    requestAnimationFrame(sampleFrame);
+    // Sample from the collapse press, so a slow click cannot miss the motion.
+    document.addEventListener("pointerdown", () => {
+      stopAt = performance.now() + 400;
+      requestAnimationFrame(sampleFrame);
+    }, { capture: true, once: true });
     window.__sidebarMotionMeasurements = measurements;
   });
 
   await page.getByRole("button", { name: "Collapse", exact: true }).click();
   await expect(sidebar).toHaveCSS("width", "56px");
+  // The sidebar width animates; the panel clips its content by overflow.
   await expect.poll(() => page.evaluate(() =>
-    new Set(window.__sidebarMotionMeasurements?.clipPaths).size > 1,
+    new Set(window.__sidebarMotionMeasurements?.panelWidths.map(Math.round)).size > 2,
   )).toBe(true);
 
   await page.waitForTimeout(350);
@@ -170,9 +174,9 @@ test("sidebar reveals without scaling text or repeatedly resizing the library", 
     window.__sidebarMotionMeasurements,
   );
   expect(collapseMeasurements).toBeDefined();
-  expect(new Set(
-    (collapseMeasurements?.sidebarWidths ?? []).map(Math.round),
-  )).toEqual(new Set([56, 256]));
+  const sidebarWidths = (collapseMeasurements?.sidebarWidths ?? []).map(Math.round);
+  expect(Math.max(...sidebarWidths)).toBe(256);
+  expect(Math.min(...sidebarWidths)).toBe(56);
   const observedMainWidths = new Set(
     collapseMeasurements!.mainWidths.map(Math.round),
   );
@@ -187,7 +191,7 @@ test("sidebar reveals without scaling text or repeatedly resizing the library", 
     (transform) => transform === "none" || transform === "matrix(1, 0, 0, 1, 0, 0)",
   )).toBe(true);
   await expect(sidebarPanel).toHaveAttribute("data-state", "closed");
-  await expect(sidebarPanel).toHaveCSS("clip-path", "inset(0px 200px 0px 0px)");
+  await expect(sidebarPanel).toHaveCSS("width", "56px");
 
   await page.getByRole("button", { name: "Expand", exact: true }).click();
   await expect(sidebar).toHaveCSS("width", "256px");
@@ -196,10 +200,7 @@ test("sidebar reveals without scaling text or repeatedly resizing the library", 
   await page.getByRole("button", { name: "Collapse", exact: true }).click();
   await expect(sidebar).toHaveCSS("width", "56px");
   await page.waitForTimeout(250);
-  await expect(sidebar.locator("[data-sidebar-panel]")).toHaveCSS(
-    "clip-path",
-    "inset(0px 200px 0px 0px)",
-  );
+  await expect(sidebar.locator("[data-sidebar-panel]")).toHaveCSS("width", "56px");
 });
 
 test("sidebar animation respects reduced motion", async ({ page }) => {
@@ -215,10 +216,7 @@ test("sidebar animation respects reduced motion", async ({ page }) => {
   );
   await page.getByRole("button", { name: "Collapse", exact: true }).click();
   await expect(sidebar).toHaveCSS("width", "56px");
-  await expect(sidebar.locator("[data-sidebar-panel]")).toHaveCSS(
-    "clip-path",
-    "inset(0px 200px 0px 0px)",
-  );
+  await expect(sidebar.locator("[data-sidebar-panel]")).toHaveCSS("width", "56px");
 });
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }]) {
@@ -357,7 +355,7 @@ test("virtualized cards share one object URL for the same local asset", async ({
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
   await sidebar.getByRole("button", { name: "Mixed cards", exact: true }).click();
   await expect(page.locator(".library-card img").first()).toBeVisible();
-  const main = page.getByRole("main");
+  const main = page.getByRole("main").locator('[data-slot="scroll-area-viewport"]').first();
   await main.evaluate((node) => node.scrollTo(0, node.scrollHeight));
   await expect.poll(() => main.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
   await main.evaluate((node) => node.scrollTo(0, 0));
@@ -466,6 +464,7 @@ for (const layout of ["Grid", "List"] as const) {
     const main = page.getByRole("main", { name: "All items" });
     const initialWidth = (await main.boundingBox())!.width;
     const geometry = () => cards.evaluateAll(elements => {
+      if (!elements.length) return [];
       const origin = elements[0].closest("main")!.getBoundingClientRect();
       return elements.slice(0, 8).map(element => {
         const rect = element.getBoundingClientRect();
@@ -476,7 +475,7 @@ for (const layout of ["Grid", "List"] as const) {
     await expect.poll(async () => {
       const before = await geometry();
       await page.waitForTimeout(100);
-      return JSON.stringify(await geometry()) === JSON.stringify(before);
+      return before.length > 0 && JSON.stringify(await geometry()) === JSON.stringify(before);
     }).toBe(true);
     const before = await geometry();
     const handle = page.getByRole("separator", { name: "Resize sidebar" });

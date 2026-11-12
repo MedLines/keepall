@@ -33,7 +33,8 @@ for (const layout of ["grid", "list"]) {
     test.setTimeout(90_000);
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
-    await page.goto(`/?layout=${layout}&collection=reading&q=Batch`);
+    // Pin the list to one column so ArrowDown steps through result order.
+    await page.goto(`/?layout=${layout}${layout === "list" ? "&columns=1" : ""}&collection=reading&q=Batch`);
     const card = (index: number) => page.locator(`[data-item-id="note-${index}"]`);
     await expect(card(0)).toBeVisible();
     await card(0).focus();
