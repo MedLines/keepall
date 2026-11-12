@@ -91,6 +91,8 @@ test("cards, bulk actions, folders, tags, and Trash share the same confirmation 
     await bulkAction(page, "Deselect all");
   }
   for (const [name, action] of [["Folder", "Delete collection"], ["Research", "Delete tag"]]) {
+    // A click while the previous menu is still fading out only dismisses that menu.
+    await expect(page.getByRole("menu")).toHaveCount(0);
     await page.getByRole("button", { name: `${name} actions`, exact: true }).click();
     await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
     await verifyAndCancel(page, action);

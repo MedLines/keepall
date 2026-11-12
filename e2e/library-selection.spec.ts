@@ -73,6 +73,9 @@ for (const layout of ["Grid", "List"]) {
     const move = page.getByRole("dialog", { name: "Move 2 selected items to Trash" });
     await expect(move).toContainText("1 selected item is hidden");
     await move.getByRole("button", { name: "Move to Trash" }).click();
+    // The modal hides the bulk bar from the accessibility tree, so toHaveCount(0) alone can pass
+    // before the move is stored. The dialog closes only after the writes finish.
+    await expect(move).toBeHidden();
     await expect(bulk).toHaveCount(0);
     await page.goto("/?trash=1");
     await expect(page.locator("[data-item-id]")).toHaveCount(2);
@@ -118,7 +121,10 @@ test("Trash Clear hidden keeps the excluded item after permanent deletion and re
     }
   };
   await choose("Move to Trash");
-  await page.getByRole("dialog", { name: "Move 2 selected items to Trash" }).getByRole("button", { name: "Move to Trash" }).click();
+  const move = page.getByRole("dialog", { name: "Move 2 selected items to Trash" });
+  await move.getByRole("button", { name: "Move to Trash" }).click();
+  // Wait for the dialog to close (after the writes) before navigating; see the test above.
+  await expect(move).toBeHidden();
   await expect(bulk).toHaveCount(0);
   await page.goto("/?trash=1");
   await select("Alpha note");

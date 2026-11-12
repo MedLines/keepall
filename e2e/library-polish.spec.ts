@@ -145,8 +145,14 @@ test("document cards show bounded reading previews and explicit local note actio
 for (const width of [1440, 768, 320]) {
   test(`image and PDF display controls stay in the same toolbar at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 });
-    const close = page.getByRole("button", { name: "Close navigation", exact: true });
-    if (await close.isVisible()) await close.click();
+    if (width < 768) {
+      // Shrinking below 768px turns the open sidebar into a modal a moment later (6990e73); an
+      // instant isVisible() check races it and the modal then hides the preview.
+      const navigation = page.getByRole("dialog", { name: "Sidebar navigation", exact: true });
+      await expect(navigation).toBeVisible();
+      await navigation.getByRole("button", { name: "Close navigation", exact: true }).click();
+      await expect(navigation).toBeHidden();
+    }
     const image = await previewItem(page, "image");
     const imageMode = image.getByRole("group", { name: "Image sizing" });
     await expect(imageMode.getByRole("button")).toHaveText(["Fit", "Scroll"]);

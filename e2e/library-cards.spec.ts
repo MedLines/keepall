@@ -1628,8 +1628,12 @@ test("image page edits details, removes a tag, and deletes the item", async ({ p
   await removeImage.click();
   await expect(removeImageDialog).toBeHidden();
   await page.getByRole("button", { name: "Current image actions" }).click();
+  // Escape must close this menu, not the full item view dialog behind it (7c6e9ef), so wait for the menu first.
+  const imageMenu = page.getByRole("menu", { name: "Current image actions" });
+  await expect(imageMenu.getByRole("menuitem", { name: "Replace current image" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Remove current image" })).toHaveCount(0);
   await page.keyboard.press("Escape");
+  await expect(imageMenu).toBeHidden();
   await page.screenshot({
     path: testInfo.outputPath("image-item-page-actions.png"),
   });
