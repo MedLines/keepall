@@ -5,6 +5,10 @@ import path from "node:path";
 
 const port = process.env.KEEPALL_E2E_PORT ?? "3100";
 const origin = `http://localhost:${port}`;
+// Mocked source pages live on another origin. Once the library page registers the app service
+// worker it controls every localhost:${port} navigation, and page.route never sees requests it
+// handles, so a mocked page on the library origin intermittently renders the real 404.
+const sites = `http://127.0.0.1:${port}`;
 
 type ExtensionTab = { id: number; url?: string; title?: string };
 declare const chrome: {
@@ -74,12 +78,12 @@ test("toast and page menu add screenshots of the visible page without Keepall's 
 
     const source = await context.newPage();
     for (const route of ["design-site", "second-site", "dialog-site"]) {
-      await source.route(`${origin}/${route}`, (request) => request.fulfill({
+      await source.route(`${sites}/${route}`, (request) => request.fulfill({
         contentType: "text/html",
-        body: `<!doctype html><title>${route}</title><body style="margin:0;background:rgb(220,30,30);height:3000px"><h1>${route}</h1><a href="${origin}/linked-page">Linked page</a>${route === "dialog-site" ? "<style>dialog::backdrop { background: transparent }</style><dialog id='lightbox'><p>Photo</p></dialog><script>document.getElementById('lightbox').showModal()</script>" : ""}</body>`,
+        body: `<!doctype html><title>${route}</title><body style="margin:0;background:rgb(220,30,30);height:3000px"><h1>${route}</h1><a href="${sites}/linked-page">Linked page</a>${route === "dialog-site" ? "<style>dialog::backdrop { background: transparent }</style><dialog id='lightbox'><p>Photo</p></dialog><script>document.getElementById('lightbox').showModal()</script>" : ""}</body>`,
       }));
     }
-    await source.goto(`${origin}/design-site`);
+    await source.goto(`${sites}/design-site`);
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => {
@@ -105,7 +109,7 @@ test("toast and page menu add screenshots of the visible page without Keepall's 
     await expect(toast).toContainText("Screenshot added (2)");
 
     let [saved] = await storedLinks(library);
-    expect(saved.url).toBe(`${origin}/design-site`);
+    expect(saved.url).toBe(`${sites}/design-site`);
     expect(saved.shots).toHaveLength(2);
     for (const shot of saved.shots) {
       expect(["image/webp", "image/png"]).toContain(shot.mimeType);
@@ -120,23 +124,23 @@ test("toast and page menu add screenshots of the visible page without Keepall's 
     await worker.evaluate(async (linkUrl) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await saveContext({ menuItemId: "save-to-keepall", linkUrl, pageUrl: tab.url }, tab);
-    }, `${origin}/linked-page`);
+    }, `${sites}/linked-page`);
     await expect(toast).toContainText("Link saved to Keepall");
     await expect(toast.getByRole("button", { name: "Add screenshot" })).toHaveCount(0);
 
     // The page menu saves and captures in one step.
-    await source.goto(`${origin}/second-site`);
+    await source.goto(`${sites}/second-site`);
     const title = await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await saveContext({ menuItemId: "save-page-with-screenshot", pageUrl: tab.url }, tab);
       return chrome.action.getTitle({ tabId: tab.id });
     });
     expect(title).toBe("Page and screenshot saved");
-    saved = (await storedLinks(library)).find((link) => link.url === `${origin}/second-site`)!;
+    saved = (await storedLinks(library)).find((link) => link.url === `${sites}/second-site`)!;
     expect(saved.shots).toHaveLength(1);
 
     // Under a page's modal dialog the notice sits inside that dialog, outside our host, and must be hidden too.
-    await source.goto(`${origin}/dialog-site`);
+    await source.goto(`${sites}/dialog-site`);
     await worker.evaluate(async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       await saveTab(tab);
@@ -145,7 +149,7 @@ test("toast and page menu add screenshots of the visible page without Keepall's 
     await expect(dialogFrame.locator(".toast.is-visible")).toContainText("Link saved to Keepall");
     await dialogFrame.getByRole("button", { name: "Add screenshot" }).click();
     await expect(dialogFrame.locator(".toast")).toContainText("Screenshot added");
-    saved = (await storedLinks(library)).find((link) => link.url === `${origin}/dialog-site`)!;
+    saved = (await storedLinks(library)).find((link) => link.url === `${sites}/dialog-site`)!;
     expect(saved.shots).toHaveLength(1);
     expect(saved.shots[0].corner[0]).toBeGreaterThan(200);
     expect(saved.shots[0].corner[1]).toBeLessThan(60);
