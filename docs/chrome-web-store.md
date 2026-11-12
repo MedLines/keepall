@@ -1,20 +1,21 @@
-# Keepall Capture — Chrome Web Store 0.4.0 draft
+# Keepall Capture — Chrome Web Store 0.5.0 draft
 
 - Item ID: `ehloefgfecmfjbncknaoleakbnjhkpea`
-- Published version verified in the dashboard October 8, 2026: **0.3.0**
-- Prepared update: **0.4.0**
-- Prepared October 8, 2026. Dashboard and production checks must be recorded separately from local tests.
+- Published version: **0.4.0** (Chrome Web Store listing showed it October 11, 2026)
+- Prepared update: **0.5.0**
+- Prepared November 12, 2026. Dashboard and production checks must be recorded separately from local tests.
 
-Upload to the **existing item**. This feature update adds local files and image
-paste, note preview, shared app drawer controls, continued collection/tag
-organization, a larger search-clear target, and an extension-icon library menu.
+Upload to the **existing item**. This update adds page screenshots, a Save page with
+screenshot menu item, a shortcut to reach the save notice, notices that stay
+visible and explain errors, a steadier capture drawer, and a clearer Options page.
+Production must advertise `link-screenshot-v1` before the store update goes live.
 The web app's package version is independent of the extension version.
 
 ## Draft preparation
 
 1. Commit and push the reviewed release changes. Deploy the matching app bridge and updated privacy page before testing the production file workflow.
 2. Open the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole), then **Keepall Capture**.
-3. In **Package**, choose **Upload New Package** and upload `/tmp/keepall-extension-drawer-update.zip`. Confirm **0.4.0**.
+3. In **Package**, choose **Upload New Package** and upload `/tmp/keepall-capture-0.5.0.zip`. Confirm **0.5.0**.
 4. In **Store listing**, use the description below. The short summary comes from the manifest.
 5. In **Privacy practices**, use the single purpose and permission explanations below. Review the existing data categories and certifications against the actual dashboard fields. Retain the isolated website iframe disclosure.
 6. Add the reviewer instructions below and save each edited tab. Verify the uploaded version, listing, privacy fields, and production workflow.
@@ -35,7 +36,7 @@ SAVE FROM THE WEB
 Click the toolbar icon to save the current page. Right-click a link to save its destination without opening it. Right-click an image to save the image itself. Right-click a video and choose Save video to Keepall (MP4 or WebM up to 100 MB; if a streamed video can't be handed over by the page, Keepall explains why). Highlight text and choose Save to Keepall to add the passage to the source link's note. Repeated selections do not add duplicate passages.
 
 ADD CONTEXT AND FILES
-Press Alt+K (Option+K on Mac) to open the capture drawer, using the same controls and appearance as the Keepall app. Edit the page title, write a plain-text or Markdown note, preview it, and choose collections and tags. Close keeps unfinished edits in that tab until you reload or close the tab; Discard draft removes them.
+Press Alt+K (Option+K on Mac) to open the capture drawer, using the same controls and appearance as the Keepall app. After a save, press Alt+Shift+K to move keyboard focus to the save notice. Edit the page title, write a plain-text or Markdown note, preview it, and choose collections and tags. Close keeps unfinished edits in that tab until you reload or close the tab; Discard draft removes them.
 
 Use Add files for PNG, JPEG, GIF, WebP, AVIF, MP4, WebM, TXT, Markdown, or PDF files. You can also paste an image into the drawer. Save multiple images as one gallery or separate items, add an image caption or video note, and inspect or edit text-file contents. These become independent library items rather than attachments to the current page. Mixed files save separately. Progress and results show which files saved, with retry and cancellation controls. Bulk import opens the app's import dialog while preserving the extension draft.
 
@@ -131,25 +132,24 @@ user-requested article fetches, hosting logs, and aggregate page-view analytics.
 Paste-ready text, under 500 characters:
 
 ```text
-No account needed. Open https://www.keepall.app in this Chrome profile. On an HTTPS page, click Keepall; try Organize, tags and Undo. Alt+K opens the drawer: Add files (PNG/JPEG, MP4, TXT/MD/PDF), paste an image, and preview Markdown. Save, then check the library. Right-click a link/image/selection to save; allow the image host if asked. Right-click the extension icon > Open Keepall library. Bulk import opens the app. Internal pages cannot be captured.
+No account needed. Open https://www.keepall.app in this Chrome profile. On an HTTPS page, click Keepall; try Organize, tags and Undo. Alt+K opens the drawer: Add files (PNG/JPEG, MP4, TXT/MD/PDF), paste an image, and preview Markdown. Save, then click the camera in the notice for a screenshot. Right-click a link/image/selection to save; allow the image host if asked. Right-click the extension icon > Open Keepall library. Bulk import opens the app. Internal pages cannot be captured.
 ```
 
-## Local release verification — October 8, 2026
+## Local release verification — November 12, 2026
 
-The reviewed branch passed the production app build, extension bundle build and
-deterministic check, type checking, and relevant lint. The shared drawer change
-passed 32 Chromium extension cases; its final file-layout corrections passed six
-file/parity cases. Subsequent clear-target and library-menu changes passed the
-organizer browser case in both themes, all 15 capture cases, and two final menu
-routing checks. Focused organizer and worker-transfer units passed 16 and six
-tests respectively. These were local tests with disposable profiles, not a
-physical toolbar-menu click or verification of the signed-in Store draft.
+Unit tests (1533), type checking, extension bundle check, and the extension
+Chromium cases passed locally. The deployed app at https://www.keepall.app
+serves the `link-screenshot-v1` capability (found in its JavaScript chunks).
+The packaged ZIP, unpacked into a disposable profile with only the public key
+restored in the test copy, saved a page and stored a screenshot from the notice.
+These were local tests with disposable profiles, not a physical toolbar click
+or verification of the signed-in Store draft.
 
-The prepared ZIP has version 0.4.0, valid archive integrity, no development key,
-and byte-matching extension sources and generated assets. Its SHA-256 is:
+The prepared ZIP has version 0.5.0, valid archive integrity, no development key,
+and a manifest otherwise identical to the source. Its SHA-256 is:
 
 ```text
-968539c9a9759696f33b822b9d8eb820703b69b5999e6296de872b0efde6ec08
+fb59aa812f365b472ed961c8c06b60b082700b9c147118b5499be96173043af3
 ```
 
 Production deployment, the live privacy page, the uploaded package, and saved
@@ -158,7 +158,7 @@ dashboard fields need separate verification before the publisher submits.
 ## Rebuild and identity
 
 ```bash
-python3 scripts/package-extension.py /tmp/keepall-extension-drawer-update.zip
+python3 scripts/package-extension.py /tmp/keepall-capture-0.5.0.zip
 ```
 
 The ZIP has `manifest.json` at its root and excludes the public development key.

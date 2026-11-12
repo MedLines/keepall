@@ -9,6 +9,28 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    id: "2026-11-12-capture-screenshots-and-notices",
+    date: "2026-11-12",
+    title: "Page screenshots, Context Packs, and steadier save notices",
+    summary: "Add screenshots to saved links, export your library for an AI agent, and rely on Capture notices that stay put when something goes wrong.",
+    sections: [
+      { label: "New", notes: [
+        "After Keepall Capture saves a page, choose the camera button in the notice to add a screenshot of what is on screen to the link. Scroll and add more, up to eight. You can also right-click an empty part of a page and choose Save page with screenshot. Each link shows its screenshots in a section you can open full screen, and you can pick one as the card cover or remove it.",
+        "Export for an AI agent turns the current results or your selected items into a Context Pack: a ZIP with a Markdown card for each item, a manifest, and, if you choose, the original files. You see the item count and an estimate of the text size before downloading, and you can copy a line for your project's AGENTS.md.",
+      ] },
+      { label: "Improved", notes: [
+        "Save notices stay on screen after an error and say what went wrong, with a button to open Settings when the cause is the connection or a permission. A saving badge on the toolbar icon shows every save in progress.",
+        "Press Alt+Shift+K to move keyboard focus to the save notice. Screen readers announce notices, and focus returns to the page when you dismiss one or choose Undo. Notices also appear above website pop-ups.",
+        "The capture drawer no longer saves when you press Enter, can save while collections are still loading, and recovers from an interrupted save. If a link changed in Keepall while the drawer was open, it reloads the latest version and keeps what you typed.",
+        "The Options page checks the connection to your library when it opens. The address field stays available for running Keepall locally during development.",
+      ] },
+      { label: "Fixed", notes: [
+        "Typing in the notice's organizer search no longer triggers a website's own keyboard shortcuts.",
+      ] },
+    ],
+    guides: [{ label: "Save files from Chrome", href: "/help/chrome-capture#local-files" }],
+  },
+  {
     id: "2026-10-19-trash-undo-and-untitled-notes",
     date: "2026-10-19",
     title: "Undo stays in the library bar",
