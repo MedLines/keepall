@@ -104,3 +104,20 @@ test("quick preview switches between the page preview and screenshots", async ({
   await dialog.getByRole("button", { name: "Next item" }).click();
   await expect(dialog.getByRole("group", { name: "Link images" })).toHaveCount(0);
 });
+
+test("clicking a screenshot opens the shared full-screen viewer and steps through captures", async ({ page }) => {
+  await page.goto("/items/folio");
+  const section = page.getByRole("region", { name: /Screenshots/ });
+  await section.getByRole("button", { name: "View screenshot full screen" }).click();
+  const viewer = page.getByRole("dialog", { name: "Focused image viewer" });
+  await expect(viewer).toBeVisible();
+  await expect(viewer.getByLabel("Image 1 of 2")).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(viewer.getByLabel("Image 2 of 2")).toBeVisible();
+  await viewer.getByRole("button", { name: "Zoom in image" }).click();
+  await expect(viewer.getByRole("button", { name: "Zoom out image" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(viewer).toBeHidden();
+  // Stepping in the viewer moves the section's selection with it.
+  await expect(section.getByRole("button", { name: "Screenshot 2" })).toHaveAttribute("aria-pressed", "true");
+});

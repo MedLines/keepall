@@ -8,7 +8,7 @@ import { linkCoverAssetId, linkScreenshots } from "@/domain/link-screenshot";
 import { removeLinkScreenshotImage, setLinkCoverImage } from "@/persistence/items";
 import { ItemMediaFrame } from "./item-media-frame";
 import { ITEM_MEDIA_HEIGHT } from "./item-page-styles";
-import { LibraryItemMedia } from "./library-item-media";
+import { FocusedImageViewer, MediaViewerTrigger } from "./focused-image-viewer";
 import { LinkScreenshotStrip } from "./link-screenshot-strip";
 
 /** Screenshots captured from the page, with cover choice and removal. Hidden when there are none. */
@@ -22,6 +22,7 @@ export function LinkScreenshotsSection({ link, disabled, onUpdated, className = 
   const [selected, setSelected] = useState<string | null>(null);
   const [mutation, setMutation] = useState<"cover" | "remove" | null>(null);
   const [removeOpen, setRemoveOpen] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const shots = linkScreenshots(link);
   const current = shots.find((shot) => shot.assetId === selected) ?? shots[0];
@@ -66,15 +67,22 @@ export function LinkScreenshotsSection({ link, disabled, onUpdated, className = 
       Screenshots <span className="text-sm font-normal tabular-nums text-text-secondary">{shots.length}</span>
     </h2>
     <p className="mt-2 text-sm text-text-secondary">Captured from the page with the Keepall extension.</p>
-    {/* The shared frame clips with a transparent inset border, so its inner radius stays concentric. */}
+    {/* Same stage and full-screen viewer as image items. */}
     <figure className={`mt-6 ${ITEM_MEDIA_HEIGHT}`}>
-      <ItemMediaFrame>
-        <div className="flex size-full min-h-0 min-w-0 items-center justify-center p-3 sm:p-5">
-          <LibraryItemMedia item={link} assetId={current.assetId} variant="canvas" sharedTransition={false} />
-        </div>
+      <ItemMediaFrame className="image-viewer-canvas">
+        <MediaViewerTrigger item={link} assetId={current.assetId} label="View screenshot full screen" onOpen={() => setViewerOpen(true)} />
       </ItemMediaFrame>
       <figcaption className="sr-only">Screenshot {index + 1} of {shots.length}</figcaption>
     </figure>
+    <FocusedImageViewer
+      item={link}
+      assetId={current.assetId}
+      assetIds={shots.map((shot) => shot.assetId)}
+      open={viewerOpen}
+      currentSlide={index}
+      onOpenChange={setViewerOpen}
+      onSlideChange={(slide) => setSelected(shots[slide]?.assetId ?? null)}
+    />
     <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
       <LinkScreenshotStrip link={link} selected={current.assetId} onSelect={setSelected} />
       <div className="flex shrink-0 items-center gap-2">
