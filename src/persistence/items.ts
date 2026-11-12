@@ -2,6 +2,7 @@ import { resolveItemCollectionIds } from "./collections";
 import { deleteUnreferencedDocuments } from "./documents";
 import { normalizeItem, type Item } from "@/domain/item";
 import { articleAssetIds } from "@/domain/article";
+import { addLinkScreenshot, linkScreenshotAssetIds, removeLinkScreenshot, setLinkCover } from "@/domain/link-screenshot";
 import {
   appendImageAsset,
   assertLocalImageBytes,
@@ -429,7 +430,7 @@ export async function emptyTrash(ids: string[]): Promise<void> {
 
 function itemAssetIds(item: Item): string[] {
   if (item.type === "image") return item.assetIds;
-  if (item.type === "link") return [...(item.previewAssetId ? [item.previewAssetId] : []), ...articleAssetIds(item.article)];
+  if (item.type === "link") return [...(item.previewAssetId ? [item.previewAssetId] : []), ...articleAssetIds(item.article), ...linkScreenshotAssetIds(item)];
   if (item.type === "note") return noteImageAssetIds(item.content);
   return [];
 }
@@ -506,10 +507,8 @@ async function mutateLink(
     const current = normalizeItem(row);
     const next = { ...edit(current), updatedAt: Math.max(Date.now(), current.updatedAt + 1) };
     await db.items.put(next);
-    if (current.previewAssetId && current.previewAssetId !== next.previewAssetId) {
-      await deleteUnreferencedAsset(current.previewAssetId);
-    }
-    if (current.article !== next.article) await deleteUnreferencedAssets(articleAssetIds(current.article));
+    const kept = new Set(itemAssetIds(next));
+    await deleteUnreferencedAssets(itemAssetIds(current).filter((assetId) => !kept.has(assetId)));
     return next;
   });
 }
@@ -534,10 +533,7 @@ export async function updateLink(
     const current = normalizeItem(row);
     const next = { ...linkToNote(current, input), updatedAt: Math.max(Date.now(), current.updatedAt + 1) };
     await db.items.put(next);
-    await deleteUnreferencedAssets([
-      ...(current.previewAssetId ? [current.previewAssetId] : []),
-      ...articleAssetIds(current.article),
-    ]);
+    await deleteUnreferencedAssets(itemAssetIds(current));
     return next;
   });
 }
@@ -704,6 +700,44 @@ export async function saveLinkPreviewImage(
     const asset = await putAsset({ ...input, contentHash });
     return setLinkPreviewAssetId(id, asset.id, expectedUrl);
   });
+}
+
+/**
+ * Store a page capture and append it to the link in one transaction. The link
+ * must still exist outside Trash with the same normalized URL; identical bytes
+ * are not appended twice.
+ */
+export async function addLinkScreenshotImage(
+  id: string,
+  expectedUrl: string,
+  input: { bytes: Uint8Array; mimeType: string; width: number; height: number; capturedAt?: number },
+): Promise<LinkItem> {
+  const mimeType = assertLocalImageBytes(input.bytes, input.mimeType);
+  const expectedKey = normalizeLinkUrl(expectedUrl);
+  if (!expectedKey) throw new Error("Enter an http or https URL");
+  const contentHash = await hashAssetBytes(input.bytes);
+  const thumbnail = await imageThumbnail(input.bytes, mimeType);
+  const db = getDb();
+  return db.transaction("rw", db.items, db.assets, db.thumbnails, async () => {
+    const row = await db.items.get(id);
+    if (!row || row.deletedAt !== undefined || row.type !== "link") throw new Error("Link not found");
+    if (normalizeLinkUrl(row.url) !== expectedKey) throw new LinkPreviewStaleError();
+    const asset = await putAsset({ bytes: input.bytes, mimeType, contentHash });
+    await putThumbnail(asset.id, thumbnail);
+    const shot = { assetId: asset.id, capturedAt: input.capturedAt ?? Date.now(), width: input.width, height: input.height };
+    const current = normalizeItem(row);
+    if (linkScreenshotAssetIds(current).includes(asset.id)) return current;
+    return mutateLink(id, (link) => addLinkScreenshot(link, shot));
+  });
+}
+
+export async function removeLinkScreenshotImage(id: string, assetId: string): Promise<LinkItem> {
+  return mutateLink(id, (link) => removeLinkScreenshot(link, assetId));
+}
+
+/** Pin the card cover to the preview or a screenshot; null restores automatic. */
+export async function setLinkCoverImage(id: string, assetId: string | null): Promise<LinkItem> {
+  return mutateLink(id, (link) => setLinkCover(link, assetId));
 }
 
 export async function assignTagToItem(itemId: string, tagId: string): Promise<Item> {

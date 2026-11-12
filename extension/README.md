@@ -28,6 +28,15 @@ New quick saves identify the type: “Link saved to Keepall” or
 “Image saved to Keepall.” An older deployed bridge can still save and open items,
 but it cannot offer Undo until the updated web app is deployed.
 
+**Add screenshot** (the camera button at the end of the row) appears after a toolbar save of the page in the
+tab. It captures only what is on screen, with Keepall's own notification hidden, and attaches the image to the
+saved link. Scroll and click again to add more, up to eight per link; the label counts them. It is not offered for
+right-clicked link destinations, drawer saves, or an older app that does not advertise `link-screenshot-v1`.
+Right-click an empty part of a page and choose **Save page with screenshot** to save and capture in one step.
+The capture uses the toolbar or menu click's temporary page access (`activeTab`), which lasts until the tab
+navigates, so no new permission is needed. Restricted pages such as `chrome://` or the Chrome Web Store
+report that they cannot be captured. Screenshots stay in the local library like other images.
+
 **Organize** opens a compact panel with **Collection** and **Tags** switches.
 Search either list and choose **Create “name”** only when no names contain the search text.
 With an empty search, a **Recent** group lists up to four collections or tags used on your newest items.

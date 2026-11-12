@@ -21,6 +21,7 @@ import {
   CloseIcon,
   ColumnsIcon,
   DeleteIcon,
+  DownloadIcon,
   EyeIcon,
   GridIcon,
   ListIcon,
@@ -56,6 +57,8 @@ type Props = {
   onListColumnsChange?: (columns: LibraryListColumns) => void;
   onPreview?: () => void;
   previewDisabled?: boolean;
+  /** Export the current results as a Context Pack. */
+  onExport?: () => void;
   typeFilter: LibraryTypeSelection;
   typeCounts: LibrarySidebarCounts;
   onTypeFilterChange: (type: LibraryTypeSelection) => void;
@@ -87,7 +90,7 @@ function LibraryBulkActions({ bulk, selection, notice }: { bulk: LibraryBulkBarP
 
 export function LibraryTopBar({
   headingRef, title, itemCount, searchQuery, searchPending = false, onSearchChange,
-  sort, onSortChange, layout, onLayoutChange, listColumns = "auto", onListColumnsChange, onPreview, previewDisabled = false, panelOpen, onPanelOpenChange,
+  sort, onSortChange, layout, onLayoutChange, listColumns = "auto", onListColumnsChange, onPreview, previewDisabled = false, onExport, panelOpen, onPanelOpenChange,
   typeFilter, typeCounts, onTypeFilterChange, tagFilterName,
   searchPlaceholder, typeFilterName, onClearSearchFilter, onClearTypeFilter,
   onClearTagFilter, onClearFilters, bulk, selection, notice, collectionsView = false, tagsView = false, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
@@ -195,6 +198,13 @@ export function LibraryTopBar({
                 className={buttonClassName({ size: "toolbar", className: "px-3" })}
                 disabled={previewDisabled} onClick={onPreview}>
                 <EyeIcon className="size-4" /><span className="hidden @min-[54rem]/toolbar:inline">Preview</span>
+              </button>
+            </Tooltip> : null}
+            {!trash && !collectionsView && !tagsView && onExport ? <Tooltip content="Export these results for an AI agent">
+              <button type="button" aria-label="Export" aria-haspopup="dialog"
+                className={buttonClassName({ size: "toolbar", className: "px-3" })}
+                disabled={previewDisabled} onClick={onExport}>
+                <DownloadIcon className="size-4" /><span className="hidden @min-[54rem]/toolbar:inline">Export</span>
               </button>
             </Tooltip> : null}
           </div>

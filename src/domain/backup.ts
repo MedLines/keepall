@@ -10,6 +10,7 @@ import { validateImageAnalysis } from "./image-analysis";
 import { coerceImageFields } from "./image";
 import type { LinkItem } from "./link";
 import { coerceLinkPreviewFields } from "./link";
+import { coerceLinkScreenshotFields, linkScreenshots } from "./link-screenshot";
 import { noteImageAssetIds, type NoteItem } from "./note";
 import type { Tag } from "./tag";
 import { normalizePinnedCollectionIds } from "./library-preferences";
@@ -527,8 +528,9 @@ function parseItem(
       preview.previewAssetId && assetIds.has(preview.previewAssetId)
         ? preview.previewAssetId
         : null;
+    const screenshots = linkScreenshots(item as Partial<LinkItem>).filter((shot) => assetIds.has(shot.assetId));
 
-    const link: LinkItem = {
+    const link: LinkItem = coerceLinkScreenshotFields({
       id: item.id,
       type: "link",
       title: item.title,
@@ -538,13 +540,15 @@ function parseItem(
       ...(item.noteFormat === "markdown" ? { noteFormat: "markdown" as const } : {}),
       ...preview,
       previewAssetId,
+      ...(screenshots.length ? { screenshots } : {}),
+      ...(typeof item.coverAssetId === "string" ? { coverAssetId: item.coverAssetId } : {}),
       tagIds: itemTagIds,
       collectionIds: itemCollectionIds,
       ...membership,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       ...trash,
-    };
+    });
     return link;
   }
 

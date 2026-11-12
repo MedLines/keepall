@@ -8,6 +8,7 @@ import { noteListTitle, type NoteItem } from "./note";
 import type { DocumentItem } from "./document";
 import type { VideoItem } from "./video";
 import { coerceExclusiveCollectionIds } from "./collection";
+import { coerceLinkScreenshotFields } from "./link-screenshot";
 
 export type Item = (NoteItem | LinkItem | ImageItem | VideoItem | DocumentItem) & {
   collectionAddedAt?: number;
@@ -28,10 +29,10 @@ export function normalizeItem<T extends ItemWithOptionalOrgIds>(
   };
 
   if ("type" in withOrg && (withOrg as { type?: string }).type === "link") {
-    return {
+    return coerceLinkScreenshotFields({
       ...withOrg,
       ...coerceLinkPreviewFields(withOrg as Partial<LinkItem>),
-    };
+    });
   }
 
   if ("type" in withOrg && (withOrg as { type?: string }).type === "image") {

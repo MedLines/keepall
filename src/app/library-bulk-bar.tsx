@@ -8,7 +8,7 @@ import { CaptureOrgPanel } from "./capture-org-panel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 import { SHELL_DESTRUCTIVE_BTN, SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shell-styles";
-import { ArrowRightIcon, ChevronDownIcon, DeleteIcon, LayersIcon, SelectionCheckedIcon } from "./shell-icons";
+import { ArrowRightIcon, ChevronDownIcon, DeleteIcon, DownloadIcon, LayersIcon, SelectionCheckedIcon } from "./shell-icons";
 import { buttonClassName } from "@/components/ui/button";
 import { menuItemClassName } from "@/components/ui/menu-item";
 
@@ -16,6 +16,8 @@ export type BulkPanel = null | "delete" | "organize";
 
 export type LibraryBulkBarProps = {
   count: number;
+  /** Export the selected items as a Context Pack; omitted in Trash. */
+  onExport?: () => void;
   hiddenCount?: number;
   panelCount?: number;
   panelHiddenCount?: number;
@@ -71,6 +73,8 @@ export type LibraryBulkToolbarProps = Pick<
   onOpenPanel?: LibraryBulkBarProps["onOpenPanel"];
   onDelete?: () => void;
   deleteLabel?: string;
+  /** Export the selected items as a Context Pack; omitted where export does not apply (Trash). */
+  onExport?: () => void;
 };
 
 /** Compact bulk buttons for the top bar (selection must be active). */
@@ -87,6 +91,7 @@ export function LibraryBulkToolbar({
   onRestoreSelected,
   onDelete,
   deleteLabel,
+  onExport,
 }: LibraryBulkToolbarProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const restoreTriggerFocus = useRef(true);
@@ -113,7 +118,7 @@ export function LibraryBulkToolbar({
     if (slot) observer.observe(slot);
     measure();
     return () => observer.disconnect();
-  }, [count, hiddenCount, allVisibleSelected, onOpenPanel, onDelete, onDeletePermanently, onRestoreSelected, deleteLabel]);
+  }, [count, hiddenCount, allVisibleSelected, onOpenPanel, onDelete, onDeletePermanently, onRestoreSelected, deleteLabel, onExport]);
 
   const destructiveAction = onDelete ?? onDeletePermanently ?? (() => onOpenPanel?.("delete"));
   const destructiveLabel = deleteLabel ?? (onDeletePermanently ? "Delete permanently" : "Move to Trash");
@@ -183,6 +188,11 @@ export function LibraryBulkToolbar({
                   <LayersIcon className="size-4" />Organize
                 </Menu.Item>
               ) : null}
+              {onExport ? (
+                <Menu.Item className={menuItemClassName({ layout: "none", className: "items-center gap-2 text-left" })} onClick={() => runWithoutTriggerRestore(onExport)}>
+                  <DownloadIcon className="size-4" />Export selected
+                </Menu.Item>
+              ) : null}
               {onRestoreSelected && count > 0 ? <Menu.Item disabled={busy} className={menuItemClassName({ layout: "none", className: "items-center gap-2 text-left" })} onClick={() => runWithoutTriggerRestore(onRestoreSelected)}>
                 <ArrowRightIcon className="size-4" />Restore selected
               </Menu.Item> : null}
@@ -213,6 +223,9 @@ export function LibraryBulkToolbar({
             <LayersIcon className="size-4" />Organize
           </button>
         ) : null}
+        {onExport ? <button className={BULK_BTN} disabled={busy} type="button" onClick={onExport}>
+          <DownloadIcon className="size-4" />Export
+        </button> : null}
         {onRestoreSelected && count > 0 ? <button className={BULK_BTN} disabled={busy} type="button" onClick={onRestoreSelected}>
           <ArrowRightIcon className="size-4" />Restore selected
         </button> : null}

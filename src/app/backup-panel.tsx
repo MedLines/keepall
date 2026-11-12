@@ -13,6 +13,7 @@ import { exportKeepallArchive, prepareBackupFile, type PreparedBackup } from "@/
 import { countCurrentLibrary } from "@/persistence/backup";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
 import { abortable } from "@/lib/abortable";
+import { formatFileSize } from "@/lib/format-file-size";
 import { BackupIcon, ChevronDownIcon, CloseIcon, CollectionIcon, DownloadIcon, HashIcon, ImageIcon, ImagesIcon, LinkIcon, NoteIcon, UploadIcon, VideoIcon } from "./shell-icons";
 import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 
@@ -23,13 +24,6 @@ const operationLabels: Record<Operation, string> = {
 };
 function countText(counts: BackupCounts) {
   return `${counts.total} items (${counts.active} active, ${counts.trash} in Trash)`;
-}
-
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} bytes`;
-  const unit = bytes < 1024 * 1024 ? "KB" : "MB";
-  const value = bytes / (unit === "KB" ? 1024 : 1024 * 1024);
-  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: value < 10 ? 1 : 0 }).format(value)} ${unit}`;
 }
 
 function ImportProgress({ progress, cancelling }: { progress: BackupImportProgress | null; cancelling: boolean }) {

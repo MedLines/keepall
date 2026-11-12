@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { linkCardHost } from "@/domain/card-display";
 import type { LinkItem } from "@/domain/link";
+import { linkCoverAssetId } from "@/domain/link-screenshot";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { LinkIcon } from "./shell-icons";
 
 export function LibraryOrganizationLinkPreview({ item, showType = false, folder = false }: { item: LinkItem; showType?: boolean; folder?: boolean }) {
-  const imageUrl = useAssetObjectUrl(item.previewAssetId);
+  const imageUrl = useAssetObjectUrl(linkCoverAssetId(item));
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   if (imageUrl && imageUrl !== failedUrl) {
     return <>

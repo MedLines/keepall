@@ -9,6 +9,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { itemListTitle, type Item } from "@/domain/item";
 import { imageCardSecondary } from "@/domain/card-display";
+import { linkCoverAssetId } from "@/domain/link-screenshot";
 import { CloseIcon, CollectionIcon, HashIcon } from "./shell-icons";
 import { LibraryDocumentCard } from "./library-document-card";
 import { LibraryReadingCard } from "./library-reading-card";
@@ -71,7 +72,7 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
     : item.type === "image" ? item.title.trim() : itemListTitle(item);
   if (item.type === "image" && !title && !imageCardSecondary(item) && !pinned) return query.trim() ? wrap(null) : null;
   const TitleRow = title ? "h2" : "div";
-  const hasLinkImage = item.type === "link" && Boolean(item.previewAssetId);
+  const hasLinkImage = item.type === "link" && Boolean(linkCoverAssetId(item));
   return wrap(
     <div className="library-card-copy">
       {title || pinned ? <TitleRow className={`library-card-title ${item.type === "link" && !hasLinkImage ? "library-card-title-fallback" : ""}`}>

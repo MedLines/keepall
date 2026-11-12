@@ -5,7 +5,7 @@ import { createFileTransfer } from "./file-transfer";
 import { captureExtensionFiles } from "@/persistence/extension-file-capture";
 import { prepareLocalVideo } from "../prepare-local-video";
 import { isUuid } from "@/domain/extension-file-capture";
-import { getExtensionOrganizationOptions, saveExtensionImage, saveExtensionLink, type ExtensionImageCapture, type ExtensionLinkCapture } from "@/persistence/extension-capture";
+import { getExtensionOrganizationOptions, saveExtensionImage, saveExtensionLink, saveExtensionScreenshot, type ExtensionImageCapture, type ExtensionLinkCapture, type ExtensionScreenshotCapture } from "@/persistence/extension-capture";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
 import { getCaptureCollections, moveCaptureToCollection, updateCaptureTag } from "@/persistence/extension-collections";
 import { saveExtensionSelection } from "@/persistence/extension-selection";
@@ -53,6 +53,31 @@ function isImageCapture(value: unknown): value is ExtensionImageCapture {
     typeof input.mimeType === "string" &&
     input.bytes instanceof Uint8Array &&
     input.bytes.byteLength <= 20 * 1024 * 1024;
+}
+
+function isScreenshotCapture(value: unknown): value is ExtensionScreenshotCapture {
+  if (!value || typeof value !== "object") return false;
+  const input = value as Record<string, unknown>;
+  return typeof input.captureId === "string" && input.captureId.length <= 100 &&
+    typeof input.itemId === "string" && typeof input.url === "string" && typeof input.mimeType === "string" &&
+    input.bytes instanceof Uint8Array && input.bytes.byteLength <= 20 * 1024 * 1024 &&
+    Number.isInteger(input.width) && Number.isInteger(input.height);
+}
+
+async function screenshotReply(value: unknown) {
+  if (!isScreenshotCapture(value)) return null;
+  try {
+    const result = await saveExtensionScreenshot(value);
+    window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+    return { type: "result", captureId: value.captureId, ...result };
+  } catch (error) {
+    const text = error instanceof Error ? error.message : "";
+    const message = /up to \d+ screenshots/.test(text) ? text
+      : error instanceof Error && (error.name === "LinkPreviewStaleError" || text === "Link not found")
+        ? "This link changed in Keepall. Save the page again to add screenshots."
+        : "Could not save this screenshot to Keepall.";
+    return { type: "result", captureId: value.captureId, error: message };
+  }
 }
 
 async function undoCaptureReply(value: unknown) {
@@ -172,6 +197,12 @@ export function ExtensionBridge() {
         return;
       }
 
+      if (event.data.type === "capture-screenshot") {
+        const result = await screenshotReply(event.data.payload);
+        if (result) reply(result, event.origin);
+        return;
+      }
+
       if (event.data.type === "undo-capture") {
         const result = await undoCaptureReply(event.data.payload);
         if (result) reply(result, event.origin);
@@ -223,7 +254,7 @@ export function ExtensionBridge() {
     }
 
     window.addEventListener("message", onMessage);
-    for (const origin of EXTENSION_ORIGINS) reply({ type: "ready", capabilities: ["file-transfer-v1"] }, origin);
+    for (const origin of EXTENSION_ORIGINS) reply({ type: "ready", capabilities: ["file-transfer-v1", "link-screenshot-v1"] }, origin);
     return () => { window.removeEventListener("message", onMessage); fileTransfer.dispose(); };
   }, []);
 

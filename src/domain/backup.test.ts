@@ -128,6 +128,23 @@ describe("parseKeepallBackup", () => {
     expect(restoredLink).toMatchObject({ noteContent: "## Mine", noteFormat: "markdown", previewDescription: "Website text" });
   });
 
+  test("round-trips link screenshots and drops ones whose asset is missing", () => {
+    const asset = (id: string) => ({ id, mimeType: "image/webp", byteLength: 1, dataBase64: "AQ==", createdAt: 1 });
+    const shot = (assetId: string) => ({ assetId, capturedAt: 5, width: 1600, height: 1000 });
+    const link = { ...buildLink({ url: "https://studio.example" }, { id: "l1" }), screenshots: [shot("s1"), shot("gone"), shot("s2")], coverAssetId: "s2" };
+    const exported = buildKeepallBackup({ items: [link], tags: [], collections: [], assets: [asset("s1"), asset("s2")] });
+    const [restored] = parseKeepallBackup(JSON.parse(JSON.stringify(exported))).items;
+    expect(restored).toMatchObject({ screenshots: [shot("s1"), shot("s2")], coverAssetId: "s2" });
+
+    const coverLost = { ...link, coverAssetId: "gone" };
+    const [withoutCover] = parseKeepallBackup(buildKeepallBackup({ items: [coverLost], tags: [], collections: [], assets: [asset("s1")] })).items;
+    expect(withoutCover).toMatchObject({ screenshots: [shot("s1")] });
+    expect(withoutCover).not.toHaveProperty("coverAssetId");
+
+    const plain = buildLink({ url: "https://example.com" }, { id: "l2" });
+    expect(parseKeepallBackup(buildKeepallBackup({ items: [plain], tags: [], collections: [] })).items[0]).not.toHaveProperty("screenshots");
+  });
+
   test("rejects unknown attached-note formats", () => {
     const link = buildLink({ url: "https://example.com" });
     expect(() => parseKeepallBackup({ ...valid, items: [{ ...link, noteFormat: "html" }] })).toThrow(/note format/);
