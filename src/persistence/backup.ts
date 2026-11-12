@@ -18,6 +18,7 @@ import type { VideoItem } from "@/domain/video";
 import type { ImageItem } from "@/domain/image";
 import type { LinkItem } from "@/domain/link";
 import { normalizeLinkUrl } from "@/domain/link";
+import { coerceLinkScreenshotFields, linkScreenshotAssetIds, linkScreenshots, withoutLinkScreenshotFields, type LinkScreenshot } from "@/domain/link-screenshot";
 import { deleteUnreferencedAssets } from "./items";
 import { replaceNoteImageAssetIds, type NoteItem } from "@/domain/note";
 import { putAsset, ensureContentHash, getAsset } from "./assets";
@@ -102,7 +103,8 @@ export async function replaceValidatedBackup(
     ),
   );
 
-  const imageAssetIds = new Set(backup.items.filter((item) => item.type === "image").flatMap((item) => item.assetIds));
+  const imageAssetIds = new Set(backup.items.flatMap((item) =>
+    item.type === "image" ? item.assetIds : item.type === "link" ? linkScreenshotAssetIds(item) : []));
   const existingThumbnailIds = new Set(thumbnails.map((thumbnail) => thumbnail.assetId));
   const generatedThumbnails: Thumbnail[] = [];
   let preparedAssets = 0;
@@ -281,6 +283,24 @@ async function mergeValidatedBackup(
     content: mapArticleImages(article.content, image => ({ ...image, assetId: image.assetId ? remapAssetId(image.assetId) ?? undefined : undefined })),
   });
 
+  const remapScreenshots = (link: LinkItem): LinkScreenshot[] =>
+    linkScreenshots(link).flatMap((shot) => {
+      const assetId = remapAssetId(shot.assetId);
+      return assetId ? [{ ...shot, assetId }] : [];
+    });
+  const withScreenshots = (link: LinkItem, screenshots: LinkScreenshot[], coverAssetId: string | null): LinkItem => {
+    return coerceLinkScreenshotFields({
+      ...withoutLinkScreenshotFields(link),
+      ...(screenshots.length ? { screenshots } : {}),
+      ...(coverAssetId ? { coverAssetId } : {}),
+    });
+  };
+  // Assets are deduplicated by content hash, so equal bytes share an asset id.
+  const unionScreenshots = (first: LinkScreenshot[], second: LinkScreenshot[]): LinkScreenshot[] => {
+    const ids = new Set(first.map((shot) => shot.assetId));
+    return [...first, ...second.filter((shot) => !ids.has(shot.assetId))];
+  };
+
   const itemIdMap = new Map<string, string>();
   const summary: KeepallMergeSummary = {
     added: 0,
@@ -456,14 +476,14 @@ async function mergeValidatedBackup(
       if (!local) {
         const idTaken = await db.items.get(incoming.id);
         const id = idTaken ? crypto.randomUUID() : incoming.id;
-        const next: LinkItem = {
+        const next = withScreenshots({
           ...incoming,
           id,
           tagIds: remapTagIds(incoming.tagIds),
           collectionIds: remapCollectionIds(incoming.collectionIds),
           previewAssetId: remapAssetId(incoming.previewAssetId),
           ...(incoming.article ? { article: remapArticle(incoming.article) } : {}),
-        };
+        }, remapScreenshots(incoming), remapAssetId(incoming.coverAssetId ?? null));
         await db.items.put(next);
         linksById.set(next.id, next);
         if (urlKey && next.deletedAt === undefined) {
@@ -477,8 +497,14 @@ async function mergeValidatedBackup(
 
       const org = mergeOrg(local, incoming);
       const useIncoming = isIncomingNewer(local.updatedAt, incoming.updatedAt);
+      const localScreenshots = linkScreenshots(local);
+      const incomingScreenshots = remapScreenshots(incoming);
+      const screenshots = useIncoming
+        ? unionScreenshots(incomingScreenshots, localScreenshots)
+        : unionScreenshots(localScreenshots, incomingScreenshots);
+      const gainedScreenshots = screenshots.length !== localScreenshots.length;
       const next: LinkItem = useIncoming
-        ? {
+        ? withScreenshots({
             ...incoming,
             id: local.id,
             url: normalizeLinkUrl(local.url) === urlKey ? local.url : incoming.url,
@@ -486,20 +512,21 @@ async function mergeValidatedBackup(
             collectionIds: org.collectionIds,
             previewAssetId: remapAssetId(incoming.previewAssetId),
             ...(incoming.article ? { article: remapArticle(incoming.article) } : {}),
-          }
-        : {
+          }, screenshots, remapAssetId(incoming.coverAssetId ?? null))
+        : withScreenshots({
             ...local,
             tagIds: org.tagIds,
             collectionIds: org.collectionIds,
             previewAssetId: local.previewAssetId,
             updatedAt:
-              org.tagIds.length !== local.tagIds.length
+              org.tagIds.length !== local.tagIds.length || gainedScreenshots
                 ? Math.max(local.updatedAt, incoming.updatedAt)
                 : local.updatedAt,
-          };
+          }, screenshots, local.coverAssetId ?? null);
 
       const unchanged =
         !useIncoming &&
+        !gainedScreenshots &&
         next.tagIds.length === local.tagIds.length &&
         next.tagIds.every((id, i) => id === local.tagIds[i]) &&
         next.collectionIds[0] === local.collectionIds[0];

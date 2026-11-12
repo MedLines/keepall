@@ -1,6 +1,7 @@
 import type { SavedArticle } from "./article";
 import { isHttpUrl } from "./classify";
 import type { NoteItem } from "./note";
+import { withoutLinkScreenshotFields, type LinkScreenshot } from "./link-screenshot";
 
 export type LinkPreviewStatus = "idle" | "pending" | "ready" | "failed";
 
@@ -29,6 +30,10 @@ export type LinkItem = {
   previewRetry: LinkPreviewRetry | null;
   /** When pending/last attempt started; used for the dead-lease check. */
   previewAttemptedAt: number | null;
+  /** Viewport captures added from the extension, in capture order. */
+  screenshots?: LinkScreenshot[];
+  /** Card cover chosen by the user; absent means automatic (see linkCoverAssetId). */
+  coverAssetId?: string;
   tagIds: string[];
   collectionIds: string[];
   createdAt: number;
@@ -245,9 +250,9 @@ export function applyLinkEdit(
   }
 
   const urlChanged = url !== link.url;
-
   return {
-    ...link,
+    // Captures describe the old page, so a new URL starts without them.
+    ...(urlChanged ? withoutLinkScreenshotFields(link) : link),
     url,
     title: input.title !== undefined ? input.title.trim() : link.title,
     ...(input.noteContent !== undefined ? { noteContent: input.noteContent.trim() } : {}),
