@@ -2,7 +2,7 @@
 
 import { prepareItemNavigation } from "./item-navigation-snapshot";
 import { ScrollPanel } from "@/components/ui/scroll-panel";
-import { loadPreviewLayouts } from "@/persistence/preview-layouts";
+import { backfillPreviewLayouts, loadPreviewLayouts } from "@/persistence/preview-layouts";
 import { LibraryStartupContent } from "./library-loading-content";
 import { LibraryLayoutTransition, transitionLibraryLayout } from "./item-view-transition";
 
@@ -374,6 +374,8 @@ export function Library() {
         ]);
         await loadPreviewLayouts([...nextItems, ...nextTrash]).catch(() => {});
         if (!cancelled && generation === requestGeneration) {
+          // Cards whose media never loaded would otherwise grow on first decode and shift their column.
+          void backfillPreviewLayouts(nextItems, () => cancelled || generation !== requestGeneration).catch(() => {});
           hasLoaded = true;
           const nextIndexes = buildLibraryBrowseIndexes(nextItems);
           browseIndexesRef.current = nextIndexes;
