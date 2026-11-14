@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import { Children, type ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -14,8 +14,11 @@ export type ButtonVariant = "secondary" | "primary" | "danger" | "danger-ghost";
  * Text button sizes:
  * - md: 40px, dialogs and panels.
  * - lg: 44px, page-level actions.
- * - toolbar: 44px library top bar. Padding stays with the caller because it depends on whether an icon leads.
+ * - toolbar: 44px library top bar.
  * - none: no size classes; the caller sets height, padding and type. For one-off controls only.
+ *
+ * md, lg and toolbar add .ui-button: side padding comes from --button-px (16px; change it with
+ * button-px-*, never px-*), and the side with an icon gets three quarters of it.
  */
 export type ButtonSize = "md" | "lg" | "toolbar" | "none";
 
@@ -30,9 +33,9 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  md: "min-h-10 px-4 text-sm font-medium",
-  lg: "min-h-11 px-4 text-sm font-medium",
-  toolbar: "h-11 shrink-0 gap-2 text-sm",
+  md: "ui-button min-h-10 text-sm font-medium",
+  lg: "ui-button min-h-11 text-sm font-medium",
+  toolbar: "ui-button h-11 shrink-0 gap-2 text-sm",
   none: "",
 };
 
@@ -60,18 +63,20 @@ export function iconButtonClassName({ variant = "secondary", size = "md", classN
 type ButtonProps = ComponentProps<"button"> & ButtonStyle;
 
 /**
- * DRAFT: Text button for every action; pick the variant by role (one primary per surface, danger only to confirm a destructive dialog) and the size by placement.
+ * Text button for every action; pick the variant by role (one primary per surface, danger only to confirm a destructive dialog) and the size by placement.
  *
  * @import import { Button } from "@/components/ui/button";
  */
-export function Button({ variant = "secondary", size = "md", className, type = "button", ...props }: ButtonProps) {
-  return <button type={type} className={buttonClassName({ variant, size, className })} {...props} />;
+export function Button({ variant = "secondary", size = "md", className, type = "button", children, ...props }: ButtonProps) {
+  // Bare text becomes a span so the icon-side padding rule can see which side the icon is on.
+  const content = Children.map(children, (child) => (typeof child === "string" || typeof child === "number" ? <span>{child}</span> : child));
+  return <button type={type} className={buttonClassName({ variant, size, className })} {...props}>{content}</button>;
 }
 
 type IconButtonProps = ComponentProps<"button"> & IconButtonStyle & { "aria-label": string };
 
 /**
- * DRAFT: Square icon-only button for actions an icon alone makes clear (close, more, toolbar toggles); always give it an aria-label.
+ * Square icon-only button for actions an icon alone makes clear (close, more, toolbar toggles); always give it an aria-label.
  *
  * @import import { IconButton } from "@/components/ui/button";
  */

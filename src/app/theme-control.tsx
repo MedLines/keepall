@@ -12,7 +12,7 @@ import { DarkThemeIcon, LightThemeIcon } from "./shell-icons";
 import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 
 /**
- * DRAFT: Toggle between the light and dark theme; saves the choice on this device.
+ * Toggle between the light and dark theme; saves the choice on this device.
  *
  * @import import { ThemeControl } from "@/app/theme-control";
  */
@@ -26,7 +26,7 @@ export function ThemeControl({ compact = false }: { compact?: boolean }) {
         type="button"
         aria-label="Theme"
         aria-pressed={dark}
-        className={compact ? iconButtonClassName({ size: "lg", className: "theme-control gap-2" }) : buttonClassName({ size: "toolbar", className: "theme-control px-2" })}
+        className={compact ? iconButtonClassName({ size: "lg", className: "theme-control gap-2" }) : buttonClassName({ size: "toolbar", className: "theme-control button-px-2" })}
         onClick={() => setThemePreference(dark ? "light" : "dark")}
       >
         {dark ? <LightThemeIcon /> : <DarkThemeIcon />}

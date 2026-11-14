@@ -27,6 +27,26 @@ const COMPUTED_STYLE_PROPERTIES = ["--*", "transform", "width", "height", "aspec
 
 const BUTTON_MESSAGE = `<{{component}}> owns its size and shape: "{{className}}" is not allowed. Use the size prop ({{sizes|see button.tsx}}) and variant prop ({{variants|see button.tsx}}); place it with margin here or gap on the parent. See ${CONVENTIONS}.`;
 
+// A buttonClassName() element (md, lg or toolbar) that mixes an icon with bare text: CSS can't see a text node, so the
+// icon-side padding rule (.ui-button in components.css) can't tell which side the icon is on.
+const BUTTON_TEXT_ELEMENT = {
+  meta: { type: "problem", schema: [], messages: { wrap: "Wrap this button's text in a <span> so the icon-side padding rule can see which side the icon is on (Button does this itself)." } },
+  create(context) {
+    const usesButtonClassName = (opening) => opening.attributes.some((attr) => attr.type === "JSXAttribute" && attr.name.name === "className"
+      && attr.value?.type === "JSXExpressionContainer" && attr.value.expression.type === "CallExpression" && attr.value.expression.callee.name === "buttonClassName"
+      // size "none" buttons set their own padding by hand, so the rule doesn't apply to them.
+      && !attr.value.expression.arguments[0]?.properties?.some((prop) => prop.key?.name === "size" && prop.value?.value === "none"));
+    return {
+      JSXElement(node) {
+        if (!usesButtonClassName(node.openingElement)) return;
+        const hasIcon = node.children.some((child) => child.type === "JSXElement" && /Icon$/.test(child.openingElement.name.name ?? ""));
+        const text = node.children.find((child) => child.type === "JSXText" && /\S/.test(child.value));
+        if (hasIcon && text) context.report({ node: text, messageId: "wrap" });
+      },
+    };
+  },
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -38,6 +58,24 @@ const eslintConfig = defineConfig([
     rules: {
       complexity: ["warn", { max: 20, variant: "classic" }],
       "sonarjs/cognitive-complexity": ["warn", 15],
+    },
+  },
+  {
+    // Text buttons: the side with an icon gets 3/4 of --button-px (components.css .ui-button).
+    files: ["src/**/*.{jsx,tsx}"],
+    plugins: { keepall: { rules: { "button-text-element": BUTTON_TEXT_ELEMENT } } },
+    rules: {
+      "keepall/button-text-element": "error",
+      "no-restricted-syntax": ["error",
+        {
+          selector: "CallExpression[callee.name='buttonClassName']:not(:has(Property[key.name='size'] Literal[value='none'])) Property[key.name='className'] :matches(Literal[value=/(^|\\s)(px|ps|pe)-/], TemplateElement[value.raw=/(^|\\s)(px|ps|pe)-/])",
+          message: "Set a text button's side padding with button-px-* (default 4), not px-/ps-/pe-, so the side with an icon gets its smaller padding. See Button in src/components/ui/button.tsx.",
+        },
+        {
+          selector: "JSXOpeningElement[name.name='Button']:not(:has(JSXAttribute[name.name='size'][value.value='none'])) JSXAttribute[name.name='className'] :matches(Literal[value=/(^|\\s)(px|ps|pe)-/], TemplateElement[value.raw=/(^|\\s)(px|ps|pe)-/])",
+          message: "Set a Button's side padding with button-px-* (default 4), not px-/ps-/pe-, so the side with an icon gets its smaller padding.",
+        },
+      ],
     },
   },
   {

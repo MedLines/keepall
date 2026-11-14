@@ -33,3 +33,4 @@ description: Token lookup for Keepall UI. Use before writing a className that se
 | Weight | `font-medium` for labels and row titles, `font-semibold` for headings |
 | Media without a known ratio | `aspect-16/10` (fractions work; `aspect-video` does not exist) |
 | Spacing | Tailwind's 4px scale (`gap-3`, `p-5`) |
+| Text button side padding | `button-px-*` (default 4), never `px-*`; the icon side gets ¾ automatically |
