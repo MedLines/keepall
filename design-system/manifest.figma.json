@@ -1,0 +1,3438 @@
+{
+  "$comment": "Read-only export of the Figma library via use_figma (Plugin API). Regenerate with design-system/figma-export.js. Do not edit by hand.",
+  "source": {
+    "fileKey": "4EpNWgQsSifv6pmqROO03g",
+    "fileName": "Keepall Design System",
+    "url": "https://www.figma.com/design/4EpNWgQsSifv6pmqROO03g/Keepall-Design-System",
+    "exportedAt": "2026-11-14"
+  },
+  "components": [
+    {
+      "name": "Button",
+      "page": "Buttons",
+      "type": "COMPONENT_SET",
+      "nodeId": "5:170",
+      "key": "8163fd9c1ef5a28e661df0ddd1b1dd06fd8e6a5b",
+      "description": "Button — src/components/ui/button.tsx: Button (variant, size), or buttonClassName() for Base UI triggers. Variant: secondary (default, .ui-control), primary (.ui-primary; white in dark mode, never mid-grey), danger (destructive confirm), danger-ghost (Empty Trash). Size: md = 40px dialogs and panels (px 16, text-sm medium); toolbar = 44px library top bar (padding set by the caller: ps-3 pe-4 with a leading icon). Code also has lg = 44px page actions with px 16. Base UI triggers use buttonClassName(). Pill shape via the components-layer control-shape rule (999px + superellipse(1.5)). Press: scale(0.96) over --motion-quick. Disabled: --opacity-disabled (0.6). Focus: 1px border-focus outline, 2px offset.",
+      "properties": [
+        {
+          "name": "Label",
+          "type": "TEXT",
+          "default": "Save item",
+          "id": "5:0"
+        },
+        {
+          "name": "Show icon",
+          "type": "BOOLEAN",
+          "default": true,
+          "id": "5:33"
+        },
+        {
+          "name": "Icon",
+          "type": "INSTANCE_SWAP",
+          "default": "4:18",
+          "id": "5:66"
+        },
+        {
+          "name": "Variant",
+          "type": "VARIANT",
+          "default": "Primary",
+          "options": [
+            "Primary",
+            "Secondary",
+            "Danger",
+            "Danger ghost"
+          ]
+        },
+        {
+          "name": "Size",
+          "type": "VARIANT",
+          "default": "md",
+          "options": [
+            "md",
+            "toolbar"
+          ]
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Default",
+          "options": [
+            "Default",
+            "Hover",
+            "Focus",
+            "Disabled"
+          ]
+        }
+      ],
+      "variantCount": 32
+    },
+    {
+      "name": "Icon button",
+      "page": "Buttons",
+      "type": "COMPONENT_SET",
+      "nodeId": "5:239",
+      "key": "00a309b9c1f97e38fbd727d0eb76a15510984e37",
+      "description": "IconButton — src/components/ui/button.tsx: IconButton (size, aria-label), or iconButtonClassName() for Base UI triggers. Control sizes: sm 32px, md 40px (dialog close), lg 44px (top bar). Base UI triggers use iconButtonClassName(). Media chrome = .library-card-media-chrome: 32px translucent surface over card media with a 12px squircle radius; 44px hit target via 6px slop. Always pair with an aria-label and a 350ms tooltip. Disabled: --opacity-disabled. Wrap in Tooltip (src/components/ui/tooltip.tsx) with describe={false} when the tooltip repeats the aria-label; never add a native title.",
+      "properties": [
+        {
+          "name": "Icon",
+          "type": "INSTANCE_SWAP",
+          "default": "4:130",
+          "id": "5:99"
+        },
+        {
+          "name": "Style",
+          "type": "VARIANT",
+          "default": "Control",
+          "options": [
+            "Control",
+            "Media chrome"
+          ]
+        },
+        {
+          "name": "Size",
+          "type": "VARIANT",
+          "default": "md",
+          "options": [
+            "md",
+            "lg",
+            "sm"
+          ]
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Default",
+          "options": [
+            "Default",
+            "Hover",
+            "Focus",
+            "Disabled"
+          ]
+        }
+      ],
+      "variantCount": 11
+    },
+    {
+      "name": "Segmented switch",
+      "page": "Buttons",
+      "type": "COMPONENT_SET",
+      "nodeId": "5:266",
+      "key": "036a8c422988121161f0f10c99ad1f8d81ca1e66",
+      "description": "SegmentedControl — src/components/ui/segmented-control.tsx. Two-choice switch (role=group with an accessible label; each choice aria-pressed). Variant=Icon: 44px raised track, 2px inset, two 42px icon buttons with Tooltips (library Grid/List, note Edit/Preview). Variant=Text: track height follows --viewer-control-size (44px default), options split the width with text-xs medium labels (viewer Fit/Scroll, PDF Pages/Scroll, note format, gallery Slides/Scroll). The .ui-selected thumb (bg-active + 1px inset highlight) slides over --motion-glide with --ease-standard; selected text-primary, idle text-secondary.",
+      "properties": [
+        {
+          "name": "Start icon",
+          "type": "INSTANCE_SWAP",
+          "default": "4:57",
+          "id": "5:111"
+        },
+        {
+          "name": "End icon",
+          "type": "INSTANCE_SWAP",
+          "default": "4:103",
+          "id": "5:114"
+        },
+        {
+          "name": "Start label",
+          "type": "TEXT",
+          "default": "Pages",
+          "id": "32:4"
+        },
+        {
+          "name": "End label",
+          "type": "TEXT",
+          "default": "Scroll",
+          "id": "32:9"
+        },
+        {
+          "name": "Variant",
+          "type": "VARIANT",
+          "default": "Icon",
+          "options": [
+            "Icon",
+            "Text"
+          ]
+        },
+        {
+          "name": "Selected",
+          "type": "VARIANT",
+          "default": "Start",
+          "options": [
+            "Start",
+            "End"
+          ]
+        }
+      ],
+      "variantCount": 4
+    },
+    {
+      "name": "Search field",
+      "page": "Inputs",
+      "type": "COMPONENT_SET",
+      "nodeId": "7:23",
+      "key": "c3f1e738a43833dbc91f9faa77f7b2baa59cb8a3",
+      "description": "Library top-bar search (#library-search, type=search, .ui-field inside .library-top-bar). 40px pill with superellipse(1.5) corners, bg-control, 1px border-control. 16px Search glyph at 14px, text inset 40px. Empty shows the shortcut hint (10px kbd, text-secondary). Filled swaps the hint for a 44px clear target with a 28px round hover surface (bg-raised). While a content search is pending, the glyph becomes a 16px spinner after 200ms. Focus: 1px border-focus outline inset 2px. Placeholders: &quot;Search your library…&quot;, &quot;Search collections…&quot;, &quot;Search tags…&quot;, &quot;Search Trash…&quot;.",
+      "properties": [
+        {
+          "name": "Value",
+          "type": "TEXT",
+          "default": "Search your library…",
+          "id": "7:0"
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Empty",
+          "options": [
+            "Empty",
+            "Focus",
+            "Filled"
+          ]
+        }
+      ],
+      "variantCount": 3
+    },
+    {
+      "name": "Text field",
+      "page": "Inputs",
+      "type": "COMPONENT_SET",
+      "nodeId": "7:41",
+      "key": "1d656eb9d52f9b581acaf78406e0d1fd7bbcb95a",
+      "description": "TextField — src/components/ui/text-field.tsx (fieldClassName() for bare inputs). Label (text-sm medium, text-primary) above the input with an 8px gap; the label is the input’s accessible name, and an optional hint below is linked with aria-describedby. Input: .ui-field, min-h 44px, px 12px, text-sm, bg-control, 1px border-control, radius-control-md (13px). Placeholder text-secondary. Focus: 1px border-focus outline inset 2px. Touch devices render 16px text to avoid zoom.",
+      "properties": [
+        {
+          "name": "Label",
+          "type": "TEXT",
+          "default": "Title",
+          "id": "7:4"
+        },
+        {
+          "name": "Show label",
+          "type": "BOOLEAN",
+          "default": true,
+          "id": "7:9"
+        },
+        {
+          "name": "Value",
+          "type": "TEXT",
+          "default": "Add a title",
+          "id": "7:14"
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Default",
+          "options": [
+            "Default",
+            "Filled",
+            "Focus",
+            "Disabled"
+          ]
+        }
+      ],
+      "variantCount": 4
+    },
+    {
+      "name": "Textarea",
+      "page": "Inputs",
+      "type": "COMPONENT",
+      "nodeId": "7:42",
+      "key": "e59f7f4748abd328c12b103532932b84cacab94e",
+      "description": "Multi-line .ui-field (ScrollTextarea). Same surface as Text field; padding 12px, text-sm, min-h 160px, resize-y. Scrollbar uses the shared overlay track; it never reserves a gutter.",
+      "properties": [
+        {
+          "name": "Label",
+          "type": "TEXT",
+          "default": "Note",
+          "id": "7:19"
+        },
+        {
+          "name": "Value",
+          "type": "TEXT",
+          "default": "Keep the details worth returning to.",
+          "id": "7:20"
+        }
+      ]
+    },
+    {
+      "name": "Radio card",
+      "page": "Inputs",
+      "type": "COMPONENT_SET",
+      "nodeId": "33:227",
+      "key": "7bc1e1e6f1283df9935220262783fa1e1563abac",
+      "description": "RadioCard — src/components/ui/radio-card.tsx. A full-width radio option: the whole card is the label, so its text is the radio’s accessible name. .ui-control surface (bg-control, 1px border-control) with 12px × 16px padding and a 12px gap; the checked option takes bg-active. Pill shape from the shared control-shape rule (999px with superellipse(1.5)) in every dialog — link conflict, bookmark import and delete collection; don’t override the radius per dialog. Label text-sm medium; optional description text-xs secondary. The radio is the native input (16px, nudged 4px to the first text line).",
+      "properties": [
+        {
+          "name": "Label",
+          "type": "TEXT",
+          "default": "Keep Keepall collections",
+          "id": "33:0"
+        },
+        {
+          "name": "Description",
+          "type": "TEXT",
+          "default": "Items already in a Keepall collection stay where they are.",
+          "id": "33:3"
+        },
+        {
+          "name": "Show description",
+          "type": "BOOLEAN",
+          "default": true,
+          "id": "33:6"
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Default",
+          "options": [
+            "Default",
+            "Checked"
+          ]
+        }
+      ],
+      "variantCount": 2
+    },
+    {
+      "name": "Menu item",
+      "page": "Menus & overlays",
+      "type": "COMPONENT_SET",
+      "nodeId": "9:26",
+      "key": "451ce1ee163cfd3c96feef013a61f4b7a8ccdfc4",
+      "description": "menuItemClassName() — src/components/ui/menu-item.ts, on Base UI Menu.Item / Select.Item / ContextMenu.Item. Shared surface: .ui-menu-item flex w-full text-sm; tone default (text-primary, bg-active highlight) or danger (text-danger, bg-danger highlight); layout row (icon + label, items-center gap-2). In select popups (.shell-select-option) rows are min 28px (40px on touch), padding 4px 8px, 13px; radius = popup radius − 6px inset − 1px with squircle corners; one gliding highlight (MenuHoverList) follows pointer and keyboard. Optional 18px leading icon, tabular count (text-xs, text-secondary) and a 16px checkmark slot.",
+      "properties": [
+        {
+          "name": "Label",
+          "type": "TEXT",
+          "default": "Newest first",
+          "id": "9:0"
+        },
+        {
+          "name": "Show icon",
+          "type": "BOOLEAN",
+          "default": true,
+          "id": "9:3"
+        },
+        {
+          "name": "Icon",
+          "type": "INSTANCE_SWAP",
+          "default": "4:145",
+          "id": "9:6"
+        },
+        {
+          "name": "Show count",
+          "type": "BOOLEAN",
+          "default": false,
+          "id": "9:9"
+        },
+        {
+          "name": "Count",
+          "type": "TEXT",
+          "default": "20",
+          "id": "9:12"
+        },
+        {
+          "name": "Checked",
+          "type": "BOOLEAN",
+          "default": false,
+          "id": "9:15"
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Default",
+          "options": [
+            "Default",
+            "Highlighted"
+          ]
+        }
+      ],
+      "variantCount": 2
+    },
+    {
+      "name": "Menu",
+      "page": "Menus & overlays",
+      "type": "COMPONENT",
+      "nodeId": "9:27",
+      "key": "990690e55b31000eeddd21233b8edfcec8302891",
+      "description": ".ui-popover + .ui-menu-popup: bg-control, 1px border-control, radius-panel (20px) with squircle corners, 6px inset, shadow-menu. Width ≥ max(9rem, trigger width); height capped at the available height. Select popups (role=listbox) scroll in the registry ScrollArea because the listbox sits inside its viewport. Action menus (role=menu: card, row and bulk actions) scroll in a native ui-scrollbar container so the menu owns its menuitems directly. Opens on the fast motion tier: fade + 4px slide toward the trigger + scale(0.96 → 1); exits on fast-exit. Reduced motion keeps only the fade.",
+      "properties": []
+    },
+    {
+      "name": "Tooltip",
+      "page": "Menus & overlays",
+      "type": "COMPONENT",
+      "nodeId": "9:79",
+      "key": "3275554e80aa4175df61f8b1d2276d35b1e3cbfd",
+      "description": "Tooltip — src/components/ui/tooltip.tsx (TOOLTIP_CLASS; TooltipContent when a Select trigger composes its own Root). radius-control-sm, 1px border-control, bg-surface, padding 6px 10px, text-xs medium, shadow-menu, 8px from the trigger. Delay 350ms for toolbar controls, 100ms for folder and tag previews. Set describe=false when the text repeats the trigger’s accessible name so it isn’t announced twice. Never use a native title attribute on a control. Panel-style previews (note excerpt, long title) pass unstyled with their own .ui-popover surface.",
+      "properties": [
+        {
+          "name": "Text",
+          "type": "TEXT",
+          "default": "Save item · S",
+          "id": "9:18"
+        }
+      ]
+    },
+    {
+      "name": "Toast",
+      "page": "Menus & overlays",
+      "type": "COMPONENT",
+      "nodeId": "9:81",
+      "key": "98689dbb33dc551e13376f92194c693d9ff4194e",
+      "description": "Sonner toast (.kc-toast): bg-surface, 1px border-control, 12px radius, 14px / 1.6 text, shadow-menu. For background results only — Trash undo uses the Undo notice in the top bar instead.",
+      "properties": [
+        {
+          "name": "Message",
+          "type": "TEXT",
+          "default": "Backup saved to your device.",
+          "id": "9:19"
+        }
+      ]
+    },
+    {
+      "name": "Undo notice",
+      "page": "Menus & overlays",
+      "type": "COMPONENT",
+      "nodeId": "9:83",
+      "key": "b2e20230a61140971b924fb898d9619984a11b7b",
+      "description": "Transient Trash undo. Lives ONLY in the library top bar action slot (LibraryTopBar `notice` prop) — never inside the scrolling content. 40px control-squircle surface (bg-control, 1px border-control, 2px inset, 12px start padding), text-xs secondary message, 32px Undo (medium, text-primary) and Dismiss buttons with bg-raised hover. A 2px timer runs along the bottom; the notice withdraws after 6s, pauses on hover, focus, busy or a hidden tab, and stays until dismissed after a failed undo. Enters with a 4px rise over the moderate tier.",
+      "properties": [
+        {
+          "name": "Message",
+          "type": "TEXT",
+          "default": "Moved 3 items to Trash",
+          "id": "9:20"
+        }
+      ]
+    },
+    {
+      "name": "Confirm dialog",
+      "page": "Menus & overlays",
+      "type": "COMPONENT",
+      "nodeId": "9:92",
+      "key": "6df7db0bccc250f6898556c0471077f34e7f41d3",
+      "description": "ConfirmDialog — src/components/ui/confirm-dialog.tsx. .ui-popover with no padding, max-width 28rem, radius-panel. Header (a div, not a header element, so the library top bar stays the only banner landmark): title (text-xl semibold) + description (text-sm relaxed, text-secondary), 40px close IconButton; 1px border-control divider. Body: optional content, error (text-sm text-danger, role=alert), then right-aligned Cancel (Button secondary) and confirm (Button danger). Initial focus on Cancel. While busy the confirm label becomes the pending label, both actions are disabled at --opacity-disabled, and pointer dismissal is off. Opens on the slow tier: fade + scale(0.97 → 1) over a blurred .ui-backdrop.",
+      "properties": [
+        {
+          "name": "Title",
+          "type": "TEXT",
+          "default": "Move to Trash?",
+          "id": "9:21"
+        },
+        {
+          "name": "Description",
+          "type": "TEXT",
+          "default": "3 items will move to Trash. You can restore them from Trash until you empty it.",
+          "id": "9:22"
+        }
+      ]
+    },
+    {
+      "name": "Sidebar nav item",
+      "page": "Navigation",
+      "type": "COMPONENT_SET",
+      "nodeId": "10:60",
+      "key": "d7e6fd64a0d8fe64b7c0f421789a48334d129c7e",
+      "description": "Library sidebar row — ShellNavItem / ShellNavLink in src/app/library-shell.tsx. Desktop 36px rows (40px+ on touch), text-sm, text-secondary; 40px icon column with an 18px glyph, 8px gap, 12px end padding; 11px tabular count (hidden on row hover while the row menu shows). Hover bg-raised. Active (aria-current=&quot;page&quot;) = .ui-selected: bg-active + 1px inset top highlight, font-medium, and text-primary for the label, icon AND count (classes merged with cn so the active color wins; keeps 4.5:1 on bg-active). Collapsed rail keeps only the 40px icon column and shows the label in a Tooltip to the right — never a native title. Pill radius with superellipse(1.5); press scale(0.98). Focus: 1px border-focus outline at offset −1px.",
+      "properties": [
+        {
+          "name": "Label",
+          "type": "TEXT",
+          "default": "All items",
+          "id": "10:0"
+        },
+        {
+          "name": "Icon",
+          "type": "INSTANCE_SWAP",
+          "default": "4:24",
+          "id": "10:9"
+        },
+        {
+          "name": "Show count",
+          "type": "BOOLEAN",
+          "default": true,
+          "id": "10:18"
+        },
+        {
+          "name": "Count",
+          "type": "TEXT",
+          "default": "20",
+          "id": "10:27"
+        },
+        {
+          "name": "Layout",
+          "type": "VARIANT",
+          "default": "Expanded",
+          "options": [
+            "Expanded",
+            "Collapsed"
+          ]
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Default",
+          "options": [
+            "Default",
+            "Hover",
+            "Active",
+            "Focus"
+          ]
+        }
+      ],
+      "variantCount": 8
+    },
+    {
+      "name": "Sidebar section header",
+      "page": "Navigation",
+      "type": "COMPONENT_SET",
+      "nodeId": "10:75",
+      "key": "574f572a34874aac59d92e7cf7ccbba7a811c9f7",
+      "description": "Collapsible Collections / Tags section toggle ([data-sidebar-section-toggle], CollapsibleSection in library-shell.tsx): 36px, text-primary medium label, chevron rotates when the section closes. In the collapsed rail it shows its label in a Tooltip. Sections are spaced 12px apart on desktop; open state persists per section in localStorage.",
+      "properties": [
+        {
+          "name": "Label",
+          "type": "TEXT",
+          "default": "Collections",
+          "id": "10:36"
+        },
+        {
+          "name": "Icon",
+          "type": "INSTANCE_SWAP",
+          "default": "4:49",
+          "id": "10:39"
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Open",
+          "options": [
+            "Open",
+            "Closed"
+          ]
+        }
+      ],
+      "variantCount": 2
+    },
+    {
+      "name": "Type badge",
+      "page": "Library",
+      "type": "COMPONENT_SET",
+      "nodeId": "11:47",
+      "key": "2d0ec1c582d259a20b5d48c1f2b78e59367e1f7f",
+      "description": "ItemTypeBadge (card variant): one colored identity glyph on the .library-card-media-chrome surface, bottom-end of the preview at 14px inside the media. 32px high, min 32px wide, 16px glyph. Colors use item/* — darker in light mode, the brighter item/on-media/* in dark mode. Only image galleries add text (the count, before the glyph). role=&quot;img&quot; with an aria-label naming the type; color is never the only cue.",
+      "properties": [
+        {
+          "name": "Type",
+          "type": "VARIANT",
+          "default": "PDF",
+          "options": [
+            "PDF",
+            "TXT",
+            "Markdown",
+            "Note",
+            "Image",
+            "Images",
+            "Link",
+            "Video"
+          ]
+        }
+      ],
+      "variantCount": 8
+    },
+    {
+      "name": "Metadata pill",
+      "page": "Library",
+      "type": "COMPONENT_SET",
+      "nodeId": "11:68",
+      "key": "6113089d7311249ddb70235d84ee1c1036da6344",
+      "description": ".library-card-metadata-pill (LibraryCardMetadata). Collection pill sits left, tag-count pill right; each is its own button. 32px, 8px horizontal padding, 6px icon gap, bg-raised, text-xs text-secondary, pill radius with superellipse(1.5). Hover bg-active + text-primary; press scale(0.96). Pill edges sit 16px from the card edge so the folder glyph aligns with the 24px content inset. Folder and tag-preview tooltips open after 100ms.",
+      "properties": [
+        {
+          "name": "Collection name",
+          "type": "TEXT",
+          "default": "Weekend projects",
+          "id": "11:0"
+        },
+        {
+          "name": "Tag count",
+          "type": "TEXT",
+          "default": "3 tags",
+          "id": "13:28"
+        },
+        {
+          "name": "Kind",
+          "type": "VARIANT",
+          "default": "Collection",
+          "options": [
+            "Collection",
+            "Tags"
+          ]
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Default",
+          "options": [
+            "Default",
+            "Hover"
+          ]
+        }
+      ],
+      "variantCount": 4
+    },
+    {
+      "name": "Selection control",
+      "page": "Library",
+      "type": "COMPONENT_SET",
+      "nodeId": "11:76",
+      "key": "4b7b7c449ba3507561757145cc9f1830611c8c12",
+      "description": "LibrarySelectionControl: 32px media-chrome checkbox at the card’s top-start corner (center 38px from the card edges, 44px hit target). Appears on hover, keyboard focus, or while a selection is active. State=Selected uses action-primary with text-on-action.",
+      "properties": [
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Default",
+          "options": [
+            "Default",
+            "Selected"
+          ]
+        }
+      ],
+      "variantCount": 2
+    },
+    {
+      "name": "Card note",
+      "page": "Library",
+      "type": "COMPONENT",
+      "nodeId": "11:77",
+      "key": "49a05095e08577efbf78ca2e7b7f6e57e9c7cc17",
+      "description": "CardNote: personal note or image caption. Note glyph (plain text) or MD glyph (Markdown) in item-note color, then one truncated 13px line in text-primary. 24px row with an expanded hit area, 8px after the source row. Only render when there is content; it opens the Keepall item.",
+      "properties": [
+        {
+          "name": "Note",
+          "type": "TEXT",
+          "default": "Try the quiet corner next to the tall window.",
+          "id": "11:5"
+        },
+        {
+          "name": "Glyph",
+          "type": "INSTANCE_SWAP",
+          "default": "4:115",
+          "id": "11:6"
+        }
+      ]
+    },
+    {
+      "name": "Card source",
+      "page": "Library",
+      "type": "COMPONENT",
+      "nodeId": "11:83",
+      "key": "4dbad6470805c0362a8fcbf0efcf589547462a1d",
+      "description": "CardSource: external source host for links and images. 11px favicon centered in a 16px slot, host in 11px / 16px text-card-meta, always followed by the external-arrow glyph. Local filenames use the same text without the arrow.",
+      "properties": [
+        {
+          "name": "Host",
+          "type": "TEXT",
+          "default": "sunday-studio.example",
+          "id": "11:7"
+        }
+      ]
+    },
+    {
+      "name": "Library card",
+      "page": "Library",
+      "type": "COMPONENT_SET",
+      "nodeId": "13:170",
+      "key": "918ace74bfec2b28d396a6857219a743ede91c86",
+      "description": "Grid card (.library-card). bg-card, 64px squircle outer curve with an 8px inset; the media keeps the concentric 56px curve, a 1px border-media inner outline and native proportions (PDF covers: intrinsic ratio, never fixed). Footer: 16px side padding (content at 24px), 10px top, 12px bottom, 6px row gap; title 16px medium/22px, one line (two for link cards without an OG image); Card source (11px), Card note (13px). Collection pill left, tag pill right, 16px from the card edge; 2px extra outer bottom padding. Corner controls (selection top-start, actions top-end) are 32px media-chrome surfaces 14px inside the media, centres 38px from the card edges; they appear on hover/focus or during selection. Type badge bottom-end. Selected: bg-selected and an action-primary checkbox. Masonry columns ≥ 320px with 20px gaps.",
+      "properties": [
+        {
+          "name": "Title",
+          "type": "TEXT",
+          "default": "Afternoon light",
+          "id": "13:0"
+        },
+        {
+          "name": "Show source",
+          "type": "BOOLEAN",
+          "default": true,
+          "id": "13:4"
+        },
+        {
+          "name": "Show note",
+          "type": "BOOLEAN",
+          "default": true,
+          "id": "13:8"
+        },
+        {
+          "name": "Show metadata",
+          "type": "BOOLEAN",
+          "default": true,
+          "id": "13:12"
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Default",
+          "options": [
+            "Default",
+            "Hover",
+            "Selected"
+          ]
+        }
+      ],
+      "variantCount": 3
+    },
+    {
+      "name": "List row",
+      "page": "Library",
+      "type": "COMPONENT_SET",
+      "nodeId": "13:268",
+      "key": "104e95bf5dcafa13a1d84ae8e4ab4750bcaa8154",
+      "description": "List view row (.library-list-row). Min 64px, 8px inset, 28px control-squircle radius; 48px media slot with a 20px radius (outer − inset). Title 14px medium; secondary line 3px below: 20px type glyph in a 24px slot, then source, caption, note excerpt or distinct filename (12px / 18px, text-secondary). Collections and tag count on the right (LibraryCardMetadata); narrow rows show only glyphs. Hover/focus bg-control; selected bg-selected. Selection (16px from the start, over the thumbnail) and actions (12px from the end) are 32px pills that appear on hover/focus. The title link covers the whole row. Rows sit 4px apart in up to three 440px-min columns.",
+      "properties": [
+        {
+          "name": "Title",
+          "type": "TEXT",
+          "default": "Afternoon light",
+          "id": "13:16"
+        },
+        {
+          "name": "Summary",
+          "type": "TEXT",
+          "default": "sunday-studio.example",
+          "id": "13:20"
+        },
+        {
+          "name": "Show metadata",
+          "type": "BOOLEAN",
+          "default": true,
+          "id": "13:24"
+        },
+        {
+          "name": "State",
+          "type": "VARIANT",
+          "default": "Default",
+          "options": [
+            "Default",
+            "Hover",
+            "Selected"
+          ]
+        }
+      ],
+      "variantCount": 3
+    }
+  ],
+  "icons": [
+    {
+      "name": "Icon/Add",
+      "nodeId": "4:18",
+      "key": "0dbe9971469ae8c1fc55e006e3dd56432dda5cd1"
+    },
+    {
+      "name": "Icon/Library",
+      "nodeId": "4:24",
+      "key": "9133ae4fb12723cc473121c6f5bb39579f2cc0a9"
+    },
+    {
+      "name": "Icon/Chevron down",
+      "nodeId": "4:29",
+      "key": "94cc5b75665112da181e4d3900037fa339e28f65"
+    },
+    {
+      "name": "Icon/Close",
+      "nodeId": "4:34",
+      "key": "c560ae0896f7bf1e30dab42a09410470875fca6a"
+    },
+    {
+      "name": "Icon/Backup",
+      "nodeId": "4:44",
+      "key": "d49844eefdad87d8a675d41db2b1278eedd0dd45"
+    },
+    {
+      "name": "Icon/Collection",
+      "nodeId": "4:49",
+      "key": "2c094beba7cc6836215de3ab6b50758f4a7484b5"
+    },
+    {
+      "name": "Icon/Grid",
+      "nodeId": "4:57",
+      "key": "4f7e6124b14dd838e0c602ddab0e0fdd8978faa9"
+    },
+    {
+      "name": "Icon/Filter",
+      "nodeId": "4:62",
+      "key": "59deaec15a1f8899b62eccf8978782b96975a7be"
+    },
+    {
+      "name": "Icon/Image",
+      "nodeId": "4:69",
+      "key": "bca4fedaec3a98d55bb9697a21e5f808d5601283"
+    },
+    {
+      "name": "Icon/Images",
+      "nodeId": "4:77",
+      "key": "45bc89c88827ac94a0819c56fbea30c0c2202601"
+    },
+    {
+      "name": "Icon/Inbox",
+      "nodeId": "4:83",
+      "key": "6f09422613ad76b6210f25fad1bb5259b50bb08a"
+    },
+    {
+      "name": "Icon/Layers",
+      "nodeId": "4:90",
+      "key": "cc753303ebf8cab3a99eaeacff5d10df7539a1ce"
+    },
+    {
+      "name": "Icon/Link",
+      "nodeId": "4:96",
+      "key": "383b86b11725ea7471463eaa31d6aae1a40d7bf0"
+    },
+    {
+      "name": "Icon/List",
+      "nodeId": "4:103",
+      "key": "b11a8a4e99719ca171bd7b059056434031073b17"
+    },
+    {
+      "name": "Icon/More",
+      "nodeId": "4:108",
+      "key": "ac0cfc612098993a2a53b5b7ab58b71632f80b13"
+    },
+    {
+      "name": "Icon/Note",
+      "nodeId": "4:115",
+      "key": "fd9ea595220ead52301ce7a320ef34b2a25750e1"
+    },
+    {
+      "name": "Icon/Search",
+      "nodeId": "4:121",
+      "key": "c87d724e4ffeebbd3afb0a63d98ac679183ac325"
+    },
+    {
+      "name": "Icon/Panel",
+      "nodeId": "4:130",
+      "key": "c0aa08750fcff5e6b4d5436a5af6b0ba9384a83d"
+    },
+    {
+      "name": "Icon/PDF",
+      "nodeId": "4:136",
+      "key": "d2093f2612e01a2881878b4c49ee2b0f7973411c"
+    },
+    {
+      "name": "Icon/Sort",
+      "nodeId": "4:145",
+      "key": "5090cc65e81c8006a7340cbc0f4d852916007539"
+    },
+    {
+      "name": "Icon/Relevance",
+      "nodeId": "4:152",
+      "key": "bcd00f31699425bfcd507a3c74ffa71754e606a0"
+    },
+    {
+      "name": "Icon/Moon",
+      "nodeId": "4:157",
+      "key": "d599bf83228dc46789c871657aeb648f0e0f530a"
+    },
+    {
+      "name": "Icon/Sun",
+      "nodeId": "4:163",
+      "key": "8d4331e5a830736c6b4e423148f00be7cb34d46f"
+    },
+    {
+      "name": "Icon/Tag",
+      "nodeId": "4:170",
+      "key": "d60c370a9b39e26b719d4e9c8db8bc72327282cd"
+    },
+    {
+      "name": "Icon/Edit",
+      "nodeId": "4:177",
+      "key": "8e2268e5838af281771f6c2b882dc4b23bbca10f"
+    },
+    {
+      "name": "Icon/Delete",
+      "nodeId": "4:185",
+      "key": "b9ab58204c0e6d230c18a6f0c44e1c31c4a1142c"
+    },
+    {
+      "name": "Icon/Pin",
+      "nodeId": "4:191",
+      "key": "1b8c14fdaca96f687c9fdb3509ac9febf6170d33"
+    },
+    {
+      "name": "Icon/Arrow left",
+      "nodeId": "4:196",
+      "key": "995c6db101e23527581ab98168070cb27f070f44"
+    },
+    {
+      "name": "Icon/Arrow right",
+      "nodeId": "4:201",
+      "key": "29bb8273e3fdc36e6b00f314505d5f508531f74e"
+    },
+    {
+      "name": "Icon/Video",
+      "nodeId": "4:208",
+      "key": "eb1d79952a5c3a2628f6942d6a763d3ba8570152"
+    },
+    {
+      "name": "Icon/Play",
+      "nodeId": "4:213",
+      "key": "13bcaff8c192c2202684bb6bc165f71d15313b1e"
+    },
+    {
+      "name": "Icon/Eye",
+      "nodeId": "4:220",
+      "key": "8aaf7055583408b17df25dba57996962ce52b163"
+    },
+    {
+      "name": "Icon/Selection checked",
+      "nodeId": "4:226",
+      "key": "579d9f5be33b3b51513ece8ab3751a1e2936430d"
+    },
+    {
+      "name": "Icon/Selection empty",
+      "nodeId": "4:231",
+      "key": "ba6378cd70e30e586c314839fff5fbd5a43d8b86"
+    },
+    {
+      "name": "Icon/Check",
+      "nodeId": "4:236",
+      "key": "932ccf95e58edf7c582e9d9d23ebf7b6b9d5a7cc"
+    },
+    {
+      "name": "Icon/Settings",
+      "nodeId": "4:242",
+      "key": "32139aad507f035a2f617ab17c7b4585ebdcc3bf"
+    },
+    {
+      "name": "Icon/Help",
+      "nodeId": "4:249",
+      "key": "cc128fb5be13551aa9be4fb901d052c90403a0c4"
+    },
+    {
+      "name": "Icon/Undo",
+      "nodeId": "4:255",
+      "key": "5cd8df305ae2f407bd91a6082c4db6f581bb5b13"
+    },
+    {
+      "name": "Icon/External link",
+      "nodeId": "4:260",
+      "key": "4c810709ae3aebc0bd55007d2acc08220dd98665"
+    },
+    {
+      "name": "Icon/Columns",
+      "nodeId": "4:267",
+      "key": "06cc0339e11f3437288764600f99e86b3072f063"
+    },
+    {
+      "name": "Icon/TXT",
+      "nodeId": "4:273",
+      "key": "8acd1e07ed69657fa721d2f82a93612f8d72ec59"
+    },
+    {
+      "name": "Icon/Markdown",
+      "nodeId": "4:279",
+      "key": "1db38d4383a6042f5add4c3659c59f5f795c6ef2"
+    },
+    {
+      "name": "Icon/Copy",
+      "nodeId": "4:285",
+      "key": "be0068b699d52880fd491f1a651612aee90228bb"
+    },
+    {
+      "name": "Icon/Download",
+      "nodeId": "4:291",
+      "key": "6d199aad9e18542dabd65b98639c2c2f1ad0adad"
+    },
+    {
+      "name": "Icon/Upload",
+      "nodeId": "4:297",
+      "key": "f69a6cad62ad5d78bcd04fb1c4297896e9a9007b"
+    },
+    {
+      "name": "Icon/Refresh",
+      "nodeId": "4:302",
+      "key": "f54d96bd4a18fbb458bc162511e001df05ce399c"
+    },
+    {
+      "name": "Icon/Clock",
+      "nodeId": "4:308",
+      "key": "a0dd33d9fcc5bf2d9ed740e92c98c7d0dcec883e"
+    },
+    {
+      "name": "Icon/Globe",
+      "nodeId": "4:316",
+      "key": "eb12e224f54eba35584c0b00748bb63e9af11877"
+    }
+  ],
+  "variables": [
+    {
+      "collection": "Primitives",
+      "modes": [
+        "Value"
+      ],
+      "variables": [
+        {
+          "name": "neutral/25",
+          "codeSyntax": "var(--neutral-25)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.9922,
+              0.9922,
+              0.9882,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/50",
+          "codeSyntax": "var(--neutral-50)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.9608,
+              0.9608,
+              0.9529,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/100",
+          "codeSyntax": "var(--neutral-100)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.9255,
+              0.9255,
+              0.9137,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/150",
+          "codeSyntax": "var(--neutral-150)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.902,
+              0.902,
+              0.8902,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/200",
+          "codeSyntax": "var(--neutral-200)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.8471,
+              0.851,
+              0.8353,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/400",
+          "codeSyntax": "var(--neutral-400)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.6667,
+              0.6824,
+              0.7098,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/500",
+          "codeSyntax": "var(--neutral-500)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.3843,
+              0.3961,
+              0.4196,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/700",
+          "codeSyntax": "var(--neutral-700)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.2118,
+              0.2196,
+              0.2353,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/750",
+          "codeSyntax": "var(--neutral-750)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.1608,
+              0.1686,
+              0.1804,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/800",
+          "codeSyntax": "var(--neutral-800)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.1373,
+              0.1451,
+              0.149,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/850",
+          "codeSyntax": "var(--neutral-850)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.1412,
+              0.1412,
+              0.1412,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/875",
+          "codeSyntax": "var(--neutral-875)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.1059,
+              0.1098,
+              0.1137,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/900",
+          "codeSyntax": "var(--neutral-900)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.0941,
+              0.0941,
+              0.102,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/950",
+          "codeSyntax": "var(--neutral-950)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.0902,
+              0.0902,
+              0.0902,
+              1
+            ]
+          }
+        },
+        {
+          "name": "neutral/975",
+          "codeSyntax": "var(--neutral-975)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.0549,
+              0.0549,
+              0.0588,
+              1
+            ]
+          }
+        },
+        {
+          "name": "white",
+          "codeSyntax": "var(--white)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              1,
+              1,
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "name": "black",
+          "codeSyntax": "var(--color-black)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0,
+              0,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "name": "paper",
+          "codeSyntax": "var(--paper)",
+          "type": "COLOR",
+          "scopes": [],
+          "values": {
+            "Value": [
+              0.949,
+              0.949,
+              0.9412,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "collection": "Color",
+      "modes": [
+        "Light",
+        "Dark"
+      ],
+      "variables": [
+        {
+          "name": "bg/shell",
+          "codeSyntax": "var(--color-bg-shell)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/100"
+            },
+            "Dark": {
+              "alias": "neutral/950"
+            }
+          },
+          "description": "App shell behind the inset library panel (sidebar background)."
+        },
+        {
+          "name": "bg/canvas",
+          "codeSyntax": "var(--color-bg-canvas)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/50"
+            },
+            "Dark": {
+              "alias": "neutral/975"
+            }
+          },
+          "description": "Library panel and page canvas."
+        },
+        {
+          "name": "bg/surface",
+          "codeSyntax": "var(--color-bg-surface)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "white"
+            },
+            "Dark": {
+              "alias": "neutral/850"
+            }
+          },
+          "description": "Tooltips, toasts, select options and managed surfaces."
+        },
+        {
+          "name": "bg/card",
+          "codeSyntax": "var(--color-bg-card)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "white"
+            },
+            "Dark": {
+              "alias": "neutral/800"
+            }
+          },
+          "description": "Library grid cards."
+        },
+        {
+          "name": "bg/control",
+          "codeSyntax": "var(--color-bg-control)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/25"
+            },
+            "Dark": {
+              "alias": "neutral/875"
+            }
+          },
+          "description": "Resting fill for .ui-control, .ui-field and .ui-popover."
+        },
+        {
+          "name": "bg/reading",
+          "codeSyntax": "var(--color-bg-reading)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/50"
+            },
+            "Dark": {
+              "alias": "neutral/875"
+            }
+          }
+        },
+        {
+          "name": "bg/raised",
+          "codeSyntax": "var(--color-bg-raised)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/150"
+            },
+            "Dark": {
+              "alias": "neutral/750"
+            }
+          },
+          "description": "Hover fill for controls; metadata pills; segmented switch track."
+        },
+        {
+          "name": "bg/selected",
+          "codeSyntax": "var(--color-bg-selected)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0.9412,
+              0.9451,
+              0.9412,
+              1
+            ],
+            "Dark": [
+              0.1176,
+              0.1255,
+              0.1294,
+              1
+            ]
+          }
+        },
+        {
+          "name": "bg/active",
+          "codeSyntax": "var(--color-bg-active)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.051
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.122
+            ]
+          },
+          "description": "Selected nav row / segmented thumb (.ui-selected) and menu hover."
+        },
+        {
+          "name": "border/active",
+          "codeSyntax": "var(--color-border-active)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR",
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              1,
+              1,
+              1,
+              0.8
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.059
+            ]
+          },
+          "description": "Top inset highlight on .ui-selected (inset 0 1px 0)."
+        },
+        {
+          "name": "bg/scrim",
+          "codeSyntax": "var(--color-bg-scrim)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.149
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.4
+            ]
+          }
+        },
+        {
+          "name": "bg/overlay",
+          "codeSyntax": "var(--color-bg-overlay)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0.0353,
+              0.0353,
+              0.0431,
+              1
+            ],
+            "Dark": [
+              0.0353,
+              0.0353,
+              0.0431,
+              1
+            ]
+          }
+        },
+        {
+          "name": "bg/media",
+          "codeSyntax": "var(--color-bg-media)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0.0941,
+              0.0941,
+              0.102,
+              1
+            ],
+            "Dark": [
+              0.0941,
+              0.0941,
+              0.102,
+              1
+            ]
+          }
+        },
+        {
+          "name": "bg/image-viewer",
+          "codeSyntax": "var(--color-bg-image-viewer)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/150"
+            },
+            "Dark": {
+              "alias": "neutral/900"
+            }
+          }
+        },
+        {
+          "name": "text/primary",
+          "codeSyntax": "var(--color-text-primary)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/800"
+            },
+            "Dark": {
+              "alias": "paper"
+            }
+          }
+        },
+        {
+          "name": "text/secondary",
+          "codeSyntax": "var(--color-text-secondary)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/500"
+            },
+            "Dark": {
+              "alias": "neutral/400"
+            }
+          }
+        },
+        {
+          "name": "text/card-meta",
+          "codeSyntax": "var(--color-text-card-meta)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.3843,
+              0.4078,
+              0.4431,
+              1
+            ],
+            "Dark": [
+              0.5765,
+              0.6,
+              0.6353,
+              1
+            ]
+          }
+        },
+        {
+          "name": "text/on-media",
+          "codeSyntax": "var(--color-text-on-media)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.949,
+              0.949,
+              0.9412,
+              1
+            ],
+            "Dark": [
+              0.949,
+              0.949,
+              0.9412,
+              1
+            ]
+          }
+        },
+        {
+          "name": "item/on-media/pdf",
+          "codeSyntax": "var(--color-item-pdf-on-media)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              1,
+              0.4392,
+              0.4392,
+              1
+            ],
+            "Dark": [
+              1,
+              0.4392,
+              0.4392,
+              1
+            ]
+          }
+        },
+        {
+          "name": "item/on-media/text",
+          "codeSyntax": "var(--color-item-text-on-media)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.4392,
+              0.6784,
+              0.9843,
+              1
+            ],
+            "Dark": [
+              0.4392,
+              0.6784,
+              0.9843,
+              1
+            ]
+          }
+        },
+        {
+          "name": "item/on-media/markdown",
+          "codeSyntax": "var(--color-item-markdown-on-media)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.7882,
+              0.6118,
+              0.9882,
+              1
+            ],
+            "Dark": [
+              0.7882,
+              0.6118,
+              0.9882,
+              1
+            ]
+          }
+        },
+        {
+          "name": "item/on-media/note",
+          "codeSyntax": "var(--color-item-note-on-media)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              1,
+              0.6549,
+              0.2745,
+              1
+            ],
+            "Dark": [
+              1,
+              0.6549,
+              0.2745,
+              1
+            ]
+          }
+        },
+        {
+          "name": "item/on-media/image",
+          "codeSyntax": "var(--color-item-image-on-media)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.7098,
+              1,
+              0.8824,
+              1
+            ],
+            "Dark": [
+              0.7098,
+              1,
+              0.8824,
+              1
+            ]
+          }
+        },
+        {
+          "name": "item/on-media/link",
+          "codeSyntax": "var(--color-item-link-on-media)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.8196,
+              0.9373,
+              1,
+              1
+            ],
+            "Dark": [
+              0.8196,
+              0.9373,
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "name": "item/on-media/video",
+          "codeSyntax": "var(--color-item-video-on-media)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.959,
+              0.5341,
+              0.7449,
+              1
+            ],
+            "Dark": [
+              0.959,
+              0.5341,
+              0.7449,
+              1
+            ]
+          }
+        },
+        {
+          "name": "item/pdf",
+          "codeSyntax": "var(--color-item-pdf)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.8023,
+              0.0824,
+              0.1497,
+              1
+            ],
+            "Dark": {
+              "alias": "item/on-media/pdf"
+            }
+          }
+        },
+        {
+          "name": "item/text",
+          "codeSyntax": "var(--color-item-text)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0.366,
+              0.7418,
+              1
+            ],
+            "Dark": {
+              "alias": "item/on-media/text"
+            }
+          }
+        },
+        {
+          "name": "item/markdown",
+          "codeSyntax": "var(--color-item-markdown)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.4802,
+              0.2563,
+              0.6861,
+              1
+            ],
+            "Dark": {
+              "alias": "item/on-media/markdown"
+            }
+          }
+        },
+        {
+          "name": "item/note",
+          "codeSyntax": "var(--color-item-note)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.6245,
+              0.342,
+              0,
+              1
+            ],
+            "Dark": {
+              "alias": "item/on-media/note"
+            }
+          }
+        },
+        {
+          "name": "item/image",
+          "codeSyntax": "var(--color-item-image)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0.4466,
+              0.2309,
+              1
+            ],
+            "Dark": {
+              "alias": "item/on-media/image"
+            }
+          }
+        },
+        {
+          "name": "item/link",
+          "codeSyntax": "var(--color-item-link)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0.412,
+              0.6038,
+              1
+            ],
+            "Dark": {
+              "alias": "item/on-media/link"
+            }
+          }
+        },
+        {
+          "name": "item/video",
+          "codeSyntax": "var(--color-item-video)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.6829,
+              0.1296,
+              0.459,
+              1
+            ],
+            "Dark": {
+              "alias": "item/on-media/video"
+            }
+          }
+        },
+        {
+          "name": "border/subtle",
+          "codeSyntax": "var(--color-border-subtle)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR",
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/200"
+            },
+            "Dark": {
+              "alias": "neutral/700"
+            }
+          }
+        },
+        {
+          "name": "border/edge",
+          "codeSyntax": "var(--color-border-edge)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR",
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.141
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.141
+            ]
+          }
+        },
+        {
+          "name": "border/media",
+          "codeSyntax": "var(--color-border-media)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR",
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.08
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.08
+            ]
+          }
+        },
+        {
+          "name": "border/control",
+          "codeSyntax": "var(--color-border-control)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR",
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.078
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.078
+            ]
+          }
+        },
+        {
+          "name": "border/focus",
+          "codeSyntax": "var(--color-border-focus)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR",
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.4109,
+              0.4109,
+              0.4109,
+              1
+            ],
+            "Dark": [
+              0.5021,
+              0.5021,
+              0.5021,
+              1
+            ]
+          },
+          "description": "Focus-visible outline (1px, offset 2px)."
+        },
+        {
+          "name": "border/selected",
+          "codeSyntax": "var(--color-border-selected)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR",
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.3333,
+              0.3686,
+              0.4118,
+              1
+            ],
+            "Dark": [
+              0.7686,
+              0.7961,
+              0.8275,
+              1
+            ]
+          }
+        },
+        {
+          "name": "action/primary",
+          "codeSyntax": "var(--color-action-primary)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/800"
+            },
+            "Dark": {
+              "alias": "white"
+            }
+          },
+          "description": "Primary action fill (.ui-primary). Dark theme is white — never a mid-grey."
+        },
+        {
+          "name": "action/primary-hover",
+          "codeSyntax": "var(--color-action-primary-hover)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "neutral/700"
+            },
+            "Dark": {
+              "alias": "neutral/150"
+            }
+          },
+          "description": "Primary hover: soft grey plus shadow lift."
+        },
+        {
+          "name": "text/on-action",
+          "codeSyntax": "var(--color-text-on-action)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": {
+              "alias": "white"
+            },
+            "Dark": {
+              "alias": "neutral/900"
+            }
+          }
+        },
+        {
+          "name": "text/danger",
+          "codeSyntax": "var(--color-text-danger)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.7059,
+              0.1373,
+              0.0941,
+              1
+            ],
+            "Dark": [
+              0.9882,
+              0.6471,
+              0.6471,
+              1
+            ]
+          }
+        },
+        {
+          "name": "bg/danger",
+          "codeSyntax": "var(--color-bg-danger)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              1,
+              0.9451,
+              0.9373,
+              1
+            ],
+            "Dark": [
+              0.2235,
+              0.1098,
+              0.1255,
+              1
+            ]
+          }
+        },
+        {
+          "name": "border/danger",
+          "codeSyntax": "var(--color-border-danger)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR",
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.9882,
+              0.6471,
+              0.6471,
+              1
+            ],
+            "Dark": [
+              0.6431,
+              0.2902,
+              0.3216,
+              1
+            ]
+          }
+        },
+        {
+          "name": "text/warning",
+          "codeSyntax": "var(--color-text-warning)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.4706,
+              0.2078,
+              0.0588,
+              1
+            ],
+            "Dark": [
+              0.9882,
+              0.8275,
+              0.5451,
+              1
+            ]
+          }
+        },
+        {
+          "name": "bg/warning",
+          "codeSyntax": "var(--color-bg-warning)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              1,
+              0.9843,
+              0.9216,
+              1
+            ],
+            "Dark": [
+              0.2,
+              0.149,
+              0.098,
+              1
+            ]
+          }
+        },
+        {
+          "name": "border/warning",
+          "codeSyntax": "var(--color-border-warning)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR",
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.9922,
+              0.902,
+              0.5412,
+              1
+            ],
+            "Dark": [
+              0.5216,
+              0.3922,
+              0.2078,
+              1
+            ]
+          }
+        },
+        {
+          "name": "bg/search-match",
+          "codeSyntax": "var(--color-bg-search-match)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              1,
+              0.9294,
+              0.6667,
+              1
+            ],
+            "Dark": [
+              0.4392,
+              0.3137,
+              0.0941,
+              1
+            ]
+          }
+        },
+        {
+          "name": "text/search-match",
+          "codeSyntax": "var(--color-text-search-match)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.1882,
+              0.1373,
+              0.0431,
+              1
+            ],
+            "Dark": [
+              1,
+              0.9569,
+              0.7882,
+              1
+            ]
+          }
+        },
+        {
+          "name": "shadow/menu",
+          "codeSyntax": "var(--shadow-menu)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.059
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.251
+            ]
+          }
+        },
+        {
+          "name": "shadow/action-primary",
+          "codeSyntax": "var(--shadow-action-primary)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.1
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.32
+            ]
+          }
+        },
+        {
+          "name": "shadow/action-primary-hover",
+          "codeSyntax": "var(--shadow-action-primary-hover)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.16
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.5
+            ]
+          }
+        },
+        {
+          "name": "shadow/panel",
+          "codeSyntax": "var(--shadow-panel)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.071
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.071
+            ]
+          }
+        },
+        {
+          "name": "shadow/image-1",
+          "codeSyntax": "var(--shadow-image)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.12
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.24
+            ]
+          }
+        },
+        {
+          "name": "shadow/image-2",
+          "codeSyntax": "var(--shadow-image)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.12
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.28
+            ]
+          }
+        },
+        {
+          "name": "shadow/image-3",
+          "codeSyntax": "var(--shadow-image)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.18
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.4
+            ]
+          }
+        },
+        {
+          "name": "bg/media-chrome",
+          "codeSyntax": "var(--color-bg-media-chrome)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              1,
+              1,
+              1,
+              0.72
+            ],
+            "Dark": [
+              0.0353,
+              0.0353,
+              0.0431,
+              0.72
+            ]
+          },
+          "description": ".library-card-media-chrome: translucent surface for badges and card controls over media."
+        },
+        {
+          "name": "bg/media-chrome-hover",
+          "codeSyntax": "var(--color-bg-media-chrome-hover)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              1,
+              1,
+              1,
+              0.84
+            ],
+            "Dark": [
+              0.0353,
+              0.0353,
+              0.0431,
+              0.84
+            ]
+          },
+          "description": ".library-card-media-chrome: translucent surface for badges and card controls over media."
+        },
+        {
+          "name": "border/media-chrome",
+          "codeSyntax": "var(--color-border-media-chrome)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.14
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.14
+            ]
+          },
+          "description": ".library-card-media-chrome: translucent surface for badges and card controls over media."
+        },
+        {
+          "name": "shadow/card",
+          "codeSyntax": "var(--shadow-card)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.039
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.039
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "collection": "Radius",
+      "modes": [
+        "Value"
+      ],
+      "variables": [
+        {
+          "name": "radius/control-xs",
+          "codeSyntax": "var(--radius-control-xs)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 10
+          }
+        },
+        {
+          "name": "radius/control-sm",
+          "codeSyntax": "var(--radius-control-sm)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 12
+          }
+        },
+        {
+          "name": "radius/control-md",
+          "codeSyntax": "var(--radius-control-md)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 13
+          }
+        },
+        {
+          "name": "radius/control-lg",
+          "codeSyntax": "var(--radius-control-lg)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 14
+          }
+        },
+        {
+          "name": "radius/input",
+          "codeSyntax": "var(--radius-input)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 16
+          }
+        },
+        {
+          "name": "radius/panel",
+          "codeSyntax": "var(--radius-panel)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 20
+          }
+        },
+        {
+          "name": "radius/library-panel",
+          "codeSyntax": "var(--radius-library-panel)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 32
+          }
+        },
+        {
+          "name": "radius/card",
+          "codeSyntax": "var(--radius-card)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 64
+          }
+        },
+        {
+          "name": "radius/card-fallback",
+          "codeSyntax": "var(--radius-card)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 24
+          }
+        },
+        {
+          "name": "radius/full",
+          "codeSyntax": "999px",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 999
+          }
+        },
+        {
+          "name": "render/card",
+          "codeSyntax": "var(--radius-card)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 35
+          }
+        },
+        {
+          "name": "render/card-media",
+          "codeSyntax": "calc(var(--radius-card) - var(--spacing-card-inset))",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 30
+          }
+        },
+        {
+          "name": "render/library-panel",
+          "codeSyntax": "var(--radius-library-panel)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 17
+          }
+        },
+        {
+          "name": "render/panel",
+          "codeSyntax": "var(--radius-panel)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 11
+          }
+        },
+        {
+          "name": "render/menu-option",
+          "codeSyntax": "calc(var(--radius-panel) - 7px)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 7
+          }
+        },
+        {
+          "name": "render/media-chrome",
+          "codeSyntax": "var(--card-control-radius)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 7
+          }
+        },
+        {
+          "name": "render/control-28",
+          "codeSyntax": "999px",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 10
+          }
+        },
+        {
+          "name": "render/control-32",
+          "codeSyntax": "999px",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 12
+          }
+        },
+        {
+          "name": "render/control-36",
+          "codeSyntax": "999px",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 13
+          }
+        },
+        {
+          "name": "render/control-40",
+          "codeSyntax": "999px",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 15
+          }
+        },
+        {
+          "name": "render/control-44",
+          "codeSyntax": "999px",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 16
+          }
+        },
+        {
+          "name": "render/list-row",
+          "codeSyntax": "28px",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 21
+          }
+        },
+        {
+          "name": "render/list-media",
+          "codeSyntax": "20px",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 15
+          }
+        }
+      ]
+    },
+    {
+      "collection": "Spacing",
+      "modes": [
+        "Value"
+      ],
+      "variables": [
+        {
+          "name": "space/0",
+          "codeSyntax": "calc(var(--spacing) * 0)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 0
+          }
+        },
+        {
+          "name": "space/1",
+          "codeSyntax": "calc(var(--spacing) * 1)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 4
+          }
+        },
+        {
+          "name": "space/2",
+          "codeSyntax": "calc(var(--spacing) * 2)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 8
+          }
+        },
+        {
+          "name": "space/3",
+          "codeSyntax": "calc(var(--spacing) * 3)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 12
+          }
+        },
+        {
+          "name": "space/4",
+          "codeSyntax": "calc(var(--spacing) * 4)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 16
+          }
+        },
+        {
+          "name": "space/5",
+          "codeSyntax": "calc(var(--spacing) * 5)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 20
+          }
+        },
+        {
+          "name": "space/6",
+          "codeSyntax": "calc(var(--spacing) * 6)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 24
+          }
+        },
+        {
+          "name": "space/8",
+          "codeSyntax": "calc(var(--spacing) * 8)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 32
+          }
+        },
+        {
+          "name": "space/10",
+          "codeSyntax": "calc(var(--spacing) * 10)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 40
+          }
+        },
+        {
+          "name": "space/11",
+          "codeSyntax": "calc(var(--spacing) * 11)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 44
+          }
+        },
+        {
+          "name": "space/12",
+          "codeSyntax": "calc(var(--spacing) * 12)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 48
+          }
+        },
+        {
+          "name": "space/16",
+          "codeSyntax": "calc(var(--spacing) * 16)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 64
+          }
+        },
+        {
+          "name": "space/0_5",
+          "codeSyntax": "calc(var(--spacing) * 0.5)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 2
+          }
+        },
+        {
+          "name": "space/1_5",
+          "codeSyntax": "calc(var(--spacing) * 1.5)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 6
+          }
+        },
+        {
+          "name": "space/2_5",
+          "codeSyntax": "calc(var(--spacing) * 2.5)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 10
+          }
+        },
+        {
+          "name": "space/3_5",
+          "codeSyntax": "calc(var(--spacing) * 3.5)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 14
+          }
+        },
+        {
+          "name": "card/inset",
+          "codeSyntax": "var(--spacing-card-inset)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 8
+          }
+        },
+        {
+          "name": "card/control-inset",
+          "codeSyntax": "var(--card-control-inset)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 22
+          }
+        },
+        {
+          "name": "card/control-size",
+          "codeSyntax": "var(--card-control-size)",
+          "type": "FLOAT",
+          "scopes": [
+            "WIDTH_HEIGHT"
+          ],
+          "values": {
+            "Value": 32
+          }
+        },
+        {
+          "name": "card/control-hit-slop",
+          "codeSyntax": "var(--card-control-hit-slop)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 6
+          }
+        },
+        {
+          "name": "card/icon-size",
+          "codeSyntax": "var(--card-icon-size)",
+          "type": "FLOAT",
+          "scopes": [
+            "WIDTH_HEIGHT"
+          ],
+          "values": {
+            "Value": 16
+          }
+        },
+        {
+          "name": "card/icon-gap",
+          "codeSyntax": "var(--card-icon-gap)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 6
+          }
+        },
+        {
+          "name": "size/control-sm",
+          "codeSyntax": "calc(var(--spacing) * 8)",
+          "type": "FLOAT",
+          "scopes": [
+            "WIDTH_HEIGHT"
+          ],
+          "values": {
+            "Value": 32
+          }
+        },
+        {
+          "name": "size/control",
+          "codeSyntax": "calc(var(--spacing) * 10)",
+          "type": "FLOAT",
+          "scopes": [
+            "WIDTH_HEIGHT"
+          ],
+          "values": {
+            "Value": 40
+          }
+        },
+        {
+          "name": "size/control-lg",
+          "codeSyntax": "calc(var(--spacing) * 11)",
+          "type": "FLOAT",
+          "scopes": [
+            "WIDTH_HEIGHT"
+          ],
+          "values": {
+            "Value": 44
+          }
+        },
+        {
+          "name": "size/icon",
+          "codeSyntax": "calc(var(--spacing) * 4)",
+          "type": "FLOAT",
+          "scopes": [
+            "WIDTH_HEIGHT"
+          ],
+          "values": {
+            "Value": 16
+          }
+        },
+        {
+          "name": "size/icon-lg",
+          "codeSyntax": "calc(var(--spacing) * 5)",
+          "type": "FLOAT",
+          "scopes": [
+            "WIDTH_HEIGHT"
+          ],
+          "values": {
+            "Value": 20
+          }
+        },
+        {
+          "name": "card/content-inset",
+          "codeSyntax": "var(--card-content-inset)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 16
+          }
+        },
+        {
+          "name": "card/content-top",
+          "codeSyntax": "var(--card-content-top)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 10
+          }
+        },
+        {
+          "name": "card/content-bottom",
+          "codeSyntax": "var(--card-content-bottom)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 12
+          }
+        },
+        {
+          "name": "card/row-gap",
+          "codeSyntax": "var(--card-row-gap)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 6
+          }
+        },
+        {
+          "name": "card/note-gap",
+          "codeSyntax": "var(--card-note-gap)",
+          "type": "FLOAT",
+          "scopes": [
+            "GAP"
+          ],
+          "values": {
+            "Value": 8
+          }
+        }
+      ]
+    },
+    {
+      "collection": "Motion",
+      "modes": [
+        "Value"
+      ],
+      "variables": [
+        {
+          "name": "duration/fast-enter",
+          "codeSyntax": "var(--motion-fast-enter)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 80
+          }
+        },
+        {
+          "name": "duration/fast-exit",
+          "codeSyntax": "var(--motion-fast-exit)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 60
+          }
+        },
+        {
+          "name": "duration/moderate-enter",
+          "codeSyntax": "var(--motion-moderate-enter)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 160
+          }
+        },
+        {
+          "name": "duration/moderate-exit",
+          "codeSyntax": "var(--motion-moderate-exit)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 120
+          }
+        },
+        {
+          "name": "duration/slow-enter",
+          "codeSyntax": "var(--motion-slow-enter)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 240
+          }
+        },
+        {
+          "name": "duration/slow-exit",
+          "codeSyntax": "var(--motion-slow-exit)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 160
+          }
+        },
+        {
+          "name": "duration/quick",
+          "codeSyntax": "var(--motion-quick)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 150
+          }
+        },
+        {
+          "name": "duration/glide",
+          "codeSyntax": "var(--motion-glide)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 180
+          }
+        },
+        {
+          "name": "duration/flourish",
+          "codeSyntax": "var(--motion-flourish)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 260
+          }
+        },
+        {
+          "name": "delay/placeholder",
+          "codeSyntax": "var(--delay-placeholder)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 150
+          }
+        },
+        {
+          "name": "ease/standard",
+          "codeSyntax": "var(--ease-standard)",
+          "type": "STRING",
+          "scopes": [],
+          "values": {
+            "Value": "cubic-bezier(0.2, 0, 0, 1)"
+          }
+        }
+      ]
+    },
+    {
+      "collection": "Typography",
+      "modes": [
+        "Value"
+      ],
+      "variables": [
+        {
+          "name": "size/2xs",
+          "codeSyntax": "var(--text-2xs)",
+          "type": "FLOAT",
+          "scopes": [
+            "FONT_SIZE"
+          ],
+          "values": {
+            "Value": 10
+          }
+        },
+        {
+          "name": "size/meta",
+          "codeSyntax": "var(--text-meta)",
+          "type": "FLOAT",
+          "scopes": [
+            "FONT_SIZE"
+          ],
+          "values": {
+            "Value": 11
+          }
+        },
+        {
+          "name": "size/xs",
+          "codeSyntax": "var(--text-xs)",
+          "type": "FLOAT",
+          "scopes": [
+            "FONT_SIZE"
+          ],
+          "values": {
+            "Value": 12
+          }
+        },
+        {
+          "name": "size/compact",
+          "codeSyntax": "var(--text-compact)",
+          "type": "FLOAT",
+          "scopes": [
+            "FONT_SIZE"
+          ],
+          "values": {
+            "Value": 13
+          }
+        },
+        {
+          "name": "size/sm",
+          "codeSyntax": "var(--text-sm)",
+          "type": "FLOAT",
+          "scopes": [
+            "FONT_SIZE"
+          ],
+          "values": {
+            "Value": 14
+          }
+        },
+        {
+          "name": "size/md",
+          "codeSyntax": "var(--text-md)",
+          "type": "FLOAT",
+          "scopes": [
+            "FONT_SIZE"
+          ],
+          "values": {
+            "Value": 15
+          }
+        },
+        {
+          "name": "size/base",
+          "codeSyntax": "var(--text-base)",
+          "type": "FLOAT",
+          "scopes": [
+            "FONT_SIZE"
+          ],
+          "values": {
+            "Value": 16
+          }
+        },
+        {
+          "name": "size/xl",
+          "codeSyntax": "var(--text-xl)",
+          "type": "FLOAT",
+          "scopes": [
+            "FONT_SIZE"
+          ],
+          "values": {
+            "Value": 20
+          }
+        },
+        {
+          "name": "size/heading",
+          "codeSyntax": "var(--text-heading)",
+          "type": "FLOAT",
+          "scopes": [
+            "FONT_SIZE"
+          ],
+          "values": {
+            "Value": 22
+          }
+        },
+        {
+          "name": "size/display",
+          "codeSyntax": "var(--text-display)",
+          "type": "FLOAT",
+          "scopes": [
+            "FONT_SIZE"
+          ],
+          "values": {
+            "Value": 28
+          }
+        }
+      ]
+    },
+    {
+      "collection": "State",
+      "modes": [
+        "Value"
+      ],
+      "variables": [
+        {
+          "name": "opacity/disabled",
+          "codeSyntax": "var(--opacity-disabled)",
+          "type": "FLOAT",
+          "scopes": [
+            "OPACITY"
+          ],
+          "values": {
+            "Value": 60
+          }
+        },
+        {
+          "name": "focus/ring-width",
+          "codeSyntax": "var(--focus-ring-width)",
+          "type": "FLOAT",
+          "scopes": [
+            "STROKE_FLOAT"
+          ],
+          "values": {
+            "Value": 1
+          }
+        },
+        {
+          "name": "focus/offset",
+          "codeSyntax": "var(--focus-offset)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": 2
+          }
+        },
+        {
+          "name": "focus/offset-inset",
+          "codeSyntax": "var(--focus-offset-inset)",
+          "type": "FLOAT",
+          "scopes": [],
+          "values": {
+            "Value": -2
+          }
+        }
+      ]
+    }
+  ]
+}
