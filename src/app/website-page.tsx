@@ -16,7 +16,7 @@ export function WebsitePage({
   children: ReactNode;
 }) {
   return (
-    <div className="ka-page kh-page kw-page">
+    <div className="ka-page kh-page">
       <a href="#website-content" className="ka-skip">Skip to content</a>
       <MarketingHeader floating />
       <main id="website-content" className="ka-wrap kh-main">

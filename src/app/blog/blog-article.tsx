@@ -33,7 +33,7 @@ export function BlogArticle({
   children: ReactNode;
 }) {
   return (
-    <div className="ka-page kh-page kw-page kb-article-page">
+    <div className="ka-page kh-page kb-article-page">
       <a href="#website-content" className="ka-skip">Skip to content</a>
       <MarketingHeader floating />
       <main className="ka-wrap kh-main">

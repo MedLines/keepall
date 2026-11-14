@@ -54,7 +54,7 @@ type Props = {
 };
 
 const MENU_ITEM = menuItemClassName();
-const ORGANIZATION_ITEM = `${MENU_ITEM} organization-choice`;
+const ORGANIZATION_ITEM = MENU_ITEM;
 
 function SelectionMark({ checked }: { checked: boolean }) {
   const reduceMotion = useReducedMotion();

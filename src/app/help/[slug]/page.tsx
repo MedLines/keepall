@@ -27,7 +27,7 @@ export default async function GuidePage({ params }: Props) {
   return <>
     <div className="kh-guide-layout">
       <aside className="kh-sidebar">
-        <ScrollPanel className="kh-sidebar-scroll" viewportClassName="kh-sidebar-viewport scroll-fade">
+        <ScrollPanel viewportClassName="kh-sidebar-viewport scroll-fade">
           <Link href="/help" className="kh-back"><ArrowLeftIcon />All guides</Link>
           <nav aria-label="On this page">
             <p className="kh-eyebrow">In this guide</p>
@@ -46,7 +46,7 @@ export default async function GuidePage({ params }: Props) {
           {!!section.steps?.length && <ol className="kh-steps">{section.steps.map(step => <li key={step}>{step}</li>)}</ol>}
           {section.visual && <GuideFigure visual={section.visual} />}
           {section.note && <p className="kh-note">{section.note}</p>}
-          {section.images && <div className="kh-permissions">{section.images.map(image => <figure className="kh-figure" key={image.src}><Image src={image.src} width={image.width} height={image.height} alt={image.alt} sizes="(max-width: 800px) 90vw, 740px" /><figcaption>{image.caption}</figcaption></figure>)}</div>}
+          {section.images && <div>{section.images.map(image => <figure className="kh-figure" key={image.src}><Image src={image.src} width={image.width} height={image.height} alt={image.alt} sizes="(max-width: 800px) 90vw, 740px" /><figcaption>{image.caption}</figcaption></figure>)}</div>}
           {section.links && <div className="kh-section-links">{section.links.map(link => <Link key={link.href} href={link.href}>{link.label}<ArrowRightIcon /></Link>)}</div>}
         </section>)}</div>
         {guide.action && <Link href={guide.action.href} className="ka-button kh-article-action">{guide.action.label}<ArrowRightIcon /></Link>}

@@ -101,7 +101,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
             <div className="pointer-events-none absolute inset-x-4 bottom-4 flex justify-center">{progress}</div>
             </div>
             {review ? review.organization : null}
-            <footer className={`${review ? "library-review-footer" : "library-preview-footer"} shrink-0`}>
+            <footer className={review ? "shrink-0" : "library-preview-footer shrink-0"}>
               {review ? review.footer : <>
               <div className="library-preview-navigation flex items-center gap-2">
                 <Tooltip content="Previous item" describe={false}><button type="button" className={buttonClassName({ size: "none", className: "min-h-11 shrink-0 gap-2 ps-2 pe-3 text-sm disabled:opacity-50" })} aria-label="Previous item" disabled={index <= 0} onClick={() => onMove(-1)}><ArrowLeftIcon className="size-4 rtl:rotate-180" />Back</button></Tooltip>
@@ -120,7 +120,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-16">{review.emptyState}</div>
             <div className="pointer-events-none absolute inset-x-4 bottom-4 flex justify-center">{review.progress}</div>
             </div>
-            <footer className="library-review-footer shrink-0">{review.footer}</footer>
+            <footer className="shrink-0">{review.footer}</footer>
           </> : null}
         </Dialog.Popup>
       </Dialog.Viewport>

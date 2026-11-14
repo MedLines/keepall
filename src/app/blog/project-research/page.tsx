@@ -74,7 +74,7 @@ export default function ProjectResearchArticle() {
         <h2>Back up the research</h2>
         <p>After importing sources or making important edits, open Settings, choose Storage &amp; backups, then Export backup. Keep the downloaded file outside the app. It includes saved articles, documents and their edits, and your personal notes.</p>
         <p>Your library lives in this browser profile on this device. Before moving browsers or clearing site data, follow the <Link href="/help/storage-and-backups#download">backup guide</Link>. Importing a backup on another device moves a copy; it does not keep the two libraries in sync.</p>
-        <Link href="/" className="ka-button ka-button-light">Open your library</Link>
+        <Link href="/" className="ka-button">Open your library</Link>
       </section>
     </BlogArticle>
   );

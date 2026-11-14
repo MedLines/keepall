@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function SettingsPage() {
   return (
-    <ScrollPanel role="main" className="settings-page h-full min-h-0 bg-bg-shell" viewportClassName="p-2.5" contentClassName="!grid min-h-full">
+    <ScrollPanel role="main" className="h-full min-h-0 bg-bg-shell" viewportClassName="p-2.5" contentClassName="!grid min-h-full">
       <div className="library-panel min-h-full bg-bg-canvas px-4 py-4 pb-24 sm:px-7 sm:pt-6 md:pb-6">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4">
           <LogoContextMenu>
