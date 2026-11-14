@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ArrowRightIcon } from "../shell-icons";
 import { buttonClassName } from "@/components/ui/button";
 
+/** DRAFT: Full-width link row with a trailing arrow that leads to another settings section or page. */
 export function SettingsLink({ href, children, primary = false }: {
   href: string;
   children: ReactNode;

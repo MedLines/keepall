@@ -41,6 +41,7 @@ type Props<T extends string> = {
   variant?: "toolbar" | "field";
 };
 
+/** DRAFT: Single-choice dropdown (Select) for the top bar and forms; use it instead of a native select. */
 export function ShellTopMenu<T extends string>({
   ariaLabel,
   value,

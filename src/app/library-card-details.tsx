@@ -6,6 +6,7 @@ import { DocumentIcon } from "./document-icon";
 import { SearchHighlight } from "./search-highlight";
 import { ExternalLinkIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
 
+/** DRAFT: Pin glyph marking an item pinned in the current collection. */
 export function CardPin({ className = "flex size-4" }: { className?: string }) {
   return <span role="img" aria-label="Pinned in this collection" className={`library-card-pin ${className} shrink-0 items-center justify-center text-text-secondary`}><PinIcon className="size-4" /><span className="sr-only">Pinned in this collection</span></span>;
 }
@@ -19,6 +20,7 @@ function SourceFavicon({ url }: { url: string }) {
   ) : <LinkIcon className="size-[1em] shrink-0" />;
 }
 
+/** DRAFT: External source host for links and images, with favicon and external-arrow glyph; opens the website. */
 export function CardSource({ url, query = "", showFavicon = true }: { url: string; query?: string; showFavicon?: boolean }) {
   let host = url;
   try { host = new URL(url).hostname; } catch { /* Older imports can contain a raw source label. */ }
@@ -28,6 +30,7 @@ export function CardSource({ url, query = "", showFavicon = true }: { url: strin
   </a>;
 }
 
+/** DRAFT: One-line excerpt of an item's personal note or caption that opens the Keepall item; render only when there is content. */
 export function CardNote({ content, format, title, openHref, onOpen, readOnly = false, query = "", iconOnly = false }: {
   content: string; format?: "markdown"; title: string; openHref?: string; onOpen: () => void; readOnly?: boolean; query?: string; iconOnly?: boolean;
 }) {

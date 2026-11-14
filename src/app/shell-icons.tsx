@@ -37,10 +37,12 @@ type IconProps = { className?: string; fill?: "none" | "currentColor"; strokeWid
 
 export function ColumnsIcon(props: IconProps) { return <ShellIcon icon={LayoutThreeColumn} {...props} />; }
 
+/** All shell icons render a Hugeicons glyph at 18px, stroke 1.5, aria-hidden; size them with className. */
 function ShellIcon({ icon, className = "", fill = "none", strokeWidth = 1.5 }: IconProps & { icon: IconSvgElement }) {
   return <HugeiconsIcon icon={icon} size={18} strokeWidth={strokeWidth} fill={fill} className={`shrink-0 ${className}`} aria-hidden="true" />;
 }
 
+/** DRAFT: The animated Keepall mark; use it only for branding, never as an action icon. */
 export function LogoIcon({ className = "" }: IconProps) {
   return (
     <span className={`relative block shrink-0 ${className}`} aria-hidden="true">
