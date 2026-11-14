@@ -2,6 +2,14 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import sonarjs from "eslint-plugin-sonarjs";
+import { plugin as shadcn } from "@shadcn/lint";
+
+// Design-system gate. Theme and component discovery come from components.json
+// (src/app/globals.css, @/components/ui).
+const TOKENS = "src/app/styles/tokens.css";
+const CONVENTIONS = "docs/interface-conventions.md";
+// Button and IconButton take their size and shape from props; callers may only place them.
+const BUTTON_SIZE_DENY = ["spacing", "shape", "w-*", "h-*", "size-*", "min-w-*", "min-h-*", "max-w-*", "max-h-*"];
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -15,6 +23,43 @@ const eslintConfig = defineConfig([
       complexity: ["warn", { max: 20, variant: "classic" }],
       "sonarjs/cognitive-complexity": ["warn", 15],
     },
+  },
+  {
+    files: ["src/**/*.{js,jsx,ts,tsx}", ".storybook/**/*.{ts,tsx}"],
+    plugins: { shadcn },
+    rules: {
+      "shadcn/no-raw-colors": ["error", {
+        message: `"{{className}}" is a raw color. Use a semantic role from ${TOKENS}: {{suggestions|see the --color-bg-*, --color-text-*, --color-border-* roles}}. If none fits, propose a new role there first.`,
+      }],
+      "shadcn/no-arbitrary-values": ["error", {
+        message: `"{{className}}" is an arbitrary value. Use a theme value instead: {{suggestions|see the scales in ${TOKENS}}}. If none fits, add a named token to ${TOKENS} and explain it in ${CONVENTIONS}.`,
+      }],
+      "shadcn/no-inline-styles": ["error", {
+        message: `Inline style "{{property}}" bypasses the design system. Use utility classes backed by ${TOKENS}, or a class in src/app/styles/ (see ${CONVENTIONS}).`,
+      }],
+      "shadcn/no-unknown-classes": ["error", {
+        message: `"{{className}}" is not a Tailwind utility this theme generates. {{suggestions|Check the spelling, or use a utility backed by ${TOKENS}.}}`,
+      }],
+      "shadcn/no-restyle": ["warn", {
+        allow: ["layout"],
+        message: {
+          default: `Don't restyle <{{component}}> with "{{className}}". Use a variant ({{variants|none defined}}) as described in ${CONVENTIONS}.`,
+        },
+        contracts: [{
+          pattern: "^(Button|IconButton)$",
+          allow: ["layout"],
+          deny: BUTTON_SIZE_DENY,
+          message: {
+            default: `<{{component}}> owns its size and shape: "{{className}}" is not allowed. Use the size prop ({{sizes|see button.tsx}}) and variant prop ({{variants|see button.tsx}}); place it with margin here or gap on the parent. See ${CONVENTIONS}.`,
+          },
+        }],
+      }],
+    },
+  },
+  {
+    // Components style themselves.
+    files: ["src/components/ui/**"],
+    rules: { "shadcn/no-restyle": "off" },
   },
   // Override default ignores of eslint-config-next.
   globalIgnores([
