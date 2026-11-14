@@ -286,7 +286,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
                   <th scope="row" className="py-2 text-start text-sm font-medium">All items</th>
                   {[prepared.current, prepared.backup.counts].map((counts, index) => (
                     <td key={index} className="py-2 text-end">
-                      <span className="block text-[26px] font-semibold leading-none">{counts.total}</span>
+                      <span className="block text-display font-semibold leading-none">{counts.total}</span>
                       <span className="mt-1 block text-compact text-text-secondary">{counts.active} active</span>
                     </td>
                   ))}
