@@ -64,7 +64,7 @@ type ButtonProps = ComponentProps<"button"> & ButtonStyle;
  *
  * @import import { Button } from "@/components/ui/button";
  */
-export function Button({ variant, size, className, type = "button", ...props }: ButtonProps) {
+export function Button({ variant = "secondary", size = "md", className, type = "button", ...props }: ButtonProps) {
   return <button type={type} className={buttonClassName({ variant, size, className })} {...props} />;
 }
 
@@ -75,6 +75,6 @@ type IconButtonProps = ComponentProps<"button"> & IconButtonStyle & { "aria-labe
  *
  * @import import { IconButton } from "@/components/ui/button";
  */
-export function IconButton({ variant, size, className, type = "button", ...props }: IconButtonProps) {
+export function IconButton({ variant = "secondary", size = "md", className, type = "button", ...props }: IconButtonProps) {
   return <button type={type} className={iconButtonClassName({ variant, size, className })} {...props} />;
 }
