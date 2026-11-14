@@ -67,3 +67,7 @@ plans/
 # Isolated UI prototypes — runnable locally, never ship
 src/app/prototypes/
 .codex
+
+# Claude Code: local agent worktrees and per-user settings (settings.json stays committable)
+.claude/worktrees/
+.claude/settings.local.json
