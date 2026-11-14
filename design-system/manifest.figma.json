@@ -13,7 +13,7 @@
       "type": "COMPONENT_SET",
       "nodeId": "5:170",
       "key": "8163fd9c1ef5a28e661df0ddd1b1dd06fd8e6a5b",
-      "description": "Button — src/components/ui/button.tsx: Button (variant, size), or buttonClassName() for Base UI triggers. Variant: secondary (default, .ui-control), primary (.ui-primary; white in dark mode, never mid-grey), danger (destructive confirm), danger-ghost (Empty Trash). Size: md = 40px dialogs and panels (px 16, text-sm medium); toolbar = 44px library top bar (padding set by the caller: ps-3 pe-4 with a leading icon). Code also has lg = 44px page actions with px 16. Base UI triggers use buttonClassName(). Pill shape via the components-layer control-shape rule (999px + superellipse(1.5)). Press: scale(0.96) over --motion-quick. Disabled: --opacity-disabled (0.6). Focus: 1px border-focus outline, 2px offset.",
+      "description": "Text button for every action; pick the variant by role (one primary per surface, danger only to confirm a destructive dialog) and the size by placement.\n\nButton — src/components/ui/button.tsx: Button (variant, size), or buttonClassName() for Base UI triggers. Variant: secondary (default, .ui-control), primary (.ui-primary; white in dark mode, never mid-grey), danger (destructive confirm), danger-ghost (Empty Trash). Size: md = 40px dialogs and panels (px 16, text-sm medium); toolbar = 44px library top bar; lg = 44px page actions. Icon=Start: the icon side gets 12px, three quarters of the 16px side padding; Icon=None: 16px on both sides. Code applies this itself (.ui-button; set side padding with button-px-*). Base UI triggers use buttonClassName(). Pill shape via the components-layer control-shape rule (999px + superellipse(1.5)). Press: scale(0.96) over --motion-quick. Disabled: --opacity-disabled (0.6). Focus: 1px border-focus outline, 2px offset.",
       "properties": [
         {
           "name": "Label",
@@ -22,13 +22,7 @@
           "id": "5:0"
         },
         {
-          "name": "Show icon",
-          "type": "BOOLEAN",
-          "default": true,
-          "id": "5:33"
-        },
-        {
-          "name": "Icon",
+          "name": "Glyph",
           "type": "INSTANCE_SWAP",
           "default": "4:18",
           "id": "5:66"
@@ -64,9 +58,18 @@
             "Focus",
             "Disabled"
           ]
+        },
+        {
+          "name": "Icon",
+          "type": "VARIANT",
+          "default": "Start",
+          "options": [
+            "None",
+            "Start"
+          ]
         }
       ],
-      "variantCount": 48
+      "variantCount": 96
     },
     {
       "name": "IconButton",
@@ -74,7 +77,7 @@
       "type": "COMPONENT_SET",
       "nodeId": "5:239",
       "key": "00a309b9c1f97e38fbd727d0eb76a15510984e37",
-      "description": "IconButton — src/components/ui/button.tsx: IconButton (size, aria-label), or iconButtonClassName() for Base UI triggers. Control sizes: sm 32px, md 40px (dialog close), lg 44px (top bar). Base UI triggers use iconButtonClassName(). Media chrome = .library-card-media-chrome: 32px translucent surface over card media with a 12px squircle radius; 44px hit target via 6px slop. Always pair with an aria-label and a 350ms tooltip. Disabled: --opacity-disabled. Wrap in Tooltip (src/components/ui/tooltip.tsx) with describe={false} when the tooltip repeats the aria-label; never add a native title.",
+      "description": "Square icon-only button for actions an icon alone makes clear (close, more, toolbar toggles); always give it an aria-label.\n\nIconButton — src/components/ui/button.tsx: IconButton (size, aria-label), or iconButtonClassName() for Base UI triggers. Control sizes: sm 32px, md 40px (dialog close), lg 44px (top bar). Base UI triggers use iconButtonClassName(). Media chrome = .library-card-media-chrome: 32px translucent surface over card media with a 12px squircle radius; 44px hit target via 6px slop. Always pair with an aria-label and a 350ms tooltip. Disabled: --opacity-disabled. Wrap in Tooltip (src/components/ui/tooltip.tsx) with describe={false} when the tooltip repeats the aria-label; never add a native title.",
       "properties": [
         {
           "name": "Icon",
@@ -132,7 +135,7 @@
       "type": "COMPONENT_SET",
       "nodeId": "5:266",
       "key": "036a8c422988121161f0f10c99ad1f8d81ca1e66",
-      "description": "SegmentedControl — src/components/ui/segmented-control.tsx. Two-choice switch (role=group with an accessible label; each choice aria-pressed). Variant=Icon: 44px raised track, 2px inset, two 42px icon buttons with Tooltips (library Grid/List, note Edit/Preview). Variant=Text: track height follows --viewer-control-size (44px default), options split the width with text-xs medium labels (viewer Fit/Scroll, PDF Pages/Scroll, note format, gallery Slides/Scroll). The .ui-selected thumb (bg-active + 1px inset highlight) slides over --motion-glide with --ease-standard; selected text-primary, idle text-secondary.",
+      "description": "Two-choice switch where exactly one option is always selected; use it for view modes, not for actions.\n\nSegmentedControl — src/components/ui/segmented-control.tsx. Two-choice switch (role=group with an accessible label; each choice aria-pressed). Variant=Icon: 44px raised track, 2px inset, two 42px icon buttons with Tooltips (library Grid/List, note Edit/Preview). Variant=Text: track height follows --viewer-control-size (44px default), options split the width with text-xs medium labels (viewer Fit/Scroll, PDF Pages/Scroll, note format, gallery Slides/Scroll). The .ui-selected thumb (bg-active + 1px inset highlight) slides over --motion-glide with --ease-standard; selected text-primary, idle text-secondary.",
       "properties": [
         {
           "name": "Start icon",
@@ -212,7 +215,7 @@
       "type": "COMPONENT_SET",
       "nodeId": "7:41",
       "key": "1d656eb9d52f9b581acaf78406e0d1fd7bbcb95a",
-      "description": "TextField — src/components/ui/text-field.tsx (fieldClassName() for bare inputs). Label (text-sm medium, text-primary) above the input with an 8px gap; the label is the input’s accessible name, and an optional hint below is linked with aria-describedby. Input: .ui-field, min-h 44px, px 12px, text-sm, bg-control, 1px border-control, radius-control-md (13px). Placeholder text-secondary. Focus: 1px border-focus outline inset 2px. Touch devices render 16px text to avoid zoom.",
+      "description": "Labelled single-line text input for dialogs and forms; the visible label is also its accessible name.\n\nTextField — src/components/ui/text-field.tsx (fieldClassName() for bare inputs). Label (text-sm medium, text-primary) above the input with an 8px gap; the label is the input’s accessible name, and an optional hint below is linked with aria-describedby. Input: .ui-field, min-h 44px, px 12px, text-sm, bg-control, 1px border-control, radius-control-md (13px). Placeholder text-secondary. Focus: 1px border-focus outline inset 2px. Touch devices render 16px text to avoid zoom.",
       "properties": [
         {
           "name": "Label",
@@ -252,7 +255,7 @@
       "type": "COMPONENT",
       "nodeId": "7:42",
       "key": "e59f7f4748abd328c12b103532932b84cacab94e",
-      "description": "Multi-line .ui-field (ScrollTextarea). Same surface as Text field; padding 12px, text-sm, min-h 160px, resize-y. Scrollbar uses the shared overlay track; it never reserves a gutter.",
+      "description": "Multi-line text input that scrolls inside the shared scrollbar track.\n\nMulti-line .ui-field (ScrollTextarea). Same surface as Text field; padding 12px, text-sm, min-h 160px, resize-y. Scrollbar uses the shared overlay track; it never reserves a gutter.",
       "properties": [
         {
           "name": "Label",
@@ -274,7 +277,7 @@
       "type": "COMPONENT_SET",
       "nodeId": "33:227",
       "key": "7bc1e1e6f1283df9935220262783fa1e1563abac",
-      "description": "RadioCard — src/components/ui/radio-card.tsx. A full-width radio option: the whole card is the label, so its text is the radio’s accessible name. .ui-control surface (bg-control, 1px border-control) with 12px × 16px padding and a 12px gap; the checked option takes bg-active. Pill shape from the shared control-shape rule (999px with superellipse(1.5)) in every dialog — link conflict, bookmark import and delete collection; don’t override the radius per dialog. Label text-sm medium; optional description text-xs secondary. The radio is the native input (16px, nudged 4px to the first text line).",
+      "description": "Full-width option for picking one of a few choices in a dialog; the whole card is the click target.\n\nRadioCard — src/components/ui/radio-card.tsx. A full-width radio option: the whole card is the label, so its text is the radio’s accessible name. .ui-control surface (bg-control, 1px border-control) with 12px × 16px padding and a 12px gap; the checked option takes bg-active. Pill shape from the shared control-shape rule (999px with superellipse(1.5)) in every dialog — link conflict, bookmark import and delete collection; don’t override the radius per dialog. Label text-sm medium; optional description text-xs secondary. The radio is the native input (16px, nudged 4px to the first text line).",
       "properties": [
         {
           "name": "Label",
@@ -377,7 +380,7 @@
       "type": "COMPONENT",
       "nodeId": "9:79",
       "key": "3275554e80aa4175df61f8b1d2276d35b1e3cbfd",
-      "description": "Tooltip — src/components/ui/tooltip.tsx (TOOLTIP_CLASS; TooltipContent when a Select trigger composes its own Root). radius-control-sm, 1px border-control, bg-surface, padding 6px 10px, text-xs medium, shadow-menu, 8px from the trigger. Delay 350ms for toolbar controls, 100ms for folder and tag previews. Set describe=false when the text repeats the trigger’s accessible name so it isn’t announced twice. Never use a native title attribute on a control. Panel-style previews (note excerpt, long title) pass unstyled with their own .ui-popover surface.",
+      "description": "Hover and focus hint for a control, usually an icon button; never use a native title attribute instead.\n\nTooltip — src/components/ui/tooltip.tsx (TOOLTIP_CLASS; TooltipContent when a Select trigger composes its own Root). radius-control-sm, 1px border-control, bg-surface, padding 6px 10px, text-xs medium, shadow-menu, 8px from the trigger. Delay 350ms for toolbar controls, 100ms for folder and tag previews. Set describe=false when the text repeats the trigger’s accessible name so it isn’t announced twice. Never use a native title attribute on a control. Panel-style previews (note excerpt, long title) pass unstyled with their own .ui-popover surface.",
       "properties": [
         {
           "name": "Text",
@@ -393,7 +396,7 @@
       "type": "COMPONENT",
       "nodeId": "9:81",
       "key": "98689dbb33dc551e13376f92194c693d9ff4194e",
-      "description": "Sonner toast (.kc-toast): bg-surface, 1px border-control, 12px radius, 14px / 1.6 text, shadow-menu. For background results only — Trash undo uses the Undo notice in the top bar instead.",
+      "description": "Mount once at the app root to show toast() notices; library undo and status notices use the top bar instead.\n\nSonner toast (.kc-toast): bg-surface, 1px border-control, 12px radius, 14px / 1.6 text, shadow-menu. For background results only — Trash undo uses the Undo notice in the top bar instead.",
       "properties": [
         {
           "name": "Message",
@@ -409,7 +412,7 @@
       "type": "COMPONENT",
       "nodeId": "9:83",
       "key": "b2e20230a61140971b924fb898d9619984a11b7b",
-      "description": "Transient Trash undo. Lives ONLY in the library top bar action slot (LibraryTopBar `notice` prop) — never inside the scrolling content. 40px control-squircle surface (bg-control, 1px border-control, 2px inset, 12px start padding), text-xs secondary message, 32px Undo (medium, text-primary) and Dismiss buttons with bg-raised hover. A 2px timer runs along the bottom; the notice withdraws after 6s, pauses on hover, focus, busy or a hidden tab, and stays until dismissed after a failed undo. Enters with a 4px rise over the moderate tier.",
+      "description": "Undo offer shown in the library top bar's action slot after a move to Trash; never inside the scrolling content.\n\n\nTransient Trash undo. Lives ONLY in the library top bar action slot (LibraryTopBar `notice` prop) — never inside the scrolling content. 40px control-squircle surface (bg-control, 1px border-control, 2px inset, 12px start padding), text-xs secondary message, 32px Undo (medium, text-primary) and Dismiss buttons with bg-raised hover. A 2px timer runs along the bottom; the notice withdraws after 6s, pauses on hover, focus, busy or a hidden tab, and stays until dismissed after a failed undo. Enters with a 4px rise over the moderate tier.",
       "properties": [
         {
           "name": "Message",
@@ -425,7 +428,7 @@
       "type": "COMPONENT",
       "nodeId": "9:92",
       "key": "6df7db0bccc250f6898556c0471077f34e7f41d3",
-      "description": "ConfirmDialog — src/components/ui/confirm-dialog.tsx. .ui-popover with no padding, max-width 28rem, radius-panel. Header (a div, not a header element, so the library top bar stays the only banner landmark): title (text-xl semibold) + description (text-sm relaxed, text-secondary), 40px close IconButton; 1px border-control divider. Body: optional content, error (text-sm text-danger, role=alert), then right-aligned Cancel (Button secondary) and confirm (Button danger). Initial focus on Cancel. While busy the confirm label becomes the pending label, both actions are disabled at --opacity-disabled, and pointer dismissal is off. Opens on the slow tier: fade + scale(0.97 → 1) over a blurred .ui-backdrop.",
+      "description": "Modal confirmation for destructive actions only; the confirm button is always the danger variant and the dialog can't be dismissed while busy.\n\n\nConfirmDialog — src/components/ui/confirm-dialog.tsx. .ui-popover with no padding, max-width 28rem, radius-panel. Header (a div, not a header element, so the library top bar stays the only banner landmark): title (text-xl semibold) + description (text-sm relaxed, text-secondary), 40px close IconButton; 1px border-control divider. Body: optional content, error (text-sm text-danger, role=alert), then right-aligned Cancel (Button secondary) and confirm (Button danger). Initial focus on Cancel. While busy the confirm label becomes the pending label, both actions are disabled at --opacity-disabled, and pointer dismissal is off. Opens on the slow tier: fade + scale(0.97 → 1) over a blurred .ui-backdrop.",
       "properties": [
         {
           "name": "Title",
@@ -623,7 +626,7 @@
       "type": "COMPONENT_SET",
       "nodeId": "11:47",
       "key": "2d0ec1c582d259a20b5d48c1f2b78e59367e1f7f",
-      "description": "ItemTypeBadge (card variant): one colored identity glyph on the .library-card-media-chrome surface, bottom-end of the preview at 14px inside the media. 32px high, min 32px wide, 16px glyph. Colors use item/ — darker in light mode, the brighter item/on-media/ in dark mode. Only image galleries add text (the count, before the glyph). role=\"img\" with an aria-label naming the type; color is never the only cue.",
+      "description": "Type badge on a card preview (bottom-end) or list row; adds a count only for galleries and screenshots.\n\n\nItemTypeBadge (card variant): one colored identity glyph on the .library-card-media-chrome surface, bottom-end of the preview at 14px inside the media. 32px high, min 32px wide, 16px glyph. Colors use item/ — darker in light mode, the brighter item/on-media/ in dark mode. Only image galleries add text (the count, before the glyph). role=\"img\" with an aria-label naming the type; color is never the only cue.",
       "properties": [
         {
           "name": "variant",
@@ -658,7 +661,7 @@
       "type": "COMPONENT_SET",
       "nodeId": "11:68",
       "key": "6113089d7311249ddb70235d84ee1c1036da6344",
-      "description": ".library-card-metadata-pill (LibraryCardMetadata). Collection pill sits left, tag-count pill right; each is its own button. 32px, 8px horizontal padding, 6px icon gap, bg-raised, text-xs text-secondary, pill radius with superellipse(1.5). Hover bg-active + text-primary; press scale(0.96). Pill edges sit 16px from the card edge so the folder glyph aligns with the 24px content inset. Folder and tag-preview tooltips open after 100ms.",
+      "description": "Collection pill (left) and tag-count pill (right) at the bottom of a card or row; each pill has its own action.\n\n.library-card-metadata-pill (LibraryCardMetadata). Collection pill sits left, tag-count pill right; each is its own button. 32px, 8px horizontal padding, 6px icon gap, bg-raised, text-xs text-secondary, pill radius with superellipse(1.5). Hover bg-active + text-primary; press scale(0.96). Pill edges sit 16px from the card edge so the folder glyph aligns with the 24px content inset. Folder and tag-preview tooltips open after 100ms.",
       "properties": [
         {
           "name": "Collection name",
@@ -699,7 +702,7 @@
       "type": "COMPONENT_SET",
       "nodeId": "11:76",
       "key": "4b7b7c449ba3507561757145cc9f1830611c8c12",
-      "description": "LibrarySelectionControl: 32px media-chrome checkbox at the card’s top-start corner (center 38px from the card edges, 44px hit target). Appears on hover, keyboard focus, or while a selection is active. State=Selected uses action-primary with text-on-action.",
+      "description": "Round checkbox in a card or row corner for multi-select; shown on hover, focus, or while selecting.\n\nLibrarySelectionControl: 32px media-chrome checkbox at the card’s top-start corner (center 38px from the card edges, 44px hit target). Appears on hover, keyboard focus, or while a selection is active. State=Selected uses action-primary with text-on-action.",
       "properties": [
         {
           "name": "State",
@@ -719,7 +722,7 @@
       "type": "COMPONENT",
       "nodeId": "11:77",
       "key": "49a05095e08577efbf78ca2e7b7f6e57e9c7cc17",
-      "description": "CardNote: personal note or image caption. Note glyph (plain text) or MD glyph (Markdown) in item-note color, then one truncated 13px line in text-primary. 24px row with an expanded hit area, 8px after the source row. Only render when there is content; it opens the Keepall item.",
+      "description": "One-line excerpt of an item's personal note or caption that opens the Keepall item; render only when there is content.\n\n\nCardNote: personal note or image caption. Note glyph (plain text) or MD glyph (Markdown) in item-note color, then one truncated 13px line in text-primary. 24px row with an expanded hit area, 8px after the source row. Only render when there is content; it opens the Keepall item.",
       "properties": [
         {
           "name": "Note",
@@ -741,7 +744,7 @@
       "type": "COMPONENT",
       "nodeId": "11:83",
       "key": "4dbad6470805c0362a8fcbf0efcf589547462a1d",
-      "description": "CardSource: external source host for links and images. 11px favicon centered in a 16px slot, host in 11px / 16px text-card-meta, always followed by the external-arrow glyph. Local filenames use the same text without the arrow.",
+      "description": "External source host for links and images, with favicon and external-arrow glyph; opens the website.\n\nCardSource: external source host for links and images. 11px favicon centered in a 16px slot, host in 11px / 16px text-card-meta, always followed by the external-arrow glyph. Local filenames use the same text without the arrow.",
       "properties": [
         {
           "name": "Host",

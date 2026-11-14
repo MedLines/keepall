@@ -27,7 +27,7 @@ Some Figma variants show what a component renders for different data, not a prop
 
 ## Content slots
 
-Figma `TEXT`, `INSTANCE_SWAP` and `BOOLEAN` ("Show …") properties stand for children, icon props and conditional content in code. Their names describe sample content, so they are not compared with code props.
+Figma `TEXT`, `INSTANCE_SWAP` and `BOOLEAN` ("Show …") properties stand for children, icon props and conditional content in code. Their names describe sample content, so they are not compared with code props. `Button` also has an `Icon` variant (`Start` or `None`): Figma can't tie padding to a toggle, so the variant carries the 12px icon-side padding that code's `.ui-button` rule applies on its own.
 
 ## Props with no design value
 

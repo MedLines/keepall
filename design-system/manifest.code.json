@@ -5,8 +5,8 @@
       "name": "Button",
       "storybookId": "ui-button",
       "import": "import { Button } from \"@/components/ui/button\";",
-      "purpose": "DRAFT: Text button for every action; pick the variant by role (one primary per surface, danger only to confirm a destructive dialog) and the size by placement.",
-      "description": "DRAFT: Text button for every action; pick the variant by role (one primary per surface, danger only to confirm a destructive dialog) and the size by placement.",
+      "purpose": "Text button for every action; pick the variant by role (one primary per surface, danger only to confirm a destructive dialog) and the size by placement.",
+      "description": "Text button for every action; pick the variant by role (one primary per surface, danger only to confirm a destructive dialog) and the size by placement.",
       "props": [
         {
           "name": "variant",
@@ -59,8 +59,8 @@
       "name": "CardNote",
       "storybookId": "library-cardnote",
       "import": "import { CardNote } from \"@/app/library-card-details\";",
-      "purpose": "DRAFT: One-line excerpt of an item's personal note or caption that opens the Keepall item; render only when there is content.",
-      "description": "DRAFT: One-line excerpt of an item's personal note or caption that opens the Keepall item; render only when there is content.",
+      "purpose": "One-line excerpt of an item's personal note or caption that opens the Keepall item; render only when there is content.",
+      "description": "One-line excerpt of an item's personal note or caption that opens the Keepall item; render only when there is content.",
       "props": [
         {
           "name": "content",
@@ -117,8 +117,8 @@
       "name": "CardPin",
       "storybookId": "library-cardpin",
       "import": "import { CardPin } from \"@/app/library-card-details\";",
-      "purpose": "DRAFT: Pin glyph marking an item pinned in the current collection.",
-      "description": "DRAFT: Pin glyph marking an item pinned in the current collection.",
+      "purpose": "Pin glyph marking an item pinned in the current collection.",
+      "description": "Pin glyph marking an item pinned in the current collection.",
       "props": [
         {
           "name": "className",
@@ -134,8 +134,8 @@
       "name": "CardSource",
       "storybookId": "library-cardsource",
       "import": "import { CardSource } from \"@/app/library-card-details\";",
-      "purpose": "DRAFT: External source host for links and images, with favicon and external-arrow glyph; opens the website.",
-      "description": "DRAFT: External source host for links and images, with favicon and external-arrow glyph; opens the website.",
+      "purpose": "External source host for links and images, with favicon and external-arrow glyph; opens the website.",
+      "description": "External source host for links and images, with favicon and external-arrow glyph; opens the website.",
       "props": [
         {
           "name": "url",
@@ -166,8 +166,8 @@
       "name": "ConfirmDialog",
       "storybookId": "ui-confirmdialog",
       "import": "import { ConfirmDialog } from \"@/components/ui/confirm-dialog\";",
-      "purpose": "DRAFT: Modal confirmation for destructive actions only; the confirm button is always the danger variant and the dialog can't be dismissed while busy.",
-      "description": "DRAFT: Modal confirmation for destructive actions only; the confirm button is always the danger variant and the dialog can't be dismissed while busy.",
+      "purpose": "Modal confirmation for destructive actions only; the confirm button is always the danger variant and the dialog can't be dismissed while busy.",
+      "description": "Modal confirmation for destructive actions only; the confirm button is always the danger variant and the dialog can't be dismissed while busy.",
       "props": [
         {
           "name": "open",
@@ -261,8 +261,8 @@
       "name": "DocumentIcon",
       "storybookId": "foundations-documenticon",
       "import": "import { DocumentIcon } from \"@/app/document-icon\";",
-      "purpose": "DRAFT: File glyph for PDF, TXT and MD documents, with the extension drawn into it.",
-      "description": "DRAFT: File glyph for PDF, TXT and MD documents, with the extension drawn into it.",
+      "purpose": "File glyph for PDF, TXT and MD documents, with the extension drawn into it.",
+      "description": "File glyph for PDF, TXT and MD documents, with the extension drawn into it.",
       "props": [
         {
           "name": "format",
@@ -290,8 +290,8 @@
       "name": "IconButton",
       "storybookId": "ui-iconbutton",
       "import": "import { IconButton } from \"@/components/ui/button\";",
-      "purpose": "DRAFT: Square icon-only button for actions an icon alone makes clear (close, more, toolbar toggles); always give it an aria-label.",
-      "description": "DRAFT: Square icon-only button for actions an icon alone makes clear (close, more, toolbar toggles); always give it an aria-label.",
+      "purpose": "Square icon-only button for actions an icon alone makes clear (close, more, toolbar toggles); always give it an aria-label.",
+      "description": "Square icon-only button for actions an icon alone makes clear (close, more, toolbar toggles); always give it an aria-label.",
       "props": [
         {
           "name": "variant",
@@ -360,8 +360,8 @@
       "name": "ItemTypeBadge",
       "storybookId": "library-itemtypebadge",
       "import": "import { ItemTypeBadge } from \"@/app/item-type-icon\";",
-      "purpose": "DRAFT: Type badge on a card preview (bottom-end) or list row; adds a count only for galleries and screenshots.",
-      "description": "DRAFT: Type badge on a card preview (bottom-end) or list row; adds a count only for galleries and screenshots.\n\nOne colored identity glyph; only gallery and screenshot counts add text.",
+      "purpose": "Type badge on a card preview (bottom-end) or list row; adds a count only for galleries and screenshots.",
+      "description": "Type badge on a card preview (bottom-end) or list row; adds a count only for galleries and screenshots.\n\nOne colored identity glyph; only gallery and screenshot counts add text.",
       "props": [
         {
           "name": "item",
@@ -390,8 +390,8 @@
       "name": "ItemTypeIcon",
       "storybookId": "library-itemtypeicon",
       "import": "import { ItemTypeIcon } from \"@/app/item-type-icon\";",
-      "purpose": "DRAFT: The colored glyph that identifies an item's type; use it wherever an item appears, never a type word or a different icon.",
-      "description": "DRAFT: The colored glyph that identifies an item's type; use it wherever an item appears, never a type word or a different icon.",
+      "purpose": "The colored glyph that identifies an item's type; use it wherever an item appears, never a type word or a different icon.",
+      "description": "The colored glyph that identifies an item's type; use it wherever an item appears, never a type word or a different icon.",
       "props": [
         {
           "name": "item",
@@ -413,8 +413,8 @@
       "name": "LibraryCardMetadata",
       "storybookId": "library-librarycardmetadata",
       "import": "import { LibraryCardMetadata } from \"@/app/library-card-content\";",
-      "purpose": "DRAFT: Collection pill (left) and tag-count pill (right) at the bottom of a card or row; each pill has its own action.",
-      "description": "DRAFT: Collection pill (left) and tag-count pill (right) at the bottom of a card or row; each pill has its own action.",
+      "purpose": "Collection pill (left) and tag-count pill (right) at the bottom of a card or row; each pill has its own action.",
+      "description": "Collection pill (left) and tag-count pill (right) at the bottom of a card or row; each pill has its own action.",
       "props": [
         {
           "name": "collections",
@@ -463,8 +463,8 @@
       "name": "LibrarySelectionControl",
       "storybookId": "library-libraryselectioncontrol",
       "import": "import { LibrarySelectionControl } from \"@/app/library-selection-control\";",
-      "purpose": "DRAFT: Round checkbox in a card or row corner for multi-select; shown on hover, focus, or while selecting.",
-      "description": "DRAFT: Round checkbox in a card or row corner for multi-select; shown on hover, focus, or while selecting.",
+      "purpose": "Round checkbox in a card or row corner for multi-select; shown on hover, focus, or while selecting.",
+      "description": "Round checkbox in a card or row corner for multi-select; shown on hover, focus, or while selecting.",
       "props": [
         {
           "name": "label",
@@ -510,8 +510,8 @@
       "name": "MediaViewerToolbar",
       "storybookId": "library-mediaviewertoolbar",
       "import": "import { MediaViewerToolbar } from \"@/app/media-viewer-toolbar\";",
-      "purpose": "DRAFT: Toolbar for image and PDF viewers: view choices on the left, navigation in the middle, zoom on the right.",
-      "description": "DRAFT: Toolbar for image and PDF viewers: view choices on the left, navigation in the middle, zoom on the right.",
+      "purpose": "Toolbar for image and PDF viewers: view choices on the left, navigation in the middle, zoom on the right.",
+      "description": "Toolbar for image and PDF viewers: view choices on the left, navigation in the middle, zoom on the right.",
       "props": [
         {
           "name": "view",
@@ -545,8 +545,8 @@
       "name": "MenuHoverList",
       "storybookId": "ui-menuhoverlist",
       "import": "import { MenuHoverList } from \"@/components/ui/menu-hover-list\";",
-      "purpose": "DRAFT: Wraps the items of a menu or select so one highlight glides between them, following both pointer and keyboard.",
-      "description": "DRAFT: Wraps the items of a menu or select so one highlight glides between them, following both pointer and keyboard.\n\nFollow the primitive's highlight so pointer and keyboard keep the same target.",
+      "purpose": "Wraps the items of a menu or select so one highlight glides between them, following both pointer and keyboard.",
+      "description": "Wraps the items of a menu or select so one highlight glides between them, following both pointer and keyboard.\n\nFollow the primitive's highlight so pointer and keyboard keep the same target.",
       "props": [
         {
           "name": "children",
@@ -564,8 +564,8 @@
       "name": "ModalDialog",
       "storybookId": "ui-modaldialog",
       "import": "import { ModalDialog } from \"@/components/ui/modal-dialog\";",
-      "purpose": "DRAFT: Modal for forms and editors with a fixed header and footer and scrolling content; use ConfirmDialog for destructive yes/no questions.",
-      "description": "DRAFT: Modal for forms and editors with a fixed header and footer and scrolling content; use ConfirmDialog for destructive yes/no questions.",
+      "purpose": "Modal for forms and editors with a fixed header and footer and scrolling content; use ConfirmDialog for destructive yes/no questions.",
+      "description": "Modal for forms and editors with a fixed header and footer and scrolling content; use ConfirmDialog for destructive yes/no questions.",
       "props": [
         {
           "name": "open",
@@ -653,8 +653,8 @@
       "name": "MotionProvider",
       "storybookId": "ui-motionprovider",
       "import": "import { MotionProvider } from \"@/components/ui/motion-provider\";",
-      "purpose": "DRAFT: App-root provider that makes Motion animations follow the system reduced-motion setting; mount it once.",
-      "description": "DRAFT: App-root provider that makes Motion animations follow the system reduced-motion setting; mount it once.",
+      "purpose": "App-root provider that makes Motion animations follow the system reduced-motion setting; mount it once.",
+      "description": "App-root provider that makes Motion animations follow the system reduced-motion setting; mount it once.",
       "props": [
         {
           "name": "children",
@@ -670,8 +670,8 @@
       "name": "RadioCard",
       "storybookId": "ui-radiocard",
       "import": "import { RadioCard } from \"@/components/ui/radio-card\";",
-      "purpose": "DRAFT: Full-width option for picking one of a few choices in a dialog; the whole card is the click target.",
-      "description": "DRAFT: Full-width option for picking one of a few choices in a dialog; the whole card is the click target.\n\nA full-width radio option: the whole card is the label, so the text is the radio's accessible name.\nIt takes the shared pill control shape in every dialog; don't override its radius per dialog.",
+      "purpose": "Full-width option for picking one of a few choices in a dialog; the whole card is the click target.",
+      "description": "Full-width option for picking one of a few choices in a dialog; the whole card is the click target.\n\nA full-width radio option: the whole card is the label, so the text is the radio's accessible name.\nIt takes the shared pill control shape in every dialog; don't override its radius per dialog.",
       "props": [
         {
           "name": "className",
@@ -706,8 +706,8 @@
       "name": "RowActionMenu",
       "storybookId": "shell-rowactionmenu",
       "import": "import { RowActionMenu } from \"@/app/row-action-menu\";",
-      "purpose": "DRAFT: Action menu for one row or card, opened from its More button or by right-click, with the same actions both ways.",
-      "description": "DRAFT: Action menu for one row or card, opened from its More button or by right-click, with the same actions both ways.\n\nBoth opening methods use the same actions, with independent Base UI triggers.",
+      "purpose": "Action menu for one row or card, opened from its More button or by right-click, with the same actions both ways.",
+      "description": "Action menu for one row or card, opened from its More button or by right-click, with the same actions both ways.\n\nBoth opening methods use the same actions, with independent Base UI triggers.",
       "props": [
         {
           "name": "children",
@@ -758,8 +758,8 @@
       "name": "ScrollArea",
       "storybookId": "ui-scrollarea",
       "import": "import { ScrollArea } from \"@/components/ui/scroll-area\";",
-      "purpose": "DRAFT: Scrolling container with Keepall's thin overlay scrollbar (native scrolling on touch); use it for drawer, dialog and panel bodies.",
-      "description": "DRAFT: Scrolling container with Keepall's thin overlay scrollbar (native scrolling on touch); use it for drawer, dialog and panel bodies.",
+      "purpose": "Scrolling container with Keepall's thin overlay scrollbar (native scrolling on touch); use it for drawer, dialog and panel bodies.",
+      "description": "Scrolling container with Keepall's thin overlay scrollbar (native scrolling on touch); use it for drawer, dialog and panel bodies.",
       "props": [
         {
           "name": "viewportClassName",
@@ -789,8 +789,8 @@
       "name": "ScrollPanel",
       "storybookId": "ui-scrollpanel",
       "import": "import { ScrollPanel } from \"@/components/ui/scroll-panel\";",
-      "purpose": "DRAFT: ScrollArea that exposes its real viewport element, for virtualized lists, reading position and media viewers.",
-      "description": "DRAFT: ScrollArea that exposes its real viewport element, for virtualized lists, reading position and media viewers.\n\nCompose the registry track with a real viewport ref for virtualizers and media.",
+      "purpose": "ScrollArea that exposes its real viewport element, for virtualized lists, reading position and media viewers.",
+      "description": "ScrollArea that exposes its real viewport element, for virtualized lists, reading position and media viewers.\n\nCompose the registry track with a real viewport ref for virtualizers and media.",
       "props": [
         {
           "name": "viewportClassName",
@@ -830,8 +830,8 @@
       "name": "ScrollTextarea",
       "storybookId": "ui-scrolltextarea",
       "import": "import { ScrollTextarea } from \"@/components/ui/scroll-textarea\";",
-      "purpose": "DRAFT: Multi-line text input that scrolls inside the shared scrollbar track.",
-      "description": "DRAFT: Multi-line text input that scrolls inside the shared scrollbar track.\n\nKeep native text editing, selection and caret scrolling inside the shared track.",
+      "purpose": "Multi-line text input that scrolls inside the shared scrollbar track.",
+      "description": "Multi-line text input that scrolls inside the shared scrollbar track.\n\nKeep native text editing, selection and caret scrolling inside the shared track.",
       "props": [],
       "stories": [
         "Default",
@@ -845,8 +845,8 @@
       "name": "SearchHighlight",
       "storybookId": "library-searchhighlight",
       "import": "import { SearchHighlight } from \"@/app/search-highlight\";",
-      "purpose": "DRAFT: Marks the parts of a text that match the current search query.",
-      "description": "DRAFT: Marks the parts of a text that match the current search query.",
+      "purpose": "Marks the parts of a text that match the current search query.",
+      "description": "Marks the parts of a text that match the current search query.",
       "props": [
         {
           "name": "text",
@@ -870,8 +870,8 @@
       "name": "SegmentedControl",
       "storybookId": "ui-segmentedcontrol",
       "import": "import { SegmentedControl } from \"@/components/ui/segmented-control\";",
-      "purpose": "DRAFT: Two-choice switch where exactly one option is always selected; use it for view modes, not for actions.",
-      "description": "DRAFT: Two-choice switch where exactly one option is always selected; use it for view modes, not for actions.\n\nTwo-choice segmented switch (.icon-segmented-switch). The .ui-selected thumb slides between the\nchoices over --motion-glide; the group is labelled and each choice reports aria-pressed.",
+      "purpose": "Two-choice switch where exactly one option is always selected; use it for view modes, not for actions.",
+      "description": "Two-choice switch where exactly one option is always selected; use it for view modes, not for actions.\n\nTwo-choice segmented switch (.icon-segmented-switch). The .ui-selected thumb slides between the\nchoices over --motion-glide; the group is labelled and each choice reports aria-pressed.",
       "props": [
         {
           "name": "label",
@@ -936,8 +936,8 @@
       "name": "SettingsLink",
       "storybookId": "shell-settingslink",
       "import": "import { SettingsLink } from \"@/app/settings/settings-link\";",
-      "purpose": "DRAFT: Full-width link row with a trailing arrow that leads to another settings section or page.",
-      "description": "DRAFT: Full-width link row with a trailing arrow that leads to another settings section or page.",
+      "purpose": "Full-width link row with a trailing arrow that leads to another settings section or page.",
+      "description": "Full-width link row with a trailing arrow that leads to another settings section or page.",
       "props": [
         {
           "name": "href",
@@ -967,8 +967,8 @@
       "name": "ShellTopMenu",
       "storybookId": "shell-shelltopmenu",
       "import": "import { ShellTopMenu } from \"@/app/shell-top-menu\";",
-      "purpose": "DRAFT: Single-choice dropdown (Select) for the top bar and forms; use it instead of a native select.",
-      "description": "DRAFT: Single-choice dropdown (Select) for the top bar and forms; use it instead of a native select.",
+      "purpose": "Single-choice dropdown (Select) for the top bar and forms; use it instead of a native select.",
+      "description": "Single-choice dropdown (Select) for the top bar and forms; use it instead of a native select.",
       "props": [
         {
           "name": "ariaLabel",
@@ -1057,8 +1057,8 @@
       "name": "SideDrawer",
       "storybookId": "ui-sidedrawer",
       "import": "import { SideDrawer } from \"@/components/ui/side-drawer\";",
-      "purpose": "DRAFT: Panel that slides in from the left or right edge, with a title header and close button, for capture and organizing flows.",
-      "description": "DRAFT: Panel that slides in from the left or right edge, with a title header and close button, for capture and organizing flows.",
+      "purpose": "Panel that slides in from the left or right edge, with a title header and close button, for capture and organizing flows.",
+      "description": "Panel that slides in from the left or right edge, with a title header and close button, for capture and organizing flows.",
       "props": [
         {
           "name": "open",
@@ -1120,8 +1120,8 @@
       "name": "TextField",
       "storybookId": "ui-textfield",
       "import": "import { TextField } from \"@/components/ui/text-field\";",
-      "purpose": "DRAFT: Labelled single-line text input for dialogs and forms; the visible label is also its accessible name.",
-      "description": "DRAFT: Labelled single-line text input for dialogs and forms; the visible label is also its accessible name.\n\nA labelled text input for dialogs and forms: label above (text-sm medium), 8px gap, optional hint.",
+      "purpose": "Labelled single-line text input for dialogs and forms; the visible label is also its accessible name.",
+      "description": "Labelled single-line text input for dialogs and forms; the visible label is also its accessible name.\n\nA labelled text input for dialogs and forms: label above (text-sm medium), 8px gap, optional hint.\nEvery other prop (value, defaultValue, placeholder, onChange, type, …) goes to the native input.",
       "props": [
         {
           "name": "label",
@@ -1157,8 +1157,8 @@
       "name": "ThemeControl",
       "storybookId": "shell-themecontrol",
       "import": "import { ThemeControl } from \"@/app/theme-control\";",
-      "purpose": "DRAFT: Toggle between the light and dark theme; saves the choice on this device.",
-      "description": "DRAFT: Toggle between the light and dark theme; saves the choice on this device.",
+      "purpose": "Toggle between the light and dark theme; saves the choice on this device.",
+      "description": "Toggle between the light and dark theme; saves the choice on this device.",
       "props": [
         {
           "name": "compact",
@@ -1177,8 +1177,8 @@
       "name": "Toaster",
       "storybookId": "ui-toaster",
       "import": "import { Toaster } from \"@/components/ui/toaster\";",
-      "purpose": "DRAFT: Mount once at the app root to show toast() notices; library undo and status notices use the top bar instead.",
-      "description": "DRAFT: Mount once at the app root to show toast() notices; library undo and status notices use the top bar instead.",
+      "purpose": "Mount once at the app root to show toast() notices; library undo and status notices use the top bar instead.",
+      "description": "Mount once at the app root to show toast() notices; library undo and status notices use the top bar instead.",
       "props": [],
       "stories": [
         "Default",
@@ -1190,8 +1190,8 @@
       "name": "Tooltip",
       "storybookId": "ui-tooltip",
       "import": "import { Tooltip } from \"@/components/ui/tooltip\";",
-      "purpose": "DRAFT: Hover and focus hint for a control, usually an icon button; never use a native title attribute instead.",
-      "description": "DRAFT: Hover and focus hint for a control, usually an icon button; never use a native title attribute instead.\n\nA styled Base UI tooltip around any trigger element. Never use a native title attribute alongside it.",
+      "purpose": "Hover and focus hint for a control, usually an icon button; never use a native title attribute instead.",
+      "description": "Hover and focus hint for a control, usually an icon button; never use a native title attribute instead.\n\nA styled Base UI tooltip around any trigger element. Never use a native title attribute alongside it.",
       "props": [
         {
           "name": "content",
@@ -1243,8 +1243,8 @@
       "name": "TooltipContent",
       "storybookId": "ui-tooltipcontent",
       "import": "import { TooltipContent } from \"@/components/ui/tooltip\";",
-      "purpose": "DRAFT: The tooltip surface alone, for triggers that already compose their own Base UI tooltip root (such as a Select).",
-      "description": "DRAFT: The tooltip surface alone, for triggers that already compose their own Base UI tooltip root (such as a Select).\n\nPortal, positioner and popup for a tooltip whose Root and Trigger are composed elsewhere (e.g. a Select trigger).",
+      "purpose": "The tooltip surface alone, for triggers that already compose their own Base UI tooltip root (such as a Select).",
+      "description": "The tooltip surface alone, for triggers that already compose their own Base UI tooltip root (such as a Select).\n\nPortal, positioner and popup for a tooltip whose Root and Trigger are composed elsewhere (e.g. a Select trigger).",
       "props": [
         {
           "name": "id",
@@ -1305,8 +1305,8 @@
       "name": "UndoNotice",
       "storybookId": "library-undonotice",
       "import": "import { UndoNotice } from \"@/app/undo-notice\";",
-      "purpose": "DRAFT: Undo offer shown in the library top bar's action slot after a move to Trash; never inside the scrolling content.",
-      "description": "DRAFT: Undo offer shown in the library top bar's action slot after a move to Trash; never inside the scrolling content.\n\nTransient undo offer that lives in the top bar's action slot, so announcing a\nmove to Trash never pushes the library down. The countdown pauses while the\nnotice is hovered, focused, busy, or the page is hidden, and the notice never\nwithdraws itself while the keyboard is inside it.",
+      "purpose": "Undo offer shown in the library top bar's action slot after a move to Trash; never inside the scrolling content.",
+      "description": "Undo offer shown in the library top bar's action slot after a move to Trash; never inside the scrolling content.\n\nTransient undo offer that lives in the top bar's action slot, so announcing a\nmove to Trash never pushes the library down. The countdown pauses while the\nnotice is hovered, focused, busy, or the page is hidden, and the notice never\nwithdraws itself while the keyboard is inside it.",
       "props": [
         {
           "name": "message",

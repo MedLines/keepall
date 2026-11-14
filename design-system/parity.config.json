@@ -7,6 +7,9 @@
         "size": {
           "none": "caller-sized-variants"
         }
+      },
+      "ignoreFigmaProperties": {
+        "Icon": "content-slots"
       }
     },
     {
