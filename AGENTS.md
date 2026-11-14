@@ -50,7 +50,8 @@ Storybook is the closed list of UI parts. Run `pnpm storybook`; the `keepall-sto
   import { CloseIcon } from "@/app/shell-icons";
   ```
 
-  Base UI parts that render their own element take `buttonClassName()`, `iconButtonClassName()` or `menuItemClassName()` instead; these helpers are not in the MCP list.
+  Base UI parts that render their own element take `buttonClassName()`, `iconButtonClassName()` (both in `@/components/ui/button`) or `menuItemClassName()` (`@/components/ui/menu-item`) instead; the RowActionMenu and MenuHoverList stories show them in use.
+- **Text button padding**: set a text button's side padding with `button-px-*` (default 4), never `px-*`; the side with an icon then gets three quarters of it. Text beside an icon must be an element (`Button` wraps bare strings itself). Lint enforces both.
 - **Retired patterns**: a native `title` (use `Tooltip`), a hand-built `<button>` (use `Button` or `IconButton`), `ScrollArea` inside `role="menu"` (use a native `ui-scrollbar` scroller), Tailwind palette colours such as `bg-sky-50` (the palette is closed; use a role).
 - **New UI ships with a story** beside it (`*.stories.tsx`, invented fixtures on `.example` domains).
 - **Judgment calls** (spacing defaults, which of two similar components wins) follow `docs/interface-conventions.md`. When you settle a new one, add it there.

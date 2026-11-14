@@ -18,9 +18,10 @@ type Props = Omit<ComponentProps<"input">, "className"> & {
 };
 
 /**
- * DRAFT: Labelled single-line text input for dialogs and forms; the visible label is also its accessible name.
+ * Labelled single-line text input for dialogs and forms; the visible label is also its accessible name.
  *
  * A labelled text input for dialogs and forms: label above (text-sm medium), 8px gap, optional hint.
+ * Every other prop (value, defaultValue, placeholder, onChange, type, …) goes to the native input.
  *
  * @import import { TextField } from "@/components/ui/text-field";
  */
