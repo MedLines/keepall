@@ -25,7 +25,7 @@ type ConfirmDialogProps = {
 };
 
 /**
- * DRAFT: Modal confirmation for destructive actions only; the confirm button is always the danger variant and the dialog can't be dismissed while busy.
+ * Modal confirmation for destructive actions only; the confirm button is always the danger variant and the dialog can't be dismissed while busy.
  *
  * @import import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  */

@@ -7,7 +7,7 @@ import { uiMotion } from "./motion-tokens";
 type Highlight = { x: number; y: number; width: number; height: number };
 
 /**
- * DRAFT: Wraps the items of a menu or select so one highlight glides between them, following both pointer and keyboard.
+ * Wraps the items of a menu or select so one highlight glides between them, following both pointer and keyboard.
  *
  * Follow the primitive's highlight so pointer and keyboard keep the same target.
  *

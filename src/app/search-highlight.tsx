@@ -5,7 +5,7 @@ import { findSearchExcerpt, findQueryTextMatches, findTextMatches, parseSearchTe
 import type { Item } from "@/domain/item";
 
 /**
- * DRAFT: Marks the parts of a text that match the current search query.
+ * Marks the parts of a text that match the current search query.
  *
  * @import import { SearchHighlight } from "@/app/search-highlight";
  */

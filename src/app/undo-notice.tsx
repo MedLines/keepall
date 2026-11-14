@@ -22,7 +22,7 @@ type Props = {
 };
 
 /**
- * DRAFT: Undo offer shown in the library top bar's action slot after a move to Trash; never inside the scrolling content.
+ * Undo offer shown in the library top bar's action slot after a move to Trash; never inside the scrolling content.
  *
  * Transient undo offer that lives in the top bar's action slot, so announcing a
  * move to Trash never pushes the library down. The countdown pauses while the

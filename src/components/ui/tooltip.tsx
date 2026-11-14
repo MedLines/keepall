@@ -27,7 +27,7 @@ export type TooltipContentProps = {
 };
 
 /**
- * DRAFT: The tooltip surface alone, for triggers that already compose their own Base UI tooltip root (such as a Select).
+ * The tooltip surface alone, for triggers that already compose their own Base UI tooltip root (such as a Select).
  *
  * Portal, positioner and popup for a tooltip whose Root and Trigger are composed elsewhere (e.g. a Select trigger).
  *
@@ -55,7 +55,7 @@ export type TooltipProps = Omit<TooltipContentProps, "id" | "children"> & {
 };
 
 /**
- * DRAFT: Hover and focus hint for a control, usually an icon button; never use a native title attribute instead.
+ * Hover and focus hint for a control, usually an icon button; never use a native title attribute instead.
  *
  * A styled Base UI tooltip around any trigger element. Never use a native title attribute alongside it.
  *

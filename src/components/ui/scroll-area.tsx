@@ -33,7 +33,7 @@ interface ScrollAreaProps extends ComponentPropsWithoutRef<"div"> {
 }
 
 /**
- * DRAFT: Scrolling container with Keepall's thin overlay scrollbar (native scrolling on touch); use it for drawer, dialog and panel bodies.
+ * Scrolling container with Keepall's thin overlay scrollbar (native scrolling on touch); use it for drawer, dialog and panel bodies.
  *
  * @import import { ScrollArea } from "@/components/ui/scroll-area";
  */

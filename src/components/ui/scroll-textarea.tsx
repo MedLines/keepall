@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { ScrollBar } from "./scroll-area";
 
 /**
- * DRAFT: Multi-line text input that scrolls inside the shared scrollbar track.
+ * Multi-line text input that scrolls inside the shared scrollbar track.
  *
  * Keep native text editing, selection and caret scrolling inside the shared track.
  *

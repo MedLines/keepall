@@ -42,7 +42,7 @@ type Props<T extends string> = {
 };
 
 /**
- * DRAFT: Single-choice dropdown (Select) for the top bar and forms; use it instead of a native select.
+ * Single-choice dropdown (Select) for the top bar and forms; use it instead of a native select.
  *
  * @import import { ShellTopMenu } from "@/app/shell-top-menu";
  */

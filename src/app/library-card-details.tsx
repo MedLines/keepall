@@ -7,7 +7,7 @@ import { SearchHighlight } from "./search-highlight";
 import { ExternalLinkIcon, LinkIcon, NoteIcon, PinIcon } from "./shell-icons";
 
 /**
- * DRAFT: Pin glyph marking an item pinned in the current collection.
+ * Pin glyph marking an item pinned in the current collection.
  *
  * @import import { CardPin } from "@/app/library-card-details";
  */
@@ -25,7 +25,7 @@ function SourceFavicon({ url }: { url: string }) {
 }
 
 /**
- * DRAFT: External source host for links and images, with favicon and external-arrow glyph; opens the website.
+ * External source host for links and images, with favicon and external-arrow glyph; opens the website.
  *
  * @import import { CardSource } from "@/app/library-card-details";
  */
@@ -39,7 +39,7 @@ export function CardSource({ url, query = "", showFavicon = true }: { url: strin
 }
 
 /**
- * DRAFT: One-line excerpt of an item's personal note or caption that opens the Keepall item; render only when there is content.
+ * One-line excerpt of an item's personal note or caption that opens the Keepall item; render only when there is content.
  *
  * @import import { CardNote } from "@/app/library-card-details";
  */

@@ -90,7 +90,7 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
 }
 
 /**
- * DRAFT: Collection pill (left) and tag-count pill (right) at the bottom of a card or row; each pill has its own action.
+ * Collection pill (left) and tag-count pill (right) at the bottom of a card or row; each pill has its own action.
  *
  * @import import { LibraryCardMetadata } from "@/app/library-card-content";
  */

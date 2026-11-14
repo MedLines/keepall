@@ -5,7 +5,7 @@ import { Menu } from "@base-ui/react/menu";
 import { useRef, useState, type ReactElement, type ReactNode, type RefObject } from "react";
 
 /**
- * DRAFT: Action menu for one row or card, opened from its More button or by right-click, with the same actions both ways.
+ * Action menu for one row or card, opened from its More button or by right-click, with the same actions both ways.
  *
  * Both opening methods use the same actions, with independent Base UI triggers.
  *

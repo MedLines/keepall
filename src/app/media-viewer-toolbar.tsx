@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /**
- * DRAFT: Toolbar for image and PDF viewers: view choices on the left, navigation in the middle, zoom on the right.
+ * Toolbar for image and PDF viewers: view choices on the left, navigation in the middle, zoom on the right.
  *
  * @import import { MediaViewerToolbar } from "@/app/media-viewer-toolbar";
  */

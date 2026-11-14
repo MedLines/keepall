@@ -2,7 +2,7 @@ import type { DocumentFormat } from "@/domain/document";
 import { MarkdownFileIcon, PdfIcon, TextFileIcon } from "./shell-icons";
 
 /**
- * DRAFT: File glyph for PDF, TXT and MD documents, with the extension drawn into it.
+ * File glyph for PDF, TXT and MD documents, with the extension drawn into it.
  *
  * @import import { DocumentIcon } from "@/app/document-icon";
  */

@@ -14,7 +14,7 @@ type Props = Omit<ComponentProps<"input">, "type" | "className" | "children"> & 
 };
 
 /**
- * DRAFT: Full-width option for picking one of a few choices in a dialog; the whole card is the click target.
+ * Full-width option for picking one of a few choices in a dialog; the whole card is the click target.
  *
  * A full-width radio option: the whole card is the label, so the text is the radio's accessible name.
  * It takes the shared pill control shape in every dialog; don't override its radius per dialog.

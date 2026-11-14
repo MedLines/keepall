@@ -12,7 +12,7 @@ type Props = {
 };
 
 /**
- * DRAFT: Round checkbox in a card or row corner for multi-select; shown on hover, focus, or while selecting.
+ * Round checkbox in a card or row corner for multi-select; shown on hover, focus, or while selecting.
  *
  * @import import { LibrarySelectionControl } from "@/app/library-selection-control";
  */

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { ScrollBar } from "./scroll-area";
 
 /**
- * DRAFT: ScrollArea that exposes its real viewport element, for virtualized lists, reading position and media viewers.
+ * ScrollArea that exposes its real viewport element, for virtualized lists, reading position and media viewers.
  *
  * Compose the registry track with a real viewport ref for virtualizers and media.
  *
