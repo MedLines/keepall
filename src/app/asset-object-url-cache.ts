@@ -1,7 +1,8 @@
 import { assetToBlob, getAsset } from "@/persistence/assets";
 import { getThumbnail } from "@/persistence/thumbnails";
 
-const MAX_IDLE_URLS = 16;
+// Covers several screens of a 4-column grid, so scrolling back up reuses decoded URLs.
+const MAX_IDLE_URLS = 96;
 const IDLE_URL_TTL_MS = 30_000;
 export const THUMBNAIL_UPDATED_EVENT = "keepall:thumbnail-updated";
 
