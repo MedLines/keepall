@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Docs, design-system records and agent files quote class names as examples; keep them out of the class scan. */
+@source not "../../docs";
+@source not "../../design-system";
+@source not "../../.claude";
 @import "./scroll-fade.css";
 @import "./public-site.css";
 

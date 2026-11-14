@@ -123,7 +123,7 @@ Desktop sidebar rows use 36px height and 12px section spacing; mobile keeps its 
 `pnpm lint` runs `@shadcn/lint` through ESLint and Stylelint on `src/app/styles/`. The policy and its reasons:
 
 - Raw colours, unknown classes and inline styles are errors. Keepall's own CSS classes count as known (the config reads them from `src/**/*.css`), as do a few hook classes that tests or the extension select by name.
-- Arbitrary values are errors except layout geometry (calc/min/viewport sizes, grid tracks, z layers), `rounded-[inherit]` and `transition-[…]` property lists. Prefer the Tailwind scale or a CSS variable shorthand such as `h-(--item-viewer-height)` over `h-[var(…)]`.
+- Arbitrary values are errors except layout geometry (calc/min/viewport sizes, grid tracks, z layers), `rounded-[inherit]` and `transition-[…]` property lists. Prefer the Tailwind scale or a CSS variable shorthand such as `h-(--item-viewer-height)` over an arbitrary `var()` value in square brackets.
 - An inline `style` may carry runtime values: custom properties, transform, width, height, aspect ratio and grid tracks are allowed outright; anything else needs an `eslint-disable-next-line shadcn/no-inline-styles -- <reason>`.
 - Restyling a design-system component is a warning. `Button` and `IconButton` own their size and shape: callers place them with margin; only `Button size="toolbar"` takes `px-*` from the caller. `ScrollArea`, `ScrollPanel` and `ScrollTextarea` accept layout, spacing and shape, plus `ui-field` and `scroll-fade`.
 - In `src/app/styles/`, only `tokens.css` may write literal colours; mask properties are exempt because black and transparent there set alpha.
