@@ -44,6 +44,8 @@ const OPTION = {
 };
 
 /**
+ * DRAFT: Two-choice switch where exactly one option is always selected; use it for view modes, not for actions.
+ *
  * Two-choice segmented switch (.icon-segmented-switch). The .ui-selected thumb slides between the
  * choices over --motion-glide; the group is labelled and each choice reports aria-pressed.
  */

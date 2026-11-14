@@ -17,7 +17,11 @@ type Props = Omit<ComponentProps<"input">, "className"> & {
   inputClassName?: string;
 };
 
-/** A labelled text input for dialogs and forms: label above (text-sm medium), 8px gap, optional hint. */
+/**
+ * DRAFT: Labelled single-line text input for dialogs and forms; the visible label is also its accessible name.
+ *
+ * A labelled text input for dialogs and forms: label above (text-sm medium), 8px gap, optional hint.
+ */
 export function TextField({ label, hint, className, inputClassName, ...input }: Props) {
   const hintId = useId();
   return <label className={cn("grid gap-2 text-sm font-medium text-text-primary", className)}>

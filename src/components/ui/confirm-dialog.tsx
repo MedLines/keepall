@@ -24,6 +24,7 @@ type ConfirmDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+/** DRAFT: Modal confirmation for destructive actions only; the confirm button is always the danger variant and the dialog can't be dismissed while busy. */
 export function ConfirmDialog({
   open,
   title,

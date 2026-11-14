@@ -6,7 +6,11 @@ import { uiMotion } from "./motion-tokens";
 
 type Highlight = { x: number; y: number; width: number; height: number };
 
-/** Follow the primitive's highlight so pointer and keyboard keep the same target. */
+/**
+ * DRAFT: Wraps the items of a menu or select so one highlight glides between them, following both pointer and keyboard.
+ *
+ * Follow the primitive's highlight so pointer and keyboard keep the same target.
+ */
 export function MenuHoverList({ children }: { children: ReactNode }) {
   const listRef = useRef<HTMLDivElement>(null);
   const [highlight, setHighlight] = useState<Highlight | null>(null);

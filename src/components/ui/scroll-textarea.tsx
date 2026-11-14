@@ -6,7 +6,11 @@ import { useTouchPrimary } from "@/hooks/use-touch-primary";
 import { cn } from "@/lib/utils";
 import { ScrollBar } from "./scroll-area";
 
-/** Keep native text editing, selection and caret scrolling inside the shared track. */
+/**
+ * DRAFT: Multi-line text input that scrolls inside the shared scrollbar track.
+ *
+ * Keep native text editing, selection and caret scrolling inside the shared track.
+ */
 export function ScrollTextarea({ className, ref, style, value, defaultValue, ...props }: ComponentProps<"textarea">) {
   const field = useRef<HTMLTextAreaElement | null>(null);
   const touch = useTouchPrimary();

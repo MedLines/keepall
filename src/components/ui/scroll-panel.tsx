@@ -6,7 +6,11 @@ import { useTouchPrimary } from "@/hooks/use-touch-primary";
 import { cn } from "@/lib/utils";
 import { ScrollBar } from "./scroll-area";
 
-/** Compose the registry track with a real viewport ref for virtualizers and media. */
+/**
+ * DRAFT: ScrollArea that exposes its real viewport element, for virtualized lists, reading position and media viewers.
+ *
+ * Compose the registry track with a real viewport ref for virtualizers and media.
+ */
 export function ScrollPanel({ children, className, viewportClassName, contentClassName,
   viewportRef, viewportProps, orientation = "vertical", ...props }: ComponentPropsWithoutRef<"div"> & {
   viewportClassName?: string;

@@ -23,6 +23,7 @@ type SideDrawerProps = {
   children: ReactNode;
 };
 
+/** DRAFT: Panel that slides in from the left or right edge, with a title header and close button, for capture and organizing flows. */
 export function SideDrawer({
   open,
   onOpenChange,
