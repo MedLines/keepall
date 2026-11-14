@@ -43,7 +43,7 @@ export function PdfCardThumbnail({ item, compact = false }: {
   return <ItemViewTransition itemId={item.id} assetId={item.assetId} kind="document" source><div ref={frame} data-pdf-preview style={!compact && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined} className={compact ? "size-full overflow-hidden rounded-[inherit] bg-white" : "media-outline media-squircle-inset w-full overflow-hidden bg-white"}>
     {ready && thumbnail.image ?
       <LibraryThumbnailImage src={thumbnail.image} width={dimensions?.width} height={dimensions?.height} alt={`First page of ${item.title || item.sourceFileName}`} className={`block bg-white ${compact ? "size-full object-cover object-top" : "h-auto w-full"}`} />
-      : <div style={!compact && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined} className={`flex flex-col items-center justify-center gap-3 text-gray-600 ${compact ? "size-full" : "aspect-[16/10]"}`}>
+      : <div style={!compact && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined} className={`flex flex-col items-center justify-center gap-3 text-gray-600 ${compact ? "size-full" : "aspect-16/10"}`}>
         {ready ? <><DocumentIcon format="pdf" className={compact ? "size-6" : "size-8"} /><span className={compact ? "sr-only" : "text-sm"}>Preview unavailable</span></>
           : <span className="sr-only">Loading preview…</span>}
       </div>}

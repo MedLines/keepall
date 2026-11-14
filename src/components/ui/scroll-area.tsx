@@ -160,9 +160,9 @@ const ScrollBar = forwardRef<
           // -translate nudges the thumb 2px off the container edge; the track
           // (and its 10px hit target) stays flush so edge-throws still land.
           orientation === "vertical" &&
-            "mx-auto my-1 w-1 -translate-x-0.5 h-[var(--scroll-area-thumb-height)] group-hover/scrollbar:w-1.5",
+            "mx-auto my-1 w-1 -translate-x-0.5 h-(--scroll-area-thumb-height) group-hover/scrollbar:w-1.5",
           orientation === "horizontal" &&
-            "my-auto mx-1 h-1 -translate-y-0.5 w-[var(--scroll-area-thumb-width)] group-hover/scrollbar:h-1.5"
+            "my-auto mx-1 h-1 -translate-y-0.5 w-(--scroll-area-thumb-width) group-hover/scrollbar:h-1.5"
         )}
       />
     </ScrollAreaPrimitive.Scrollbar>

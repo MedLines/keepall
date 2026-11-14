@@ -478,7 +478,7 @@ export function LibraryItem({
         className={
           isList
             ? "library-list-row group relative flex items-start gap-3"
-            : `library-card group relative flex flex-col rounded-card pt-[8px] pr-[8px] pl-[8px] ${hasGridFooter ? "pb-[2px]" : "pb-[8px]"}`
+            : `library-card group relative flex flex-col rounded-card pt-2 pr-2 pl-2 ${hasGridFooter ? "pb-0.5" : "pb-2"}`
         }
       >
       {trigger}

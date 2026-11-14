@@ -156,7 +156,7 @@ function imageClassName(
   if (compact) {
     return `media-outline size-full rounded-[inherit] object-cover ${className}`;
   }
-  return `media-outline aspect-[16/10] h-full w-full object-cover ${className}`;
+  return `media-outline aspect-16/10 h-full w-full object-cover ${className}`;
 }
 
 function fallbackClassName(
@@ -176,7 +176,7 @@ function fallbackClassName(
   if (compact) {
     return `flex size-full items-center justify-center bg-bg-raised text-sm font-semibold text-text-primary ${className}`;
   }
-  return `flex aspect-[16/10] items-center justify-center bg-bg-raised text-4xl font-semibold text-text-primary ${className}`;
+  return `flex aspect-16/10 items-center justify-center bg-bg-raised text-4xl font-semibold text-text-primary ${className}`;
 }
 
 function FallbackContent({ item, compact }: { item: Item; compact: boolean }) {

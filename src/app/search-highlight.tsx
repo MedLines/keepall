@@ -64,7 +64,7 @@ export function SearchResult({ item, query = "", tagNames = [], excerpt, childre
 
   return <>
     <div ref={contentRef} className="min-w-0">{children}</div>
-    {match ? <p ref={excerptRef} className="search-excerpt mt-2 break-words text-sm leading-6 text-text-secondary [overflow-wrap:anywhere]">
+    {match ? <p ref={excerptRef} className="search-excerpt mt-2 break-words text-sm leading-6 text-text-secondary wrap-anywhere">
       <span className="font-medium">{match.label}: </span>
       <SearchHighlight text={match.text} query={query} />
     </p> : null}

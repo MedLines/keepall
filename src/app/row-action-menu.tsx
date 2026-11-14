@@ -30,7 +30,7 @@ export function RowActionMenu({ children, trigger, menu, label, disabled, trigge
       <Menu.Positioner align={align} sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
         <Menu.Popup
           aria-label={label}
-          className="row-action-popup ui-menu-popup ui-popover flex max-h-[var(--available-height)] w-56 max-w-[calc(100vw-1rem)] flex-col overflow-hidden cursor-default outline-none"
+          className="row-action-popup ui-menu-popup ui-popover flex max-h-(--available-height) w-56 max-w-[calc(100vw-1rem)] flex-col overflow-hidden cursor-default outline-none"
           finalFocus={(interaction) => {
             if (!restoreFocus.current) return false;
             if (typeof finalFocus === "function") return finalFocus(interaction);

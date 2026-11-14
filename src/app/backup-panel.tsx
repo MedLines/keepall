@@ -269,7 +269,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
           <div className="flex min-w-0 items-start gap-3">
             <BackupIcon className="mt-0.5 text-text-secondary" />
             <div className="min-w-0 flex-1">
-              <p className="[overflow-wrap:anywhere] text-base font-semibold"><bdi>{prepared.backup.name}</bdi></p>
+              <p className="wrap-anywhere text-base font-semibold"><bdi>{prepared.backup.name}</bdi></p>
               <p className="mt-1 text-compact leading-5 text-text-secondary">{formatFileSize(prepared.backup.size)} · Exported {new Date(prepared.backup.exportedAt).toLocaleString()}</p>
             </div>
           </div>

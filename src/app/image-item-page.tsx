@@ -802,7 +802,7 @@ function ImageWorkspace({
               createdAt={item.createdAt}
               updatedAt={item.updatedAt}
               sourceFileName={item.sourceFileName}
-              className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2 lg:min-h-[var(--item-viewer-height)]`}
+              className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2 lg:min-h-(--item-viewer-height)`}
               disabled={actionBusy}
               onOrganize={onOrganize}
               onEdit={onEdit}

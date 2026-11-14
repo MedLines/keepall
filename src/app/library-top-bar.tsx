@@ -124,7 +124,7 @@ export function LibraryTopBar({
               <ShellPanelIcon open={panelOpen} />
             </button>
           </Tooltip>
-          <div className="relative min-w-[140px] flex-1 sm:max-w-[250px]">
+          <div className="relative min-w-35 flex-1 sm:max-w-62.5">
             <label className="sr-only" htmlFor="library-search">Search</label>
             <span role="status" className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-secondary">
               <SearchIcon className={`size-4 transition-[visibility] duration-0 ${searchPending ? "invisible delay-200" : "visible"}`} />
@@ -228,7 +228,7 @@ export function LibraryTopBar({
       <div data-library-toolbar-row className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div data-library-toolbar-left className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:flex-1">
           <div className="flex min-w-0 items-center gap-3">
-          <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-[34px] text-text-primary sm:text-display">
+          <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-8.5 text-text-primary sm:text-display">
             {title}
           </h1>
           <span className="flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} ${collectionsView ? "collections" : tagsView ? "tags" : "items"}`}>

@@ -317,7 +317,7 @@ function CollectionSection({
         {selectedCollection ? (
           <li>
             <button className={`${PICK_CHIP} ${PICK_CHIP_SELECTED}`} type="button" disabled={disabled} aria-pressed="true" onClick={() => onSetCollection(selectedCollection.name)}>
-              <CheckIcon className="size-[13px]" />
+              <CheckIcon className="size-3.25" />
               <span className="max-w-48 truncate">{selectedCollection.name}</span>
             </button>
           </li>
@@ -386,7 +386,7 @@ function SelectedTag({ name, disabled, selection, onAdd, onRemove }: {
         </button>
       ) : (
         <>
-          <CheckIcon className="size-[13px]" />
+          <CheckIcon className="size-3.25" />
           <span className="max-w-40 truncate">{name}</span>
         </>
       )}

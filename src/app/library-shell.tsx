@@ -217,7 +217,7 @@ export function LibraryShell({
         active={allItemsActive}
         label="All items"
         count={libraryLoading ? undefined : counts.all}
-        icon={<LibraryIcon className="size-[18px] shrink-0 text-text-secondary" />}
+        icon={<LibraryIcon className="size-4.5 shrink-0 text-text-secondary" />}
         onClick={() => {
           onGoAll();
           closeOnMobile();
@@ -228,7 +228,7 @@ export function LibraryShell({
         active={unsortedActive}
         label="Unsorted"
         count={libraryLoading ? undefined : counts.unsorted}
-        icon={<InboxIcon className="size-[18px] shrink-0 text-text-secondary" />}
+        icon={<InboxIcon className="size-4.5 shrink-0 text-text-secondary" />}
         onClick={() => {
           onGoUnsorted();
           closeOnMobile();
@@ -251,7 +251,7 @@ export function LibraryShell({
       <nav
           data-sidebar-nav
           aria-label="Sidebar navigation"
-          className={`library-sidebar-navigation grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-[18px] ${contentExpanded ? SHELL_NAV_GUTTER : "px-2"}`}
+          className={`library-sidebar-navigation grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-4.5 ${contentExpanded ? SHELL_NAV_GUTTER : "px-2"}`}
         >
           <div className={`flex min-h-0 flex-col gap-1 ${contentExpanded ? "overflow-hidden" : "scroll-fade overflow-y-auto overscroll-contain"}`}>
             <div className={`flex shrink-0 flex-col gap-1 ${contentExpanded ? "library-sidebar-primary-nav overflow-hidden" : ""}`}>
@@ -363,30 +363,30 @@ export function LibraryShell({
               {(trigger) => contentExpanded ? (
                 <div className={cn(`group ${SHELL_NAV_SURFACE} min-h-10 w-full text-sm ${browseTrash ? SHELL_NAV_ITEM_ACTIVE : `${SHELL_NAV_ITEM_IDLE} focus-within:bg-bg-raised`}`)}>
                   <button type="button" aria-label="Trash" aria-current={browseTrash ? "page" : undefined} data-sidebar-anchor="Trash"
-                    className="flex min-h-10 min-w-0 flex-1 self-stretch items-center gap-2.5 px-3 py-2 text-left transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
+                    className="flex min-h-10 min-w-0 flex-1 self-stretch items-center gap-2.5 px-3 py-2 text-left transition-transform active:scale-98 motion-reduce:transition-none motion-reduce:active:scale-100"
                     onClick={() => { onGoTrash?.(); closeOnMobile(); }}>
-                    <span data-sidebar-icon className="flex size-[18px] shrink-0 items-center justify-center"><DeleteIcon className="size-[18px]" /></span>
+                    <span data-sidebar-icon className="flex size-4.5 shrink-0 items-center justify-center"><DeleteIcon className="size-4.5" /></span>
                     <span className="min-w-0 flex-1 truncate">Trash</span>
                     {!libraryLoading ? <NavCount value={trashCount} /> : null}
                   </button>
                   {trigger}
                 </div>
               ) : (
-                <ShellNavItem expanded={false} active={browseTrash} label="Trash" icon={<DeleteIcon className="size-[18px] shrink-0" />} onClick={() => { onGoTrash?.(); closeOnMobile(); }} />
+                <ShellNavItem expanded={false} active={browseTrash} label="Trash" icon={<DeleteIcon className="size-4.5 shrink-0" />} onClick={() => { onGoTrash?.(); closeOnMobile(); }} />
               )}
             </SidebarRowMenu>
             <ShellNavLink
               expanded={contentExpanded}
               label="Help"
               href="/help"
-              icon={<HelpIcon className="size-[18px] shrink-0 text-text-secondary" />}
+              icon={<HelpIcon className="size-4.5 shrink-0 text-text-secondary" />}
             />
             <ShellNavLink
               expanded={contentExpanded}
               label="Settings"
               href="/settings"
               icon={
-                <SettingsIcon className="size-[18px] shrink-0 text-text-secondary" />
+                <SettingsIcon className="size-4.5 shrink-0 text-text-secondary" />
               }
             />
           </div>
@@ -471,7 +471,7 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onClose, onGoHome }: {
   onGoHome: () => void;
 }) {
   return (
-    <div data-sidebar-brand className={`mb-5 mt-[18px] flex h-10 shrink-0 items-center ${expanded ? "mx-4" : "mx-2"}`}>
+    <div data-sidebar-brand className={`mb-5 mt-4.5 flex h-10 shrink-0 items-center ${expanded ? "mx-4" : "mx-2"}`}>
       <LogoContextMenu>
         <Link
           href="/"
@@ -514,7 +514,7 @@ function ShellNavLink({ expanded, label, href, icon }: {
       aria-label={label}
       data-sidebar-anchor={label}
     >
-      <span data-sidebar-icon className="flex size-[18px] shrink-0 items-center justify-center">
+      <span data-sidebar-icon className="flex size-4.5 shrink-0 items-center justify-center">
         {icon}
       </span>
       {expanded ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
@@ -882,7 +882,7 @@ function TagNavRow({
         <div className={cn(`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${active ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary` : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`}`)}>
           <button
             type="button"
-            className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 py-2 pl-12 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+            className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 py-2 pl-12 text-left transition-transform active:scale-96 motion-reduce:transition-none motion-reduce:active:scale-100"
             aria-label={`Tag ${tag.name}`}
             aria-current={active ? "page" : undefined}
             onClick={onNavigate}
@@ -1151,7 +1151,7 @@ function ShellNavItem({
       type="button"
       className={cn(`${SHELL_NAV_ITEM} ${
         expanded
-          ? icon ? "min-h-10 w-full gap-2.5 px-3 py-2 text-left text-sm" : "min-h-8 w-full gap-2.5 ps-[38px] pe-3 py-1 text-left text-xs"
+          ? icon ? "min-h-10 w-full gap-2.5 px-3 py-2 text-left text-sm" : "min-h-8 w-full gap-2.5 ps-9.5 pe-3 py-1 text-left text-xs"
           : "mx-auto size-10 justify-center px-0"
       } ${active ? SHELL_NAV_ITEM_ACTIVE : SHELL_NAV_ITEM_IDLE} ${
         dropHighlight ? "ring-2 ring-border-focus" : ""
@@ -1164,7 +1164,7 @@ function ShellNavItem({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {icon ? <span data-sidebar-icon className="flex size-[18px] shrink-0 items-center justify-center">{icon}</span> : null}
+      {icon ? <span data-sidebar-icon className="flex size-4.5 shrink-0 items-center justify-center">{icon}</span> : null}
       {expanded ? (
         <>
           <span className="min-w-0 flex-1 truncate">{label}</span>
@@ -1226,7 +1226,7 @@ function CollapsibleSection({
           aria-expanded={rail ? false : open}
           onClick={() => rail ? rail.onExpand() : onOpenChange(!open)}
         >
-          <span data-sidebar-icon className="flex size-[18px] shrink-0 items-center justify-center">{icon}</span>
+          <span data-sidebar-icon className="flex size-4.5 shrink-0 items-center justify-center">{icon}</span>
           <span className="min-w-0 flex-1 truncate text-md font-medium">{title}</span>
           <ChevronDownIcon
             className={`size-3.5 text-text-secondary transition-transform duration-200 ease-standard motion-reduce:transition-none ${
@@ -1269,7 +1269,7 @@ function SidebarSearch({
     <div className="shrink-0 px-3">
       <label className="relative block">
         <span className="sr-only">{label}</span>
-        <SearchIcon className="pointer-events-none absolute left-[19px] top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
+        <SearchIcon className="pointer-events-none absolute left-4.75 top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
         <input
           className="h-7 w-full border border-transparent bg-transparent pl-9 pr-2 text-xs"
           placeholder={label === "Search collections" ? "Search folders" : label}

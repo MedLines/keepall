@@ -69,10 +69,10 @@ export function ConfirmDialog({
           >
             <div className="flex items-start gap-4 border-b border-border-control px-6 py-5">
               <div className="min-w-0 flex-1">
-                <Dialog.Title className="[overflow-wrap:anywhere] text-xl font-semibold text-text-primary">
+                <Dialog.Title className="wrap-anywhere text-xl font-semibold text-text-primary">
                   {title}
                 </Dialog.Title>
-                <Dialog.Description className="mt-1 [overflow-wrap:anywhere] text-sm leading-relaxed text-text-secondary">
+                <Dialog.Description className="mt-1 wrap-anywhere text-sm leading-relaxed text-text-secondary">
                   {description}
                 </Dialog.Description>
               </div>

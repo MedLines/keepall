@@ -141,7 +141,7 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
           </li>)}
         </ul> : <span />}
         {tags.length ? <div ref={rootRef} className="library-card-tag-control relative shrink-0">
-          <Tooltip content={tags.map(tag => tag.name).join(", ")} disabled={expanded} delay={100} closeDelay={100} side="top" align="end" collisionPadding={8} className="max-w-72 whitespace-normal [overflow-wrap:anywhere]">
+          <Tooltip content={tags.map(tag => tag.name).join(", ")} disabled={expanded} delay={100} closeDelay={100} side="top" align="end" collisionPadding={8} className="max-w-72 whitespace-normal wrap-anywhere">
             <button ref={triggerRef} type="button" aria-label={`${tags.length} ${tags.length === 1 ? "tag" : "tags"}`} aria-expanded={expanded} aria-controls={id} className="library-card-metadata-pill rounded-full" onClick={() => {
               setExpanded(!expanded);
             }}><HashIcon className="size-4" /><span>{tags.length}<span className="library-card-tag-label"> {tags.length === 1 ? "tag" : "tags"}</span></span></button>

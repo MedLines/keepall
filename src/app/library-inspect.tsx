@@ -86,7 +86,7 @@ type Props = {
 };
 
 const BTN =
-  "border border-border-edge bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-transform duration-(--motion-quick) ease-out active:scale-[0.96] disabled:opacity-60";
+  "border border-border-edge bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-transform duration-(--motion-quick) ease-out active:scale-96 disabled:opacity-60";
 
 export function LibraryInspect({
   item,

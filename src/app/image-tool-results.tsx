@@ -103,7 +103,7 @@ export function ScreenshotTextSection({ ocr, slide, copied, onCopy }: {
   return <ResultSection title="Screenshot text" icon={<OcrIcon className="size-4" />} action={ocr.text ? <Tooltip content="Copy text" describe={false}><button type="button" className={iconButtonClassName({ size: "lg" })} aria-label="Copy text" onClick={() => onCopy(ocr.text, "ocr")}><CopyFeedback copied={copied} /></button></Tooltip> : null}>
     <p className="text-xs text-text-secondary" title="Recognized text may contain mistakes.">English · {Math.round(ocr.confidence)}% confidence</p>
     {ocr.text ? <ScrollPanel role="region" aria-label={`Extracted text from image ${slide + 1}`} className={styles.text} viewportClassName="max-h-64 px-4 py-3" viewportProps={{ tabIndex: 0 }}>
-      <p className="select-text whitespace-pre-wrap break-words text-sm leading-6 text-text-primary [overflow-wrap:anywhere]">{ocr.text}</p>
+      <p className="select-text whitespace-pre-wrap break-words text-sm leading-6 text-text-primary wrap-anywhere">{ocr.text}</p>
     </ScrollPanel> : <p className="text-sm text-text-secondary">No text found. Try a sharper image or a closer crop.</p>}
   </ResultSection>;
 }

@@ -1284,7 +1284,7 @@ export function CaptureHost() {
               data-testid="capture-actions"
               aria-hidden={saved}
               inert={saved}
-              className={`col-start-1 row-start-1 flex w-full flex-wrap items-center justify-end gap-2 transition-[opacity,translate] duration-[var(--motion-moderate-exit)] ease-standard motion-reduce:transition-[opacity] ${saved ? "-translate-y-1 opacity-0" : "translate-y-0 opacity-100"}`}
+              className={`col-start-1 row-start-1 flex w-full flex-wrap items-center justify-end gap-2 transition-[opacity,translate] duration-(--motion-moderate-exit) ease-standard motion-reduce:transition-opacity ${saved ? "-translate-y-1 opacity-0" : "translate-y-0 opacity-100"}`}
             >
               <button
                 className={captureStyles["bulk-import"]}
@@ -1327,10 +1327,10 @@ export function CaptureHost() {
             <div
               data-testid="capture-saved"
               aria-hidden={!saved}
-              className={`pointer-events-none col-start-1 row-start-1 flex w-full items-center justify-center gap-2.5 transition-[opacity,translate] delay-[60ms] duration-[var(--motion-moderate-enter)] ease-standard motion-reduce:transition-[opacity] ${saved ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0"}`}
+              className={`pointer-events-none col-start-1 row-start-1 flex w-full items-center justify-center gap-2.5 transition-[opacity,translate] delay-60 duration-(--motion-moderate-enter) ease-standard motion-reduce:transition-opacity ${saved ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0"}`}
             >
               <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-action-primary text-text-on-action">
-                <CheckIcon className="size-[18px]" strokeWidth={2} />
+                <CheckIcon className="size-4.5" strokeWidth={2} />
               </span>
               {saved ? <p role="status" className="text-sm font-medium text-text-primary">Saved to your library.</p> : null}
             </div>

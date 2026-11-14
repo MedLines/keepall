@@ -54,8 +54,8 @@ export function ModalDialog({
           <Dialog.Popup initialFocus={initialFocus} onKeyDown={onKeyDown} onKeyUp={onKeyUp} onFocusCapture={onFocusCapture} className={`confirm-dialog-popup ui-popover flex w-full flex-col overflow-hidden p-0 outline-none ${size === "editor" ? "h-[min(44rem,calc(100dvh-2rem))] max-w-[42rem]" : "max-h-[calc(100dvh-2rem)] max-w-[30rem]"}`}>
             <div className="flex shrink-0 items-start gap-4 border-b border-border-control px-5 py-5 sm:px-6">
               <div className="min-w-0 flex-1">
-                <Dialog.Title className="[overflow-wrap:anywhere] text-xl font-semibold text-text-primary">{title}</Dialog.Title>
-                <Dialog.Description className="mt-1 [overflow-wrap:anywhere] text-sm leading-relaxed text-text-secondary">{description}</Dialog.Description>
+                <Dialog.Title className="wrap-anywhere text-xl font-semibold text-text-primary">{title}</Dialog.Title>
+                <Dialog.Description className="mt-1 wrap-anywhere text-sm leading-relaxed text-text-secondary">{description}</Dialog.Description>
               </div>
               <Dialog.Close aria-label={closeLabel} disabled={busy} className={iconButtonClassName()}><CloseIcon /></Dialog.Close>
             </div>

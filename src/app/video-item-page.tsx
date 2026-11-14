@@ -153,7 +153,7 @@ export function VideoItemPage({ itemId, returnHref, initialSnapshot }: { itemId:
           createdAt={item.createdAt}
           updatedAt={item.updatedAt}
           sourceFileName={item.sourceFileName}
-          className={`${ITEM_DETAILS_POSITION} lg:min-h-[var(--item-viewer-height)]`}
+          className={`${ITEM_DETAILS_POSITION} lg:min-h-(--item-viewer-height)`}
           disabled={busy}
           editDisabled={editing}
           deleteLabel="Move to Trash"

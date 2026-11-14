@@ -100,7 +100,7 @@ export function PwaProvider({ children }: { children: ReactNode }) {
   if (publicPage) return <>{children}</>;
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden">
       {policy?.showMissingConfigurationWarning ? (
         <MissingOriginConfigurationWarning />
       ) : null}
