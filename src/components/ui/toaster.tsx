@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Toaster as Sonner, toast } from "sonner";
 
 export { toast };
 
+const subscribeToNothing = () => () => {};
+
 export function Toaster() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // False on the server and during hydration, true after; keeps Sonner out of SSR markup.
+  const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false);
   if (!mounted) return null;
   return (
     <Sonner
