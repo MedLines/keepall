@@ -10,6 +10,8 @@
     "start": "next start",
     "lint": "eslint && pnpm lint:css",
     "lint:css": "stylelint \"src/app/styles/*.css\"",
+    "ds:manifest": "node --no-warnings scripts/design-system/manifest-code.mjs",
+    "ds:parity": "node scripts/design-system/parity.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
