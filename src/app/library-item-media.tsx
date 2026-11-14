@@ -67,6 +67,8 @@ export function LibraryItemMedia({
         src={imageSrc}
         width={dimensions?.width}
         height={dimensions?.height}
+        // Hold the known shape before a fresh blob URL decodes; the 16:10 fallback would resize the card and shift its column.
+        style={gridAspectStyle(variant, dimensions)}
         onLoad={(event) => {
           const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
           if (assetIdForDisplay && width > 0 && height > 0) {
@@ -93,7 +95,7 @@ export function LibraryItemMedia({
     <div
       aria-hidden="true"
       className={fallbackClassName(variant, compact, className)}
-      style={variant === "grid" && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined}
+      style={gridAspectStyle(variant, dimensions)}
     >
       {item.type !== "video" && assetIdForDisplay && !imageBroken ? null : <FallbackContent item={item} compact={compact} />}
     </div>
@@ -109,7 +111,7 @@ function LinkFavicon({ item, variant, compact, className, dimensions }: {
 
   return (
     <div aria-hidden="true" className={fallbackClassName(variant, compact, className)}
-      style={variant === "grid" && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined}>
+      style={gridAspectStyle(variant, dimensions)}>
       {faviconSrc ? (
         <LibraryThumbnailImage
           alt=""
@@ -181,4 +183,9 @@ function FallbackContent({ item, compact }: { item: Item; compact: boolean }) {
   if (item.type === "link" || item.type === "document" || item.type === "note" || item.type === "video") return <ItemTypeIcon item={item} className={compact ? "size-6" : "size-10"} />;
   if (!compact) return cardInitial(item);
   return <ItemTypeIcon item={item} className="size-6" />;
+}
+
+/** Grid media keeps the stored image shape so loading states match the decoded card height. */
+function gridAspectStyle(variant: MediaVariant, dimensions?: { width: number; height: number }) {
+  return variant === "grid" && dimensions ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` } : undefined;
 }
