@@ -154,8 +154,8 @@ const ScrollBar = forwardRef<
         className={cn(
           // Fixed surface-relative overlay ramp (8 → 12 → 16%) — same tint
           // direction as the menu hover/active tokens, one notch stronger.
-          "relative bg-[rgb(var(--overlay)/0.08)] transition-[background-color,width,height] duration-160 ease-in-out",
-          "group-hover/scrollbar:bg-[rgb(var(--overlay)/0.12)] active:!bg-[rgb(var(--overlay)/0.16)]",
+          "relative bg-bg-scrollbar-thumb transition-[background-color,width,height] duration-160 ease-in-out",
+          "group-hover/scrollbar:bg-bg-scrollbar-thumb-hover active:!bg-bg-scrollbar-thumb-active",
           shape.bg,
           // -translate nudges the thumb 2px off the container edge; the track
           // (and its 10px hit target) stays flush so edge-throws still land.

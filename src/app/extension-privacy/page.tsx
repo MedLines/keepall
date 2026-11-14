@@ -25,8 +25,8 @@ export default function ExtensionPrivacyPage() {
             <ArrowLeftIcon className="size-4" />
             Back to library
           </Link>
-          <p className="mt-7 text-xs font-medium uppercase tracking-[0.12em] text-text-secondary">Keepall Capture</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Privacy</h1>
+          <p className="mt-7 text-xs font-medium uppercase tracking-eyebrow text-text-secondary">Keepall Capture</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-heading sm:text-4xl">Privacy</h1>
           <p className="mt-3 text-sm text-text-secondary">Last updated October 8, 2026</p>
           <p className="mt-3 text-sm text-text-secondary">This page covers the Chrome extension. Read <Link className="font-medium text-text-primary underline underline-offset-2" href="/privacy">Keepall&apos;s app-wide privacy page</Link> for browser storage, network requests, and backups.</p>
 

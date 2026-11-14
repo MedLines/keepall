@@ -97,12 +97,12 @@
   .ui-backdrop:is([data-starting-style], [data-ending-style]) { opacity: 0; }
   .ui-backdrop[data-ending-style] { transition-duration: var(--motion-moderate-exit); }
   .focused-image-backdrop {
-    background: light-dark(oklch(0 0 0 / 0.6), oklch(0 0 0 / 0.86));
+    background: var(--color-bg-image-backdrop);
     -webkit-backdrop-filter: blur(36px) saturate(0.35);
     backdrop-filter: blur(36px) saturate(0.35);
   }
   .focused-image-backdrop[data-zoomed="true"] {
-    background: oklch(0 0 0 / 0.92);
+    background: var(--color-bg-image-backdrop-zoomed);
     -webkit-backdrop-filter: blur(48px) saturate(0.25);
     backdrop-filter: blur(48px) saturate(0.25);
   }

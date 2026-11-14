@@ -52,6 +52,10 @@
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 
+/* Backdrop behind dialogs and drawers. It follows data-theme only. */
+:root { --backdrop-scrim: linear-gradient(135deg in srgb, oklch(0 0 0 / 0.14), oklch(0 0 0 / 0.09)); }
+:root[data-theme="dark"] { --backdrop-scrim: linear-gradient(135deg in srgb, oklch(1 0 0 / 0.07), oklch(1 0 0 / 0.04)); }
+
 @theme inline {
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --color-black: oklch(0 0 0);
@@ -110,10 +114,27 @@
   --color-bg-search-match: light-dark(oklch(0.945107388 0.086846189 94.873876244), oklch(0.455050432 0.08252792 77.418640118));
   --color-text-search-match: light-dark(oklch(0.265771697 0.042163708 80.495289208), oklch(0.965108469 0.056770316 95.33699577));
   --color-collection-marker: oklch(var(--collection-marker-lightness, 0.68) 0.15 var(--collection-marker-hue, 0));
+  /* Overlay tints: black in light, white in dark. Scrollbar thumbs and the sidebar resize rule. */
+  --color-bg-scrollbar-thumb: light-dark(oklch(0 0 0 / 0.08), oklch(1 0 0 / 0.08));
+  --color-bg-scrollbar-thumb-hover: light-dark(oklch(0 0 0 / 0.12), oklch(1 0 0 / 0.12));
+  --color-bg-scrollbar-thumb-active: light-dark(oklch(0 0 0 / 0.16), oklch(1 0 0 / 0.16));
+  --color-bg-sidebar-rule: light-dark(oklch(0 0 0 / 0.14), oklch(1 0 0 / 0.14));
+  --color-bg-sidebar-rule-focus: light-dark(oklch(0 0 0 / 0.25), oklch(1 0 0 / 0.25));
+  /* Focused image viewer backdrop, and its darker zoomed state. */
+  --color-bg-image-backdrop: light-dark(oklch(0 0 0 / 0.6), oklch(0 0 0 / 0.86));
+  --color-bg-image-backdrop-zoomed: oklch(0 0 0 / 0.92);
+  /* PDF pages and their placeholders stay white paper in both themes. */
+  --color-bg-paper: oklch(1 0 0);
+  --color-text-on-paper: oklch(0.446 0.03 256.802);
+  /* Toasts on the public pages, which stay dark in either theme. */
+  --color-bg-toast: oklch(0.262597222 0.005696969 301.143762134);
+  --color-border-toast: oklch(1 0 0 / 0.070588235);
+  --color-text-toast: oklch(0.938763728 0.007981954 73.741801476);
   --radius-control-xs: 0.625rem;
   --radius-control-sm: 0.75rem;
   --radius-control-md: 0.8125rem;
   --radius-control-lg: 0.875rem;
+  --radius-control-xl: 1.5rem;
   --radius-input: 1rem;
   --radius-panel: 1.25rem;
   --radius-library-panel: 2rem;
@@ -126,6 +147,8 @@
   --shadow-action-primary-hover: 0 2px 8px light-dark(oklch(0 0 0 / 0.16), oklch(0 0 0 / 0.5));
   --shadow-panel: 0 3px 12px oklch(0 0 0 / 0.070588235);
   --shadow-card: 0 2px 4px oklch(0 0 0 / 0.039215686);
+  --shadow-thumbnail-edge: 0 0 0 1px oklch(0 0 0 / 0.05);
+  --shadow-inspect: 0 0 0 1px oklch(0 0 0 / 0.06), 0 16px 40px oklch(0 0 0 / 0.18);
   --shadow-image:
     0 1px 2px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.24)),
     0 4px 12px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.28)),
@@ -141,5 +164,7 @@
   --text-md: 0.9375rem;
   --text-heading: 1.375rem;
   --text-display: 1.75rem;
+  --tracking-heading: -0.03em;
+  --tracking-eyebrow: 0.12em;
   --radius-card: 1.5rem;
 }

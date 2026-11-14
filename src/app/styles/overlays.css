@@ -1,25 +1,16 @@
-/* Overlay ramp and backdrop scrim, toasts, scrollbars, scroll areas and scroll textareas. */
-
-/* Registry scrollbars use an RGB triplet; Keepall themes use data-theme. */
-:root { --overlay: 0 0 0; --backdrop-scrim: linear-gradient(135deg in srgb, oklch(0 0 0 / 0.14), oklch(0 0 0 / 0.09)); }
-:root[data-theme="dark"] { --overlay: 255 255 255; --backdrop-scrim: linear-gradient(135deg in srgb, oklch(1 0 0 / 0.07), oklch(1 0 0 / 0.04)); }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --overlay: 255 255 255; }
-}
+/* Toasts, scrollbars, scroll areas and scroll textareas. Colours come from tokens.css. */
 
 /* Public pages stay dark even when the library uses its light theme. */
 :root:has(.ka-page.ka-about, .ka-page.kh-page) {
-  --overlay: 255 255 255;
   color-scheme: dark;
 }
 :root:has(.ka-page.ka-about, .ka-page.kh-page) .kc-toaster {
-  --normal-bg: oklch(0.262597222 0.005696969 301.143762134);
-  --normal-border: oklch(1 0 0 / 0.070588235);
-  --normal-text: oklch(0.938763728 0.007981954 73.741801476);
-  --success-bg: oklch(0.262597222 0.005696969 301.143762134);
-  --success-border: oklch(1 0 0 / 0.070588235);
-  --success-text: oklch(0.938763728 0.007981954 73.741801476);
+  --normal-bg: var(--color-bg-toast);
+  --normal-border: var(--color-border-toast);
+  --normal-text: var(--color-text-toast);
+  --success-bg: var(--color-bg-toast);
+  --success-border: var(--color-border-toast);
+  --success-text: var(--color-text-toast);
 }
 
 .kc-toaster {
@@ -43,22 +34,22 @@
 @media (pointer: fine) {
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgb(var(--overlay) / 0.08) transparent;
+    scrollbar-color: var(--color-bg-scrollbar-thumb) transparent;
   }
 
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track,
   ::-webkit-scrollbar-corner { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background-color: rgb(var(--overlay) / 0.08);
+    background-color: var(--color-bg-scrollbar-thumb);
     border: 3px solid transparent;
     background-clip: content-box;
     border-radius: 8px;
   }
   ::-webkit-scrollbar-thumb:vertical { border-left-width: 1px; border-right-width: 5px; }
   ::-webkit-scrollbar-thumb:horizontal { border-top-width: 1px; border-bottom-width: 5px; }
-  ::-webkit-scrollbar-thumb:hover { background-color: rgb(var(--overlay) / 0.12); }
-  ::-webkit-scrollbar-thumb:active { background-color: rgb(var(--overlay) / 0.16); }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--color-bg-scrollbar-thumb-hover); }
+  ::-webkit-scrollbar-thumb:active { background-color: var(--color-bg-scrollbar-thumb-active); }
 }
 
 [data-slot="scroll-area"] { scrollbar-gutter: auto; --scroll-fade-size: 48px; }

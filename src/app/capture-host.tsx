@@ -1055,7 +1055,7 @@ export function CaptureHost() {
                   className="shrink-0"
                 >
                   <div
-                    className="relative size-16 overflow-hidden rounded-lg bg-bg-raised shadow-[0_0_0_1px_oklch(0_0_0_/_0.05)]"
+                    className="relative size-16 overflow-hidden rounded-lg bg-bg-raised shadow-thumbnail-edge"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
                     <img
