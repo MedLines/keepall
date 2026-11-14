@@ -97,7 +97,9 @@ function tokenEntries(scopes) {
 // --- write ------------------------------------------------------------------------------------
 
 const manifest = await loadManifest();
+// Prototypes (Storybook's Prototypes section) are experiments built from system parts, not parts.
 const components = Object.values(manifest.components)
+  .filter((entry) => !entry.id.startsWith("prototypes-"))
   .map((entry) => {
     const docgen = entry.reactDocgen ?? {};
     const description = entry.description ?? docgen.description ?? "";
