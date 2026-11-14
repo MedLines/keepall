@@ -24,9 +24,13 @@ const figmaByName = new Map(figma.components.map((c) => [c.name, c]));
 const paired = new Set();
 const pairedFigma = new Set();
 
-for (const pair of config.components) {
+// Components with the same name in code and Figma pair on their own; config entries add exceptions.
+const configured = new Set(config.components.map((pair) => pair.code));
+const pairs = [...config.components, ...code.components.filter((c) => !configured.has(c.name) && figmaByName.has(c.name)).map((c) => ({ code: c.name }))];
+
+for (const pair of pairs) {
   const c = codeByName.get(pair.code);
-  const f = figmaByName.get(pair.figma);
+  const f = figmaByName.get(pair.figma ?? pair.code);
   if (!c || !f) { add("red", "component", pair.code, `Pairing points at a missing component (${!c ? "code" : "Figma"}).`, "Fix parity.config.json."); continue; }
   paired.add(c.name); pairedFigma.add(f.name);
 
@@ -36,7 +40,9 @@ for (const pair of config.components) {
   const ignoreFigma = { ...config.ignoreFigmaPropertiesEverywhere, ...pair.ignoreFigmaProperties };
   const ignoreCode = pair.ignoreCodeProps ?? {};
   const ignoreValues = pair.ignoreCodeValues ?? {};
-  const enumProps = c.props.filter((p) => p.type === "enum" && !(p.name in ignoreCode));
+  const enumProps = c.props.filter((p) => !(p.name in ignoreCode) && (p.type === "enum" ||
+    (p.type === "boolean" && f.properties.some((fp) => fp.type === "VARIANT" && fp.name.toLowerCase() === p.name.toLowerCase()))))
+    .map((p) => (p.type === "boolean" ? { ...p, values: ["false", "true"] } : p));
 
   for (const fp of f.properties.filter((p) => p.type === "VARIANT")) {
     if (fp.name in ignoreFigma) { add("gap", "property", `${c.name}.${fp.name}`, `Figma-only variant (${fp.options.join(", ")}).`, gap(ignoreFigma[fp.name])); continue; }
@@ -52,7 +58,8 @@ for (const pair of config.components) {
     if (!missing.length && !extra.length) add("green", "values", `${c.name}.${cp.name}`, compared.join(", "));
     else add("red", "values", `${c.name}.${cp.name}`, `code [${compared.join(", ")}] vs Figma [${fp.options.join(", ")}]`,
       [extra.length && `Rename or remove Figma values ${extra.map((v) => `"${v}"`).join(", ")}`, missing.length && `add ${missing.map((v) => `"${v}"`).join(", ")}`].filter(Boolean).join("; ") + ".");
-    if (cp.default === undefined) add("red", "default", `${c.name}.${cp.name}`, `Code exposes no default; Figma defaults to "${fp.default}".`, `Declare the default in the component's props first (code), then set the Figma default to match.`);
+    if (cp.default === undefined && cp.required) add("green", "default", `${c.name}.${cp.name}`, `Required in code; Figma shows "${fp.default}".`);
+    else if (cp.default === undefined) add("red", "default", `${c.name}.${cp.name}`, `Code exposes no default; Figma defaults to "${fp.default}".`, `Declare the default in the component's props first (code), then set the Figma default to match.`);
     else if (cp.default === fp.default) add("green", "default", `${c.name}.${cp.name}`, cp.default);
     else add("red", "default", `${c.name}.${cp.name}`, `code "${cp.default}" vs Figma "${fp.default}".`, `Set the Figma default of "${fp.name}" to "${cp.default}".`);
   }
@@ -71,7 +78,7 @@ for (const pair of config.components) {
 for (const f of figma.components) {
   if (pairedFigma.has(f.name)) continue;
   if (f.name in config.figmaWithoutCodeComponent) add("known", "component", f.name, `Figma only: ${config.figmaWithoutCodeComponent[f.name]}`);
-  else add("red", "component", f.name, "Figma component with no code counterpart.", "Pair it in parity.config.json, or remove it.");
+  else add("red", "component", f.name, "Figma component with no code counterpart.", "Rename it to the code component it draws, or explain it under figmaWithoutCodeComponent in parity.config.json.");
   if (/&(quot|amp|lt|gt|#\d+);/.test(f.description)) add("red", "description", f.name, "Figma description contains HTML entities (e.g. &quot;).", "Replace the entities with plain characters.");
 }
 for (const c of code.components) {

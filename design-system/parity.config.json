@@ -1,9 +1,8 @@
 {
-  "$comment": "Pairs code components with their Figma counterparts and lists differences that are known gaps, not drift. Every gap names a GAPS.md section. Code wins every disagreement.",
+  "$comment": "Lists differences between code and the Figma library that are known gaps, not drift. Components with the same name pair on their own; entries here add exceptions, and \"figma\" names a Figma component whose name differs. Every gap names a GAPS.md section. Code wins every disagreement.",
   "components": [
     {
       "code": "Button",
-      "figma": "Button",
       "ignoreCodeValues": {
         "size": {
           "none": "caller-sized-variants"
@@ -12,14 +11,12 @@
     },
     {
       "code": "IconButton",
-      "figma": "Icon button",
       "ignoreFigmaProperties": {
         "Style": "media-chrome-surface"
       }
     },
     {
       "code": "SegmentedControl",
-      "figma": "Segmented switch",
       "ignoreFigmaProperties": {
         "Selected": "data-driven-variants"
       },
@@ -28,64 +25,34 @@
       }
     },
     {
-      "code": "TextField",
-      "figma": "Text field"
-    },
-    {
-      "code": "ScrollTextarea",
-      "figma": "Textarea"
-    },
-    {
       "code": "RadioCard",
-      "figma": "Radio card",
       "ignoreFigmaProperties": {
         "State": "data-driven-variants"
       }
     },
     {
-      "code": "Tooltip",
-      "figma": "Tooltip"
-    },
-    {
-      "code": "Toaster",
-      "figma": "Toast"
-    },
-    {
-      "code": "UndoNotice",
-      "figma": "Undo notice"
-    },
-    {
-      "code": "ConfirmDialog",
-      "figma": "Confirm dialog"
-    },
-    {
       "code": "ItemTypeBadge",
-      "figma": "Type badge",
+      "ignoreFigmaProperties": {
+        "Type": "data-driven-variants"
+      }
+    },
+    {
+      "code": "ItemTypeIcon",
       "ignoreFigmaProperties": {
         "Type": "data-driven-variants"
       }
     },
     {
       "code": "LibraryCardMetadata",
-      "figma": "Metadata pill",
       "ignoreFigmaProperties": {
         "Kind": "data-driven-variants"
       }
     },
     {
       "code": "LibrarySelectionControl",
-      "figma": "Selection control",
       "ignoreFigmaProperties": {
         "State": "data-driven-variants"
       }
-    },
-    {
-      "code": "CardNote",
-      "figma": "Card note"
-    },
-    {
-      "code": "CardSource",
-      "figma": "Card source"
     }
   ],
   "ignoreFigmaPropertiesEverywhere": {

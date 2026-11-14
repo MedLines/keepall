@@ -34,23 +34,24 @@
           "id": "5:66"
         },
         {
-          "name": "Variant",
+          "name": "variant",
           "type": "VARIANT",
-          "default": "Primary",
+          "default": "secondary",
           "options": [
-            "Primary",
-            "Secondary",
-            "Danger",
-            "Danger ghost"
+            "primary",
+            "secondary",
+            "danger",
+            "danger-ghost"
           ]
         },
         {
-          "name": "Size",
+          "name": "size",
           "type": "VARIANT",
           "default": "md",
           "options": [
             "md",
-            "toolbar"
+            "toolbar",
+            "lg"
           ]
         },
         {
@@ -65,10 +66,10 @@
           ]
         }
       ],
-      "variantCount": 32
+      "variantCount": 48
     },
     {
-      "name": "Icon button",
+      "name": "IconButton",
       "page": "Buttons",
       "type": "COMPONENT_SET",
       "nodeId": "5:239",
@@ -82,6 +83,17 @@
           "id": "5:99"
         },
         {
+          "name": "variant",
+          "type": "VARIANT",
+          "default": "secondary",
+          "options": [
+            "secondary",
+            "primary",
+            "danger",
+            "danger-ghost"
+          ]
+        },
+        {
           "name": "Style",
           "type": "VARIANT",
           "default": "Control",
@@ -91,7 +103,7 @@
           ]
         },
         {
-          "name": "Size",
+          "name": "size",
           "type": "VARIANT",
           "default": "md",
           "options": [
@@ -112,10 +124,10 @@
           ]
         }
       ],
-      "variantCount": 11
+      "variantCount": 17
     },
     {
-      "name": "Segmented switch",
+      "name": "SegmentedControl",
       "page": "Buttons",
       "type": "COMPONENT_SET",
       "nodeId": "5:266",
@@ -147,12 +159,12 @@
           "id": "32:9"
         },
         {
-          "name": "Variant",
+          "name": "variant",
           "type": "VARIANT",
-          "default": "Icon",
+          "default": "text",
           "options": [
-            "Icon",
-            "Text"
+            "icon",
+            "text"
           ]
         },
         {
@@ -173,7 +185,7 @@
       "type": "COMPONENT_SET",
       "nodeId": "7:23",
       "key": "c3f1e738a43833dbc91f9faa77f7b2baa59cb8a3",
-      "description": "Library top-bar search (#library-search, type=search, .ui-field inside .library-top-bar). 40px pill with superellipse(1.5) corners, bg-control, 1px border-control. 16px Search glyph at 14px, text inset 40px. Empty shows the shortcut hint (10px kbd, text-secondary). Filled swaps the hint for a 44px clear target with a 28px round hover surface (bg-raised). While a content search is pending, the glyph becomes a 16px spinner after 200ms. Focus: 1px border-focus outline inset 2px. Placeholders: &quot;Search your library…&quot;, &quot;Search collections…&quot;, &quot;Search tags…&quot;, &quot;Search Trash…&quot;.",
+      "description": "Library top-bar search (#library-search, type=search, .ui-field inside .library-top-bar). 40px pill with superellipse(1.5) corners, bg-control, 1px border-control. 16px Search glyph at 14px, text inset 40px. Empty shows the shortcut hint (10px kbd, text-secondary). Filled swaps the hint for a 44px clear target with a 28px round hover surface (bg-raised). While a content search is pending, the glyph becomes a 16px spinner after 200ms. Focus: 1px border-focus outline inset 2px. Placeholders: \"Search your library…\", \"Search collections…\", \"Search tags…\", \"Search Trash…\".",
       "properties": [
         {
           "name": "Value",
@@ -195,7 +207,7 @@
       "variantCount": 3
     },
     {
-      "name": "Text field",
+      "name": "TextField",
       "page": "Inputs",
       "type": "COMPONENT_SET",
       "nodeId": "7:41",
@@ -235,7 +247,7 @@
       "variantCount": 4
     },
     {
-      "name": "Textarea",
+      "name": "ScrollTextarea",
       "page": "Inputs",
       "type": "COMPONENT",
       "nodeId": "7:42",
@@ -257,7 +269,7 @@
       ]
     },
     {
-      "name": "Radio card",
+      "name": "RadioCard",
       "page": "Inputs",
       "type": "COMPONENT_SET",
       "nodeId": "33:227",
@@ -376,7 +388,7 @@
       ]
     },
     {
-      "name": "Toast",
+      "name": "Toaster",
       "page": "Menus & overlays",
       "type": "COMPONENT",
       "nodeId": "9:81",
@@ -392,7 +404,7 @@
       ]
     },
     {
-      "name": "Undo notice",
+      "name": "UndoNotice",
       "page": "Menus & overlays",
       "type": "COMPONENT",
       "nodeId": "9:83",
@@ -408,7 +420,7 @@
       ]
     },
     {
-      "name": "Confirm dialog",
+      "name": "ConfirmDialog",
       "page": "Menus & overlays",
       "type": "COMPONENT",
       "nodeId": "9:92",
@@ -430,12 +442,81 @@
       ]
     },
     {
+      "name": "ModalDialog",
+      "page": "Menus & overlays",
+      "type": "COMPONENT_SET",
+      "nodeId": "56:217",
+      "key": "0daa9421d6f257a3a3eb29868d4435e7062fb7c0",
+      "description": "Modal for forms and editors with a fixed header and footer and scrolling content; use ConfirmDialog for destructive yes/no questions.\n\n\nimport { ModalDialog } from \"@/components/ui/modal-dialog\";",
+      "properties": [
+        {
+          "name": "size",
+          "type": "VARIANT",
+          "default": "compact",
+          "options": [
+            "compact",
+            "editor"
+          ]
+        }
+      ],
+      "variantCount": 2
+    },
+    {
+      "name": "SideDrawer",
+      "page": "Menus & overlays",
+      "type": "COMPONENT_SET",
+      "nodeId": "56:266",
+      "key": "5bb4c127575627e7cc653e1f2618f293925167b0",
+      "description": "Panel that slides in from the left or right edge, with a title header and close button, for capture and organizing flows.\n\n\nimport { SideDrawer } from \"@/components/ui/side-drawer\";",
+      "properties": [
+        {
+          "name": "side",
+          "type": "VARIANT",
+          "default": "right",
+          "options": [
+            "right",
+            "left"
+          ]
+        }
+      ],
+      "variantCount": 2
+    },
+    {
+      "name": "RowActionMenu",
+      "page": "Menus & overlays",
+      "type": "COMPONENT",
+      "nodeId": "56:267",
+      "key": "ce66a6466f8cacbfe81af502fbbdcb8bfe2bd59c",
+      "description": "Action menu for one row or card, opened from its More button or by right-click, with the same actions both ways.\n\n\nimport { RowActionMenu } from \"@/app/row-action-menu\";",
+      "properties": []
+    },
+    {
+      "name": "ShellTopMenu",
+      "page": "Menus & overlays",
+      "type": "COMPONENT_SET",
+      "nodeId": "56:315",
+      "key": "dce6e9712f41e9d79b0fdba3d6bbf888aa8c5a68",
+      "description": "Single-choice dropdown (Select) for the top bar and forms; use it instead of a native select.\n\n\nimport { ShellTopMenu } from \"@/app/shell-top-menu\";",
+      "properties": [
+        {
+          "name": "variant",
+          "type": "VARIANT",
+          "default": "toolbar",
+          "options": [
+            "toolbar",
+            "field"
+          ]
+        }
+      ],
+      "variantCount": 2
+    },
+    {
       "name": "Sidebar nav item",
       "page": "Navigation",
       "type": "COMPONENT_SET",
       "nodeId": "10:60",
       "key": "d7e6fd64a0d8fe64b7c0f421789a48334d129c7e",
-      "description": "Library sidebar row — ShellNavItem / ShellNavLink in src/app/library-shell.tsx. Desktop 36px rows (40px+ on touch), text-sm, text-secondary; 40px icon column with an 18px glyph, 8px gap, 12px end padding; 11px tabular count (hidden on row hover while the row menu shows). Hover bg-raised. Active (aria-current=&quot;page&quot;) = .ui-selected: bg-active + 1px inset top highlight, font-medium, and text-primary for the label, icon AND count (classes merged with cn so the active color wins; keeps 4.5:1 on bg-active). Collapsed rail keeps only the 40px icon column and shows the label in a Tooltip to the right — never a native title. Pill radius with superellipse(1.5); press scale(0.98). Focus: 1px border-focus outline at offset −1px.",
+      "description": "Library sidebar row — ShellNavItem / ShellNavLink in src/app/library-shell.tsx. Desktop 36px rows (40px+ on touch), text-sm, text-secondary; 40px icon column with an 18px glyph, 8px gap, 12px end padding; 11px tabular count (hidden on row hover while the row menu shows). Hover bg-raised. Active (aria-current=\"page\") = .ui-selected: bg-active + 1px inset top highlight, font-medium, and text-primary for the label, icon AND count (classes merged with cn so the active color wins; keeps 4.5:1 on bg-active). Collapsed rail keeps only the 40px icon column and shows the label in a Tooltip to the right — never a native title. Pill radius with superellipse(1.5); press scale(0.98). Focus: 1px border-focus outline at offset −1px.",
       "properties": [
         {
           "name": "Label",
@@ -517,13 +598,42 @@
       "variantCount": 2
     },
     {
-      "name": "Type badge",
+      "name": "SettingsLink",
+      "page": "Navigation",
+      "type": "COMPONENT_SET",
+      "nodeId": "56:383",
+      "key": "bf086755dfaeb6fa252b3e4ecb46b9318f732c40",
+      "description": "Full-width link row with a trailing arrow that leads to another settings section or page.\n\n\nimport { SettingsLink } from \"@/app/settings/settings-link\";",
+      "properties": [
+        {
+          "name": "primary",
+          "type": "VARIANT",
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ]
+        }
+      ],
+      "variantCount": 2
+    },
+    {
+      "name": "ItemTypeBadge",
       "page": "Library",
       "type": "COMPONENT_SET",
       "nodeId": "11:47",
       "key": "2d0ec1c582d259a20b5d48c1f2b78e59367e1f7f",
-      "description": "ItemTypeBadge (card variant): one colored identity glyph on the .library-card-media-chrome surface, bottom-end of the preview at 14px inside the media. 32px high, min 32px wide, 16px glyph. Colors use item/* — darker in light mode, the brighter item/on-media/* in dark mode. Only image galleries add text (the count, before the glyph). role=&quot;img&quot; with an aria-label naming the type; color is never the only cue.",
+      "description": "ItemTypeBadge (card variant): one colored identity glyph on the .library-card-media-chrome surface, bottom-end of the preview at 14px inside the media. 32px high, min 32px wide, 16px glyph. Colors use item/ — darker in light mode, the brighter item/on-media/ in dark mode. Only image galleries add text (the count, before the glyph). role=\"img\" with an aria-label naming the type; color is never the only cue.",
       "properties": [
+        {
+          "name": "variant",
+          "type": "VARIANT",
+          "default": "card",
+          "options": [
+            "card",
+            "list"
+          ]
+        },
         {
           "name": "Type",
           "type": "VARIANT",
@@ -540,10 +650,10 @@
           ]
         }
       ],
-      "variantCount": 8
+      "variantCount": 16
     },
     {
-      "name": "Metadata pill",
+      "name": "LibraryCardMetadata",
       "page": "Library",
       "type": "COMPONENT_SET",
       "nodeId": "11:68",
@@ -584,7 +694,7 @@
       "variantCount": 4
     },
     {
-      "name": "Selection control",
+      "name": "LibrarySelectionControl",
       "page": "Library",
       "type": "COMPONENT_SET",
       "nodeId": "11:76",
@@ -604,7 +714,7 @@
       "variantCount": 2
     },
     {
-      "name": "Card note",
+      "name": "CardNote",
       "page": "Library",
       "type": "COMPONENT",
       "nodeId": "11:77",
@@ -626,7 +736,7 @@
       ]
     },
     {
-      "name": "Card source",
+      "name": "CardSource",
       "page": "Library",
       "type": "COMPONENT",
       "nodeId": "11:83",
@@ -724,11 +834,76 @@
         }
       ],
       "variantCount": 3
+    },
+    {
+      "name": "MediaViewerToolbar",
+      "page": "Library",
+      "type": "COMPONENT",
+      "nodeId": "56:316",
+      "key": "f591d927a7854c9a0e9b55c3e9a54033b6c80243",
+      "description": "Toolbar for image and PDF viewers: view choices on the left, navigation in the middle, zoom on the right.\n\n\nimport { MediaViewerToolbar } from \"@/app/media-viewer-toolbar\";",
+      "properties": []
+    },
+    {
+      "name": "ItemTypeIcon",
+      "page": "Library",
+      "type": "COMPONENT_SET",
+      "nodeId": "56:361",
+      "key": "be6db358bb3357d6e56dd940da9080fbaf5fc867",
+      "description": "The colored glyph that identifies an item's type; use it wherever an item appears, never a type word or a different icon.\n\n\nimport { ItemTypeIcon } from \"@/app/item-type-icon\";",
+      "properties": [
+        {
+          "name": "Type",
+          "type": "VARIANT",
+          "default": "PDF",
+          "options": [
+            "PDF",
+            "TXT",
+            "Markdown",
+            "Note",
+            "Image",
+            "Images",
+            "Link",
+            "Video"
+          ]
+        }
+      ],
+      "variantCount": 8
+    },
+    {
+      "name": "DocumentIcon",
+      "page": "Library",
+      "type": "COMPONENT_SET",
+      "nodeId": "56:371",
+      "key": "b6860ebfd2db14ba734fab77c5d3a8b78e940277",
+      "description": "File glyph for PDF, TXT and MD documents, with the extension drawn into it.\n\n\nimport { DocumentIcon } from \"@/app/document-icon\";",
+      "properties": [
+        {
+          "name": "format",
+          "type": "VARIANT",
+          "default": "text",
+          "options": [
+            "text",
+            "markdown",
+            "pdf"
+          ]
+        }
+      ],
+      "variantCount": 3
+    },
+    {
+      "name": "CardPin",
+      "page": "Library",
+      "type": "COMPONENT",
+      "nodeId": "56:372",
+      "key": "e9dec0bab80c9fadb5225eb65f7768022cd40e12",
+      "description": "Pin glyph marking an item pinned in the current collection.\n\n\nimport { CardPin } from \"@/app/library-card-details\";",
+      "properties": []
     }
   ],
   "icons": [
     {
-      "name": "Icon/Add",
+      "name": "Icon/Plus",
       "nodeId": "4:18",
       "key": "0dbe9971469ae8c1fc55e006e3dd56432dda5cd1"
     },
@@ -823,7 +998,7 @@
       "key": "d2093f2612e01a2881878b4c49ee2b0f7973411c"
     },
     {
-      "name": "Icon/Sort",
+      "name": "Icon/Sort desc",
       "nodeId": "4:145",
       "key": "5090cc65e81c8006a7340cbc0f4d852916007539"
     },
@@ -833,17 +1008,17 @@
       "key": "bcd00f31699425bfcd507a3c74ffa71754e606a0"
     },
     {
-      "name": "Icon/Moon",
+      "name": "Icon/Dark theme",
       "nodeId": "4:157",
       "key": "d599bf83228dc46789c871657aeb648f0e0f530a"
     },
     {
-      "name": "Icon/Sun",
+      "name": "Icon/Light theme",
       "nodeId": "4:163",
       "key": "8d4331e5a830736c6b4e423148f00be7cb34d46f"
     },
     {
-      "name": "Icon/Tag",
+      "name": "Icon/Hash",
       "nodeId": "4:170",
       "key": "d60c370a9b39e26b719d4e9c8db8bc72327282cd"
     },
@@ -928,12 +1103,12 @@
       "key": "06cc0339e11f3437288764600f99e86b3072f063"
     },
     {
-      "name": "Icon/TXT",
+      "name": "Icon/Text file",
       "nodeId": "4:273",
       "key": "8acd1e07ed69657fa721d2f82a93612f8d72ec59"
     },
     {
-      "name": "Icon/Markdown",
+      "name": "Icon/Markdown file",
       "nodeId": "4:279",
       "key": "1db38d4383a6042f5add4c3659c59f5f795c6ef2"
     },
@@ -963,9 +1138,89 @@
       "key": "a0dd33d9fcc5bf2d9ed740e92c98c7d0dcec883e"
     },
     {
-      "name": "Icon/Globe",
+      "name": "Icon/Internet",
       "nodeId": "4:316",
       "key": "eb12e224f54eba35584c0b00748bb63e9af11877"
+    },
+    {
+      "name": "Icon/Device",
+      "nodeId": "49:175",
+      "key": "3b5d290d40d7c28ead3956ce4d22bf47320f9992"
+    },
+    {
+      "name": "Icon/Exit full screen",
+      "nodeId": "49:185",
+      "key": "93c89b4e851bd1c5cd676beb80f1df958724edd4"
+    },
+    {
+      "name": "Icon/Forward",
+      "nodeId": "49:196",
+      "key": "fb11ffc39c6731bfbcb7fada7017806e4b0cf44c"
+    },
+    {
+      "name": "Icon/Full screen",
+      "nodeId": "49:207",
+      "key": "61d31f4cb495a0d9d2cbd8a22212df0c1efbda5f"
+    },
+    {
+      "name": "Icon/Keyboard",
+      "nodeId": "49:216",
+      "key": "0be8eda243369be7919c7816548cd147e3a6e434"
+    },
+    {
+      "name": "Icon/Markdown",
+      "nodeId": "49:230",
+      "key": "909634121d2c086e60d76862d950a19d2b175f64"
+    },
+    {
+      "name": "Icon/Mute",
+      "nodeId": "49:241",
+      "key": "299feea04ff543d9e6216e8cef8981058f8fefdf"
+    },
+    {
+      "name": "Icon/Ocr",
+      "nodeId": "49:253",
+      "key": "978ddf6b910bd0c14c48363846f72d8d75b1998b"
+    },
+    {
+      "name": "Icon/Offline",
+      "nodeId": "49:265",
+      "key": "d9f693e25e42dcf4735f2cb5c8203d50df3ad381"
+    },
+    {
+      "name": "Icon/Palette",
+      "nodeId": "49:280",
+      "key": "5b4649a70307cd31f99dfe4d76e61b2abc3f2622"
+    },
+    {
+      "name": "Icon/Pause",
+      "nodeId": "49:289",
+      "key": "1cb8e44e2e2ad8bddc309bff22d6182094761037"
+    },
+    {
+      "name": "Icon/Plain text",
+      "nodeId": "49:299",
+      "key": "bff6ce9cd7907403fb9e80af75267d81bd9cc363"
+    },
+    {
+      "name": "Icon/Rewind",
+      "nodeId": "49:309",
+      "key": "9bf8e4d8c20db6a7dcb11dc4c3fd401909c7c860"
+    },
+    {
+      "name": "Icon/Sidebar chevron",
+      "nodeId": "49:320",
+      "key": "cf1138fdacd5f062ce08859cb6e0a5a10fd5b42d"
+    },
+    {
+      "name": "Icon/Sort asc",
+      "nodeId": "49:330",
+      "key": "ee7ac8c644317ef9493bceef4d27e22e250ca97d"
+    },
+    {
+      "name": "Icon/Volume",
+      "nodeId": "49:344",
+      "key": "9c15cb8b9342333323a973bc7caa4d1cb22e5e6d"
     }
   ],
   "variables": [
@@ -1225,7 +1480,8 @@
               0.9412,
               1
             ]
-          }
+          },
+          "description": "Warm off-white used for primary text in dark mode."
         }
       ]
     },
@@ -2537,6 +2793,382 @@
               0.039
             ]
           }
+        },
+        {
+          "name": "bg/scrollbar-thumb",
+          "codeSyntax": "var(--color-bg-scrollbar-thumb)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.08
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.08
+            ]
+          },
+          "description": "Scroll area thumb at rest."
+        },
+        {
+          "name": "bg/scrollbar-thumb-hover",
+          "codeSyntax": "var(--color-bg-scrollbar-thumb-hover)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.12
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.12
+            ]
+          },
+          "description": "Scroll area thumb on hover."
+        },
+        {
+          "name": "bg/scrollbar-thumb-active",
+          "codeSyntax": "var(--color-bg-scrollbar-thumb-active)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.16
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.16
+            ]
+          },
+          "description": "Scroll area thumb while dragging."
+        },
+        {
+          "name": "bg/sidebar-rule",
+          "codeSyntax": "var(--color-bg-sidebar-rule)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.14
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.14
+            ]
+          },
+          "description": "Sidebar resize rule."
+        },
+        {
+          "name": "bg/sidebar-rule-focus",
+          "codeSyntax": "var(--color-bg-sidebar-rule-focus)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.25
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.25
+            ]
+          },
+          "description": "Sidebar resize rule when focused or dragged."
+        },
+        {
+          "name": "bg/image-backdrop",
+          "codeSyntax": "var(--color-bg-image-backdrop)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.6
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.86
+            ]
+          },
+          "description": "Backdrop behind the image viewer."
+        },
+        {
+          "name": "bg/image-backdrop-zoomed",
+          "codeSyntax": "var(--color-bg-image-backdrop-zoomed)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.92
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.92
+            ]
+          },
+          "description": "Image viewer backdrop while zoomed. Same in both schemes."
+        },
+        {
+          "name": "bg/paper",
+          "codeSyntax": "var(--color-bg-paper)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": {
+              "alias": "white"
+            },
+            "Dark": {
+              "alias": "white"
+            }
+          },
+          "description": "PDF and document page. Same in both schemes."
+        },
+        {
+          "name": "text/on-paper",
+          "codeSyntax": "var(--color-text-on-paper)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.2888,
+              0.3335,
+              0.3961,
+              1
+            ],
+            "Dark": [
+              0.2888,
+              0.3335,
+              0.3961,
+              1
+            ]
+          },
+          "description": "Text drawn on bg/paper. Same in both schemes."
+        },
+        {
+          "name": "bg/toast",
+          "codeSyntax": "var(--color-bg-toast)",
+          "type": "COLOR",
+          "scopes": [
+            "FRAME_FILL",
+            "SHAPE_FILL"
+          ],
+          "values": {
+            "Light": [
+              0.1451,
+              0.1412,
+              0.1529,
+              1
+            ],
+            "Dark": [
+              0.1451,
+              0.1412,
+              0.1529,
+              1
+            ]
+          },
+          "description": "Toast surface. Toasts are dark in both schemes."
+        },
+        {
+          "name": "border/toast",
+          "codeSyntax": "var(--color-border-toast)",
+          "type": "COLOR",
+          "scopes": [
+            "STROKE_COLOR",
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              1,
+              1,
+              1,
+              0.0706
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.0706
+            ]
+          },
+          "description": "Toast edge."
+        },
+        {
+          "name": "text/toast",
+          "codeSyntax": "var(--color-text-toast)",
+          "type": "COLOR",
+          "scopes": [
+            "SHAPE_FILL",
+            "TEXT_FILL",
+            "STROKE_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0.9333,
+              0.9176,
+              0.898,
+              1
+            ],
+            "Dark": [
+              0.9333,
+              0.9176,
+              0.898,
+              1
+            ]
+          },
+          "description": "Toast text."
+        },
+        {
+          "name": "shadow/edge",
+          "codeSyntax": "var(--shadow-edge)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.1412
+            ],
+            "Dark": [
+              1,
+              1,
+              1,
+              0.1412
+            ]
+          },
+          "description": "1px ring colour of --shadow-edge."
+        },
+        {
+          "name": "shadow/thumbnail-edge",
+          "codeSyntax": "var(--shadow-thumbnail-edge)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.05
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.05
+            ]
+          },
+          "description": "1px ring colour of --shadow-thumbnail-edge."
+        },
+        {
+          "name": "shadow/inspect-1",
+          "codeSyntax": "var(--shadow-inspect)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.06
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.06
+            ]
+          },
+          "description": "Layer 1 (1px ring) of --shadow-inspect."
+        },
+        {
+          "name": "shadow/inspect-2",
+          "codeSyntax": "var(--shadow-inspect)",
+          "type": "COLOR",
+          "scopes": [
+            "EFFECT_COLOR"
+          ],
+          "values": {
+            "Light": [
+              0,
+              0,
+              0,
+              0.18
+            ],
+            "Dark": [
+              0,
+              0,
+              0,
+              0.18
+            ]
+          },
+          "description": "Layer 2 (0 16px 40px) of --shadow-inspect."
         }
       ]
     },
@@ -2632,7 +3264,8 @@
           ],
           "values": {
             "Value": 64
-          }
+          },
+          "description": "Code value with corner-shape: squircle (supported browsers). For canvas rendering use render/card."
         },
         {
           "name": "radius/card-fallback",
@@ -2643,7 +3276,8 @@
           ],
           "values": {
             "Value": 24
-          }
+          },
+          "description": "@theme fallback when corner-shape is unsupported."
         },
         {
           "name": "radius/full",
@@ -2654,7 +3288,8 @@
           ],
           "values": {
             "Value": 999
-          }
+          },
+          "description": "Control shape rule (components layer): buttons, menu items, segmented switches, top-bar inputs and sidebar rows. Paired with corner-shape: superellipse(1.5). An explicit rounded-* utility now wins."
         },
         {
           "name": "render/card",
@@ -2665,7 +3300,8 @@
           ],
           "values": {
             "Value": 35
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: squircle 64px → 35 @ 84% smoothing."
         },
         {
           "name": "render/card-media",
@@ -2676,7 +3312,8 @@
           ],
           "values": {
             "Value": 30
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: squircle 56px → 30 @ 84% smoothing."
         },
         {
           "name": "render/library-panel",
@@ -2687,7 +3324,8 @@
           ],
           "values": {
             "Value": 17
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: squircle 32px → 17 @ 84% smoothing."
         },
         {
           "name": "render/panel",
@@ -2698,7 +3336,8 @@
           ],
           "values": {
             "Value": 11
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: squircle 20px (select popups) → 11 @ 84% smoothing."
         },
         {
           "name": "render/menu-option",
@@ -2709,7 +3348,8 @@
           ],
           "values": {
             "Value": 7
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: squircle 13px → 7 @ 84% smoothing."
         },
         {
           "name": "render/media-chrome",
@@ -2720,7 +3360,8 @@
           ],
           "values": {
             "Value": 7
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: squircle 12px → 7 @ 84% smoothing."
         },
         {
           "name": "render/control-28",
@@ -2731,7 +3372,8 @@
           ],
           "values": {
             "Value": 10
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: superellipse(1.5) on a 28px pill → 10 @ 35% smoothing."
         },
         {
           "name": "render/control-32",
@@ -2742,7 +3384,8 @@
           ],
           "values": {
             "Value": 12
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: superellipse(1.5) on a 32px pill → 12 @ 35% smoothing."
         },
         {
           "name": "render/control-36",
@@ -2753,7 +3396,8 @@
           ],
           "values": {
             "Value": 13
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: superellipse(1.5) on a 36px pill → 13 @ 35% smoothing."
         },
         {
           "name": "render/control-40",
@@ -2764,7 +3408,8 @@
           ],
           "values": {
             "Value": 15
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: superellipse(1.5) on a 40px pill → 15 @ 35% smoothing."
         },
         {
           "name": "render/control-44",
@@ -2775,7 +3420,8 @@
           ],
           "values": {
             "Value": 16
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: superellipse(1.5) on a 44px pill → 16 @ 35% smoothing."
         },
         {
           "name": "render/list-row",
@@ -2786,7 +3432,8 @@
           ],
           "values": {
             "Value": 21
-          }
+          },
+          "description": "Figma rendering of CSS corner-shape: superellipse(1.5) at 28px (list rows) → 21 @ 35% smoothing."
         },
         {
           "name": "render/list-media",
@@ -2797,6 +3444,18 @@
           ],
           "values": {
             "Value": 15
+          },
+          "description": "Figma rendering of CSS corner-shape: superellipse(1.5) at 20px (48px list thumbnails) → 15 @ 35% smoothing."
+        },
+        {
+          "name": "radius/control-xl",
+          "codeSyntax": "var(--radius-control-xl)",
+          "type": "FLOAT",
+          "scopes": [
+            "CORNER_RADIUS"
+          ],
+          "values": {
+            "Value": 24
           }
         }
       ]
@@ -3174,7 +3833,8 @@
           "scopes": [],
           "values": {
             "Value": 80
-          }
+          },
+          "description": "Menus. Spring, bounce 0. Milliseconds."
         },
         {
           "name": "duration/fast-exit",
@@ -3183,7 +3843,8 @@
           "scopes": [],
           "values": {
             "Value": 60
-          }
+          },
+          "description": "Menus. Spring, bounce 0. Milliseconds."
         },
         {
           "name": "duration/moderate-enter",
@@ -3192,7 +3853,8 @@
           "scopes": [],
           "values": {
             "Value": 160
-          }
+          },
+          "description": "Drawers, reveals, undo notice. Spring, bounce 0. Milliseconds."
         },
         {
           "name": "duration/moderate-exit",
@@ -3201,7 +3863,8 @@
           "scopes": [],
           "values": {
             "Value": 120
-          }
+          },
+          "description": "Drawers, reveals, undo notice. Spring, bounce 0. Milliseconds."
         },
         {
           "name": "duration/slow-enter",
@@ -3210,7 +3873,8 @@
           "scopes": [],
           "values": {
             "Value": 240
-          }
+          },
+          "description": "Dialogs, settings panels. Spring, bounce 0.12. Milliseconds."
         },
         {
           "name": "duration/slow-exit",
@@ -3219,7 +3883,8 @@
           "scopes": [],
           "values": {
             "Value": 160
-          }
+          },
+          "description": "Dialogs, settings panels. Spring, bounce 0.12. Milliseconds."
         },
         {
           "name": "duration/quick",
@@ -3228,7 +3893,8 @@
           "scopes": [],
           "values": {
             "Value": 150
-          }
+          },
+          "description": "Press feedback and quick fades. ease-out. Milliseconds."
         },
         {
           "name": "duration/glide",
@@ -3237,7 +3903,8 @@
           "scopes": [],
           "values": {
             "Value": 180
-          }
+          },
+          "description": "Segmented thumb, video and PDF reveals. Milliseconds."
         },
         {
           "name": "duration/flourish",
@@ -3246,7 +3913,8 @@
           "scopes": [],
           "values": {
             "Value": 260
-          }
+          },
+          "description": "Logo, folder artwork and settings transitions. Milliseconds."
         },
         {
           "name": "delay/placeholder",
@@ -3255,7 +3923,8 @@
           "scopes": [],
           "values": {
             "Value": 150
-          }
+          },
+          "description": "Loading placeholders appear only after this delay. Milliseconds."
         },
         {
           "name": "ease/standard",
@@ -3383,6 +4052,30 @@
           "values": {
             "Value": 28
           }
+        },
+        {
+          "name": "tracking/heading",
+          "codeSyntax": "var(--tracking-heading)",
+          "type": "FLOAT",
+          "scopes": [
+            "LETTER_SPACING"
+          ],
+          "values": {
+            "Value": -3
+          },
+          "description": "Percent of font size (-0.03em)."
+        },
+        {
+          "name": "tracking/eyebrow",
+          "codeSyntax": "var(--tracking-eyebrow)",
+          "type": "FLOAT",
+          "scopes": [
+            "LETTER_SPACING"
+          ],
+          "values": {
+            "Value": 12
+          },
+          "description": "Percent of font size (0.12em)."
         }
       ]
     },
@@ -3401,7 +4094,8 @@
           ],
           "values": {
             "Value": 60
-          }
+          },
+          "description": "Every disabled control: 0.6."
         },
         {
           "name": "focus/ring-width",
@@ -3412,7 +4106,8 @@
           ],
           "values": {
             "Value": 1
-          }
+          },
+          "description": "Focus outline width, color border/focus."
         },
         {
           "name": "focus/offset",
@@ -3421,7 +4116,8 @@
           "scopes": [],
           "values": {
             "Value": 2
-          }
+          },
+          "description": "Outline offset outside controls."
         },
         {
           "name": "focus/offset-inset",
@@ -3430,7 +4126,8 @@
           "scopes": [],
           "values": {
             "Value": -2
-          }
+          },
+          "description": "Outline offset inside fields."
         }
       ]
     }

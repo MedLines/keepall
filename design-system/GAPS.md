@@ -18,11 +18,12 @@ Hover, focus, active, pressed, highlighted and disabled are CSS states in code: 
 
 Some Figma variants show what a component renders for different data, not a prop:
 
-- `Type badge` → `Type`, from the item's type.
-- `Metadata pill` → `Kind`: a collection pill versus a tag-count pill inside `LibraryCardMetadata`.
-- `Segmented switch` → `Selected`: which of the two choices is the current `value`.
-- `Selection control` → `State`: the `selected` boolean.
-- `Radio card` → `State`: the input's `checked` state.
+- `ItemTypeBadge` → `Type`, from the item's type.
+- `ItemTypeIcon` → `Type`, from the item's type.
+- `LibraryCardMetadata` → `Kind`: a collection pill versus a tag-count pill inside `LibraryCardMetadata`.
+- `SegmentedControl` → `Selected`: which of the two choices is the current `value`.
+- `LibrarySelectionControl` → `State`: the `selected` boolean.
+- `RadioCard` → `State`: the input's `checked` state.
 
 ## Content slots
 
