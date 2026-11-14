@@ -802,7 +802,7 @@ function ImageWorkspace({
               createdAt={item.createdAt}
               updatedAt={item.updatedAt}
               sourceFileName={item.sourceFileName}
-              className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2 lg:min-h-[var(--item-viewer-height)]`}
+              className={`${ITEM_DETAILS_POSITION} max-lg:row-start-2 lg:min-h-(--item-viewer-height)`}
               disabled={actionBusy}
               onOrganize={onOrganize}
               onEdit={onEdit}
@@ -833,7 +833,7 @@ function ImageWorkspace({
 
 function ImageCount({ current, total, className = "" }: { current: number; total: number; className?: string }) {
   return (
-    <span className={`inline-flex h-12 min-w-16 shrink-0 items-center justify-center rounded-[24px] border border-border-control bg-bg-control px-3 tabular-nums [corner-shape:var(--corner-shape-panel)] ${className}`} aria-label="Current image" title={`Image ${current} of ${total}`}>
+    <span className={`inline-flex h-12 min-w-16 shrink-0 items-center justify-center rounded-control-xl border border-border-control bg-bg-control px-3 tabular-nums [corner-shape:var(--corner-shape-panel)] ${className}`} aria-label="Current image" title={`Image ${current} of ${total}`}>
       <span className="sr-only">Image {current} of {total}</span>
       <span aria-hidden="true" className="flex items-baseline gap-1.5 text-sm">
         <span className="font-semibold text-text-primary">{current}</span>
@@ -874,7 +874,7 @@ function GalleryControls({
           <button
             key={index}
             type="button"
-            className={`control-shape-none h-12 min-w-6 flex-1 overflow-hidden rounded-[24px] border p-0.5 [corner-shape:var(--corner-shape-panel)] sm:min-w-10 sm:max-w-16 ${index === currentSlide ? "border-border-selected bg-bg-selected" : "border-border-control bg-bg-control"}`}
+            className={`control-shape-none h-12 min-w-6 flex-1 overflow-hidden rounded-control-xl border p-0.5 [corner-shape:var(--corner-shape-panel)] sm:min-w-10 sm:max-w-16 ${index === currentSlide ? "border-border-selected bg-bg-selected" : "border-border-control bg-bg-control"}`}
             aria-label={`Show image ${index + 1}`}
             aria-current={index === currentSlide ? "true" : undefined}
             onClick={() => onSlideChange(index)}

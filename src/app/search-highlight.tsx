@@ -4,6 +4,11 @@ import { Fragment, useLayoutEffect, useRef, type ReactNode } from "react";
 import { findSearchExcerpt, findQueryTextMatches, findTextMatches, parseSearchTerms, type SearchExcerpt } from "@/domain/search";
 import type { Item } from "@/domain/item";
 
+/**
+ * Marks the parts of a text that match the current search query.
+ *
+ * @import import { SearchHighlight } from "@/app/search-highlight";
+ */
 export function SearchHighlight({ text, query = "" }: { text: string; query?: string }) {
   const ranges = findQueryTextMatches(text, query);
   if (!ranges.length) return text;
@@ -59,7 +64,7 @@ export function SearchResult({ item, query = "", tagNames = [], excerpt, childre
 
   return <>
     <div ref={contentRef} className="min-w-0">{children}</div>
-    {match ? <p ref={excerptRef} className="search-excerpt mt-2 break-words text-sm leading-6 text-text-secondary [overflow-wrap:anywhere]">
+    {match ? <p ref={excerptRef} className="search-excerpt mt-2 break-words text-sm leading-6 text-text-secondary wrap-anywhere">
       <span className="font-medium">{match.label}: </span>
       <SearchHighlight text={match.text} query={query} />
     </p> : null}

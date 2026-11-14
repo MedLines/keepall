@@ -202,9 +202,11 @@ function FlyingIcon({ kind, index, layout, distance }: FlightProps & { kind: Her
   });
 
   return <>
+    {/* eslint-disable-next-line shadcn/no-inline-styles -- Motion values drive the flight animation. */}
     <motion.span className="ka-hero-flight-icon" data-flight-icon={kind} style={{ width: size, height: size, transform, opacity }}>
       <Image src={`/marketing/hero-${kind}.svg`} width={112} height={112} alt="" draggable={false} />
     </motion.span>
+    {/* eslint-disable-next-line shadcn/no-inline-styles -- Motion values drive the landing animation. */}
     <motion.span className="ka-hero-flight-landing" style={{ transform: landingTransform, opacity: landingOpacity }} />
   </>;
 }

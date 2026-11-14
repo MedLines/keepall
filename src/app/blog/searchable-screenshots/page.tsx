@@ -73,7 +73,7 @@ export default function ScreenshotLibraryArticle() {
         <h2>Back up the images and results</h2>
         <p>Keepall backups include the original saved images, palettes, and recognized text. After adding or analyzing a useful batch, open Settings, choose Storage &amp; backups, then Export backup. Keep the file outside the app.</p>
         <p>Each gallery image keeps its own analysis. Replacing or removing the original removes its palette and recognized text too. Follow the <Link href="/help/storage-and-backups#download">backup guide</Link> before clearing browser data or moving your library.</p>
-        <Link href="/" className="ka-button ka-button-light">Open your library</Link>
+        <Link href="/" className="ka-button">Open your library</Link>
       </section>
     </BlogArticle>
   );

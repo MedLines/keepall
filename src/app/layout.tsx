@@ -53,6 +53,7 @@ export default function RootLayout({ children, viewer }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: SHELL_INIT_SCRIPT }} />
       </head>
+      {/* eslint-disable-next-line shadcn/no-inline-styles -- uiMotion tiers exposed as --motion-* custom properties. */}
       <body className="bg-bg-canvas text-text-primary antialiased" style={motionCssVariables}>
         <MotionProvider>
           <PwaProvider>

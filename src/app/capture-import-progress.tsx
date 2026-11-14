@@ -36,7 +36,7 @@ export function CaptureImportProgressDialog({ progress, onCancel, cancelling }: 
           {cancelling ? "Canceling import…" : label}
         </p>
         <p className="tabular-nums">{gallery ? `${progress.total} images in this gallery` : `${progress.done} of ${progress.total} files processed`}</p>
-        {progress.fileName ? <p className="[overflow-wrap:anywhere] text-text-secondary"><bdi>{progress.fileName}</bdi></p> : null}
+        {progress.fileName ? <p className="wrap-anywhere text-text-secondary"><bdi>{progress.fileName}</bdi></p> : null}
         {!gallery && !preparing ? <p className="tabular-nums text-text-secondary">{progress.saved} saved · {progress.failed} failed</p> : null}
       </div>
       <progress aria-label={label} value={gallery ? undefined : progress.done} max={progress.total}

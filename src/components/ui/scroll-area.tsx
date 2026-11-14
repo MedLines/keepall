@@ -32,6 +32,11 @@ interface ScrollAreaProps extends ComponentPropsWithoutRef<"div"> {
   orientation?: Orientation;
 }
 
+/**
+ * Scrolling container with Keepall's thin overlay scrollbar (native scrolling on touch); use it for drawer, dialog and panel bodies.
+ *
+ * @import import { ScrollArea } from "@/components/ui/scroll-area";
+ */
 const ScrollArea = forwardRef<
   ComponentRef<typeof ScrollAreaPrimitive.Root>,
   ScrollAreaProps
@@ -102,6 +107,11 @@ const ScrollArea = forwardRef<
 
 ScrollArea.displayName = "ScrollArea";
 
+/**
+ * The shared scrollbar track; compose it only inside ScrollArea-based primitives, never on its own.
+ *
+ * @import import { ScrollBar } from "@/components/ui/scroll-area";
+ */
 const ScrollBar = forwardRef<
   ComponentRef<typeof ScrollAreaPrimitive.Scrollbar>,
   ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Scrollbar>
@@ -144,15 +154,15 @@ const ScrollBar = forwardRef<
         className={cn(
           // Fixed surface-relative overlay ramp (8 → 12 → 16%) — same tint
           // direction as the menu hover/active tokens, one notch stronger.
-          "relative bg-[rgb(var(--overlay)/0.08)] transition-[background-color,width,height] duration-160 ease-in-out",
-          "group-hover/scrollbar:bg-[rgb(var(--overlay)/0.12)] active:!bg-[rgb(var(--overlay)/0.16)]",
+          "relative bg-bg-scrollbar-thumb transition-[background-color,width,height] duration-160 ease-in-out",
+          "group-hover/scrollbar:bg-bg-scrollbar-thumb-hover active:!bg-bg-scrollbar-thumb-active",
           shape.bg,
           // -translate nudges the thumb 2px off the container edge; the track
           // (and its 10px hit target) stays flush so edge-throws still land.
           orientation === "vertical" &&
-            "mx-auto my-1 w-1 -translate-x-0.5 h-[var(--scroll-area-thumb-height)] group-hover/scrollbar:w-1.5",
+            "mx-auto my-1 w-1 -translate-x-0.5 h-(--scroll-area-thumb-height) group-hover/scrollbar:w-1.5",
           orientation === "horizontal" &&
-            "my-auto mx-1 h-1 -translate-y-0.5 w-[var(--scroll-area-thumb-width)] group-hover/scrollbar:h-1.5"
+            "my-auto mx-1 h-1 -translate-y-0.5 w-(--scroll-area-thumb-width) group-hover/scrollbar:h-1.5"
         )}
       />
     </ScrollAreaPrimitive.Scrollbar>

@@ -67,7 +67,7 @@ export const SHELL_NAV_SURFACE =
 
 /** Interactive sidebar nav item — icon always; label when expanded. */
 export const SHELL_NAV_ITEM =
-  `${SHELL_NAV_SURFACE} transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100`;
+  `${SHELL_NAV_SURFACE} transition-transform active:scale-98 motion-reduce:transition-none motion-reduce:active:scale-100`;
 
 export const SHELL_NAV_ITEM_ACTIVE =
   "ui-selected font-medium text-text-primary";

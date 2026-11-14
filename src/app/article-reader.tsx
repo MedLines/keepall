@@ -18,7 +18,7 @@ function SavedArticleHeader({ article, previewAssetId }: { article: SavedArticle
   const sourceName = article.siteName || new URL(article.sourceUrl).hostname.replace(/^www\./, "");
   return <header className="mb-8 mt-6 border-b border-border-control pb-7">
     <p className="text-sm font-medium text-text-secondary">{sourceName}</p>
-    <h1 className="mt-3 break-words text-3xl font-semibold leading-tight tracking-tight [text-wrap:pretty] sm:text-4xl">{article.title}</h1>
+    <h1 className="mt-3 break-words text-3xl font-semibold leading-tight tracking-tight text-pretty sm:text-4xl">{article.title}</h1>
     {article.author || article.publishedAt ? <p className="mt-4 flex flex-wrap gap-x-2 gap-y-1 text-sm leading-relaxed text-text-secondary">
       {article.author ? <span>{article.author}</span> : null}
       {article.author && article.publishedAt ? <span aria-hidden="true">·</span> : null}

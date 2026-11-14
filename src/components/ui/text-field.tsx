@@ -17,7 +17,14 @@ type Props = Omit<ComponentProps<"input">, "className"> & {
   inputClassName?: string;
 };
 
-/** A labelled text input for dialogs and forms: label above (text-sm medium), 8px gap, optional hint. */
+/**
+ * Labelled single-line text input for dialogs and forms; the visible label is also its accessible name.
+ *
+ * A labelled text input for dialogs and forms: label above (text-sm medium), 8px gap, optional hint.
+ * Every other prop (value, defaultValue, placeholder, onChange, type, …) goes to the native input.
+ *
+ * @import import { TextField } from "@/components/ui/text-field";
+ */
 export function TextField({ label, hint, className, inputClassName, ...input }: Props) {
   const hintId = useId();
   return <label className={cn("grid gap-2 text-sm font-medium text-text-primary", className)}>

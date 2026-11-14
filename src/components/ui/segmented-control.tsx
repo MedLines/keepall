@@ -44,8 +44,12 @@ const OPTION = {
 };
 
 /**
+ * Two-choice switch where exactly one option is always selected; use it for view modes, not for actions.
+ *
  * Two-choice segmented switch (.icon-segmented-switch). The .ui-selected thumb slides between the
  * choices over --motion-glide; the group is labelled and each choice reports aria-pressed.
+ *
+ * @import import { SegmentedControl } from "@/components/ui/segmented-control";
  */
 export function SegmentedControl<Value extends string>({
   label, value, choices, onChange, variant = "text", disabled = false, className, thumbClassName, tooltipSide = "bottom", tooltipContainer, ...groupProps

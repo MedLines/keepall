@@ -83,6 +83,7 @@ export function PdfPage({ document, number, zoom, viewportSize }: { document: PD
     {error ? <div role="alert" className="mb-3 text-sm text-text-danger">Couldn&apos;t display this page. Try another page or download the file. <button type="button" className={buttonClassName({ size: "none", className: "inline-block min-h-9 px-3" })} onClick={() => setAttempt(value => value + 1)}>Retry page</button></div> : null}
     <ScrollPanel orientation="both" className="max-w-full rounded-input border border-border-control bg-bg-raised" aria-busy={rendered?.key !== key}>
       {!rendered && !viewportSize ? <PdfLoadingPaper /> : null}
+      {/* eslint-disable-next-line shadcn/no-inline-styles -- Size of the rendered PDF page. */}
       <div ref={display} className="relative mx-auto w-fit bg-white" style={viewportSize} />
     </ScrollPanel>
     <div ref={staging} aria-hidden="true" inert className="pointer-events-none invisible absolute inset-0 overflow-hidden" />

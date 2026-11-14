@@ -95,7 +95,7 @@ export default function BrowserBookmarksArticle() {
         <p>The imported links and your edits stay in this browser profile on this device. Another browser or device has a separate library. After checking the import and adding useful context, export a Keepall backup.</p>
         <p>In Settings, open Storage &amp; backups and choose Export backup. Keep the downloaded file somewhere outside the app. Your original bookmark HTML is still useful, but it does not contain the notes and organization you have added in Keepall.</p>
         <p>Follow the <Link href="/help/storage-and-backups#download">backup guide</Link> to keep a recovery copy, or the <Link href="/help/import#backup">restore guide</Link> to move your library to another browser.</p>
-        <Link href="/" className="ka-button ka-button-light">Open your library</Link>
+        <Link href="/" className="ka-button">Open your library</Link>
       </section>
     </BlogArticle>
   );

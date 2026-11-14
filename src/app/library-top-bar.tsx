@@ -124,7 +124,7 @@ export function LibraryTopBar({
               <ShellPanelIcon open={panelOpen} />
             </button>
           </Tooltip>
-          <div className="relative min-w-[140px] flex-1 sm:max-w-[250px]">
+          <div className="relative min-w-35 flex-1 sm:max-w-62.5">
             <label className="sr-only" htmlFor="library-search">Search</label>
             <span role="status" className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-secondary">
               <SearchIcon className={`size-4 transition-[visibility] duration-0 ${searchPending ? "invisible delay-200" : "visible"}`} />
@@ -195,14 +195,14 @@ export function LibraryTopBar({
             /> : null}
             {!trash && !collectionsView && !tagsView && onPreview ? <Tooltip content={`Preview current results · ${shortcutLabel(shortcuts.preview)}`}>
               <button type="button" aria-keyshortcuts={shortcuts.preview.replace(/Key|Digit/g, "").replace("Slash", "/")} aria-label="Preview" aria-haspopup="dialog"
-                className={buttonClassName({ size: "toolbar", className: "px-3" })}
+                className={buttonClassName({ size: "toolbar", className: "button-px-3" })}
                 disabled={previewDisabled} onClick={onPreview}>
                 <EyeIcon className="size-4" /><span className="hidden @min-[54rem]/toolbar:inline">Preview</span>
               </button>
             </Tooltip> : null}
             {!trash && !collectionsView && !tagsView && onExport ? <Tooltip content="Export these results for an AI agent">
               <button type="button" aria-label="Export" aria-haspopup="dialog"
-                className={buttonClassName({ size: "toolbar", className: "px-3" })}
+                className={buttonClassName({ size: "toolbar", className: "button-px-3" })}
                 disabled={previewDisabled} onClick={onExport}>
                 <DownloadIcon className="size-4" /><span className="hidden @min-[54rem]/toolbar:inline">Export</span>
               </button>
@@ -211,15 +211,15 @@ export function LibraryTopBar({
         </div>
         <div className="flex w-full shrink-0 items-center justify-end gap-3 @min-[44rem]/toolbar:w-auto">
           <ThemeControl compact />
-          {trash ? <button type="button" disabled={trashEmptyDisabled} onClick={onEmptyTrash} className={buttonClassName({ variant: "danger-ghost", size: "toolbar", className: "px-4" })}><DeleteIcon className="size-4" /><span className="leading-none">Empty Trash</span></button> : <Tooltip content={`Save item · ${shortcutLabel(shortcuts.capture)}`} describe={false}>
+          {trash ? <button type="button" disabled={trashEmptyDisabled} onClick={onEmptyTrash} className={buttonClassName({ variant: "danger-ghost", size: "toolbar" })}><DeleteIcon className="size-4" /><span className="leading-none">Empty Trash</span></button> : <Tooltip content={`Save item · ${shortcutLabel(shortcuts.capture)}`} describe={false}>
             <button
               type="button"
               aria-keyshortcuts={shortcuts.capture.replace(/Key|Digit/g, "").replace("Slash", "/")}
-              className={buttonClassName({ variant: "primary", size: "toolbar", className: "ps-3 pe-4 font-medium" })}
+              className={buttonClassName({ variant: "primary", size: "toolbar", className: "font-medium" })}
               onClick={() => openCaptureDialog()}
             >
               <PlusIcon />
-              Save item
+              <span>Save item</span>
             </button>
           </Tooltip>}
         </div>
@@ -228,7 +228,7 @@ export function LibraryTopBar({
       <div data-library-toolbar-row className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div data-library-toolbar-left className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:flex-1">
           <div className="flex min-w-0 items-center gap-3">
-          <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-[34px] text-text-primary sm:text-display">
+          <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-8.5 text-text-primary sm:text-display">
             {title}
           </h1>
           <span className="flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} ${collectionsView ? "collections" : tagsView ? "tags" : "items"}`}>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 type PwaUpdateBannerProps = {
   onReload: () => void;
 };
@@ -7,17 +9,16 @@ type PwaUpdateBannerProps = {
 export function PwaUpdateBanner({ onReload }: PwaUpdateBannerProps) {
   return (
     <div
-      className="relative z-20 border-b border-sky-200 bg-sky-50 px-4 py-2 text-center text-sm text-sky-950"
+      className="relative z-20 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-border-subtle bg-bg-surface px-4 py-2 text-center text-sm text-text-primary"
       role="status"
       data-testid="pwa-update-banner"
     >
-      <p className="inline">
+      <p>
         Update available. Reload when you are ready. Your library data stays on
-        this device.{" "}
+        this device.
       </p>
-      <button
-        className="relative z-20 ml-1 inline-flex items-center bg-sky-900 px-3 py-1 text-sm font-medium text-sky-50 hover:bg-sky-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-900"
-        type="button"
+      <Button
+        variant="primary"
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -25,7 +26,7 @@ export function PwaUpdateBanner({ onReload }: PwaUpdateBannerProps) {
         }}
       >
         Reload
-      </button>
+      </Button>
     </div>
   );
 }

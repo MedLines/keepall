@@ -43,7 +43,7 @@ export default function HelpPage() {
       <Link href="/help/install-keepall#computer" className="kh-start-card"><InstallVisual compact /><div className="kh-start-copy"><span className="kh-eyebrow">On your computer or phone</span><h2>Install Keepall</h2><p>Open your library from its own app icon.</p><span className="kh-card-action">Read the install guide <ArrowRightIcon /></span></div></Link>
       <Link href="/help/chrome-capture#install" className="kh-start-card"><div className="kh-extension-preview"><Image src={capturePoster} alt="A real Keepall Capture demo showing selected text on a website" width={1080} height={1040} sizes="(max-width: 650px) 90vw, 520px" /></div><div className="kh-start-copy"><span className="kh-eyebrow">For Chrome on your computer</span><h2>Save from Chrome</h2><p>Save pages, images, and selected text with Keepall Capture.</p><span className="kh-card-action">Set up Keepall Capture <ArrowRightIcon /></span></div></Link>
     </nav>
-    <section className="kh-guides" aria-labelledby="guides-title">
+    <section aria-labelledby="guides-title">
       <div className="kh-list-heading"><h2 id="guides-title">Help guides</h2><span>{guides.length} guides · Step-by-step instructions</span></div>
       <nav className="kh-group-nav" aria-label="Guide topics">{guideGroups.map(group => <a key={group.id} href={`#${group.id}`}>{group.title}</a>)}</nav>
       {guideGroups.map(group => <section className="kh-guide-group" key={group.id} id={group.id} aria-labelledby={`${group.id}-title`}>

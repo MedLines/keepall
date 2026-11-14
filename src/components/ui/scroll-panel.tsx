@@ -6,7 +6,13 @@ import { useTouchPrimary } from "@/hooks/use-touch-primary";
 import { cn } from "@/lib/utils";
 import { ScrollBar } from "./scroll-area";
 
-/** Compose the registry track with a real viewport ref for virtualizers and media. */
+/**
+ * ScrollArea that exposes its real viewport element, for virtualized lists, reading position and media viewers.
+ *
+ * Compose the registry track with a real viewport ref for virtualizers and media.
+ *
+ * @import import { ScrollPanel } from "@/components/ui/scroll-panel";
+ */
 export function ScrollPanel({ children, className, viewportClassName, contentClassName,
   viewportRef, viewportProps, orientation = "vertical", ...props }: ComponentPropsWithoutRef<"div"> & {
   viewportClassName?: string;
@@ -28,6 +34,7 @@ export function ScrollPanel({ children, className, viewportClassName, contentCla
   ) : (
     <Primitive.Root {...props} data-slot="scroll-area" className={rootClass}>
       <Primitive.Viewport {...viewportProps} ref={viewportRef} data-slot="scroll-area-viewport" className={viewportClass}>
+        {/* eslint-disable-next-line shadcn/no-inline-styles -- Overrides Base UI's inline min-width on the content element. */}
         <Primitive.Content className={contentClassName} style={orientation === "vertical" ? { minWidth: 0 } : undefined}>{children}</Primitive.Content>
       </Primitive.Viewport>
       {orientation !== "horizontal" ? <ScrollBar orientation="vertical" /> : null}

@@ -89,7 +89,7 @@ export default function DesignReferenceArticle() {
         <h2>Keep a copy of the work</h2>
         <p>Your references and notes live in this browser profile on this device. After a useful research session, open Settings, choose Storage &amp; backups, then choose Export backup. Keep the downloaded file outside the app. It includes your library data and saved image files.</p>
         <p>Follow the <Link href="/help/storage-and-backups#download">backup guide</Link> before clearing browser data or moving to another browser.</p>
-        <Link href="/" className="ka-button ka-button-light">Open your library</Link>
+        <Link href="/" className="ka-button">Open your library</Link>
       </section>
     </BlogArticle>
   );

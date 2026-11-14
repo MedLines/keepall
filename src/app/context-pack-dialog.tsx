@@ -75,7 +75,7 @@ function ExportDone({ snippet, copied, onCopy }: { snippet: string; copied: bool
       so your project&apos;s instructions stay in charge. To point agents at it, add this line to your AGENTS.md:
     </p>
     <div className="flex flex-col gap-2">
-      <code className="block rounded-control-xs bg-bg-raised p-3 text-xs leading-relaxed [overflow-wrap:anywhere]">{snippet}</code>
+      <code className="block rounded-control-xs bg-bg-raised p-3 text-xs leading-relaxed wrap-anywhere">{snippet}</code>
       <Button className="self-start" onClick={onCopy}>{copied ? "Copied" : "Copy line"}</Button>
     </div>
   </>;

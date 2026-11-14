@@ -44,6 +44,7 @@ function HeroWord({ kind }: { kind: HeroKind }) {
       <Tooltip.Trigger className="ka-hero-word" type="button" aria-describedby={tooltipId} onPointerMove={tilt} onPointerLeave={settle} onPointerCancel={settle} onBlur={settle} onClick={play}>
         {kind}
         <span className="ka-hero-toy-anchor" data-hero-icon={kind}>
+          {/* eslint-disable-next-line shadcn/no-inline-styles -- Motion values tilt the hero icon with the pointer. */}
           <motion.span className="ka-hero-toy" style={{ rotateX: reduceMotion ? 0 : rotateX, rotateY: reduceMotion ? 0 : rotateY, rotateZ: HERO_ICON_ANGLES[kind] }}>
             <span ref={scope} className="ka-hero-toy-turn">
               <Image src={`/marketing/hero-${kind}.svg`} width={112} height={112} alt="" loading="eager" draggable={false} />

@@ -101,7 +101,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
             <div className="pointer-events-none absolute inset-x-4 bottom-4 flex justify-center">{progress}</div>
             </div>
             {review ? review.organization : null}
-            <footer className={`${review ? "library-review-footer" : "library-preview-footer"} shrink-0`}>
+            <footer className={review ? "shrink-0" : "library-preview-footer shrink-0"}>
               {review ? review.footer : <>
               <div className="library-preview-navigation flex items-center gap-2">
                 <Tooltip content="Previous item" describe={false}><button type="button" className={buttonClassName({ size: "none", className: "min-h-11 shrink-0 gap-2 ps-2 pe-3 text-sm disabled:opacity-50" })} aria-label="Previous item" disabled={index <= 0} onClick={() => onMove(-1)}><ArrowLeftIcon className="size-4 rtl:rotate-180" />Back</button></Tooltip>
@@ -120,7 +120,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-16">{review.emptyState}</div>
             <div className="pointer-events-none absolute inset-x-4 bottom-4 flex justify-center">{review.progress}</div>
             </div>
-            <footer className="library-review-footer shrink-0">{review.footer}</footer>
+            <footer className="shrink-0">{review.footer}</footer>
           </> : null}
         </Dialog.Popup>
       </Dialog.Viewport>
@@ -163,7 +163,7 @@ function PreviewTitle({ title }: { title: string }) {
 function PreviewContent({ item, onGalleryStep, reviewing }: { item: Item; onGalleryStep: () => void; reviewing: boolean }) {
   if (item.type === "note") return <ScrollPanel className="h-full min-h-0" viewportClassName="scroll-fade overscroll-contain px-4" contentClassName="!flex min-h-full" viewportProps={{ "data-preview-scroll": "", tabIndex: 0 }}>
     <ItemPreviewContentTransition itemId={item.id} source>
-    <NoteContent className={`library-preview-document w-full shrink-0 pb-4 ${reviewing ? "" : "mx-auto max-w-[65ch]"}`} content={item.content} format={item.format ?? "plain"} />
+    <NoteContent className={`library-preview-document w-full shrink-0 pb-4 ${reviewing ? "" : "mx-auto max-w-prose"}`} content={item.content} format={item.format ?? "plain"} />
     </ItemPreviewContentTransition>
   </ScrollPanel>;
   if (item.type === "image") return <ImagePreview item={item} onGalleryStep={onGalleryStep} />;
@@ -172,12 +172,12 @@ function PreviewContent({ item, onGalleryStep, reviewing }: { item: Item; onGall
       <ItemPreviewContentTransition itemId={item.id} source><PreviewVideo key={item.assetId} assetId={item.assetId} title={previewTitle(item)} /></ItemPreviewContentTransition>
     </div>
     {item.noteContent ? <ScrollPanel className="flex max-h-[35%] shrink-0 flex-col" viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain" viewportProps={{ "data-preview-scroll": "", tabIndex: 0, role: "region", "aria-label": "Video notes" }}>
-      <NoteContent className="library-preview-document mx-auto max-w-[65ch]" content={item.noteContent} format={item.noteFormat ?? "plain"} />
+      <NoteContent className="library-preview-document mx-auto max-w-prose" content={item.noteContent} format={item.noteFormat ?? "plain"} />
     </ScrollPanel> : null}
   </div>;
   if (item.type === "document") return <ScrollPanel className="h-full min-h-0" viewportClassName="overscroll-contain px-4 pb-4" viewportProps={{ "data-preview-scroll": "", "data-document-scroll": "", tabIndex: 0 }}>
-    <ItemViewTransition itemId={item.id} assetId={item.assetId} kind="document" source preview><div className={item.format === "pdf" ? "min-w-0" : "library-preview-document mx-auto max-w-[65ch]"}><DocumentContent item={item} /></div></ItemViewTransition>
-    {item.noteContent ? <section aria-label="Document notes" className="mx-auto mt-5 max-w-[65ch] border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
+    <ItemViewTransition itemId={item.id} assetId={item.assetId} kind="document" source preview><div className={item.format === "pdf" ? "min-w-0" : "library-preview-document mx-auto max-w-prose"}><DocumentContent item={item} /></div></ItemViewTransition>
+    {item.noteContent ? <section aria-label="Document notes" className="mx-auto mt-5 max-w-prose border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
   </ScrollPanel>;
   return <LinkPreview key={item.id} item={item} reviewing={reviewing} />;
 }
@@ -186,7 +186,7 @@ function LinkPreview({ item, reviewing }: { item: LinkItem; reviewing: boolean }
   const cover = linkCoverAssetId(item);
   const [selected, setSelected] = useState(cover);
   const shown = selected && linkStripOptions(item, true).some(option => option.assetId === selected) ? selected : cover;
-  const details = <ItemPreviewContentTransition itemId={item.id} source><div className={`flex w-full flex-col gap-4 ${reviewing ? "" : "mx-auto max-w-[65ch]"}`}>
+  const details = <ItemPreviewContentTransition itemId={item.id} source><div className={`flex w-full flex-col gap-4 ${reviewing ? "" : "mx-auto max-w-prose"}`}>
     <a href={item.url} target="_blank" rel="noreferrer" aria-label={`Open source: ${item.url}`} className={buttonClassName({ size: "none", className: "min-h-11 max-w-full self-start gap-2 px-3 text-sm text-text-secondary justify-start" })}><LinkIcon className="size-4" /><span className="truncate">{linkCardHost(item)}</span><ExternalLinkIcon className="size-4" /></a>
     {item.previewDescription ? <p className="whitespace-pre-wrap break-words text-text-secondary">{item.previewDescription}</p> : null}
     {item.noteContent ? <section aria-label="Link notes" className="border-t border-border-control pt-4"><p className="mb-3 flex items-center gap-2 text-xs font-medium text-text-secondary"><NoteIcon className="size-4" />Notes</p><NoteContent className="library-preview-document" content={item.noteContent} format={item.noteFormat ?? "plain"} /></section> : null}
@@ -216,7 +216,7 @@ function ImagePreview({ item, onGalleryStep }: { item: Extract<Item, { type: "im
       <LibraryItemMedia item={item} variant="preview" assetId={item.assetIds[slide]} />
     </ScrollPanel>
     {item.caption ? <ScrollPanel className="flex min-h-0 max-h-[35%] shrink flex-col" viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain" viewportProps={{ "data-preview-scroll": "", tabIndex: 0, role: "region", "aria-label": "Image notes" }}>
-      <NoteContent className="library-preview-document mx-auto max-w-[65ch]" content={item.caption} format={item.captionFormat ?? "plain"} />
+      <NoteContent className="library-preview-document mx-auto max-w-prose" content={item.caption} format={item.captionFormat ?? "plain"} />
     </ScrollPanel> : null}
   </div>;
 }

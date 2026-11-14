@@ -6,6 +6,11 @@ import { ScrollArea } from "./scroll-area";
 import { CloseIcon } from "@/app/shell-icons";
 import { iconButtonClassName } from "./button";
 
+/**
+ * Modal for forms and editors with a fixed header and footer and scrolling content; use ConfirmDialog for destructive yes/no questions.
+ *
+ * @import import { ModalDialog } from "@/components/ui/modal-dialog";
+ */
 export function ModalDialog({
   open, onOpenChange, title, description, busy = false, closeLabel = "Close",
   size = "compact", children, footer, onSubmit, onDismiss, onFocusCapture, initialFocus, onKeyDown, onKeyUp,
@@ -49,8 +54,8 @@ export function ModalDialog({
           <Dialog.Popup initialFocus={initialFocus} onKeyDown={onKeyDown} onKeyUp={onKeyUp} onFocusCapture={onFocusCapture} className={`confirm-dialog-popup ui-popover flex w-full flex-col overflow-hidden p-0 outline-none ${size === "editor" ? "h-[min(44rem,calc(100dvh-2rem))] max-w-[42rem]" : "max-h-[calc(100dvh-2rem)] max-w-[30rem]"}`}>
             <div className="flex shrink-0 items-start gap-4 border-b border-border-control px-5 py-5 sm:px-6">
               <div className="min-w-0 flex-1">
-                <Dialog.Title className="[overflow-wrap:anywhere] text-xl font-semibold text-text-primary">{title}</Dialog.Title>
-                <Dialog.Description className="mt-1 [overflow-wrap:anywhere] text-sm leading-relaxed text-text-secondary">{description}</Dialog.Description>
+                <Dialog.Title className="wrap-anywhere text-xl font-semibold text-text-primary">{title}</Dialog.Title>
+                <Dialog.Description className="mt-1 wrap-anywhere text-sm leading-relaxed text-text-secondary">{description}</Dialog.Description>
               </div>
               <Dialog.Close aria-label={closeLabel} disabled={busy} className={iconButtonClassName()}><CloseIcon /></Dialog.Close>
             </div>

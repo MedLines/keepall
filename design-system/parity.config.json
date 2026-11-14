@@ -1,0 +1,99 @@
+{
+  "$comment": "Lists differences between code and the Figma library that are known gaps, not drift. Components with the same name pair on their own; entries here add exceptions, and \"figma\" names a Figma component whose name differs. Every gap names a GAPS.md section. Code wins every disagreement.",
+  "components": [
+    {
+      "code": "Button",
+      "ignoreCodeValues": {
+        "size": {
+          "none": "caller-sized-variants"
+        }
+      },
+      "ignoreFigmaProperties": {
+        "Icon": "content-slots"
+      }
+    },
+    {
+      "code": "IconButton",
+      "ignoreFigmaProperties": {
+        "Style": "media-chrome-surface"
+      }
+    },
+    {
+      "code": "SegmentedControl",
+      "ignoreFigmaProperties": {
+        "Selected": "data-driven-variants"
+      },
+      "ignoreCodeProps": {
+        "tooltipSide": "props-with-no-design-value"
+      }
+    },
+    {
+      "code": "RadioCard",
+      "ignoreFigmaProperties": {
+        "State": "data-driven-variants"
+      }
+    },
+    {
+      "code": "ItemTypeBadge",
+      "ignoreFigmaProperties": {
+        "Type": "data-driven-variants"
+      }
+    },
+    {
+      "code": "ItemTypeIcon",
+      "ignoreFigmaProperties": {
+        "Type": "data-driven-variants"
+      }
+    },
+    {
+      "code": "LibraryCardMetadata",
+      "ignoreFigmaProperties": {
+        "Kind": "data-driven-variants"
+      }
+    },
+    {
+      "code": "LibrarySelectionControl",
+      "ignoreFigmaProperties": {
+        "State": "data-driven-variants"
+      }
+    }
+  ],
+  "ignoreFigmaPropertiesEverywhere": {
+    "State": "interaction-states"
+  },
+  "figmaWithoutCodeComponent": {
+    "Search field": "Inline in library-top-bar.tsx; there is no SearchField component yet.",
+    "Menu": "The .ui-menu-popup surface class, used inside Base UI menus; not a component.",
+    "Menu item": "The menuItemClassName() helper in src/components/ui/menu-item.ts; not a component.",
+    "Sidebar nav item": "Inline ShellNavItem / ShellNavLink in library-shell.tsx; not exported.",
+    "Sidebar section header": "Inline CollapsibleSection in library-shell.tsx; not exported.",
+    "Library card": "A composition (LibraryItem) drawn for reference, not a reusable part.",
+    "List row": "A composition (LibraryItem, list layout) drawn for reference, not a reusable part."
+  },
+  "codeWithoutFigmaComponent": {
+    "MotionProvider": "non-visual-components",
+    "Icons": "The icon catalogue story; icons are compared one by one under Icons.",
+    "MenuHoverList": "behaviour-and-containers",
+    "ScrollArea": "behaviour-and-containers",
+    "ScrollPanel": "behaviour-and-containers",
+    "SearchHighlight": "behaviour-and-containers",
+    "TooltipContent": "behaviour-and-containers",
+    "ThemeControl": "behaviour-and-containers"
+  },
+  "variables": {
+    "gapNamePrefixes": {
+      "render/": "superellipse-corners"
+    },
+    "gapNames": {
+      "radius/card": "card-radius-fallback"
+    },
+    "codeOnlyTokens": {
+      "--corner-shape-panel": "superellipse-corners",
+      "--corner-shape-control": "superellipse-corners",
+      "--color-collection-marker": "computed-and-fluid-values",
+      "--card-icon-alignment-offset": "computed-and-fluid-values",
+      "--font-sans": "Figma sets the family through text styles, not a variable.",
+      "--color-white": "utility-aliases"
+    }
+  }
+}

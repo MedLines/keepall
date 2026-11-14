@@ -116,7 +116,7 @@ export function SettingsTabs(content: Record<Section, ReactNode>) {
       </Tabs.List>
       <div className="fixed bottom-6 hidden w-52 md:block"><HelpLink /></div>
     </div>
-    <div ref={contentRef} data-testid="settings-content" className="settings-panels min-w-0">
+    <div ref={contentRef} data-testid="settings-content" className="min-w-0">
       {sections.map(({ value }) => <Tabs.Panel key={value} value={value} keepMounted hidden={section !== value} aria-hidden={section !== value || undefined} className="settings-panel space-y-4">
         {content[value]}
       </Tabs.Panel>)}

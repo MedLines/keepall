@@ -208,12 +208,12 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] { w
   left: 3.5px;
   width: 1px;
   border-radius: 1px;
-  --sidebar-line-alpha: 0.14;
+  --sidebar-rule: var(--color-bg-sidebar-rule);
   background: linear-gradient(
     to bottom,
     transparent,
-    rgb(var(--overlay) / var(--sidebar-line-alpha)) 48px,
-    rgb(var(--overlay) / var(--sidebar-line-alpha)) calc(100% - 48px),
+    var(--sidebar-rule) 48px,
+    var(--sidebar-rule) calc(100% - 48px),
     transparent
   );
   opacity: 0;
@@ -223,7 +223,7 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] { w
 .library-sidebar-resize:is(:hover, :focus-visible)::after,
 .library-sidebar-desktop[data-resizing] .library-sidebar-resize::after { opacity: 1; }
 
-.library-sidebar-resize:focus-visible::after { --sidebar-line-alpha: 0.25; opacity: 1; }
+.library-sidebar-resize:focus-visible::after { --sidebar-rule: var(--color-bg-sidebar-rule-focus); opacity: 1; }
 
 html[data-sidebar-resizing], html[data-sidebar-resizing] * {
   cursor: col-resize !important;
@@ -417,7 +417,7 @@ html[data-shell-panel="closed"] .library-sidebar-desktop[data-ready="false"] [da
 .storage-health-placeholder::after { content: ""; display: block; width: 100%; height: 100%; border-radius: inherit; background: var(--color-bg-raised); animation: library-loading-pulse 1600ms ease-in-out infinite; }
 .storage-health-meter { transform-origin: left; transition: transform var(--motion-moderate-enter) var(--ease-standard); }
 :dir(rtl) .storage-health-meter { transform-origin: right; }
-.pdf-loading-paper { width: 100%; aspect-ratio: var(--pdf-loading-aspect-ratio, 16 / 10); border-radius: var(--radius-input); corner-shape: var(--corner-shape-panel); background: white; }
+.pdf-loading-paper { width: 100%; aspect-ratio: var(--pdf-loading-aspect-ratio, 16 / 10); border-radius: var(--radius-input); corner-shape: var(--corner-shape-panel); background: var(--color-bg-paper); }
 .document-reading-loading { min-height: 14rem; }
 .reading-preview-loading { min-height: 144px; padding: 16px 16px 48px; }
 .document-loading-lines { display: grid; gap: 14px; opacity: 0; animation: library-loading-show var(--motion-fast-enter) var(--ease-standard) var(--delay-placeholder) both; }

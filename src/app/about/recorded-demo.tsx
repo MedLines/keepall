@@ -77,6 +77,7 @@ export function RecordedDemo({ active, name, src, poster, onComplete }: { active
   const action = playing ? "Pause" : state === "ended" ? "Replay" : state === "paused" ? "Resume" : "Play";
   return <div ref={container} className="ka-recording" data-playing={playing}>
     {poster}
+    {/* eslint-disable-next-line shadcn/no-inline-styles -- Hides the video until its first frame decodes. */}
     <video ref={video} className="ka-recording-video" style={{ opacity: hasFrame ? 1 : 0 }} width={1440} height={860} preload="none" muted playsInline aria-label={`${name} demonstration recorded in Keepall`} onLoadedData={() => setHasFrame(true)} onPlaying={() => setState("playing")} onPause={() => { if (!video.current?.ended) setState("paused"); }} onEnded={() => {
       setState("ended");
       if (active && visible.current && !document.hidden && !manuallyPaused.current &&
@@ -99,6 +100,7 @@ export function RecordedDemo({ active, name, src, poster, onComplete }: { active
       <span className="ka-recording-caption">{error ? "Couldn’t load. Try again." : "Recorded in Keepall"}</span>
       <a className="ka-recording-expand ui-control" href={`${src}.mp4`} target="_blank" rel="noreferrer" aria-label={`Open ${name} demo full size`} onClick={() => { manuallyPaused.current = true; video.current?.pause(); }}><FullScreenIcon /></a>
     </div>
+    {/* eslint-disable-next-line shadcn/no-inline-styles -- Progress follows playback; reset skips the transition. */}
     <div className="ka-recording-progress" aria-hidden="true"><span style={{ transform: `scaleX(${progress.value})`, transitionDuration: progress.reset ? "0ms" : undefined }} /></div>
   </div>;
 }

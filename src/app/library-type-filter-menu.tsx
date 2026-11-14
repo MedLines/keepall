@@ -89,7 +89,7 @@ export function LibraryTypeFilterMenu({
           render={<Tooltip.Trigger delay={350} />}
           aria-label={label}
           aria-describedby={tooltipId}
-          className={buttonClassName({ size: "toolbar", className: `min-w-11 px-3 ${selected.length ? "ui-selected" : ""}` })}
+          className={buttonClassName({ size: "toolbar", className: `min-w-11 button-px-3 ${selected.length ? "ui-selected" : ""}` })}
         >
           <span aria-hidden="true" className="inline-flex items-center gap-2">
             {selected.length ? options.filter(option => option.value !== "all" && selected.includes(option.value)).map(option => <span key={option.value} className="inline-flex shrink-0">{option.icon}</span>) : <FilterIcon />}

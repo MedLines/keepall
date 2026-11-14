@@ -28,6 +28,7 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
     <motion.div
       id={id}
       className="library-tag-popover ui-popover flex flex-col overflow-hidden absolute end-0 top-[calc(100%+8px)] z-40 max-h-[min(20rem,50dvh)] w-48 max-w-[calc(100vw-6rem)]"
+      // eslint-disable-next-line shadcn/no-inline-styles -- Pointer events follow the exit-animation presence state.
       style={{ pointerEvents: isPresent ? "auto" : "none" }}
       inert={!isPresent}
       aria-hidden={!isPresent}
@@ -88,6 +89,11 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
   );
 }
 
+/**
+ * Collection pill (left) and tag-count pill (right) at the bottom of a card or row; each pill has its own action.
+ *
+ * @import import { LibraryCardMetadata } from "@/app/library-card-content";
+ */
 export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onBrowseTag, onRemoveTag, className = "" }: {
   collections: { id: string; name: string }[];
   tags: { id: string; name: string }[];
@@ -136,7 +142,7 @@ export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onB
           </li>)}
         </ul> : <span />}
         {tags.length ? <div ref={rootRef} className="library-card-tag-control relative shrink-0">
-          <Tooltip content={tags.map(tag => tag.name).join(", ")} disabled={expanded} delay={100} closeDelay={100} side="top" align="end" collisionPadding={8} className="max-w-72 whitespace-normal [overflow-wrap:anywhere]">
+          <Tooltip content={tags.map(tag => tag.name).join(", ")} disabled={expanded} delay={100} closeDelay={100} side="top" align="end" collisionPadding={8} className="max-w-72 whitespace-normal wrap-anywhere">
             <button ref={triggerRef} type="button" aria-label={`${tags.length} ${tags.length === 1 ? "tag" : "tags"}`} aria-expanded={expanded} aria-controls={id} className="library-card-metadata-pill rounded-full" onClick={() => {
               setExpanded(!expanded);
             }}><HashIcon className="size-4" /><span>{tags.length}<span className="library-card-tag-label"> {tags.length === 1 ? "tag" : "tags"}</span></span></button>

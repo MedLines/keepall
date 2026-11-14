@@ -6,7 +6,13 @@ import { useTouchPrimary } from "@/hooks/use-touch-primary";
 import { cn } from "@/lib/utils";
 import { ScrollBar } from "./scroll-area";
 
-/** Keep native text editing, selection and caret scrolling inside the shared track. */
+/**
+ * Multi-line text input that scrolls inside the shared scrollbar track.
+ *
+ * Keep native text editing, selection and caret scrolling inside the shared track.
+ *
+ * @import import { ScrollTextarea } from "@/components/ui/scroll-textarea";
+ */
 export function ScrollTextarea({ className, ref, style, value, defaultValue, ...props }: ComponentProps<"textarea">) {
   const field = useRef<HTMLTextAreaElement | null>(null);
   const touch = useTouchPrimary();
@@ -21,7 +27,7 @@ export function ScrollTextarea({ className, ref, style, value, defaultValue, ...
     if (!touch) field.current?.dispatchEvent(new Event("scroll"));
   }, [value, defaultValue, touch]);
 
-  const rootClass = cn("scroll-textarea relative grid min-w-0 grid-rows-[minmax(0,1fr)] overflow-hidden", className);
+  const rootClass = cn("scroll-textarea relative grid min-w-0 grid-rows-1 overflow-hidden", className);
   const textarea = <textarea {...props} ref={fieldRef} value={value} defaultValue={defaultValue}
     className="size-full min-h-0 min-w-0 resize-none border-0 bg-transparent p-0 text-inherit outline-none" />;
 

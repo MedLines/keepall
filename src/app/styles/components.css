@@ -19,6 +19,15 @@
     color: var(--color-text-secondary);
     transition: transform var(--motion-quick) ease-out, opacity var(--motion-moderate-enter) ease-out;
   }
+  /* Text buttons (buttonClassName md, lg, toolbar) take their side padding from --button-px; set it
+     with button-px-*. The side with an icon gets three quarters of it, so the icon sits optically
+     centred against the text. Text beside an icon must be an element; Button wraps bare strings. */
+  .ui-button {
+    --button-px: calc(var(--spacing) * 4);
+    padding-inline: var(--button-px);
+  }
+  .ui-button:has(> svg:first-child + :not(.sr-only, .hidden)) { padding-inline-start: calc(var(--button-px) * 0.75); }
+  .ui-button:has(> :not(.sr-only, .hidden) + svg:last-child) { padding-inline-end: calc(var(--button-px) * 0.75); }
   .ui-control:not(.ui-primary):hover:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { background: var(--color-bg-raised); color: var(--color-text-primary); }
   .ui-control:active:not(:disabled):not([data-disabled]):not([aria-disabled="true"]) { transform: scale(0.96); }
   .ui-primary {
@@ -97,12 +106,12 @@
   .ui-backdrop:is([data-starting-style], [data-ending-style]) { opacity: 0; }
   .ui-backdrop[data-ending-style] { transition-duration: var(--motion-moderate-exit); }
   .focused-image-backdrop {
-    background: light-dark(oklch(0 0 0 / 0.6), oklch(0 0 0 / 0.86));
+    background: var(--color-bg-image-backdrop);
     -webkit-backdrop-filter: blur(36px) saturate(0.35);
     backdrop-filter: blur(36px) saturate(0.35);
   }
   .focused-image-backdrop[data-zoomed="true"] {
-    background: oklch(0 0 0 / 0.92);
+    background: var(--color-bg-image-backdrop-zoomed);
     -webkit-backdrop-filter: blur(48px) saturate(0.25);
     backdrop-filter: blur(48px) saturate(0.25);
   }
@@ -235,3 +244,9 @@
     border-radius: 999px;
   }
 }
+
+/* Side padding for text buttons (.ui-button). Use it instead of px-*, so the icon-side rule above applies. */
+@utility button-px-* {
+  --button-px: --spacing(--value(integer));
+}
+
