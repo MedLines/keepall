@@ -33,3 +33,25 @@ Local-first personal library. Phase 1 is a complete local product; later phases 
 
 - **Primary action color**: In the dark theme, `.ui-primary` is white (`--color-action-primary` = `--white`) with dark text and a soft-grey hover (`--color-action-primary-hover` = `--neutral-150`) plus a small shadow lift. NEVER use a mid-grey (`--neutral-400`) for primary actions — it reads as disabled.
 - **Transient confirmations**: Trash undo and similar transient notices live in the library top bar's action slot (`LibraryTopBar` `notice` prop), never inline above the cards. NEVER render an undo or status banner inside the library scroll content (it shifts layout). Footer confirmations take over the action area — never append text beside the action buttons (it pushes them sideways). Undo withdraws after 6s, pauses on hover, focus, busy, or a hidden tab, and stays until dismissed after a failed undo. (ref: 2026-10-20-keepall-top-bar-undo-notice)
+
+## Design system rules for agents
+
+Storybook is the closed list of UI parts. Run `pnpm storybook`; the `keepall-storybook` MCP server in `.mcp.json` reads it.
+
+- **Before writing UI**, call `docs-list` once, then `docs-show` only for the components you will use. Use only the props and values it documents.
+- **Build from what exists**: components from the MCP list, colours from the semantic roles in `src/app/styles/tokens.css` (`bg-*`, `text-*`, `border-*`), sizes, spacing, radius and shadows from its tokens or Tailwind's scale. Style through `className`; an inline `style` carries only runtime values (measured geometry, motion values) behind an `eslint-disable` comment that says why.
+- **When a part is missing**, compose it from existing parts, list it as _invented_ in your report, and ask before adding a component to `src/components/ui`.
+- **Icons** come from `@/app/shell-icons` (Hugeicons; see Storybook's Foundations/Icons) and `DocumentIcon` for file types.
+- **Imports**:
+
+  ```tsx
+  import { Button, IconButton } from "@/components/ui/button";
+  import { Tooltip } from "@/components/ui/tooltip";
+  import { CloseIcon } from "@/app/shell-icons";
+  ```
+
+  Base UI parts that render their own element take `buttonClassName()`, `iconButtonClassName()` or `menuItemClassName()` instead; these helpers are not in the MCP list.
+- **Retired patterns**: a native `title` (use `Tooltip`), a hand-built `<button>` (use `Button` or `IconButton`), `ScrollArea` inside `role="menu"` (use a native `ui-scrollbar` scroller), Tailwind palette colours such as `bg-sky-50` (the palette is closed; use a role).
+- **New UI ships with a story** beside it (`*.stories.tsx`, invented fixtures on `.example` domains).
+- **Judgment calls** (spacing defaults, which of two similar components wins) follow `docs/interface-conventions.md`. When you settle a new one, add it there.
+- **The gate**: a hook lints every file you edit, and `pnpm lint` must pass.
