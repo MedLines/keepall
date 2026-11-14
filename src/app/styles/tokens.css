@@ -57,6 +57,14 @@
 :root[data-theme="dark"] { --backdrop-scrim: linear-gradient(135deg in srgb, oklch(1 0 0 / 0.07), oklch(1 0 0 / 0.04)); }
 
 @theme inline {
+  /* Closed palette: Tailwind's default colours, shadows and the other scales Keepall doesn't use
+     generate no classes. Only the tokens declared below do. */
+  --color-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+  --perspective-*: initial;
+  --aspect-*: initial;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --color-black: oklch(0 0 0);
   --color-white: oklch(1 0 0);
