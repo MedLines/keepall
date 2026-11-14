@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { userEvent } from "storybook/test";
 import { DeleteIcon, EditIcon, MoreIcon, PinIcon } from "@/app/shell-icons";
 import { IconButton } from "./button";
-import { Tooltip, TooltipContent, TooltipProvider } from "./tooltip";
+import { Tooltip, TooltipProvider } from "./tooltip";
 
 /** Stories open the tooltip by moving keyboard focus onto the trigger. */
 const openByFocus = async () => {
@@ -12,7 +12,6 @@ const openByFocus = async () => {
 const meta = {
   title: "UI/Tooltip",
   component: Tooltip,
-  subcomponents: { TooltipContent, TooltipProvider },
   parameters: { layout: "centered" },
   args: {
     content: "More actions",

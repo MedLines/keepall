@@ -1,12 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { ScrollArea, ScrollBar } from "./scroll-area";
+import { ScrollArea } from "./scroll-area";
 
 const rows = Array.from({ length: 30 }, (_, index) => `Saved item ${index + 1} · notes.example`);
 
 const meta = {
   title: "UI/ScrollArea",
   component: ScrollArea,
-  subcomponents: { ScrollBar },
   args: { className: "h-64 w-72 rounded-panel border border-border-control bg-bg-surface" },
   argTypes: { orientation: { control: "inline-radio", options: ["vertical", "horizontal", "both"] } },
 } satisfies Meta<typeof ScrollArea>;

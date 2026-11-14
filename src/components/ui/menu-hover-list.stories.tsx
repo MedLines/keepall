@@ -6,10 +6,8 @@ import { iconButtonClassName } from "./button";
 import { MenuHoverList } from "./menu-hover-list";
 import { menuItemClassName } from "./menu-item";
 
-/**
- * MenuHoverList inside a Base UI menu whose items use menuItemClassName().
- * Tones: default and danger. Disabled items keep the default tone.
- */
+// MenuHoverList inside a Base UI menu whose items use menuItemClassName().
+// Tones: default and danger. Disabled items keep the default tone.
 const meta = {
   title: "UI/MenuHoverList",
   component: MenuHoverList,

@@ -3,7 +3,7 @@ import { userEvent, within } from "storybook/test";
 import { Button } from "./button";
 import { Toaster, toast } from "./toaster";
 
-/** The Toaster is mounted once at the app root; call toast() from anywhere. */
+// The Toaster is mounted once at the app root; call toast() from anywhere.
 const meta = {
   title: "UI/Toaster",
   component: Toaster,

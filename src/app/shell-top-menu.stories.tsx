@@ -14,7 +14,7 @@ const sortOptions = [
 
 const meta = {
   title: "Shell/ShellTopMenu",
-  component: ShellTopMenu<Sort>,
+  component: ShellTopMenu,
   args: { ariaLabel: "Sort", value: "newest", options: sortOptions, onChange: fn() },
   argTypes: { variant: { control: "inline-radio", options: ["toolbar", "field"] } },
   render: function Render(args) {

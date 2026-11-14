@@ -20,7 +20,7 @@ function Pager({ count = 4 }: { count?: number }) {
   </div>;
 }
 
-/** View choices left, navigation center, zoom right; Scroll is always the last view choice. */
+// View choices left, navigation center, zoom right; Scroll is always the last view choice.
 const meta = {
   title: "Library/MediaViewerToolbar",
   component: MediaViewerToolbar,

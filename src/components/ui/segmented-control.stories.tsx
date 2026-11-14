@@ -19,7 +19,7 @@ const iconChoices = [
 
 const meta = {
   title: "UI/SegmentedControl",
-  component: SegmentedControl<Format>,
+  component: SegmentedControl,
   args: { label: "Note format", value: "plain", choices: textChoices, onChange: fn(), className: "w-60" },
   argTypes: {
     variant: { control: "inline-radio", options: ["text", "icon"] },

@@ -3,7 +3,7 @@ import { userEvent } from "storybook/test";
 import { ThemeControl } from "./theme-control";
 import { THEME_STORAGE_KEY } from "./theme-preference";
 
-/** ThemeControl reads the saved theme; the loader saves the toolbar's theme first so both agree. */
+// ThemeControl reads the saved theme; the loader saves the toolbar's theme first so both agree.
 const meta = {
   title: "Shell/ThemeControl",
   component: ThemeControl,

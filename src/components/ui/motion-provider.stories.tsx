@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { MotionProvider } from "./motion-provider";
 import { uiMotion } from "./motion-tokens";
 
-/** Not visual: the box below slides in, or appears in place when the OS asks for reduced motion. */
+// Not visual: the box below slides in, or appears in place when the OS asks for reduced motion.
 const meta = {
   title: "UI/MotionProvider",
   component: MotionProvider,

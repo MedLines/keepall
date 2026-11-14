@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { userEvent } from "storybook/test";
 import { TextField } from "./text-field";
 
-/** TextField has no error prop; validation messages belong to the surrounding form. */
+// TextField has no error prop; validation messages belong to the surrounding form.
 const meta = {
   title: "UI/TextField",
   component: TextField,
