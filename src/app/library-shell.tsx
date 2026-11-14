@@ -1017,14 +1017,15 @@ function CollectionNavRow({
         >
           <button
             type="button"
-            className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 py-2 text-left transition-transform active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+            className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 py-2 text-left transition-transform active:scale-96 motion-reduce:transition-none motion-reduce:active:scale-100"
             aria-label={collection.name}
             aria-current={active ? "page" : undefined}
             onClick={onNavigate}
           >
             <span
               aria-hidden="true"
-              className="flex h-[18px] w-10 shrink-0 translate-x-[18px] items-center justify-center text-collection-marker"
+              className="flex h-4.5 w-10 shrink-0 translate-x-4.5 items-center justify-center text-collection-marker"
+              // eslint-disable-next-line shadcn/no-inline-styles -- Per-collection marker hue and lightness custom properties.
               style={collectionMarkerStyle(collection.id)}
               title={pinned ? "Pinned collection" : undefined}
             >

@@ -363,6 +363,7 @@ export function LibraryItem({
     >
     {(trigger) => <li
       ref={setRowRef}
+      // eslint-disable-next-line shadcn/no-inline-styles -- Virtualizer placement.
       style={placement?.style}
       data-index={placement?.index}
       data-item-id={item.id}
@@ -544,6 +545,7 @@ export function LibraryItem({
             ? `min-w-0 flex-1 ${pendingDelete ? "" : "library-list-body"}`
             : `library-card-footer ${hasMedia ? "library-card-footer-with-media" : ""}`
         }
+        // eslint-disable-next-line shadcn/no-inline-styles -- Pointer events follow the card chrome visibility state.
         style={{ pointerEvents: chromeVisible ? "auto" : "none" }}
       >
         {!isList ? (

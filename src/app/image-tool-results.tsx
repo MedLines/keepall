@@ -75,6 +75,7 @@ export function PaletteSwatch({ hex, copied, onCopy, allowLibrarySearch, portalC
         event.preventDefault();
         const bounds = event.currentTarget.getBoundingClientRect();
         event.currentTarget.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: bounds.left + bounds.width / 2, clientY: bounds.bottom }));
+      // eslint-disable-next-line shadcn/no-inline-styles -- The swatch shows a colour extracted from the user's image.
       }} className={`ui-control ${styles.swatch}`} style={{ backgroundColor: hex, color: swatchTextColor(hex) }} aria-label={`Copy color ${hex}`} onClick={onCopy}>
         <span className="font-mono text-xs tabular-nums">{hex}</span>
         <span className={styles.swatchFeedback} data-copied={copied}><CopyFeedback copied={copied} /></span>

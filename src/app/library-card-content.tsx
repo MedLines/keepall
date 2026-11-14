@@ -28,6 +28,7 @@ function TagPopover({ id, tags, onBrowseTag, onRemoveTag }: {
     <motion.div
       id={id}
       className="library-tag-popover ui-popover flex flex-col overflow-hidden absolute end-0 top-[calc(100%+8px)] z-40 max-h-[min(20rem,50dvh)] w-48 max-w-[calc(100vw-6rem)]"
+      // eslint-disable-next-line shadcn/no-inline-styles -- Pointer events follow the exit-animation presence state.
       style={{ pointerEvents: isPresent ? "auto" : "none" }}
       inert={!isPresent}
       aria-hidden={!isPresent}

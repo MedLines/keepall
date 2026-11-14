@@ -132,6 +132,7 @@ export function VideoPlayer({ src, poster, title, onError }: { src: string; post
         <span className="min-w-10 text-xs tabular-nums">{formatTime(currentTime)}</span>
         <input type="range" aria-label="Seek video" aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
           min={0} max={hasDuration ? duration : 1} step={0.1} value={Math.min(currentTime, duration)} disabled={!hasDuration}
+          // eslint-disable-next-line shadcn/no-inline-styles -- Range fill computed from playback position.
           className={`${styles.range} min-w-0 flex-1`} style={rangeStyle(currentTime, duration)}
           onChange={event => seek(Number(event.target.value))} />
         <span className="min-w-10 text-right text-xs tabular-nums">{formatTime(duration)}</span>
@@ -144,6 +145,7 @@ export function VideoPlayer({ src, poster, title, onError }: { src: string; post
           <PlayerControl label={muted || volume === 0 ? "Unmute" : "Mute"} onClick={toggleMute}>{muted || volume === 0 ? <MuteIcon /> : <VolumeIcon />}</PlayerControl>
           <div className={styles.volumeSlider}>
             <input type="range" aria-label="Volume" min={0} max={1} step={0.05} value={muted ? 0 : volume}
+              // eslint-disable-next-line shadcn/no-inline-styles -- Range fill computed from the volume.
               className={styles.range} style={rangeStyle(muted ? 0 : volume, 1)}
               onChange={event => changeVolume(Number(event.target.value))} />
           </div>

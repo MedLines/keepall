@@ -59,6 +59,7 @@ export function CaptureImageLayout({ mode, disabled, value, format, preview, lab
 
   return <div className="capture-image-layout relative h-56 shrink-0" data-testid="capture-image-layout-slot">
     <fieldset className={`absolute inset-0 flex flex-col gap-2 ${stage === 1 ? "pointer-events-none" : ""}`} disabled={disabled}
+      // eslint-disable-next-line shadcn/no-inline-styles -- Crossfade layer state is computed per stage.
       aria-hidden={stage === 1} inert={stage === 1} style={layer(stage === 0)}>
       <legend className="mb-2 text-sm font-medium">Save images as</legend>
       {OPTIONS.map(([option, title, description]) => <label key={option} className={`ui-field flex min-h-16 cursor-pointer items-start gap-3 p-3 ${mode === option ? "border-action-primary" : ""}`}>
@@ -69,6 +70,7 @@ export function CaptureImageLayout({ mode, disabled, value, format, preview, lab
       </label>)}
     </fieldset>
     <div className={`absolute inset-0 flex min-h-0 flex-col gap-2 ${stage === 0 ? "pointer-events-none" : ""}`}
+      // eslint-disable-next-line shadcn/no-inline-styles -- Crossfade layer state is computed per stage.
       aria-hidden={stage === 0} inert={stage === 0} style={layer(stage === 1)}>
       <div className="flex min-h-8 items-center justify-between gap-2">
         <label htmlFor="capture-image-caption" className="text-sm font-medium">Caption (optional)</label>

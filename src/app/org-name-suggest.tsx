@@ -195,6 +195,7 @@ export function OrgNameSuggest({
           />
           {suggestionsVisible && suggestionPosition
             ? createPortal(
+            // eslint-disable-next-line shadcn/no-inline-styles -- Fixed position measured from the input.
             <ScrollArea className="ui-popover fixed z-[100] py-1" viewportClassName="scroll-fade" style={suggestionPosition}>
               <ul
                 id={listboxId}

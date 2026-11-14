@@ -30,8 +30,10 @@ export function HeroScene({ children, preview }: { children: ReactNode; preview:
   const { layout, distance, headerFadeOpacity } = useHeroFlight(ref, scrollY, reduceMotion);
   return (
     <>
+    {/* eslint-disable-next-line shadcn/no-inline-styles -- Motion value follows scroll. */}
     <motion.div className="ka-header-scroll-fade" aria-hidden="true" style={{ opacity: headerFadeOpacity }} />
     <section ref={ref} className="ka-hero" aria-labelledby="ka-title">
+      {/* eslint-disable-next-line shadcn/no-inline-styles -- Motion value follows scroll. */}
       <motion.div className="ka-landscape" aria-hidden="true" style={{ y: reduceMotion ? 0 : landscapeY }} />
       <div className="ka-hero-intro">
       <div className="ka-hero-copy" onFocusCapture={(event) => {
@@ -76,6 +78,7 @@ function StackCard({ children, index, progress }: { children: ReactNode; index: 
   // Match each sticky offset with its remaining stack depth so all three edges
   // stay separated when the cards reach their container's bottom boundary.
   const position = { "--stack-top": `${SCENE.stackTop + index * SCENE.stackStep}px`, "--stack-gap": `${(2 - index) * SCENE.stackStep}px` } as CSSProperties;
+  // eslint-disable-next-line shadcn/no-inline-styles -- Stack position and scroll-linked scale are computed per card.
   return <div className="ka-stack-card" style={position}><motion.div className="ka-stack-surface" style={{ scale: reduceMotion ? 1 : scale }}>{children}</motion.div></div>;
 }
 

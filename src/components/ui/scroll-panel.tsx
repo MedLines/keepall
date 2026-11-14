@@ -34,6 +34,7 @@ export function ScrollPanel({ children, className, viewportClassName, contentCla
   ) : (
     <Primitive.Root {...props} data-slot="scroll-area" className={rootClass}>
       <Primitive.Viewport {...viewportProps} ref={viewportRef} data-slot="scroll-area-viewport" className={viewportClass}>
+        {/* eslint-disable-next-line shadcn/no-inline-styles -- Overrides Base UI's inline min-width on the content element. */}
         <Primitive.Content className={contentClassName} style={orientation === "vertical" ? { minWidth: 0 } : undefined}>{children}</Primitive.Content>
       </Primitive.Viewport>
       {orientation !== "horizontal" ? <ScrollBar orientation="vertical" /> : null}

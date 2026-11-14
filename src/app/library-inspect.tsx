@@ -235,6 +235,7 @@ export function LibraryInspect({
             ref={panelRef}
             tabIndex={-1}
             className="relative z-10 flex max-h-[min(96vh,64rem)] w-full max-w-4xl flex-col overflow-hidden bg-bg-surface shadow-[0_0_0_1px_oklch(0_0_0_/_0.06),0_16px_40px_oklch(0_0_0_/_0.18)] outline-none sm:rounded-2xl"
+            // eslint-disable-next-line shadcn/no-inline-styles -- Motion corrects layout-animated corners from the inline radius.
             style={{ borderRadius: 16 }}
             initial={
               reduceMotion ? false : { opacity: 0, scale: 0.97 }
@@ -252,6 +253,7 @@ export function LibraryInspect({
                 layoutId={
                   reduceMotion ? undefined : itemMediaLayoutId(item.id)
                 }
+                // eslint-disable-next-line shadcn/no-inline-styles -- Motion corrects layout-animated corners from the inline radius.
                 style={{ borderRadius: 0 }}
                 className="overflow-hidden"
                 transition={{ type: "spring", duration: 0.3, bounce: 0 }}

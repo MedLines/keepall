@@ -68,6 +68,7 @@ export function LibraryItemMedia({
         width={dimensions?.width}
         height={dimensions?.height}
         // Hold the known shape before a fresh blob URL decodes; the 16:10 fallback would resize the card and shift its column.
+        // eslint-disable-next-line shadcn/no-inline-styles -- Aspect ratio measured from the media.
         style={gridAspectStyle(variant, dimensions)}
         onLoad={(event) => {
           const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
@@ -95,6 +96,7 @@ export function LibraryItemMedia({
     <div
       aria-hidden="true"
       className={fallbackClassName(variant, compact, className)}
+      // eslint-disable-next-line shadcn/no-inline-styles -- Aspect ratio measured from the media.
       style={gridAspectStyle(variant, dimensions)}
     >
       {item.type !== "video" && assetIdForDisplay && !imageBroken ? null : <FallbackContent item={item} compact={compact} />}
@@ -111,6 +113,7 @@ function LinkFavicon({ item, variant, compact, className, dimensions }: {
 
   return (
     <div aria-hidden="true" className={fallbackClassName(variant, compact, className)}
+      // eslint-disable-next-line shadcn/no-inline-styles -- Aspect ratio measured from the media.
       style={gridAspectStyle(variant, dimensions)}>
       {faviconSrc ? (
         <LibraryThumbnailImage
