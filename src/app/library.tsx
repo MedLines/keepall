@@ -46,6 +46,7 @@ import { LinkValidationError } from "@/domain/link";
 import { assertLocalImageFile } from "@/domain/image";
 import { NoteValidationError } from "@/domain/note";
 import { normalizeSearchQuery } from "@/domain/search";
+import { SEARCH_SCOPE_MARKER } from "./card-heights";
 import { TagValidationError, normalizeTagName, type Tag } from "@/domain/tag";
 import { orderCollectionsByPins } from "@/domain/library-preferences";
 import {
@@ -2083,6 +2084,7 @@ export function Library() {
                   onPreviewOpenChange={setPreviewOpen}
                   visibleItems={visibleItems}
                   scopeKey={browseScopeKey}
+                  heightScope={hasActiveSearch ? `${browseScopeKey}${SEARCH_SCOPE_MARKER}${normalizeSearchQuery(searchQuery)}` : browseScopeKey}
                   layout={browseLayout}
                   scrollRef={mainScrollRef}
                   listColumns={view.listColumns ?? "auto"}

@@ -17,6 +17,8 @@ type Props = {
   ref?: Ref<LibraryPreviewHandle>;
   visibleItems: Item[];
   scopeKey: string;
+  /** Scope plus anything that changes card content, such as the search query. */
+  heightScope?: string;
   layout: LibraryLayout;
   listColumns?: LibraryListColumns;
   scrollRef: RefObject<HTMLElement | null>;
@@ -35,7 +37,7 @@ const arrowStep: Record<string, number> = { ArrowLeft: -1, ArrowUp: -1, ArrowRig
 
 /** Both views window large libraries; keyboard order follows the filtered results. */
 export function LibraryMainGrid({
-  ref, visibleItems, scopeKey, layout, listColumns = "auto", scrollRef, empty, renderItem,
+  ref, visibleItems, scopeKey, heightScope, layout, listColumns = "auto", scrollRef, empty, renderItem,
   selectedIds, onSelectIds, onOpenItem, previewEnabled = true, keyboardDisabled = false, suspendCardTransitions = false, onPreviewOpenChange,
 }: Props) {
   const browseRef = useRef<HTMLDivElement>(null);
@@ -143,7 +145,7 @@ export function LibraryMainGrid({
   }
 
   const grid = visibleItems.length === 0 ? empty : layout === "grid" ? (
-    <LibraryMasonry key={scopeKey} items={visibleItems} scopeKey={scopeKey} scrollRef={scrollRef} renderItem={renderItem} focusedIndex={focusedIndex} />
+    <LibraryMasonry key={scopeKey} items={visibleItems} scopeKey={scopeKey} heightScope={heightScope} scrollRef={scrollRef} renderItem={renderItem} focusedIndex={focusedIndex} />
   ) : visibleItems.length >= LIBRARY_VIRTUALIZE_MIN ? (
     <LibraryVirtualItems key={scopeKey} items={visibleItems} scrollRef={scrollRef} renderItem={renderItem} focusedIndex={focusedIndex} columns={columns} />
   ) : (
