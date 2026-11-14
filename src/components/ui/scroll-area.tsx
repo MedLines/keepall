@@ -108,7 +108,7 @@ const ScrollArea = forwardRef<
 ScrollArea.displayName = "ScrollArea";
 
 /**
- * DRAFT: The shared scrollbar track; compose it only inside ScrollArea-based primitives, never on its own.
+ * The shared scrollbar track; compose it only inside ScrollArea-based primitives, never on its own.
  *
  * @import import { ScrollBar } from "@/components/ui/scroll-area";
  */

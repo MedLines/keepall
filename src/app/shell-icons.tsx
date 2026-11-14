@@ -44,7 +44,7 @@ function ShellIcon({ icon, className = "", fill = "none", strokeWidth = 1.5 }: I
 }
 
 /**
- * DRAFT: The animated Keepall mark; use it only for branding, never as an action icon.
+ * The animated Keepall mark; use it only for branding, never as an action icon.
  *
  * @import import { LogoIcon } from "@/app/shell-icons";
  */

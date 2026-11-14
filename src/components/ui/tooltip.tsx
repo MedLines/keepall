@@ -70,7 +70,7 @@ export function Tooltip({ content, children, delay = 350, closeDelay, disabled, 
 }
 
 /**
- * DRAFT: Shares one open delay across a group of tooltips so moving between neighbouring controls doesn't wait again.
+ * Shares one open delay across a group of tooltips so moving between neighbouring controls doesn't wait again.
  *
  * @import import { TooltipProvider } from "@/components/ui/tooltip";
  */
