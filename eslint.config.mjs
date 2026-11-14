@@ -48,6 +48,9 @@ const eslintConfig = defineConfig([
         message: `"{{className}}" is a raw color. Use a semantic role from ${TOKENS}: {{suggestions|see the --color-bg-*, --color-text-*, --color-border-* roles}}. If none fits, propose a new role there first.`,
       }],
       "shadcn/no-arbitrary-values": ["error", {
+        // Layout geometry (calc/min/viewport sizes, grid tracks, z layers), the inherit
+        // keyword for radius, and transition property lists carry no design value.
+        allow: ["layout", "rounded-[inherit]", "transition-*"],
         message: `"{{className}}" is an arbitrary value. Use a theme value instead: {{suggestions|see the scales in ${TOKENS}}}. If none fits, add a named token to ${TOKENS} and explain it in ${CONVENTIONS}.`,
       }],
       "shadcn/no-inline-styles": ["error", {
