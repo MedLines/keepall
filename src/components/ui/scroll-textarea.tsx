@@ -10,6 +10,8 @@ import { ScrollBar } from "./scroll-area";
  * DRAFT: Multi-line text input that scrolls inside the shared scrollbar track.
  *
  * Keep native text editing, selection and caret scrolling inside the shared track.
+ *
+ * @import import { ScrollTextarea } from "@/components/ui/scroll-textarea";
  */
 export function ScrollTextarea({ className, ref, style, value, defaultValue, ...props }: ComponentProps<"textarea">) {
   const field = useRef<HTMLTextAreaElement | null>(null);

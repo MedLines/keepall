@@ -5,7 +5,11 @@ import { ImageIcon, ImagesIcon, LinkIcon, NoteIcon, VideoIcon } from "./shell-ic
 
 const typeLabels = { pdf: "PDF document", markdown: "Markdown document", text: "Text document", image: "Image", link: "Link", video: "Video", note: "Note" };
 
-/** DRAFT: The colored glyph that identifies an item's type; use it wherever an item appears, never a type word or a different icon. */
+/**
+ * DRAFT: The colored glyph that identifies an item's type; use it wherever an item appears, never a type word or a different icon.
+ *
+ * @import import { ItemTypeIcon } from "@/app/item-type-icon";
+ */
 export function ItemTypeIcon({ item, className = "size-5" }: { item: Item; className?: string }) {
   const kind = item.type === "document" || (item.type === "note" && item.format === "markdown") ? item.format : item.type;
   const iconClassName = `item-type-icon item-type-icon--${kind} ${className}`;
@@ -20,6 +24,8 @@ export function ItemTypeIcon({ item, className = "size-5" }: { item: Item; class
  * DRAFT: Type badge on a card preview (bottom-end) or list row; adds a count only for galleries and screenshots.
  *
  * One colored identity glyph; only gallery and screenshot counts add text.
+ *
+ * @import import { ItemTypeBadge } from "@/app/item-type-icon";
  */
 export function ItemTypeBadge({ item, variant = "card" }: { item: Item; variant?: "card" | "list" }) {
   const screenshots = item.type === "link" ? linkScreenshots(item).length : 0;

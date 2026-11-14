@@ -8,6 +8,8 @@ import { useRef, useState, type ReactElement, type ReactNode, type RefObject } f
  * DRAFT: Action menu for one row or card, opened from its More button or by right-click, with the same actions both ways.
  *
  * Both opening methods use the same actions, with independent Base UI triggers.
+ *
+ * @import import { RowActionMenu } from "@/app/row-action-menu";
  */
 export function RowActionMenu({ children, trigger, menu, label, disabled, triggerRef, onOpen, finalFocus }: {
   children: (trigger: ReactNode) => ReactElement;

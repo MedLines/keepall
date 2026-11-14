@@ -30,6 +30,8 @@ export type TooltipContentProps = {
  * DRAFT: The tooltip surface alone, for triggers that already compose their own Base UI tooltip root (such as a Select).
  *
  * Portal, positioner and popup for a tooltip whose Root and Trigger are composed elsewhere (e.g. a Select trigger).
+ *
+ * @import import { TooltipContent } from "@/components/ui/tooltip";
  */
 export function TooltipContent({ id, children, side = "bottom", align, sideOffset = 8, collisionPadding, container, layerClassName = "z-[100]", className, unstyled = false }: TooltipContentProps) {
   return <BaseTooltip.Portal container={container}>
@@ -56,6 +58,8 @@ export type TooltipProps = Omit<TooltipContentProps, "id" | "children"> & {
  * DRAFT: Hover and focus hint for a control, usually an icon button; never use a native title attribute instead.
  *
  * A styled Base UI tooltip around any trigger element. Never use a native title attribute alongside it.
+ *
+ * @import import { Tooltip } from "@/components/ui/tooltip";
  */
 export function Tooltip({ content, children, delay = 350, closeDelay, disabled, describe = true, ...contentProps }: TooltipProps) {
   const id = useId();
@@ -65,5 +69,9 @@ export function Tooltip({ content, children, delay = 350, closeDelay, disabled, 
   </BaseTooltip.Root>;
 }
 
-/** DRAFT: Shares one open delay across a group of tooltips so moving between neighbouring controls doesn't wait again. */
+/**
+ * DRAFT: Shares one open delay across a group of tooltips so moving between neighbouring controls doesn't wait again.
+ *
+ * @import import { TooltipProvider } from "@/components/ui/tooltip";
+ */
 export const TooltipProvider = BaseTooltip.Provider;

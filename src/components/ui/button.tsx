@@ -59,14 +59,22 @@ export function iconButtonClassName({ variant = "secondary", size = "md", classN
 
 type ButtonProps = ComponentProps<"button"> & ButtonStyle;
 
-/** DRAFT: Text button for every action; pick the variant by role (one primary per surface, danger only to confirm a destructive dialog) and the size by placement. */
+/**
+ * DRAFT: Text button for every action; pick the variant by role (one primary per surface, danger only to confirm a destructive dialog) and the size by placement.
+ *
+ * @import import { Button } from "@/components/ui/button";
+ */
 export function Button({ variant, size, className, type = "button", ...props }: ButtonProps) {
   return <button type={type} className={buttonClassName({ variant, size, className })} {...props} />;
 }
 
 type IconButtonProps = ComponentProps<"button"> & IconButtonStyle & { "aria-label": string };
 
-/** DRAFT: Square icon-only button for actions an icon alone makes clear (close, more, toolbar toggles); always give it an aria-label. */
+/**
+ * DRAFT: Square icon-only button for actions an icon alone makes clear (close, more, toolbar toggles); always give it an aria-label.
+ *
+ * @import import { IconButton } from "@/components/ui/button";
+ */
 export function IconButton({ variant, size, className, type = "button", ...props }: IconButtonProps) {
   return <button type={type} className={iconButtonClassName({ variant, size, className })} {...props} />;
 }

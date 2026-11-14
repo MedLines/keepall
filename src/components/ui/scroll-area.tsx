@@ -32,7 +32,11 @@ interface ScrollAreaProps extends ComponentPropsWithoutRef<"div"> {
   orientation?: Orientation;
 }
 
-/** DRAFT: Scrolling container with Keepall's thin overlay scrollbar (native scrolling on touch); use it for drawer, dialog and panel bodies. */
+/**
+ * DRAFT: Scrolling container with Keepall's thin overlay scrollbar (native scrolling on touch); use it for drawer, dialog and panel bodies.
+ *
+ * @import import { ScrollArea } from "@/components/ui/scroll-area";
+ */
 const ScrollArea = forwardRef<
   ComponentRef<typeof ScrollAreaPrimitive.Root>,
   ScrollAreaProps
@@ -103,7 +107,11 @@ const ScrollArea = forwardRef<
 
 ScrollArea.displayName = "ScrollArea";
 
-/** DRAFT: The shared scrollbar track; compose it only inside ScrollArea-based primitives, never on its own. */
+/**
+ * DRAFT: The shared scrollbar track; compose it only inside ScrollArea-based primitives, never on its own.
+ *
+ * @import import { ScrollBar } from "@/components/ui/scroll-area";
+ */
 const ScrollBar = forwardRef<
   ComponentRef<typeof ScrollAreaPrimitive.Scrollbar>,
   ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Scrollbar>

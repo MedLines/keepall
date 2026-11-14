@@ -18,6 +18,8 @@ type Props = Omit<ComponentProps<"input">, "type" | "className" | "children"> & 
  *
  * A full-width radio option: the whole card is the label, so the text is the radio's accessible name.
  * It takes the shared pill control shape in every dialog; don't override its radius per dialog.
+ *
+ * @import import { RadioCard } from "@/components/ui/radio-card";
  */
 export function RadioCard({ className, inputClassName = "mt-1", children, ...input }: Props) {
   return <label className={cn(RADIO_CARD_CLASS, className)}>

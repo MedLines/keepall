@@ -11,7 +11,11 @@ type Props = {
   onToggle: () => void;
 };
 
-/** DRAFT: Round checkbox in a card or row corner for multi-select; shown on hover, focus, or while selecting. */
+/**
+ * DRAFT: Round checkbox in a card or row corner for multi-select; shown on hover, focus, or while selecting.
+ *
+ * @import import { LibrarySelectionControl } from "@/app/library-selection-control";
+ */
 export function LibrarySelectionControl({ label, className, visible, selected, disabled, onToggle }: Props) {
   return <label data-visible={visible} className={className}>
     <span className="sr-only">{label}</span>

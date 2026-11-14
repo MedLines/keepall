@@ -11,7 +11,11 @@ import {
 import { DarkThemeIcon, LightThemeIcon } from "./shell-icons";
 import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 
-/** DRAFT: Toggle between the light and dark theme; saves the choice on this device. */
+/**
+ * DRAFT: Toggle between the light and dark theme; saves the choice on this device.
+ *
+ * @import import { ThemeControl } from "@/app/theme-control";
+ */
 export function ThemeControl({ compact = false }: { compact?: boolean }) {
   const theme = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
   const dark = theme === "dark";

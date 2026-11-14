@@ -28,6 +28,8 @@ type Props = {
  * move to Trash never pushes the library down. The countdown pauses while the
  * notice is hovered, focused, busy, or the page is hidden, and the notice never
  * withdraws itself while the keyboard is inside it.
+ *
+ * @import import { UndoNotice } from "@/app/undo-notice";
  */
 export function UndoNotice({ message, undoLabel, busy, paused = false, onUndo, onDismiss }: Props) {
   const [remaining, setRemaining] = useState(UNDO_NOTICE_TIMEOUT_MS);

@@ -10,6 +10,8 @@ import { ScrollBar } from "./scroll-area";
  * DRAFT: ScrollArea that exposes its real viewport element, for virtualized lists, reading position and media viewers.
  *
  * Compose the registry track with a real viewport ref for virtualizers and media.
+ *
+ * @import import { ScrollPanel } from "@/components/ui/scroll-panel";
  */
 export function ScrollPanel({ children, className, viewportClassName, contentClassName,
   viewportRef, viewportProps, orientation = "vertical", ...props }: ComponentPropsWithoutRef<"div"> & {

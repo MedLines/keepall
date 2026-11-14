@@ -6,7 +6,11 @@ import { ScrollArea } from "./scroll-area";
 import { CloseIcon } from "@/app/shell-icons";
 import { iconButtonClassName } from "./button";
 
-/** DRAFT: Modal for forms and editors with a fixed header and footer and scrolling content; use ConfirmDialog for destructive yes/no questions. */
+/**
+ * DRAFT: Modal for forms and editors with a fixed header and footer and scrolling content; use ConfirmDialog for destructive yes/no questions.
+ *
+ * @import import { ModalDialog } from "@/components/ui/modal-dialog";
+ */
 export function ModalDialog({
   open, onOpenChange, title, description, busy = false, closeLabel = "Close",
   size = "compact", children, footer, onSubmit, onDismiss, onFocusCapture, initialFocus, onKeyDown, onKeyUp,

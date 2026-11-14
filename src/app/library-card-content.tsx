@@ -88,7 +88,11 @@ export function LibraryCardContent({ item, onOpen, openHref, pinned = false, que
   );
 }
 
-/** DRAFT: Collection pill (left) and tag-count pill (right) at the bottom of a card or row; each pill has its own action. */
+/**
+ * DRAFT: Collection pill (left) and tag-count pill (right) at the bottom of a card or row; each pill has its own action.
+ *
+ * @import import { LibraryCardMetadata } from "@/app/library-card-content";
+ */
 export function LibraryCardMetadata({ collections, tags, onBrowseCollection, onBrowseTag, onRemoveTag, className = "" }: {
   collections: { id: string; name: string }[];
   tags: { id: string; name: string }[];

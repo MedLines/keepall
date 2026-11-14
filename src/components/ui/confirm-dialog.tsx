@@ -24,7 +24,11 @@ type ConfirmDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-/** DRAFT: Modal confirmation for destructive actions only; the confirm button is always the danger variant and the dialog can't be dismissed while busy. */
+/**
+ * DRAFT: Modal confirmation for destructive actions only; the confirm button is always the danger variant and the dialog can't be dismissed while busy.
+ *
+ * @import import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+ */
 export function ConfirmDialog({
   open,
   title,

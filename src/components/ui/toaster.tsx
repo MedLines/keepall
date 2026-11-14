@@ -7,7 +7,11 @@ export { toast };
 
 const subscribeToNothing = () => () => {};
 
-/** DRAFT: Mount once at the app root to show toast() notices; library undo and status notices use the top bar instead. */
+/**
+ * DRAFT: Mount once at the app root to show toast() notices; library undo and status notices use the top bar instead.
+ *
+ * @import import { Toaster } from "@/components/ui/toaster";
+ */
 export function Toaster() {
   // False on the server and during hydration, true after; keeps Sonner out of SSR markup.
   const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false);
