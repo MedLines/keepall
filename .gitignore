@@ -71,3 +71,6 @@ src/app/prototypes/
 # Claude Code: local agent worktrees and per-user settings (settings.json stays committable)
 .claude/worktrees/
 .claude/settings.local.json
+
+# Storybook build output
+storybook-static/
