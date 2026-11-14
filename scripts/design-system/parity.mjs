@@ -177,7 +177,8 @@ for (const [name, v] of figmaVars) {
   if (prefix) { add("gap", "variable", name, `${v.codeSyntax} — Figma-only tuned value.`, gap(config.variables.gapNamePrefixes[prefix])); continue; }
   if (name in config.variables.gapNames) { add("gap", "variable", name, `${v.codeSyntax}`, gap(config.variables.gapNames[name])); continue; }
 
-  const modes = v.modes.includes("Light") ? ["Light", "Dark"] : ["Value"];
+  // Theme modes are named after code themes (data-theme values); other collections have one "Value" mode.
+  const modes = v.modes.length > 1 ? v.modes : ["Value"];
   if (!ref) {
     // Literal code syntax such as 999px or calc(var(--spacing) * 4).
     const px = toPx(v.codeSyntax.replace("var(--spacing)", "var(--spacing)"));
@@ -189,7 +190,8 @@ for (const [name, v] of figmaVars) {
 
   const problems = [];
   for (const mode of modes) {
-    const cssMode = mode === "Dark" ? "dark" : "light";
+    const cssMode = mode === "Value" ? "light" : mode;
+    if (!["light", "dark"].includes(cssMode)) { problems.push(`${mode}: only the light and dark themes are compared so far`); continue; }
     const resolved = codeValue(ref, cssMode);
     const fv = figmaValue(v, mode);
     if (v.type === "COLOR") {

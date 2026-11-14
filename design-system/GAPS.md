@@ -47,7 +47,7 @@ Figma stores numbers. Code uses `rem`, `px`, `ms`, `em`, unitless opacity and `c
 
 ## Colour-scheme scopes
 
-Each colour role resolves through `light-dark()` in its own `color-scheme` scope. The public pages are always dark, and PDF text layers are always light. Figma has one Light and one Dark mode per collection, so frames that stand for those scopes must set the mode explicitly.
+Each colour role resolves through `light-dark()` in its own `color-scheme` scope. The public pages are always dark, and PDF text layers are always light. Figma's Theme collection has one `light` and one `dark` mode, so frames that stand for those scopes must set the mode explicitly.
 
 ## Tokens outside tokens.css
 

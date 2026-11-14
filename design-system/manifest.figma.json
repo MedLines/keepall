@@ -1486,10 +1486,10 @@
       ]
     },
     {
-      "collection": "Color",
+      "collection": "Theme",
       "modes": [
-        "Light",
-        "Dark"
+        "light",
+        "dark"
       ],
       "variables": [
         {
@@ -1501,10 +1501,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/100"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/950"
             }
           },
@@ -1519,10 +1519,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/50"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/975"
             }
           },
@@ -1537,10 +1537,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "white"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/850"
             }
           },
@@ -1555,10 +1555,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "white"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/800"
             }
           },
@@ -1573,10 +1573,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/25"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/875"
             }
           },
@@ -1591,10 +1591,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/50"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/875"
             }
           }
@@ -1608,10 +1608,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/150"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/750"
             }
           },
@@ -1626,13 +1626,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.9412,
               0.9451,
               0.9412,
               1
             ],
-            "Dark": [
+            "dark": [
               0.1176,
               0.1255,
               0.1294,
@@ -1649,13 +1649,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.051
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -1673,13 +1673,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               1,
               1,
               1,
               0.8
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -1697,13 +1697,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.149
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -1720,13 +1720,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.0353,
               0.0353,
               0.0431,
               1
             ],
-            "Dark": [
+            "dark": [
               0.0353,
               0.0353,
               0.0431,
@@ -1743,13 +1743,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.0941,
               0.0941,
               0.102,
               1
             ],
-            "Dark": [
+            "dark": [
               0.0941,
               0.0941,
               0.102,
@@ -1766,10 +1766,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/150"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/900"
             }
           }
@@ -1784,10 +1784,10 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/800"
             },
-            "Dark": {
+            "dark": {
               "alias": "paper"
             }
           }
@@ -1802,10 +1802,10 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/500"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/400"
             }
           }
@@ -1820,13 +1820,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.3843,
               0.4078,
               0.4431,
               1
             ],
-            "Dark": [
+            "dark": [
               0.5765,
               0.6,
               0.6353,
@@ -1844,13 +1844,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.949,
               0.949,
               0.9412,
               1
             ],
-            "Dark": [
+            "dark": [
               0.949,
               0.949,
               0.9412,
@@ -1868,13 +1868,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               1,
               0.4392,
               0.4392,
               1
             ],
-            "Dark": [
+            "dark": [
               1,
               0.4392,
               0.4392,
@@ -1892,13 +1892,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.4392,
               0.6784,
               0.9843,
               1
             ],
-            "Dark": [
+            "dark": [
               0.4392,
               0.6784,
               0.9843,
@@ -1916,13 +1916,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.7882,
               0.6118,
               0.9882,
               1
             ],
-            "Dark": [
+            "dark": [
               0.7882,
               0.6118,
               0.9882,
@@ -1940,13 +1940,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               1,
               0.6549,
               0.2745,
               1
             ],
-            "Dark": [
+            "dark": [
               1,
               0.6549,
               0.2745,
@@ -1964,13 +1964,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.7098,
               1,
               0.8824,
               1
             ],
-            "Dark": [
+            "dark": [
               0.7098,
               1,
               0.8824,
@@ -1988,13 +1988,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.8196,
               0.9373,
               1,
               1
             ],
-            "Dark": [
+            "dark": [
               0.8196,
               0.9373,
               1,
@@ -2012,13 +2012,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.959,
               0.5341,
               0.7449,
               1
             ],
-            "Dark": [
+            "dark": [
               0.959,
               0.5341,
               0.7449,
@@ -2036,13 +2036,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.8023,
               0.0824,
               0.1497,
               1
             ],
-            "Dark": {
+            "dark": {
               "alias": "item/on-media/pdf"
             }
           }
@@ -2057,13 +2057,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0.366,
               0.7418,
               1
             ],
-            "Dark": {
+            "dark": {
               "alias": "item/on-media/text"
             }
           }
@@ -2078,13 +2078,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.4802,
               0.2563,
               0.6861,
               1
             ],
-            "Dark": {
+            "dark": {
               "alias": "item/on-media/markdown"
             }
           }
@@ -2099,13 +2099,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.6245,
               0.342,
               0,
               1
             ],
-            "Dark": {
+            "dark": {
               "alias": "item/on-media/note"
             }
           }
@@ -2120,13 +2120,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0.4466,
               0.2309,
               1
             ],
-            "Dark": {
+            "dark": {
               "alias": "item/on-media/image"
             }
           }
@@ -2141,13 +2141,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0.412,
               0.6038,
               1
             ],
-            "Dark": {
+            "dark": {
               "alias": "item/on-media/link"
             }
           }
@@ -2162,13 +2162,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.6829,
               0.1296,
               0.459,
               1
             ],
-            "Dark": {
+            "dark": {
               "alias": "item/on-media/video"
             }
           }
@@ -2182,10 +2182,10 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/200"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/700"
             }
           }
@@ -2199,13 +2199,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.141
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -2222,13 +2222,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.08
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -2245,13 +2245,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.078
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -2268,13 +2268,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.4109,
               0.4109,
               0.4109,
               1
             ],
-            "Dark": [
+            "dark": [
               0.5021,
               0.5021,
               0.5021,
@@ -2292,13 +2292,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.3333,
               0.3686,
               0.4118,
               1
             ],
-            "Dark": [
+            "dark": [
               0.7686,
               0.7961,
               0.8275,
@@ -2315,10 +2315,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/800"
             },
-            "Dark": {
+            "dark": {
               "alias": "white"
             }
           },
@@ -2333,10 +2333,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "neutral/700"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/150"
             }
           },
@@ -2352,10 +2352,10 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "white"
             },
-            "Dark": {
+            "dark": {
               "alias": "neutral/900"
             }
           }
@@ -2370,13 +2370,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.7059,
               0.1373,
               0.0941,
               1
             ],
-            "Dark": [
+            "dark": [
               0.9882,
               0.6471,
               0.6471,
@@ -2393,13 +2393,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               1,
               0.9451,
               0.9373,
               1
             ],
-            "Dark": [
+            "dark": [
               0.2235,
               0.1098,
               0.1255,
@@ -2416,13 +2416,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.9882,
               0.6471,
               0.6471,
               1
             ],
-            "Dark": [
+            "dark": [
               0.6431,
               0.2902,
               0.3216,
@@ -2440,13 +2440,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.4706,
               0.2078,
               0.0588,
               1
             ],
-            "Dark": [
+            "dark": [
               0.9882,
               0.8275,
               0.5451,
@@ -2463,13 +2463,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               1,
               0.9843,
               0.9216,
               1
             ],
-            "Dark": [
+            "dark": [
               0.2,
               0.149,
               0.098,
@@ -2486,13 +2486,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.9922,
               0.902,
               0.5412,
               1
             ],
-            "Dark": [
+            "dark": [
               0.5216,
               0.3922,
               0.2078,
@@ -2509,13 +2509,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               1,
               0.9294,
               0.6667,
               1
             ],
-            "Dark": [
+            "dark": [
               0.4392,
               0.3137,
               0.0941,
@@ -2533,13 +2533,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.1882,
               0.1373,
               0.0431,
               1
             ],
-            "Dark": [
+            "dark": [
               1,
               0.9569,
               0.7882,
@@ -2555,13 +2555,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.059
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -2577,13 +2577,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.1
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -2599,13 +2599,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.16
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -2621,13 +2621,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.071
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -2643,13 +2643,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.12
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -2665,13 +2665,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.12
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -2687,13 +2687,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.18
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -2710,13 +2710,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               1,
               1,
               1,
               0.72
             ],
-            "Dark": [
+            "dark": [
               0.0353,
               0.0353,
               0.0431,
@@ -2734,13 +2734,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               1,
               1,
               1,
               0.84
             ],
-            "Dark": [
+            "dark": [
               0.0353,
               0.0353,
               0.0431,
@@ -2757,13 +2757,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.14
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -2780,13 +2780,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.039
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -2803,13 +2803,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.08
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -2827,13 +2827,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.12
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -2851,13 +2851,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.16
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -2875,13 +2875,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.14
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -2899,13 +2899,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.25
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -2923,13 +2923,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.6
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -2947,13 +2947,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.92
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -2971,10 +2971,10 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": {
+            "light": {
               "alias": "white"
             },
-            "Dark": {
+            "dark": {
               "alias": "white"
             }
           },
@@ -2990,13 +2990,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.2888,
               0.3335,
               0.3961,
               1
             ],
-            "Dark": [
+            "dark": [
               0.2888,
               0.3335,
               0.3961,
@@ -3014,13 +3014,13 @@
             "SHAPE_FILL"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.1451,
               0.1412,
               0.1529,
               1
             ],
-            "Dark": [
+            "dark": [
               0.1451,
               0.1412,
               0.1529,
@@ -3038,13 +3038,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               1,
               1,
               1,
               0.0706
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -3063,13 +3063,13 @@
             "STROKE_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0.9333,
               0.9176,
               0.898,
               1
             ],
-            "Dark": [
+            "dark": [
               0.9333,
               0.9176,
               0.898,
@@ -3086,13 +3086,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.1412
             ],
-            "Dark": [
+            "dark": [
               1,
               1,
               1,
@@ -3109,13 +3109,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.05
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -3132,13 +3132,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.06
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
@@ -3155,13 +3155,13 @@
             "EFFECT_COLOR"
           ],
           "values": {
-            "Light": [
+            "light": [
               0,
               0,
               0,
               0.18
             ],
-            "Dark": [
+            "dark": [
               0,
               0,
               0,
