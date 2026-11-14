@@ -35,6 +35,7 @@ for (const pair of config.components) {
 
   const ignoreFigma = { ...config.ignoreFigmaPropertiesEverywhere, ...pair.ignoreFigmaProperties };
   const ignoreCode = pair.ignoreCodeProps ?? {};
+  const ignoreValues = pair.ignoreCodeValues ?? {};
   const enumProps = c.props.filter((p) => p.type === "enum" && !(p.name in ignoreCode));
 
   for (const fp of f.properties.filter((p) => p.type === "VARIANT")) {
@@ -43,10 +44,13 @@ for (const pair of config.components) {
     if (!cp) { add("red", "property", `${c.name}.${fp.name}`, `Figma variant with no code prop (${fp.options.join(", ")}).`, `Remove the "${fp.name}" property, or list it in parity.config.json with a GAPS.md reason.`); continue; }
     if (cp.name !== fp.name) add("red", "property", `${c.name}.${cp.name}`, `Figma spells it "${fp.name}".`, `Rename the Figma property "${fp.name}" to "${cp.name}".`);
     else add("green", "property", `${c.name}.${cp.name}`, "Name matches.");
-    const missing = cp.values.filter((v) => !fp.options.includes(v));
+    const skipped = ignoreValues[cp.name] ?? {};
+    for (const [value, anchor] of Object.entries(skipped)) add("gap", "values", `${c.name}.${cp.name}=${value}`, "Code-only value.", gap(anchor));
+    const missing = cp.values.filter((v) => !fp.options.includes(v) && !(v in skipped));
     const extra = fp.options.filter((v) => !cp.values.includes(v));
-    if (!missing.length && !extra.length) add("green", "values", `${c.name}.${cp.name}`, cp.values.join(", "));
-    else add("red", "values", `${c.name}.${cp.name}`, `code [${cp.values.join(", ")}] vs Figma [${fp.options.join(", ")}]`,
+    const compared = cp.values.filter((v) => !(v in skipped));
+    if (!missing.length && !extra.length) add("green", "values", `${c.name}.${cp.name}`, compared.join(", "));
+    else add("red", "values", `${c.name}.${cp.name}`, `code [${compared.join(", ")}] vs Figma [${fp.options.join(", ")}]`,
       [extra.length && `Rename or remove Figma values ${extra.map((v) => `"${v}"`).join(", ")}`, missing.length && `add ${missing.map((v) => `"${v}"`).join(", ")}`].filter(Boolean).join("; ") + ".");
     if (cp.default === undefined) add("red", "default", `${c.name}.${cp.name}`, `Code exposes no default; Figma defaults to "${fp.default}".`, `Declare the default in the component's props first (code), then set the Figma default to match.`);
     else if (cp.default === fp.default) add("green", "default", `${c.name}.${cp.name}`, cp.default);
@@ -191,6 +195,7 @@ for (const [name, v] of figmaVars) {
     } else if (v.type === "FLOAT") {
       let px = toPx(resolved);
       if (ref === "--opacity-disabled" && px !== null) px = Math.round(px * 100);
+      if (ref.startsWith("--tracking-") && /em$/.test(resolved.trim())) px = Math.round(Number.parseFloat(resolved) * 10000) / 100;
       if (px === null || Math.abs(px - fv) > 0.01) problems.push(`${mode}: code ${resolved} vs Figma ${fv}`);
     } else if (String(resolved).trim() !== String(fv).trim()) problems.push(`${mode}: code "${resolved}" vs Figma "${fv}"`);
   }

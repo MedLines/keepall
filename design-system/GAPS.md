@@ -38,7 +38,7 @@ Figma colour variables hold only a shadow's colour. Offsets, blur and spread liv
 
 ## Units
 
-Figma stores numbers. Code uses `rem`, `px`, `ms`, unitless opacity and `calc(var(--spacing) * n)`. The parity check converts code values to Figma's numbers before comparing them: 16px per rem, 4px per spacing step, milliseconds as written, and opacity as a percentage (`0.6` → `60`).
+Figma stores numbers. Code uses `rem`, `px`, `ms`, `em`, unitless opacity and `calc(var(--spacing) * n)`. The parity check converts code values to Figma's numbers before comparing them: 16px per rem, 4px per spacing step, milliseconds as written, opacity as a percentage (`0.6` → `60`), and letter spacing as a percentage of the font size (`-0.03em` → `-3`), the unit Figma's letter-spacing field uses.
 
 ## Computed and fluid values
 
@@ -58,4 +58,21 @@ The `uiMotion` tiers are springs (duration plus bounce). Figma keeps only their 
 
 ## Non-visual components
 
-`MotionProvider` and `Toaster` render no design surface of their own. `Toaster`'s toasts are drawn in Figma as `Toast`.
+`MotionProvider` renders no design surface of its own; it only makes Motion animations follow the reduced-motion setting.
+
+## Caller-sized variants
+
+`Button size="none"` adds no size classes; the caller sets height, padding and type. It has no fixed look, so Figma does not draw it.
+
+## Media chrome surface
+
+`.library-card-media-chrome` is the translucent surface that card corner controls and type badges sit on. Figma draws it as `IconButton` `Style=Media chrome`. In code it is a class, not an `IconButton` prop, so the `Style` property is not compared.
+
+## Behaviour and containers
+
+`MenuHoverList` (the gliding highlight), `ScrollArea` and `ScrollPanel` (scroll containers), `SearchHighlight` (text marking), `TooltipContent` (the same surface as `Tooltip`, without its root) and `ThemeControl` (a `Button` that toggles the theme) add behaviour or wrap other parts. Figma shows them through the parts they use.
+
+## Utility aliases
+
+`--color-white` and `--color-black` exist so Tailwind generates `bg-white` and `text-black`. Figma's `white` and `black` primitives stand for them.
+

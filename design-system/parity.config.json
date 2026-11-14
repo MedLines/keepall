@@ -3,11 +3,19 @@
   "components": [
     {
       "code": "Button",
-      "figma": "Button"
+      "figma": "Button",
+      "ignoreCodeValues": {
+        "size": {
+          "none": "caller-sized-variants"
+        }
+      }
     },
     {
       "code": "IconButton",
-      "figma": "Icon button"
+      "figma": "Icon button",
+      "ignoreFigmaProperties": {
+        "Style": "media-chrome-surface"
+      }
     },
     {
       "code": "SegmentedControl",
@@ -94,7 +102,13 @@
   },
   "codeWithoutFigmaComponent": {
     "MotionProvider": "non-visual-components",
-    "Icons": "The icon catalogue story; icons are compared one by one under Icons."
+    "Icons": "The icon catalogue story; icons are compared one by one under Icons.",
+    "MenuHoverList": "behaviour-and-containers",
+    "ScrollArea": "behaviour-and-containers",
+    "ScrollPanel": "behaviour-and-containers",
+    "SearchHighlight": "behaviour-and-containers",
+    "TooltipContent": "behaviour-and-containers",
+    "ThemeControl": "behaviour-and-containers"
   },
   "variables": {
     "gapNamePrefixes": {
@@ -108,7 +122,8 @@
       "--corner-shape-control": "superellipse-corners",
       "--color-collection-marker": "computed-and-fluid-values",
       "--card-icon-alignment-offset": "computed-and-fluid-values",
-      "--font-sans": "Figma sets the family through text styles, not a variable."
+      "--font-sans": "Figma sets the family through text styles, not a variable.",
+      "--color-white": "utility-aliases"
     }
   }
 }

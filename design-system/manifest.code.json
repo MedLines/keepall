@@ -16,7 +16,8 @@
             "primary",
             "danger",
             "danger-ghost"
-          ]
+          ],
+          "default": "secondary"
         },
         {
           "name": "size",
@@ -26,7 +27,8 @@
             "lg",
             "toolbar",
             "none"
-          ]
+          ],
+          "default": "md"
         },
         {
           "name": "className",
@@ -299,7 +301,8 @@
             "primary",
             "danger",
             "danger-ghost"
-          ]
+          ],
+          "default": "secondary"
         },
         {
           "name": "size",
@@ -308,7 +311,8 @@
             "sm",
             "md",
             "lg"
-          ]
+          ],
+          "default": "md"
         },
         {
           "name": "className",
