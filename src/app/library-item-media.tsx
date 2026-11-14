@@ -29,6 +29,8 @@ type Props = {
   faviconOnly?: boolean;
   className?: string;
   sharedTransition?: boolean;
+  /** Off-screen measuring: hold the media's final box without reading or fetching anything. */
+  deferLoading?: boolean;
 };
 
 /** Renders link/image preview or note letter. No links; inspect owns outbound. */
@@ -41,11 +43,12 @@ export function LibraryItemMedia({
   onImageLoad,
   className = "",
   sharedTransition = true,
+  deferLoading = false,
 }: Props) {
   const assetIdForDisplay = faviconOnly && item.type === "link" ? null : resolveAssetId(item, assetId);
   const useThumbnail = item.type === "video" || (["card", "grid"].includes(variant) && item.type === "image");
-  const originalUrl = useAssetObjectUrl(assetIdForDisplay, { enabled: !useThumbnail });
-  const thumbnailUrl = useThumbnailObjectUrl(useThumbnail || item.type === "image" ? assetIdForDisplay : null);
+  const originalUrl = useAssetObjectUrl(assetIdForDisplay, { enabled: !useThumbnail && !deferLoading });
+  const thumbnailUrl = useThumbnailObjectUrl(!deferLoading && (useThumbnail || item.type === "image") ? assetIdForDisplay : null);
   const localObjectUrl = useThumbnail ? thumbnailUrl : originalUrl ?? (item.type === "image" ? thumbnailUrl : null);
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const [decodedLayout, setDecodedLayout] = useState<{ assetId: string; width: number; height: number } | null>(null);
@@ -87,7 +90,7 @@ export function LibraryItemMedia({
       : image;
   }
 
-  if (item.type === "link") {
+  if (item.type === "link" && !deferLoading) {
     return <LinkFavicon key={item.url} item={item} variant={variant} compact={compact} className={className} dimensions={dimensions} />;
   }
 

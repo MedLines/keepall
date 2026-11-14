@@ -212,9 +212,10 @@ export function LibraryItem({
     rowRef.current = node;
     measureElement?.(node);
   }, [measureElement]);
+  const measureOnly = placement?.measureOnly === true;
   usePreviewEnrichViewport(
     rowRef,
-    !trashActions && item.type === "link" ? item : null,
+    !measureOnly && !trashActions && item.type === "link" ? item : null,
   );
 
   const chromeVisible = useBrowseChromeVisible(layoutMode, reduceMotion);
@@ -278,6 +279,7 @@ export function LibraryItem({
             variant={isList ? "card" : "grid"}
             compact={isList}
             faviconOnly={isList && item.type === "link"}
+            deferLoading={measureOnly}
             onImageLoad={setImageRatio}
             className={isList ? "!aspect-auto h-full w-full object-cover" : ""}
           />
