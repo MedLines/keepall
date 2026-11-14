@@ -1,4 +1,10 @@
-export type ThemePreference = "light" | "dark";
+/** Theme names: the data-theme values, the :root[data-theme] blocks in tokens.css and the Figma
+ * Theme modes all use these exact names. Add a theme here when it lands in tokens.css. */
+export const THEMES = ["light", "dark"] as const;
+export type ThemePreference = (typeof THEMES)[number];
+
+const isTheme = (value: string | null | undefined): value is ThemePreference =>
+  (THEMES as readonly string[]).includes(value ?? "");
 
 export const THEME_STORAGE_KEY = "keepall-theme-v1";
 const THEME_CHANGED_EVENT = "keepall-theme-changed";
@@ -10,7 +16,7 @@ function readBrowserTheme(): ThemePreference {
 }
 
 function parseTheme(value: string | null | undefined): ThemePreference {
-  return value === "light" || value === "dark" ? value : readBrowserTheme();
+  return isTheme(value) ? value : readBrowserTheme();
 }
 
 function readSavedTheme(): ThemePreference {
@@ -67,4 +73,4 @@ export function setThemePreference(theme: ThemePreference): void {
 }
 
 // Static, trusted source only. Runs before the first paint.
-export const THEME_INIT_SCRIPT = `(()=>{let t=window.matchMedia?.("(prefers-color-scheme: dark)").matches?"dark":"light";try{const s=localStorage.getItem("${THEME_STORAGE_KEY}");if(s==="light"||s==="dark")t=s}catch{}document.documentElement.dataset.theme=t})()`;
+export const THEME_INIT_SCRIPT = `(()=>{let t=window.matchMedia?.("(prefers-color-scheme: dark)").matches?"dark":"light";try{const s=localStorage.getItem("${THEME_STORAGE_KEY}");if(${JSON.stringify(THEMES)}.includes(s))t=s}catch{}document.documentElement.dataset.theme=t})()`;

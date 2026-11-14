@@ -56,6 +56,93 @@
 :root { --backdrop-scrim: linear-gradient(135deg in srgb, oklch(0 0 0 / 0.14), oklch(0 0 0 / 0.09)); }
 :root[data-theme="dark"] { --backdrop-scrim: linear-gradient(135deg in srgb, oklch(1 0 0 / 0.07), oklch(1 0 0 / 0.04)); }
 
+/* Theme roles: the default theme. Every colour utility reads one of these, so a theme is a
+   :root[data-theme="<name>"] block that overrides --theme-* only, with the names Figma's Theme
+   collection uses as modes. Local --color-* overrides (public pages, folder cards) tint only
+   hand-written CSS. */
+:root {
+  --theme-bg-shell: light-dark(var(--neutral-100), var(--neutral-950));
+  --theme-bg-canvas: light-dark(var(--neutral-50), var(--neutral-975));
+  --theme-bg-surface: light-dark(var(--white), var(--neutral-850));
+  --theme-bg-card: light-dark(var(--white), var(--neutral-800));
+  --theme-bg-control: light-dark(var(--neutral-25), var(--neutral-875));
+  --theme-bg-reading: light-dark(var(--neutral-50), var(--neutral-875));
+  --theme-bg-raised: light-dark(var(--neutral-150), var(--neutral-750));
+  --theme-bg-selected: light-dark(oklch(0.957102447 0.001695869 145.562810956), oklch(0.241832388 0.003552774 228.947041356));
+  --theme-bg-active: light-dark(oklch(0 0 0 / 0.050980392), oklch(1 0 0 / 0.121568627));
+  --theme-border-active: light-dark(oklch(1 0 0 / 0.8), oklch(1 0 0 / 0.058823529));
+  --theme-bg-scrim: light-dark(oklch(0 0 0 / 0.149019608), oklch(0 0 0 / 0.4));
+  --theme-bg-overlay: oklch(0.140765334 0.004385904 285.82285136);
+  --theme-bg-media: oklch(0.2098857 0.00390174 286.058756954);
+  --theme-bg-image-viewer: light-dark(var(--neutral-150), var(--neutral-900));
+  --theme-bg-media-chrome: light-dark(oklch(1 0 0 / 0.72), oklch(0.140765334 0.004385904 285.82285136 / 0.72));
+  --theme-bg-media-chrome-hover: light-dark(oklch(1 0 0 / 0.84), oklch(0.140765334 0.004385904 285.82285136 / 0.84));
+  --theme-text-primary: light-dark(var(--neutral-800), var(--paper));
+  --theme-text-secondary: light-dark(var(--neutral-500), var(--neutral-400));
+  --theme-text-card-meta: light-dark(#626871, #9399a2);
+  --theme-text-on-media: oklch(0.960592553 0.002653442 106.449449342);
+  --theme-item-pdf-on-media: #ff7070;
+  --theme-item-text-on-media: #70adfb;
+  --theme-item-markdown-on-media: #c99cfc;
+  --theme-item-note-on-media: #ffa746;
+  --theme-item-image-on-media: #b5ffe1;
+  --theme-item-link-on-media: #d1efff;
+  --theme-item-video-on-media: oklch(0.76 0.145 350);
+  --theme-item-pdf: light-dark(oklch(0.54 0.21 25), var(--theme-item-pdf-on-media));
+  --theme-item-text: light-dark(oklch(0.49 0.17 255), var(--theme-item-text-on-media));
+  --theme-item-markdown: light-dark(oklch(0.50 0.17 305), var(--theme-item-markdown-on-media));
+  --theme-item-note: light-dark(oklch(0.53 0.135 65), var(--theme-item-note-on-media));
+  --theme-item-image: light-dark(oklch(0.48 0.13 155), var(--theme-item-image-on-media));
+  --theme-item-link: light-dark(oklch(0.49 0.12 235), var(--theme-item-link-on-media));
+  --theme-item-video: light-dark(oklch(0.51 0.19 350), var(--theme-item-video-on-media));
+  --theme-border-subtle: light-dark(var(--neutral-200), var(--neutral-700));
+  --theme-border-edge: light-dark(oklch(0 0 0 / 0.141176471), oklch(1 0 0 / 0.141176471));
+  --theme-border-media: light-dark(oklch(0 0 0 / 0.08), oklch(1 0 0 / 0.08));
+  --theme-border-media-chrome: light-dark(oklch(0 0 0 / 0.14), oklch(1 0 0 / 0.14));
+  --theme-border-control: light-dark(oklch(0 0 0 / 0.078431373), oklch(1 0 0 / 0.078431373));
+  --theme-border-focus: light-dark(oklch(0.52 0 0), oklch(0.60 0 0));
+  --theme-border-selected: light-dark(oklch(0.478112036 0.021030497 253.478913982), oklch(0.839078171 0.013548353 251.578187792));
+  --theme-action-primary: light-dark(var(--neutral-800), var(--white));
+  --theme-action-primary-hover: light-dark(var(--neutral-700), var(--neutral-150));
+  --theme-text-on-action: light-dark(var(--white), var(--neutral-900));
+  --theme-text-danger: light-dark(oklch(0.500335978 0.182051182 29.512714275), oklch(0.807689675 0.103485729 19.570623816));
+  --theme-bg-danger: light-dark(oklch(0.968586961 0.015409139 27.280066214), oklch(0.268012128 0.045783995 11.811931989));
+  --theme-border-danger: light-dark(oklch(0.807689675 0.103485729 19.570623816), oklch(0.526386657 0.119150064 16.638270002));
+  --theme-text-warning: light-dark(oklch(0.41370733 0.105364833 45.903757687), oklch(0.886303525 0.101036799 80.9265957));
+  --theme-bg-warning: light-dark(oklch(0.986879345 0.021402972 95.277433146), oklch(0.279993514 0.029659593 66.118892661));
+  --theme-border-warning: light-dark(oklch(0.924276834 0.115126806 95.745862969), oklch(0.526468942 0.07671406 74.512358797));
+  --theme-bg-search-match: light-dark(oklch(0.945107388 0.086846189 94.873876244), oklch(0.455050432 0.08252792 77.418640118));
+  --theme-text-search-match: light-dark(oklch(0.265771697 0.042163708 80.495289208), oklch(0.965108469 0.056770316 95.33699577));
+  /* Overlay tints: black in light, white in dark. Scrollbar thumbs and the sidebar resize rule. */
+  --theme-bg-scrollbar-thumb: light-dark(oklch(0 0 0 / 0.08), oklch(1 0 0 / 0.08));
+  --theme-bg-scrollbar-thumb-hover: light-dark(oklch(0 0 0 / 0.12), oklch(1 0 0 / 0.12));
+  --theme-bg-scrollbar-thumb-active: light-dark(oklch(0 0 0 / 0.16), oklch(1 0 0 / 0.16));
+  --theme-bg-sidebar-rule: light-dark(oklch(0 0 0 / 0.14), oklch(1 0 0 / 0.14));
+  --theme-bg-sidebar-rule-focus: light-dark(oklch(0 0 0 / 0.25), oklch(1 0 0 / 0.25));
+  /* Focused image viewer backdrop, and its darker zoomed state. */
+  --theme-bg-image-backdrop: light-dark(oklch(0 0 0 / 0.6), oklch(0 0 0 / 0.86));
+  --theme-bg-image-backdrop-zoomed: oklch(0 0 0 / 0.92);
+  /* PDF pages and their placeholders stay white paper in both themes. */
+  --theme-bg-paper: oklch(1 0 0);
+  --theme-text-on-paper: oklch(0.446 0.03 256.802);
+  /* Toasts on the public pages, which stay dark in either theme. */
+  --theme-bg-toast: oklch(0.262597222 0.005696969 301.143762134);
+  --theme-border-toast: oklch(1 0 0 / 0.070588235);
+  --theme-text-toast: oklch(0.938763728 0.007981954 73.741801476);
+  --theme-shadow-edge: light-dark(oklch(0 0 0 / 0.141176471), oklch(1 0 0 / 0.141176471));
+  --theme-shadow-menu: light-dark(oklch(0 0 0 / 0.058823529), oklch(0 0 0 / 0.250980392));
+  --theme-shadow-action-primary: light-dark(oklch(0 0 0 / 0.1), oklch(0 0 0 / 0.32));
+  --theme-shadow-action-primary-hover: light-dark(oklch(0 0 0 / 0.16), oklch(0 0 0 / 0.5));
+  --theme-shadow-panel: oklch(0 0 0 / 0.070588235);
+  --theme-shadow-card: oklch(0 0 0 / 0.039215686);
+  --theme-shadow-thumbnail-edge: oklch(0 0 0 / 0.05);
+  --theme-shadow-inspect-1: oklch(0 0 0 / 0.06);
+  --theme-shadow-inspect-2: oklch(0 0 0 / 0.18);
+  --theme-shadow-image-1: light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.24));
+  --theme-shadow-image-2: light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.28));
+  --theme-shadow-image-3: light-dark(oklch(0 0 0 / 0.18), oklch(0 0 0 / 0.4));
+}
+
 @theme inline {
   /* Closed palette: Tailwind's default colours, shadows and the other scales Keepall doesn't use
      generate no classes. Only the tokens declared below do. */
@@ -69,75 +156,71 @@
   --color-black: oklch(0 0 0);
   --color-white: oklch(1 0 0);
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --color-bg-shell: light-dark(var(--neutral-100), var(--neutral-950));
-  --color-bg-canvas: light-dark(var(--neutral-50), var(--neutral-975));
-  --color-bg-surface: light-dark(var(--white), var(--neutral-850));
-  --color-bg-card: light-dark(var(--white), var(--neutral-800));
-  --color-bg-control: light-dark(var(--neutral-25), var(--neutral-875));
-  --color-bg-reading: light-dark(var(--neutral-50), var(--neutral-875));
-  --color-bg-raised: light-dark(var(--neutral-150), var(--neutral-750));
-  --color-bg-selected: light-dark(oklch(0.957102447 0.001695869 145.562810956), oklch(0.241832388 0.003552774 228.947041356));
-  --color-bg-active: light-dark(oklch(0 0 0 / 0.050980392), oklch(1 0 0 / 0.121568627));
-  --color-border-active: light-dark(oklch(1 0 0 / 0.8), oklch(1 0 0 / 0.058823529));
-  --color-bg-scrim: light-dark(oklch(0 0 0 / 0.149019608), oklch(0 0 0 / 0.4));
-  --color-bg-overlay: oklch(0.140765334 0.004385904 285.82285136);
-  --color-bg-media: oklch(0.2098857 0.00390174 286.058756954);
-  --color-bg-image-viewer: light-dark(var(--neutral-150), var(--neutral-900));
-  --color-bg-media-chrome: light-dark(oklch(1 0 0 / 0.72), oklch(0.140765334 0.004385904 285.82285136 / 0.72));
-  --color-bg-media-chrome-hover: light-dark(oklch(1 0 0 / 0.84), oklch(0.140765334 0.004385904 285.82285136 / 0.84));
-  --color-text-primary: light-dark(var(--neutral-800), var(--paper));
-  --color-text-secondary: light-dark(var(--neutral-500), var(--neutral-400));
-  --color-text-card-meta: light-dark(#626871, #9399a2);
-  --color-text-on-media: oklch(0.960592553 0.002653442 106.449449342);
-  --color-item-pdf-on-media: #ff7070;
-  --color-item-text-on-media: #70adfb;
-  --color-item-markdown-on-media: #c99cfc;
-  --color-item-note-on-media: #ffa746;
-  --color-item-image-on-media: #b5ffe1;
-  --color-item-link-on-media: #d1efff;
-  --color-item-video-on-media: oklch(0.76 0.145 350);
-  --color-item-pdf: light-dark(oklch(0.54 0.21 25), var(--color-item-pdf-on-media));
-  --color-item-text: light-dark(oklch(0.49 0.17 255), var(--color-item-text-on-media));
-  --color-item-markdown: light-dark(oklch(0.50 0.17 305), var(--color-item-markdown-on-media));
-  --color-item-note: light-dark(oklch(0.53 0.135 65), var(--color-item-note-on-media));
-  --color-item-image: light-dark(oklch(0.48 0.13 155), var(--color-item-image-on-media));
-  --color-item-link: light-dark(oklch(0.49 0.12 235), var(--color-item-link-on-media));
-  --color-item-video: light-dark(oklch(0.51 0.19 350), var(--color-item-video-on-media));
-  --color-border-subtle: light-dark(var(--neutral-200), var(--neutral-700));
-  --color-border-edge: light-dark(oklch(0 0 0 / 0.141176471), oklch(1 0 0 / 0.141176471));
-  --color-border-media: light-dark(oklch(0 0 0 / 0.08), oklch(1 0 0 / 0.08));
-  --color-border-media-chrome: light-dark(oklch(0 0 0 / 0.14), oklch(1 0 0 / 0.14));
-  --color-border-control: light-dark(oklch(0 0 0 / 0.078431373), oklch(1 0 0 / 0.078431373));
-  --color-border-focus: light-dark(oklch(0.52 0 0), oklch(0.60 0 0));
-  --color-border-selected: light-dark(oklch(0.478112036 0.021030497 253.478913982), oklch(0.839078171 0.013548353 251.578187792));
-  --color-action-primary: light-dark(var(--neutral-800), var(--white));
-  --color-action-primary-hover: light-dark(var(--neutral-700), var(--neutral-150));
-  --color-text-on-action: light-dark(var(--white), var(--neutral-900));
-  --color-text-danger: light-dark(oklch(0.500335978 0.182051182 29.512714275), oklch(0.807689675 0.103485729 19.570623816));
-  --color-bg-danger: light-dark(oklch(0.968586961 0.015409139 27.280066214), oklch(0.268012128 0.045783995 11.811931989));
-  --color-border-danger: light-dark(oklch(0.807689675 0.103485729 19.570623816), oklch(0.526386657 0.119150064 16.638270002));
-  --color-text-warning: light-dark(oklch(0.41370733 0.105364833 45.903757687), oklch(0.886303525 0.101036799 80.9265957));
-  --color-bg-warning: light-dark(oklch(0.986879345 0.021402972 95.277433146), oklch(0.279993514 0.029659593 66.118892661));
-  --color-border-warning: light-dark(oklch(0.924276834 0.115126806 95.745862969), oklch(0.526468942 0.07671406 74.512358797));
-  --color-bg-search-match: light-dark(oklch(0.945107388 0.086846189 94.873876244), oklch(0.455050432 0.08252792 77.418640118));
-  --color-text-search-match: light-dark(oklch(0.265771697 0.042163708 80.495289208), oklch(0.965108469 0.056770316 95.33699577));
+  --color-bg-shell: var(--theme-bg-shell);
+  --color-bg-canvas: var(--theme-bg-canvas);
+  --color-bg-surface: var(--theme-bg-surface);
+  --color-bg-card: var(--theme-bg-card);
+  --color-bg-control: var(--theme-bg-control);
+  --color-bg-reading: var(--theme-bg-reading);
+  --color-bg-raised: var(--theme-bg-raised);
+  --color-bg-selected: var(--theme-bg-selected);
+  --color-bg-active: var(--theme-bg-active);
+  --color-border-active: var(--theme-border-active);
+  --color-bg-scrim: var(--theme-bg-scrim);
+  --color-bg-overlay: var(--theme-bg-overlay);
+  --color-bg-media: var(--theme-bg-media);
+  --color-bg-image-viewer: var(--theme-bg-image-viewer);
+  --color-bg-media-chrome: var(--theme-bg-media-chrome);
+  --color-bg-media-chrome-hover: var(--theme-bg-media-chrome-hover);
+  --color-text-primary: var(--theme-text-primary);
+  --color-text-secondary: var(--theme-text-secondary);
+  --color-text-card-meta: var(--theme-text-card-meta);
+  --color-text-on-media: var(--theme-text-on-media);
+  --color-item-pdf-on-media: var(--theme-item-pdf-on-media);
+  --color-item-text-on-media: var(--theme-item-text-on-media);
+  --color-item-markdown-on-media: var(--theme-item-markdown-on-media);
+  --color-item-note-on-media: var(--theme-item-note-on-media);
+  --color-item-image-on-media: var(--theme-item-image-on-media);
+  --color-item-link-on-media: var(--theme-item-link-on-media);
+  --color-item-video-on-media: var(--theme-item-video-on-media);
+  --color-item-pdf: var(--theme-item-pdf);
+  --color-item-text: var(--theme-item-text);
+  --color-item-markdown: var(--theme-item-markdown);
+  --color-item-note: var(--theme-item-note);
+  --color-item-image: var(--theme-item-image);
+  --color-item-link: var(--theme-item-link);
+  --color-item-video: var(--theme-item-video);
+  --color-border-subtle: var(--theme-border-subtle);
+  --color-border-edge: var(--theme-border-edge);
+  --color-border-media: var(--theme-border-media);
+  --color-border-media-chrome: var(--theme-border-media-chrome);
+  --color-border-control: var(--theme-border-control);
+  --color-border-focus: var(--theme-border-focus);
+  --color-border-selected: var(--theme-border-selected);
+  --color-action-primary: var(--theme-action-primary);
+  --color-action-primary-hover: var(--theme-action-primary-hover);
+  --color-text-on-action: var(--theme-text-on-action);
+  --color-text-danger: var(--theme-text-danger);
+  --color-bg-danger: var(--theme-bg-danger);
+  --color-border-danger: var(--theme-border-danger);
+  --color-text-warning: var(--theme-text-warning);
+  --color-bg-warning: var(--theme-bg-warning);
+  --color-border-warning: var(--theme-border-warning);
+  --color-bg-search-match: var(--theme-bg-search-match);
+  --color-text-search-match: var(--theme-text-search-match);
   --color-collection-marker: oklch(var(--collection-marker-lightness, 0.68) 0.15 var(--collection-marker-hue, 0));
-  /* Overlay tints: black in light, white in dark. Scrollbar thumbs and the sidebar resize rule. */
-  --color-bg-scrollbar-thumb: light-dark(oklch(0 0 0 / 0.08), oklch(1 0 0 / 0.08));
-  --color-bg-scrollbar-thumb-hover: light-dark(oklch(0 0 0 / 0.12), oklch(1 0 0 / 0.12));
-  --color-bg-scrollbar-thumb-active: light-dark(oklch(0 0 0 / 0.16), oklch(1 0 0 / 0.16));
-  --color-bg-sidebar-rule: light-dark(oklch(0 0 0 / 0.14), oklch(1 0 0 / 0.14));
-  --color-bg-sidebar-rule-focus: light-dark(oklch(0 0 0 / 0.25), oklch(1 0 0 / 0.25));
-  /* Focused image viewer backdrop, and its darker zoomed state. */
-  --color-bg-image-backdrop: light-dark(oklch(0 0 0 / 0.6), oklch(0 0 0 / 0.86));
-  --color-bg-image-backdrop-zoomed: oklch(0 0 0 / 0.92);
-  /* PDF pages and their placeholders stay white paper in both themes. */
-  --color-bg-paper: oklch(1 0 0);
-  --color-text-on-paper: oklch(0.446 0.03 256.802);
-  /* Toasts on the public pages, which stay dark in either theme. */
-  --color-bg-toast: oklch(0.262597222 0.005696969 301.143762134);
-  --color-border-toast: oklch(1 0 0 / 0.070588235);
-  --color-text-toast: oklch(0.938763728 0.007981954 73.741801476);
+  --color-bg-scrollbar-thumb: var(--theme-bg-scrollbar-thumb);
+  --color-bg-scrollbar-thumb-hover: var(--theme-bg-scrollbar-thumb-hover);
+  --color-bg-scrollbar-thumb-active: var(--theme-bg-scrollbar-thumb-active);
+  --color-bg-sidebar-rule: var(--theme-bg-sidebar-rule);
+  --color-bg-sidebar-rule-focus: var(--theme-bg-sidebar-rule-focus);
+  --color-bg-image-backdrop: var(--theme-bg-image-backdrop);
+  --color-bg-image-backdrop-zoomed: var(--theme-bg-image-backdrop-zoomed);
+  --color-bg-paper: var(--theme-bg-paper);
+  --color-text-on-paper: var(--theme-text-on-paper);
+  --color-bg-toast: var(--theme-bg-toast);
+  --color-border-toast: var(--theme-border-toast);
+  --color-text-toast: var(--theme-text-toast);
   --radius-control-xs: 0.625rem;
   --radius-control-sm: 0.75rem;
   --radius-control-md: 0.8125rem;
@@ -149,18 +232,18 @@
   --spacing-card-inset: 0.5rem;
   --corner-shape-panel: squircle;
   --corner-shape-control: superellipse(1.5);
-  --shadow-edge: 0 0 0 1px light-dark(oklch(0 0 0 / 0.141176471), oklch(1 0 0 / 0.141176471));
-  --shadow-menu: 0 4px 16px light-dark(oklch(0 0 0 / 0.058823529), oklch(0 0 0 / 0.250980392));
-  --shadow-action-primary: 0 1px 2px light-dark(oklch(0 0 0 / 0.1), oklch(0 0 0 / 0.32));
-  --shadow-action-primary-hover: 0 2px 8px light-dark(oklch(0 0 0 / 0.16), oklch(0 0 0 / 0.5));
-  --shadow-panel: 0 3px 12px oklch(0 0 0 / 0.070588235);
-  --shadow-card: 0 2px 4px oklch(0 0 0 / 0.039215686);
-  --shadow-thumbnail-edge: 0 0 0 1px oklch(0 0 0 / 0.05);
-  --shadow-inspect: 0 0 0 1px oklch(0 0 0 / 0.06), 0 16px 40px oklch(0 0 0 / 0.18);
+  --shadow-edge: 0 0 0 1px var(--theme-shadow-edge);
+  --shadow-menu: 0 4px 16px var(--theme-shadow-menu);
+  --shadow-action-primary: 0 1px 2px var(--theme-shadow-action-primary);
+  --shadow-action-primary-hover: 0 2px 8px var(--theme-shadow-action-primary-hover);
+  --shadow-panel: 0 3px 12px var(--theme-shadow-panel);
+  --shadow-card: 0 2px 4px var(--theme-shadow-card);
+  --shadow-thumbnail-edge: 0 0 0 1px var(--theme-shadow-thumbnail-edge);
+  --shadow-inspect: 0 0 0 1px var(--theme-shadow-inspect-1), 0 16px 40px var(--theme-shadow-inspect-2);
   --shadow-image:
-    0 1px 2px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.24)),
-    0 4px 12px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.28)),
-    0 12px 24px -6px light-dark(oklch(0 0 0 / 0.18), oklch(0 0 0 / 0.4));
+    0 1px 2px var(--theme-shadow-image-1),
+    0 4px 12px var(--theme-shadow-image-2),
+    0 12px 24px -6px var(--theme-shadow-image-3);
 }
 
 /* Keep this token dynamic so rounded-card and inset media share the fallback. */

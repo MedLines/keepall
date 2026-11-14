@@ -2,10 +2,12 @@ import type { Decorator, Preview } from "@storybook/nextjs-vite";
 import { useLayoutEffect, type ReactNode } from "react";
 import { MotionProvider } from "../src/components/ui/motion-provider";
 import { motionCssVariables } from "../src/components/ui/motion-tokens";
+import { THEMES, type ThemePreference } from "../src/app/theme-preference";
 import "@fontsource-variable/inter";
 import "../src/app/globals.css";
 
-type Theme = "light" | "dark";
+type Theme = ThemePreference;
+const THEME_ICONS: Partial<Record<Theme, string>> = { light: "sun", dark: "moon" };
 
 /** Mirror the app root: data-theme on <html>, canvas and text roles plus motion variables on <body>. */
 function AppShell({ theme, children }: { theme: Theme; children: ReactNode }) {
@@ -33,10 +35,8 @@ const preview: Preview = {
       toolbar: {
         title: "Theme",
         icon: "mirror",
-        items: [
-          { value: "light", title: "Light", icon: "sun" },
-          { value: "dark", title: "Dark", icon: "moon" },
-        ],
+        // The same names as data-theme in the app and the Theme modes in Figma.
+        items: THEMES.map((value) => ({ value, title: value[0].toUpperCase() + value.slice(1), icon: THEME_ICONS[value] ?? "paintbrush" })),
         dynamicTitle: true,
       },
     },

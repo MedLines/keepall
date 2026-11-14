@@ -77,3 +77,7 @@ The `uiMotion` tiers are springs (duration plus bounce). Figma keeps only their 
 
 `--color-white` and `--color-black` exist so Tailwind generates `bg-white` and `text-black`. Figma's `white` and `black` primitives stand for them.
 
+## Fixed colours
+
+Two kinds of Figma layers keep literal colours on purpose, so they look the same in every theme. The Keepall logo on the Cover (`#ff4a6b` and its tints, gradients and glow) is the brand mark, matching code's one brand-colour exception. The `Media` and `Thumbnail` gradients in `Library card` and `List row` stand in for photos, and photos don't change with the theme.
+

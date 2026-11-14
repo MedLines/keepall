@@ -1671,143 +1671,119 @@
         "source": ":root"
       },
       "--color-action-primary": {
-        "light": "var(--neutral-800)",
-        "dark": "var(--white)",
+        "value": "var(--theme-action-primary)",
         "source": "@theme inline"
       },
       "--color-action-primary-hover": {
-        "light": "var(--neutral-700)",
-        "dark": "var(--neutral-150)",
+        "value": "var(--theme-action-primary-hover)",
         "source": "@theme inline"
       },
       "--color-bg-active": {
-        "light": "oklch(0 0 0 / 0.050980392)",
-        "dark": "oklch(1 0 0 / 0.121568627)",
+        "value": "var(--theme-bg-active)",
         "source": "@theme inline"
       },
       "--color-bg-canvas": {
-        "light": "var(--neutral-50)",
-        "dark": "var(--neutral-975)",
+        "value": "var(--theme-bg-canvas)",
         "source": "@theme inline"
       },
       "--color-bg-card": {
-        "light": "var(--white)",
-        "dark": "var(--neutral-800)",
+        "value": "var(--theme-bg-card)",
         "source": "@theme inline"
       },
       "--color-bg-control": {
-        "light": "var(--neutral-25)",
-        "dark": "var(--neutral-875)",
+        "value": "var(--theme-bg-control)",
         "source": "@theme inline"
       },
       "--color-bg-danger": {
-        "light": "oklch(0.968586961 0.015409139 27.280066214)",
-        "dark": "oklch(0.268012128 0.045783995 11.811931989)",
+        "value": "var(--theme-bg-danger)",
         "source": "@theme inline"
       },
       "--color-bg-image-backdrop": {
-        "light": "oklch(0 0 0 / 0.6)",
-        "dark": "oklch(0 0 0 / 0.86)",
+        "value": "var(--theme-bg-image-backdrop)",
         "source": "@theme inline"
       },
       "--color-bg-image-backdrop-zoomed": {
-        "value": "oklch(0 0 0 / 0.92)",
+        "value": "var(--theme-bg-image-backdrop-zoomed)",
         "source": "@theme inline"
       },
       "--color-bg-image-viewer": {
-        "light": "var(--neutral-150)",
-        "dark": "var(--neutral-900)",
+        "value": "var(--theme-bg-image-viewer)",
         "source": "@theme inline"
       },
       "--color-bg-media": {
-        "value": "oklch(0.2098857 0.00390174 286.058756954)",
+        "value": "var(--theme-bg-media)",
         "source": "@theme inline"
       },
       "--color-bg-media-chrome": {
-        "light": "oklch(1 0 0 / 0.72)",
-        "dark": "oklch(0.140765334 0.004385904 285.82285136 / 0.72)",
+        "value": "var(--theme-bg-media-chrome)",
         "source": "@theme inline"
       },
       "--color-bg-media-chrome-hover": {
-        "light": "oklch(1 0 0 / 0.84)",
-        "dark": "oklch(0.140765334 0.004385904 285.82285136 / 0.84)",
+        "value": "var(--theme-bg-media-chrome-hover)",
         "source": "@theme inline"
       },
       "--color-bg-overlay": {
-        "value": "oklch(0.140765334 0.004385904 285.82285136)",
+        "value": "var(--theme-bg-overlay)",
         "source": "@theme inline"
       },
       "--color-bg-paper": {
-        "value": "oklch(1 0 0)",
+        "value": "var(--theme-bg-paper)",
         "source": "@theme inline"
       },
       "--color-bg-raised": {
-        "light": "var(--neutral-150)",
-        "dark": "var(--neutral-750)",
+        "value": "var(--theme-bg-raised)",
         "source": "@theme inline"
       },
       "--color-bg-reading": {
-        "light": "var(--neutral-50)",
-        "dark": "var(--neutral-875)",
+        "value": "var(--theme-bg-reading)",
         "source": "@theme inline"
       },
       "--color-bg-scrim": {
-        "light": "oklch(0 0 0 / 0.149019608)",
-        "dark": "oklch(0 0 0 / 0.4)",
+        "value": "var(--theme-bg-scrim)",
         "source": "@theme inline"
       },
       "--color-bg-scrollbar-thumb": {
-        "light": "oklch(0 0 0 / 0.08)",
-        "dark": "oklch(1 0 0 / 0.08)",
+        "value": "var(--theme-bg-scrollbar-thumb)",
         "source": "@theme inline"
       },
       "--color-bg-scrollbar-thumb-active": {
-        "light": "oklch(0 0 0 / 0.16)",
-        "dark": "oklch(1 0 0 / 0.16)",
+        "value": "var(--theme-bg-scrollbar-thumb-active)",
         "source": "@theme inline"
       },
       "--color-bg-scrollbar-thumb-hover": {
-        "light": "oklch(0 0 0 / 0.12)",
-        "dark": "oklch(1 0 0 / 0.12)",
+        "value": "var(--theme-bg-scrollbar-thumb-hover)",
         "source": "@theme inline"
       },
       "--color-bg-search-match": {
-        "light": "oklch(0.945107388 0.086846189 94.873876244)",
-        "dark": "oklch(0.455050432 0.08252792 77.418640118)",
+        "value": "var(--theme-bg-search-match)",
         "source": "@theme inline"
       },
       "--color-bg-selected": {
-        "light": "oklch(0.957102447 0.001695869 145.562810956)",
-        "dark": "oklch(0.241832388 0.003552774 228.947041356)",
+        "value": "var(--theme-bg-selected)",
         "source": "@theme inline"
       },
       "--color-bg-shell": {
-        "light": "var(--neutral-100)",
-        "dark": "var(--neutral-950)",
+        "value": "var(--theme-bg-shell)",
         "source": "@theme inline"
       },
       "--color-bg-sidebar-rule": {
-        "light": "oklch(0 0 0 / 0.14)",
-        "dark": "oklch(1 0 0 / 0.14)",
+        "value": "var(--theme-bg-sidebar-rule)",
         "source": "@theme inline"
       },
       "--color-bg-sidebar-rule-focus": {
-        "light": "oklch(0 0 0 / 0.25)",
-        "dark": "oklch(1 0 0 / 0.25)",
+        "value": "var(--theme-bg-sidebar-rule-focus)",
         "source": "@theme inline"
       },
       "--color-bg-surface": {
-        "light": "var(--white)",
-        "dark": "var(--neutral-850)",
+        "value": "var(--theme-bg-surface)",
         "source": "@theme inline"
       },
       "--color-bg-toast": {
-        "value": "oklch(0.262597222 0.005696969 301.143762134)",
+        "value": "var(--theme-bg-toast)",
         "source": "@theme inline"
       },
       "--color-bg-warning": {
-        "light": "oklch(0.986879345 0.021402972 95.277433146)",
-        "dark": "oklch(0.279993514 0.029659593 66.118892661)",
+        "value": "var(--theme-bg-warning)",
         "source": "@theme inline"
       },
       "--color-black": {
@@ -1815,57 +1791,47 @@
         "source": "@theme inline"
       },
       "--color-border-active": {
-        "light": "oklch(1 0 0 / 0.8)",
-        "dark": "oklch(1 0 0 / 0.058823529)",
+        "value": "var(--theme-border-active)",
         "source": "@theme inline"
       },
       "--color-border-control": {
-        "light": "oklch(0 0 0 / 0.078431373)",
-        "dark": "oklch(1 0 0 / 0.078431373)",
+        "value": "var(--theme-border-control)",
         "source": "@theme inline"
       },
       "--color-border-danger": {
-        "light": "oklch(0.807689675 0.103485729 19.570623816)",
-        "dark": "oklch(0.526386657 0.119150064 16.638270002)",
+        "value": "var(--theme-border-danger)",
         "source": "@theme inline"
       },
       "--color-border-edge": {
-        "light": "oklch(0 0 0 / 0.141176471)",
-        "dark": "oklch(1 0 0 / 0.141176471)",
+        "value": "var(--theme-border-edge)",
         "source": "@theme inline"
       },
       "--color-border-focus": {
-        "light": "oklch(0.52 0 0)",
-        "dark": "oklch(0.60 0 0)",
+        "value": "var(--theme-border-focus)",
         "source": "@theme inline"
       },
       "--color-border-media": {
-        "light": "oklch(0 0 0 / 0.08)",
-        "dark": "oklch(1 0 0 / 0.08)",
+        "value": "var(--theme-border-media)",
         "source": "@theme inline"
       },
       "--color-border-media-chrome": {
-        "light": "oklch(0 0 0 / 0.14)",
-        "dark": "oklch(1 0 0 / 0.14)",
+        "value": "var(--theme-border-media-chrome)",
         "source": "@theme inline"
       },
       "--color-border-selected": {
-        "light": "oklch(0.478112036 0.021030497 253.478913982)",
-        "dark": "oklch(0.839078171 0.013548353 251.578187792)",
+        "value": "var(--theme-border-selected)",
         "source": "@theme inline"
       },
       "--color-border-subtle": {
-        "light": "var(--neutral-200)",
-        "dark": "var(--neutral-700)",
+        "value": "var(--theme-border-subtle)",
         "source": "@theme inline"
       },
       "--color-border-toast": {
-        "value": "oklch(1 0 0 / 0.070588235)",
+        "value": "var(--theme-border-toast)",
         "source": "@theme inline"
       },
       "--color-border-warning": {
-        "light": "oklch(0.924276834 0.115126806 95.745862969)",
-        "dark": "oklch(0.526468942 0.07671406 74.512358797)",
+        "value": "var(--theme-border-warning)",
         "source": "@theme inline"
       },
       "--color-collection-marker": {
@@ -1873,113 +1839,99 @@
         "source": "@theme inline"
       },
       "--color-item-image": {
-        "light": "oklch(0.48 0.13 155)",
-        "dark": "var(--color-item-image-on-media)",
+        "value": "var(--theme-item-image)",
         "source": "@theme inline"
       },
       "--color-item-image-on-media": {
-        "value": "#b5ffe1",
+        "value": "var(--theme-item-image-on-media)",
         "source": "@theme inline"
       },
       "--color-item-link": {
-        "light": "oklch(0.49 0.12 235)",
-        "dark": "var(--color-item-link-on-media)",
+        "value": "var(--theme-item-link)",
         "source": "@theme inline"
       },
       "--color-item-link-on-media": {
-        "value": "#d1efff",
+        "value": "var(--theme-item-link-on-media)",
         "source": "@theme inline"
       },
       "--color-item-markdown": {
-        "light": "oklch(0.50 0.17 305)",
-        "dark": "var(--color-item-markdown-on-media)",
+        "value": "var(--theme-item-markdown)",
         "source": "@theme inline"
       },
       "--color-item-markdown-on-media": {
-        "value": "#c99cfc",
+        "value": "var(--theme-item-markdown-on-media)",
         "source": "@theme inline"
       },
       "--color-item-note": {
-        "light": "oklch(0.53 0.135 65)",
-        "dark": "var(--color-item-note-on-media)",
+        "value": "var(--theme-item-note)",
         "source": "@theme inline"
       },
       "--color-item-note-on-media": {
-        "value": "#ffa746",
+        "value": "var(--theme-item-note-on-media)",
         "source": "@theme inline"
       },
       "--color-item-pdf": {
-        "light": "oklch(0.54 0.21 25)",
-        "dark": "var(--color-item-pdf-on-media)",
+        "value": "var(--theme-item-pdf)",
         "source": "@theme inline"
       },
       "--color-item-pdf-on-media": {
-        "value": "#ff7070",
+        "value": "var(--theme-item-pdf-on-media)",
         "source": "@theme inline"
       },
       "--color-item-text": {
-        "light": "oklch(0.49 0.17 255)",
-        "dark": "var(--color-item-text-on-media)",
+        "value": "var(--theme-item-text)",
         "source": "@theme inline"
       },
       "--color-item-text-on-media": {
-        "value": "#70adfb",
+        "value": "var(--theme-item-text-on-media)",
         "source": "@theme inline"
       },
       "--color-item-video": {
-        "light": "oklch(0.51 0.19 350)",
-        "dark": "var(--color-item-video-on-media)",
+        "value": "var(--theme-item-video)",
         "source": "@theme inline"
       },
       "--color-item-video-on-media": {
-        "value": "oklch(0.76 0.145 350)",
+        "value": "var(--theme-item-video-on-media)",
         "source": "@theme inline"
       },
       "--color-text-card-meta": {
-        "light": "#626871",
-        "dark": "#9399a2",
+        "value": "var(--theme-text-card-meta)",
         "source": "@theme inline"
       },
       "--color-text-danger": {
-        "light": "oklch(0.500335978 0.182051182 29.512714275)",
-        "dark": "oklch(0.807689675 0.103485729 19.570623816)",
+        "value": "var(--theme-text-danger)",
         "source": "@theme inline"
       },
       "--color-text-on-action": {
-        "light": "var(--white)",
-        "dark": "var(--neutral-900)",
+        "value": "var(--theme-text-on-action)",
         "source": "@theme inline"
       },
       "--color-text-on-media": {
-        "value": "oklch(0.960592553 0.002653442 106.449449342)",
+        "value": "var(--theme-text-on-media)",
         "source": "@theme inline"
       },
       "--color-text-on-paper": {
-        "value": "oklch(0.446 0.03 256.802)",
+        "value": "var(--theme-text-on-paper)",
         "source": "@theme inline"
       },
       "--color-text-primary": {
-        "light": "var(--neutral-800)",
-        "dark": "var(--paper)",
+        "value": "var(--theme-text-primary)",
         "source": "@theme inline"
       },
       "--color-text-search-match": {
-        "light": "oklch(0.265771697 0.042163708 80.495289208)",
-        "dark": "oklch(0.965108469 0.056770316 95.33699577)",
+        "value": "var(--theme-text-search-match)",
         "source": "@theme inline"
       },
       "--color-text-secondary": {
-        "light": "var(--neutral-500)",
-        "dark": "var(--neutral-400)",
+        "value": "var(--theme-text-secondary)",
         "source": "@theme inline"
       },
       "--color-text-toast": {
-        "value": "oklch(0.938763728 0.007981954 73.741801476)",
+        "value": "var(--theme-text-toast)",
         "source": "@theme inline"
       },
       "--color-text-warning": {
-        "light": "oklch(0.41370733 0.105364833 45.903757687)",
-        "dark": "oklch(0.886303525 0.101036799 80.9265957)",
+        "value": "var(--theme-text-warning)",
         "source": "@theme inline"
       },
       "--color-white": {
@@ -2135,39 +2087,39 @@
         "source": "@theme inline"
       },
       "--shadow-action-primary": {
-        "value": "0 1px 2px light-dark(oklch(0 0 0 / 0.1), oklch(0 0 0 / 0.32))",
+        "value": "0 1px 2px var(--theme-shadow-action-primary)",
         "source": "@theme inline"
       },
       "--shadow-action-primary-hover": {
-        "value": "0 2px 8px light-dark(oklch(0 0 0 / 0.16), oklch(0 0 0 / 0.5))",
+        "value": "0 2px 8px var(--theme-shadow-action-primary-hover)",
         "source": "@theme inline"
       },
       "--shadow-card": {
-        "value": "0 2px 4px oklch(0 0 0 / 0.039215686)",
+        "value": "0 2px 4px var(--theme-shadow-card)",
         "source": "@theme inline"
       },
       "--shadow-edge": {
-        "value": "0 0 0 1px light-dark(oklch(0 0 0 / 0.141176471), oklch(1 0 0 / 0.141176471))",
+        "value": "0 0 0 1px var(--theme-shadow-edge)",
         "source": "@theme inline"
       },
       "--shadow-image": {
-        "value": "0 1px 2px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.24)), 0 4px 12px light-dark(oklch(0 0 0 / 0.12), oklch(0 0 0 / 0.28)), 0 12px 24px -6px light-dark(oklch(0 0 0 / 0.18), oklch(0 0 0 / 0.4))",
+        "value": "0 1px 2px var(--theme-shadow-image-1), 0 4px 12px var(--theme-shadow-image-2), 0 12px 24px -6px var(--theme-shadow-image-3)",
         "source": "@theme inline"
       },
       "--shadow-inspect": {
-        "value": "0 0 0 1px oklch(0 0 0 / 0.06), 0 16px 40px oklch(0 0 0 / 0.18)",
+        "value": "0 0 0 1px var(--theme-shadow-inspect-1), 0 16px 40px var(--theme-shadow-inspect-2)",
         "source": "@theme inline"
       },
       "--shadow-menu": {
-        "value": "0 4px 16px light-dark(oklch(0 0 0 / 0.058823529), oklch(0 0 0 / 0.250980392))",
+        "value": "0 4px 16px var(--theme-shadow-menu)",
         "source": "@theme inline"
       },
       "--shadow-panel": {
-        "value": "0 3px 12px oklch(0 0 0 / 0.070588235)",
+        "value": "0 3px 12px var(--theme-shadow-panel)",
         "source": "@theme inline"
       },
       "--shadow-thumbnail-edge": {
-        "value": "0 0 0 1px oklch(0 0 0 / 0.05)",
+        "value": "0 0 0 1px var(--theme-shadow-thumbnail-edge)",
         "source": "@theme inline"
       },
       "--spacing-card-inset": {
@@ -2197,6 +2149,365 @@
       "--text-meta": {
         "value": "0.6875rem",
         "source": "@theme"
+      },
+      "--theme-action-primary": {
+        "light": "var(--neutral-800)",
+        "dark": "var(--white)",
+        "source": ":root"
+      },
+      "--theme-action-primary-hover": {
+        "light": "var(--neutral-700)",
+        "dark": "var(--neutral-150)",
+        "source": ":root"
+      },
+      "--theme-bg-active": {
+        "light": "oklch(0 0 0 / 0.050980392)",
+        "dark": "oklch(1 0 0 / 0.121568627)",
+        "source": ":root"
+      },
+      "--theme-bg-canvas": {
+        "light": "var(--neutral-50)",
+        "dark": "var(--neutral-975)",
+        "source": ":root"
+      },
+      "--theme-bg-card": {
+        "light": "var(--white)",
+        "dark": "var(--neutral-800)",
+        "source": ":root"
+      },
+      "--theme-bg-control": {
+        "light": "var(--neutral-25)",
+        "dark": "var(--neutral-875)",
+        "source": ":root"
+      },
+      "--theme-bg-danger": {
+        "light": "oklch(0.968586961 0.015409139 27.280066214)",
+        "dark": "oklch(0.268012128 0.045783995 11.811931989)",
+        "source": ":root"
+      },
+      "--theme-bg-image-backdrop": {
+        "light": "oklch(0 0 0 / 0.6)",
+        "dark": "oklch(0 0 0 / 0.86)",
+        "source": ":root"
+      },
+      "--theme-bg-image-backdrop-zoomed": {
+        "value": "oklch(0 0 0 / 0.92)",
+        "source": ":root"
+      },
+      "--theme-bg-image-viewer": {
+        "light": "var(--neutral-150)",
+        "dark": "var(--neutral-900)",
+        "source": ":root"
+      },
+      "--theme-bg-media": {
+        "value": "oklch(0.2098857 0.00390174 286.058756954)",
+        "source": ":root"
+      },
+      "--theme-bg-media-chrome": {
+        "light": "oklch(1 0 0 / 0.72)",
+        "dark": "oklch(0.140765334 0.004385904 285.82285136 / 0.72)",
+        "source": ":root"
+      },
+      "--theme-bg-media-chrome-hover": {
+        "light": "oklch(1 0 0 / 0.84)",
+        "dark": "oklch(0.140765334 0.004385904 285.82285136 / 0.84)",
+        "source": ":root"
+      },
+      "--theme-bg-overlay": {
+        "value": "oklch(0.140765334 0.004385904 285.82285136)",
+        "source": ":root"
+      },
+      "--theme-bg-paper": {
+        "value": "oklch(1 0 0)",
+        "source": ":root"
+      },
+      "--theme-bg-raised": {
+        "light": "var(--neutral-150)",
+        "dark": "var(--neutral-750)",
+        "source": ":root"
+      },
+      "--theme-bg-reading": {
+        "light": "var(--neutral-50)",
+        "dark": "var(--neutral-875)",
+        "source": ":root"
+      },
+      "--theme-bg-scrim": {
+        "light": "oklch(0 0 0 / 0.149019608)",
+        "dark": "oklch(0 0 0 / 0.4)",
+        "source": ":root"
+      },
+      "--theme-bg-scrollbar-thumb": {
+        "light": "oklch(0 0 0 / 0.08)",
+        "dark": "oklch(1 0 0 / 0.08)",
+        "source": ":root"
+      },
+      "--theme-bg-scrollbar-thumb-active": {
+        "light": "oklch(0 0 0 / 0.16)",
+        "dark": "oklch(1 0 0 / 0.16)",
+        "source": ":root"
+      },
+      "--theme-bg-scrollbar-thumb-hover": {
+        "light": "oklch(0 0 0 / 0.12)",
+        "dark": "oklch(1 0 0 / 0.12)",
+        "source": ":root"
+      },
+      "--theme-bg-search-match": {
+        "light": "oklch(0.945107388 0.086846189 94.873876244)",
+        "dark": "oklch(0.455050432 0.08252792 77.418640118)",
+        "source": ":root"
+      },
+      "--theme-bg-selected": {
+        "light": "oklch(0.957102447 0.001695869 145.562810956)",
+        "dark": "oklch(0.241832388 0.003552774 228.947041356)",
+        "source": ":root"
+      },
+      "--theme-bg-shell": {
+        "light": "var(--neutral-100)",
+        "dark": "var(--neutral-950)",
+        "source": ":root"
+      },
+      "--theme-bg-sidebar-rule": {
+        "light": "oklch(0 0 0 / 0.14)",
+        "dark": "oklch(1 0 0 / 0.14)",
+        "source": ":root"
+      },
+      "--theme-bg-sidebar-rule-focus": {
+        "light": "oklch(0 0 0 / 0.25)",
+        "dark": "oklch(1 0 0 / 0.25)",
+        "source": ":root"
+      },
+      "--theme-bg-surface": {
+        "light": "var(--white)",
+        "dark": "var(--neutral-850)",
+        "source": ":root"
+      },
+      "--theme-bg-toast": {
+        "value": "oklch(0.262597222 0.005696969 301.143762134)",
+        "source": ":root"
+      },
+      "--theme-bg-warning": {
+        "light": "oklch(0.986879345 0.021402972 95.277433146)",
+        "dark": "oklch(0.279993514 0.029659593 66.118892661)",
+        "source": ":root"
+      },
+      "--theme-border-active": {
+        "light": "oklch(1 0 0 / 0.8)",
+        "dark": "oklch(1 0 0 / 0.058823529)",
+        "source": ":root"
+      },
+      "--theme-border-control": {
+        "light": "oklch(0 0 0 / 0.078431373)",
+        "dark": "oklch(1 0 0 / 0.078431373)",
+        "source": ":root"
+      },
+      "--theme-border-danger": {
+        "light": "oklch(0.807689675 0.103485729 19.570623816)",
+        "dark": "oklch(0.526386657 0.119150064 16.638270002)",
+        "source": ":root"
+      },
+      "--theme-border-edge": {
+        "light": "oklch(0 0 0 / 0.141176471)",
+        "dark": "oklch(1 0 0 / 0.141176471)",
+        "source": ":root"
+      },
+      "--theme-border-focus": {
+        "light": "oklch(0.52 0 0)",
+        "dark": "oklch(0.60 0 0)",
+        "source": ":root"
+      },
+      "--theme-border-media": {
+        "light": "oklch(0 0 0 / 0.08)",
+        "dark": "oklch(1 0 0 / 0.08)",
+        "source": ":root"
+      },
+      "--theme-border-media-chrome": {
+        "light": "oklch(0 0 0 / 0.14)",
+        "dark": "oklch(1 0 0 / 0.14)",
+        "source": ":root"
+      },
+      "--theme-border-selected": {
+        "light": "oklch(0.478112036 0.021030497 253.478913982)",
+        "dark": "oklch(0.839078171 0.013548353 251.578187792)",
+        "source": ":root"
+      },
+      "--theme-border-subtle": {
+        "light": "var(--neutral-200)",
+        "dark": "var(--neutral-700)",
+        "source": ":root"
+      },
+      "--theme-border-toast": {
+        "value": "oklch(1 0 0 / 0.070588235)",
+        "source": ":root"
+      },
+      "--theme-border-warning": {
+        "light": "oklch(0.924276834 0.115126806 95.745862969)",
+        "dark": "oklch(0.526468942 0.07671406 74.512358797)",
+        "source": ":root"
+      },
+      "--theme-item-image": {
+        "light": "oklch(0.48 0.13 155)",
+        "dark": "var(--theme-item-image-on-media)",
+        "source": ":root"
+      },
+      "--theme-item-image-on-media": {
+        "value": "#b5ffe1",
+        "source": ":root"
+      },
+      "--theme-item-link": {
+        "light": "oklch(0.49 0.12 235)",
+        "dark": "var(--theme-item-link-on-media)",
+        "source": ":root"
+      },
+      "--theme-item-link-on-media": {
+        "value": "#d1efff",
+        "source": ":root"
+      },
+      "--theme-item-markdown": {
+        "light": "oklch(0.50 0.17 305)",
+        "dark": "var(--theme-item-markdown-on-media)",
+        "source": ":root"
+      },
+      "--theme-item-markdown-on-media": {
+        "value": "#c99cfc",
+        "source": ":root"
+      },
+      "--theme-item-note": {
+        "light": "oklch(0.53 0.135 65)",
+        "dark": "var(--theme-item-note-on-media)",
+        "source": ":root"
+      },
+      "--theme-item-note-on-media": {
+        "value": "#ffa746",
+        "source": ":root"
+      },
+      "--theme-item-pdf": {
+        "light": "oklch(0.54 0.21 25)",
+        "dark": "var(--theme-item-pdf-on-media)",
+        "source": ":root"
+      },
+      "--theme-item-pdf-on-media": {
+        "value": "#ff7070",
+        "source": ":root"
+      },
+      "--theme-item-text": {
+        "light": "oklch(0.49 0.17 255)",
+        "dark": "var(--theme-item-text-on-media)",
+        "source": ":root"
+      },
+      "--theme-item-text-on-media": {
+        "value": "#70adfb",
+        "source": ":root"
+      },
+      "--theme-item-video": {
+        "light": "oklch(0.51 0.19 350)",
+        "dark": "var(--theme-item-video-on-media)",
+        "source": ":root"
+      },
+      "--theme-item-video-on-media": {
+        "value": "oklch(0.76 0.145 350)",
+        "source": ":root"
+      },
+      "--theme-shadow-action-primary": {
+        "light": "oklch(0 0 0 / 0.1)",
+        "dark": "oklch(0 0 0 / 0.32)",
+        "source": ":root"
+      },
+      "--theme-shadow-action-primary-hover": {
+        "light": "oklch(0 0 0 / 0.16)",
+        "dark": "oklch(0 0 0 / 0.5)",
+        "source": ":root"
+      },
+      "--theme-shadow-card": {
+        "value": "oklch(0 0 0 / 0.039215686)",
+        "source": ":root"
+      },
+      "--theme-shadow-edge": {
+        "light": "oklch(0 0 0 / 0.141176471)",
+        "dark": "oklch(1 0 0 / 0.141176471)",
+        "source": ":root"
+      },
+      "--theme-shadow-image-1": {
+        "light": "oklch(0 0 0 / 0.12)",
+        "dark": "oklch(0 0 0 / 0.24)",
+        "source": ":root"
+      },
+      "--theme-shadow-image-2": {
+        "light": "oklch(0 0 0 / 0.12)",
+        "dark": "oklch(0 0 0 / 0.28)",
+        "source": ":root"
+      },
+      "--theme-shadow-image-3": {
+        "light": "oklch(0 0 0 / 0.18)",
+        "dark": "oklch(0 0 0 / 0.4)",
+        "source": ":root"
+      },
+      "--theme-shadow-inspect-1": {
+        "value": "oklch(0 0 0 / 0.06)",
+        "source": ":root"
+      },
+      "--theme-shadow-inspect-2": {
+        "value": "oklch(0 0 0 / 0.18)",
+        "source": ":root"
+      },
+      "--theme-shadow-menu": {
+        "light": "oklch(0 0 0 / 0.058823529)",
+        "dark": "oklch(0 0 0 / 0.250980392)",
+        "source": ":root"
+      },
+      "--theme-shadow-panel": {
+        "value": "oklch(0 0 0 / 0.070588235)",
+        "source": ":root"
+      },
+      "--theme-shadow-thumbnail-edge": {
+        "value": "oklch(0 0 0 / 0.05)",
+        "source": ":root"
+      },
+      "--theme-text-card-meta": {
+        "light": "#626871",
+        "dark": "#9399a2",
+        "source": ":root"
+      },
+      "--theme-text-danger": {
+        "light": "oklch(0.500335978 0.182051182 29.512714275)",
+        "dark": "oklch(0.807689675 0.103485729 19.570623816)",
+        "source": ":root"
+      },
+      "--theme-text-on-action": {
+        "light": "var(--white)",
+        "dark": "var(--neutral-900)",
+        "source": ":root"
+      },
+      "--theme-text-on-media": {
+        "value": "oklch(0.960592553 0.002653442 106.449449342)",
+        "source": ":root"
+      },
+      "--theme-text-on-paper": {
+        "value": "oklch(0.446 0.03 256.802)",
+        "source": ":root"
+      },
+      "--theme-text-primary": {
+        "light": "var(--neutral-800)",
+        "dark": "var(--paper)",
+        "source": ":root"
+      },
+      "--theme-text-search-match": {
+        "light": "oklch(0.265771697 0.042163708 80.495289208)",
+        "dark": "oklch(0.965108469 0.056770316 95.33699577)",
+        "source": ":root"
+      },
+      "--theme-text-secondary": {
+        "light": "var(--neutral-500)",
+        "dark": "var(--neutral-400)",
+        "source": ":root"
+      },
+      "--theme-text-toast": {
+        "value": "oklch(0.938763728 0.007981954 73.741801476)",
+        "source": ":root"
+      },
+      "--theme-text-warning": {
+        "light": "oklch(0.41370733 0.105364833 45.903757687)",
+        "dark": "oklch(0.886303525 0.101036799 80.9265957)",
+        "source": ":root"
       },
       "--tracking-eyebrow": {
         "value": "0.12em",
