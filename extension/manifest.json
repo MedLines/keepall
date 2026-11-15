@@ -8,6 +8,7 @@
   "permissions": ["activeTab", "scripting", "offscreen", "storage", "alarms", "contextMenus"],
   "optional_host_permissions": ["*://*/*"],
   "host_permissions": ["https://www.keepall.app/*", "http://localhost/*"],
+  "externally_connectable": { "matches": ["https://www.keepall.app/*", "http://localhost/*"] },
   "web_accessible_resources": [{
     "resources": ["inter-latin-wght-normal.woff2"],
     "matches": ["http://*/*", "https://*/*"]

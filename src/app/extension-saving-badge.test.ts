@@ -25,7 +25,7 @@ function worker() {
     },
     alarms: { create: vi.fn(), onAlarm: { addListener: vi.fn() } },
     runtime: {
-      onInstalled: { addListener: vi.fn() }, onMessage: { addListener: vi.fn() },
+      onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() }, onMessageExternal: { addListener: vi.fn() }, onMessage: { addListener: vi.fn() },
       getURL: (path: string) => `chrome-extension://test/${path}`,
       getContexts: vi.fn(async () => [{}]),
       sendMessage: vi.fn((message: { payload: { captureId: string } }) => { resolveSent(message); return reply; }),

@@ -2,7 +2,7 @@
 
 Let coding agents such as Claude Code, Codex, and OpenCode search, read, save to, and organize a Keepall library. The library stays in the browser's IndexedDB. Keepall's servers can't read it, can't read the agent's requests, and can't send commands to it.
 
-Status: proposal, November 15, 2026. Nothing is implemented. A spike decides whether to continue (see [Spike](#spike)).
+Status: spike built locally on November 15, 2026 (see [Spike results](#spike-results)). Nothing is deployed or published.
 
 ## Constraints
 
@@ -137,6 +137,52 @@ These claims are unverified. The spike answers them before any slice ships.
 | Do Claude Code, Codex, and OpenCode start `npx -y @keepall/mcp@1` from their MCP config? | Each one lists the tools and completes `search_items`. |
 
 Spike scope: a Worker and Durable Object that forward opaque frames, a minimal `@keepall/mcp` with pairing, and the extension answering `search_items` through `/extension-bridge`.
+
+## Spike results
+
+Built on `spike/agent-relay`. Everything runs locally: the relay under `wrangler dev`, the app under `next dev`, and the unpacked extension.
+
+| Piece | Where |
+| --- | --- |
+| Shared protocol: pairing link, X25519 + HKDF pair key, per-connection AES-GCM sessions, library endpoint | `src/domain/agent-protocol.ts` |
+| `search_items` with the library's search rules | `src/domain/agent-tools.ts`, `src/persistence/agent-tools.ts` |
+| Pairings, stored only on this device and never in backups | `src/persistence/agent-pairings.ts` (database version 13) |
+| Library host inside the hidden bridge | `src/app/extension-bridge/agent-host.ts` |
+| Approval page | `src/app/connect/` |
+| Relay Worker and Durable Object | `packages/relay/` |
+| Stdio MCP server and `pair`, `unpair`, `search` commands | `packages/mcp/` |
+| Extension: start the bridge on Chrome startup and after pairing | `extension/worker.js`, `extension/offscreen.js`, `externally_connectable` in the manifest |
+
+Tests: protocol and tool unit tests in Vitest, five relay tests against `wrangler dev`, two MCP tests that drive the stdio server through a real relay, and `e2e/agent-access.spec.ts`, which pairs through `/connect` in Chromium with the extension loaded, closes the tab, and gets search results from the extension's hidden bridge.
+
+What the spike showed:
+
+- **Push may not be needed while Chrome runs.** The extension's offscreen document already outlives its background worker, so the bridge inside it can hold the relay connection with no pings and no push. The idle connection sends nothing, so the Durable Object hibernates. Still unverified: whether that connection survives hours idle, sleep and resume, and network changes, and whether Cloudflare closes long-idle hibernated sockets. Measure this with a deployed relay before building push.
+- **The agent has to speak first.** The relay only routes library frames to an agent connection it has seen, so the agent announces itself when the library appears, during pairing and after.
+- **WebCrypto X25519 works** in Node 24 and in the Chromium build Playwright ships. The minimum Chrome version for X25519 is still unchecked against the extension's `minimum_chrome_version` of 116.
+- **No new extension permissions.** The change adds `externally_connectable`, `runtime.onStartup`, and `runtime.onMessageExternal`. Confirm in the Chrome Web Store dashboard that it doesn't trigger a warning.
+- **The pairing link reaches browser history.** The page drops the fragment from the address bar after reading it, but the history entry is already written and may sync. The secret only matters until pairing completes. A short code shown by both the agent and the page would close that window.
+- **Retried requests can run twice.** When the library reconnects mid-request, the agent re-sends under the new session. That's harmless for search. Write tools need request IDs the library remembers.
+
+Not done in the spike: deploying the relay (needs a Cloudflare login), measuring real usage, publishing `@keepall/mcp` (it imports `src/domain` directly, so publishing needs a bundling step, and running from source prints a Node module-type warning), checking Codex and OpenCode, revoking pairings in Settings, and push.
+
+### Try it locally
+
+```bash
+pnpm --filter @keepall/relay dev
+```
+
+```bash
+pnpm dev
+```
+
+Load `extension/` unpacked and set its library address to `http://localhost:3000`. Then add the server to Claude Code:
+
+```bash
+claude mcp add keepall -- node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /absolute/path/to/keepall/packages/mcp/src/cli.ts
+```
+
+Ask Claude Code to search Keepall. The first call returns a pairing link. Open it in the same Chrome profile, choose **Allow search access**, and ask again.
 
 ## Slices after the spike
 

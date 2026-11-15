@@ -40,7 +40,7 @@ test("extension registers distinct page-save and toolbar-library menu actions", 
     chrome: {
       storage: { local: { setAccessLevel: () => Promise.resolve() }, onChanged: event("storage") },
       alarms: { create: () => Promise.resolve(), onAlarm: event("alarm") },
-      runtime: { onInstalled: event("install"), onMessage: event("message") },
+      runtime: { onInstalled: event("install"), onStartup: event("startup"), onMessageExternal: event("external"), onMessage: event("message") },
       contextMenus: {
         removeAll: (done: () => void) => { clears++; menus.length = 0; done(); },
         create: (menu: typeof menus[number]) => menus.push(menu),
@@ -83,7 +83,7 @@ test("toolbar library menu uses the configured origin without repurposing other 
   const scope = { URL, setTimeout, clearTimeout, chrome: {
     storage: { local: { setAccessLevel: async () => {}, get: async () => ({ origin: configuredOrigin }) }, onChanged: event("storage") },
     alarms: { create: async () => {}, onAlarm: event("alarm") },
-    runtime: { onInstalled: event("install"), onMessage: event("message") },
+    runtime: { onInstalled: event("install"), onStartup: event("startup"), onMessageExternal: event("external"), onMessage: event("message") },
     contextMenus: { onClicked: event("menu") }, action: { onClicked: event("toolbar"), setBadgeBackgroundColor: async () => {}, setTitle: async () => {}, setBadgeText: async (value: object) => { calls.push(["badge", value]); } }, commands: { onCommand: event("command") },
     tabs: { onUpdated: event("tab"), onRemoved: event("removed"), query: async () => { if (failQuery) throw new Error("Browser unavailable"); return tabs; },
       create: async (value: object) => { calls.push(["create", value]); },

@@ -141,6 +141,7 @@ const eslintConfig = defineConfig([
     "extension/note-preview.js",
     "extension/drawer-styles.js",
     "coverage/**",
+    "**/.wrangler/**",
     "playwright-report/**",
     "test-results/**",
     ".learning/**",

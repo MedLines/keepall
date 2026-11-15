@@ -108,6 +108,32 @@ async function ensureOffscreen(origin) {
   await creatingOffscreen;
 }
 
+// Agent access: keep the hidden bridge loaded so paired agents can reach the library while Chrome runs.
+// The bridge holds the relay connection and does all decryption; the extension never sees plaintext.
+async function startAgentHost() {
+  const origin = await keepallOrigin();
+  await ensureOffscreen(origin);
+  await chrome.runtime.sendMessage({ target: "offscreen", type: "agent-host", origin });
+}
+
+chrome.runtime.onStartup.addListener(() => {
+  void chrome.storage.local.get("agentHost")
+    .then(({ agentHost }) => (agentHost === true ? startAgentHost() : undefined))
+    .catch(() => {});
+});
+
+// Keepall's /connect page asks for this after pairing an agent.
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  if (message?.type !== "agent-host") return;
+  void (async () => {
+    if (sender.origin !== await keepallOrigin()) return { ok: false };
+    await chrome.storage.local.set({ agentHost: true });
+    await startAgentHost();
+    return { ok: true };
+  })().then(sendResponse, () => sendResponse({ ok: false }));
+  return true;
+});
+
 async function checkLibraryConnection() {
   const origin = await keepallOrigin();
   try {

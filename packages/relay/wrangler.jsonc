@@ -1,0 +1,10 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "keepall-relay",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // Free plan: SQLite-backed Durable Objects only.
+  "durable_objects": { "bindings": [{ "name": "CHANNELS", "class_name": "Channel" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Channel"] }],
+  "observability": { "enabled": false }
+}
