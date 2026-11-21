@@ -98,15 +98,19 @@ The user picks an access level when pairing and can change it in **Settings → 
 - **Suggest changes**, the default. Every write joins that agent's one open proposal, so twenty small tool calls become one review at `/review`.
 - **Make changes.** A call that touches 10 items or fewer applies at once. Larger calls still wait for review.
 
-The review page shows changes as pictures of the items they touch:
+Reviewing follows Unsorted review and uses the library's own parts:
 
-- **By change** groups effects by what they do ("Add tag “dark ui”", "Move to “Branding” (new collection)", "Move to Trash"), however many tool calls suggested them, with each item's thumbnail and the agent's reasons. Notes show the existing text and the added text. Trash and replaced notes are marked in the danger color.
-- **By item** shows each item once, with every suggested change to it as a checkbox chip.
-- **Untick anything.** Each group has a checkbox that can show "some", and each item and each chip can be unticked. Exclusions are per effect, such as "don't tag this pin *dark ui*", so they hold however the agent split its calls.
-- **Look closely before deciding.** A plain click on a thumbnail opens the library's quick look in place, with that item's changes as checkboxes and Back and Next through the group. Cmd/Ctrl-click or middle-click opens the item in a new tab.
-- **A sticky action bar** shows how many changes are included, with Apply and Decline all. The result page has Undo next to it.
+- **One at a time, over the library.** When suggestions wait, the library shows **Review Claude Code's changes** where **Review Unsorted** sits. The agent's link (`/?agent-review=1`) opens it directly. It is the library's quick look in review mode:
+  - **The item, large,** with a card listing what the agent suggested and why.
+  - **The same Collection and Tags cards** as Unsorted review, pre-filled with the suggestion, so you can adjust them before applying.
+  - **Note and Trash suggestions,** each in its own card with **Leave out** or **Keep item**.
+  - **The same footer:** Back and Next (Next leaves the item as it is), **Apply changes** to save this item and move on, and **Undo** for the last applied item.
+  - **At the end,** **Apply the rest as suggested** or **Decline the rest**.
+- **All at once at `/review`.** Changes are grouped by what they do, however many tool calls suggested them, with each item's thumbnail and the agent's reasons. Notes show your existing text next to the added text. Trash and replaced notes show in the danger color. Each tile carries the library's round selection control, and each group has **Include all** or **Leave out all**. A plain click or Space previews an item in the library's quick look. The **Preview** button (the toolbar's eye icon) previews the focused item. Cmd/Ctrl-click opens it in a new tab. A sticky bar shows how many changes are included.
 
-Settings → Agents summarizes waiting proposals and links to the review. Agents can pass an optional `reason` with each write, which appears beside the change.
+Settings → Agents summarizes waiting proposals with **Review one at a time** and **See all at once**. Agents can pass an optional `reason` with each write, which appears beside the change.
+
+Suggestions remember a fingerprint of what they saw: each target item's collection, tags, note text and Trash state. Your later edits to those fields skip the suggestion with a reason. Background updates, such as a fetched link preview, don't.
 
 Every applied change is stored in a journal with a before-copy of every row it touches, written in the same IndexedDB transaction as the change itself, so no change can land without its copy. When a backup folder is connected, applying a reviewed proposal also writes a full folder backup first. If that backup fails, the change still applies, and the result says the folder backup failed.
 

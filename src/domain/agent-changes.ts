@@ -54,7 +54,12 @@ export type PlannedStep = {
   id: string; text: string; status: "planned" | "unchanged" | "skipped" | "excluded"; notes: string[]; itemIds: string[]; effects: StepEffect[];
 };
 export type ChangePlan = { records: RecordChange[]; steps: PlannedStep[]; itemsAffected: number; created: { items: string[]; collections: string[]; tags: string[] } };
-export type PlanInput = { id: string; request: ChangeRequest; seen?: Record<string, number> };
+/**
+ * What a suggestion saw of each item it targets. A fingerprint of the fields agents can change, so background
+ * updates such as a fetched link preview don't invalidate it. Older proposals stored the item's version number.
+ */
+export type SeenItems = Record<string, string | number>;
+export type PlanInput = { id: string; request: ChangeRequest; seen?: SeenItems };
 
 export const effectKeys = {
   collection: (itemId: string) => `${itemId}#collection`,
@@ -218,7 +223,7 @@ class ChangePlanner {
     return true;
   }
 
-  private apply(step: PlannedStep, request: ChangeRequest, seen: Record<string, number> | undefined) {
+  private apply(step: PlannedStep, request: ChangeRequest, seen: SeenItems | undefined) {
     switch (request.kind) {
       case "move": return this.move(step, request, seen);
       case "tag": return this.tag(step, request, seen);
@@ -275,15 +280,17 @@ class ChangePlanner {
   }
 
   /** The live item for an ID, or why it can't be changed. */
-  private target(id: string, seen: Record<string, number> | undefined): Item | string {
+  private target(id: string, seen: SeenItems | undefined): Item | string {
     const item = this.items.get(id);
     if (!item || item.deletedAt !== undefined) return `${id} isn't in the library (it may be in Trash)`;
     const original = this.originalItems.get(id);
-    if (seen?.[id] !== undefined && original && original.updatedAt !== seen[id]) return `${quote(itemListTitle(item))} changed in Keepall after this was suggested`;
+    const saw = seen?.[id];
+    const changed = saw !== undefined && original && (typeof saw === "number" ? original.updatedAt !== saw : itemFingerprint(original) !== saw);
+    if (changed) return `${quote(itemListTitle(item))} changed in Keepall after this was suggested`;
     return item;
   }
 
-  private targets(ids: readonly string[], seen: Record<string, number> | undefined): Targets {
+  private targets(ids: readonly string[], seen: SeenItems | undefined): Targets {
     const found: Item[] = [];
     const notes: string[] = [];
     for (const id of ids) {
@@ -330,7 +337,7 @@ class ChangePlanner {
     if (!changed.length) step.status = targets.found.length ? "unchanged" : "skipped";
   }
 
-  private move(step: PlannedStep, request: Extract<ChangeRequest, { kind: "move" }>, seen: Record<string, number> | undefined) {
+  private move(step: PlannedStep, request: Extract<ChangeRequest, { kind: "move" }>, seen: SeenItems | undefined) {
     const targets = this.targets(request.itemIds, seen);
     const existing = request.collection ? this.findCollection(request.collection) : undefined;
     // With no existing collection of that name, every item moves (Unsorted items included).
@@ -348,7 +355,7 @@ class ChangePlanner {
     this.settle(step, moved, targets);
   }
 
-  private tag(step: PlannedStep, request: Extract<ChangeRequest, { kind: "tag" }>, seen: Record<string, number> | undefined) {
+  private tag(step: PlannedStep, request: Extract<ChangeRequest, { kind: "tag" }>, seen: SeenItems | undefined) {
     const targets = this.targets(request.itemIds, seen);
     const changed = targets.found.filter((item) => this.retag(step, item, request));
     const parts = [request.add.length ? `add ${request.add.map(quote).join(", ")}` : "", request.remove.length ? `remove ${request.remove.map(quote).join(", ")}` : ""];
@@ -377,7 +384,7 @@ class ChangePlanner {
     return true;
   }
 
-  private note(step: PlannedStep, request: Extract<ChangeRequest, { kind: "note" }>, seen: Record<string, number> | undefined) {
+  private note(step: PlannedStep, request: Extract<ChangeRequest, { kind: "note" }>, seen: SeenItems | undefined) {
     const item = this.target(request.itemId, seen);
     if (typeof item === "string") {
       step.text = `Add a note to ${request.itemId}`;
@@ -478,7 +485,7 @@ class ChangePlanner {
     if (organized.parts.length) step.text += ` ${organized.parts.join(", ")}`;
   }
 
-  private trash(step: PlannedStep, request: Extract<ChangeRequest, { kind: "trash" }>, seen: Record<string, number> | undefined) {
+  private trash(step: PlannedStep, request: Extract<ChangeRequest, { kind: "trash" }>, seen: SeenItems | undefined) {
     const targets = this.targets(request.itemIds, seen);
     const trashed = targets.found.filter((item) => !this.unticked(effectKeys.trash(item.id)));
     for (const item of trashed) {
@@ -500,6 +507,11 @@ export function planChanges(state: LibraryState, inputs: readonly PlanInput[], o
 /** Fields agents can change. Undo restores only these, so unrelated later updates (like a fetched preview) survive. */
 const AGENT_ITEM_FIELDS = ["collectionIds", "collectionAddedAt", "tagIds", "content", "caption", "noteContent", "deletedAt"] as const;
 const COMPARED_ITEM_FIELDS = AGENT_ITEM_FIELDS.filter((field) => field !== "collectionAddedAt");
+
+/** The state of everything an agent can change on an item, for telling whether the user changed it since. */
+export function itemFingerprint(item: Item): string {
+  return JSON.stringify(COMPARED_ITEM_FIELDS.map((field) => (item as Record<string, unknown>)[field] ?? null));
+}
 
 function fieldsMatch(left: Item, right: Item) {
   return COMPARED_ITEM_FIELDS.every((field) => JSON.stringify((left as Record<string, unknown>)[field]) === JSON.stringify((right as Record<string, unknown>)[field]));

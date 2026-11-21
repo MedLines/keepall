@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseChangeRequest, planChanges, planUndo, type ChangeRequest, type LibraryState, type RecordChange } from "./agent-changes";
+import { itemFingerprint, parseChangeRequest, planChanges, planUndo, type ChangeRequest, type LibraryState, type RecordChange } from "./agent-changes";
 import type { Item } from "./item";
 
 const base = { tagIds: [] as string[], collectionIds: [] as string[], createdAt: 1, updatedAt: 1 };
@@ -147,5 +147,17 @@ describe("planUndo", () => {
     const previewed = { ...changed, items: changed.items.map((item) => (item.id === "b" ? { ...item, previewTitle: "Fetched", updatedAt: 300 } as Item : item)) };
     const restored = apply(previewed, planUndo(change.records, previewed, 400).records);
     expect(restored.items.find((item) => item.id === "b")).toMatchObject({ noteContent: "", previewTitle: "Fetched" });
+  });
+});
+
+describe("itemFingerprint", () => {
+  it("changes when the user organizes or edits, not when a preview is fetched", () => {
+    const original = library().items[1];
+    const fingerprint = itemFingerprint(original);
+    expect(itemFingerprint({ ...original, previewTitle: "Fetched", updatedAt: 99 } as Item)).toBe(fingerprint);
+    expect(itemFingerprint({ ...original, tagIds: ["t1"] })).not.toBe(fingerprint);
+    expect(itemFingerprint({ ...original, noteContent: "mine" } as Item)).not.toBe(fingerprint);
+    const result = planChanges(library(), [{ id: "r", request: { kind: "trash", itemIds: ["b"] }, seen: { b: fingerprint } }], options());
+    expect(result.steps[0].status).toBe("planned");
   });
 });

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { agentChangeStatus, applyAgentProposal, listAgentChanges, listOpenProposals, previewAgentProposal, rejectAgentProposal, submitAgentChange, undoAgentChange } from "./agent-changes";
+import {
+  agentChangeStatus, applyAgentItemDecision, applyAgentProposal, listAgentChanges, listOpenProposals, previewAgentProposal, rejectAgentProposal,
+  reopenAgentItem, submitAgentChange, undoAgentChange,
+} from "./agent-changes";
 import type { AgentPairing } from "./agent-pairings";
 import { createCollection, listCollections } from "./collections";
 import { deleteKeepallDatabase, getDb } from "./db";
@@ -98,5 +101,51 @@ describe("agent changes", () => {
     await rejectAgentProposal(proposal.id);
     expect(await listItems()).toEqual([]);
     expect((await agentChangeStatus("pairing-suggest")).decided[0].status).toBe("rejected");
+  });
+});
+
+describe("one item at a time", () => {
+  beforeEach(async () => {
+    await deleteKeepallDatabase();
+  });
+
+  test("an adjusted decision applies for one item, the rest stay open, and undo reopens it", async () => {
+    const items = await notes(2);
+    const agent = pairing("suggest");
+    await submitAgentChange(agent, "s1", "move_to_collection", { item_ids: items.map((item) => item.id), collection: "Ideas" });
+    await submitAgentChange(agent, "s2", "tag_items", { item_ids: items.map((item) => item.id), tags: "agent tag" });
+    const [proposal] = await listOpenProposals();
+
+    // The reviewer keeps the collection but swaps the agent's tag for their own.
+    const first = await applyAgentItemDecision(proposal.id, items[0].id, { collection: "Ideas", tags: ["mine"], note: null, trash: false });
+    expect(first.remaining).toBe(2);
+    expect((await getItem(items[0].id))?.collectionIds).toHaveLength(1);
+    expect((await listTags()).map((tag) => tag.name)).toEqual(["mine"]);
+    const preview = await previewAgentProposal(proposal.id);
+    expect(Object.keys(preview!.items)).toEqual([items[1].id]);
+
+    await reopenAgentItem(proposal.id, items[0].id, first.changeId);
+    expect((await getItem(items[0].id))?.collectionIds).toEqual([]);
+    expect(Object.keys((await previewAgentProposal(proposal.id))!.items).sort()).toEqual(items.map((item) => item.id).sort());
+
+    await applyAgentItemDecision(proposal.id, items[0].id, { collection: "Ideas", tags: [], note: null, trash: false });
+    const last = await applyAgentItemDecision(proposal.id, items[1].id, { collection: null, tags: [], note: null, trash: false });
+    expect(last.remaining).toBe(0);
+    expect(await listOpenProposals()).toEqual([]);
+  });
+});
+
+describe("suggestions and background updates", () => {
+  beforeEach(async () => {
+    await deleteKeepallDatabase();
+  });
+
+  test("a fetched link preview doesn't invalidate a suggestion", async () => {
+    const link = { id: "site", type: "link", title: "Studio", url: "https://studio.example/", noteContent: "", previewTitle: "", previewDescription: "", previewImageUrl: "", previewAssetId: null, previewStatus: "idle", tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 1 };
+    await getDb().items.put(link as never);
+    await submitAgentChange(pairing("suggest"), "s1", "move_to_collection", { item_id: "site", collection: "Sites" });
+    await getDb().items.update("site", { previewTitle: "Studio home", previewStatus: "ready", updatedAt: 50 } as never);
+    const [proposal] = await listOpenProposals();
+    expect((await previewAgentProposal(proposal.id))!.steps[0]).toMatchObject({ status: "planned", notes: [] });
   });
 });

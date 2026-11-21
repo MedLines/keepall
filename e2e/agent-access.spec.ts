@@ -279,7 +279,7 @@ test("an agent suggests changes, the user applies some in Settings, and undo put
 
     // Three suggestions, sent the way a simple agent might: one ID as a string, tags as one string.
     const moved = json(await mcp.call("move_to_collection", { item_ids: ["gallery", "site"], collection: "Moodboard" }));
-    expect(moved).toMatchObject({ status: "waiting_for_review", suggestions_waiting: 1, review_url: `${origin}/review` });
+    expect(moved).toMatchObject({ status: "waiting_for_review", suggestions_waiting: 1, review_url: `${origin}/?agent-review=1` });
     expect(moved.what_to_do_next).toContain("Review them here");
     json(await mcp.call("tag_items", { item_id: "masonry", tags: "layout, ideas" }));
     const noted = json(await mcp.call("add_note", { item_id: "masonry", text: "Check the off-screen measuring" }));
@@ -287,39 +287,56 @@ test("an agent suggests changes, the user applies some in Settings, and undo put
     expect(json(await mcp.call("check_changes", {})).waiting_for_review.suggestions).toHaveLength(3);
     expect((await readItems(page)).gallery.collection).toBe("Portfolio inspo");
 
-    // Settings summarizes the waiting suggestions and leads to the visual review.
-    await page.goto(`${origin}/settings#agents`);
-    const summary = page.getByRole("article", { name: "Codex suggests 3 changes" });
-    await expect(summary).toBeVisible();
-    await summary.getByRole("link", { name: "Review changes" }).click();
-    await expect(page.getByRole("heading", { name: "Review Codex's changes" })).toBeVisible();
+    // The overview shows every change at once; Space previews the focused item, like the library.
+    await page.goto(`${origin}/review`);
     await expect(page.getByRole("heading", { name: "Move to “Moodboard” (new collection)" })).toBeVisible();
-
-    // A plain click looks at the item in place; its changes can be unticked there.
-    await page.getByRole("link", { name: "Look at “Masonry virtualization notes”" }).first().click();
-    const look = page.getByRole("dialog");
-    await expect(look.getByText("Codex's changes", { exact: false })).toBeVisible();
-    await look.getByRole("checkbox", { name: "Note" }).uncheck();
+    await page.getByRole("link", { name: "Preview “Dashboard references”" }).focus();
+    await page.keyboard.press(" ");
+    await expect(page.getByRole("dialog").getByRole("button", { name: "Open full item" })).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByText("3 of 4 changes included")).toBeVisible();
-    await page.getByRole("button", { name: "Apply 3 changes" }).click();
-    await expect(page.getByRole("heading", { name: "Applied 3 changes" })).toBeVisible();
+
+    // Settings offers the one-at-a-time review, which opens over the library like Unsorted review.
+    await page.goto(`${origin}/settings#agents`);
+    await page.getByRole("article", { name: "Codex suggests 3 changes" }).getByRole("link", { name: "Review one at a time" }).click();
+    const review = page.getByRole("dialog");
+    await expect(review.getByText("Codex's changes", { exact: false })).toBeVisible();
+    await expect(review.getByText("1 of 3")).toBeVisible();
+    await expect(review.getByText("→ Moodboard")).toBeVisible();
+    await review.getByRole("button", { name: "Apply changes" }).click();
+    // The link: leave it as it is.
+    await expect(review.getByText("2 of 3")).toBeVisible();
+    await review.getByRole("button", { name: "Next item" }).click();
+    // The notes item: keep the tag, leave out the note.
+    await expect(review.getByText("3 of 3")).toBeVisible();
+    await review.getByRole("button", { name: "Leave out" }).click();
+    await review.getByRole("button", { name: "Apply changes" }).click();
+    await expect(review.getByRole("heading", { name: "End of review" })).toBeVisible();
+
     let items = await readItems(page);
     expect(items.gallery.collection).toBe("Moodboard");
-    expect(items.site.collection).toBe("Moodboard");
+    expect(items.site.collection).toBe("Portfolio inspo");
     // "layout" matched the existing "layout" tag, so only "ideas" is new.
     expect(items.masonry.tags).toBe(2);
     expect(items.masonry.content).toBe("Measure cards off screen before placing them.");
 
+    // Undo returns to the last applied item and puts it back as it was.
+    await review.getByRole("button", { name: "Undo" }).click();
+    await expect(review.getByText("3 of 3")).toBeVisible();
+    expect((await readItems(page)).masonry.tags).toBe(1);
+    await review.getByRole("button", { name: "Apply changes" }).click();
+    await review.getByRole("button", { name: "Decline the rest" }).click();
+    await expect(review.getByRole("heading", { name: "Review complete" })).toBeVisible();
+    expect((await readItems(page)).site.collection).toBe("Portfolio inspo");
+
+    // The agent sees what happened and can undo its own applied changes.
     const status = json(await mcp.call("check_changes", {}));
-    expect(status.recently_reviewed[0]).toMatchObject({ decision: "applied", skipped: [{ reason: "Not chosen" }] });
-    const undo = json(await mcp.call("undo_change", { change_id: status.recently_reviewed[0].change_id }));
-    expect(undo).toMatchObject({ status: "undone" });
+    expect(status.waiting_for_review).toBeNull();
+    const latest = status.recent_changes.find((change: { undone: boolean }) => !change.undone);
+    expect(json(await mcp.call("undo_change", { change_id: latest.change_id }))).toMatchObject({ status: "undone" });
     items = await readItems(page);
-    expect(items.gallery.collection).toBe("Portfolio inspo");
     expect(items.masonry.tags).toBe(1);
     await page.goto(`${origin}/settings#agents`);
-    await expect(page.getByText(/^Undone/)).toBeVisible();
+    await expect(page.getByText(/^Undone/).first()).toBeVisible();
 
     // Switching to "Make changes" lets small changes apply at once.
     await page.getByRole("radio", { name: /Make changes/ }).check();

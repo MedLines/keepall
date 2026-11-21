@@ -176,7 +176,7 @@ try {
   if (options.access === "suggest") {
     console.log(`Suggested ${open?.requests.length ?? 0} changes:`);
     for (const request of open?.requests ?? []) console.log(`  - ${request.text}`);
-    const mentionsReview = agent.text.includes(`${options.origin}/review`);
+    const mentionsReview = agent.text.includes(`${options.origin}/?agent-review=1`);
     console.log(`${mentionsReview ? "PASS" : "FAIL"}  The agent gave the user the review link`);
     if (open) {
       await page.goto(`${options.origin}/review`);

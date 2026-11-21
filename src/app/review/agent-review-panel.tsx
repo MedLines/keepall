@@ -1,19 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { Button, buttonClassName } from "@/components/ui/button";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Tooltip } from "@/components/ui/tooltip";
 import type { StepEffect } from "@/domain/agent-changes";
-import { effectLabel, effectsByItem, reviewSummary, type ReviewGroup } from "@/domain/agent-review";
+import { reviewSummary, type ReviewGroup } from "@/domain/agent-review";
 import { itemListTitle, type Item } from "@/domain/item";
 import { cn } from "@/lib/utils";
 import { itemPageHref } from "../item-page-navigation";
 import { LibraryItemMedia } from "../library-item-media";
 import { LibraryQuickPreview } from "../library-quick-preview";
-import { ArrowLeftIcon, NoteIcon } from "../shell-icons";
-
-export type ReviewView = "changes" | "items";
+import { LibrarySelectionControl } from "../library-selection-control";
+import { ArrowLeftIcon, EyeIcon, NoteIcon } from "../shell-icons";
+import { AGENT_REVIEW_PARAM } from "../use-agent-review-offer";
 
 export type AgentReviewPanelProps = {
   agentName: string;
@@ -23,16 +23,18 @@ export type AgentReviewPanelProps = {
   items: Record<string, Item>;
   /** Suggestions that can't apply as they stand, in words. */
   conflicts: string[];
-  /** Effect keys the reviewer unticked. */
+  /** Effect keys the reviewer left out. */
   excluded: ReadonlySet<string>;
-  view: ReviewView;
   backupFolder: boolean;
   busy: boolean;
-  onView(view: ReviewView): void;
   onToggle(keys: readonly string[], include: boolean): void;
   onApply(): void;
   onDecline(): void;
 };
+
+/** The library's corner selection control, placed on a review tile or note row. */
+const TILE_CONTROL = "library-card-media-chrome library-card-corner-control library-card-corner-start absolute z-20 flex items-center justify-center";
+const ROW_CONTROL = "library-card-media-chrome library-card-corner-control flex shrink-0 items-center justify-center";
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
@@ -54,28 +56,9 @@ function title(item: Item | undefined) {
   return itemListTitle(item) || "Untitled";
 }
 
-type Preview = (ids: readonly string[], itemId: string, from: HTMLElement) => void;
+type Target = (ids: readonly string[], itemId: string, from: HTMLElement) => void;
 
-/** A plain click opens the quick look; modified clicks keep the link's own behavior, like a new tab. */
-function previewClick(preview: Preview, ids: readonly string[], itemId: string) {
-  return (event: MouseEvent<HTMLAnchorElement>) => {
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
-    preview(ids, itemId, event.currentTarget);
-  };
-}
-
-/** A checkbox that can show "some" for a group with a mix of ticked and unticked items. */
-function GroupCheckbox({ keys, excluded, onToggle, labelledBy }: { keys: readonly string[]; excluded: ReadonlySet<string>; onToggle: AgentReviewPanelProps["onToggle"]; labelledBy: string }) {
-  const ref = useRef<HTMLInputElement>(null);
-  const off = keys.filter((key) => excluded.has(key)).length;
-  useEffect(() => {
-    if (ref.current) ref.current.indeterminate = off > 0 && off < keys.length;
-  }, [off, keys.length]);
-  return <input ref={ref} type="checkbox" className="mt-1.5" aria-labelledby={labelledBy} checked={off === 0} onChange={(event) => onToggle(keys, event.target.checked)} />;
-}
-
-/** The item's own picture, or for a note its first lines. Saved items open in Keepall's viewer. */
+/** The item's own picture, or for a note its first lines. */
 function Thumbnail({ item }: { item: Item }) {
   if (item.type === "note") {
     return (
@@ -88,57 +71,66 @@ function Thumbnail({ item }: { item: Item }) {
   return <LibraryItemMedia item={item} variant="card" sharedTransition={false} />;
 }
 
-function Tile({ item, itemId, keys, excluded, onToggle, saved, preview, siblings }: {
+/**
+ * Like a library card: a plain click or Space previews it, modified clicks keep the link's own behavior (a new tab),
+ * and the corner control includes it or leaves it out.
+ */
+function Tile({ item, itemId, keys, excluded, onToggle, saved, preview, focus, siblings }: {
   item: Item | undefined; itemId: string; keys: readonly string[]; excluded: ReadonlySet<string>; onToggle: AgentReviewPanelProps["onToggle"]; saved: boolean;
-  preview: Preview; siblings: readonly string[];
+  preview: Target; focus: Target; siblings: readonly string[];
 }) {
   const included = keys.some((key) => !excluded.has(key));
   const name = title(item);
   const media = item ? <Thumbnail item={item} /> : null;
+  const click = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    preview(siblings, itemId, event.currentTarget);
+  };
+  const space = (event: KeyboardEvent<HTMLAnchorElement>) => {
+    if (event.key !== " ") return;
+    event.preventDefault();
+    preview(siblings, itemId, event.currentTarget);
+  };
   return (
     <li className="min-w-0">
       <div className={cn("relative aspect-square overflow-hidden rounded-control-lg border border-border-control bg-bg-raised", !included && "opacity-(--opacity-disabled)")}>
-        {saved && item
-          ? <Link href={itemPageHref(itemId, "/")} className="block size-full" aria-label={`Look at “${name}”`} onClick={previewClick(preview, siblings, itemId)}>{media}</Link>
-          : media}
-        <label className="absolute left-2 top-2 flex rounded-control-xs border border-border-control bg-bg-surface p-1.5">
-          <input type="checkbox" checked={included} aria-label={`Include “${name}”`} onChange={(event) => onToggle(keys, event.target.checked)} />
-        </label>
+        {saved && item ? (
+          <Link href={itemPageHref(itemId, "/")} className="block size-full" aria-label={`Preview “${name}”`} aria-keyshortcuts="Space"
+            onClick={click} onKeyDown={space} onFocus={(event) => focus(siblings, itemId, event.currentTarget)}>{media}</Link>
+        ) : media}
+        <LibrarySelectionControl label={`Include “${name}”`} className={TILE_CONTROL} visible selected={included} disabled={false} onToggle={() => onToggle(keys, !included)} />
       </div>
       <p className="mt-1.5 truncate text-xs text-text-secondary">{name}</p>
     </li>
   );
 }
 
-function NoteRow({ effect, item, excluded, onToggle, preview, siblings }: {
-  effect: Extract<StepEffect, { kind: "note" }>; item: Item | undefined; excluded: ReadonlySet<string>; onToggle: AgentReviewPanelProps["onToggle"]; preview: Preview; siblings: readonly string[];
-}) {
+function NoteRow({ effect, item, excluded, onToggle }: { effect: Extract<StepEffect, { kind: "note" }>; item: Item | undefined } & Pick<AgentReviewPanelProps, "excluded" | "onToggle">) {
   const before = effect.before.trim();
-  const appended = before && effect.after.startsWith(before);
-  const added = appended ? effect.after.slice(before.length).trim() : effect.after;
+  const appended = !before || effect.after.startsWith(before);
+  const included = !excluded.has(effect.key);
   return (
-    <li className={cn("flex gap-3 border-t border-border-control pt-4 first:border-t-0 first:pt-0", excluded.has(effect.key) && "opacity-(--opacity-disabled)")}>
-      <input type="checkbox" className="mt-1.5" checked={!excluded.has(effect.key)} aria-label={`Include the note on “${title(item)}”`} onChange={(event) => onToggle([effect.key], event.target.checked)} />
+    <li className={cn("flex items-start gap-3 border-t border-border-control pt-4 first:border-t-0 first:pt-0", !included && "opacity-(--opacity-disabled)")}>
+      <LibrarySelectionControl label={`Include the note on “${title(item)}”`} className={ROW_CONTROL} visible selected={included} disabled={false} onToggle={() => onToggle([effect.key], !included)} />
       <div className="size-16 shrink-0 overflow-hidden rounded-control-md border border-border-control bg-bg-raised">{item ? <Thumbnail item={item} /> : null}</div>
       <div className="min-w-0 flex-1 text-sm leading-6">
-        {item ? <Link href={itemPageHref(effect.itemId, "/")} onClick={previewClick(preview, siblings, effect.itemId)} className="font-medium text-text-primary underline-offset-2 hover:underline">{title(item)}</Link> : null}
-        {before && appended ? <p className="mt-1 line-clamp-2 text-text-secondary">{before}</p> : null}
-        {before && !appended ? <p className="mt-1 line-clamp-2 text-text-danger line-through">{before}</p> : null}
-        <p className="mt-1 whitespace-pre-wrap rounded-control-xs bg-bg-selected px-2 py-1 text-text-primary">{added}</p>
+        <p className="font-medium text-text-primary">{title(item)}</p>
+        {before ? <p className={cn("mt-1 line-clamp-2", appended ? "text-text-secondary" : "text-text-danger line-through")}>{before}</p> : null}
+        <p className="mt-1 whitespace-pre-wrap rounded-control-xs bg-bg-selected px-2 py-1 text-text-primary">{appended ? effect.after.slice(before.length).trim() : effect.after}</p>
       </div>
     </li>
   );
 }
 
-function Group({ group, items, excluded, onToggle, preview }: { group: ReviewGroup; preview: Preview } & Pick<AgentReviewPanelProps, "items" | "excluded" | "onToggle">) {
+function Group({ group, items, excluded, onToggle, preview, focus }: { group: ReviewGroup; preview: Target; focus: Target } & Pick<AgentReviewPanelProps, "items" | "excluded" | "onToggle">) {
   const headingId = `group-${group.id}`;
   const keys = group.effects.map((effect) => effect.key);
   const chosen = keys.filter((key) => !excluded.has(key)).length;
   const keysFor = (itemId: string) => group.effects.filter((effect) => "itemId" in effect && effect.itemId === itemId).map((effect) => effect.key);
   return (
     <section aria-labelledby={headingId} className="library-panel border border-border-control bg-bg-surface p-4 sm:p-5">
-      <div className="flex items-start gap-3">
-        <GroupCheckbox keys={keys} excluded={excluded} onToggle={onToggle} labelledBy={headingId} />
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 id={headingId} className={cn("text-base font-semibold", group.caution ? "text-text-danger" : "text-text-primary")}>{group.title}</h2>
           <p className="mt-0.5 text-xs text-text-secondary">
@@ -147,57 +139,20 @@ function Group({ group, items, excluded, onToggle, preview }: { group: ReviewGro
           </p>
           {group.reasons.map((reason) => <p key={reason} className="mt-2 text-sm leading-6 text-text-secondary">“{reason}”</p>)}
         </div>
+        <Button onClick={() => onToggle(keys, chosen < keys.length)}>{chosen < keys.length ? "Include all" : "Leave out all"}</Button>
       </div>
       {group.kind === "note" ? (
         <ul className="mt-4 space-y-4">
-          {group.effects.map((effect) => effect.kind === "note" ? <NoteRow key={effect.key} effect={effect} item={items[effect.itemId]} excluded={excluded} onToggle={onToggle} preview={preview} siblings={group.itemIds} /> : null)}
+          {group.effects.map((effect) => effect.kind === "note" ? <NoteRow key={effect.key} effect={effect} item={items[effect.itemId]} excluded={excluded} onToggle={onToggle} /> : null)}
         </ul>
       ) : group.itemIds.length ? (
         <ul className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           {group.itemIds.map((itemId) => (
-            <Tile key={itemId} itemId={itemId} item={items[itemId]} keys={keysFor(itemId)} excluded={excluded} onToggle={onToggle} saved={group.kind !== "create"} preview={preview} siblings={group.itemIds} />
+            <Tile key={itemId} itemId={itemId} item={items[itemId]} keys={keysFor(itemId)} excluded={excluded} onToggle={onToggle} saved={group.kind !== "create"} preview={preview} focus={focus} siblings={group.itemIds} />
           ))}
         </ul>
       ) : null}
     </section>
-  );
-}
-
-function EffectChips({ effects, excluded, onToggle }: { effects: readonly StepEffect[] } & Pick<AgentReviewPanelProps, "excluded" | "onToggle">) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {effects.map((effect) => (
-        <label key={effect.key} className={cn("ui-control inline-flex cursor-pointer items-center gap-1.5 px-2.5 py-1 text-xs has-[:checked]:bg-bg-active", effect.kind === "trash" && "text-text-danger")}>
-          <input type="checkbox" checked={!excluded.has(effect.key)} onChange={(event) => onToggle([effect.key], event.target.checked)} />
-          {effectLabel(effect)}
-        </label>
-      ))}
-    </div>
-  );
-}
-
-/** Each item once, with every change to it as a chip you can untick. */
-function ItemsView({ groups, items, excluded, onToggle, preview }: Pick<AgentReviewPanelProps, "groups" | "items" | "excluded" | "onToggle"> & { preview: Preview }) {
-  const byItem = [...effectsByItem(groups)];
-  const ids = byItem.map(([itemId]) => itemId);
-  return (
-    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {byItem.map(([itemId, effects]) => {
-        const item = items[itemId];
-        const saved = !effects.some((effect) => effect.kind === "create");
-        return (
-          <li key={itemId} className="library-panel flex gap-3 border border-border-control bg-bg-surface p-3">
-            <div className="size-24 shrink-0 overflow-hidden rounded-control-lg border border-border-control bg-bg-raised">
-              {item && saved ? <Link href={itemPageHref(itemId, "/")} className="block size-full" aria-label={`Look at “${title(item)}”`} onClick={previewClick(preview, ids, itemId)}><Thumbnail item={item} /></Link> : item ? <Thumbnail item={item} /> : null}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-text-primary">{title(item)}</p>
-              <div className="mt-2"><EffectChips effects={effects} excluded={excluded} onToggle={onToggle} /></div>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 
@@ -213,73 +168,58 @@ export function ReviewHeader({ children }: { children: ReactNode }) {
   );
 }
 
-/** The library's quick look, showing one item large with its suggested changes as checkboxes. */
-function QuickLook({ look, setLook, groups, items, excluded, onToggle, agentName, returnFocus }: {
-  look: { ids: readonly string[]; index: number } | null; setLook(look: { ids: readonly string[]; index: number } | null): void; agentName: string; returnFocus(): HTMLElement | null;
-} & Pick<AgentReviewPanelProps, "groups" | "items" | "excluded" | "onToggle">) {
-  if (!look) return null;
-  const itemId = look.ids[look.index];
-  const item = items[itemId] ?? null;
-  const effects = effectsByItem(groups).get(itemId) ?? [];
-  const move = (step: number) => setLook({ ...look, index: Math.min(look.ids.length - 1, Math.max(0, look.index + step)) });
-  return (
-    <LibraryQuickPreview
-      item={item}
-      index={look.index}
-      count={look.ids.length}
-      onMove={move}
-      onClose={() => setLook(null)}
-      onOpenItem={(entry) => window.open(itemPageHref(entry.id, "/"), "_blank", "noopener")}
-      returnFocus={returnFocus}
-      review={{
-        busy: false,
-        label: `${agentName}'s changes`,
-        description: "Review an agent's changes. Left and right arrows browse items. Untick a change to leave it out. Escape closes.",
-        emptyState: null,
-        progress: <p role="status" aria-live="polite" className="rounded-full border border-border-edge bg-bg-card px-2.5 py-1 text-center text-xs tabular-nums text-text-secondary">{look.index + 1} of {look.ids.length}</p>,
-        organization: <div className="shrink-0 space-y-2"><p className="text-xs font-medium text-text-secondary">Suggested for this item</p><EffectChips effects={effects} excluded={excluded} onToggle={onToggle} /></div>,
-        footer: (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Button disabled={look.index <= 0} onClick={() => move(-1)}>Back</Button>
-            <a href={itemPageHref(itemId, "/")} target="_blank" rel="noopener" className={buttonClassName()}>Open in new tab</a>
-            <Button disabled={look.index >= look.ids.length - 1} onClick={() => move(1)}>Next</Button>
-          </div>
-        ),
-      }}
-    />
-  );
-}
-
-/** Review an agent's suggestions as pictures of the items they change, grouped by what they do. */
-export function AgentReviewPanel(props: AgentReviewPanelProps) {
-  const { agentName, createdAt, now, groups, conflicts, excluded, view, backupFolder, busy, onView, onApply, onDecline } = props;
-  const [look, setLook] = useState<{ ids: readonly string[]; index: number } | null>(null);
-  const opener = useRef<HTMLElement | null>(null);
-  const preview: Preview = (ids, itemId, from) => {
-    opener.current = from;
-    setLook({ ids, index: Math.max(0, ids.indexOf(itemId)) });
-  };
+function summaryLine(groups: readonly ReviewGroup[]) {
   const summary = reviewSummary(groups);
-  const total = groups.reduce((sum, group) => sum + group.effects.length, 0);
-  const chosen = groups.reduce((sum, group) => sum + group.effects.filter((effect) => !excluded.has(effect.key)).length, 0);
   const parts = [
     summary.collections ? count(summary.collections, "collection") : "",
     summary.tags ? count(summary.tags, "tag") : "",
     summary.notes ? count(summary.notes, "note") : "",
     summary.trash ? `${summary.trash} to Trash` : "",
   ].filter(Boolean);
+  return `${count(summary.items, "item")}${parts.length ? `: ${parts.join(", ")}` : ""}`;
+}
+
+/** All of an agent's suggestions at once, as pictures of the items they change, grouped by what they do. */
+export function AgentReviewPanel(props: AgentReviewPanelProps) {
+  const { agentName, createdAt, now, groups, items, conflicts, excluded, backupFolder, busy, onApply, onDecline } = props;
+  const [look, setLook] = useState<{ ids: readonly string[]; index: number } | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const focused = useRef<{ ids: readonly string[]; itemId: string } | null>(null);
+  const preview: Target = (ids, itemId, from) => {
+    opener.current = from;
+    setLook({ ids, index: Math.max(0, ids.indexOf(itemId)) });
+  };
+  const focus: Target = (ids, itemId, from) => {
+    focused.current = { ids, itemId };
+    opener.current = from;
+  };
+  const firstGroup = groups.find((group) => group.itemIds.length && group.kind !== "create");
+  const previewFocused = () => {
+    const target = focused.current ?? (firstGroup ? { ids: firstGroup.itemIds, itemId: firstGroup.itemIds[0] } : null);
+    if (target) setLook({ ids: target.ids, index: Math.max(0, target.ids.indexOf(target.itemId)) });
+  };
+  const total = groups.reduce((sum, group) => sum + group.effects.length, 0);
+  const chosen = groups.reduce((sum, group) => sum + group.effects.filter((effect) => !excluded.has(effect.key)).length, 0);
+  const lookId = look ? look.ids[look.index] : undefined;
   return (
     <div className="space-y-4">
       <ReviewHeader>
-        <h1 className="mt-5 text-2xl font-semibold tracking-heading text-text-primary sm:text-3xl">Review {agentName}&apos;s changes</h1>
+        <h1 className="mt-5 text-2xl font-semibold tracking-heading text-text-primary sm:text-3xl">All of {agentName}&apos;s changes</h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Suggested {ago(createdAt, now)} for {count(summary.items, "item")}{parts.length ? `: ${parts.join(", ")}` : ""}. Untick anything you don&apos;t want. Click any item to look at it closely.
+          Suggested {ago(createdAt, now)} for {summaryLine(groups)}. Leave out anything you don&apos;t want, then apply the rest at once.
         </p>
         <p className="mt-1 text-xs text-text-secondary">
           Keepall keeps a copy of everything this changes, so you can undo it.{backupFolder ? " It also saves a full backup to your backup folder first." : ""}
         </p>
-        <SegmentedControl className="mt-4 w-64" label="Review by" value={view} onChange={onView}
-          choices={[{ value: "changes", label: "By change" }, { value: "items", label: "By item" }]} />
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href={`/?${AGENT_REVIEW_PARAM}=1`} className={buttonClassName()}>Review one at a time</Link>
+          <Tooltip content="Preview the focused item (Space)" describe={false}>
+            <button type="button" aria-label="Preview" aria-keyshortcuts="Space" aria-haspopup="dialog" disabled={!firstGroup}
+              className={buttonClassName({ size: "none", className: "min-h-10 gap-2 ps-3 pe-4 text-sm font-medium" })} onClick={previewFocused}>
+              <EyeIcon className="size-4" /><span>Preview</span>
+            </button>
+          </Tooltip>
+        </div>
       </ReviewHeader>
       {conflicts.length ? (
         <div role="note" className="library-panel border border-border-control bg-bg-surface p-4 text-sm leading-6">
@@ -287,8 +227,7 @@ export function AgentReviewPanel(props: AgentReviewPanelProps) {
           <ul className="mt-1 text-text-secondary">{conflicts.map((conflict) => <li key={conflict}>{conflict}</li>)}</ul>
         </div>
       ) : null}
-      {view === "changes" ? groups.map((group) => <Group key={group.id} group={group} {...props} preview={preview} />) : <ItemsView {...props} preview={preview} />}
-      <QuickLook look={look} setLook={setLook} {...props} returnFocus={() => opener.current} />
+      {groups.map((group) => <Group key={group.id} group={group} {...props} preview={preview} focus={focus} />)}
       <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 library-panel border border-border-control bg-bg-surface p-3 sm:p-4">
         <p className="text-sm text-text-secondary">{chosen === total ? `All ${count(total, "change")} included` : `${chosen} of ${count(total, "change")} included`}</p>
         <div className="flex flex-wrap gap-2">
@@ -296,6 +235,17 @@ export function AgentReviewPanel(props: AgentReviewPanelProps) {
           <Button variant="primary" disabled={busy || !chosen} onClick={onApply}>{busy ? "Applying…" : `Apply ${count(chosen, "change")}`}</Button>
         </div>
       </div>
+      {look ? (
+        <LibraryQuickPreview
+          item={lookId ? items[lookId] ?? null : null}
+          index={look.index}
+          count={look.ids.length}
+          onMove={(step) => setLook({ ...look, index: Math.min(look.ids.length - 1, Math.max(0, look.index + step)) })}
+          onClose={() => setLook(null)}
+          onOpenItem={(entry) => window.open(itemPageHref(entry.id, "/"), "_blank", "noopener")}
+          returnFocus={() => opener.current}
+        />
+      ) : null}
     </div>
   );
 }
@@ -324,12 +274,11 @@ function backupLine(backup: ReviewOutcome["backup"]) {
 /** What happened, with Undo right where the change was made. */
 export function AgentReviewResult({ outcome, busy, onUndo, next }: { outcome: ReviewOutcome; busy: boolean; onUndo?: () => void; next?: { id: string; agentName: string } }) {
   const skipped = outcome.skipped.filter((entry) => entry.reason !== "Not chosen");
-  const heading = outcomeHeading(outcome);
   const applied = !outcome.declined && !outcome.undone;
   return (
     <div className="space-y-4">
       <ReviewHeader>
-        <div role="status"><h1 className="mt-5 text-2xl font-semibold tracking-heading text-text-primary sm:text-3xl">{heading}</h1></div>
+        <div role="status"><h1 className="mt-5 text-2xl font-semibold tracking-heading text-text-primary sm:text-3xl">{outcomeHeading(outcome)}</h1></div>
         {applied ? <p className="mt-1 text-sm text-text-secondary">{backupLine(outcome.backup)}You can undo this here or later in Settings, Agents.</p> : null}
       </ReviewHeader>
       {outcome.undone?.kept.length ? (

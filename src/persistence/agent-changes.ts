@@ -1,8 +1,10 @@
 import {
-  DIRECT_CHANGE_LIMIT, parseChangeRequest, planChanges, planUndo, type AgentWriteTool, type ChangeRequest, type LibraryState, type PlannedStep,
-  type RecordChange,
+  DIRECT_CHANGE_LIMIT, itemFingerprint, parseChangeRequest, planChanges, planUndo, type AgentWriteTool, type ChangeRequest, type LibraryState,
+  type PlannedStep, type RecordChange, type SeenItems,
 } from "@/domain/agent-changes";
 import type { Item } from "@/domain/item";
+import { decisionRequests, type ItemDecision } from "@/domain/agent-review";
+import { nameIndex } from "@/domain/agent-tools";
 import { AgentToolError } from "@/domain/agent-tools";
 import { normalizeCollection } from "@/domain/collection";
 import { normalizeItem } from "@/domain/item";
@@ -15,7 +17,7 @@ export const AGENT_CHANGES_CHANNEL = "keepall-agent-changes";
 const JOURNAL_LIMIT = 200;
 
 export type AgentProposalRequest = {
-  id: string; tool: AgentWriteTool; request: ChangeRequest; text: string; seen: Record<string, number>; addedAt: number;
+  id: string; tool: AgentWriteTool; request: ChangeRequest; text: string; seen: SeenItems; addedAt: number;
   /** The agent's one-line reason, shown to the reviewer. */
   reason?: string;
 };
@@ -30,6 +32,8 @@ export type AgentProposal = {
   updatedAt: number;
   decidedAt?: number;
   result?: AgentProposalResult;
+  /** Items the reviewer already settled one at a time. Their suggestions no longer apply or show. */
+  decidedItems?: string[];
 };
 
 /** One applied batch. `records` holds the before-copy of every row it touched, so it can always be reversed. */
@@ -134,7 +138,7 @@ export async function submitAgentChange(pairing: AgentPairing, requestId: string
     }
 
     const items = new Map(state.items.map((item) => [item.id, item]));
-    const seen = Object.fromEntries(targetIds(request).flatMap((id) => (items.has(id) ? [[id, items.get(id)!.updatedAt]] : [])));
+    const seen = Object.fromEntries(targetIds(request).flatMap((id) => (items.has(id) ? [[id, itemFingerprint(items.get(id)!)]] : [])));
     const entry: AgentProposalRequest = { id: requestId, tool, request, text: step.text, seen, addedAt: now, ...(reason ? { reason } : {}) };
     const proposal: AgentProposal = open
       ? { ...open, requests: [...open.requests, entry], updatedAt: now }
@@ -158,6 +162,17 @@ async function backUpFirst(): Promise<BackupOutcome> {
   }
 }
 
+/** Plans a proposal, leaving out every effect on items the reviewer already decided one at a time. */
+function planOpenProposal(state: LibraryState, proposal: AgentProposal, options: { now: number; excluded?: readonly string[] }) {
+  const inputs = proposal.requests.map(({ id, request, seen }) => ({ id, request, seen }));
+  const newId = () => crypto.randomUUID();
+  const decided = new Set(proposal.decidedItems ?? []);
+  const keys = decided.size
+    ? planChanges(state, inputs, { now: options.now, newId }).steps.flatMap((step) => step.effects).filter((effect) => "itemId" in effect && decided.has(effect.itemId)).map((effect) => effect.key)
+    : [];
+  return planChanges(state, inputs, { now: options.now, newId, excluded: new Set([...keys, ...(options.excluded ?? [])]) });
+}
+
 export type ProposalPreview = {
   proposal: AgentProposal;
   steps: Array<PlannedStep & { reason?: string }>;
@@ -172,7 +187,7 @@ export async function previewAgentProposal(proposalId: string): Promise<Proposal
     const proposal = await db.agentProposals.get(proposalId);
     if (!proposal) return null;
     const state = await readState();
-    const plan = planChanges(state, proposal.requests.map(({ id, request, seen }) => ({ id, request, seen })), { now: Date.now(), newId: () => crypto.randomUUID() });
+    const plan = planOpenProposal(state, proposal, { now: Date.now() });
     const current = new Map(state.items.map((item) => [item.id, item]));
     const items: Record<string, Item> = {};
     for (const step of plan.steps) {
@@ -196,9 +211,7 @@ export async function applyAgentProposal(proposalId: string, excludedKeys: reado
     const proposal = await db.agentProposals.get(proposalId);
     if (!proposal || proposal.status !== "open") throw new Error("These suggestions were already reviewed.");
     const now = Date.now();
-    const plan = planChanges(await readState(), proposal.requests.map(({ id, request, seen }) => ({ id, request, seen })), {
-      now, newId: () => crypto.randomUUID(), excluded: new Set(excludedKeys),
-    });
+    const plan = planOpenProposal(await readState(), proposal, { now, excluded: excludedKeys });
     const { applied } = summarize(plan.steps);
     const skipped = plan.steps.filter((step) => step.status !== "planned" || step.notes.length).map((step) => ({
       text: step.text,
@@ -217,6 +230,56 @@ export async function applyAgentProposal(proposalId: string, excludedKeys: reado
   });
   announce({ type: "applied", proposalId });
   return result;
+}
+
+/**
+ * Applies the reviewer's decision for one item as its own change, with a before-copy like any agent change, and
+ * marks the item decided. The proposal closes once nothing in it is left to decide.
+ */
+export async function applyAgentItemDecision(proposalId: string, itemId: string, decision: ItemDecision): Promise<{ changeId?: string; remaining: number }> {
+  const db = getDb();
+  const result = await db.transaction("rw", agentTables(), async () => {
+    const proposal = await db.agentProposals.get(proposalId);
+    if (!proposal || proposal.status !== "open") throw new Error("These suggestions were already reviewed.");
+    const state = await readState();
+    const item = state.items.find((entry) => entry.id === itemId && entry.deletedAt === undefined);
+    if (!item) throw new Error("This item is no longer in your library.");
+    const now = Date.now();
+    const requests = decisionRequests(item, decision, nameIndex(state.tags, state.collections).tags);
+    const plan = planChanges(state, requests.map((request, index) => ({ id: `${itemId}:${index}`, request })), { now, newId: () => crypto.randomUUID() });
+    let changeId: string | undefined;
+    if (plan.records.length) {
+      changeId = crypto.randomUUID();
+      await writeRecords(plan.records);
+      await db.agentChanges.add({ id: changeId, pairingId: proposal.pairingId, agentName: proposal.agentName, proposalId, createdAt: now, steps: summarize(plan.steps).applied, records: plan.records });
+      await pruneJournal();
+    }
+    const decided = { ...proposal, decidedItems: [...new Set([...(proposal.decidedItems ?? []), itemId])], updatedAt: now };
+    const remaining = planOpenProposal(await readState(), decided, { now }).steps.reduce((total, step) => total + step.effects.length, 0);
+    await db.agentProposals.put(remaining ? decided : {
+      ...decided, status: "applied", decidedAt: now, result: { applied: [], skipped: [], backup: { status: "off" }, effects: 0 },
+    });
+    return { changeId, remaining };
+  });
+  announce({ type: "applied", proposalId });
+  return result;
+}
+
+/** Undoes one item's decision and puts the item back up for review. */
+export async function reopenAgentItem(proposalId: string, itemId: string, changeId?: string): Promise<{ kept: string[] }> {
+  const undo = changeId ? await undoAgentChange(changeId) : { restored: 0, kept: [] };
+  const db = getDb();
+  await db.transaction("rw", db.agentProposals, db.items, async () => {
+    const proposal = await db.agentProposals.get(proposalId);
+    if (!proposal) return;
+    // Undo restored the item, so the suggestions hold again; record what they now see.
+    const row = await db.items.get(itemId);
+    const fingerprint = row ? itemFingerprint(normalizeItem(row)) : undefined;
+    const requests = proposal.requests.map((entry) => (fingerprint !== undefined && entry.seen[itemId] !== undefined ? { ...entry, seen: { ...entry.seen, [itemId]: fingerprint } } : entry));
+    await db.agentProposals.put({ ...proposal, requests, status: "open", decidedAt: undefined, decidedItems: (proposal.decidedItems ?? []).filter((id) => id !== itemId), updatedAt: Date.now() });
+  });
+  announce({ type: "reopened", proposalId });
+  return { kept: undo.kept };
 }
 
 export async function rejectAgentProposal(proposalId: string): Promise<void> {

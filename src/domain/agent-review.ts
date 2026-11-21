@@ -1,6 +1,7 @@
 // Shapes a planned proposal for people: changes grouped by what they do, with each item's effects, so a review
 // shows "Add tag dark ui to these 21 images" once, however many agent calls suggested it.
-import type { PlannedStep, StepEffect } from "./agent-changes";
+import type { ChangeRequest, PlannedStep, StepEffect } from "./agent-changes";
+import type { Item } from "./item";
 
 export type ReviewGroup = {
   id: string;
@@ -117,4 +118,45 @@ export function reviewSummary(groups: readonly ReviewGroup[]) {
     notes: groups.find((group) => group.kind === "note")?.effects.length ?? 0,
     trash: groups.find((group) => group.kind === "trash")?.effects.length ?? 0,
   };
+}
+
+/** What the reviewer settles on for one item, starting from the agent's suggestion. */
+export type ItemDecision = {
+  /** Collection name, or null for Unsorted. */
+  collection: string | null;
+  tags: string[];
+  /** The note text to save, or null to leave the note as it is. */
+  note: string | null;
+  trash: boolean;
+};
+
+/** The agent's suggestion for one item, as a starting decision. */
+export function suggestedDecision(item: Item, effects: readonly StepEffect[], names: { collections: ReadonlyMap<string, string>; tags: ReadonlyMap<string, string> }): ItemDecision {
+  let collection = item.collectionIds[0] ? names.collections.get(item.collectionIds[0]) ?? null : null;
+  const tags = item.tagIds.flatMap((id) => names.tags.get(id) ?? []);
+  let note: string | null = null;
+  let trash = false;
+  for (const effect of effects) {
+    if (effect.kind === "collection") collection = effect.to;
+    if (effect.kind === "tag" && effect.op === "add" && !tags.some((tag) => tag.toLowerCase() === effect.tag.toLowerCase())) tags.push(effect.tag);
+    if (effect.kind === "tag" && effect.op === "remove") tags.splice(0, tags.length, ...tags.filter((tag) => tag.toLowerCase() !== effect.tag.toLowerCase()));
+    if (effect.kind === "note") note = effect.after;
+    if (effect.kind === "trash") trash = true;
+  }
+  return { collection, tags, note, trash };
+}
+
+/** The requests that take one item from where it is to the reviewer's decision. Planned like any agent change. */
+export function decisionRequests(item: Item, decision: ItemDecision, tagNames: ReadonlyMap<string, string>): ChangeRequest[] {
+  const current = item.tagIds.flatMap((id) => tagNames.get(id) ?? []);
+  const lower = (names: readonly string[]) => new Set(names.map((name) => name.toLowerCase()));
+  const wanted = lower(decision.tags);
+  const have = lower(current);
+  const requests: ChangeRequest[] = [
+    { kind: "move", itemIds: [item.id], collection: decision.collection },
+    { kind: "tag", itemIds: [item.id], add: decision.tags.filter((tag) => !have.has(tag.toLowerCase())), remove: current.filter((tag) => !wanted.has(tag.toLowerCase())) },
+  ];
+  if (decision.note !== null) requests.push({ kind: "note", itemId: item.id, text: decision.note, replace: true });
+  if (decision.trash) requests.push({ kind: "trash", itemIds: [item.id] });
+  return requests.filter((request) => request.kind !== "tag" || request.add.length || request.remove.length);
 }

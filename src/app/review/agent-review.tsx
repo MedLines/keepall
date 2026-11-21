@@ -9,7 +9,7 @@ import {
   AGENT_CHANGES_CHANNEL, applyAgentProposal, listOpenProposals, previewAgentProposal, rejectAgentProposal, undoAgentChange,
 } from "@/persistence/agent-changes";
 import { getBackupFolderSettings } from "@/persistence/backup-settings";
-import { AgentReviewPanel, AgentReviewResult, ReviewHeader, type ReviewOutcome, type ReviewView } from "./agent-review-panel";
+import { AgentReviewPanel, AgentReviewResult, ReviewHeader, type ReviewOutcome } from "./agent-review-panel";
 
 type Loaded =
   | { status: "loading" }
@@ -42,7 +42,6 @@ async function load(): Promise<Loaded> {
 export function AgentReview() {
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
   const [excluded, setExcluded] = useState<ReadonlySet<string>>(new Set());
-  const [view, setView] = useState<ReviewView>("changes");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ outcome: ReviewOutcome; changeId?: string } | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -122,10 +121,8 @@ export function AgentReview() {
       items={ready.items}
       conflicts={ready.conflicts}
       excluded={excluded}
-      view={view}
       backupFolder={ready.backupFolder}
       busy={busy}
-      onView={setView}
       onToggle={(keys, include) => setExcluded((current) => {
         const next = new Set(current);
         for (const key of keys) {

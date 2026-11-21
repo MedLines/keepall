@@ -57,7 +57,10 @@ function Proposal({ proposal, now }: { proposal: ProposalView } & Pick<AgentsPan
         {shown.map((request) => <li key={request.id} className="truncate">{request.text}</li>)}
         {proposal.requests.length > shown.length ? <li>and {plural(proposal.requests.length - shown.length, "more")}</li> : null}
       </ul>
-      <Link href={`/review?proposal=${encodeURIComponent(proposal.id)}`} className={buttonClassName({ variant: "primary", className: "mt-4" })}>Review changes</Link>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link href="/?agent-review=1" className={buttonClassName({ variant: "primary" })}>Review one at a time</Link>
+        <Link href={`/review?proposal=${encodeURIComponent(proposal.id)}`} className={buttonClassName()}>See all at once</Link>
+      </div>
     </article>
   );
 }

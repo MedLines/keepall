@@ -114,10 +114,10 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
           </> : review ? <>
             <div className="library-preview-surface library-review-content relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-border-edge bg-bg-card">
             <div data-review-header className="flex shrink-0 items-center justify-between gap-4 p-4">
-              <Dialog.Title className="text-lg font-semibold">Unsorted review</Dialog.Title>
+              <Dialog.Title className="text-lg font-semibold">{review.label ?? "Unsorted review"}</Dialog.Title>
               <Dialog.Close disabled={review.busy} aria-label="Close preview" className={iconButtonClassName({ size: "lg" })}><CloseIcon /></Dialog.Close>
             </div>
-            <Dialog.Description className="sr-only">Unsorted review. Undo returns to the previous review action.</Dialog.Description>
+            <Dialog.Description className="sr-only">{review.label ?? "Unsorted review"}. Undo returns to the previous review action.</Dialog.Description>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-16">{review.emptyState}</div>
             <div className="pointer-events-none absolute inset-x-4 bottom-4 flex justify-center">{review.progress}</div>
             </div>

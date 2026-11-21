@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planChanges, type LibraryState } from "./agent-changes";
-import { agentDisplayName, effectLabel, effectsByItem, groupEffects, reviewSummary } from "./agent-review";
+import { agentDisplayName, decisionRequests, effectLabel, effectsByItem, groupEffects, reviewSummary, suggestedDecision } from "./agent-review";
 import type { Item } from "./item";
 
 const image = (id: string, extra: Partial<Item> = {}) =>
@@ -55,5 +55,32 @@ describe("effects", () => {
       { id: "r2", request: { kind: "trash", itemIds: ["b"] } },
     ]);
     expect(groupEffects(result.steps).map((group) => [group.kind, group.caution])).toEqual([["note", false], ["trash", true]]);
+  });
+});
+
+describe("item decisions", () => {
+  const names = { collections: new Map([["c1", "Old"]]), tags: new Map([["dark", "Dark UI"], ["t2", "keep"]]) };
+  const item = image("x", { collectionIds: ["c1"], tagIds: ["t2"] });
+
+  it("starts from the agent's suggestion", () => {
+    const effects = [
+      { kind: "collection", key: "k1", itemId: "x", to: "Moodboard", isNew: true },
+      { kind: "tag", key: "k2", itemId: "x", tag: "cards", op: "add" },
+      { kind: "tag", key: "k3", itemId: "x", tag: "keep", op: "remove" },
+      { kind: "note", key: "k4", itemId: "x", before: "", after: "Agent note" },
+    ] as const;
+    expect(suggestedDecision(item, effects, names)).toEqual({ collection: "Moodboard", tags: ["cards"], note: "Agent note", trash: false });
+  });
+
+  it("turns the reviewer's decision into requests the planner applies", () => {
+    const requests = decisionRequests(item, { collection: null, tags: ["keep", "cards"], note: null, trash: true }, names.tags);
+    expect(requests).toEqual([
+      { kind: "move", itemIds: ["x"], collection: null },
+      { kind: "tag", itemIds: ["x"], add: ["cards"], remove: [] },
+      { kind: "trash", itemIds: ["x"] },
+    ]);
+    const unchanged = decisionRequests(item, { collection: "Old", tags: ["KEEP"], note: null, trash: false }, names.tags);
+    expect(planChanges({ items: [item], collections: [{ id: "c1", name: "Old", createdAt: 1, pinnedItemIds: [] }], tags: [{ id: "t2", name: "keep", createdAt: 1 }] },
+      unchanged.map((request, index) => ({ id: `d${index}`, request })), { now: 5, newId: () => "n" }).records).toEqual([]);
   });
 });

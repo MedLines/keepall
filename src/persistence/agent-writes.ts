@@ -6,8 +6,9 @@ import { getDb } from "./db";
 
 export type AgentCallContext = { appOrigin: string; pairingId: string; requestId: string };
 
+/** Opens the library with the agent's suggestions up for review, one item at a time. */
 function reviewUrl(appOrigin: string) {
-  return new URL("/review", appOrigin).href;
+  return new URL("/?agent-review=1", appOrigin).href;
 }
 
 function reason(args: Record<string, unknown>) {

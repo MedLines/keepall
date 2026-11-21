@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { fn } from "storybook/test";
+import { expect, fn } from "storybook/test";
 import { planChanges } from "@/domain/agent-changes";
 import { groupEffects } from "@/domain/agent-review";
 import type { Item } from "@/domain/item";
@@ -30,8 +30,8 @@ const meta = {
   component: AgentReviewPanel,
   args: {
     agentName: "Claude Code", createdAt: now - 3 * 60_000, now, groups, items: Object.fromEntries(items.map((item) => [item.id, item])),
-    conflicts: [], excluded: new Set<string>(), view: "changes", backupFolder: true, busy: false,
-    onView: fn(), onToggle: fn(), onApply: fn(), onDecline: fn(),
+    conflicts: [], excluded: new Set<string>(), backupFolder: true, busy: false,
+    onToggle: fn(), onApply: fn(), onDecline: fn(),
   },
   decorators: [(Story) => <div className="max-w-5xl bg-bg-canvas p-4"><Story /></div>],
 } satisfies Meta<typeof AgentReviewPanel>;
@@ -39,8 +39,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const ByChange: Story = {};
-export const ByItem: Story = { args: { view: "items" } };
+export const AllChanges: Story = {
+  play: async ({ canvas, args }) => {
+    await canvas.getAllByRole("button", { name: "Leave out all" })[0].click();
+    await expect(args.onToggle).toHaveBeenCalled();
+    await canvas.getByRole("button", { name: /^Apply/ }).click();
+    await expect(args.onApply).toHaveBeenCalled();
+  },
+};
 export const SomeUnticked: Story = { args: { excluded: new Set(["dash#tag:add:dark ui", "junk#trash"]) } };
 export const WithConflict: Story = { args: { conflicts: ['"Type scale notes" changed in Keepall after this was suggested'] } };
 export const Applying: Story = { args: { busy: true } };
