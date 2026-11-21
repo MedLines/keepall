@@ -100,15 +100,18 @@ The user picks an access level when pairing and can change it in **Settings → 
 
 Reviewing follows Unsorted review and uses the library's own parts:
 
-- **One at a time, over the library.** When suggestions wait, the library shows **Review Claude Code's changes** where **Review Unsorted** sits. The agent's link (`/?agent-review=1`) opens it directly. It is the library's quick look in review mode:
+- **The review page, `/review`.** The agent's link and Settings → Agents both lead here. Changes are grouped by what they do, however many tool calls suggested them, and each item appears as a library card: the same shell, squircle media, and corner selection control. The control includes or leaves the item out of **Apply all**, and each group has **Include all** or **Leave out all**. Notes show your existing text next to the added text. Trash and replaced notes show in the danger color. A sticky bar shows how many changes are included.
+- **Review one at a time, in place.** Clicking a card, pressing Space on a focused card, or choosing **Review one at a time** opens Unsorted review's dialog right on the review page, starting at that item:
   - **The item, large,** with a card listing what the agent suggested and why.
-  - **The same Collection and Tags cards** as Unsorted review, pre-filled with the suggestion, so you can adjust them before applying.
+  - **The same Collection and Tags cards** as Unsorted review, pre-filled with the suggestion and editable.
   - **Note and Trash suggestions,** each in its own card with **Leave out** or **Keep item**.
-  - **The same footer:** Back and Next (Next leaves the item as it is), **Apply changes** to save this item and move on, and **Undo** for the last applied item.
+  - **The same footer:** Back, Next (leaves the item as it is), **Apply changes**, and **Undo**.
   - **At the end,** **Apply the rest as suggested** or **Decline the rest**.
-- **All at once at `/review`.** Changes are grouped by what they do, however many tool calls suggested them, with each item's thumbnail and the agent's reasons. Notes show your existing text next to the added text. Trash and replaced notes show in the danger color. Each tile carries the library's round selection control, and each group has **Include all** or **Leave out all**. A plain click or Space previews an item in the library's quick look. The **Preview** button (the toolbar's eye icon) previews the focused item. Cmd/Ctrl-click opens it in a new tab. A sticky bar shows how many changes are included.
+  
+  Each item you apply is its own change with a before-copy.
+- **From the library.** While suggestions wait, the library also offers **Review Claude Code's changes** where **Review Unsorted** sits, and it opens the same dialog over the library. `/?agent-review=1` opens it directly.
 
-Settings → Agents summarizes waiting proposals with **Review one at a time** and **See all at once**. Agents can pass an optional `reason` with each write, which appears beside the change.
+Settings → Agents summarizes waiting proposals with **Review changes**. Agents can pass an optional `reason` with each write, which appears beside the change.
 
 Suggestions remember a fingerprint of what they saw: each target item's collection, tags, note text and Trash state. Your later edits to those fields skip the suggestion with a reason. Background updates, such as a fetched link preview, don't.
 

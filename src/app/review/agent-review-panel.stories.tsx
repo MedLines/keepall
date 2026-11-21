@@ -31,7 +31,7 @@ const meta = {
   args: {
     agentName: "Claude Code", createdAt: now - 3 * 60_000, now, groups, items: Object.fromEntries(items.map((item) => [item.id, item])),
     conflicts: [], excluded: new Set<string>(), backupFolder: true, busy: false,
-    onToggle: fn(), onApply: fn(), onDecline: fn(),
+    onToggle: fn(), onReview: fn(), onApply: fn(), onDecline: fn(),
   },
   decorators: [(Story) => <div className="max-w-5xl bg-bg-canvas p-4"><Story /></div>],
 } satisfies Meta<typeof AgentReviewPanel>;
@@ -45,6 +45,8 @@ export const AllChanges: Story = {
     await expect(args.onToggle).toHaveBeenCalled();
     await canvas.getByRole("button", { name: /^Apply/ }).click();
     await expect(args.onApply).toHaveBeenCalled();
+    await canvas.getByRole("button", { name: "Review “Studio grid study”" }).click();
+    await expect(args.onReview).toHaveBeenCalledWith("grid", expect.anything());
   },
 };
 export const SomeUnticked: Story = { args: { excluded: new Set(["dash#tag:add:dark ui", "junk#trash"]) } };

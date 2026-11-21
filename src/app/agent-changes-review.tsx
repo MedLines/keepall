@@ -26,6 +26,8 @@ type Props = {
   onClose: () => void;
   onOpenItem: (item: Item, animate?: boolean) => void;
   returnFocus: () => HTMLElement | null;
+  /** Start at this item, for reviewing from a tile on the overview page. */
+  startItemId?: string;
 };
 
 type Loaded = {
@@ -162,9 +164,10 @@ function EndOfReview({ loaded, total, remaining, busy, onApplyRest, onDeclineRes
  * Unsorted review's twin for an agent's suggestions: one item at a time, the same organize panel pre-filled with
  * what the agent suggested, and Apply changes to keep it (as adjusted) and move on.
  */
-export function AgentChangesReview({ collections, tags, onClose, onOpenItem, returnFocus }: Props) {
+export function AgentChangesReview({ collections, tags, onClose, onOpenItem, returnFocus, startItemId }: Props) {
   const [loaded, setLoaded] = useState<Loaded | null | undefined>(undefined);
-  const [index, setIndex] = useState(0);
+  // Until the reviewer moves, the position follows the item they opened the review on.
+  const [chosenIndex, setIndex] = useState<number | null>(null);
   const [decisions, setDecisions] = useState<Record<string, ItemDecision>>({});
   const [decided, setDecided] = useState<ReadonlySet<string>>(new Set());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -193,6 +196,7 @@ export function AgentChangesReview({ collections, tags, onClose, onOpenItem, ret
   }, [refresh]);
 
   const queue = loaded?.queue ?? [];
+  const index = chosenIndex ?? Math.max(0, startItemId ? queue.indexOf(startItemId) : 0);
   const itemId = queue[index];
   const item = loaded && itemId && !decided.has(itemId) ? loaded.items[itemId] ?? null : null;
   const done = !!loaded && index >= queue.length;

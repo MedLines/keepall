@@ -279,7 +279,7 @@ test("an agent suggests changes, the user applies some in Settings, and undo put
 
     // Three suggestions, sent the way a simple agent might: one ID as a string, tags as one string.
     const moved = json(await mcp.call("move_to_collection", { item_ids: ["gallery", "site"], collection: "Moodboard" }));
-    expect(moved).toMatchObject({ status: "waiting_for_review", suggestions_waiting: 1, review_url: `${origin}/?agent-review=1` });
+    expect(moved).toMatchObject({ status: "waiting_for_review", suggestions_waiting: 1, review_url: `${origin}/review` });
     expect(moved.what_to_do_next).toContain("Review them here");
     json(await mcp.call("tag_items", { item_id: "masonry", tags: "layout, ideas" }));
     const noted = json(await mcp.call("add_note", { item_id: "masonry", text: "Check the off-screen measuring" }));
@@ -287,19 +287,21 @@ test("an agent suggests changes, the user applies some in Settings, and undo put
     expect(json(await mcp.call("check_changes", {})).waiting_for_review.suggestions).toHaveLength(3);
     expect((await readItems(page)).gallery.collection).toBe("Portfolio inspo");
 
-    // The overview shows every change at once; Space previews the focused item, like the library.
-    await page.goto(`${origin}/review`);
-    await expect(page.getByRole("heading", { name: "Move to “Moodboard” (new collection)" })).toBeVisible();
-    await page.getByRole("link", { name: "Preview “Dashboard references”" }).focus();
-    await page.keyboard.press(" ");
-    await expect(page.getByRole("dialog").getByRole("button", { name: "Open full item" })).toBeVisible();
-    await page.keyboard.press("Escape");
-
-    // Settings offers the one-at-a-time review, which opens over the library like Unsorted review.
+    // Settings leads to the review page, which shows every change as library cards.
     await page.goto(`${origin}/settings#agents`);
-    await page.getByRole("article", { name: "Codex suggests 3 changes" }).getByRole("link", { name: "Review one at a time" }).click();
+    await page.getByRole("article", { name: "Codex suggests 3 changes" }).getByRole("link", { name: "Review changes" }).click();
+    await expect(page.getByRole("heading", { name: "Move to “Moodboard” (new collection)" })).toBeVisible();
+
+    // Clicking a card opens the Unsorted-style review at that item, right here.
+    await page.getByRole("button", { name: "Review “Studio site”" }).click();
+    await expect(page.getByRole("dialog").getByText("2 of 3")).toBeVisible();
+    await page.keyboard.press("Escape");
+    // So does Space on a focused card.
+    await page.getByRole("button", { name: "Review “Dashboard references”" }).focus();
+    await page.keyboard.press(" ");
     const review = page.getByRole("dialog");
     await expect(review.getByText("Codex's changes", { exact: false })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`^${origin}/review`));
     await expect(review.getByText("1 of 3")).toBeVisible();
     await expect(review.getByText("→ Moodboard")).toBeVisible();
     await review.getByRole("button", { name: "Apply changes" }).click();

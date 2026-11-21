@@ -9,6 +9,12 @@ import {
   AGENT_CHANGES_CHANNEL, applyAgentProposal, listOpenProposals, previewAgentProposal, rejectAgentProposal, undoAgentChange,
 } from "@/persistence/agent-changes";
 import { getBackupFolderSettings } from "@/persistence/backup-settings";
+import { listCollections } from "@/persistence/collections";
+import { listTags } from "@/persistence/tags";
+import type { Collection } from "@/domain/collection";
+import type { Tag } from "@/domain/tag";
+import { AgentChangesReview } from "../agent-changes-review";
+import { itemPageHref } from "../item-page-navigation";
 import { AgentReviewPanel, AgentReviewResult, ReviewHeader, type ReviewOutcome } from "./agent-review-panel";
 
 type Loaded =
@@ -16,7 +22,7 @@ type Loaded =
   | { status: "empty" }
   | {
     status: "ready"; proposalId: string; agentName: string; createdAt: number; groups: ReviewGroup[]; items: Record<string, Item>;
-    conflicts: string[]; others: Array<{ id: string; agentName: string }>; backupFolder: boolean;
+    conflicts: string[]; others: Array<{ id: string; agentName: string }>; backupFolder: boolean; collections: Collection[]; tags: Tag[];
   };
 
 async function load(): Promise<Loaded> {
@@ -24,7 +30,7 @@ async function load(): Promise<Loaded> {
   const open = await listOpenProposals();
   const proposal = open.find((entry) => entry.id === wanted) ?? open[0];
   if (!proposal) return { status: "empty" };
-  const [preview, backup] = await Promise.all([previewAgentProposal(proposal.id), getBackupFolderSettings().catch(() => null)]);
+  const [preview, backup, collections, tags] = await Promise.all([previewAgentProposal(proposal.id), getBackupFolderSettings().catch(() => null), listCollections(), listTags()]);
   if (!preview) return { status: "empty" };
   return {
     status: "ready",
@@ -36,6 +42,8 @@ async function load(): Promise<Loaded> {
     conflicts: [...new Set(preview.steps.flatMap((step) => step.notes))],
     others: open.filter((entry) => entry.id !== proposal.id).map((entry) => ({ id: entry.id, agentName: agentDisplayName(entry.agentName) })),
     backupFolder: !!backup?.enabled,
+    collections,
+    tags,
   };
 }
 
@@ -46,6 +54,8 @@ export function AgentReview() {
   const [done, setDone] = useState<{ outcome: ReviewOutcome; changeId?: string } | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
+  // The one-at-a-time review, opened here on top of the overview rather than in the library.
+  const [reviewing, setReviewing] = useState<{ itemId: string | null; from: HTMLElement | null } | null>(null);
   const finished = useRef(false);
 
   const show = useCallback((next: Loaded) => {
@@ -113,6 +123,19 @@ export function AgentReview() {
   return (
     <>
       {error ? <p role="alert" className="mb-4 text-sm text-text-danger">{error}</p> : null}
+      {reviewing ? (
+        <AgentChangesReview
+          collections={ready.collections}
+          tags={ready.tags}
+          startItemId={reviewing.itemId ?? undefined}
+          onClose={() => {
+            setReviewing(null);
+            load().then(show, () => show({ status: "empty" }));
+          }}
+          onOpenItem={(item) => window.open(itemPageHref(item.id, "/"), "_blank", "noopener")}
+          returnFocus={() => reviewing.from}
+        />
+      ) : null}
       <AgentReviewPanel
       agentName={ready.agentName}
       createdAt={ready.createdAt}
@@ -123,6 +146,7 @@ export function AgentReview() {
       excluded={excluded}
       backupFolder={ready.backupFolder}
       busy={busy}
+      onReview={(itemId, from) => setReviewing({ itemId, from })}
       onToggle={(keys, include) => setExcluded((current) => {
         const next = new Set(current);
         for (const key of keys) {
