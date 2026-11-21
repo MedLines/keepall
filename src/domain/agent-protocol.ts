@@ -34,6 +34,12 @@ export type RelayControl = { type: "peer"; present: boolean } | { type: "agent-l
 
 export type AgentRequest = { id: string; tool: string; args: Record<string, unknown> };
 export type AgentResponse = { id: string; ok: true; result: unknown } | { id: string; ok: false; error: string };
+/** One piece of a response too large for a single relay frame. Pieces arrive in order on one session. */
+export type AgentResponseChunk = { id: string; chunk: number; chunks: number; data: string };
+
+/** Keeps each sealed frame well under the relay's 1 MiB limit. */
+export const RESPONSE_CHUNK_CHARACTERS = 512 * 1024;
+const MAX_RESPONSE_CHUNKS = 64;
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -282,7 +288,10 @@ export function createLibraryEndpoint(pairKey: Bytes, handle: ToolHandler, send:
 
   function reply(prefix: Bytes, connection: Connection, response: AgentResponse) {
     connection.outbound = connection.outbound.then(async () => {
-      if (connections.get(toHex(prefix)) === connection) send(concatBytes(prefix, await connection.session.seal(response)));
+      for (const message of responseMessages(response)) {
+        if (connections.get(toHex(prefix)) !== connection) return;
+        send(concatBytes(prefix, await connection.session.seal(message)));
+      }
     }).catch(() => {});
   }
 
@@ -327,6 +336,52 @@ export function createLibraryEndpoint(pairKey: Bytes, handle: ToolHandler, send:
 export function splitConnectionFrame(data: Uint8Array): { prefix: Bytes; frame: Bytes } | null {
   if (data.byteLength <= CONNECTION_ID_BYTES) return null;
   return { prefix: data.slice(0, CONNECTION_ID_BYTES), frame: data.slice(CONNECTION_ID_BYTES) };
+}
+
+/** The messages that carry one response: itself when small, otherwise ordered chunks of its JSON. */
+export function responseMessages(response: AgentResponse, chunkCharacters = RESPONSE_CHUNK_CHARACTERS): Array<AgentResponse | AgentResponseChunk> {
+  const body = JSON.stringify(response);
+  if (body.length <= chunkCharacters) return [response];
+  const chunks = Math.ceil(body.length / chunkCharacters);
+  if (chunks > MAX_RESPONSE_CHUNKS) {
+    return [{ id: response.id, ok: false, error: "This answer is too large to send. Ask for fewer images or items." }];
+  }
+  return Array.from({ length: chunks }, (_, chunk) => ({ id: response.id, chunk, chunks, data: body.slice(chunk * chunkCharacters, (chunk + 1) * chunkCharacters) }));
+}
+
+function isResponseChunk(value: unknown): value is AgentResponseChunk {
+  if (!value || typeof value !== "object") return false;
+  const chunk = value as Record<string, unknown>;
+  return typeof chunk.id === "string" && Number.isInteger(chunk.chunk) && Number.isInteger(chunk.chunks) && typeof chunk.data === "string" &&
+    (chunk.chunks as number) > 1 && (chunk.chunks as number) <= MAX_RESPONSE_CHUNKS && (chunk.chunk as number) >= 0 && (chunk.chunk as number) < (chunk.chunks as number);
+}
+
+/** Rebuilds chunked responses. `accept` returns a complete response, or null while one is still arriving. */
+export function createResponseAssembler() {
+  const partial = new Map<string, string[]>();
+  return {
+    accept(message: unknown): AgentResponse | null {
+      if (isAgentResponse(message)) return message;
+      if (!isResponseChunk(message)) return null;
+      const parts = partial.get(message.id) ?? [];
+      // Chunks of one response arrive in order on one session; anything else starts over.
+      if (message.chunk !== parts.length) {
+        partial.delete(message.id);
+        return null;
+      }
+      parts.push(message.data);
+      if (parts.length < message.chunks) {
+        partial.set(message.id, parts);
+        return null;
+      }
+      partial.delete(message.id);
+      const response: unknown = JSON.parse(parts.join(""));
+      return isAgentResponse(response) && response.id === message.id ? response : null;
+    },
+    forget(id: string) {
+      partial.delete(id);
+    },
+  };
 }
 
 export function parseRelayControl(text: string): RelayControl | null {

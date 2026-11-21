@@ -1,5 +1,5 @@
 import {
-  channelSocketUrl, createSession, helloFrame, isAgentResponse, newSessionNonce, parseRelayControl, readHello,
+  channelSocketUrl, createResponseAssembler, createSession, helloFrame, newSessionNonce, parseRelayControl, readHello,
   type AgentSession, type Bytes,
 } from "../../../src/domain/agent-protocol.ts";
 import type { Pairing } from "./config.ts";
@@ -25,6 +25,7 @@ export class LibraryClient {
   private socket: WebSocket | undefined;
   private connecting: Promise<void> | undefined;
   private session: AgentSession | undefined;
+  private assembler = createResponseAssembler();
   private agentNonce: Bytes | undefined;
   private readonly pending = new Map<string, Pending>();
   private inbound: Promise<void> = Promise.resolve();
@@ -105,12 +106,13 @@ export class LibraryClient {
     if (libraryNonce) {
       if (!this.agentNonce) return;
       this.session = await createSession(this.pairing.pairKey, "agent", this.agentNonce, libraryNonce);
+      this.assembler = createResponseAssembler();
       this.flush();
       return;
     }
     if (!this.session) return;
-    const response = await this.session.open(frame);
-    if (!isAgentResponse(response)) return;
+    const response = this.assembler.accept(await this.session.open(frame));
+    if (!response) return;
     this.settle(response.id, response.ok ? null : new Error(response.error), response.ok ? response.result : undefined);
   }
 

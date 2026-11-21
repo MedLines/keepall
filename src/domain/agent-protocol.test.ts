@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  channelSocketUrl, concatBytes, createLibraryEndpoint, createPairingLink, createSession, derivePairKey, generateAgentKeyPair, helloFrame, newChannelId,
+  channelSocketUrl, concatBytes, createLibraryEndpoint, createPairingLink, createResponseAssembler, responseMessages, createSession, derivePairKey, generateAgentKeyPair, helloFrame, newChannelId,
   newPairingSecret, newSessionNonce, pairAcceptFrame, pairConfirmFrame, parsePairingFragment, readHello, readPairAccept,
   verifyPairAccept, verifyPairConfirm,
 } from "./agent-protocol";
@@ -145,5 +145,31 @@ describe("library endpoint", () => {
     await endpoint.receive(concatBytes(prefixB, await b.seal({ id: "2", tool: "search_items", args: {} })));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(sent).toEqual([]);
+  });
+});
+
+describe("large responses", () => {
+  it("split into ordered chunks and come back whole", () => {
+    const response = { id: "7", ok: true as const, result: { data: "x".repeat(25) } };
+    const messages = responseMessages(response, 10);
+    expect(messages.length).toBeGreaterThan(1);
+    const assembler = createResponseAssembler();
+    const results = messages.map((message) => assembler.accept(message));
+    expect(results.slice(0, -1).every((result) => result === null)).toBe(true);
+    expect(results.at(-1)).toEqual(response);
+    expect(responseMessages(response)).toEqual([response]);
+  });
+
+  it("drop a response whose chunks arrive out of order", () => {
+    const messages = responseMessages({ id: "8", ok: true, result: "y".repeat(40) }, 10);
+    const assembler = createResponseAssembler();
+    // Chunk 1 goes missing: everything after it is discarded rather than stitched together wrongly.
+    for (const message of [messages[0], ...messages.slice(2)]) expect(assembler.accept(message)).toBeNull();
+  });
+
+  it("replace a response too large to send with an error", () => {
+    expect(responseMessages({ id: "9", ok: true, result: "z".repeat(1000) }, 10)).toEqual([
+      { id: "9", ok: false, error: "This answer is too large to send. Ask for fewer images or items." },
+    ]);
   });
 });

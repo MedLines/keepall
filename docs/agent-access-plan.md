@@ -64,11 +64,21 @@ Settings lists paired agents with their permission level and last use. Revoking 
 
 ## Tools
 
+Read tools, built in the spike:
+
 | Tool | Behavior |
 | --- | --- |
-| `search_items` | Query, type, collection, tag, limit. Returns IDs, titles, types, and excerpts using the library's existing search rules. |
-| `get_item` | One item as Markdown with its note, tags, collection, and source URL. Article and document text on request. Images only on request, in chunks. |
-| `list_collections`, `list_tags` | Names, IDs, and item counts. |
+| `search_items` | Query plus optional type, collection name, tag name, and `has_images`. Uses the library's own search rules, including text found inside images. Each result has its ID, title, excerpt, tags, collection, picture count, and a link to open it in Keepall. |
+| `get_item` | One item in full: note, caption, saved article or document text, text found in its images, palette, tags, and collection. Long text is cut at 30,000 characters and marked as cut. Shows up to 8 pictures per call, with `image_offset` to page through a gallery. |
+| `view_images` | The main picture of up to 12 items at once, for comparing references like a moodboard. Reports IDs that are missing or have no picture. |
+| `list_collections`, `list_tags` | Names and item counts. |
+
+Pictures are every image in a gallery, a link's cover, page preview, and screenshots, a video's poster frame, and a PDF's first page. The browser decodes each one and re-encodes it as WebP: up to 1,568 px on the long side for `get_item` and 1,092 px for `view_images`, and smaller again if it would exceed about 600 KB. Originals never leave the library. The MCP server returns each picture as image content with a caption naming its item, so the model sees it the way it sees a pasted screenshot. Answers larger than one relay frame travel as ordered chunks of 512 KiB and are reassembled by `@keepall/mcp`.
+
+Write tools, after the spike:
+
+| Tool | Behavior |
+| --- | --- |
 | `save_link`, `save_note` | Create or reuse items. New items land in Unsorted and record which agent created them. |
 | `organize` | Move items to a collection, add or remove tags. Returns a proposal first unless the agent has permission to apply changes directly. |
 | `trash_item` | Moves to Trash. The tools never delete permanently or empty Trash. |
@@ -145,7 +155,7 @@ Built on `spike/agent-relay`. Everything runs locally: the relay under `wrangler
 | Piece | Where |
 | --- | --- |
 | Shared protocol: pairing link, X25519 + HKDF pair key, per-connection AES-GCM sessions, library endpoint | `src/domain/agent-protocol.ts` |
-| `search_items` with the library's search rules | `src/domain/agent-tools.ts`, `src/persistence/agent-tools.ts` |
+| Read tools and picture resizing | `src/domain/agent-tools.ts`, `src/persistence/agent-tools.ts`, `src/persistence/agent-images.ts`, `packages/mcp/src/tools.ts` |
 | Pairings, stored only on this device and never in backups | `src/persistence/agent-pairings.ts` (database version 13) |
 | Library host, elected through a Web Lock, in the hidden bridge or an open tab | `src/app/extension-bridge/agent-host.ts`, `src/app/agent-host-runner.tsx` |
 | Approval page | `src/app/connect/` |
@@ -184,7 +194,7 @@ Load `extension/` unpacked and set its library address to `http://localhost:3000
 claude mcp add keepall -- node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /absolute/path/to/keepall/packages/mcp/src/cli.ts
 ```
 
-Ask Claude Code to search Keepall. The first call returns a pairing link. Open it in the same Chrome profile, choose **Allow search access**, and ask again.
+Ask Claude Code to search Keepall. The first call returns a pairing link. Open it in the same Chrome profile, choose **Allow read access**, and ask again.
 
 ## Slices after the spike
 

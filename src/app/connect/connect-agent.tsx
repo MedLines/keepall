@@ -120,7 +120,7 @@ export function ConnectAgent() {
           <>
             <h1 id="connect-title" className="mt-6 text-heading font-semibold text-text-primary">Connect {state.link.agentName} to Keepall?</h1>
             <p className="mt-3 text-sm leading-6 text-text-secondary">
-              {state.link.agentName} will be able to search this library and read the titles, notes, tags, and links of what you&apos;ve saved. It can&apos;t change or delete anything.
+              {state.link.agentName} will be able to search this library and read everything you&apos;ve saved, including notes, saved articles, documents, and images. Images are sent as resized copies. It can&apos;t change or delete anything.
             </p>
             <p className="mt-3 text-sm leading-6 text-text-secondary">
               Requests are encrypted between the agent and this browser. Keepall&apos;s relay passes them along without being able to read them.
@@ -128,7 +128,7 @@ export function ConnectAgent() {
             {state.step === "error" ? <p role="alert" className="mt-4 text-sm text-text-danger">{state.message}</p> : null}
             <div className="mt-6 flex flex-wrap gap-3">
               <Button variant="primary" disabled={state.step === "connecting"} onClick={() => void allow(state.link)}>
-                {state.step === "connecting" ? "Connecting…" : "Allow search access"}
+                {state.step === "connecting" ? "Connecting…" : "Allow read access"}
               </Button>
               <Button disabled={state.step === "connecting"} onClick={() => setState({ step: "cancelled" })}>Cancel</Button>
             </div>
