@@ -87,6 +87,8 @@ import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 const IMAGE_ACTION_BTN = captureStyles["file-add"];
 const CAPTURE_PREVIEW_CLASS = "flex min-h-0 max-h-36 shrink-0 flex-col rounded-input border border-border-control bg-bg-control";
 const FILE_PREVIEW_CLASS = "flex min-h-0 shrink-0 flex-col rounded-input border border-border-control bg-bg-control";
+/** Longest wait for a clipboard read before the drawer opens without a prefill. */
+export const CLIPBOARD_READ_TIMEOUT_MS = 700;
 
 /** Alt+K (Windows/Linux) and Option+K (macOS). Option is altKey; code stays KeyK even when Option remaps the character. */
 export function isCaptureOpenShortcut(event: KeyboardEvent): boolean {
@@ -310,9 +312,20 @@ export function CaptureHost() {
     }
 
     let cancelled = false;
+    let timeout: number | undefined;
     const generation = clipboardReadGenerationRef.current;
+    // navigator.clipboard.read can wait indefinitely for focus or a permission
+    // prompt, which would leave every control locked. Skip it without focus and
+    // give up after a short wait; a late result is ignored.
+    const read = document.hasFocus()
+      ? readClipboardImageAndText()
+      : Promise.reject(new Error("Document is not focused"));
+    const timedOut = new Promise<never>((_, reject) => {
+      timeout = window.setTimeout(() => reject(new Error("Clipboard read timed out")), CLIPBOARD_READ_TIMEOUT_MS);
+    });
 
-    void readClipboardImageAndText()
+    void Promise.race([read, timedOut])
+      .finally(() => window.clearTimeout(timeout))
       .then(clipboard => {
         if (cancelled || generation !== clipboardReadGenerationRef.current) {
           return;
@@ -328,6 +341,7 @@ export function CaptureHost() {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
     };
   }, [state.status]);
 

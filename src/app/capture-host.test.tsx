@@ -10,7 +10,7 @@ import { listTags } from "@/persistence/tags";
 import { getLibraryPreferences } from "@/persistence/library-preferences";
 import { importFiles } from "@/persistence/file-import";
 import { createDocument } from "@/persistence/documents";
-import { CaptureHost, isCaptureOpenShortcut } from "./capture-host";
+import { CLIPBOARD_READ_TIMEOUT_MS, CaptureHost, isCaptureOpenShortcut } from "./capture-host";
 import { enrichLinkPreview } from "./enrich-link-preview";
 import { readClipboardImageAndText } from "./read-clipboard-capture";
 import { prepareLocalVideo } from "./prepare-local-video";
@@ -145,6 +145,34 @@ describe("CaptureHost", () => {
     });
     vi.mocked(prepareLocalVideo).mockReset();
     vi.mocked(importFiles).mockReset();
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+  });
+
+  test("a clipboard read that never settles unlocks the drawer after the timeout and ignores a late result", async () => {
+    const clipboard = deferred<{ image: Blob | null; text: string }>();
+    vi.mocked(readClipboardImageAndText).mockReturnValue(clipboard.promise);
+    render(<CaptureHost />);
+    act(() => openCaptureDialog());
+    const input = await screen.findByLabelText("Link, note, or image");
+    expect(input).toBeDisabled();
+    await waitFor(() => expect(input).toBeEnabled(), { timeout: CLIPBOARD_READ_TIMEOUT_MS + 1000 });
+    expect(screen.getByRole("button", { name: "Add files" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+    await act(async () => clipboard.resolve({ image: null, text: "Late clipboard" }));
+    expect(input).toHaveValue("");
+    fireEvent.change(input, { target: { value: "Typed note" } });
+    expect(input).toHaveValue("Typed note");
+  });
+
+  test("skips the clipboard read when the page does not have focus", async () => {
+    vi.mocked(document.hasFocus).mockReturnValue(false);
+    vi.mocked(readClipboardImageAndText).mockResolvedValue({ image: null, text: "Clipboard note" });
+    render(<CaptureHost />);
+    act(() => openCaptureDialog());
+    const input = await screen.findByLabelText("Link, note, or image");
+    await waitFor(() => expect(input).toBeEnabled());
+    expect(readClipboardImageAndText).not.toHaveBeenCalled();
+    expect(input).toHaveValue("");
   });
 
   test("bulk import opens immediately while clipboard access is pending and ignores a late clipboard result", async () => {
