@@ -6,5 +6,7 @@
   // Free plan: SQLite-backed Durable Objects only.
   "durable_objects": { "bindings": [{ "name": "CHANNELS", "class_name": "Channel" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Channel"] }],
+  // Served at keepall-relay.<account>.workers.dev. `pnpm run deploy` limits browser connections to www.keepall.app.
+  "workers_dev": true,
   "observability": { "enabled": false }
 }

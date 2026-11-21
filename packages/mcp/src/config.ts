@@ -5,9 +5,9 @@ import { fromBase64Url, isChannelId, parseSetupCode, setupCodePairKey, toBase64U
 
 export type Pairing = { relayUrl: string; appOrigin: string; channelId: string; pairKey: Bytes };
 
-// Spike defaults point at local development. Production values come with the deployed relay.
-export const relayUrl = () => process.env.KEEPALL_RELAY_URL ?? "http://localhost:8787";
-export const appOrigin = () => process.env.KEEPALL_APP_ORIGIN ?? "http://localhost:3000";
+// The published build fills in the production defaults (see build.mjs); running from source uses local development.
+export const relayUrl = () => process.env.KEEPALL_RELAY_URL ?? process.env.KEEPALL_DEFAULT_RELAY_URL ?? "http://localhost:8787";
+export const appOrigin = () => process.env.KEEPALL_APP_ORIGIN ?? process.env.KEEPALL_DEFAULT_APP_ORIGIN ?? "http://localhost:3000";
 
 export function configPath() {
   if (process.env.KEEPALL_AGENT_CONFIG) return process.env.KEEPALL_AGENT_CONFIG;

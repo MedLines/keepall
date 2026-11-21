@@ -3,7 +3,14 @@
 // channel costs no duration. It sets no timers and never waits on the other side.
 import { DurableObject } from "cloudflare:workers";
 
-type Env = { CHANNELS: DurableObjectNamespace<Channel> };
+type Env = {
+  CHANNELS: DurableObjectNamespace<Channel>;
+  /**
+   * Comma-separated site origins allowed to connect from a browser, such as "https://www.keepall.app". Agents run
+   * outside browsers and send no Origin, so they're unaffected. Unset (local development) allows every origin.
+   */
+  ALLOWED_ORIGINS?: string;
+};
 type Role = "agent" | "library";
 type Attachment = { role: Role; connectionId?: string };
 
@@ -21,6 +28,10 @@ export default {
     if (!match) return new Response("Not found\n", { status: 404 });
     const role = url.searchParams.get("role");
     if (role !== "agent" && role !== "library") return new Response("Unknown role\n", { status: 400 });
+    const origin = request.headers.get("Origin");
+    const allowed = env.ALLOWED_ORIGINS?.split(",").map((value) => value.trim()).filter(Boolean);
+    // Checked before any Durable Object is touched, so other sites can't spend the relay's daily quota.
+    if (origin && allowed?.length && !allowed.includes(origin)) return new Response("Origin not allowed\n", { status: 403 });
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") return new Response("Expected a WebSocket\n", { status: 426 });
     return env.CHANNELS.get(env.CHANNELS.idFromName(match[1])).fetch(request);
   },

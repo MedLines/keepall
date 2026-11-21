@@ -27,7 +27,7 @@ export default function ExtensionPrivacyPage() {
           </Link>
           <p className="mt-7 text-xs font-medium uppercase tracking-eyebrow text-text-secondary">Keepall Capture</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-heading sm:text-4xl">Privacy</h1>
-          <p className="mt-3 text-sm text-text-secondary">Last updated October 8, 2026</p>
+          <p className="mt-3 text-sm text-text-secondary">Last updated November 21, 2026</p>
           <p className="mt-3 text-sm text-text-secondary">This page covers the Chrome extension. Read <Link className="font-medium text-text-primary underline underline-offset-2" href="/privacy">Keepall&apos;s app-wide privacy page</Link> for browser storage, network requests, and backups.</p>
 
           <div className="mt-8 space-y-6 text-sm leading-7 text-text-secondary">
@@ -49,6 +49,10 @@ export default function ExtensionPrivacyPage() {
               <p className="mt-2">The extension loads a Keepall page over HTTPS, or a configured localhost address over HTTP, to write to the same local library without opening a visible tab. This page request does not include your captured URL, note, or file bytes in its URL. Selecting local files or pasting an image transfers their contents within your browser rather than uploading them to a server. For a selected image, the extension requests its bytes directly from the image host; Chrome may ask you to allow access to that host. You can optionally grant access to all websites once in the extension&apos;s Options page to avoid repeated image-host prompts, and use the link there to manage or remove website access in Chrome. Keepall downloads an image only when you choose the right-click save action. The image host receives the request, and the bytes pass to the Keepall page in your browser for local storage. When you view saved links in Keepall, the app may send a saved link URL to Keepall&apos;s preview service to fetch a title, description, or image from the linked website. The preview service and linked website may receive that URL. Notes, collections, and tags are not sent with preview requests.</p>
               <p className="mt-2">Keepall is hosted on Vercel. Normal visits to Keepall may produce hosting logs, and Vercel Web Analytics records aggregate page-view information. The extension does not use saved library content for analytics or advertising.</p>
               <p className="mt-2">The app may load website icons from Google&apos;s favicon service, sending the saved link&apos;s hostname, or from the original website. Choosing to save or update an article in Keepall sends that link&apos;s URL to the server to request the public page and supported images. Your personal notes, collections, and tags are not included.</p>
+            </section>
+            <section>
+              <h2 className="text-lg font-semibold text-text-primary">AI agents you connect</h2>
+              <p className="mt-2">If you connect an AI agent in Keepall Settings, the extension keeps its hidden Keepall page loaded while Chrome runs so the agent can reach your library without an open tab. That Keepall page holds an end-to-end encrypted connection to Keepall&apos;s relay on Cloudflare and answers the agent from your local library. The extension itself never sees the requests or answers. When an agent suggests changes, the Keepall page tells the extension how many items wait for review and the agent&apos;s name, so the toolbar icon can show a count and a Review agent changes menu item. Read <Link className="font-medium text-text-primary underline underline-offset-2" href="/privacy#agents">AI agents you connect</Link> for what the relay and the agent receive.</p>
             </section>
             <section>
               <h2 className="text-lg font-semibold text-text-primary">Use, sharing, and control</h2>

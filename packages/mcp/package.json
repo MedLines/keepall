@@ -1,22 +1,48 @@
 {
   "name": "@keepall/mcp",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Connect coding agents to your Keepall library through an end-to-end encrypted relay.",
+  "version": "1.0.0",
+  "description": "Connect Claude Code, Codex, OpenCode, and other agents to your Keepall library over an end-to-end encrypted relay.",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "keepall-mcp": "src/cli.ts"
+    "keepall-mcp": "dist/keepall-mcp.js"
   },
   "engines": {
-    "node": ">=22.18"
+    "node": ">=22"
   },
   "scripts": {
+    "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test test/*.test.ts"
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test test/*.test.ts",
+    "prepublishOnly": "node build.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
+    "esbuild": "^0.28.2",
     "typescript": "^7.0.2"
+  },
+  "keywords": [
+    "keepall",
+    "mcp",
+    "model-context-protocol",
+    "claude-code",
+    "codex",
+    "opencode",
+    "bookmarks"
+  ],
+  "homepage": "https://www.keepall.app/settings#agents",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MedLines/keepall.git",
+    "directory": "packages/mcp"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

@@ -20,7 +20,7 @@ const hashSections: Record<string, Section> = {
   general: "general", "appearance-heading": "general", "network-heading": "general", "keyboard-shortcuts-heading": "general",
   storage: "storage", "storage-heading": "storage", "backup-heading": "storage", "import-heading": "storage",
   installation: "installation", "installation-heading": "installation",
-  agents: "agents", "agents-review-heading": "agents", "agents-changes-heading": "agents", "agents-connected-heading": "agents",
+  agents: "agents", "agents-review-heading": "agents", "agents-connect-heading": "agents", "agents-changes-heading": "agents", "agents-connected-heading": "agents",
 };
 
 function subscribeToSection(onChange: () => void) {

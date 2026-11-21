@@ -79,7 +79,9 @@ test("forwards frames with a connection prefix and routes replies to the right a
   first.socket.send(Uint8Array.of(2, 1, 1));
   second.socket.send(Uint8Array.of(2, 2, 2));
   await library.until(() => library.received.binary.length === 2);
-  const [fromFirst, fromSecond] = library.received.binary;
+  // The two agents' frames can arrive in either order.
+  const fromFirst = library.received.binary.find((frame) => frame[9] === 1)!;
+  const fromSecond = library.received.binary.find((frame) => frame[9] === 2)!;
   assert.deepEqual([...fromFirst.slice(8)], [2, 1, 1]);
   assert.deepEqual([...fromSecond.slice(8)], [2, 2, 2]);
 

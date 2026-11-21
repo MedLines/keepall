@@ -40,7 +40,9 @@ async function startRelay(state: string) {
 }
 
 function startMcp(relayUrl: string, configFile: string, extraEnv: Record<string, string> = {}) {
-  const child = spawn(process.execPath, ["--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", path.resolve("packages/mcp/src/cli.ts")], {
+  // KEEPALL_MCP_BIN runs these tests against the bundled package instead of the source.
+  const entry = process.env.KEEPALL_MCP_BIN ? path.resolve(process.env.KEEPALL_MCP_BIN) : path.resolve("packages/mcp/src/cli.ts");
+  const child = spawn(process.execPath, ["--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", entry], {
     env: { ...process.env, KEEPALL_RELAY_URL: relayUrl, KEEPALL_APP_ORIGIN: origin, KEEPALL_AGENT_CONFIG: configFile, ...extraEnv },
   }) as ChildProcessWithoutNullStreams;
   const waiting = new Map<number, (message: unknown) => void>();

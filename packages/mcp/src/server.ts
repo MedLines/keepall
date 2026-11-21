@@ -4,7 +4,8 @@ import { LibraryClient } from "./library-client.ts";
 import { startPairing, type PairingAttempt } from "./pair.ts";
 import { INSTRUCTIONS, toolContent, TOOLS } from "./tools.ts";
 
-const SERVER_VERSION = "0.0.0";
+// The published build fills in the package version (see build.mjs).
+const SERVER_VERSION = process.env.KEEPALL_PACKAGE_VERSION ?? "0.0.0";
 const PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 type JsonRpcMessage = { jsonrpc: "2.0"; id?: string | number | null; method?: string; params?: Record<string, unknown> };
 

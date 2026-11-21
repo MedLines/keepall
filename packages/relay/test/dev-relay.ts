@@ -17,11 +17,11 @@ function freePort() {
   });
 }
 
-export async function startDevRelay() {
+export async function startDevRelay(vars: Record<string, string> = {}) {
   const port = await freePort();
   const url = `http://127.0.0.1:${port}`;
   const state = await mkdtemp(path.join(tmpdir(), "keepall-relay-"));
-  const child = spawn("pnpm", ["exec", "wrangler", "dev", "--ip", "127.0.0.1", "--port", String(port), "--persist-to", state, "--inspector-port", String(await freePort()), "--show-interactive-dev-session=false"], {
+  const child = spawn("pnpm", ["exec", "wrangler", "dev", "--ip", "127.0.0.1", "--port", String(port), "--persist-to", state, "--inspector-port", String(await freePort()), "--show-interactive-dev-session=false", ...Object.entries(vars).flatMap(([key, value]) => ["--var", `${key}:${value}`])], {
     cwd: path.resolve(import.meta.dirname, ".."), stdio: "ignore", detached: true,
   });
   async function stop() {
