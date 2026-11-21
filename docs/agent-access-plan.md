@@ -147,7 +147,7 @@ Built on `spike/agent-relay`. Everything runs locally: the relay under `wrangler
 | Shared protocol: pairing link, X25519 + HKDF pair key, per-connection AES-GCM sessions, library endpoint | `src/domain/agent-protocol.ts` |
 | `search_items` with the library's search rules | `src/domain/agent-tools.ts`, `src/persistence/agent-tools.ts` |
 | Pairings, stored only on this device and never in backups | `src/persistence/agent-pairings.ts` (database version 13) |
-| Library host inside the hidden bridge | `src/app/extension-bridge/agent-host.ts` |
+| Library host, elected through a Web Lock, in the hidden bridge or an open tab | `src/app/extension-bridge/agent-host.ts`, `src/app/agent-host-runner.tsx` |
 | Approval page | `src/app/connect/` |
 | Relay Worker and Durable Object | `packages/relay/` |
 | Stdio MCP server and `pair`, `unpair`, `search` commands | `packages/mcp/` |
@@ -162,6 +162,8 @@ What the spike showed:
 - **WebCrypto X25519 works** in Node 24 and in the Chromium build Playwright ships. The minimum Chrome version for X25519 is still unchecked against the extension's `minimum_chrome_version` of 116.
 - **No new extension permissions.** The change adds `externally_connectable`, `runtime.onStartup`, and `runtime.onMessageExternal`. Confirm in the Chrome Web Store dashboard that it doesn't trigger a warning.
 - **The pairing link reaches browser history.** The page drops the fragment from the address bar after reading it, but the history entry is already written and may sync. The secret only matters until pairing completes. A short code shown by both the agent and the page would close that window.
+- **The extension isn't always there.** In the first hands-on test, pairing worked but the extension in Chrome wasn't loading the bridge, so searches never reached the library. Two changes came out of it. First, an open Keepall tab now answers agents too: the bridge and every tab ask for the same Web Lock, so one context per browser profile holds the relay connections, and the next one takes over when it closes. Second, `/connect` says when Keepall Capture didn't respond, and the agent's errors name the missing piece (relay, no connected browser, handshake, or slow answer) and the library address to check.
+- **Parallel calls before pairing now share one link**, and a retry on a connection that already knows the library is gone fails in about 3 seconds instead of waiting out the 30-second timeout.
 - **Retried requests can run twice.** When the library reconnects mid-request, the agent re-sends under the new session. That's harmless for search. Write tools need request IDs the library remembers.
 
 Not done in the spike: deploying the relay (needs a Cloudflare login), measuring real usage, publishing `@keepall/mcp` (it imports `src/domain` directly, so publishing needs a bundling step, and running from source prints a Node module-type warning), checking Codex and OpenCode, revoking pairings in Settings, and push.

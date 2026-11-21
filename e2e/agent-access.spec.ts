@@ -3,6 +3,7 @@
 import { test, expect, chromium, type Page } from "@playwright/test";
 import { spawn, type ChildProcess, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
+import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline";
@@ -13,10 +14,22 @@ const extensionPath = path.resolve("extension");
 
 type ToolResult = { result: { isError?: boolean; content: Array<{ text: string }> } };
 
+/** A port the OS just confirmed is free. */
+function freePort() {
+  return new Promise<number>((resolve, reject) => {
+    const server = createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address() as AddressInfo;
+      server.close(() => resolve(port));
+    });
+  });
+}
+
 async function startRelay(state: string) {
-  const relayPort = 8700 + Math.floor(Math.random() * 90);
+  const relayPort = await freePort();
   const url = `http://127.0.0.1:${relayPort}`;
-  const child = spawn("pnpm", ["exec", "wrangler", "dev", "--ip", "127.0.0.1", "--port", String(relayPort), "--persist-to", state, "--show-interactive-dev-session=false"], {
+  const child = spawn("pnpm", ["exec", "wrangler", "dev", "--ip", "127.0.0.1", "--port", String(relayPort), "--persist-to", state, "--inspector-port", String(await freePort()), "--show-interactive-dev-session=false"], {
     cwd: path.resolve("packages/relay"), stdio: "ignore", detached: true,
   });
   for (let attempt = 0; attempt < 120; attempt += 1) {
@@ -95,6 +108,7 @@ test("an agent pairs through /connect and searches the library through the exten
     await expect(page).toHaveURL(`${origin}/connect`);
     await page.getByRole("button", { name: "Allow search access" }).click();
     await expect(page.getByRole("heading", { name: "Claude Code is connected" })).toBeVisible();
+    await expect(page.getByText("Keepall Capture answers while Chrome is open")).toBeVisible();
     // The pair key stays in the library's own storage.
     expect(await worker.evaluate(() => chrome.storage.local.get(null))).toMatchObject({ agentHost: true });
 
@@ -107,6 +121,48 @@ test("an agent pairs through /connect and searches the library through the exten
     expect(found.result.content[0].text).toContain(`${origin}/items/masonry`);
     expect(found.result.content[0].text).toContain("\"layout\"");
     expect(found.result.content[0].text).not.toContain("Masonry draft in Trash");
+  } finally {
+    mcp?.child.stdin.end();
+    await context.close();
+    if (relay?.child.pid) process.kill(-relay.child.pid, "SIGTERM");
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test("without the extension, an open Keepall tab answers and closing it fails fast with a clear error", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const temp = await mkdtemp(path.join(tmpdir(), "keepall-agent-tab-"));
+  let relay: { url: string; child: ChildProcess } | undefined;
+  let mcp: ReturnType<typeof startMcp> | undefined;
+  const context = await browser.newContext({ serviceWorkers: "block" });
+  try {
+    relay = await startRelay(path.join(temp, "relay"));
+    const page = await context.newPage();
+    await page.context().setDefaultNavigationTimeout(60_000);
+    await seed(page);
+
+    mcp = startMcp(relay.url, path.join(temp, "agent.json"));
+    await mcp.request("initialize", { protocolVersion: "2025-06-18", clientInfo: { name: "Codex" }, capabilities: {} });
+    const [first, second] = await Promise.all([mcp.search("masonry"), mcp.search("layout")]);
+    const pattern = new RegExp(`${origin}/connect#\\S+`);
+    const link = pattern.exec(first.result.content[0].text)![0];
+    expect(pattern.exec(second.result.content[0].text)![0]).toBe(link);
+
+    await page.goto(link);
+    await page.getByRole("button", { name: "Allow search access" }).click();
+    await expect(page.getByRole("heading", { name: "Codex is connected" })).toBeVisible();
+    await expect(page.getByRole("status")).toContainText("Keepall Capture didn't respond");
+
+    await expect.poll(async () => (await mcp!.search("masonry")).result.content[0].text, { timeout: 30_000 }).toContain("Masonry virtualization notes");
+
+    await page.close();
+    const started = Date.now();
+    const offline = await mcp.search("masonry");
+    expect(offline.result.content[0].text).toContain(`no browser is connected to answer`);
+    expect(offline.result.content[0].text).toContain(origin);
+    const retry = await mcp.search("masonry");
+    expect(retry.result.content[0].text).toContain("no browser is connected to answer");
+    expect(Date.now() - started).toBeLessThan(15_000);
   } finally {
     mcp?.child.stdin.end();
     await context.close();

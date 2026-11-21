@@ -34,32 +34,33 @@ function text(value: string, isError = false) {
 export function runServer() {
   let pairing: Pairing | null | undefined;
   let client: LibraryClient | undefined;
-  let attempt: PairingAttempt | undefined;
+  // One pairing at a time. Parallel calls share it, so the user never sees competing links.
+  let attempt: Promise<PairingAttempt> | undefined;
   let agentName = "An agent";
 
   function send(message: Record<string, unknown>) {
     process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", ...message })}\n`);
   }
 
-  async function pairingLink() {
-    if (!attempt) {
-      attempt = await startPairing({ relayUrl: relayUrl(), appOrigin: appOrigin(), agentName });
-      attempt.done.then(async (result) => {
-        await savePairing(result);
-        pairing = result;
-      }).catch((error: unknown) => process.stderr.write(`keepall: ${error instanceof Error ? error.message : error}\n`)).finally(() => {
-        attempt = undefined;
-      });
-    }
-    return attempt.link;
+  function pairingAttempt() {
+    if (attempt) return attempt;
+    const current = startPairing({ relayUrl: relayUrl(), appOrigin: appOrigin(), agentName });
+    attempt = current;
+    current.then((started) => started.done).then(async (result) => {
+      await savePairing(result);
+      pairing = result;
+    }).catch((error: unknown) => process.stderr.write(`keepall: ${error instanceof Error ? error.message : error}\n`)).finally(() => {
+      if (attempt === current) attempt = undefined;
+    });
+    return current;
   }
 
   async function callTool(name: string, args: Record<string, unknown>) {
     if (!TOOLS.some((tool) => tool.name === name)) return text(`Unknown tool: ${name}`, true);
     pairing ??= await loadPairing();
     if (!pairing) {
-      const link = await pairingLink();
-      return text(`Keepall isn't connected to this agent yet. Ask the user to open this link in the Chrome profile that has their Keepall library and approve access, then call ${name} again:\n\n${link}`, true);
+      const { link } = await pairingAttempt();
+      return text(`Keepall isn't paired with this agent yet. Ask the user to open this link in the Chrome profile that has their Keepall library and choose Allow, then call ${name} again. Every call returns this same link until pairing finishes or the link expires after 10 minutes.\n\n${link}`, true);
     }
     client ??= new LibraryClient(pairing);
     try {
@@ -118,7 +119,7 @@ export function runServer() {
   });
   lines.on("close", () => {
     client?.close();
-    attempt?.cancel();
+    void attempt?.then((started) => started.cancel(), () => {});
     process.exit(0);
   });
 }

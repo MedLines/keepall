@@ -10,7 +10,7 @@ import { ITEMS_CHANGED_EVENT } from "../items-events";
 import { getCaptureCollections, moveCaptureToCollection, updateCaptureTag } from "@/persistence/extension-collections";
 import { saveExtensionSelection } from "@/persistence/extension-selection";
 import { undoExtensionCapture } from "@/persistence/extension-capture-undo";
-import { startAgentHost } from "./agent-host";
+import { hostAgents } from "./agent-host";
 
 const EXTENSION_ORIGINS = [
   "chrome-extension://flmcadkppebdjebeiiellmeldfbckppo",
@@ -255,7 +255,7 @@ export function ExtensionBridge() {
     }
 
     window.addEventListener("message", onMessage);
-    const stopAgentHost = startAgentHost();
+    const stopAgentHost = hostAgents();
     for (const origin of EXTENSION_ORIGINS) reply({ type: "ready", capabilities: ["file-transfer-v1", "link-screenshot-v1", "agent-host-v1"] }, origin);
     return () => { window.removeEventListener("message", onMessage); fileTransfer.dispose(); stopAgentHost(); };
   }, []);

@@ -6,9 +6,31 @@ import { runAgentTool } from "@/persistence/agent-tools";
 const RETRY_MIN_MS = 5_000;
 const RETRY_MAX_MS = 5 * 60_000;
 const TOUCH_INTERVAL_MS = 60_000;
+const HOST_LOCK = "keepall-agent-host";
 
 /**
- * Keeps one relay connection per paired agent while the bridge is loaded. The connection sends nothing while
+ * Hosts paired agents from whichever context gets the lock first: the extension's hidden bridge or an open
+ * Keepall tab. Only one context per browser profile holds the relay connections; when it goes away, the next
+ * one waiting takes over.
+ */
+export function hostAgents(): () => void {
+  if (typeof navigator.locks === "undefined") return startAgentHost();
+  const controller = new AbortController();
+  navigator.locks.request(HOST_LOCK, { signal: controller.signal }, () => new Promise<void>((release) => {
+    if (controller.signal.aborted) return release();
+    const stop = startAgentHost();
+    controller.signal.addEventListener("abort", () => {
+      stop();
+      release();
+    }, { once: true });
+  })).catch(() => {
+    // Aborted while waiting for the lock.
+  });
+  return () => controller.abort();
+}
+
+/**
+ * Keeps one relay connection per paired agent while it runs. The connection sends nothing while
  * idle, so the relay's Durable Object can hibernate. Frames are decrypted here, inside the app's origin; the
  * extension and the relay only ever carry ciphertext.
  */

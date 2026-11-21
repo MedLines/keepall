@@ -98,9 +98,14 @@ test("pairs through a link, then searches the library end to end", async () => {
   const tools = await server.request("tools/list");
   assert.deepEqual(tools.result.tools.map((tool) => tool.name), ["search_items"]);
 
-  const unpaired = await server.request("tools/call", { name: "search_items", arguments: { query: "masonry" } });
-  assert.equal(unpaired.result.isError, true);
-  const link = /http:\/\/localhost:3000\/connect#\S+/.exec(unpaired.result.content[0].text)![0];
+  // Parallel calls before pairing all get the same link.
+  const unpaired = await Promise.all(["masonry", "grid", "layout"].map((query) => server.request("tools/call", { name: "search_items", arguments: { query } })));
+  const links = unpaired.map((response) => {
+    assert.equal(response.result.isError, true);
+    return /http:\/\/localhost:3000\/connect#\S+/.exec(response.result.content[0].text)![0];
+  });
+  assert.equal(new Set(links).size, 1);
+  const [link] = links;
   assert.equal(parsePairingFragment(new URL(link).hash)!.agentName, "Claude Code");
 
   const { pairKey, channelId } = await approve(link);
@@ -129,7 +134,13 @@ test("pairs through a link, then searches the library end to end", async () => {
   library.close();
   const offline = await server.request("tools/call", { name: "search_items", arguments: { query: "anything" } });
   assert.equal(offline.result.isError, true);
-  assert.match(offline.result.content[0].text, /isn't reachable/);
+  assert.match(offline.result.content[0].text, /no browser is connected to answer.*set to http:\/\/localhost:3000/);
+
+  // A retry on the same, still-open connection fails just as fast instead of waiting out the timeout.
+  const started = Date.now();
+  const retry = await server.request("tools/call", { name: "search_items", arguments: { query: "anything" } });
+  assert.match(retry.result.content[0].text, /no browser is connected to answer/);
+  assert.ok(Date.now() - started < 10_000, `retry took ${Date.now() - started} ms`);
 
   // The library coming back starts a fresh session on the same agent connection.
   const again = await host(pairKey, channelId, calls);

@@ -11,25 +11,28 @@ import { LogoIcon } from "../shell-icons";
 
 const EXTENSION_IDS = ["flmcadkppebdjebeiiellmeldfbckppo", "ehloefgfecmfjbncknaoleakbnjhkpea"];
 const CONFIRM_TIMEOUT_MS = 20_000;
+const EXTENSION_REPLY_MS = 3_000;
 
 type State =
   | { step: "loading" }
   | { step: "invalid" | "cancelled" }
   | { step: "ready" | "connecting"; link: PairingLink }
-  | { step: "done"; link: PairingLink }
+  | { step: "done"; link: PairingLink; extension: boolean }
   | { step: "error"; link: PairingLink; message: string };
 
-declare const chrome: { runtime?: { sendMessage?(extensionId: string, message: unknown): Promise<unknown> } } | undefined;
+type ChromeRuntime = { sendMessage(extensionId: string, message: unknown): Promise<unknown> };
 
-/** Wakes Keepall Capture's hidden bridge so it starts answering right away. Best effort: the bridge also starts with Chrome. */
-function notifyExtension() {
-  for (const id of EXTENSION_IDS) {
-    try {
-      void chrome?.runtime?.sendMessage?.(id, { type: "agent-host" })?.catch(() => {});
-    } catch {
-      // Not installed, or this ID isn't the installed build.
-    }
-  }
+/**
+ * Asks Keepall Capture to load its hidden bridge, which answers agents without a tab open. Resolves true when an
+ * installed extension that points at this address agreed. Chrome only exposes `runtime` here when one is installed.
+ */
+async function notifyExtension(): Promise<boolean> {
+  const runtime = (globalThis as { chrome?: { runtime?: ChromeRuntime } }).chrome?.runtime;
+  if (!runtime?.sendMessage) return false;
+  const replies = EXTENSION_IDS.map((id) => runtime.sendMessage(id, { type: "agent-host" })
+    .then((reply) => (reply as { ok?: unknown } | undefined)?.ok === true, () => false));
+  const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), EXTENSION_REPLY_MS));
+  return Promise.race([Promise.all(replies).then((results) => results.includes(true)), timeout]);
 }
 
 /** Runs the library's half of pairing over the relay. Resolves once the agent proves it derived the same key. */
@@ -88,8 +91,7 @@ export function ConnectAgent() {
       const channel = new BroadcastChannel(AGENT_PAIRINGS_CHANNEL);
       channel.postMessage("changed");
       channel.close();
-      notifyExtension();
-      setState({ step: "done", link });
+      setState({ step: "done", link, extension: await notifyExtension() });
     } catch (error) {
       started.current = false;
       setState({ step: "error", link, message: error instanceof Error ? error.message : "Couldn't connect. Ask the agent for a new link." });
@@ -135,9 +137,20 @@ export function ConnectAgent() {
         {state.step === "done" ? (
           <>
             <h1 id="connect-title" className="mt-6 text-heading font-semibold text-text-primary">{state.link.agentName} is connected</h1>
-            <p className="mt-3 text-sm leading-6 text-text-secondary">
-              Go back to your agent and ask it to search Keepall. It answers while Chrome is open with Keepall Capture installed. You can close this tab.
-            </p>
+            {state.extension ? (
+              <p className="mt-3 text-sm leading-6 text-text-secondary">
+                Go back to {state.link.agentName} and ask it to search Keepall. Keepall Capture answers while Chrome is open, so you can close this tab.
+              </p>
+            ) : (
+              <>
+                <p className="mt-3 text-sm leading-6 text-text-secondary">
+                  Go back to {state.link.agentName} and ask it to search Keepall.
+                </p>
+                <p role="status" className="mt-3 text-sm leading-6 text-text-warning">
+                  Keepall Capture didn&apos;t respond, so {state.link.agentName} can reach this library only while a Keepall tab is open. Keep this tab open, or install Keepall Capture and set its library address to {location.origin} so it answers without a tab.
+                </p>
+              </>
+            )}
           </>
         ) : null}
       </section>

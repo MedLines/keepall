@@ -4,7 +4,12 @@ import {
 } from "../../../src/domain/agent-protocol.ts";
 import type { Pairing } from "./config.ts";
 
-export const OFFLINE_MESSAGE = "Keepall isn't reachable. Open Chrome with the Keepall extension, then try again.";
+/** Errors name the piece that's missing, since the agent relays them to the user. */
+export function offlineMessage(appOrigin: string) {
+  return `Paired with Keepall, but no browser is connected to answer. Keepall answers from Chrome through the Keepall Capture extension, or from an open Keepall tab. Check that the extension is installed, enabled, and set to ${appOrigin}, or open ${appOrigin} in Chrome, then try again.`;
+}
+const HANDSHAKE_TIMEOUT = "A browser is connected but didn't finish the encrypted handshake in time. Reload the Keepall tab or the Keepall Capture extension, then try again.";
+const ANSWER_TIMEOUT = "Your browser received the request but didn't answer in time. Try again. If it keeps happening, reload the Keepall tab or the Keepall Capture extension.";
 
 type Pending = { tool: string; args: Record<string, unknown>; resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout>; sent: boolean };
 
@@ -26,6 +31,8 @@ export class LibraryClient {
   private outbound: Promise<void> = Promise.resolve();
   private idleTimer: ReturnType<typeof setTimeout> | undefined;
   private offlineTimer: ReturnType<typeof setTimeout> | undefined;
+  /** What the relay last said about the library. Unknown until the relay's first control frame. */
+  private libraryPresent: boolean | undefined;
   private nextId = 0;
 
   constructor(pairing: Pairing, options: { idleMs?: number; timeoutMs?: number; offlineGraceMs?: number } = {}) {
@@ -40,8 +47,10 @@ export class LibraryClient {
     await this.connect();
     const id = String((this.nextId += 1));
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => this.settle(id, new Error("Keepall didn't answer in time. Check that Chrome is open, then try again.")), this.timeoutMs);
+      const timer = setTimeout(() => this.settle(id, new Error(this.session ? ANSWER_TIMEOUT : this.libraryPresent ? HANDSHAKE_TIMEOUT : offlineMessage(this.pairing.appOrigin))), this.timeoutMs);
       this.pending.set(id, { tool, args, resolve, reject, timer, sent: false });
+      // A reused connection may already know the library is gone. Fail as fast as a fresh one would.
+      if (this.libraryPresent === false) this.armOffline();
       this.flush();
     });
   }
@@ -63,7 +72,7 @@ export class LibraryClient {
       }, { once: true });
       socket.addEventListener("error", () => {
         this.connecting = undefined;
-        reject(new Error(`Could not reach the Keepall relay at ${this.pairing.relayUrl}.`));
+        reject(new Error(`Couldn't reach the Keepall relay at ${this.pairing.relayUrl}. This computer may be offline, or the relay is down.`));
       }, { once: true });
       socket.addEventListener("close", () => this.closed(socket));
       socket.addEventListener("message", (event) => {
@@ -79,15 +88,15 @@ export class LibraryClient {
       const control = parseRelayControl(data);
       if (control?.type !== "peer") return;
       this.session = undefined;
+      this.libraryPresent = control.present;
       clearTimeout(this.offlineTimer);
+      this.offlineTimer = undefined;
       if (control.present) {
         this.agentNonce = newSessionNonce();
         for (const request of this.pending.values()) request.sent = false;
         socket.send(helloFrame(this.agentNonce));
-      } else {
-        this.offlineTimer = setTimeout(() => {
-          for (const id of [...this.pending.keys()]) this.settle(id, new Error(OFFLINE_MESSAGE));
-        }, this.offlineGraceMs);
+      } else if (this.pending.size) {
+        this.armOffline();
       }
       return;
     }
@@ -103,6 +112,15 @@ export class LibraryClient {
     const response = await this.session.open(frame);
     if (!isAgentResponse(response)) return;
     this.settle(response.id, response.ok ? null : new Error(response.error), response.ok ? response.result : undefined);
+  }
+
+  /** Gives a library a moment to (re)connect before failing everything that's waiting. */
+  private armOffline() {
+    if (this.offlineTimer) return;
+    this.offlineTimer = setTimeout(() => {
+      this.offlineTimer = undefined;
+      for (const id of [...this.pending.keys()]) this.settle(id, new Error(offlineMessage(this.pairing.appOrigin)));
+    }, this.offlineGraceMs);
   }
 
   /** Sends every unsent request in call order. Sealing and sending share one chain so counters stay in order. */
@@ -136,7 +154,9 @@ export class LibraryClient {
     if (this.socket !== socket) return;
     this.socket = undefined;
     this.session = undefined;
+    this.libraryPresent = undefined;
     clearTimeout(this.offlineTimer);
+    this.offlineTimer = undefined;
     for (const id of [...this.pending.keys()]) this.settle(id, new Error("The connection to Keepall closed. Try again."));
     clearTimeout(this.idleTimer);
   }
