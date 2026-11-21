@@ -1,6 +1,6 @@
 // Shapes a planned proposal for people: changes grouped by what they do, with each item's effects, so a review
 // shows "Add tag dark ui to these 21 images" once, however many agent calls suggested it.
-import type { ChangeRequest, PlannedStep, StepEffect } from "./agent-changes";
+import type { ChangeRequest, PlannedStep, RecordChange, StepEffect } from "./agent-changes";
 import type { Item } from "./item";
 
 export type ReviewGroup = {
@@ -159,4 +159,85 @@ export function decisionRequests(item: Item, decision: ItemDecision, tagNames: R
   if (decision.note !== null) requests.push({ kind: "note", itemId: item.id, text: decision.note, replace: true });
   if (decision.trash) requests.push({ kind: "trash", itemIds: [item.id] });
   return requests.filter((request) => request.kind !== "tag" || request.add.length || request.remove.length);
+}
+
+export type ItemDigest = { item: Item; changes: string[] };
+/** A change described for people: one line per kind of effect, and each item with what happened to it. */
+export type ChangeDigest = { summary: string[]; items: ItemDigest[]; renames: string[] };
+type Names = { tags: ReadonlyMap<string, string>; collections: ReadonlyMap<string, string> };
+
+function itemChanges(before: Item | null, after: Item, names: Names): string[] {
+  if (!before) return ["Saved"];
+  if (after.deletedAt !== undefined && before.deletedAt === undefined) return ["Moved to Trash"];
+  const changes: string[] = [];
+  if (after.deletedAt === undefined && before.deletedAt !== undefined) changes.push("Restored");
+  if (after.collectionIds[0] !== before.collectionIds[0]) {
+    changes.push(after.collectionIds[0] ? `→ ${names.collections.get(after.collectionIds[0]) ?? "a collection"}` : "→ Unsorted");
+  }
+  for (const id of after.tagIds) if (!before.tagIds.includes(id)) changes.push(`+ ${names.tags.get(id) ?? "tag"}`);
+  for (const id of before.tagIds) if (!after.tagIds.includes(id)) changes.push(`− ${names.tags.get(id) ?? "tag"}`);
+  const note = (item: Item) => String((item as Record<string, unknown>)[item.type === "note" ? "content" : item.type === "image" ? "caption" : "noteContent"] ?? "");
+  if (note(after) !== note(before)) changes.push("Note");
+  return changes;
+}
+
+function plural(count: number, word: string) {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
+function listNames(values: readonly string[], limit = 3) {
+  const shown = values.slice(0, limit).map((value) => `“${value}”`).join(", ");
+  return values.length > limit ? `${shown} and ${values.length - limit} more` : shown;
+}
+
+/** Each touched item's first before-copy and last state, plus every tag and collection name the changes mention. */
+function collect(changes: ReadonlyArray<readonly RecordChange[]>, names: Names) {
+  const known = { tags: new Map(names.tags), collections: new Map(names.collections) };
+  const items = new Map<string, { before: Item | null; after: Item }>();
+  const renames: string[] = [];
+  for (const record of changes.flat()) {
+    if (record.table === "items") {
+      items.set(record.id, { before: items.has(record.id) ? items.get(record.id)!.before : record.before, after: record.after });
+      continue;
+    }
+    const row = record.after ?? record.before;
+    if (!row) continue;
+    (record.table === "tags" ? known.tags : known.collections).set(record.id, row.name);
+    if (record.table === "collections" && record.before && record.after && record.before.name !== record.after.name) {
+      renames.push(`Renamed “${record.before.name}” to “${record.after.name}”`);
+    }
+  }
+  return { known, items, renames };
+}
+
+function summarize(digests: readonly ItemDigest[], renames: readonly string[]) {
+  const count = (test: (change: string) => boolean) => digests.filter((entry) => entry.changes.some(test)).length;
+  const all = digests.flatMap((entry) => entry.changes);
+  const moves = new Map<string, number>();
+  for (const change of all) if (change.startsWith("→ ")) moves.set(change.slice(2), (moves.get(change.slice(2)) ?? 0) + 1);
+  const added = [...new Set(all.filter((change) => change.startsWith("+ ")).map((change) => change.slice(2)))];
+  const removed = [...new Set(all.filter((change) => change.startsWith("− ")).map((change) => change.slice(2)))];
+  const notes = count((change) => change === "Note");
+  const saved = count((change) => change === "Saved");
+  const trashed = count((change) => change === "Moved to Trash");
+  return [
+    ...[...moves].map(([where, total]) => `Moved ${plural(total, "item")} to ${where === "Unsorted" ? "Unsorted" : `“${where}”`}`),
+    added.length ? `Tagged ${plural(count((change) => change.startsWith("+ ")), "item")}: ${listNames(added)}` : "",
+    removed.length ? `Removed ${listNames(removed)} from ${plural(count((change) => change.startsWith("− ")), "item")}` : "",
+    notes ? `Added notes to ${plural(notes, "item")}` : "",
+    saved ? `Saved ${plural(saved, "new item")}` : "",
+    trashed ? `Moved ${plural(trashed, "item")} to Trash` : "",
+    ...renames,
+  ].filter(Boolean);
+}
+
+/**
+ * Describes one or more applied changes from their before-copies: what moved where, which tags were added, and
+ * so on, rather than the agent's request text. For several changes, each item counts once, from its first
+ * before-copy to its last state.
+ */
+export function digestChanges(changes: ReadonlyArray<readonly RecordChange[]>, names: Names): ChangeDigest {
+  const { known, items, renames } = collect(changes, names);
+  const digests = [...items.values()].map(({ before, after }) => ({ item: after, changes: itemChanges(before, after, known) })).filter((entry) => entry.changes.length);
+  return { summary: summarize(digests, renames), items: digests, renames };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planChanges, type LibraryState } from "./agent-changes";
-import { agentDisplayName, decisionRequests, effectLabel, effectsByItem, groupEffects, reviewSummary, suggestedDecision } from "./agent-review";
+import { agentDisplayName, decisionRequests, digestChanges, effectLabel, effectsByItem, groupEffects, reviewSummary, suggestedDecision } from "./agent-review";
 import type { Item } from "./item";
 
 const image = (id: string, extra: Partial<Item> = {}) =>
@@ -82,5 +82,21 @@ describe("item decisions", () => {
     const unchanged = decisionRequests(item, { collection: "Old", tags: ["KEEP"], note: null, trash: false }, names.tags);
     expect(planChanges({ items: [item], collections: [{ id: "c1", name: "Old", createdAt: 1, pinnedItemIds: [] }], tags: [{ id: "t2", name: "keep", createdAt: 1 }] },
       unchanged.map((request, index) => ({ id: `d${index}`, request })), { now: 5, newId: () => "n" }).records).toEqual([]);
+  });
+});
+
+describe("digestChanges", () => {
+  it("describes what happened to the items, not the request text, and merges a session", () => {
+    const before = image("p1", { tagIds: [] });
+    const first = planChanges({ items: [before, image("p2")], collections: [], tags: [] }, [
+      { id: "r1", request: { kind: "tag", itemIds: ["p1", "p2"], add: ["interviews", "career"], remove: [] } },
+    ], { now: 5, newId: () => `t${(counter += 1)}` });
+    const tagged = first.records.find((record) => record.id === "p1")!.after as Item;
+    const second = planChanges({ items: [tagged], collections: [], tags: first.records.filter((record) => record.table === "tags").map((record) => record.after as never) }, [
+      { id: "r2", request: { kind: "move", itemIds: ["p1"], collection: "Jobs" } },
+    ], { now: 6, newId: () => `c${(counter += 1)}` });
+    const digest = digestChanges([first.records, second.records], { tags: new Map(), collections: new Map() });
+    expect(digest.summary).toEqual(["Moved 1 item to “Jobs”", "Tagged 2 items: “interviews”, “career”"]);
+    expect(digest.items.find((entry) => entry.item.id === "p1")?.changes).toEqual(["→ Jobs", "+ interviews", "+ career"]);
   });
 });

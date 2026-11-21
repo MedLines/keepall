@@ -39,6 +39,9 @@ type Props = {
 
 export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpenItem, returnFocus, sharedOpening = false, review }: Props) {
   const popupRef = useRef<HTMLDivElement>(null);
+  // The finished-review screen has no item to morph from, so each dialog gets its own transition name; two can be
+  // mounted at once while one closes and the next opens.
+  const instance = useId().replace(/[^a-zA-Z0-9]/g, "");
   const openingFullItem = useRef(false);
   const title = item ? previewTitle(item) : "";
   const reviewing = review !== undefined;
@@ -52,7 +55,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
   }
   return <Dialog.Root open={item !== null || review !== undefined} onOpenChange={open => { if (!open) onClose(); }}>
     <Dialog.Portal>
-      <ItemPreviewTransition itemId={item?.id ?? "review-complete"} source>
+      <ItemPreviewTransition itemId={item?.id ?? `review-complete-${instance}`} source>
       <Dialog.Viewport className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4">
         <Dialog.Backdrop className="ui-backdrop fixed inset-0 z-0" />
         <Dialog.Popup ref={popupRef} finalFocus={() => openingFullItem.current ? false : returnFocus()} initialFocus={popupRef}
@@ -99,7 +102,8 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
             <div key={item.id} className={`${review ? "min-h-[min(6rem,15dvh)]" : "min-h-0"} flex-1 overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus`} tabIndex={0} role="region" aria-label="Preview content">
               <PreviewContent item={item} reviewing={reviewing} onGalleryStep={() => popupRef.current?.focus({ preventScroll: true })} />
             </div>
-            <div className="pointer-events-none absolute inset-x-4 bottom-4 flex justify-center">{progress}</div>
+            {/* In its own row, not over the content, so long text never runs under the counter. */}
+            <div className="flex shrink-0 justify-center px-4 pb-4">{progress}</div>
             </div>
             {review ? review.organization : null}
             <footer className={review ? "shrink-0" : "library-preview-footer shrink-0"}>

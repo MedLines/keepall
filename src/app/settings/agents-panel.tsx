@@ -5,22 +5,36 @@ import { Button, buttonClassName } from "@/components/ui/button";
 import { RadioCard } from "@/components/ui/radio-card";
 import type { AgentAccess } from "@/domain/agent-changes";
 import { agentDisplayName } from "@/domain/agent-review";
+import { itemListTitle, type Item } from "@/domain/item";
+import { cn } from "@/lib/utils";
+import { itemPageHref } from "../item-page-navigation";
+import { LibraryItemMedia } from "../library-item-media";
+import { NoteIcon } from "../shell-icons";
 import { headingClass, paragraphClass, sectionClass } from "./settings-sections";
 
 export type ProposalView = { id: string; agentName: string; createdAt: number; requests: Array<{ id: string; text: string }> };
-export type ChangeView = { id: string; agentName: string; createdAt: number; steps: string[]; undoneAt?: number; undoKept?: string[] };
+/** One item in an activity: what happened to it, and the change that did it. */
+export type ActivityItem = { item: Item; changes: string[]; entryId: string; undone: boolean; alone: boolean };
+/** Changes from one review or one agent call, shown together. */
+export type ActivityView = {
+  id: string; agentName: string; createdAt: number; summary: string[]; items: ActivityItem[];
+  /** Changes in this activity that can still be undone, newest first. */
+  undoable: string[];
+  undoneAt?: number; undoKept?: string[];
+};
 export type PairingView = { id: string; agentName: string; createdAt: number; lastUsedAt?: number; access: AgentAccess };
 
 export type AgentsPanelProps = {
   proposals: ProposalView[];
-  changes: ChangeView[];
+  activities: ActivityView[];
   pairings: PairingView[];
   /** The ID of the proposal, change, or pairing an action is running for. */
   busy: string | null;
   /** The last action's outcome, announced politely. */
   status: { text: string; details?: string[] } | null;
   now: number;
-  onUndo(changeId: string): void;
+  /** Undoes these changes, newest first; `key` names what's busy. */
+  onUndo(changeIds: readonly string[], key: string): void;
   onAccess(pairingId: string, access: AgentAccess): void;
   onDisconnect(pairingId: string): void;
 };
@@ -62,26 +76,80 @@ function Proposal({ proposal, now }: { proposal: ProposalView } & Pick<AgentsPan
   );
 }
 
-function Change({ change, busy, now, onUndo }: { change: ChangeView } & Pick<AgentsPanelProps, "busy" | "now" | "onUndo">) {
-  const shown = change.steps.slice(0, 3);
+const STRIP_LIMIT = 8;
+
+function ItemThumbnail({ item, className }: { item: Item; className?: string }) {
   return (
-    <li className="border-t border-border-control py-4 first:border-t-0 first:pt-0">
+    <div data-kind={item.type} className={cn("library-list-thumbnail media-squircle relative shrink-0 overflow-hidden bg-bg-reading", className)}>
+      {item.type === "note"
+        ? <span className="flex size-full items-center justify-center text-text-secondary"><NoteIcon className="size-5" /></span>
+        : <LibraryItemMedia item={item} compact sharedTransition={false} />}
+    </div>
+  );
+}
+
+function itemName(item: Item) {
+  if (item.type === "image") return item.caption.trim() || "Image";
+  return itemListTitle(item) || "Untitled";
+}
+
+/** Every item in an activity, with what happened to it and, where it was its own change, Undo. */
+function ActivityItems({ activity, undone, busy, onUndo }: { activity: ActivityView; undone: boolean } & Pick<AgentsPanelProps, "busy" | "onUndo">) {
+  return (
+    <details className="group mt-3">
+      <summary className={buttonClassName({ size: "none", className: "inline-flex min-h-9 cursor-pointer list-none px-3 text-xs font-medium" })}>
+        <span className="group-open:hidden">Show {activity.items.length === 1 ? "the item" : `all ${activity.items.length} items`}</span>
+        <span className="hidden group-open:inline">Hide items</span>
+      </summary>
+      <ul className="mt-3 divide-y divide-border-control">
+        {activity.items.map((entry) => (
+          <li key={entry.item.id} className={cn("flex items-center gap-3 py-2", entry.undone && "opacity-(--opacity-disabled)")}>
+            <ItemThumbnail item={entry.item} />
+            <div className="min-w-0 flex-1">
+              <Link href={itemPageHref(entry.item.id, "/")} className="block truncate text-sm font-medium text-text-primary underline-offset-2 hover:underline">{itemName(entry.item)}</Link>
+              <p className="truncate text-xs text-text-secondary">{entry.undone ? "Undone" : entry.changes.join(" · ")}</p>
+            </div>
+            {entry.alone && !entry.undone && !undone
+              ? <Button disabled={busy === entry.entryId} onClick={() => onUndo([entry.entryId], entry.entryId)}>{busy === entry.entryId ? "Undoing…" : "Undo"}</Button>
+              : null}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+/** One review's or call's changes: a plain summary, the items as thumbnails, and every item on request. */
+function Activity({ activity, busy, now, onUndo }: { activity: ActivityView } & Pick<AgentsPanelProps, "busy" | "now" | "onUndo">) {
+  const undone = !activity.undoable.length;
+  const shown = activity.items.slice(0, STRIP_LIMIT);
+  const headingId = `activity-${activity.id}`;
+  return (
+    <article aria-labelledby={headingId} className={cn("mt-4 rounded-panel border border-border-control p-4 sm:p-5", undone && "opacity-(--opacity-disabled)")}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-text-primary">{agentDisplayName(change.agentName)} <span className="font-normal text-text-secondary">· {ago(change.createdAt, now)}</span></p>
-          <ul className="mt-1 space-y-1 text-sm leading-6 text-text-secondary">
-            {shown.map((step, index) => <li key={index}>{step}</li>)}
-            {change.steps.length > shown.length ? <li>and {plural(change.steps.length - shown.length, "more change")}</li> : null}
-          </ul>
+          <h3 id={headingId} className="text-sm font-medium text-text-primary">
+            {agentDisplayName(activity.agentName)} <span className="font-normal text-text-secondary">· {ago(activity.createdAt, now)}</span>
+          </h3>
+          <ul className="mt-1 space-y-0.5 text-sm leading-6 text-text-primary">{activity.summary.map((line) => <li key={line}>{line}</li>)}</ul>
         </div>
-        {change.undoneAt
-          ? <p className="text-xs text-text-secondary">Undone {ago(change.undoneAt, now)}</p>
-          : <Button disabled={busy === change.id} onClick={() => onUndo(change.id)}>{busy === change.id ? "Undoing…" : "Undo"}</Button>}
+        {undone
+          ? <p className="text-xs text-text-secondary">{activity.undoneAt ? `Undone ${ago(activity.undoneAt, now)}` : "Undone"}</p>
+          : <Button disabled={busy === activity.id} onClick={() => onUndo(activity.undoable, activity.id)}>{busy === activity.id ? "Undoing…" : activity.undoable.length > 1 ? "Undo all" : "Undo"}</Button>}
       </div>
-      {change.undoKept?.length ? (
-        <ul className="mt-2 space-y-1 text-xs leading-5 text-text-warning">{change.undoKept.map((note, index) => <li key={index}>{note}</li>)}</ul>
+      {!undone && shown.length ? (
+        <ul className="mt-3 flex flex-wrap gap-2" aria-label="Items changed">
+          {shown.map(({ item }) => (
+            <li key={item.id}>
+              <Link href={itemPageHref(item.id, "/")} aria-label={itemName(item)} className="block rounded-control-lg focus-visible:outline focus-visible:outline-1 focus-visible:outline-border-focus"><ItemThumbnail item={item} /></Link>
+            </li>
+          ))}
+          {activity.items.length > shown.length ? <li className="library-list-thumbnail media-squircle flex items-center justify-center bg-bg-raised text-xs font-medium text-text-secondary">+{activity.items.length - shown.length}</li> : null}
+        </ul>
       ) : null}
-    </li>
+      {activity.undoKept?.length ? <ul className="mt-2 space-y-1 text-xs leading-5 text-text-warning">{activity.undoKept.map((note) => <li key={note}>{note}</li>)}</ul> : null}
+      {activity.items.length ? <ActivityItems activity={activity} undone={undone} busy={busy} onUndo={onUndo} /> : null}
+    </article>
   );
 }
 
@@ -112,7 +180,7 @@ function Pairing({ pairing, busy, now, onAccess, onDisconnect }: { pairing: Pair
 
 /** Settings → Agents: suggestions waiting for review, applied changes with undo, and connected agents. */
 export function AgentsPanel(props: AgentsPanelProps) {
-  const { proposals, changes, pairings, status } = props;
+  const { proposals, activities, pairings, status } = props;
   return (
     <>
       {status ? (
@@ -129,9 +197,9 @@ export function AgentsPanel(props: AgentsPanelProps) {
       <section className={sectionClass} aria-labelledby="agents-changes-heading">
         <h2 id="agents-changes-heading" className={headingClass}>Recent changes</h2>
         <p className={paragraphClass}>
-          {changes.length ? "Every change an agent made, newest first. Undo puts back the copy Keepall kept, and leaves anything you've edited since." : "Changes agents make will appear here, each with Undo."}
+          {activities.length ? "What agents changed, newest first. Undo puts back the copy Keepall kept, and leaves anything you've edited since." : "Changes agents make will appear here, each with Undo."}
         </p>
-        {changes.length ? <ul className="mt-5">{changes.map((change) => <Change key={change.id} change={change} {...props} />)}</ul> : null}
+        {activities.map((activity) => <Activity key={activity.id} activity={activity} {...props} />)}
       </section>
       <section className={sectionClass} aria-labelledby="agents-connected-heading">
         <h2 id="agents-connected-heading" className={headingClass}>Connected agents</h2>

@@ -111,7 +111,14 @@ Reviewing follows Unsorted review and uses the library's own parts:
   Each item you apply is its own change with a before-copy.
 - **From the library.** While suggestions wait, the library also offers **Review Claude Code's changes** where **Review Unsorted** sits, and it opens the same dialog over the library. `/?agent-review=1` opens it directly.
 
-Settings → Agents summarizes waiting proposals with **Review changes**. Agents can pass an optional `reason` with each write, which appears beside the change.
+Settings → Agents summarizes waiting proposals with **Review changes**. Its **Recent changes** list groups the journal the way changes happened: everything applied from one review is one card, and each call that applied directly is its own card. Each card shows:
+
+- **A plain summary** built from the before-copies, not the agent's request text, such as "Moved 3 items to “Design Inspiration”" or "Tagged 9 items: “dark ui”, “cards”, “fintech”".
+- **A strip of the items' thumbnails** in the library's list-thumbnail style.
+- **Undo** or **Undo all**.
+- **Show all items,** listing each item with what happened to it, and Undo for items applied on their own.
+
+Undone cards are dimmed and show when they were undone. Agents can pass an optional `reason` with each write, which appears beside the change.
 
 Suggestions remember a fingerprint of what they saw: each target item's collection, tags, note text and Trash state. Your later edits to those fields skip the suggestion with a reason. Background updates, such as a fetched link preview, don't.
 

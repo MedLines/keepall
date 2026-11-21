@@ -1,8 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { fn } from "storybook/test";
+import { expect, fn } from "storybook/test";
+import type { Item } from "@/domain/item";
 import { AgentsPanel } from "./agents-panel";
 
 const now = Date.UTC(2026, 10, 21, 15, 0);
+const link = (id: string, title: string, url: string) =>
+  ({ id, type: "link", title, url, noteContent: "", previewTitle: "", previewDescription: "", previewImageUrl: "", previewAssetId: null, previewStatus: "failed", tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 1 }) as unknown as Item;
+const note = (id: string, title: string, content: string) => ({ id, type: "note", title, content, tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 1 }) as unknown as Item;
 const minutes = (count: number) => now - count * 60_000;
 
 const meta = {
@@ -21,12 +25,19 @@ const meta = {
         { id: "r4", text: 'Move "Old landing page" to Trash' },
       ],
     }],
-    changes: [
-      { id: "c1", agentName: "Codex", createdAt: minutes(42), steps: ['Save link "Spacing systems" to "Reading", tagged "layout"'] },
+    activities: [
       {
-        id: "c2", agentName: "Claude Code", createdAt: minutes(180), undoneAt: minutes(170),
-        steps: ['Rename collection "Misc" to "Inbox"', 'Tags on "Hero ideas": add "hero"'],
-        undoKept: ['"Hero ideas" was changed again after the agent\'s edit, so it was left as it is'],
+        id: "review-1", agentName: "claude-code", createdAt: minutes(2), undoable: ["e2", "e1"],
+        summary: ["Moved 2 items to “Portfolio inspo”", "Tagged 3 items: “interviews”, “career”"],
+        items: [
+          { item: link("a", "Studio grid study", "https://studio.example/grid"), changes: ["→ Portfolio inspo", "+ interviews"], entryId: "e1", undone: false, alone: true },
+          { item: link("b", "Type scale notes", "https://type.example/scale"), changes: ["→ Portfolio inspo", "+ career"], entryId: "e2", undone: false, alone: true },
+          { item: note("c", "Palette ideas", "Warm neutrals"), changes: ["+ interviews"], entryId: "e2", undone: false, alone: false },
+        ],
+      },
+      {
+        id: "call-1", agentName: "codex", createdAt: minutes(180), undoable: [], undoneAt: minutes(170),
+        summary: ["Renamed “Misc” to “Inbox”"], items: [], undoKept: ['"Hero ideas" was changed again after the agent\'s edit, so it was left as it is'],
       },
     ],
     pairings: [
@@ -41,10 +52,17 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const WaitingForReview: Story = {};
+export const WaitingForReview: Story = {
+  play: async ({ canvas, args }) => {
+    await canvas.getByRole("button", { name: "Undo all" }).click();
+    await expect(args.onUndo).toHaveBeenCalledWith(["e2", "e1"], "review-1");
+    await canvas.getByText("Show all 3 items").click();
+    await expect(canvas.getByText("→ Portfolio inspo · + interviews")).toBeVisible();
+  },
+};
 
 export const AfterDisconnect: Story = {
   args: { status: { text: "Disconnected Codex. It can't reach this library any more. Its past changes stay listed with Undo." } },
 };
 
-export const Empty: Story = { args: { proposals: [], changes: [], pairings: [] } };
+export const Empty: Story = { args: { proposals: [], activities: [], pairings: [] } };
