@@ -2,6 +2,7 @@ import {
   DIRECT_CHANGE_LIMIT, parseChangeRequest, planChanges, planUndo, type AgentWriteTool, type ChangeRequest, type LibraryState, type PlannedStep,
   type RecordChange,
 } from "@/domain/agent-changes";
+import type { Item } from "@/domain/item";
 import { AgentToolError } from "@/domain/agent-tools";
 import { normalizeCollection } from "@/domain/collection";
 import { normalizeItem } from "@/domain/item";
@@ -13,8 +14,12 @@ import { getDb } from "./db";
 export const AGENT_CHANGES_CHANNEL = "keepall-agent-changes";
 const JOURNAL_LIMIT = 200;
 
-export type AgentProposalRequest = { id: string; tool: AgentWriteTool; request: ChangeRequest; text: string; seen: Record<string, number>; addedAt: number };
-export type AgentProposalResult = { applied: string[]; skipped: Array<{ text: string; reason: string }>; changeId?: string; backup: BackupOutcome };
+export type AgentProposalRequest = {
+  id: string; tool: AgentWriteTool; request: ChangeRequest; text: string; seen: Record<string, number>; addedAt: number;
+  /** The agent's one-line reason, shown to the reviewer. */
+  reason?: string;
+};
+export type AgentProposalResult = { applied: string[]; skipped: Array<{ text: string; reason: string }>; changeId?: string; backup: BackupOutcome; effects?: number };
 export type AgentProposal = {
   id: string;
   pairingId: string;
@@ -100,7 +105,7 @@ function targetIds(request: ChangeRequest): string[] {
  * Takes one write from an agent. Under "change", a small change applies at once with its before-copy; anything
  * larger, or anything from a "suggest" agent, joins that agent's open proposal for review. Request IDs make retries safe.
  */
-export async function submitAgentChange(pairing: AgentPairing, requestId: string, tool: AgentWriteTool, args: Record<string, unknown>): Promise<SubmitResult> {
+export async function submitAgentChange(pairing: AgentPairing, requestId: string, tool: AgentWriteTool, args: Record<string, unknown>, reason?: string): Promise<SubmitResult> {
   const access = pairingAccess(pairing);
   if (access === "read") {
     throw new AgentToolError("This agent has read-only access to Keepall. Ask the user to allow changes in Keepall: Settings, Agents, then try again.");
@@ -130,7 +135,7 @@ export async function submitAgentChange(pairing: AgentPairing, requestId: string
 
     const items = new Map(state.items.map((item) => [item.id, item]));
     const seen = Object.fromEntries(targetIds(request).flatMap((id) => (items.has(id) ? [[id, items.get(id)!.updatedAt]] : [])));
-    const entry: AgentProposalRequest = { id: requestId, tool, request, text: step.text, seen, addedAt: now };
+    const entry: AgentProposalRequest = { id: requestId, tool, request, text: step.text, seen, addedAt: now, ...(reason ? { reason } : {}) };
     const proposal: AgentProposal = open
       ? { ...open, requests: [...open.requests, entry], updatedAt: now }
       : { id: crypto.randomUUID(), pairingId: pairing.id, agentName: pairing.agentName, status: "open", requests: [entry], createdAt: now, updatedAt: now };
@@ -153,25 +158,52 @@ async function backUpFirst(): Promise<BackupOutcome> {
   }
 }
 
-/** Applies the chosen suggestions as one change, re-planned against the library as it is now. */
-export async function applyAgentProposal(proposalId: string, chosenIds: readonly string[]): Promise<AgentProposalResult> {
+export type ProposalPreview = {
+  proposal: AgentProposal;
+  steps: Array<PlannedStep & { reason?: string }>;
+  /** Every item the proposal touches as it is now, plus items it would create, keyed by ID. */
+  items: Record<string, Item>;
+};
+
+/** Plans a proposal against the library as it is now, without writing, so the reviewer sees exactly what applies. */
+export async function previewAgentProposal(proposalId: string): Promise<ProposalPreview | null> {
+  const db = getDb();
+  return db.transaction("r", [db.items, db.collections, db.tags, db.agentProposals], async () => {
+    const proposal = await db.agentProposals.get(proposalId);
+    if (!proposal) return null;
+    const state = await readState();
+    const plan = planChanges(state, proposal.requests.map(({ id, request, seen }) => ({ id, request, seen })), { now: Date.now(), newId: () => crypto.randomUUID() });
+    const current = new Map(state.items.map((item) => [item.id, item]));
+    const items: Record<string, Item> = {};
+    for (const step of plan.steps) {
+      for (const effect of step.effects) {
+        if (!("itemId" in effect)) continue;
+        const created = plan.records.find((record) => record.table === "items" && record.id === effect.itemId && !record.before);
+        const item = created?.after ?? current.get(effect.itemId);
+        if (item) items[effect.itemId] = item as Item;
+      }
+    }
+    const reasons = new Map(proposal.requests.map((entry) => [entry.id, entry.reason]));
+    return { proposal, steps: plan.steps.map((step) => ({ ...step, reason: reasons.get(step.id) })), items };
+  });
+}
+
+/** Applies a proposal as one change, re-planned against the library as it is now, leaving out unticked effects. */
+export async function applyAgentProposal(proposalId: string, excludedKeys: readonly string[] = []): Promise<AgentProposalResult> {
   const backup = await backUpFirst();
   const db = getDb();
   const result = await db.transaction("rw", agentTables(), async () => {
     const proposal = await db.agentProposals.get(proposalId);
     if (!proposal || proposal.status !== "open") throw new Error("These suggestions were already reviewed.");
-    const chosen = new Set(chosenIds);
     const now = Date.now();
-    const plan = planChanges(await readState(), proposal.requests.filter((entry) => chosen.has(entry.id)).map(({ id, request, seen }) => ({ id, request, seen })), {
-      now, newId: () => crypto.randomUUID(),
+    const plan = planChanges(await readState(), proposal.requests.map(({ id, request, seen }) => ({ id, request, seen })), {
+      now, newId: () => crypto.randomUUID(), excluded: new Set(excludedKeys),
     });
     const { applied } = summarize(plan.steps);
-    const skipped = [
-      ...proposal.requests.filter((entry) => !chosen.has(entry.id)).map((entry) => ({ text: entry.text, reason: "Not chosen" })),
-      ...plan.steps.filter((step) => step.status !== "planned" || step.notes.length).map((step) => ({
-        text: step.text, reason: step.notes.join("; ") || (step.status === "unchanged" ? "Already done" : "Skipped"),
-      })),
-    ];
+    const skipped = plan.steps.filter((step) => step.status !== "planned" || step.notes.length).map((step) => ({
+      text: step.text,
+      reason: step.status === "excluded" ? "Not chosen" : step.notes.join("; ") || (step.status === "unchanged" ? "Already done" : "Skipped"),
+    }));
     let changeId: string | undefined;
     if (plan.records.length) {
       changeId = crypto.randomUUID();
@@ -179,7 +211,7 @@ export async function applyAgentProposal(proposalId: string, chosenIds: readonly
       await db.agentChanges.add({ id: changeId, pairingId: proposal.pairingId, agentName: proposal.agentName, proposalId, createdAt: now, steps: applied, records: plan.records });
       await pruneJournal();
     }
-    const outcome: AgentProposalResult = { applied, skipped, changeId, backup };
+    const outcome: AgentProposalResult = { applied, skipped, changeId, backup, effects: plan.steps.reduce((total, step) => total + step.effects.length, 0) };
     await db.agentProposals.put({ ...proposal, status: "applied", decidedAt: now, updatedAt: now, result: outcome });
     return outcome;
   });

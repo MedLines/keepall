@@ -37,10 +37,33 @@ export type RecordChange =
   | { table: "collections"; id: string; before: Collection | null; after: Collection | null }
   | { table: "tags"; id: string; before: Tag | null; after: Tag | null };
 
-/** One suggested change as people and agents read it. */
-export type PlannedStep = { id: string; text: string; status: "planned" | "unchanged" | "skipped"; notes: string[]; itemIds: string[] };
+/**
+ * One concrete effect on one item (or collection), with a stable key. Reviewers untick effects by key, and the
+ * same key from two suggestions is the same effect, so a tag suggested twice shows and applies once.
+ */
+export type StepEffect =
+  | { kind: "collection"; key: string; itemId: string; to: string | null; isNew: boolean }
+  | { kind: "tag"; key: string; itemId: string; tag: string; op: "add" | "remove" }
+  | { kind: "note"; key: string; itemId: string; before: string; after: string }
+  | { kind: "trash"; key: string; itemId: string }
+  | { kind: "rename"; key: string; from: string; to: string }
+  | { kind: "create"; key: string; itemId: string };
+
+/** One suggested change as people and agents read it. "excluded" means the reviewer unticked all of it. */
+export type PlannedStep = {
+  id: string; text: string; status: "planned" | "unchanged" | "skipped" | "excluded"; notes: string[]; itemIds: string[]; effects: StepEffect[];
+};
 export type ChangePlan = { records: RecordChange[]; steps: PlannedStep[]; itemsAffected: number; created: { items: string[]; collections: string[]; tags: string[] } };
 export type PlanInput = { id: string; request: ChangeRequest; seen?: Record<string, number> };
+
+export const effectKeys = {
+  collection: (itemId: string) => `${itemId}#collection`,
+  tag: (itemId: string, op: "add" | "remove", name: string) => `${itemId}#tag:${op}:${normalizeTagName(name).toLowerCase()}`,
+  note: (itemId: string, stepId: string) => `${itemId}#note:${stepId}`,
+  trash: (itemId: string) => `${itemId}#trash`,
+  rename: (from: string) => `rename:${normalizeCollectionName(from).toLowerCase()}`,
+  create: (stepId: string) => `create:${stepId}`,
+};
 
 // Parsing. Agents vary: accept one ID or many, a tag or a list of tags, and "Unsorted" for no collection.
 
@@ -165,9 +188,10 @@ class ChangePlanner {
   private readonly collections: Map<string, Collection>;
   private readonly tags: Map<string, Tag>;
   private readonly records = new Map<string, RecordChange>();
+  private skippedByReviewer = 0;
   readonly created = { items: [] as string[], collections: [] as string[], tags: [] as string[] };
 
-  constructor(state: LibraryState, private readonly now: number, private readonly newId: () => string) {
+  constructor(state: LibraryState, private readonly now: number, private readonly newId: () => string, private readonly excluded: ReadonlySet<string>) {
     this.originalItems = new Map(state.items.map((item) => [item.id, item]));
     this.originalCollections = new Map(state.collections.map((collection) => [collection.id, collection]));
     this.items = new Map(this.originalItems);
@@ -177,12 +201,21 @@ class ChangePlanner {
 
   plan(inputs: readonly PlanInput[]): ChangePlan {
     const steps = inputs.map(({ id, request, seen }) => {
-      const step: PlannedStep = { id, text: "", status: "planned", notes: [], itemIds: [] };
+      const step: PlannedStep = { id, text: "", status: "planned", notes: [], itemIds: [], effects: [] };
+      this.skippedByReviewer = 0;
       this.apply(step, request, seen);
+      if (step.status !== "planned" && this.skippedByReviewer && !step.effects.length) step.status = "excluded";
       return step;
     });
     const records = [...this.records.values()];
     return { records, steps, itemsAffected: records.filter((change) => change.table === "items").length, created: this.created };
+  }
+
+  /** Whether the reviewer unticked this effect. Counts it, so an all-unticked step reads as excluded, not skipped. */
+  private unticked(key: string) {
+    if (!this.excluded.has(key)) return false;
+    this.skippedByReviewer += 1;
+    return true;
   }
 
   private apply(step: PlannedStep, request: ChangeRequest, seen: Record<string, number> | undefined) {
@@ -261,23 +294,34 @@ class ChangePlanner {
     return { found, notes };
   }
 
-  /** Puts a new or existing item into a collection and adds tags. Returns the item and what changed, in words. */
-  private organize(item: Item, collection: string | undefined, tagNames: readonly string[]) {
-    let next = item;
+  /**
+   * Puts an item into a collection and adds tags. For an item that already exists, each part is an effect the
+   * reviewer can untick; a new item is created whole.
+   */
+  private organize(step: PlannedStep, item: Item, collection: string | undefined, tagNames: readonly string[], existing: boolean) {
     const parts: string[] = [];
-    if (collection) {
-      const { collection: row, isNew } = this.ensureCollection(collection);
-      if (next.collectionIds[0] !== row.id) {
-        next = { ...next, collectionIds: [row.id], collectionAddedAt: this.now };
-        parts.push(`to ${quote(row.name)}${isNew ? " (new collection)" : ""}`);
-      }
+    let next = this.file(step, item, collection, existing, parts);
+    const added: string[] = [];
+    for (const name of tagNames) {
+      if (existing && this.unticked(effectKeys.tag(item.id, "add", name))) continue;
+      const tag = this.ensureTag(name);
+      if (next.tagIds.includes(tag.id)) continue;
+      next = { ...next, tagIds: [...next.tagIds, tag.id] };
+      added.push(tag.name);
+      if (existing) step.effects.push({ kind: "tag", key: effectKeys.tag(item.id, "add", tag.name), itemId: item.id, tag: tag.name, op: "add" });
     }
-    const tagIds = [...new Set([...next.tagIds, ...tagNames.map((name) => this.ensureTag(name).id)])];
-    if (tagIds.length !== next.tagIds.length) {
-      next = { ...next, tagIds };
-      parts.push(`tagged ${tagNames.map(quote).join(", ")}`);
-    }
+    if (added.length) parts.push(`tagged ${added.map(quote).join(", ")}`);
     return { item: next, parts };
+  }
+
+  /** The collection half of organize. */
+  private file(step: PlannedStep, item: Item, collection: string | undefined, existing: boolean, parts: string[]): Item {
+    if (!collection || (existing && this.unticked(effectKeys.collection(item.id)))) return item;
+    const { collection: row, isNew } = this.ensureCollection(collection);
+    if (item.collectionIds[0] === row.id) return item;
+    parts.push(`to ${quote(row.name)}${isNew ? " (new collection)" : ""}`);
+    if (existing) step.effects.push({ kind: "collection", key: effectKeys.collection(item.id), itemId: item.id, to: row.name, isNew });
+    return { ...item, collectionIds: [row.id], collectionAddedAt: this.now };
   }
 
   private settle(step: PlannedStep, changed: readonly Item[], targets: Targets) {
@@ -290,34 +334,47 @@ class ChangePlanner {
     const targets = this.targets(request.itemIds, seen);
     const existing = request.collection ? this.findCollection(request.collection) : undefined;
     // With no existing collection of that name, every item moves (Unsorted items included).
-    const moved = targets.found.filter((item) => (request.collection ? !existing || item.collectionIds[0] !== existing.id : item.collectionIds.length > 0));
-    let where = "Unsorted";
-    if (request.collection) {
-      // A collection is only created when something actually moves into it.
-      const destination = moved.length ? this.ensureCollection(request.collection) : { collection: existing, isNew: false };
-      where = `${quote(destination.collection?.name ?? request.collection)}${destination.isNew ? " (new collection)" : ""}`;
-      for (const item of moved) this.putItem(this.bump({ ...item, collectionIds: [destination.collection!.id], collectionAddedAt: this.now }));
-    } else {
-      for (const item of moved) this.putItem(this.bump({ ...item, collectionIds: [] }));
+    const moved = targets.found.filter((item) => (request.collection ? !existing || item.collectionIds[0] !== existing.id : item.collectionIds.length > 0))
+      .filter((item) => !this.unticked(effectKeys.collection(item.id)));
+    // A collection is only created when something actually moves into it.
+    const destination = request.collection && moved.length ? this.ensureCollection(request.collection) : { collection: existing, isNew: false };
+    const name = request.collection ? destination.collection?.name ?? request.collection : null;
+    for (const item of moved) {
+      this.putItem(this.bump({ ...item, ...(destination.collection ? { collectionIds: [destination.collection.id], collectionAddedAt: this.now } : { collectionIds: [] }) }));
+      step.effects.push({ kind: "collection", key: effectKeys.collection(item.id), itemId: item.id, to: name, isNew: destination.isNew });
     }
+    const where = name ? `${quote(name)}${destination.isNew ? " (new collection)" : ""}` : "Unsorted";
     step.text = `Move ${itemList(moved.length ? moved : targets.found)} to ${where}`;
     this.settle(step, moved, targets);
   }
 
   private tag(step: PlannedStep, request: Extract<ChangeRequest, { kind: "tag" }>, seen: Record<string, number> | undefined) {
     const targets = this.targets(request.itemIds, seen);
-    const removeIds = new Set(request.remove.flatMap((name) => this.findTags(name).map((tag) => tag.id)));
-    const addIds = targets.found.length ? request.add.map((name) => this.ensureTag(name).id) : [];
-    const changed: Item[] = [];
-    for (const item of targets.found) {
-      const next = [...new Set([...item.tagIds.filter((id) => !removeIds.has(id)), ...addIds])];
-      if (next.length === item.tagIds.length && next.every((id) => item.tagIds.includes(id))) continue;
-      this.putItem(this.bump({ ...item, tagIds: next }));
-      changed.push(item);
-    }
+    const changed = targets.found.filter((item) => this.retag(step, item, request));
     const parts = [request.add.length ? `add ${request.add.map(quote).join(", ")}` : "", request.remove.length ? `remove ${request.remove.map(quote).join(", ")}` : ""];
     step.text = `Tags on ${itemList(changed.length ? changed : targets.found)}: ${parts.filter(Boolean).join("; ")}`;
     this.settle(step, changed, targets);
+  }
+
+  /** Applies one tag request to one item, skipping unticked tags. Returns whether the item changed. */
+  private retag(step: PlannedStep, item: Item, request: Extract<ChangeRequest, { kind: "tag" }>) {
+    let tagIds = item.tagIds;
+    const removable = request.remove.flatMap((name) => this.findTags(name)).filter((tag) => tagIds.includes(tag.id));
+    for (const tag of removable) {
+      if (this.unticked(effectKeys.tag(item.id, "remove", tag.name))) continue;
+      tagIds = tagIds.filter((id) => id !== tag.id);
+      step.effects.push({ kind: "tag", key: effectKeys.tag(item.id, "remove", tag.name), itemId: item.id, tag: tag.name, op: "remove" });
+    }
+    for (const name of request.add) {
+      const [known] = this.findTags(name);
+      if ((known && tagIds.includes(known.id)) || this.unticked(effectKeys.tag(item.id, "add", name))) continue;
+      const tag = known ?? this.ensureTag(name);
+      tagIds = [...tagIds, tag.id];
+      step.effects.push({ kind: "tag", key: effectKeys.tag(item.id, "add", tag.name), itemId: item.id, tag: tag.name, op: "add" });
+    }
+    if (tagIds === item.tagIds) return false;
+    this.putItem(this.bump({ ...item, tagIds }));
+    return true;
   }
 
   private note(step: PlannedStep, request: Extract<ChangeRequest, { kind: "note" }>, seen: Record<string, number> | undefined) {
@@ -327,11 +384,15 @@ class ChangePlanner {
       this.settle(step, [], { found: [], notes: [item] });
       return;
     }
-    const current = itemNote(item).trim();
+    const before = itemNote(item);
+    const current = before.trim();
     const next = request.replace || !current ? request.text : `${current}\n\n${request.text}`;
     step.text = `${request.replace && current ? "Replace the note on" : "Add a note to"} ${quote(itemListTitle(item) || "Untitled")}: ${quote(request.text)}`;
-    const changed = next !== itemNote(item);
-    if (changed) this.putItem(this.bump({ ...item, [NOTE_FIELD[item.type]]: next } as Item));
+    const changed = next !== before && !this.unticked(effectKeys.note(item.id, step.id));
+    if (changed) {
+      this.putItem(this.bump({ ...item, [NOTE_FIELD[item.type]]: next } as Item));
+      step.effects.push({ kind: "note", key: effectKeys.note(item.id, step.id), itemId: item.id, before, after: next });
+    }
     this.settle(step, changed ? [item] : [], { found: [item], notes: [] });
   }
 
@@ -348,10 +409,13 @@ class ChangePlanner {
     } else if (clash && clash.id !== collection.id) {
       step.status = "skipped";
       step.notes.push(`A collection named ${quote(clash.name)} already exists. Move its items instead.`);
+    } else if (this.unticked(effectKeys.rename(collection.name))) {
+      step.status = "excluded";
     } else {
       const next = { ...collection, name: to };
       this.collections.set(next.id, next);
       this.record({ table: "collections", id: next.id, before: this.originalCollections.get(next.id) ?? null, after: next });
+      step.effects.push({ kind: "rename", key: effectKeys.rename(collection.name), from: collection.name, to });
     }
   }
 
@@ -368,20 +432,31 @@ class ChangePlanner {
       this.updateSavedLink(step, existing, request);
       return;
     }
+    step.text = `Save link ${quote(request.title || url)}`;
+    if (this.unticked(effectKeys.create(step.id))) {
+      step.status = "excluded";
+      return;
+    }
     const link = buildLink({ url, title: request.title, noteContent: request.note }, { id: this.newId(), now: this.now });
-    const organized = this.organize(link, request.collection, request.tags);
+    const organized = this.organize(step, link, request.collection, request.tags, false);
     this.putItem(organized.item);
     this.created.items.push(link.id);
     step.itemIds = [link.id];
-    step.text = `Save link ${quote(request.title || url)}${organized.parts.length ? ` ${organized.parts.join(", ")}` : ""}`;
+    step.effects.push({ kind: "create", key: effectKeys.create(step.id), itemId: link.id });
+    if (organized.parts.length) step.text += ` ${organized.parts.join(", ")}`;
   }
 
   /** Saving a link that's already in the library organizes the saved one instead of adding a duplicate. */
   private updateSavedLink(step: PlannedStep, existing: Item, request: Extract<ChangeRequest, { kind: "save_link" }>) {
-    const current = itemNote(existing).trim();
-    const withNote = request.note ? ({ ...existing, noteContent: current ? `${current}\n\n${request.note}` : request.note } as Item) : existing;
-    const organized = this.organize(withNote, request.collection, request.tags);
-    const changes = [...organized.parts.map((part) => `move it ${part}`), ...(request.note ? ["add the note"] : [])];
+    const before = itemNote(existing);
+    const current = before.trim();
+    let withNote = existing;
+    if (request.note && !this.unticked(effectKeys.note(existing.id, step.id))) {
+      withNote = { ...existing, noteContent: current ? `${current}\n\n${request.note}` : request.note } as Item;
+      step.effects.push({ kind: "note", key: effectKeys.note(existing.id, step.id), itemId: existing.id, before, after: itemNote(withNote) });
+    }
+    const organized = this.organize(step, withNote, request.collection, request.tags, true);
+    const changes = [...organized.parts.map((part) => `move it ${part}`), ...(withNote !== existing ? ["add the note"] : [])];
     step.text = `${quote(itemListTitle(existing))} is already saved${changes.length ? `: ${changes.join(", ")}` : ""}`;
     const changed = organized.item !== existing;
     if (changed) this.putItem(this.bump(organized.item));
@@ -390,24 +465,34 @@ class ChangePlanner {
 
   private saveNote(step: PlannedStep, request: Extract<ChangeRequest, { kind: "save_note" }>) {
     const note = buildNote({ content: request.text, title: request.title }, { id: this.newId(), now: this.now });
-    const organized = this.organize(note, request.collection, request.tags);
+    step.text = `Save note ${quote(itemListTitle(note) || "Untitled")}`;
+    if (this.unticked(effectKeys.create(step.id))) {
+      step.status = "excluded";
+      return;
+    }
+    const organized = this.organize(step, note, request.collection, request.tags, false);
     this.putItem(organized.item);
     this.created.items.push(note.id);
     step.itemIds = [note.id];
-    step.text = `Save note ${quote(itemListTitle(note) || "Untitled")}${organized.parts.length ? ` ${organized.parts.join(", ")}` : ""}`;
+    step.effects.push({ kind: "create", key: effectKeys.create(step.id), itemId: note.id });
+    if (organized.parts.length) step.text += ` ${organized.parts.join(", ")}`;
   }
 
   private trash(step: PlannedStep, request: Extract<ChangeRequest, { kind: "trash" }>, seen: Record<string, number> | undefined) {
     const targets = this.targets(request.itemIds, seen);
-    for (const item of targets.found) this.putItem({ ...this.bump(item), deletedAt: this.now });
-    step.text = `Move ${itemList(targets.found)} to Trash`;
-    this.settle(step, targets.found, targets);
+    const trashed = targets.found.filter((item) => !this.unticked(effectKeys.trash(item.id)));
+    for (const item of trashed) {
+      this.putItem({ ...this.bump(item), deletedAt: this.now });
+      step.effects.push({ kind: "trash", key: effectKeys.trash(item.id), itemId: item.id });
+    }
+    step.text = `Move ${itemList(trashed.length ? trashed : targets.found)} to Trash`;
+    this.settle(step, trashed, targets);
   }
 }
 
 /** Plans requests in order against the library, as one batch. Nothing is written. */
-export function planChanges(state: LibraryState, inputs: readonly PlanInput[], options: { now: number; newId(): string }): ChangePlan {
-  return new ChangePlanner(state, options.now, options.newId).plan(inputs);
+export function planChanges(state: LibraryState, inputs: readonly PlanInput[], options: { now: number; newId(): string; excluded?: ReadonlySet<string> }): ChangePlan {
+  return new ChangePlanner(state, options.now, options.newId, options.excluded ?? new Set()).plan(inputs);
 }
 
 // Undo.

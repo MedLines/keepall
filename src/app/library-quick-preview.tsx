@@ -33,7 +33,8 @@ type Props = {
   onOpenItem: (item: Item, animate?: boolean) => void;
   returnFocus: () => HTMLElement | null;
   sharedOpening?: boolean;
-  review?: { footer: ReactNode; organization: ReactNode; emptyState: ReactNode; progress: ReactNode; busy: boolean };
+  /** `label` and `description` name the review (Unsorted review by default). */
+  review?: { footer: ReactNode; organization: ReactNode; emptyState: ReactNode; progress: ReactNode; busy: boolean; label?: string; description?: string };
 };
 
 export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpenItem, returnFocus, sharedOpening = false, review }: Props) {
@@ -90,9 +91,9 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
               </span>
               <div className="min-w-0 flex-1">
                 <PreviewTitle key={title} title={title} />
-                <p className="mt-1 truncate text-xs text-text-secondary">{review ? "Unsorted review · " : ""}{item.type === "document" ? item.sourceFileName : item.type === "link" ? linkCardHost(item) : item.type === "image" ? `${item.assetIds.length} ${item.assetIds.length === 1 ? "image" : "images"}` : item.type === "video" ? "Local video" : item.format === "markdown" ? "Markdown" : "Plain text"}</p>
+                <p className="mt-1 truncate text-xs text-text-secondary">{review ? `${review.label ?? "Unsorted review"} · ` : ""}{item.type === "document" ? item.sourceFileName : item.type === "link" ? linkCardHost(item) : item.type === "image" ? `${item.assetIds.length} ${item.assetIds.length === 1 ? "image" : "images"}` : item.type === "video" ? "Local video" : item.format === "markdown" ? "Markdown" : "Plain text"}</p>
               </div>
-              <Dialog.Description className="sr-only">{review ? "Unsorted review. Left and right arrows browse items. Collection and tag controls open the shared picker. Next leaves the item in Unsorted. Escape closes review." : "Quick preview. Arrows browse items. Enter opens the full item."}</Dialog.Description>
+              <Dialog.Description className="sr-only">{review ? review.description ?? "Unsorted review. Left and right arrows browse items. Collection and tag controls open the shared picker. Next leaves the item in Unsorted. Escape closes review." : "Quick preview. Arrows browse items. Enter opens the full item."}</Dialog.Description>
               <Dialog.Close disabled={review?.busy} aria-label="Close preview" className={iconButtonClassName({ size: "lg" })}><CloseIcon /></Dialog.Close>
             </div>
             <div key={item.id} className={`${review ? "min-h-[min(6rem,15dvh)]" : "min-h-0"} flex-1 overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus`} tabIndex={0} role="region" aria-label="Preview content">

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { agentChangeStatus, applyAgentProposal, listAgentChanges, listOpenProposals, rejectAgentProposal, submitAgentChange, undoAgentChange } from "./agent-changes";
+import { agentChangeStatus, applyAgentProposal, listAgentChanges, listOpenProposals, previewAgentProposal, rejectAgentProposal, submitAgentChange, undoAgentChange } from "./agent-changes";
 import type { AgentPairing } from "./agent-pairings";
 import { createCollection, listCollections } from "./collections";
 import { deleteKeepallDatabase, getDb } from "./db";
@@ -45,8 +45,12 @@ describe("agent changes", () => {
     expect(await listCollections()).toEqual([]);
 
     const [proposal] = await listOpenProposals();
-    const result = await applyAgentProposal(proposal.id, ["s1"]);
-    expect(result).toMatchObject({ applied: ['Move "Note 0" and "Note 1" to "Ideas" (new collection)'], skipped: [{ reason: "Not chosen" }], backup: { status: "off" } });
+    const preview = await previewAgentProposal(proposal.id);
+    const noteKey = preview!.steps[1].effects[0].key;
+    expect(Object.keys(preview!.items).sort()).toEqual([items[0].id, items[1].id, items[2].id].sort());
+    const result = await applyAgentProposal(proposal.id, [noteKey, `${items[1].id}#collection`]);
+    expect(result).toMatchObject({ applied: ['Move "Note 0" to "Ideas" (new collection)'], skipped: [{ reason: "Not chosen" }], backup: { status: "off" } });
+    expect((await getItem(items[1].id))?.collectionIds).toEqual([]);
     expect((await listCollections()).map((collection) => collection.name)).toEqual(["Ideas"]);
     expect((await getItem(items[2].id))?.type === "note" && (await getItem(items[2].id))).toMatchObject({ content: "Body 2" });
     expect(await listOpenProposals()).toEqual([]);
@@ -61,7 +65,7 @@ describe("agent changes", () => {
     await submitAgentChange(pairing("suggest"), "s1", "move_to_trash", { item_id: note.id });
     await updateNote(note.id, { content: "Edited by me" });
     const [proposal] = await listOpenProposals();
-    const result = await applyAgentProposal(proposal.id, ["s1"]);
+    const result = await applyAgentProposal(proposal.id);
     expect(result.applied).toEqual([]);
     expect(result.skipped[0].reason).toContain("changed in Keepall after this was suggested");
     expect(await getItem(note.id)).not.toBeNull();

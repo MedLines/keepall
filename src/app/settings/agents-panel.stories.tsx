@@ -12,9 +12,8 @@ const meta = {
     now,
     busy: null,
     status: null,
-    backupFolder: true,
     proposals: [{
-      id: "proposal-1", agentName: "Claude Code", createdAt: minutes(4),
+      id: "proposal-1", agentName: "claude-code", createdAt: minutes(4),
       requests: [
         { id: "r1", text: 'Move "Studio grid study" and 6 more to "Portfolio inspo" (new collection)' },
         { id: "r2", text: 'Tags on "Dashboard sidebar" and 3 more: add "dashboards", "dark mode"' },
@@ -34,7 +33,7 @@ const meta = {
       { id: "p1", agentName: "Claude Code", createdAt: minutes(60 * 24 * 3), lastUsedAt: minutes(4), access: "suggest" },
       { id: "p2", agentName: "Codex", createdAt: minutes(60 * 30), lastUsedAt: minutes(42), access: "change" },
     ],
-    onApply: fn(), onDecline: fn(), onUndo: fn(), onAccess: fn(), onDisconnect: fn(),
+    onUndo: fn(), onAccess: fn(), onDisconnect: fn(),
   },
   decorators: [(Story) => <div className="grid max-w-3xl gap-4 bg-bg-canvas p-4"><Story /></div>],
 } satisfies Meta<typeof AgentsPanel>;
@@ -44,16 +43,8 @@ type Story = StoryObj<typeof meta>;
 
 export const WaitingForReview: Story = {};
 
-export const Applying: Story = { args: { busy: "proposal-1" } };
-
-export const AfterApply: Story = {
-  args: {
-    proposals: [],
-    status: {
-      text: "Saved a backup to your folder first. Applied 3 changes, skipped 1. Undo it under Recent changes.",
-      details: ['Move "Old landing page" to Trash: "Old landing page" changed in Keepall after this was suggested'],
-    },
-  },
+export const AfterDisconnect: Story = {
+  args: { status: { text: "Disconnected Codex. It can't reach this library any more. Its past changes stay listed with Undo." } },
 };
 
 export const Empty: Story = { args: { proposals: [], changes: [], pairings: [] } };

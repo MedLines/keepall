@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { RADIO_CARD_CLASS, RadioCard } from "@/components/ui/radio-card";
+import Link from "next/link";
+import { Button, buttonClassName } from "@/components/ui/button";
+import { RadioCard } from "@/components/ui/radio-card";
 import type { AgentAccess } from "@/domain/agent-changes";
+import { agentDisplayName } from "@/domain/agent-review";
 import { headingClass, paragraphClass, sectionClass } from "./settings-sections";
 
 export type ProposalView = { id: string; agentName: string; createdAt: number; requests: Array<{ id: string; text: string }> };
@@ -14,15 +15,11 @@ export type AgentsPanelProps = {
   proposals: ProposalView[];
   changes: ChangeView[];
   pairings: PairingView[];
-  /** A backup folder is connected, so applying writes a full backup first. */
-  backupFolder: boolean;
   /** The ID of the proposal, change, or pairing an action is running for. */
   busy: string | null;
   /** The last action's outcome, announced politely. */
   status: { text: string; details?: string[] } | null;
   now: number;
-  onApply(proposalId: string, chosen: string[]): void;
-  onDecline(proposalId: string): void;
   onUndo(changeId: string): void;
   onAccess(pairingId: string, access: AgentAccess): void;
   onDisconnect(pairingId: string): void;
@@ -48,44 +45,19 @@ function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
-function Proposal({ proposal, backupFolder, busy, now, onApply, onDecline }: { proposal: ProposalView } & Pick<AgentsPanelProps, "backupFolder" | "busy" | "now" | "onApply" | "onDecline">) {
-  const [unchecked, setUnchecked] = useState<ReadonlySet<string>>(new Set());
-  const chosen = proposal.requests.filter((request) => !unchecked.has(request.id)).map((request) => request.id);
-  const working = busy === proposal.id;
+/** A summary that leads to the full review, where every change shows the items it touches. */
+function Proposal({ proposal, now }: { proposal: ProposalView } & Pick<AgentsPanelProps, "now">) {
   const headingId = `proposal-${proposal.id}`;
+  const shown = proposal.requests.slice(0, 3);
   return (
     <article aria-labelledby={headingId} className="mt-5 rounded-panel border border-border-control p-4 sm:p-5">
-      <h3 id={headingId} className="text-base font-semibold text-text-primary">{proposal.agentName} suggests {plural(proposal.requests.length, "change")}</h3>
-      <p className="mt-1 text-xs text-text-secondary">Started {ago(proposal.createdAt, now)}. Untick anything you don&apos;t want.</p>
-      <fieldset className="mt-4 grid gap-2" disabled={working}>
-        <legend className="sr-only">Changes from {proposal.agentName}</legend>
-        {proposal.requests.map((request) => (
-          <label key={request.id} className={RADIO_CARD_CLASS}>
-            <input
-              type="checkbox"
-              className="mt-1"
-              checked={!unchecked.has(request.id)}
-              onChange={(event) => {
-                const next = new Set(unchecked);
-                if (event.target.checked) next.delete(request.id);
-                else next.add(request.id);
-                setUnchecked(next);
-              }}
-            />
-            <span className="leading-6 text-text-primary">{request.text}</span>
-          </label>
-        ))}
-      </fieldset>
-      <p className="mt-4 text-xs leading-5 text-text-secondary">
-        Keepall keeps a copy of everything these changes touch, so you can undo them under Recent changes.
-        {backupFolder ? " It also saves a full backup to your backup folder before applying." : ""}
-      </p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="primary" disabled={!chosen.length || working} onClick={() => onApply(proposal.id, chosen)}>
-          {working ? "Applying…" : chosen.length === proposal.requests.length ? `Apply ${plural(chosen.length, "change")}` : `Apply ${chosen.length} of ${proposal.requests.length}`}
-        </Button>
-        <Button disabled={working} onClick={() => onDecline(proposal.id)}>Decline all</Button>
-      </div>
+      <h3 id={headingId} className="text-base font-semibold text-text-primary">{agentDisplayName(proposal.agentName)} suggests {plural(proposal.requests.length, "change")}</h3>
+      <p className="mt-1 text-xs text-text-secondary">Started {ago(proposal.createdAt, now)}.</p>
+      <ul className="mt-3 space-y-1 text-sm leading-6 text-text-secondary">
+        {shown.map((request) => <li key={request.id} className="truncate">{request.text}</li>)}
+        {proposal.requests.length > shown.length ? <li>and {plural(proposal.requests.length - shown.length, "more")}</li> : null}
+      </ul>
+      <Link href={`/review?proposal=${encodeURIComponent(proposal.id)}`} className={buttonClassName({ variant: "primary", className: "mt-4" })}>Review changes</Link>
     </article>
   );
 }
@@ -96,7 +68,7 @@ function Change({ change, busy, now, onUndo }: { change: ChangeView } & Pick<Age
     <li className="border-t border-border-control py-4 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-text-primary">{change.agentName} <span className="font-normal text-text-secondary">· {ago(change.createdAt, now)}</span></p>
+          <p className="text-sm font-medium text-text-primary">{agentDisplayName(change.agentName)} <span className="font-normal text-text-secondary">· {ago(change.createdAt, now)}</span></p>
           <ul className="mt-1 space-y-1 text-sm leading-6 text-text-secondary">
             {shown.map((step, index) => <li key={index}>{step}</li>)}
             {change.steps.length > shown.length ? <li>and {plural(change.steps.length - shown.length, "more change")}</li> : null}
@@ -119,7 +91,7 @@ function Pairing({ pairing, busy, now, onAccess, onDisconnect }: { pairing: Pair
     <article aria-labelledby={headingId} className="mt-5 rounded-panel border border-border-control p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 id={headingId} className="text-base font-semibold text-text-primary">{pairing.agentName}</h3>
+          <h3 id={headingId} className="text-base font-semibold text-text-primary">{agentDisplayName(pairing.agentName)}</h3>
           <p className="mt-1 text-xs text-text-secondary">
             Connected {ago(pairing.createdAt, now)}{pairing.lastUsedAt ? `, last used ${ago(pairing.lastUsedAt, now)}` : ""}
           </p>
@@ -127,7 +99,7 @@ function Pairing({ pairing, busy, now, onAccess, onDisconnect }: { pairing: Pair
         <Button variant="danger-ghost" disabled={busy === pairing.id} onClick={() => onDisconnect(pairing.id)}>Disconnect</Button>
       </div>
       <fieldset className="mt-4 grid gap-2" disabled={busy === pairing.id}>
-        <legend className="mb-2 text-sm font-medium text-text-primary">What {pairing.agentName} can do</legend>
+        <legend className="mb-2 text-sm font-medium text-text-primary">What {agentDisplayName(pairing.agentName)} can do</legend>
         {ACCESS_CHOICES.map((choice) => (
           <RadioCard key={choice.value} name={`access-${pairing.id}`} value={choice.value} checked={pairing.access === choice.value} onChange={() => onAccess(pairing.id, choice.value)}>
             <span><span className="block font-medium text-text-primary">{choice.label}</span><span className="mt-0.5 block text-text-secondary">{choice.description}</span></span>
@@ -151,7 +123,7 @@ export function AgentsPanel(props: AgentsPanelProps) {
       ) : null}
       <section className={sectionClass} aria-labelledby="agents-review-heading">
         <h2 id="agents-review-heading" className={headingClass}>Waiting for your review</h2>
-        <p className={paragraphClass}>{proposals.length ? "Changes agents suggested for your library. Nothing changes until you apply it." : "Nothing to review. When an agent suggests changes, they appear here."}</p>
+        <p className={paragraphClass}>{proposals.length ? "Changes agents suggested for your library. Nothing changes until you review and apply them." : "Nothing to review. When an agent suggests changes, they appear here."}</p>
         {proposals.map((proposal) => <Proposal key={proposal.id} proposal={proposal} {...props} />)}
       </section>
       <section className={sectionClass} aria-labelledby="agents-changes-heading">

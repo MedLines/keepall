@@ -3,22 +3,21 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AgentAccess } from "@/domain/agent-changes";
 import {
-  AGENT_CHANGES_CHANNEL, applyAgentProposal, listAgentChanges, listOpenProposals, rejectAgentProposal, undoAgentChange,
+  AGENT_CHANGES_CHANNEL, listAgentChanges, listOpenProposals, rejectAgentProposal, undoAgentChange,
 } from "@/persistence/agent-changes";
 import { AGENT_PAIRINGS_CHANNEL, deleteAgentPairing, listAgentPairings, pairingAccess, setAgentPairingAccess } from "@/persistence/agent-pairings";
-import { getBackupFolderSettings } from "@/persistence/backup-settings";
+import { agentDisplayName } from "@/domain/agent-review";
 import { AgentsPanel, type AgentsPanelProps } from "./agents-panel";
 
-type Data = Pick<AgentsPanelProps, "proposals" | "changes" | "pairings" | "backupFolder">;
-const EMPTY: Data = { proposals: [], changes: [], pairings: [], backupFolder: false };
+type Data = Pick<AgentsPanelProps, "proposals" | "changes" | "pairings">;
+const EMPTY: Data = { proposals: [], changes: [], pairings: [] };
 
 async function load(): Promise<Data> {
-  const [proposals, changes, pairings, backup] = await Promise.all([listOpenProposals(), listAgentChanges(), listAgentPairings(), getBackupFolderSettings().catch(() => null)]);
+  const [proposals, changes, pairings] = await Promise.all([listOpenProposals(), listAgentChanges(), listAgentPairings()]);
   return {
     proposals: proposals.map(({ id, agentName, createdAt, requests }) => ({ id, agentName, createdAt, requests: requests.map(({ id: requestId, text }) => ({ id: requestId, text })) })),
     changes: changes.map(({ id, agentName, createdAt, steps, undoneAt, undoKept }) => ({ id, agentName, createdAt, steps, undoneAt, undoKept })),
     pairings: pairings.map((pairing) => ({ id: pairing.id, agentName: pairing.agentName, createdAt: pairing.createdAt, lastUsedAt: pairing.lastUsedAt, access: pairingAccess(pairing) })),
-    backupFolder: !!backup?.enabled,
   };
 }
 
@@ -70,19 +69,6 @@ export function AgentsSettings() {
       busy={busy}
       status={status}
       now={now}
-      onApply={(proposalId, chosen) => void run(proposalId, async () => {
-        const result = await applyAgentProposal(proposalId, chosen);
-        const backup = result.backup.status === "saved" ? "Saved a backup to your folder first. " : result.backup.status === "failed" ? `The folder backup failed (${result.backup.message}), but Keepall kept a copy of everything it changed. ` : "";
-        const skipped = result.skipped.filter((entry) => entry.reason !== "Not chosen");
-        return {
-          text: `${backup}Applied ${result.applied.length} change${result.applied.length === 1 ? "" : "s"}${skipped.length ? `, skipped ${skipped.length}` : ""}. Undo it under Recent changes.`,
-          details: skipped.map((entry) => `${entry.text}: ${entry.reason}`),
-        };
-      })}
-      onDecline={(proposalId) => void run(proposalId, async () => {
-        await rejectAgentProposal(proposalId);
-        return { text: "Declined. Nothing changed." };
-      })}
       onUndo={(changeId) => void run(changeId, async () => {
         const result = await undoAgentChange(changeId);
         return { text: result.kept.length ? "Undone, except where you'd made changes since." : "Undone.", details: result.kept };
@@ -102,7 +88,7 @@ export function AgentsSettings() {
           if (proposal.pairingId === pairingId) await rejectAgentProposal(proposal.id);
         }
         announcePairings();
-        return { text: `Disconnected ${name}. It can't reach this library any more. Its past changes stay listed with Undo.` };
+        return { text: `Disconnected ${agentDisplayName(name)}. It can't reach this library any more. Its past changes stay listed with Undo.` };
       })}
     />
   );

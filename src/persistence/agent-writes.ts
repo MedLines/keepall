@@ -7,7 +7,12 @@ import { getDb } from "./db";
 export type AgentCallContext = { appOrigin: string; pairingId: string; requestId: string };
 
 function reviewUrl(appOrigin: string) {
-  return new URL("/settings#agents", appOrigin).href;
+  return new URL("/review", appOrigin).href;
+}
+
+function reason(args: Record<string, unknown>) {
+  if (typeof args.reason !== "string" || !args.reason.trim()) return undefined;
+  return args.reason.trim().slice(0, 300);
 }
 
 const ACCESS_WORDS: Record<AgentAccess, string> = {
@@ -88,5 +93,5 @@ export async function runAgentWriteTool(tool: string, args: Record<string, unkno
   if (tool === "undo_change") return undoChange(args, context);
   if (!isAgentWriteTool(tool)) return undefined;
   const pairing = await requirePairing(context.pairingId);
-  return describe(await submitAgentChange(pairing, context.requestId, tool, args), context.appOrigin);
+  return describe(await submitAgentChange(pairing, context.requestId, tool, args, reason(args)), context.appOrigin);
 }

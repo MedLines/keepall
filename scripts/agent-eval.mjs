@@ -176,13 +176,14 @@ try {
   if (options.access === "suggest") {
     console.log(`Suggested ${open?.requests.length ?? 0} changes:`);
     for (const request of open?.requests ?? []) console.log(`  - ${request.text}`);
-    const mentionsReview = agent.text.includes(`${options.origin}/settings#agents`);
+    const mentionsReview = agent.text.includes(`${options.origin}/review`);
     console.log(`${mentionsReview ? "PASS" : "FAIL"}  The agent gave the user the review link`);
     if (open) {
-      await page.goto(`${options.origin}/settings#agents`);
-      await page.getByRole("button", { name: /^Apply/ }).first().click();
-      await page.getByRole("status").waitFor();
-      console.log(`\n${await page.getByRole("status").innerText()}\n`);
+      await page.goto(`${options.origin}/review`);
+      await page.getByRole("button", { name: /^Apply/ }).click();
+      const outcome = page.getByRole("heading", { name: /^Applied/ });
+      await outcome.waitFor();
+      console.log(`\n${await outcome.innerText()}\n`);
     }
   }
   const result = score(await readLibrary(page));

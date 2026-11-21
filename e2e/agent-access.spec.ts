@@ -279,7 +279,7 @@ test("an agent suggests changes, the user applies some in Settings, and undo put
 
     // Three suggestions, sent the way a simple agent might: one ID as a string, tags as one string.
     const moved = json(await mcp.call("move_to_collection", { item_ids: ["gallery", "site"], collection: "Moodboard" }));
-    expect(moved).toMatchObject({ status: "waiting_for_review", suggestions_waiting: 1, review_url: `${origin}/settings#agents` });
+    expect(moved).toMatchObject({ status: "waiting_for_review", suggestions_waiting: 1, review_url: `${origin}/review` });
     expect(moved.what_to_do_next).toContain("Review them here");
     json(await mcp.call("tag_items", { item_id: "masonry", tags: "layout, ideas" }));
     const noted = json(await mcp.call("add_note", { item_id: "masonry", text: "Check the off-screen measuring" }));
@@ -287,13 +287,23 @@ test("an agent suggests changes, the user applies some in Settings, and undo put
     expect(json(await mcp.call("check_changes", {})).waiting_for_review.suggestions).toHaveLength(3);
     expect((await readItems(page)).gallery.collection).toBe("Portfolio inspo");
 
+    // Settings summarizes the waiting suggestions and leads to the visual review.
     await page.goto(`${origin}/settings#agents`);
-    const review = page.getByRole("article", { name: "Codex suggests 3 changes" });
-    await expect(review).toBeVisible();
-    await review.getByRole("checkbox", { name: /Add a note to/ }).uncheck();
-    await review.getByRole("button", { name: "Apply 2 of 3" }).click();
-    await expect(page.getByRole("status")).toContainText("Applied 2 changes");
-    await expect(page.getByText("Nothing to review.")).toBeVisible();
+    const summary = page.getByRole("article", { name: "Codex suggests 3 changes" });
+    await expect(summary).toBeVisible();
+    await summary.getByRole("link", { name: "Review changes" }).click();
+    await expect(page.getByRole("heading", { name: "Review Codex's changes" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Move to “Moodboard” (new collection)" })).toBeVisible();
+
+    // A plain click looks at the item in place; its changes can be unticked there.
+    await page.getByRole("link", { name: "Look at “Masonry virtualization notes”" }).first().click();
+    const look = page.getByRole("dialog");
+    await expect(look.getByText("Codex's changes", { exact: false })).toBeVisible();
+    await look.getByRole("checkbox", { name: "Note" }).uncheck();
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("3 of 4 changes included")).toBeVisible();
+    await page.getByRole("button", { name: "Apply 3 changes" }).click();
+    await expect(page.getByRole("heading", { name: "Applied 3 changes" })).toBeVisible();
     let items = await readItems(page);
     expect(items.gallery.collection).toBe("Moodboard");
     expect(items.site.collection).toBe("Moodboard");
@@ -308,6 +318,7 @@ test("an agent suggests changes, the user applies some in Settings, and undo put
     items = await readItems(page);
     expect(items.gallery.collection).toBe("Portfolio inspo");
     expect(items.masonry.tags).toBe(1);
+    await page.goto(`${origin}/settings#agents`);
     await expect(page.getByText(/^Undone/)).toBeVisible();
 
     // Switching to "Make changes" lets small changes apply at once.

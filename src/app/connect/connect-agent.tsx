@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioCard } from "@/components/ui/radio-card";
 import type { AgentAccess } from "@/domain/agent-changes";
+import { agentDisplayName } from "@/domain/agent-review";
 import {
   acceptPairing, channelSocketUrl, concatBytes, parsePairingFragment, splitConnectionFrame, verifyPairConfirm, type Bytes, type PairingLink,
 } from "@/domain/agent-protocol";
@@ -78,7 +79,11 @@ export function ConnectAgent() {
 
   useEffect(() => {
     // Read once: the fragment is gone after the first run, and Strict Mode runs effects twice.
-    if (parsed.current === undefined) parsed.current = parsePairingFragment(location.hash);
+    if (parsed.current === undefined) {
+      const link = parsePairingFragment(location.hash);
+      // MCP clients report names like "claude-code"; show and store the product name.
+      parsed.current = link ? { ...link, agentName: agentDisplayName(link.agentName) } : null;
+    }
     const link = parsed.current;
     // The fragment holds the pairing secret. Drop it from the address bar once read.
     if (location.hash) history.replaceState(null, "", location.pathname);
