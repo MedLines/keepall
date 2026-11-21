@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  channelSocketUrl, concatBytes, createLibraryEndpoint, createPairingLink, createResponseAssembler, responseMessages, createSession, derivePairKey, generateAgentKeyPair, helloFrame, newChannelId,
+  channelSocketUrl, concatBytes, createLibraryEndpoint, createPairingLink, createResponseAssembler, formatSetupCode, newSetupCode, parseSetupCode,
+  responseMessages, setupCodePairKey, createSession, derivePairKey, generateAgentKeyPair, helloFrame, newChannelId,
   newPairingSecret, newSessionNonce, pairAcceptFrame, pairConfirmFrame, parsePairingFragment, readHello, readPairAccept,
   verifyPairAccept, verifyPairConfirm,
 } from "./agent-protocol";
@@ -171,5 +172,23 @@ describe("large responses", () => {
     expect(responseMessages({ id: "9", ok: true, result: "z".repeat(1000) }, 10)).toEqual([
       { id: "9", ok: false, error: "This answer is too large to send. Ask for fewer images or items." },
     ]);
+  });
+});
+
+describe("setup codes", () => {
+  it("round-trip and give both sides the same pair key", async () => {
+    const code = newSetupCode("http://localhost:8787", "http://localhost:3001/settings");
+    const text = formatSetupCode(code);
+    expect(text).toMatch(/^keepall_[A-Za-z0-9_-]+$/);
+    const parsed = parseSetupCode(` ${text}\n`)!;
+    expect(parsed).toEqual({ ...code, appOrigin: "http://localhost:3001" });
+    expect(await setupCodePairKey(parsed)).toEqual(await setupCodePairKey(code));
+  });
+
+  it("rejects anything that isn't a valid code", () => {
+    expect(parseSetupCode("keepall_nope")).toBeNull();
+    expect(parseSetupCode("sk-something")).toBeNull();
+    const bad = newSetupCode("http://evil.example", "https://www.keepall.app");
+    expect(parseSetupCode(formatSetupCode(bad))).toBeNull();
   });
 });

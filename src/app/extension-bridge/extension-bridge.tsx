@@ -11,6 +11,8 @@ import { getCaptureCollections, moveCaptureToCollection, updateCaptureTag } from
 import { saveExtensionSelection } from "@/persistence/extension-selection";
 import { undoExtensionCapture } from "@/persistence/extension-capture-undo";
 import { hostAgents } from "./agent-host";
+import { AGENT_CHANGES_CHANNEL } from "@/persistence/agent-changes";
+import { readAgentReviewOffer } from "../use-agent-review-offer";
 
 const EXTENSION_ORIGINS = [
   "chrome-extension://flmcadkppebdjebeiiellmeldfbckppo",
@@ -256,8 +258,15 @@ export function ExtensionBridge() {
 
     window.addEventListener("message", onMessage);
     const stopAgentHost = hostAgents();
+    // The toolbar icon shows how many items wait for review, so suggestions are noticed without Keepall open.
+    const reportReview = () => void readAgentReviewOffer().then((offer) => {
+      for (const origin of EXTENSION_ORIGINS) reply({ type: "agent-review", items: offer?.items ?? 0, agentName: offer?.agentName ?? null }, origin);
+    }, () => {});
+    const reviewChannel = new BroadcastChannel(AGENT_CHANGES_CHANNEL);
+    reviewChannel.onmessage = reportReview;
+    reportReview();
     for (const origin of EXTENSION_ORIGINS) reply({ type: "ready", capabilities: ["file-transfer-v1", "link-screenshot-v1", "agent-host-v1"] }, origin);
-    return () => { window.removeEventListener("message", onMessage); fileTransfer.dispose(); stopAgentHost(); };
+    return () => { window.removeEventListener("message", onMessage); fileTransfer.dispose(); stopAgentHost(); reviewChannel.close(); };
   }, []);
 
   return <main className="sr-only">Keepall extension bridge</main>;

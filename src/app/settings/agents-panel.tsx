@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Button, buttonClassName } from "@/components/ui/button";
 import { RadioCard } from "@/components/ui/radio-card";
 import type { AgentAccess } from "@/domain/agent-changes";
@@ -37,6 +38,8 @@ export type AgentsPanelProps = {
   onUndo(changeIds: readonly string[], key: string): void;
   onAccess(pairingId: string, access: AgentAccess): void;
   onDisconnect(pairingId: string): void;
+  /** The Connect an agent section, shown above the connected agents. */
+  connect?: ReactNode;
 };
 
 export const ACCESS_CHOICES: Array<{ value: AgentAccess; label: string; description: string }> = [
@@ -161,7 +164,7 @@ function Pairing({ pairing, busy, now, onAccess, onDisconnect }: { pairing: Pair
         <div>
           <h3 id={headingId} className="text-base font-semibold text-text-primary">{agentDisplayName(pairing.agentName)}</h3>
           <p className="mt-1 text-xs text-text-secondary">
-            Connected {ago(pairing.createdAt, now)}{pairing.lastUsedAt ? `, last used ${ago(pairing.lastUsedAt, now)}` : ""}
+            {pairing.lastUsedAt ? `Connected ${ago(pairing.createdAt, now)}, last used ${ago(pairing.lastUsedAt, now)}` : `Set up ${ago(pairing.createdAt, now)}, waiting for its first request`}
           </p>
         </div>
         <Button variant="danger-ghost" disabled={busy === pairing.id} onClick={() => onDisconnect(pairing.id)}>Disconnect</Button>
@@ -201,6 +204,7 @@ export function AgentsPanel(props: AgentsPanelProps) {
         </p>
         {activities.map((activity) => <Activity key={activity.id} activity={activity} {...props} />)}
       </section>
+      {props.connect}
       <section className={sectionClass} aria-labelledby="agents-connected-heading">
         <h2 id="agents-connected-heading" className={headingClass}>Connected agents</h2>
         <p className={paragraphClass}>

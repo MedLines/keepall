@@ -49,7 +49,10 @@ export function startAgentHost(): () => void {
     async function handle(tool: string, args: Record<string, unknown>, requestId: string) {
       if (Date.now() - lastTouch > TOUCH_INTERVAL_MS) {
         lastTouch = Date.now();
-        void touchAgentPairing(pairing.id).catch(() => {});
+        const first = !pairing.lastUsedAt;
+        pairing.lastUsedAt = Date.now();
+        // Tell Settings the first time, so a fresh setup shows as connected without a reload.
+        void touchAgentPairing(pairing.id).then(() => { if (first) channel?.postMessage("used"); }, () => {});
       }
       try {
         return await runAgentTool(tool, args, { appOrigin: location.origin, pairingId: pairing.id, requestId });

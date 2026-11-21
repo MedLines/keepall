@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import { appOrigin, configPath, deletePairing, loadPairing, relayUrl, savePairing } from "./config.ts";
+import { appOrigin, commandArgs, configPath, deletePairing, loadPairing, relayUrl, savePairing } from "./config.ts";
 import { LibraryClient } from "./library-client.ts";
 import { startPairing } from "./pair.ts";
 import { runServer } from "./server.ts";
 import { INSTRUCTIONS, toolContent, TOOLS } from "./tools.ts";
 
-const [command, ...rest] = process.argv.slice(2);
+const [command, ...rest] = commandArgs();
 
 async function main() {
   if (!command) {

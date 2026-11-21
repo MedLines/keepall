@@ -90,6 +90,25 @@ Write tools, built:
 
 Still planned: `export_context_pack`, which would return a collection, tag, or search in the existing context pack format (`src/domain/context-pack.ts`).
 
+### Connecting from Keepall
+
+Settings → Agents → **Connect an agent** sets up Claude Code, Codex, OpenCode, Claude Desktop, or any stdio MCP agent in one step:
+
+1. **Choose** the agent and what it can do, then **Create setup**.
+2. **Keepall makes a setup code** holding the relay, the app, a fresh channel, and a 256-bit secret. It saves the pairing straight away, deriving the pair key from the secret with HKDF and binding it to the channel. The bridge or an open tab starts listening on the new channel.
+3. **The page shows the exact thing to paste,** with the code in it. For example: `claude mcp add -s user keepall -- npx -y @keepall/mcp@1 --code keepall_…`, `codex mcp add keepall -- …`, an `opencode.json` entry, or a `claude_desktop_config.json` entry.
+4. **The agent connects** the first time it starts. There's no link to open and no approval round trip, since creating the setup was the approval. `@keepall/mcp` reads the code from `--code` or `KEEPALL_CODE` and needs no pairing file.
+
+The code never passes through a server, but it works like an API key, and the page says so. Disconnect revokes it. The connected agent's card reads "waiting for its first request" until the agent makes one.
+
+The relay address comes from `NEXT_PUBLIC_KEEPALL_RELAY_URL` at build time; on localhost it defaults to the dev relay on 8787. `NEXT_PUBLIC_KEEPALL_MCP_COMMAND` points development builds at a local checkout instead of the npm package.
+
+The agent-initiated link flow (`/connect`) stays for agents started before a setup exists.
+
+### Noticing suggestions
+
+While an agent's suggestions wait, the extension shows the number of items on its toolbar icon in every tab, with a tooltip naming the agent. The icon's right-click menu gains **Review agent changes (N)**, which opens or focuses `/review`. Save confirmations still show on the icon briefly, then clear back to the count. The bridge reports the count whenever suggestions change, and the extension only accepts it from the configured library address. The sidebar's **Agent review** entry and the library's Review button lead to `/review` too.
+
 ### Access, review, and undo
 
 The user picks an access level when pairing and can change it in **Settings → Agents**:

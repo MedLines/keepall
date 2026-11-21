@@ -144,6 +144,41 @@ export function parsePairingFragment(hash: string): PairingLink | null {
   }
 }
 
+/**
+ * A setup code: everything an agent needs to reach this library, made in Keepall and pasted into the agent's
+ * config. It carries the relay, the app, the channel, and a 256-bit secret the pair key is derived from, so both
+ * sides hold the key at once and no link round trip is needed. Treat it like an API key; Settings revokes it.
+ */
+export type SetupCode = { relayUrl: string; appOrigin: string; channelId: string; secret: Bytes };
+const SETUP_CODE_PREFIX = "keepall_";
+
+export function newSetupCode(relayUrl: string, appOrigin: string): SetupCode {
+  return { relayUrl, appOrigin, channelId: newChannelId(), secret: randomBytes(KEY_BYTES) };
+}
+
+export function formatSetupCode(code: SetupCode): string {
+  const body = JSON.stringify({ v: AGENT_PROTOCOL_VERSION, r: code.relayUrl, o: code.appOrigin, c: code.channelId, s: toBase64Url(code.secret) });
+  return `${SETUP_CODE_PREFIX}${toBase64Url(encoder.encode(body))}`;
+}
+
+export function parseSetupCode(text: string): SetupCode | null {
+  try {
+    const trimmed = text.trim();
+    if (!trimmed.startsWith(SETUP_CODE_PREFIX)) return null;
+    const value = JSON.parse(decoder.decode(fromBase64Url(trimmed.slice(SETUP_CODE_PREFIX.length)))) as Record<string, unknown>;
+    if (value.v !== AGENT_PROTOCOL_VERSION || typeof value.r !== "string" || !isRelayUrl(value.r) || !isChannelId(value.c) || typeof value.s !== "string" || typeof value.o !== "string") return null;
+    const origin = new URL(value.o).origin;
+    return { relayUrl: value.r, appOrigin: origin, channelId: value.c, secret: fromBase64Url(value.s, KEY_BYTES) };
+  } catch {
+    return null;
+  }
+}
+
+/** The pair key both sides derive from a setup code. Bound to the channel, so a code can't be replayed on another. */
+export async function setupCodePairKey(code: SetupCode): Promise<Bytes> {
+  return hkdf(code.secret, fromBase64Url(code.channelId, KEY_BYTES), "keepall-agent-setup-code-v1", KEY_BYTES);
+}
+
 export async function generateAgentKeyPair(): Promise<{ privateKey: CryptoKey; publicKey: Bytes }> {
   const pair = await crypto.subtle.generateKey({ name: "X25519" }, false, ["deriveBits"]) as CryptoKeyPair;
   return { privateKey: pair.privateKey, publicKey: new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey)) };

@@ -11,11 +11,10 @@ import {
 } from "@/domain/agent-protocol";
 import { AGENT_PAIRINGS_CHANNEL, saveAgentPairing } from "@/persistence/agent-pairings";
 import { LogoIcon } from "../shell-icons";
+import { wakeExtensionBridge } from "../extension-wake";
 import { ACCESS_CHOICES } from "../settings/agents-panel";
 
-const EXTENSION_IDS = ["flmcadkppebdjebeiiellmeldfbckppo", "ehloefgfecmfjbncknaoleakbnjhkpea"];
 const CONFIRM_TIMEOUT_MS = 20_000;
-const EXTENSION_REPLY_MS = 3_000;
 
 type State =
   | { step: "loading" }
@@ -23,21 +22,6 @@ type State =
   | { step: "ready" | "connecting"; link: PairingLink }
   | { step: "done"; link: PairingLink; extension: boolean }
   | { step: "error"; link: PairingLink; message: string };
-
-type ChromeRuntime = { sendMessage(extensionId: string, message: unknown): Promise<unknown> };
-
-/**
- * Asks Keepall Capture to load its hidden bridge, which answers agents without a tab open. Resolves true when an
- * installed extension that points at this address agreed. Chrome only exposes `runtime` here when one is installed.
- */
-async function notifyExtension(): Promise<boolean> {
-  const runtime = (globalThis as { chrome?: { runtime?: ChromeRuntime } }).chrome?.runtime;
-  if (!runtime?.sendMessage) return false;
-  const replies = EXTENSION_IDS.map((id) => runtime.sendMessage(id, { type: "agent-host" })
-    .then((reply) => (reply as { ok?: unknown } | undefined)?.ok === true, () => false));
-  const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), EXTENSION_REPLY_MS));
-  return Promise.race([Promise.all(replies).then((results) => results.includes(true)), timeout]);
-}
 
 /** Runs the library's half of pairing over the relay. Resolves once the agent proves it derived the same key. */
 function pair(link: PairingLink): Promise<Bytes> {
@@ -100,7 +84,7 @@ export function ConnectAgent() {
       const channel = new BroadcastChannel(AGENT_PAIRINGS_CHANNEL);
       channel.postMessage("changed");
       channel.close();
-      setState({ step: "done", link, extension: await notifyExtension() });
+      setState({ step: "done", link, extension: await wakeExtensionBridge() });
     } catch (error) {
       started.current = false;
       setState({ step: "error", link, message: error instanceof Error ? error.message : "Couldn't connect. Ask the agent for a new link." });

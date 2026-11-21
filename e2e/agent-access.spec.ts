@@ -39,9 +39,9 @@ async function startRelay(state: string) {
   throw new Error("wrangler dev did not start");
 }
 
-function startMcp(relayUrl: string, configFile: string) {
+function startMcp(relayUrl: string, configFile: string, extraEnv: Record<string, string> = {}) {
   const child = spawn(process.execPath, ["--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", path.resolve("packages/mcp/src/cli.ts")], {
-    env: { ...process.env, KEEPALL_RELAY_URL: relayUrl, KEEPALL_APP_ORIGIN: origin, KEEPALL_AGENT_CONFIG: configFile },
+    env: { ...process.env, KEEPALL_RELAY_URL: relayUrl, KEEPALL_APP_ORIGIN: origin, KEEPALL_AGENT_CONFIG: configFile, ...extraEnv },
   }) as ChildProcessWithoutNullStreams;
   const waiting = new Map<number, (message: unknown) => void>();
   createInterface({ input: child.stdout }).on("line", (line) => {
@@ -158,6 +158,10 @@ test("an agent pairs through /connect and searches the library through the exten
     expect(found.result.content[0].text).toContain(`${origin}/items/masonry`);
     expect(found.result.content[0].text).toContain("\"layout\"");
     expect(found.result.content[0].text).not.toContain("Masonry draft in Trash");
+    // A suggestion shows on the toolbar icon, so it's noticed without Keepall open.
+    expect(json(await mcp.call("tag_items", { item_id: "masonry", tags: "agents" })).status).toBe("waiting_for_review");
+    await expect.poll(() => worker.evaluate(() => chrome.action.getBadgeText({})), { timeout: 15_000 }).toBe("1");
+    expect(await worker.evaluate(() => chrome.action.getTitle({}))).toContain("Claude Code suggested changes to 1 item");
     // The hidden bridge decodes and resizes pictures too.
     const cover = await mcp.call("get_item", { id: "site" });
     expect(cover.result.content.filter((block) => block.type === "image").map((block) => block.mimeType)).toEqual(["image/webp"]);
@@ -337,11 +341,13 @@ test("an agent suggests changes, the user applies some in Settings, and undo put
     expect(json(await mcp.call("undo_change", { change_id: latest.change_id }))).toMatchObject({ status: "undone" });
     items = await readItems(page);
     expect(items.masonry.tags).toBe(1);
+    // Recent changes groups the review into one card; the item the agent undid says so in its row.
     await page.goto(`${origin}/settings#agents`);
-    await expect(page.getByText(/^Undone/).first()).toBeVisible();
+    await page.getByText(/^Show all \d+ items$/).first().click();
+    await expect(page.getByText(/^Undone$/).first()).toBeVisible();
 
     // Switching to "Make changes" lets small changes apply at once.
-    await page.getByRole("radio", { name: /Make changes/ }).check();
+    await page.getByRole("article", { name: "Codex" }).getByRole("radio", { name: /Make changes/ }).check();
     await expect.poll(async () => json(await mcp!.call("save_note", { text: "Agent summary of the moodboard", collection: "Moodboard" })).status).toBe("done");
   } finally {
     mcp?.child.stdin.end();
@@ -351,4 +357,57 @@ test("an agent suggests changes, the user applies some in Settings, and undo put
   }
 });
 
-declare const chrome: { storage: { local: { set(values: Record<string, unknown>): Promise<void>; get(keys: null): Promise<Record<string, unknown>> } } };
+/** The relay a development build's setup codes point at: reuse one on 8787, or start one there. */
+async function relayOn8787(state: string) {
+  if (await fetch("http://localhost:8787/").then((response) => response.ok, () => false)) return { url: "http://localhost:8787", child: undefined };
+  const child = spawn("pnpm", ["exec", "wrangler", "dev", "--port", "8787", "--persist-to", state, "--inspector-port", String(await freePort()), "--show-interactive-dev-session=false"], {
+    cwd: path.resolve("packages/relay"), stdio: "ignore", detached: true,
+  });
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    if (await fetch("http://localhost:8787/").then((response) => response.ok, () => false)) return { url: "http://localhost:8787", child };
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error("wrangler dev did not start on 8787");
+}
+
+test("Settings makes a one-step setup, and the agent connects with only the code", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const temp = await mkdtemp(path.join(tmpdir(), "keepall-agent-code-"));
+  let relay: { url: string; child?: ChildProcess } | undefined;
+  let mcp: ReturnType<typeof startMcp> | undefined;
+  const context = await browser.newContext({ serviceWorkers: "block" });
+  try {
+    relay = await relayOn8787(path.join(temp, "relay"));
+    const page = await context.newPage();
+    await page.context().setDefaultNavigationTimeout(60_000);
+    await seed(page);
+
+    await page.goto(`${origin}/settings#agents`);
+    const connect = page.getByRole("region", { name: "Connect an agent" });
+    await connect.getByRole("radio", { name: "Codex" }).check();
+    await connect.getByRole("radio", { name: /Read only/ }).check();
+    await connect.getByRole("button", { name: "Create setup" }).click();
+    const command = await connect.locator("pre").innerText();
+    expect(command).toMatch(/^codex mcp add keepall -- npx -y @keepall\/mcp@1 --code keepall_[A-Za-z0-9_-]+$/);
+    const code = /--code (keepall_\S+)/.exec(command)![1];
+    await expect(page.getByRole("article", { name: "Codex" })).toContainText("waiting for its first request");
+
+    // No pairing file and no link: the code is all the agent needs. This tab hosts the connection.
+    mcp = startMcp(relay.url, path.join(temp, "no-such-file.json"), { KEEPALL_CODE: code });
+    await mcp.request("initialize", { protocolVersion: "2025-06-18", clientInfo: { name: "codex-mcp-client" }, capabilities: {} });
+    await expect.poll(async () => (await mcp!.search("masonry")).result.content[0].text, { timeout: 30_000 }).toContain("Masonry virtualization notes");
+    await expect(page.getByRole("article", { name: "Codex" })).toContainText("last used");
+    // The access chosen in Settings holds.
+    expect((await mcp.call("save_note", { text: "Not allowed" })).result.content[0].text).toContain("read-only access");
+  } finally {
+    mcp?.child.stdin.end();
+    await context.close();
+    if (relay?.child?.pid) process.kill(-relay.child.pid, "SIGTERM");
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+declare const chrome: {
+  storage: { local: { set(values: Record<string, unknown>): Promise<void>; get(keys: null): Promise<Record<string, unknown>> } };
+  action: { getBadgeText(details: object): Promise<string>; getTitle(details: object): Promise<string> };
+};

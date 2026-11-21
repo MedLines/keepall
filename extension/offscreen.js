@@ -45,6 +45,10 @@ window.addEventListener("message", (event) => {
     resolveReady = undefined;
     return;
   }
+  if (event.data.type === "agent-review" && Number.isInteger(event.data.items)) {
+    void chrome.runtime.sendMessage({ target: "worker", type: "agent-review", origin: frameOrigin, items: event.data.items, agentName: typeof event.data.agentName === "string" ? event.data.agentName : null }).catch(() => {});
+    return;
+  }
   if (event.data.type === "file-result" && typeof event.data.requestId === "string") fileWaiting.get(event.data.requestId)?.(event.data);
   if (event.data.type === "result" && typeof event.data.captureId === "string") {
     waiting.get(event.data.captureId)?.resolve(event.data);

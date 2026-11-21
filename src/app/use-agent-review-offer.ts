@@ -9,7 +9,7 @@ export const AGENT_REVIEW_PARAM = "agent-review";
 
 export type AgentReviewOffer = { agentName: string; items: number };
 
-async function readOffer(): Promise<AgentReviewOffer | null> {
+export async function readAgentReviewOffer(): Promise<AgentReviewOffer | null> {
   const [proposal] = await listOpenProposals();
   if (!proposal) return null;
   const items = new Set(proposal.requests.flatMap((entry) => ("itemIds" in entry.request ? entry.request.itemIds : entry.request.kind === "note" ? [entry.request.itemId] : [])));
@@ -26,9 +26,9 @@ export function useAgentReviewOffer() {
       window.location.replace("/review");
       return;
     }
-    readOffer().then(setOffer, () => {});
+    readAgentReviewOffer().then(setOffer, () => {});
     const channel = new BroadcastChannel(AGENT_CHANGES_CHANNEL);
-    channel.onmessage = () => void readOffer().then(setOffer, () => {});
+    channel.onmessage = () => void readAgentReviewOffer().then(setOffer, () => {});
     return () => channel.close();
   }, []);
 

@@ -12,6 +12,11 @@ import type { AgentChangeEntry } from "@/persistence/agent-changes";
 import { listCollections } from "@/persistence/collections";
 import { listTags } from "@/persistence/tags";
 import { AgentsPanel, type ActivityView, type AgentsPanelProps } from "./agents-panel";
+import { agentRelayUrl, mcpCommand } from "./agent-setup-config";
+import { ConnectAgentPanel, type ConnectAgentPanelProps } from "./connect-agent-panel";
+import { SETUP_AGENT_NAMES, setupInstructions, type SetupAgent } from "@/domain/agent-setup";
+import { createSetupPairing } from "@/persistence/agent-pairings";
+import { wakeExtensionBridge } from "../extension-wake";
 
 type Data = Pick<AgentsPanelProps, "proposals" | "activities" | "pairings">;
 const EMPTY: Data = { proposals: [], activities: [], pairings: [] };
@@ -68,6 +73,12 @@ export function AgentsSettings() {
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState<AgentsPanelProps["status"]>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [setupAgent, setSetupAgent] = useState<SetupAgent>("claude-code");
+  const [setupAccess, setSetupAccess] = useState<AgentAccess>("suggest");
+  const [setupBusy, setSetupBusy] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const [created, setCreated] = useState<ConnectAgentPanelProps["created"]>(null);
+  const [relayUrl, setRelayUrl] = useState<string | null>(null);
 
   const show = useCallback((next: Data | null) => {
     if (next) setData(next);
@@ -80,6 +91,8 @@ export function AgentsSettings() {
     const channels = [AGENT_CHANGES_CHANNEL, AGENT_PAIRINGS_CHANNEL].map((name) => new BroadcastChannel(name));
     for (const channel of channels) channel.onmessage = () => void refresh();
     load().catch(() => null).then(show);
+    // The relay depends on this page's address, which only the browser knows.
+    queueMicrotask(() => setRelayUrl(agentRelayUrl()));
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => {
       for (const channel of channels) channel.close();
@@ -99,8 +112,30 @@ export function AgentsSettings() {
     }
   }
 
+  async function createSetup() {
+    if (!relayUrl) return;
+    setSetupBusy(true);
+    setSetupError(null);
+    try {
+      const agentName = setupAgent === "other" ? "Agent" : SETUP_AGENT_NAMES[setupAgent];
+      const pairing = await createSetupPairing({ agentName, access: setupAccess, relayUrl, appOrigin: window.location.origin });
+      announcePairings();
+      void wakeExtensionBridge();
+      setCreated({ agentName, instructions: setupInstructions(setupAgent, mcpCommand(), pairing.setupCode!) });
+    } catch {
+      setSetupError("Couldn't create the setup. Try again.");
+    } finally {
+      setSetupBusy(false);
+      await refresh();
+    }
+  }
+
   return (
     <AgentsPanel
+      connect={
+        <ConnectAgentPanel available={!!relayUrl} agent={setupAgent} access={setupAccess} busy={setupBusy} created={created} error={setupError}
+          onAgent={setSetupAgent} onAccess={setSetupAccess} onCreate={() => void createSetup()} onReset={() => setCreated(null)} />
+      }
       {...data}
       busy={busy}
       status={status}

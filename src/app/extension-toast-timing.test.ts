@@ -35,8 +35,9 @@ function worker() {
   return { chrome, api: context as unknown as WorkerApi, context };
 }
 
+// A tab's save badge clears to null, which falls back to the global badge (agent changes waiting, if any).
 const clears = (chrome: ReturnType<typeof worker>["chrome"]) =>
-  chrome.action.setBadgeText.mock.calls.filter(([arg]) => arg.text === "");
+  chrome.action.setBadgeText.mock.calls.filter(([arg]) => arg.text === null);
 
 test("a newer save keeps its badge for a full 5 seconds", async () => {
   const { api, chrome } = worker();

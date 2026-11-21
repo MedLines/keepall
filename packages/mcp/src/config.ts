@@ -1,7 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
-import { fromBase64Url, isChannelId, toBase64Url, type Bytes } from "../../../src/domain/agent-protocol.ts";
+import { fromBase64Url, isChannelId, parseSetupCode, setupCodePairKey, toBase64Url, type Bytes } from "../../../src/domain/agent-protocol.ts";
 
 export type Pairing = { relayUrl: string; appOrigin: string; channelId: string; pairKey: Bytes };
 
@@ -17,7 +17,27 @@ export function configPath() {
   return path.join(base, "keepall", "agent.json");
 }
 
+/** A setup code from `--code <code>` or KEEPALL_CODE. Made in Keepall under Settings, Agents. */
+export function setupCodeText(argv: readonly string[] = process.argv): string | undefined {
+  const index = argv.indexOf("--code");
+  return (index >= 0 ? argv[index + 1] : undefined) ?? process.env.KEEPALL_CODE;
+}
+
+/** Command-line arguments with the setup code taken out, so commands still parse. */
+export function commandArgs(argv: readonly string[] = process.argv): string[] {
+  const args = argv.slice(2);
+  const index = args.indexOf("--code");
+  if (index >= 0) args.splice(index, 2);
+  return args;
+}
+
 export async function loadPairing(): Promise<Pairing | null> {
+  const codeText = setupCodeText();
+  if (codeText) {
+    const code = parseSetupCode(codeText);
+    if (!code) throw new Error("That Keepall setup code isn't valid. Copy it again from Keepall: Settings, Agents.");
+    return { relayUrl: code.relayUrl, appOrigin: code.appOrigin, channelId: code.channelId, pairKey: await setupCodePairKey(code) };
+  }
   let text: string;
   try {
     text = await readFile(configPath(), "utf8");

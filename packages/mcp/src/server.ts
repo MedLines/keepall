@@ -38,7 +38,11 @@ export function runServer() {
 
   async function callTool(name: string, args: Record<string, unknown>) {
     if (!TOOLS.some((tool) => tool.name === name)) return text(`Unknown tool: ${name}`, true);
-    pairing ??= await loadPairing();
+    try {
+      pairing ??= await loadPairing();
+    } catch (error) {
+      return text(error instanceof Error ? error.message : String(error), true);
+    }
     if (!pairing) {
       const { link } = await pairingAttempt();
       return text(`Keepall isn't paired with this agent yet. Ask the user to open this link in the Chrome profile that has their Keepall library and choose Allow, then call ${name} again. Every call returns this same link until pairing finishes or the link expires after 10 minutes.\n\n${link}`, true);
