@@ -103,7 +103,10 @@ test("pairs through a link, then searches the library end to end", async () => {
   const init = await server.request("initialize", { protocolVersion: "2025-06-18", clientInfo: { name: "Claude Code" }, capabilities: {} });
   assert.equal(init.result.protocolVersion, "2025-06-18");
   const tools = await server.request("tools/list");
-  assert.deepEqual(tools.result.tools.map((tool) => tool.name), ["search_items", "get_item", "view_images", "list_collections", "list_tags"]);
+  assert.deepEqual(tools.result.tools.map((tool) => tool.name), [
+    "search_items", "get_item", "view_images", "move_to_collection", "tag_items", "add_note", "rename_collection", "save_link", "save_note",
+    "move_to_trash", "check_changes", "undo_change", "list_collections", "list_tags",
+  ]);
 
   // Parallel calls before pairing all get the same link.
   const unpaired = await Promise.all(["masonry", "grid", "layout"].map((query) => server.request("tools/call", { name: "search_items", arguments: { query } })));

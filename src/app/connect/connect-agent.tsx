@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { RadioCard } from "@/components/ui/radio-card";
+import type { AgentAccess } from "@/domain/agent-changes";
 import {
   acceptPairing, channelSocketUrl, concatBytes, parsePairingFragment, splitConnectionFrame, verifyPairConfirm, type Bytes, type PairingLink,
 } from "@/domain/agent-protocol";
 import { AGENT_PAIRINGS_CHANNEL, saveAgentPairing } from "@/persistence/agent-pairings";
 import { LogoIcon } from "../shell-icons";
+import { ACCESS_CHOICES } from "../settings/agents-panel";
 
 const EXTENSION_IDS = ["flmcadkppebdjebeiiellmeldfbckppo", "ehloefgfecmfjbncknaoleakbnjhkpea"];
 const CONFIRM_TIMEOUT_MS = 20_000;
@@ -69,6 +72,7 @@ function pair(link: PairingLink): Promise<Bytes> {
 
 export function ConnectAgent() {
   const [state, setState] = useState<State>({ step: "loading" });
+  const [access, setAccess] = useState<AgentAccess>("suggest");
   const started = useRef(false);
   const parsed = useRef<PairingLink | null>(undefined);
 
@@ -87,7 +91,7 @@ export function ConnectAgent() {
     setState({ step: "connecting", link });
     try {
       const pairKey = await pair(link);
-      await saveAgentPairing({ id: link.channelId, relayUrl: link.relayUrl, agentName: link.agentName, pairKey, createdAt: Date.now() });
+      await saveAgentPairing({ id: link.channelId, relayUrl: link.relayUrl, agentName: link.agentName, pairKey, createdAt: Date.now(), access });
       const channel = new BroadcastChannel(AGENT_PAIRINGS_CHANNEL);
       channel.postMessage("changed");
       channel.close();
@@ -120,7 +124,18 @@ export function ConnectAgent() {
           <>
             <h1 id="connect-title" className="mt-6 text-heading font-semibold text-text-primary">Connect {state.link.agentName} to Keepall?</h1>
             <p className="mt-3 text-sm leading-6 text-text-secondary">
-              {state.link.agentName} will be able to search this library and read everything you&apos;ve saved, including notes, saved articles, documents, and images. Images are sent as resized copies. It can&apos;t change or delete anything.
+              {state.link.agentName} will be able to search this library and read everything you&apos;ve saved, including notes, saved articles, documents, and images. Images are sent as resized copies.
+            </p>
+            <fieldset className="mt-5 grid gap-2" disabled={state.step === "connecting"}>
+              <legend className="mb-2 text-sm font-medium text-text-primary">What {state.link.agentName} can do</legend>
+              {ACCESS_CHOICES.map((choice) => (
+                <RadioCard key={choice.value} name="access" value={choice.value} checked={access === choice.value} onChange={() => setAccess(choice.value)}>
+                  <span><span className="block font-medium text-text-primary">{choice.label}</span><span className="mt-0.5 block text-text-secondary">{choice.description}</span></span>
+                </RadioCard>
+              ))}
+            </fieldset>
+            <p className="mt-4 text-xs leading-5 text-text-secondary">
+              You can change this later in Settings, Agents. Keepall keeps a copy of everything an agent changes, so any change can be undone.
             </p>
             <p className="mt-3 text-sm leading-6 text-text-secondary">
               Requests are encrypted between the agent and this browser. Keepall&apos;s relay passes them along without being able to read them.
@@ -128,7 +143,7 @@ export function ConnectAgent() {
             {state.step === "error" ? <p role="alert" className="mt-4 text-sm text-text-danger">{state.message}</p> : null}
             <div className="mt-6 flex flex-wrap gap-3">
               <Button variant="primary" disabled={state.step === "connecting"} onClick={() => void allow(state.link)}>
-                {state.step === "connecting" ? "Connecting…" : "Allow read access"}
+                {state.step === "connecting" ? "Connecting…" : "Connect"}
               </Button>
               <Button disabled={state.step === "connecting"} onClick={() => setState({ step: "cancelled" })}>Cancel</Button>
             </div>

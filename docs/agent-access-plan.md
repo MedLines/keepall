@@ -75,16 +75,42 @@ Read tools, built in the spike:
 
 Pictures are every image in a gallery, a link's cover, page preview, and screenshots, a video's poster frame, and a PDF's first page. The browser decodes each one and re-encodes it as WebP: up to 1,568 px on the long side for `get_item` and 1,092 px for `view_images`, and smaller again if it would exceed about 600 KB. Originals never leave the library. The MCP server returns each picture as image content with a caption naming its item, so the model sees it the way it sees a pasted screenshot. Answers larger than one relay frame travel as ordered chunks of 512 KiB and are reassembled by `@keepall/mcp`.
 
-Write tools, after the spike:
+Write tools, built:
 
 | Tool | Behavior |
 | --- | --- |
-| `save_link`, `save_note` | Create or reuse items. New items land in Unsorted and record which agent created them. |
-| `organize` | Move items to a collection, add or remove tags. Returns a proposal first unless the agent has permission to apply changes directly. |
-| `trash_item` | Moves to Trash. The tools never delete permanently or empty Trash. |
-| `export_context_pack` | Returns a collection, tag, or search as the existing context pack format (`src/domain/context-pack.ts`). |
+| `move_to_collection` | Puts items into a collection by name, creating it if needed. "Unsorted" takes them out. |
+| `tag_items` | Adds and removes tags by name, creating new ones. Names ignore case. |
+| `add_note` | Adds text below an item's note (a note's text, an image's caption), or replaces it. |
+| `rename_collection` | Renames a collection unless the new name is taken. |
+| `save_link`, `save_note` | Save new items with an optional note, collection, and tags. A link that's already saved gets organized instead of duplicated. |
+| `move_to_trash` | Moves items to Trash. Nothing is ever deleted permanently, and Trash is never emptied. |
+| `check_changes` | The agent's access level, what waits for review, what the user applied or declined, and recent change IDs. |
+| `undo_change` | Reverses one of the agent's own changes. |
 
-Permission levels are read, read and add, and read, add, and organize. Each write can also require approval in the browser, where the extension's existing toast shows Approve and Deny while the agent waits.
+Still planned: `export_context_pack`, which would return a collection, tag, or search in the existing context pack format (`src/domain/context-pack.ts`).
+
+### Access, review, and undo
+
+The user picks an access level when pairing and can change it in **Settings → Agents**:
+
+- **Read only.** Every write tool returns an error that says how to allow changes. Pairings made before writes existed are read only.
+- **Suggest changes**, the default. Every write joins that agent's one open proposal, so twenty small tool calls become one review. Settings → Agents lists each suggestion with a checkbox. The user applies all of them or some of them, or declines.
+- **Make changes.** A call that touches 10 items or fewer applies at once. Larger calls still wait for review.
+
+Every applied change is stored in a journal with a before-copy of every row it touches, written in the same IndexedDB transaction as the change itself, so no change can land without its copy. When a backup folder is connected, applying a reviewed proposal also writes a full folder backup first. If that backup fails, the change still applies, and the result says the folder backup failed.
+
+Undo restores only the fields agents can change: collection, tags, note text, and Trash state. It leaves anything the user edited since and lists it. Unrelated later updates, like a fetched link preview, survive. Items the agent created go to Trash. Collections and tags the agent created are removed only when nothing uses them.
+
+Proposals record each target item's version when suggested. If the user edits an item before applying, that part is skipped and the reason is shown. Agents send a fresh request ID with every call, and the library remembers them, so a call re-sent after a reconnect never applies twice.
+
+### Designed for simple agents
+
+- **Forgiving input.** Write tools accept one ID or a list, tags as a list or a comma-separated string, and names regardless of case.
+- **A next step in every result.** Each write result ends with `what_to_do_next`, a plain instruction. For example: "Tell the user exactly this: I've suggested 7 changes to your Keepall library. Review them here: <link>. After they say they've reviewed them, call check_changes."
+- **Errors say how to fix the call.** For example, "No collection is named X. Use list_collections to see the names."
+- **A CLI for agents without MCP.** `keepall-mcp tools` lists the same tools, and `keepall-mcp call <tool> '<json>'` runs one.
+- **An eval.** `scripts/agent-eval.mjs` seeds a messy library (design and cooking links, notes, two images, two junk entries), pairs it, gives an agent one vague request ("tidy up my library…"), applies what it suggested, and scores the result. On November 21, 2026, Claude Haiku passed all 7 checks through the CLI in 7 tool calls and 37 seconds. It grouped design and cooking separately, tagged both images, summarized both notes, and trashed only the junk. It also handed the user the review link from `what_to_do_next`. Running the eval with `--agent claude` drives Claude Code over MCP, but that needs a signed-in `claude` CLI.
 
 Saved pages are untrusted text. Results mark library content as data, and context packs keep their existing filter that drops agent instruction files such as `CLAUDE.md`.
 
@@ -174,7 +200,7 @@ What the spike showed:
 - **The pairing link reaches browser history.** The page drops the fragment from the address bar after reading it, but the history entry is already written and may sync. The secret only matters until pairing completes. A short code shown by both the agent and the page would close that window.
 - **The extension isn't always there.** In the first hands-on test, pairing worked but the extension in Chrome wasn't loading the bridge, so searches never reached the library. Two changes came out of it. First, an open Keepall tab now answers agents too: the bridge and every tab ask for the same Web Lock, so one context per browser profile holds the relay connections, and the next one takes over when it closes. Second, `/connect` says when Keepall Capture didn't respond, and the agent's errors name the missing piece (relay, no connected browser, handshake, or slow answer) and the library address to check.
 - **Parallel calls before pairing now share one link**, and a retry on a connection that already knows the library is gone fails in about 3 seconds instead of waiting out the 30-second timeout.
-- **Retried requests can run twice.** When the library reconnects mid-request, the agent re-sends under the new session. That's harmless for search. Write tools need request IDs the library remembers.
+- **Retried requests could run twice.** When the library reconnects mid-request, the agent re-sends under the new session. Write tools now carry request IDs the library remembers, so a re-sent write applies once.
 
 Not done in the spike: deploying the relay (needs a Cloudflare login), measuring real usage, publishing `@keepall/mcp` (it imports `src/domain` directly, so publishing needs a bundling step, and running from source prints a Node module-type warning), checking Codex and OpenCode, revoking pairings in Settings, and push.
 
@@ -194,7 +220,7 @@ Load `extension/` unpacked and set its library address to `http://localhost:3000
 claude mcp add keepall -- node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /absolute/path/to/keepall/packages/mcp/src/cli.ts
 ```
 
-Ask Claude Code to search Keepall. The first call returns a pairing link. Open it in the same Chrome profile, choose **Allow read access**, and ask again.
+Ask Claude Code to search Keepall. The first call returns a pairing link. Open it in the same Chrome profile, choose what it can do, then **Connect**, and ask again.
 
 ## Slices after the spike
 

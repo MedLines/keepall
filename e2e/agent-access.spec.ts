@@ -143,7 +143,7 @@ test("an agent pairs through /connect and searches the library through the exten
     await page.goto(link);
     await expect(page.getByRole("heading", { name: "Connect Claude Code to Keepall?" })).toBeVisible();
     await expect(page).toHaveURL(`${origin}/connect`);
-    await page.getByRole("button", { name: "Allow read access" }).click();
+    await page.getByRole("button", { name: "Connect", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Claude Code is connected" })).toBeVisible();
     await expect(page.getByText("Keepall Capture answers while Chrome is open")).toBeVisible();
     // The pair key stays in the library's own storage.
@@ -190,7 +190,7 @@ test("without the extension, an open Keepall tab answers and closing it fails fa
     expect(pattern.exec(second.result.content[0].text)![0]).toBe(link);
 
     await page.goto(link);
-    await page.getByRole("button", { name: "Allow read access" }).click();
+    await page.getByRole("button", { name: "Connect", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Codex is connected" })).toBeVisible();
     await expect(page.getByRole("status")).toContainText("Keepall Capture didn't respond");
 
@@ -233,6 +233,86 @@ test("without the extension, an open Keepall tab answers and closing it fails fa
     const retry = await mcp.search("masonry");
     expect(retry.result.content[0].text).toContain("no browser is connected to answer");
     expect(Date.now() - started).toBeLessThan(15_000);
+  } finally {
+    mcp?.child.stdin.end();
+    await context.close();
+    if (relay?.child.pid) process.kill(-relay.child.pid, "SIGTERM");
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+type ToolText = { result: { isError?: boolean; content: Array<{ text: string }> } };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- tool results are untyped JSON; the assertions check their shape.
+const json = (response: ToolText) => JSON.parse(response.result.content[0].text.replace(/^[^{]*/, "")) as Record<string, any>;
+
+async function readItems(page: Page) {
+  return page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open("keepall"); request.onsuccess = () => resolve(request.result); });
+    const read = <T,>(store: string) => new Promise<T[]>((resolve) => { const request = db.transaction(store).objectStore(store).getAll(); request.onsuccess = () => resolve(request.result as T[]); });
+    const [items, collections] = await Promise.all([read<{ id: string; collectionIds: string[]; tagIds: string[]; content?: string }>("items"), read<{ id: string; name: string }>("collections")]);
+    db.close();
+    const names = new Map(collections.map((collection) => [collection.id, collection.name]));
+    return Object.fromEntries(items.map((item) => [item.id, { collection: names.get(item.collectionIds[0]) ?? null, tags: item.tagIds.length, content: item.content }]));
+  });
+}
+
+test("an agent suggests changes, the user applies some in Settings, and undo puts them back", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const temp = await mkdtemp(path.join(tmpdir(), "keepall-agent-write-"));
+  let relay: { url: string; child: ChildProcess } | undefined;
+  let mcp: ReturnType<typeof startMcp> | undefined;
+  const context = await browser.newContext({ serviceWorkers: "block" });
+  try {
+    relay = await startRelay(path.join(temp, "relay"));
+    const page = await context.newPage();
+    await page.context().setDefaultNavigationTimeout(60_000);
+    await seed(page);
+    await seedReferences(page);
+    mcp = startMcp(relay.url, path.join(temp, "agent.json"));
+    await mcp.request("initialize", { protocolVersion: "2025-06-18", clientInfo: { name: "Codex" }, capabilities: {} });
+    const link = new RegExp(`${origin}/connect#\\S+`).exec((await mcp.search("x")).result.content[0].text)![0];
+    await page.goto(link);
+    await expect(page.getByRole("radio", { name: /Suggest changes/ })).toBeChecked();
+    await page.getByRole("button", { name: "Connect", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Codex is connected" })).toBeVisible();
+    await expect.poll(async () => (await mcp!.search("masonry")).result.content[0].text, { timeout: 30_000 }).toContain("Masonry virtualization notes");
+
+    // Three suggestions, sent the way a simple agent might: one ID as a string, tags as one string.
+    const moved = json(await mcp.call("move_to_collection", { item_ids: ["gallery", "site"], collection: "Moodboard" }));
+    expect(moved).toMatchObject({ status: "waiting_for_review", suggestions_waiting: 1, review_url: `${origin}/settings#agents` });
+    expect(moved.what_to_do_next).toContain("Review them here");
+    json(await mcp.call("tag_items", { item_id: "masonry", tags: "layout, ideas" }));
+    const noted = json(await mcp.call("add_note", { item_id: "masonry", text: "Check the off-screen measuring" }));
+    expect(noted.suggestions_waiting).toBe(3);
+    expect(json(await mcp.call("check_changes", {})).waiting_for_review.suggestions).toHaveLength(3);
+    expect((await readItems(page)).gallery.collection).toBe("Portfolio inspo");
+
+    await page.goto(`${origin}/settings#agents`);
+    const review = page.getByRole("article", { name: "Codex suggests 3 changes" });
+    await expect(review).toBeVisible();
+    await review.getByRole("checkbox", { name: /Add a note to/ }).uncheck();
+    await review.getByRole("button", { name: "Apply 2 of 3" }).click();
+    await expect(page.getByRole("status")).toContainText("Applied 2 changes");
+    await expect(page.getByText("Nothing to review.")).toBeVisible();
+    let items = await readItems(page);
+    expect(items.gallery.collection).toBe("Moodboard");
+    expect(items.site.collection).toBe("Moodboard");
+    // "layout" matched the existing "layout" tag, so only "ideas" is new.
+    expect(items.masonry.tags).toBe(2);
+    expect(items.masonry.content).toBe("Measure cards off screen before placing them.");
+
+    const status = json(await mcp.call("check_changes", {}));
+    expect(status.recently_reviewed[0]).toMatchObject({ decision: "applied", skipped: [{ reason: "Not chosen" }] });
+    const undo = json(await mcp.call("undo_change", { change_id: status.recently_reviewed[0].change_id }));
+    expect(undo).toMatchObject({ status: "undone" });
+    items = await readItems(page);
+    expect(items.gallery.collection).toBe("Portfolio inspo");
+    expect(items.masonry.tags).toBe(1);
+    await expect(page.getByText(/^Undone/)).toBeVisible();
+
+    // Switching to "Make changes" lets small changes apply at once.
+    await page.getByRole("radio", { name: /Make changes/ }).check();
+    await expect.poll(async () => json(await mcp!.call("save_note", { text: "Agent summary of the moodboard", collection: "Moodboard" })).status).toBe("done");
   } finally {
     mcp?.child.stdin.end();
     await context.close();

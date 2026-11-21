@@ -34,7 +34,6 @@ export class LibraryClient {
   private offlineTimer: ReturnType<typeof setTimeout> | undefined;
   /** What the relay last said about the library. Unknown until the relay's first control frame. */
   private libraryPresent: boolean | undefined;
-  private nextId = 0;
 
   constructor(pairing: Pairing, options: { idleMs?: number; timeoutMs?: number; offlineGraceMs?: number } = {}) {
     this.pairing = pairing;
@@ -46,7 +45,8 @@ export class LibraryClient {
   async call(tool: string, args: Record<string, unknown>): Promise<unknown> {
     clearTimeout(this.idleTimer);
     await this.connect();
-    const id = String((this.nextId += 1));
+    // Unique across processes and reconnects, so the library can recognize a re-sent change and apply it once.
+    const id = crypto.randomUUID();
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => this.settle(id, new Error(this.session ? ANSWER_TIMEOUT : this.libraryPresent ? HANDSHAKE_TIMEOUT : offlineMessage(this.pairing.appOrigin))), this.timeoutMs);
       this.pending.set(id, { tool, args, resolve, reject, timer, sent: false });

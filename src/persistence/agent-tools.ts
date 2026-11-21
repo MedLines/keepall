@@ -8,6 +8,7 @@ import { listCollections } from "./collections";
 import { getDb } from "./db";
 import { getItem, listItems } from "./items";
 import { listTags } from "./tags";
+import { runAgentWriteTool, type AgentCallContext } from "./agent-writes";
 
 /** Attached images ride beside the result; the MCP server turns them into image content for the model. */
 export type AttachedImage = AgentImage & { itemId: string };
@@ -68,8 +69,9 @@ async function viewImagesForAgent(args: Record<string, unknown>) {
   return { shown: attachedImages.length, ...(notFound.length ? { notFound } : {}), ...(withoutImages.length ? { withoutImages } : {}), attachedImages };
 }
 
-/** Runs one decrypted agent request against the local library. Read-only. */
-export async function runAgentTool(tool: string, args: Record<string, unknown>, appOrigin: string): Promise<unknown> {
+/** Runs one decrypted agent request against the local library. */
+export async function runAgentTool(tool: string, args: Record<string, unknown>, context: AgentCallContext): Promise<unknown> {
+  const { appOrigin } = context;
   switch (tool) {
     case "search_items": {
       const parsed = parseSearchItemsArgs(args);
@@ -90,7 +92,10 @@ export async function runAgentTool(tool: string, args: Record<string, unknown>, 
       const [items, tags] = await Promise.all([listItems(), listTags()]);
       return listTagsForAgent(items, tags);
     }
-    default:
-      throw new AgentToolError(`Keepall doesn't support ${tool}. Update @keepall/mcp, or reload Keepall if it was just updated.`);
+    default: {
+      const result = await runAgentWriteTool(tool, args, context);
+      if (result === undefined) throw new AgentToolError(`Keepall doesn't support ${tool}. Reload Keepall if it was just updated, or update @keepall/mcp.`);
+      return result;
+    }
   }
 }

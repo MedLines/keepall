@@ -46,15 +46,15 @@ export function startAgentHost(): () => void {
     let lastTouch = 0;
     let closed = false;
 
-    async function handle(tool: string, args: Record<string, unknown>) {
+    async function handle(tool: string, args: Record<string, unknown>, requestId: string) {
       if (Date.now() - lastTouch > TOUCH_INTERVAL_MS) {
         lastTouch = Date.now();
         void touchAgentPairing(pairing.id).catch(() => {});
       }
       try {
-        return await runAgentTool(tool, args, location.origin);
+        return await runAgentTool(tool, args, { appOrigin: location.origin, pairingId: pairing.id, requestId });
       } catch (error) {
-        throw error instanceof AgentToolError ? error : new Error("Keepall could not read the library. Try again.");
+        throw error instanceof AgentToolError ? error : new Error("Keepall couldn't complete this request. Try again.");
       }
     }
 

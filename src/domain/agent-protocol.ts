@@ -271,7 +271,8 @@ export async function acceptPairing(link: PairingLink): Promise<{ pairKey: Bytes
   return { pairKey, acceptFrame: await pairAcceptFrame(pairKey, library.publicKey) };
 }
 
-export type ToolHandler = (tool: string, args: Record<string, unknown>) => Promise<unknown>;
+/** `requestId` is the agent's ID for this call. It stays the same when the agent re-sends after a reconnect. */
+export type ToolHandler = (tool: string, args: Record<string, unknown>, requestId: string) => Promise<unknown>;
 
 export type LibraryEndpoint = {
   /** Feed every relay message in arrival order. */
@@ -324,7 +325,7 @@ export function createLibraryEndpoint(pairKey: Bytes, handle: ToolHandler, send:
         return;
       }
       if (!isAgentRequest(request)) return;
-      void handle(request.tool, request.args).then(
+      void handle(request.tool, request.args, request.id).then(
         (result) => reply(prefix, connection, { id: request.id, ok: true, result }),
         (error: unknown) => reply(prefix, connection, { id: request.id, ok: false, error: error instanceof Error ? error.message : "Keepall could not complete this request." }),
       );
