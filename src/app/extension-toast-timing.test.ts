@@ -18,7 +18,7 @@ function worker() {
       get: vi.fn(async () => ({})), set: vi.fn(async () => {}),
     }, onChanged: { addListener: vi.fn() } },
     alarms: { create: vi.fn(), onAlarm: { addListener: vi.fn() } },
-    runtime: { onInstalled: { addListener: vi.fn() }, onMessage: { addListener: vi.fn() }, getURL: (path: string) => `chrome-extension://test/${path}` },
+    runtime: { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() }, onMessageExternal: { addListener: vi.fn() }, onMessage: { addListener: vi.fn() }, getURL: (path: string) => `chrome-extension://test/${path}` },
     contextMenus: { onClicked: { addListener: vi.fn() } },
     tabs: { sendMessage: vi.fn(async () => {}), onUpdated: { addListener: vi.fn() }, onRemoved: { addListener: vi.fn() } },
     scripting: { executeScript: vi.fn(async () => {}) },

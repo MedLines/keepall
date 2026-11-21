@@ -156,6 +156,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     void fileAction(message).then(sendResponse).catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
+  if (message.type === "agent-host") {
+    void ensureFrame(message.origin).then(() => sendResponse({ ok: true }), (error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
   const operation = ["capture", "capture-selection", "undo-capture", "capture-collections", "move-capture", "tag-capture"].includes(message.type)
     ? capture(message.origin, message.payload, message.type)
     : message.type === "organizations"

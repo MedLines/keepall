@@ -19,7 +19,7 @@ function worker({ request = true, contains = true } = {}) {
   const chrome = {
     storage: { local: { setAccessLevel: vi.fn(async () => {}), get: vi.fn(async () => ({})) }, session: { get: vi.fn(async () => ({})), set: vi.fn(async () => {}) }, onChanged: { addListener: vi.fn() } },
     alarms: { create: vi.fn(), onAlarm: { addListener: vi.fn() } },
-    runtime: { onInstalled: { addListener: vi.fn() }, onMessage: { addListener: (fn: Listener) => { listeners.push(fn); } }, getURL: (path: string) => `chrome-extension://test/${path}`, getContexts: vi.fn(async () => [{}]), sendMessage: vi.fn() },
+    runtime: { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() }, onMessageExternal: { addListener: vi.fn() }, onMessage: { addListener: (fn: Listener) => { listeners.push(fn); } }, getURL: (path: string) => `chrome-extension://test/${path}`, getContexts: vi.fn(async () => [{}]), sendMessage: vi.fn() },
     contextMenus: { onClicked: { addListener: vi.fn() } },
     permissions: { contains: vi.fn(async () => contains), request: vi.fn(async () => request) },
     tabs: { create: vi.fn(async () => ({})), sendMessage: vi.fn(async () => undefined), query: vi.fn(async () => []), onUpdated: { addListener: vi.fn() }, onRemoved: { addListener: vi.fn() } },

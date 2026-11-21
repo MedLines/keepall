@@ -7,6 +7,7 @@ import type { LibraryPreferences } from "@/domain/library-preferences";
 import type { Tag } from "@/domain/tag";
 import { trackBackupRevision, type BackupRevision } from "./backup-revision";
 import type { BackupFolderSettings } from "./backup-settings";
+import type { AgentPairing } from "./agent-pairings";
 
 export const KEEPALL_DB_NAME = "keepall";
 
@@ -26,6 +27,7 @@ export type KeepallDB = Dexie & {
   documentAssets: EntityTable<DocumentAsset, "id">;
   backupState: EntityTable<BackupRevision, "id">;
   backupSettings: EntityTable<BackupFolderSettings, "id">;
+  agentPairings: EntityTable<AgentPairing, "id">;
 };
 
 function createKeepallDb(): KeepallDB {
@@ -92,6 +94,8 @@ function createKeepallDb(): KeepallDB {
   db.version(10).stores({ backupState: "id" });
   db.version(11).stores({ documentAssets: "id, contentHash" });
   db.version(12).stores({ previewLayouts: "assetId" });
+  // Device-local agent pairings. Never exported: the pair key must not travel inside backups.
+  db.version(13).stores({ agentPairings: "id" });
   trackBackupRevision(db);
 
   return db;

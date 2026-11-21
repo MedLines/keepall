@@ -17,7 +17,7 @@ function worker(offscreenResult: object) {
       set: vi.fn(async () => {}),
     }, onChanged: { addListener: vi.fn() } },
     alarms: { create: vi.fn(), onAlarm: { addListener: vi.fn() } },
-    runtime: { onInstalled: { addListener: vi.fn() }, onMessage: { addListener: vi.fn((callback: Listener) => { listener = callback; }) },
+    runtime: { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() }, onMessageExternal: { addListener: vi.fn() }, onMessage: { addListener: vi.fn((callback: Listener) => { listener = callback; }) },
       getURL: (path: string) => `chrome-extension://test/${path}`, getContexts: vi.fn(async () => [{}]), sendMessage: vi.fn(async () => offscreenResult) },
     contextMenus: { onClicked: { addListener: vi.fn() } }, permissions: { contains: vi.fn(async () => true) },
     tabs: { sendMessage: vi.fn(async () => undefined), query: vi.fn(async () => []), onUpdated: { addListener: vi.fn() }, onRemoved: { addListener: vi.fn() } },

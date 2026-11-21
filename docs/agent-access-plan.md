@@ -2,7 +2,7 @@
 
 Let coding agents such as Claude Code, Codex, and OpenCode search, read, save to, and organize a Keepall library. The library stays in the browser's IndexedDB. Keepall's servers can't read it, can't read the agent's requests, and can't send commands to it.
 
-Status: proposal, November 15, 2026. Nothing is implemented. A spike decides whether to continue (see [Spike](#spike)).
+Status: spike built locally on November 15, 2026 (see [Spike results](#spike-results)). Nothing is deployed or published.
 
 ## Constraints
 
@@ -64,11 +64,21 @@ Settings lists paired agents with their permission level and last use. Revoking 
 
 ## Tools
 
+Read tools, built in the spike:
+
 | Tool | Behavior |
 | --- | --- |
-| `search_items` | Query, type, collection, tag, limit. Returns IDs, titles, types, and excerpts using the library's existing search rules. |
-| `get_item` | One item as Markdown with its note, tags, collection, and source URL. Article and document text on request. Images only on request, in chunks. |
-| `list_collections`, `list_tags` | Names, IDs, and item counts. |
+| `search_items` | Query plus optional type, collection name, tag name, and `has_images`. Uses the library's own search rules, including text found inside images. Each result has its ID, title, excerpt, tags, collection, picture count, and a link to open it in Keepall. |
+| `get_item` | One item in full: note, caption, saved article or document text, text found in its images, palette, tags, and collection. Long text is cut at 30,000 characters and marked as cut. Shows up to 8 pictures per call, with `image_offset` to page through a gallery. |
+| `view_images` | The main picture of up to 12 items at once, for comparing references like a moodboard. Reports IDs that are missing or have no picture. |
+| `list_collections`, `list_tags` | Names and item counts. |
+
+Pictures are every image in a gallery, a link's cover, page preview, and screenshots, a video's poster frame, and a PDF's first page. The browser decodes each one and re-encodes it as WebP: up to 1,568 px on the long side for `get_item` and 1,092 px for `view_images`, and smaller again if it would exceed about 600 KB. Originals never leave the library. The MCP server returns each picture as image content with a caption naming its item, so the model sees it the way it sees a pasted screenshot. Answers larger than one relay frame travel as ordered chunks of 512 KiB and are reassembled by `@keepall/mcp`.
+
+Write tools, after the spike:
+
+| Tool | Behavior |
+| --- | --- |
 | `save_link`, `save_note` | Create or reuse items. New items land in Unsorted and record which agent created them. |
 | `organize` | Move items to a collection, add or remove tags. Returns a proposal first unless the agent has permission to apply changes directly. |
 | `trash_item` | Moves to Trash. The tools never delete permanently or empty Trash. |
@@ -137,6 +147,54 @@ These claims are unverified. The spike answers them before any slice ships.
 | Do Claude Code, Codex, and OpenCode start `npx -y @keepall/mcp@1` from their MCP config? | Each one lists the tools and completes `search_items`. |
 
 Spike scope: a Worker and Durable Object that forward opaque frames, a minimal `@keepall/mcp` with pairing, and the extension answering `search_items` through `/extension-bridge`.
+
+## Spike results
+
+Built on `spike/agent-relay`. Everything runs locally: the relay under `wrangler dev`, the app under `next dev`, and the unpacked extension.
+
+| Piece | Where |
+| --- | --- |
+| Shared protocol: pairing link, X25519 + HKDF pair key, per-connection AES-GCM sessions, library endpoint | `src/domain/agent-protocol.ts` |
+| Read tools and picture resizing | `src/domain/agent-tools.ts`, `src/persistence/agent-tools.ts`, `src/persistence/agent-images.ts`, `packages/mcp/src/tools.ts` |
+| Pairings, stored only on this device and never in backups | `src/persistence/agent-pairings.ts` (database version 13) |
+| Library host, elected through a Web Lock, in the hidden bridge or an open tab | `src/app/extension-bridge/agent-host.ts`, `src/app/agent-host-runner.tsx` |
+| Approval page | `src/app/connect/` |
+| Relay Worker and Durable Object | `packages/relay/` |
+| Stdio MCP server and `pair`, `unpair`, `search` commands | `packages/mcp/` |
+| Extension: start the bridge on Chrome startup and after pairing | `extension/worker.js`, `extension/offscreen.js`, `externally_connectable` in the manifest |
+
+Tests: protocol and tool unit tests in Vitest, five relay tests against `wrangler dev`, two MCP tests that drive the stdio server through a real relay, and `e2e/agent-access.spec.ts`, which pairs through `/connect` in Chromium with the extension loaded, closes the tab, and gets search results from the extension's hidden bridge.
+
+What the spike showed:
+
+- **Push may not be needed while Chrome runs.** The extension's offscreen document already outlives its background worker, so the bridge inside it can hold the relay connection with no pings and no push. The idle connection sends nothing, so the Durable Object hibernates. Still unverified: whether that connection survives hours idle, sleep and resume, and network changes, and whether Cloudflare closes long-idle hibernated sockets. Measure this with a deployed relay before building push.
+- **The agent has to speak first.** The relay only routes library frames to an agent connection it has seen, so the agent announces itself when the library appears, during pairing and after.
+- **WebCrypto X25519 works** in Node 24 and in the Chromium build Playwright ships. The minimum Chrome version for X25519 is still unchecked against the extension's `minimum_chrome_version` of 116.
+- **No new extension permissions.** The change adds `externally_connectable`, `runtime.onStartup`, and `runtime.onMessageExternal`. Confirm in the Chrome Web Store dashboard that it doesn't trigger a warning.
+- **The pairing link reaches browser history.** The page drops the fragment from the address bar after reading it, but the history entry is already written and may sync. The secret only matters until pairing completes. A short code shown by both the agent and the page would close that window.
+- **The extension isn't always there.** In the first hands-on test, pairing worked but the extension in Chrome wasn't loading the bridge, so searches never reached the library. Two changes came out of it. First, an open Keepall tab now answers agents too: the bridge and every tab ask for the same Web Lock, so one context per browser profile holds the relay connections, and the next one takes over when it closes. Second, `/connect` says when Keepall Capture didn't respond, and the agent's errors name the missing piece (relay, no connected browser, handshake, or slow answer) and the library address to check.
+- **Parallel calls before pairing now share one link**, and a retry on a connection that already knows the library is gone fails in about 3 seconds instead of waiting out the 30-second timeout.
+- **Retried requests can run twice.** When the library reconnects mid-request, the agent re-sends under the new session. That's harmless for search. Write tools need request IDs the library remembers.
+
+Not done in the spike: deploying the relay (needs a Cloudflare login), measuring real usage, publishing `@keepall/mcp` (it imports `src/domain` directly, so publishing needs a bundling step, and running from source prints a Node module-type warning), checking Codex and OpenCode, revoking pairings in Settings, and push.
+
+### Try it locally
+
+```bash
+pnpm --filter @keepall/relay dev
+```
+
+```bash
+pnpm dev
+```
+
+Load `extension/` unpacked and set its library address to `http://localhost:3000`. Then add the server to Claude Code:
+
+```bash
+claude mcp add keepall -- node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /absolute/path/to/keepall/packages/mcp/src/cli.ts
+```
+
+Ask Claude Code to search Keepall. The first call returns a pairing link. Open it in the same Chrome profile, choose **Allow read access**, and ask again.
 
 ## Slices after the spike
 

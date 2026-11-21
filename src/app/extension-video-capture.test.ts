@@ -16,7 +16,7 @@ function worker(routes: Routes, found: string[] = []) {
     storage: { local: { setAccessLevel: vi.fn(async () => {}) }, session: { set: vi.fn(async () => {}) }, onChanged: { addListener: vi.fn() } },
     alarms: { create: vi.fn(), onAlarm: { addListener: vi.fn() } },
     runtime: {
-      onInstalled: { addListener: vi.fn() }, onMessage: { addListener: vi.fn() },
+      onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() }, onMessageExternal: { addListener: vi.fn() }, onMessage: { addListener: vi.fn() },
       sendMessage: vi.fn(async (message: { operation: string; payload: Record<string, unknown> }) => {
         sessions.push(message);
         if (message.operation === "begin") manifest = message.payload as typeof manifest;
@@ -127,7 +127,7 @@ test("rejects a video over 100 MiB from its declared size", async () => {
 });
 
 test("finds the clicked player's address in nested React props and ignores other players", () => {
-  const context: Record<string, unknown> = { chrome: { storage: { local: { setAccessLevel: async () => {} }, onChanged: { addListener() {} } }, alarms: { create() {}, onAlarm: { addListener() {} } }, runtime: { onInstalled: { addListener() {} }, onMessage: { addListener() {} } }, contextMenus: { onClicked: { addListener() {} } }, tabs: { onUpdated: { addListener() {} }, onRemoved: { addListener() {} } }, action: { onClicked: { addListener() {} } }, commands: { getAll: async () => [], onCommand: { addListener() {} } } }, crypto, URL };
+  const context: Record<string, unknown> = { chrome: { storage: { local: { setAccessLevel: async () => {} }, onChanged: { addListener() {} } }, alarms: { create() {}, onAlarm: { addListener() {} } }, runtime: { onInstalled: { addListener() {} }, onStartup: { addListener() {} }, onMessageExternal: { addListener() {} }, onMessage: { addListener() {} } }, contextMenus: { onClicked: { addListener() {} } }, tabs: { onUpdated: { addListener() {} }, onRemoved: { addListener() {} } }, action: { onClicked: { addListener() {} } }, commands: { getAll: async () => [], onCommand: { addListener() {} } } }, crypto, URL };
   runInNewContext(workerSource, context);
   // Chrome serializes the function into the page, so run its source against this document.
   const find = new Function(`return ${String(context.findVideoSources)}`)() as (blobUrl: string) => string[];
