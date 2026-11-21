@@ -128,8 +128,8 @@ import { LibraryTopBar } from "./library-top-bar";
 import { UndoNotice } from "./undo-notice";
 import { ContextPackDialog, type ContextPackRequest } from "./context-pack-dialog";
 import { contextPackSourceForSelection, contextPackSourceForView } from "@/domain/context-pack-view";
+import Link from "next/link";
 import { UnsortedReview } from "./unsorted-review";
-import { AgentChangesReview } from "./agent-changes-review";
 import { useAgentReviewOffer } from "./use-agent-review-offer";
 import { LibraryEmptyState, getEmptyStateKind, entireLibrarySearch } from "./library-empty-state";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
@@ -335,7 +335,6 @@ export function Library() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const reviewButtonRef = useRef<HTMLButtonElement>(null);
-  const agentReviewButtonRef = useRef<HTMLButtonElement>(null);
   const agentReview = useAgentReviewOffer();
   const [documentRevision, setDocumentRevision] = useState("initial");
   const prevBrowseScopeRef = useRef<string | null>(null);
@@ -1957,7 +1956,7 @@ export function Library() {
       <div className="relative flex h-full min-h-0 overflow-hidden bg-bg-shell py-2.5 pr-2.5">
         <LibraryShell
           panelOpen={panelOpen}
-          previewOpen={reviewOpen || agentReview.open || previewOpen || pathname.startsWith("/items/")}
+          previewOpen={reviewOpen || previewOpen || pathname.startsWith("/items/")}
           panelReady={panelPreference !== null || storedPanelPreference !== null}
           onPanelOpenChange={setPanelOpen}
           browseCollectionId={browseCollectionId}
@@ -2020,10 +2019,9 @@ export function Library() {
         <div data-library-panel className="library-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-bg-canvas shadow-panel">
         {topBar}
         {agentReview.offer && !view.trash && !view.collections && !view.tags ? <div className="px-3 pb-4 sm:px-6">
-          <button ref={agentReviewButtonRef} type="button" aria-haspopup="dialog" disabled={loadState !== "ready" || mutationBusy || previewOpen || reviewOpen} className={buttonClassName({ size: "none", className: "inline-block min-h-11 px-4 text-sm disabled:opacity-50" })} onClick={() => agentReview.setOpen(true)}>Review {agentReview.offer.agentName}&apos;s changes</button>
-          <p className="mt-2 text-xs text-text-secondary">{agentReview.offer.agentName} suggested changes to {agentReview.offer.items === 1 ? "1 item" : `${agentReview.offer.items} items`}. Review them one at a time.</p>
+          <Link href="/review" className={buttonClassName({ size: "none", className: "inline-flex min-h-11 items-center px-4 text-sm" })}>Review {agentReview.offer.agentName}&apos;s changes</Link>
+          <p className="mt-2 text-xs text-text-secondary">{agentReview.offer.agentName} suggested changes to {agentReview.offer.items === 1 ? "1 item" : `${agentReview.offer.items} items`}. Nothing changes until you review them.</p>
         </div> : null}
-        {agentReview.open && loadState === "ready" ? <AgentChangesReview collections={collections} tags={tags} onClose={() => agentReview.setOpen(false)} onOpenItem={openInspect} returnFocus={() => agentReviewButtonRef.current ?? libraryHeadingRef.current} /> : null}
         {browseUnsorted && !view.trash && !view.collections && !view.tags ? <div className="px-3 pb-4 sm:px-6">
           <button ref={reviewButtonRef} type="button" aria-haspopup="dialog" disabled={loadState !== "ready" || mutationBusy || previewOpen || items.every(item => item.collectionIds.length > 0)} className={buttonClassName({ size: "none", className: "inline-block min-h-11 px-4 text-sm disabled:opacity-50" })} onClick={() => setReviewOpen(true)}>Review Unsorted</button>
           <p className="mt-2 text-xs text-text-secondary">Review all items without a collection, one at a time.</p>
@@ -2101,7 +2099,7 @@ export function Library() {
                   selectedIds={selectedIds}
                   onSelectIds={setSelectedIds}
                   keyboardDisabled={previewBusy}
-                  suspendCardTransitions={reviewOpen || agentReview.open}
+                  suspendCardTransitions={reviewOpen}
                   previewEnabled={!view.trash}
                   onOpenItem={openInspect}
                   empty={
