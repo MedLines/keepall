@@ -1,14 +1,11 @@
 # Keepall Capture — Chrome Web Store 0.6.0 draft
 
 - Item ID: `ehloefgfecmfjbncknaoleakbnjhkpea`
-- Published version: **0.4.0** (Chrome Web Store listing showed it October 11, 2026)
-- Prepared update: **0.6.0** (it includes the 0.5.0 changes, so 0.5.0 never needs its own review)
-- 0.5.0 prepared November 12, 2026; 0.6.0 prepared November 21, 2026. Dashboard and production checks must be recorded separately from local tests.
+- Published version: **0.5.0** (the dashboard showed it published on November 22, 2026)
+- Draft: **0.6.0**, uploaded November 22, 2026 with the same permissions as 0.5.0. Description, privacy justifications, and test instructions saved and checked against this file.
+- Dashboard: `https://chrome.google.com/u/2/webstore/devconsole/a26d9a34-d805-4344-ac85-6e738455529d` (publisher account `/u/2/`).
 
-Upload to the **existing item**. This update adds page screenshots, a Save page with
-screenshot menu item, a shortcut to reach the save notice, notices that stay
-visible and explain errors, a steadier capture drawer, and a clearer Options page.
-0.6.0 adds agent access: once the user connects an AI agent in Keepall Settings, the
+Upload to the **existing item**. 0.6.0 adds agent access: once the user connects an AI agent in Keepall Settings, the
 hidden bridge stays loaded while Chrome runs so the agent can reach the library, and the
 toolbar icon shows a count with a **Review agent changes** menu item when an agent
 suggests changes. The manifest adds `externally_connectable` for the Keepall origins so
@@ -33,18 +30,20 @@ are separate from submitting it for review.
 
 ## Store listing
 
+The 0.5.0 submission was rejected on November 14, 2026 for keyword spam ("Yellow Argon"): the description listed file formats ("PNG, JPEG, GIF, WebP, AVIF, MP4, WebM, TXT, Markdown, or PDF"). Never list formats, brands, or other keywords in the description; describe each feature in plain words. The text below is what the dashboard holds.
+
 **Description** — paste as plain text:
 
 ```text
 Save pages, links, images, useful passages, and local files to your personal Keepall library. Keepall Capture works with the Keepall web app in this Chrome profile; you do not need to keep a library tab open to save.
 
 SAVE FROM THE WEB
-Click the toolbar icon to save the current page. Right-click a link to save its destination without opening it. Right-click an image to save the image itself. Right-click a video and choose Save video to Keepall (MP4 or WebM up to 100 MB; if a streamed video can't be handed over by the page, Keepall explains why). Highlight text and choose Save to Keepall to add the passage to the source link's note. Repeated selections do not add duplicate passages.
+Click the toolbar icon to save the current page. Right-click a link to save its destination without opening it. Right-click an image to save the image itself. Right-click a video and choose Save video to Keepall (up to 100 MB; if a streamed video can't be handed over by the page, Keepall explains why). Highlight text and choose Save to Keepall to add the passage to the source link's note. Repeated selections do not add duplicate passages.
 
 ADD CONTEXT AND FILES
 Press Alt+K (Option+K on Mac) to open the capture drawer, using the same controls and appearance as the Keepall app. After a save, press Alt+Shift+K to move keyboard focus to the save notice. Edit the page title, write a plain-text or Markdown note, preview it, and choose collections and tags. Close keeps unfinished edits in that tab until you reload or close the tab; Discard draft removes them.
 
-Use Add files for PNG, JPEG, GIF, WebP, AVIF, MP4, WebM, TXT, Markdown, or PDF files. You can also paste an image into the drawer. Save multiple images as one gallery or separate items, add an image caption or video note, and inspect or edit text-file contents. These become independent library items rather than attachments to the current page. Mixed files save separately. Progress and results show which files saved, with retry and cancellation controls. Bulk import opens the app's import dialog while preserving the extension draft.
+Use Add files to save images, videos, text and Markdown documents, or PDFs from your computer. You can also paste an image into the drawer. Save multiple images as one gallery or separate items, add an image caption or video note, and inspect or edit text-file contents. These become independent library items rather than attachments to the current page. Mixed files save separately. Progress and results show which files saved, with retry and cancellation controls. Bulk import opens the app's import dialog while preserving the extension draft.
 
 SCREENSHOTS OF THE PAGE
 After saving a page, the camera button in the confirmation adds a screenshot of what's on screen to the saved link. Scroll and add more, up to eight. You can also right-click an empty part of a page and choose Save page with screenshot. Screenshots are taken only when you click, and they stay in your local library.
@@ -53,7 +52,7 @@ KEEP ORGANIZING
 After a quick save, open the item, organize it, or undo a new save. The organizer stays open after choosing a collection so you can add tags immediately. Search collection and tag lists, create a name when there are no matches, and clear the search with an easy-to-hit button. Already-saved links keep their organization unless you change it.
 
 CONNECT AN AI AGENT (OPTIONAL)
-Connect Claude Code, Codex, OpenCode, or another agent in Keepall Settings, Agents, and it can search your library, look at saved images, and suggest how to organize them. While Chrome runs, Keepall Capture keeps your library reachable for the agents you connected, without an open tab. Messages are end-to-end encrypted between your browser and the agent. When an agent suggests changes, the toolbar icon shows how many items wait for your review; right-click the icon and choose Review agent changes. Nothing changes until you approve, unless you allow an agent to make small changes directly, and every agent change can be undone.
+In Keepall Settings, you can connect an AI agent so it can search your library, look at saved images, and suggest how to organize them. While Chrome runs, Keepall Capture keeps your library reachable for the agents you connected, without an open library tab. Messages between your browser and the agent are end-to-end encrypted. When an agent suggests changes, the toolbar icon shows how many items wait for your review; right-click the icon and choose Review agent changes. Nothing changes until you approve, unless you let an agent make small changes directly, and every agent change can be undone.
 
 OPEN YOUR LIBRARY
 Right-click the extension icon and choose Open Keepall library. It focuses an existing library tab without losing its current search or draft, or opens a new one. Visit https://www.keepall.app to browse, search, edit, and back up your library.
@@ -91,10 +90,10 @@ Save user-selected pages, links, images, text passages, and local files to the u
 | --- | --- |
 | `activeTab` | Read the current page URL and title after the user clicks the toolbar icon, invokes the capture shortcut, or selects Save to Keepall. Temporary access also lets the extension display capture controls and save feedback on that page. After the user clicks the camera action or Save page with screenshot, the same temporary access is used to capture the visible tab as an image for that saved link, with Keepall's own UI hidden during capture. |
 | `scripting` | Display the capture drawer, local file controls, packaged note preview, save-result toast, and organizer on the page where the user invokes Keepall. Notify an open Keepall tab after confirmed library changes. |
-| `offscreen` | Hold an invisible Keepall bridge page so explicit saves, local file transfers, and organization changes reach the app origin's local IndexedDB without opening a visible tab. The connection check reads organization through the same bridge without creating an item. File bytes pass through browser messages, not a server upload. After the user connects an AI agent in Keepall Settings, the same bridge stays loaded while Chrome runs so that agent can reach the library; the bridge holds the end-to-end encrypted agent connection, and the extension never sees its contents. |
-| `storage` | Store the chosen Keepall address and appearance, and whether the user connected an AI agent (so the bridge loads at browser startup). Pending link retries may include the URL, title, entered note, and organization; they expire after ten minutes and are removed on confirmation or cleanup. Browser-session storage holds save-action identifiers and temporary editor records containing tab/editor IDs, source/library URLs, saved item IDs, and action tokens. File bytes, file-note contents, and directly selected passages are not written to extension storage. |
+| `offscreen` | Hold an invisible Keepall bridge page so explicit saves, local file transfers, and organization changes reach the app origin's local IndexedDB without opening a visible tab. The connection check reads organization through the same bridge without creating an item. File bytes pass through browser messages, not a server upload. After the user connects an AI agent in Keepall Settings, the same bridge page stays loaded while Chrome runs so that agent can reach the library. The bridge page holds the end-to-end encrypted agent connection; the extension only receives how many items wait for review. |
+| `storage` | Store the chosen Keepall address and appearance, and whether the user connected an AI agent so the bridge loads at browser startup. Pending link retries may include the URL, title, entered note, and organization; they expire after ten minutes and are removed on confirmation or cleanup. Browser-session storage holds save-action identifiers and temporary editor records containing tab/editor IDs, source/library URLs, saved item IDs, and action tokens. File bytes, file-note contents, and directly selected passages are not written to extension storage. |
 | `alarms` | Periodically remove expired pending link captures and temporary editor-session records. |
-| `contextMenus` | Provide Save to Keepall for images, links, and selected text, Save video to Keepall for videos, and Save page with screenshot for pages in webpage menus, and Open Keepall library and Review agent changes (shown only while an agent's suggestions wait) in the extension icon's menu. The save actions read the chosen target and source context; the icon-menu actions open or focus a Keepall page without capturing the current page. |
+| `contextMenus` | Provide Save to Keepall for images, links, and selected text, Save video to Keepall for videos, and Save page with screenshot for pages in webpage menus. In the extension icon's menu, provide Open Keepall library, and Review agent changes while an agent's suggestions wait for review. The save actions read the chosen target and source context; the icon-menu actions open or focus a Keepall page without capturing the current page. |
 | `https://www.keepall.app/*` | Load the hidden Keepall bridge and notify open library tabs after changes. Saved content lives in this website origin's local IndexedDB in the user's browser profile. |
 | `http://localhost/*` | Support users who choose a locally running Keepall address in Options. The default destination remains https://www.keepall.app. |
 | Optional `*://*/*` | Download an image or video from its host only after the user chooses Save to Keepall or Save video to Keepall. Request permission for individual hosts, or let users optionally allow all websites from Options. This access is not needed for ordinary page links, selected text, explicitly chosen local files, or image paste. |
@@ -105,7 +104,7 @@ Save user-selected pages, links, images, text passages, and local files to the u
 https://www.keepall.app/* loads the hidden Keepall bridge and lets explicit captures, local file transfers, and organization changes reach that website origin's local IndexedDB. It also allows open library tabs to refresh after changes. http://localhost/* supports a locally running Keepall address chosen in Options. Optional *://*/* access downloads only images or videos the user explicitly selects through Save to Keepall or Save video to Keepall; users can allow individual hosts or optionally all websites. Local files are selected through the file picker or an explicit paste and do not need host-download access. The extension does not automatically collect page content or browsing history; a page screenshot is taken only after an explicit click on the camera action or Save page with screenshot.
 ```
 
-**Remote code:** Retain **Yes** for the disclosed isolated website iframe:
+**Remote code:** the dashboard no longer asks this question (checked November 22, 2026). The disclosure is kept here for reference:
 
 ```text
 The extension embeds https://www.keepall.app/extension-bridge, or the configured localhost equivalent, in an iframe inside its offscreen document. The website's script runs in that isolated iframe without extension APIs and saves user-requested content to the website origin's local IndexedDB. If the user connects an AI agent, that iframe also opens an end-to-end encrypted WebSocket to Keepall's relay (a Cloudflare Worker) and answers the agent from the local library; the extension only learns how many items wait for review. `externally_connectable` lets Keepall pages ask the extension to keep this bridge loaded. The extension worker, injected scripts, drawer styles, and note controls/preview are packaged locally; they do not fetch or evaluate remote JavaScript.
@@ -142,7 +141,7 @@ and adds the agent relay and what a connected agent receives (`/privacy#agents`)
 Paste-ready text, under 500 characters:
 
 ```text
-No account needed. Open https://www.keepall.app in this Chrome profile. On an HTTPS page, click Keepall; try Organize, tags and Undo. Alt+K opens the drawer: Add files (PNG/JPEG, MP4, TXT/MD/PDF), paste an image, and preview Markdown. Save, then click the camera in the notice for a screenshot. Right-click a link/image/selection to save; allow the image host if asked. Right-click the extension icon > Open Keepall library. Internal pages cannot be captured. Agent access is optional.
+No account needed. Open https://www.keepall.app in this Chrome profile. On an HTTPS page, click Keepall; try Organize, tags and Undo. Alt+K opens the drawer: add a local file, paste an image, preview Markdown. Save, then click the camera in the notice for a screenshot. Right-click a link, image or selection to save; allow the image host if asked. Right-click the extension icon > Open Keepall library. Internal pages cannot be captured. Agent access is optional.
 ```
 
 ## Local release verification — November 12, 2026
