@@ -269,7 +269,7 @@ function CardHeightMeasurer({ items, group, columnWidth, renderItem, isScrolling
 
   if (!batch.length) return null;
   return (
-    <div aria-hidden="true" inert className="pointer-events-none invisible relative h-0 overflow-hidden" style={{ contain: "strict" }}>
+    <div aria-hidden="true" inert className="pointer-events-none invisible relative h-0 overflow-hidden contain-strict">
       {/* A new list per batch, so its ref measures every batch. */}
       <ul key={batch[0]} ref={measureBatch} className="relative" style={{ width: columnWidth }}>
         {batch.map(index => items[index] ? renderItem(items[index], {
