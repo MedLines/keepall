@@ -115,10 +115,10 @@ try {
       if (kind === "notes") {
         editorAt = recordingTime();
         xdo("key", "alt+k");
-        await ui.wait("#keepall-note-input");
+        await ui.wait(".note-input");
         await rest(700);
-        await ui.click(".markdown-toggle");
-        await ui.click("#keepall-note-input");
+        await ui.click("[aria-label='Note format'] button", "Markdown");
+        await ui.click(".note-input");
         xdo("type", "--clearmodifiers", "--delay", "45", "# A quiet corner\n\n- Warm light\n- A place to read");
         await rest(700);
         await ui.click("button[type=submit]");

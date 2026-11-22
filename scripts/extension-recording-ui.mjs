@@ -12,12 +12,23 @@ export async function extensionRecordingUi(context, page, move, xdo) {
     try {
       const { result } = await cdp.send("Runtime.callFunctionOn", {
         objectId: object.objectId,
+        // Notices render in an iframe inside the shadow root, so they stay above website pop-ups; search it too.
         functionDeclaration: `function(selector, text) {
-          const element = [...this.querySelectorAll(selector)].find(el => !text || el.textContent.includes(text));
-          if (!element) return null;
-          const rect = element.getBoundingClientRect();
-          if (!rect.width || !rect.height || getComputedStyle(element).visibility === 'hidden' || element.disabled) return null;
-          return {x:rect.x+rect.width/2,y:rect.y+rect.height/2,text:element.textContent};
+          const scopes = [{ root: this, x: 0, y: 0 }];
+          for (const frame of this.querySelectorAll('iframe')) {
+            if (!frame.contentDocument) continue;
+            const box = frame.getBoundingClientRect();
+            scopes.push({ root: frame.contentDocument, x: box.x + frame.clientLeft, y: box.y + frame.clientTop });
+          }
+          for (const scope of scopes) {
+            const element = [...scope.root.querySelectorAll(selector)].find(el => !text || el.textContent.includes(text));
+            if (!element) continue;
+            const rect = element.getBoundingClientRect();
+            const style = element.ownerDocument.defaultView.getComputedStyle(element);
+            if (!rect.width || !rect.height || style.visibility === 'hidden' || element.disabled) continue;
+            return {x:scope.x+rect.x+rect.width/2,y:scope.y+rect.y+rect.height/2,text:element.textContent};
+          }
+          return null;
         }`,
         arguments: [{ value: selector }, { value: text ?? "" }], returnByValue: true,
       });
