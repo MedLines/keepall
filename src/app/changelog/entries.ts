@@ -9,6 +9,28 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    id: "2026-11-22-connect-ai-agents",
+    date: "2026-11-22",
+    title: "Connect an AI agent to your library",
+    summary: "Let Claude Code, Codex, OpenCode, or another agent search your library, look at your saved images, and help organize it, with end-to-end encryption and your review.",
+    sections: [
+      { label: "New", notes: [
+        "In Settings, Agents, choose your agent and what it can do: Read only, Suggest changes, or Make changes. Keepall gives you one setup step to paste into the agent. You don't install anything else.",
+        "A connected agent can search your library, read items in full, look at saved images, add tags and notes, move items between collections, rename collections, move items to Trash, and save new links and notes.",
+        "With Suggest changes, nothing changes until you review it. Agent review in the sidebar shows waiting suggestions as library cards. Open one to see the item, then accept, change, or skip each suggestion, or apply or decline the rest at once.",
+        "Every agent change keeps a copy of what it replaced. Recent changes in Settings shows what each agent did, and Undo puts it back, leaving alone anything you edited since. With a backup folder set, approving suggestions saves a backup first.",
+      ] },
+      { label: "Improved", notes: [
+        "Requests and answers are encrypted between your browser and the agent's computer. Keepall's relay passes them along without being able to read them. What an agent reads is sent to its AI provider, as with anything you share with that agent.",
+        "The agent can reach your library while a Keepall tab is open. Keepall Capture 0.6.0, now in Chrome Web Store review, keeps it reachable while Chrome runs and shows waiting suggestions on its toolbar icon.",
+      ] },
+    ],
+    guides: [
+      { label: "Connect an agent", href: "/settings#agents" },
+      { label: "What agents and the relay receive", href: "/privacy#agents" },
+    ],
+  },
+  {
     id: "2026-11-12-capture-screenshots-and-notices",
     date: "2026-11-12",
     title: "Page screenshots, Context Packs, and steadier save notices",
