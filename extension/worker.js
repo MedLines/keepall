@@ -35,10 +35,15 @@ chrome.runtime.onInstalled.addListener(() => {
       documentUrlPatterns: ["http://*/*", "https://*/*"],
     });
     chrome.contextMenus.create({ id: "open-keepall-library", title: "Open Keepall library", contexts: ["action"] });
+    chrome.contextMenus.create({ id: "review-agent-changes", title: "Review agent changes", contexts: ["action"], visible: false });
   });
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === "review-agent-changes") {
+    void openKeepallPage("/review").catch(() => {});
+    return;
+  }
   if (info.menuItemId === "open-keepall-library") {
     void openKeepallLibrary().catch(() => {
       if (tab?.id !== undefined) void showFeedback(tab.id, "Could not open your Keepall library. Try again.", false, "badge");
@@ -68,19 +73,36 @@ async function keepallOrigin() {
 }
 
 async function openKeepallLibrary() {
+  return openKeepallPage("/");
+}
+
+/** Focuses an open Keepall tab at this path, or opens one. */
+async function openKeepallPage(pathname) {
   const origin = await keepallOrigin();
   const tabs = await chrome.tabs.query({});
-  const library = tabs.find((tab) => {
+  const existing = tabs.find((tab) => {
     if (tab.id === undefined || !tab.url) return false;
     try {
       const url = new URL(tab.url);
-      return url.origin === origin && url.pathname === "/";
+      return url.origin === origin && url.pathname === pathname;
     } catch { return false; }
   });
-  if (library) {
-    await chrome.tabs.update(library.id, { active: true });
-    await chrome.windows.update(library.windowId, { focused: true });
-  } else await chrome.tabs.create({ url: `${origin}/` });
+  if (existing) {
+    await chrome.tabs.update(existing.id, { active: true });
+    await chrome.windows.update(existing.windowId, { focused: true });
+  } else await chrome.tabs.create({ url: `${origin}${pathname}` });
+}
+
+/**
+ * Agent suggestions waiting for review: a count on the toolbar icon in every tab, and a menu item that opens the
+ * review. Save confirmations show over it briefly, then clear back to it.
+ */
+async function showAgentReview(items, agentName) {
+  const waiting = Number.isInteger(items) && items > 0;
+  await chrome.action.setBadgeBackgroundColor({ color: [64, 64, 72, 255] }).catch(() => {});
+  await chrome.action.setBadgeText({ text: waiting ? String(Math.min(items, 99)) : "" }).catch(() => {});
+  await chrome.action.setTitle({ title: waiting ? `Save page to Keepall. ${agentName || "An agent"} suggested changes to ${items === 1 ? "1 item" : `${items} items`}.` : "Save page to Keepall" }).catch(() => {});
+  await chrome.contextMenus.update("review-agent-changes", { visible: waiting, title: waiting ? `Review agent changes (${items})` : "Review agent changes" }).catch(() => {});
 }
 
 async function requireLibraryAccess(origin) {
@@ -107,6 +129,32 @@ async function ensureOffscreen(origin) {
   }).finally(() => { creatingOffscreen = undefined; });
   await creatingOffscreen;
 }
+
+// Agent access: keep the hidden bridge loaded so paired agents can reach the library while Chrome runs.
+// The bridge holds the relay connection and does all decryption; the extension never sees plaintext.
+async function startAgentHost() {
+  const origin = await keepallOrigin();
+  await ensureOffscreen(origin);
+  await chrome.runtime.sendMessage({ target: "offscreen", type: "agent-host", origin });
+}
+
+chrome.runtime.onStartup.addListener(() => {
+  void chrome.storage.local.get("agentHost")
+    .then(({ agentHost }) => (agentHost === true ? startAgentHost() : undefined))
+    .catch(() => {});
+});
+
+// Keepall's /connect page asks for this after pairing an agent.
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  if (message?.type !== "agent-host") return;
+  void (async () => {
+    if (sender.origin !== await keepallOrigin()) return { ok: false };
+    await chrome.storage.local.set({ agentHost: true });
+    await startAgentHost();
+    return { ok: true };
+  })().then(sendResponse, () => sendResponse({ ok: false }));
+  return true;
+});
 
 async function checkLibraryConnection() {
   const origin = await keepallOrigin();
@@ -170,7 +218,8 @@ async function showFeedback(tabId, message, success, source = "toolbar", editorI
   clearTimeout(badgeTimers.get(tabId));
   badgeTimers.set(tabId, setTimeout(() => {
     badgeTimers.delete(tabId);
-    void chrome.action.setBadgeText({ tabId, text: "" }).catch(() => {});
+    // null, not "": the tab falls back to the global badge, which may show agent changes waiting.
+    void chrome.action.setBadgeText({ tabId, text: null }).catch(() => {});
     void chrome.action.setTitle({ tabId, title: "Save page to Keepall" }).catch(() => {});
   }, success ? 5000 : 15000));
   if (source === "badge") return;
@@ -902,7 +951,8 @@ async function saveVideo(tab, srcUrl, context = {}) {
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === "loading") {
-    void chrome.action.setBadgeText({ tabId, text: "" }).catch(() => {});
+    // null, not "": the tab falls back to the global badge, which may show agent changes waiting.
+    void chrome.action.setBadgeText({ tabId, text: null }).catch(() => {});
     void chrome.action.setTitle({ tabId, title: "Save page to Keepall" }).catch(() => {});
   }
 });
@@ -1058,6 +1108,13 @@ chrome.commands.onCommand.addListener((command, tab) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.target === "worker" && message.type === "agent-review" && sender.id === chrome.runtime.id && !sender.tab) {
+    void (async () => {
+      if (message.origin !== await keepallOrigin()) return;
+      await showAgentReview(message.items, message.agentName);
+    })();
+    return;
+  }
   if (message?.type === "editor-file-action") {
     void handleEditorFileAction(message, sender).then(sendResponse).catch(error => sendResponse({ success: false, error: error.message || "Could not complete this file action." }));
     return true;

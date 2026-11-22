@@ -1,21 +1,27 @@
-# Keepall Capture — Chrome Web Store 0.5.0 draft
+# Keepall Capture — Chrome Web Store 0.6.0 draft
 
 - Item ID: `ehloefgfecmfjbncknaoleakbnjhkpea`
 - Published version: **0.4.0** (Chrome Web Store listing showed it October 11, 2026)
-- Prepared update: **0.5.0**
-- Prepared November 12, 2026. Dashboard and production checks must be recorded separately from local tests.
+- Prepared update: **0.6.0** (it includes the 0.5.0 changes, so 0.5.0 never needs its own review)
+- 0.5.0 prepared November 12, 2026; 0.6.0 prepared November 21, 2026. Dashboard and production checks must be recorded separately from local tests.
 
 Upload to the **existing item**. This update adds page screenshots, a Save page with
 screenshot menu item, a shortcut to reach the save notice, notices that stay
 visible and explain errors, a steadier capture drawer, and a clearer Options page.
-Production must advertise `link-screenshot-v1` before the store update goes live.
+0.6.0 adds agent access: once the user connects an AI agent in Keepall Settings, the
+hidden bridge stays loaded while Chrome runs so the agent can reach the library, and the
+toolbar icon shows a count with a **Review agent changes** menu item when an agent
+suggests changes. The manifest adds `externally_connectable` for the Keepall origins so
+the app can ask the extension to start that bridge. No new permissions.
+Production must advertise `link-screenshot-v1` and `agent-host-v1`, and the relay must be
+deployed, before the store update goes live.
 The web app's package version is independent of the extension version.
 
 ## Draft preparation
 
 1. Commit and push the reviewed release changes. Deploy the matching app bridge and updated privacy page before testing the production file workflow.
 2. Open the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole), then **Keepall Capture**.
-3. In **Package**, choose **Upload New Package** and upload `/tmp/keepall-capture-0.5.0.zip`. Confirm **0.5.0**.
+3. In **Package**, choose **Upload New Package** and upload `/tmp/keepall-capture-0.6.0.zip`. Confirm **0.6.0**.
 4. In **Store listing**, use the description below. The short summary comes from the manifest.
 5. In **Privacy practices**, use the single purpose and permission explanations below. Review the existing data categories and certifications against the actual dashboard fields. Retain the isolated website iframe disclosure.
 6. Add the reviewer instructions below and save each edited tab. Verify the uploaded version, listing, privacy fields, and production workflow.
@@ -45,6 +51,9 @@ After saving a page, the camera button in the confirmation adds a screenshot of 
 
 KEEP ORGANIZING
 After a quick save, open the item, organize it, or undo a new save. The organizer stays open after choosing a collection so you can add tags immediately. Search collection and tag lists, create a name when there are no matches, and clear the search with an easy-to-hit button. Already-saved links keep their organization unless you change it.
+
+CONNECT AN AI AGENT (OPTIONAL)
+Connect Claude Code, Codex, OpenCode, or another agent in Keepall Settings, Agents, and it can search your library, look at saved images, and suggest how to organize them. While Chrome runs, Keepall Capture keeps your library reachable for the agents you connected, without an open tab. Messages are end-to-end encrypted between your browser and the agent. When an agent suggests changes, the toolbar icon shows how many items wait for your review; right-click the icon and choose Review agent changes. Nothing changes until you approve, unless you allow an agent to make small changes directly, and every agent change can be undone.
 
 OPEN YOUR LIBRARY
 Right-click the extension icon and choose Open Keepall library. It focuses an existing library tab without losing its current search or draft, or opens a new one. Visit https://www.keepall.app to browse, search, edit, and back up your library.
@@ -82,10 +91,10 @@ Save user-selected pages, links, images, text passages, and local files to the u
 | --- | --- |
 | `activeTab` | Read the current page URL and title after the user clicks the toolbar icon, invokes the capture shortcut, or selects Save to Keepall. Temporary access also lets the extension display capture controls and save feedback on that page. After the user clicks the camera action or Save page with screenshot, the same temporary access is used to capture the visible tab as an image for that saved link, with Keepall's own UI hidden during capture. |
 | `scripting` | Display the capture drawer, local file controls, packaged note preview, save-result toast, and organizer on the page where the user invokes Keepall. Notify an open Keepall tab after confirmed library changes. |
-| `offscreen` | Hold an invisible Keepall bridge page so explicit saves, local file transfers, and organization changes reach the app origin's local IndexedDB without opening a visible tab. The connection check reads organization through the same bridge without creating an item. File bytes pass through browser messages, not a server upload. |
-| `storage` | Store the chosen Keepall address and appearance. Pending link retries may include the URL, title, entered note, and organization; they expire after ten minutes and are removed on confirmation or cleanup. Browser-session storage holds save-action identifiers and temporary editor records containing tab/editor IDs, source/library URLs, saved item IDs, and action tokens. File bytes, file-note contents, and directly selected passages are not written to extension storage. |
+| `offscreen` | Hold an invisible Keepall bridge page so explicit saves, local file transfers, and organization changes reach the app origin's local IndexedDB without opening a visible tab. The connection check reads organization through the same bridge without creating an item. File bytes pass through browser messages, not a server upload. After the user connects an AI agent in Keepall Settings, the same bridge stays loaded while Chrome runs so that agent can reach the library; the bridge holds the end-to-end encrypted agent connection, and the extension never sees its contents. |
+| `storage` | Store the chosen Keepall address and appearance, and whether the user connected an AI agent (so the bridge loads at browser startup). Pending link retries may include the URL, title, entered note, and organization; they expire after ten minutes and are removed on confirmation or cleanup. Browser-session storage holds save-action identifiers and temporary editor records containing tab/editor IDs, source/library URLs, saved item IDs, and action tokens. File bytes, file-note contents, and directly selected passages are not written to extension storage. |
 | `alarms` | Periodically remove expired pending link captures and temporary editor-session records. |
-| `contextMenus` | Provide Save to Keepall for images, links, and selected text, Save video to Keepall for videos, and Save page with screenshot for pages in webpage menus, and Open Keepall library in the extension icon's menu. The save actions read the chosen target and source context; the library action opens or focuses the user's library without capturing the current page. |
+| `contextMenus` | Provide Save to Keepall for images, links, and selected text, Save video to Keepall for videos, and Save page with screenshot for pages in webpage menus, and Open Keepall library and Review agent changes (shown only while an agent's suggestions wait) in the extension icon's menu. The save actions read the chosen target and source context; the icon-menu actions open or focus a Keepall page without capturing the current page. |
 | `https://www.keepall.app/*` | Load the hidden Keepall bridge and notify open library tabs after changes. Saved content lives in this website origin's local IndexedDB in the user's browser profile. |
 | `http://localhost/*` | Support users who choose a locally running Keepall address in Options. The default destination remains https://www.keepall.app. |
 | Optional `*://*/*` | Download an image or video from its host only after the user chooses Save to Keepall or Save video to Keepall. Request permission for individual hosts, or let users optionally allow all websites from Options. This access is not needed for ordinary page links, selected text, explicitly chosen local files, or image paste. |
@@ -99,7 +108,7 @@ https://www.keepall.app/* loads the hidden Keepall bridge and lets explicit capt
 **Remote code:** Retain **Yes** for the disclosed isolated website iframe:
 
 ```text
-The extension embeds https://www.keepall.app/extension-bridge, or the configured localhost equivalent, in an iframe inside its offscreen document. The website's script runs in that isolated iframe without extension APIs and saves user-requested content to the website origin's local IndexedDB. The extension worker, injected scripts, drawer styles, and note controls/preview are packaged locally; they do not fetch or evaluate remote JavaScript.
+The extension embeds https://www.keepall.app/extension-bridge, or the configured localhost equivalent, in an iframe inside its offscreen document. The website's script runs in that isolated iframe without extension APIs and saves user-requested content to the website origin's local IndexedDB. If the user connects an AI agent, that iframe also opens an end-to-end encrypted WebSocket to Keepall's relay (a Cloudflare Worker) and answers the agent from the local library; the extension only learns how many items wait for review. `externally_connectable` lets Keepall pages ask the extension to keep this bridge loaded. The extension worker, injected scripts, drawer styles, and note controls/preview are packaged locally; they do not fetch or evaluate remote JavaScript.
 ```
 
 **Data usage:** Disclose **Web history** for user-selected URLs/titles and
@@ -125,14 +134,15 @@ include entered link-note text, as disclosed above.
 **Certifications:** Review the existing statements about not selling data, using
 it only for the single purpose, and not using it for creditworthiness or lending.
 The privacy policy retains disclosures for link previews, website icons,
-user-requested article fetches, hosting logs, and aggregate page-view analytics.
+user-requested article fetches, hosting logs, and aggregate page-view analytics,
+and adds the agent relay and what a connected agent receives (`/privacy#agents`).
 
 ## Reviewer test instructions
 
 Paste-ready text, under 500 characters:
 
 ```text
-No account needed. Open https://www.keepall.app in this Chrome profile. On an HTTPS page, click Keepall; try Organize, tags and Undo. Alt+K opens the drawer: Add files (PNG/JPEG, MP4, TXT/MD/PDF), paste an image, and preview Markdown. Save, then click the camera in the notice for a screenshot. Right-click a link/image/selection to save; allow the image host if asked. Right-click the extension icon > Open Keepall library. Bulk import opens the app. Internal pages cannot be captured.
+No account needed. Open https://www.keepall.app in this Chrome profile. On an HTTPS page, click Keepall; try Organize, tags and Undo. Alt+K opens the drawer: Add files (PNG/JPEG, MP4, TXT/MD/PDF), paste an image, and preview Markdown. Save, then click the camera in the notice for a screenshot. Right-click a link/image/selection to save; allow the image host if asked. Right-click the extension icon > Open Keepall library. Internal pages cannot be captured. Agent access is optional.
 ```
 
 ## Local release verification — November 12, 2026
@@ -158,7 +168,7 @@ dashboard fields need separate verification before the publisher submits.
 ## Rebuild and identity
 
 ```bash
-python3 scripts/package-extension.py /tmp/keepall-capture-0.5.0.zip
+python3 scripts/package-extension.py /tmp/keepall-capture-0.6.0.zip
 ```
 
 The ZIP has `manifest.json` at its root and excludes the public development key.

@@ -35,7 +35,7 @@ test("groups working settings in tabs and explains storage beside recovery contr
 
 test("rapid tab changes retain form values and expose only the active panel", () => {
   window.history.replaceState(window.history.state, "", "/settings");
-  render(<SettingsTabs general={<label>Draft setting<input defaultValue="Original" /></label>} storage={<p>Storage panel</p>} installation={<p>Installation panel</p>} />);
+  render(<SettingsTabs general={<label>Draft setting<input defaultValue="Original" /></label>} storage={<p>Storage panel</p>} installation={<p>Installation panel</p>} agents={<p>Agents panel</p>} />);
   const input = screen.getByRole("textbox", { name: "Draft setting" });
   fireEvent.change(input, { target: { value: "Unsaved edit" } });
   fireEvent.click(screen.getByRole("tab", { name: "Storage & backups" }));
@@ -53,7 +53,7 @@ test("rapid tab changes retain form values and expose only the active panel", ()
 test("tab changes reset the scroll viewport and heading links work within the active tab", () => {
   window.history.replaceState(window.history.state, "", "/settings");
   render(<main><div data-slot="scroll-area-viewport" data-testid="viewport">
-    <SettingsTabs general={<p>General panel</p>} storage={<h2 id="backup-heading">Backup</h2>} installation={<p>Installation panel</p>} />
+    <SettingsTabs general={<p>General panel</p>} storage={<h2 id="backup-heading">Backup</h2>} installation={<p>Installation panel</p>} agents={<p>Agents panel</p>} />
   </div></main>);
   const viewport = screen.getByTestId("viewport");
   viewport.scrollTop = 300;

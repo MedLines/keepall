@@ -16,7 +16,7 @@ import {
   CheckmarkCircle02Icon as CheckmarkCircle02, CircleIcon as Circle, Tick02Icon as Tick02,
   Settings02Icon as Settings02, HelpCircleIcon as HelpCircle,
   KeyboardIcon as Keyboard, TextFontIcon as TextFont, SourceCodeIcon as SourceCode,
-  RefreshIcon as Refresh, Undo02Icon as Undo02,
+  RefreshIcon as Refresh, Undo02Icon as Undo02, BotIcon as Bot,
   ColorsIcon as Colors, Copy01Icon as Copy01, ScanTextIcon as ScanText,
   ComputerIcon as Computer, WifiOff01Icon as WifiOff,
   Globe02Icon as Globe, Clock01Icon as Clock,
@@ -164,6 +164,8 @@ export function UploadIcon(props: IconProps) { return <ShellIcon icon={Upload} {
 export function DeleteIcon(props: IconProps) { return <ShellIcon icon={Delete02} {...props} />; }
 /** @import import { PinIcon } from "@/app/shell-icons"; */
 export function PinIcon(props: IconProps) { return <ShellIcon icon={Pin} {...props} />; }
+/** Connected AI agents. @import import { AgentIcon } from "@/app/shell-icons"; */
+export function AgentIcon(props: IconProps) { return <ShellIcon icon={Bot} {...props} />; }
 /** @import import { UndoIcon } from "@/app/shell-icons"; */
 export function UndoIcon(props: IconProps) { return <ShellIcon icon={Undo02} {...props} />; }
 /** @import import { ArrowLeftIcon } from "@/app/shell-icons"; */

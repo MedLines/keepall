@@ -1,0 +1,39 @@
+# Publishes @keepall/mcp to npm with provenance when a tag like mcp-v1.0.1 is pushed.
+# Uses npm trusted publishing (OIDC), so no npm token is stored here. Set it up once on npmjs.com:
+# @keepall/mcp → Settings → Trusted publishing → GitHub Actions, workflow "publish-mcp.yml".
+# The repository variable KEEPALL_PUBLIC_RELAY_URL is baked into the package as its default relay.
+name: Publish @keepall/mcp
+
+on:
+  push:
+    tags: ["mcp-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      KEEPALL_PUBLIC_RELAY_URL: ${{ vars.KEEPALL_PUBLIC_RELAY_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check the tag matches the package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: test "mcp-v$(node -p "require('./packages/mcp/package.json').version")" = "${GITHUB_REF_NAME}"
+      - run: pnpm --filter @keepall/relay test
+      - run: pnpm --filter @keepall/mcp typecheck
+      - run: pnpm --filter @keepall/mcp test
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@11
+      - working-directory: packages/mcp
+        run: npm publish

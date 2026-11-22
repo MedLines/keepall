@@ -62,6 +62,7 @@ import {
   SortDescIcon,
   TextFileIcon,
   UndoIcon,
+  AgentIcon,
   UploadIcon,
   VideoIcon,
   VolumeIcon,
@@ -156,6 +157,7 @@ export const AllIcons: Story = {
       <IconTile name="SortDescIcon"><SortDescIcon /></IconTile>
       <IconTile name="TextFileIcon"><TextFileIcon /></IconTile>
       <IconTile name="UndoIcon"><UndoIcon /></IconTile>
+      <IconTile name="AgentIcon"><AgentIcon /></IconTile>
       <IconTile name="UploadIcon"><UploadIcon /></IconTile>
       <IconTile name="VideoIcon"><VideoIcon /></IconTile>
       <IconTile name="VolumeIcon"><VolumeIcon /></IconTile>

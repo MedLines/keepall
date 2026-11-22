@@ -22,6 +22,7 @@ import type { LibraryTypeSelection } from "@/domain/library-view";
 import type { Tag } from "@/domain/tag";
 import type { LibrarySidebarCounts } from "./library-sidebar-counts";
 import {
+  AgentIcon,
   ArrowRightIcon,
   ChevronDownIcon,
   DeleteIcon,
@@ -36,6 +37,7 @@ import {
   SearchIcon,
   SettingsIcon,
 } from "./shell-icons";
+import { useAgentReviewOffer } from "./use-agent-review-offer";
 import {
   readShellCollectionsOpen,
   readShellTagsOpen,
@@ -190,6 +192,7 @@ export function LibraryShell({
     return tags.filter((tag) => tag.name.toLowerCase().includes(tagQuery));
   }, [tags, tagQuery]);
 
+  const { offer: agentReview } = useAgentReviewOffer();
   const closeOnMobile = useCallback(() => {
     if (isMobile) {
       onPanelOpenChange(false);
@@ -234,6 +237,11 @@ export function LibraryShell({
           closeOnMobile();
         }}
       />
+      {/* Only while an agent's suggestions wait, so people who don't use agents never see it. */}
+      {agentReview ? (
+        <ShellNavLink expanded={contentExpanded} label="Agent review" href="/review" count={agentReview.items}
+          icon={<AgentIcon className="size-4.5 shrink-0 text-text-secondary" />} />
+      ) : null}
     </>
   );
 
@@ -496,11 +504,12 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onClose, onGoHome }: {
   );
 }
 
-function ShellNavLink({ expanded, label, href, icon }: {
+function ShellNavLink({ expanded, label, href, icon, count }: {
   expanded: boolean;
   label: string;
   href: string;
   icon: ReactNode;
+  count?: number;
 }) {
   return (
 <Tooltip content={label} disabled={expanded} side="right" describe={false}>
@@ -518,6 +527,7 @@ function ShellNavLink({ expanded, label, href, icon }: {
         {icon}
       </span>
       {expanded ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
+      {expanded && count !== undefined ? <NavCount value={count} /> : null}
     </Link></Tooltip>
   );
 }
