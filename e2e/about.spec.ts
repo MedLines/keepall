@@ -303,3 +303,22 @@ test("reduced motion keeps both galleries still until playback is requested", as
   await expect(selected).toHaveCSS("transition-duration", "0s");
   expect(await selected.locator("video").evaluate(video => (video as HTMLVideoElement).paused)).toBe(true);
 });
+
+test("the agent demo reviews, applies, and undoes sample suggestions without leaving the page", async ({ page }) => {
+  await page.goto("/about");
+  const demo = page.locator("#agents [data-feature-demo=agent]");
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await demo.scrollIntoViewIfNeeded();
+    await demo.getByRole("button", { name: "Skip Reading notes" }).click();
+    await expect(demo.getByRole("button", { name: "Accept Reading notes" })).toHaveAttribute("aria-pressed", "false");
+    await demo.getByRole("button", { name: "Apply 2 changes" }).click();
+    await expect(demo.getByRole("status")).toHaveText("Applied. Keepall kept a copy of what changed.");
+    await expect(demo.getByText("New collection · 2 items")).toBeVisible();
+    await demo.getByRole("button", { name: "Undo" }).click();
+    await demo.getByRole("button", { name: "Accept Reading notes" }).click();
+    await expect(demo.getByRole("button", { name: "Apply 3 changes" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  }
+  await expect(page.getByRole("link", { name: "Connect an agent" })).toHaveAttribute("href", "/help/ai-agents");
+});

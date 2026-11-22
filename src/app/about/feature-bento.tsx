@@ -23,6 +23,6 @@ export function FeatureBento() {
         </article>
       )}
     </div>
-    <p className="ka-bento-footnote">Once Keepall is cached, locally saved content works offline. Original websites and fetching new content need a connection. <Link href="/help/offline">Offline guide</Link>. Previews, article fetching, and website icons use network requests. Visits use Vercel Web Analytics. <Link href="/privacy">Privacy details</Link>.</p>
+    <p className="ka-bento-footnote">Once Keepall is cached, locally saved content works offline. Original websites and fetching new content need a connection. <Link href="/help/offline">Offline guide</Link>. Previews, article fetching, and website icons use network requests. Connected AI agents reach your library through an end-to-end encrypted relay. Visits use Vercel Web Analytics. <Link href="/privacy">Privacy details</Link>.</p>
   </section>;
 }

@@ -370,7 +370,8 @@ for (const width of [390, 1707]) {
       expect(Math.abs(video.y - importing.y)).toBeLessThan(2);
     }
     await expect(page.locator(".ka-gallery-tabs button")).toHaveCount(4);
-    for (const id of ["reading", "image-tools", "extension", "your-library"]) {
+    await expect(page.locator("#agents [data-feature-demo=agent]")).toHaveCount(1);
+    for (const id of ["reading", "image-tools", "extension", "your-library", "agents"]) {
       const card = page.locator(`#${id}`);
       await expect(card).toHaveCount(1);
       await card.evaluate(element => element.scrollIntoView({ block: "start" }));
@@ -608,7 +609,7 @@ for (const width of [320, 1440]) {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/help");
     const routes = await page.locator(".kh-guide-row").evaluateAll(links => links.map(link => link.getAttribute("href")!));
-    expect(routes).toHaveLength(13);
+    expect(routes).toHaveLength(14);
     for (const route of routes) {
       const response = await page.goto(route);
       expect(response!.status(), route).toBe(200);

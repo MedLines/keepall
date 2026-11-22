@@ -15,6 +15,7 @@ import bulkImportImage from "../../../public/help/bulk-import.webp";
 import storageSettingsImage from "../../../public/help/storage-settings.webp";
 import type { GuideVisual } from "./guide-visual";
 import { focusedGuides } from "./focused-guides";
+import { agentsGuide } from "./agents-guide";
 import articleImage from "../../../public/marketing/app-article-reader.webp";
 import imageToolsImage from "../../../public/marketing/app-image-tools.webp";
 import videoImage from "../../../public/marketing/app-video-detail.webp";
@@ -919,6 +920,7 @@ export const guides: Guide[] = [
     action: { label: "Open your library", href: "/" },
   },
   ...focusedGuides,
+  agentsGuide,
 ];
 
 export const guideGroups = [
@@ -926,6 +928,7 @@ export const guideGroups = [
   { id: "read-and-explore", title: "Read and explore", slugs: ["saved-articles", "documents", "preview", "notes", "images-and-videos"] },
   { id: "organize-and-find", title: "Organize and find", slugs: ["collections-and-tags", "search"] },
   { id: "keep-library-safe", title: "Keep your library safe", slugs: ["storage-and-backups", "offline"] },
+  { id: "use-with-ai", title: "Use with AI agents", slugs: ["ai-agents"] },
 ];
 
 export function getGuide(slug: string) {

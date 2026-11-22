@@ -153,7 +153,7 @@ function Group({ group, items, excluded, onToggle, review, focus }: { group: Rev
 export function ReviewHeader({ children }: { children: ReactNode }) {
   return (
     <header>
-      <Link href="/settings#agents" className={buttonClassName({ size: "none", className: "min-h-10 gap-2 px-3 text-sm font-medium justify-start" })}>
+      <Link href="/settings#agents-connect-heading" className={buttonClassName({ size: "none", className: "min-h-10 gap-2 px-3 text-sm font-medium justify-start" })}>
         <ArrowLeftIcon className="size-4" />
         <span>Agents</span>
       </Link>

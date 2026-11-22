@@ -317,7 +317,7 @@
 .ka-stack-card { position: sticky; top: var(--stack-top); padding-bottom: var(--stack-gap); }
 .ka-stack-card:last-child { padding-bottom: 0; }
 .ka-stack-card:has(:focus-visible) { z-index: 4; }
-.ka-stack-surface { transform-origin: center top; border: 1px solid oklch(1 0 0 / 0.098039216); border-radius: 18px; background: oklch(0.159987935 0.004182128 285.917567124); box-shadow: 0 -16px 60px oklch(0 0 0 / 0.145098039); overflow: hidden; }
+.ka-stack-surface, .ka-agent-surface { transform-origin: center top; border: 1px solid oklch(1 0 0 / 0.098039216); border-radius: 18px; background: oklch(0.159987935 0.004182128 285.917567124); box-shadow: 0 -16px 60px oklch(0 0 0 / 0.145098039); overflow: hidden; }
 .ka-feature-card { display: grid; grid-template-columns: 1fr 1fr; height: calc(628px - 2 * var(--ka-stack-inset, 0px)); padding: 7px; }
 .ka-card-copy { position: relative; display: flex; align-items: flex-start; flex-direction: column; padding: 42px 40px; }
 .ka-card-copy h3 { margin-top: 48px; font-size: 34px; line-height: 1.25; }
@@ -335,7 +335,7 @@
 .ka-search-detail { max-height: 100%; object-fit: contain; object-position: top; }
 .ka-extension-brand { display: flex; align-items: center; gap: 12px; }
 .ka-extension-brand .ka-chrome-mark { width: 32px; height: 32px; flex: none; }
-.ka-about .ka-stack-surface {
+.ka-about :is(.ka-stack-surface, .ka-agent-surface) {
   --ka-stack-inset: 7px;
   --ka-surface-body: linear-gradient(155deg in srgb, oklch(0.213422507 0 0), oklch(0.159066399 0 0));
   padding: var(--ka-stack-inset);
@@ -371,7 +371,7 @@
 @media (max-width: 520px) {
   .ka-benefits { padding-top: 95px; }
   .ka-stack-card { padding-bottom: 24px; }
-  .ka-stack-surface { border-radius: 20px; }
+  .ka-stack-surface, .ka-agent-surface { border-radius: 20px; }
   .ka-feature-card { padding: 5px; }
   .ka-card-copy { padding: 26px 20px 32px; }
   .ka-card-copy .ka-eyebrow { font-size: 12px; }
@@ -385,6 +385,21 @@
 
 
 /* Independent reading views, followed by tools and smaller library previews. */
+.ka-agents { padding-top: 140px; }
+.ka-about .ka-agent-card { height: auto; min-height: calc(628px - 2 * var(--ka-stack-inset, 0px)); }
+.ka-agent-points { display: grid; gap: 10px; margin-top: 24px; color: oklch(0.853646954 0.01719365 331.63563781); font-size: var(--ka-type-control); line-height: 1.5; }
+.ka-agent-points li { display: flex; align-items: flex-start; gap: 10px; }
+.ka-agent-points svg { flex: none; width: 16px; height: 16px; margin-top: 3px; color: oklch(0.76190996 0.012576696 325.699622599); }
+.ka-card-copy > .ka-agent-alt { margin-top: 20px; font-size: 13px; }
+.ka-about .ka-agent-scene { align-items: stretch; padding: 24px; }
+@media (max-width: 800px) {
+  .ka-agents { padding-top: 110px; }
+  .ka-about .ka-agent-card { min-height: 0; }
+}
+@media (max-width: 520px) {
+  .ka-agents { padding-top: 95px; }
+  .ka-about .ka-agent-scene { padding: 16px 12px; }
+}
 .ka-bento-section { padding-top: 110px; }
 .ka-bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: 490px 350px 370px; gap: 20px; }
 .ka-bento-card { position: relative; isolation: isolate; display: flex; flex-direction: column; min-width: 0; padding: 7px; border: 1px solid var(--ka-edge); border-radius: 24px; background: var(--ka-surface-rim); box-shadow: inset 0 1px 0 oklch(1 0 0 / .08); }

@@ -6,7 +6,8 @@ import { SearchDemo } from "./search-demo";
 import backupImage from "../../../public/marketing/app-backup.webp";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AndroidIcon, AppleIcon, ComputerIcon } from "@hugeicons/core-free-icons";
-import { ArrowRightIcon, LogoIcon } from "../shell-icons";
+import { ArrowRightIcon, CheckIcon, LogoIcon } from "../shell-icons";
+import { AgentDemo } from "./agent-demo";
 import { LibraryPreview } from "./library-preview";
 import { CaptureDemo } from "./capture-demo";
 import { CHROME_EXTENSION_URL } from "../help/guides";
@@ -26,7 +27,7 @@ const inter = localFont({
 
 export const metadata: Metadata = {
   title: "Keepall · Save links, notes, media, and documents",
-  description: "A personal library for your links, notes, images, videos, and documents. Save with the Chrome extension, find your favorites, and keep your library on your device. Free, with no account.",
+  description: "A personal library for your links, notes, images, videos, and documents. Save with the Chrome extension, let your AI agent search it, and keep it on your device. Free, with no account.",
   alternates: { canonical: "/about" },
   openGraph: {
     type: "website",
@@ -74,7 +75,7 @@ export default function AboutPage() {
           <div className="ka-section-heading"><h2 id="benefits-title">Good finds deserve<br />more than an open tab.</h2></div>
           <FeatureStack>
             <section id="extension" className="ka-feature-card" aria-labelledby="capture-title">
-              <div className="ka-card-copy"><div className="ka-extension-brand"><ChromeMark /><p className="ka-eyebrow">Keepall Capture<br />For Google Chrome</p></div><h3 id="capture-title">Found it?<br /><span className="ka-brand-highlight">Keep it.</span></h3><p>Save pages, images, and selected text with their source; add a note with Alt+K on most websites.</p><a href={CHROME_EXTENSION_URL} className="ka-button ka-button-small"><ChromeMark />Add to Chrome <ArrowRightIcon /></a><Link href="/help/chrome-capture" className="ka-card-foot">Set up Capture <ArrowRightIcon /></Link></div>
+              <div className="ka-card-copy"><div className="ka-extension-brand"><ChromeMark /><p className="ka-eyebrow">Keepall Capture<br />For Google Chrome</p></div><h3 id="capture-title">Found it?<br /><span className="ka-brand-highlight">Keep it.</span></h3><p>Save pages, images, videos, and selected text with their source. Add screenshots, notes, and files from your computer with Alt+K.</p><a href={CHROME_EXTENSION_URL} className="ka-button ka-button-small"><ChromeMark />Add to Chrome <ArrowRightIcon /></a><Link href="/help/chrome-capture" className="ka-card-foot">Set up Capture <ArrowRightIcon /></Link></div>
               <div className="ka-card-scene"><CaptureDemo /></div>
             </section>
             <section className="ka-feature-card ka-organize" aria-labelledby="organize-title">
@@ -87,9 +88,29 @@ export default function AboutPage() {
             </section>
           </FeatureStack>
         </section>
+        <section id="agents" className="ka-agents ka-wrap" aria-labelledby="agents-title">
+          <div className="ka-section-heading"><h2 id="agents-title">Your library,<br />ready for your agent.</h2><p>Claude Code, Codex, OpenCode, and other agents can search what you saved and suggest how to organize it. You decide what changes.</p></div>
+          <div className="ka-agent-surface">
+            <div className="ka-feature-card ka-agent-card">
+              <div className="ka-card-copy">
+                <p className="ka-eyebrow">Keepall for AI agents</p>
+                <h3 id="agent-card-title">Ask your agent.<br />It knows what you saved.</h3>
+                <p>It searches your notes, articles, documents, and the text in your images, and it can look at the images themselves.</p>
+                <ul className="ka-agent-points">
+                  <li><CheckIcon />End-to-end encrypted. Keepall&apos;s relay can&apos;t read it.</li>
+                  <li><CheckIcon />Suggestions wait for your review.</li>
+                  <li><CheckIcon />Every agent change can be undone.</li>
+                </ul>
+                <p className="ka-agent-alt">Prefer files? Export any search or selection as a Context Pack for your project.</p>
+                <Link href="/help/ai-agents" className="ka-card-foot">Connect an agent <ArrowRightIcon /></Link>
+              </div>
+              <div className="ka-card-scene ka-agent-scene"><AgentDemo /></div>
+            </div>
+          </div>
+        </section>
         <FeatureBento />
         <section id="install" className="ka-install ka-wrap" aria-labelledby="install-title"><div className="ka-section-heading"><h2 id="install-title">Install Keepall.</h2><p>Open it from your desktop or Home Screen, or keep using your browser.</p></div><nav aria-label="Install Keepall" className="ka-platforms">{platforms.map((platform) => <Link key={platform.id} href={`/help/install-keepall#${platform.id}`}><HugeiconsIcon icon={platform.icon} size={28} strokeWidth={1.5} aria-hidden="true" /><h3>{platform.name}</h3><span className="ka-platform-browser">{platform.browser}</span><p>{platform.detail}</p><span className="ka-platform-action">See the setup guide <ArrowRightIcon /></span></Link>)}</nav><p className="ka-install-note">Your library stays on this device. Storage space and protection depend on your browser, so keep a backup. On iPhone, the Home Screen app has a separate library from Safari. <Link href="/help/storage-and-backups#mobile">Read about phone storage</Link>.</p></section>
-        <section className="ka-faq ka-wrap" aria-labelledby="faq-title"><div><h2 id="faq-title">Common questions.</h2><Link href="/help" className="ka-text-link">Visit the help center <ArrowRightIcon /></Link></div><div className="ka-questions"><details><summary>Is Keepall free?<span aria-hidden="true">+</span></summary><p>Yes. Open your library and start saving. You don&apos;t need an account.</p></details><details><summary>Does my library sync between devices?<span aria-hidden="true">+</span></summary><p>There is no automatic sync. Each browser has its own library. Download a backup from Settings and import it on your other device to move your saves.</p></details><details><summary>Can I write formatted notes?<span aria-hidden="true">+</span></summary><p>Yes. Use Markdown for headings, lists, tables, and code, and attach local images. You can also add a personal note to another save. <Link href="/help/notes">Read the notes guide</Link>.</p></details><details><summary>Can I use the extension on my phone?<span aria-hidden="true">+</span></summary><p>Keepall Capture is a Chrome extension for computers. On your phone, open Keepall in your browser or add it to your Home Screen, then save items inside the app.</p></details><details><summary>How safe are my saves on a phone?<span aria-hidden="true">+</span></summary><p>Browser cleanup or clearing site data can erase a local library. Keepall asks for storage protection, but your browser may not grant it. Download a backup after important additions. On iPhone, the Home Screen app and Safari have separate libraries. <Link href="/help/storage-and-backups#mobile">How phone storage works</Link>.</p></details><details><summary>Will my saved pages work offline?<span aria-hidden="true">+</span></summary><p>Choose Save for offline to keep a readable article copy. Once Keepall is cached, saved articles, notes, documents, and local media work offline. Saving a link alone keeps its address. Original websites and fetching new content need a connection. <Link href="/help/saved-articles">Saving articles for later</Link>.</p></details></div></section>
+        <section className="ka-faq ka-wrap" aria-labelledby="faq-title"><div><h2 id="faq-title">Common questions.</h2><Link href="/help" className="ka-text-link">Visit the help center <ArrowRightIcon /></Link></div><div className="ka-questions"><details><summary>Is Keepall free?<span aria-hidden="true">+</span></summary><p>Yes. Open your library and start saving. You don&apos;t need an account.</p></details><details><summary>Does my library sync between devices?<span aria-hidden="true">+</span></summary><p>There is no automatic sync. Each browser has its own library. Download a backup from Settings and import it on your other device to move your saves.</p></details><details><summary>Can I write formatted notes?<span aria-hidden="true">+</span></summary><p>Yes. Use Markdown for headings, lists, tables, and code, and attach local images. You can also add a personal note to another save. <Link href="/help/notes">Read the notes guide</Link>.</p></details><details><summary>Can my AI agent use my library?<span aria-hidden="true">+</span></summary><p>Yes. In Settings, Agents, connect Claude Code, Codex, OpenCode, or another agent. It can search and read your saves and suggest changes, which wait for your review. Messages are end-to-end encrypted, but what the agent reads goes to its AI provider. <Link href="/help/ai-agents">Use Keepall with AI agents</Link>.</p></details><details><summary>Can I use the extension on my phone?<span aria-hidden="true">+</span></summary><p>Keepall Capture is a Chrome extension for computers. On your phone, open Keepall in your browser or add it to your Home Screen, then save items inside the app.</p></details><details><summary>How safe are my saves on a phone?<span aria-hidden="true">+</span></summary><p>Browser cleanup or clearing site data can erase a local library. Keepall asks for storage protection, but your browser may not grant it. Download a backup after important additions. On iPhone, the Home Screen app and Safari have separate libraries. <Link href="/help/storage-and-backups#mobile">How phone storage works</Link>.</p></details><details><summary>Will my saved pages work offline?<span aria-hidden="true">+</span></summary><p>Choose Save for offline to keep a readable article copy. Once Keepall is cached, saved articles, notes, documents, and local media work offline. Saving a link alone keeps its address. Original websites and fetching new content need a connection. <Link href="/help/saved-articles">Saving articles for later</Link>.</p></details></div></section>
 
       </div>
       <footer className="ka-footer"><FooterWordmark><section className="ka-closing" aria-labelledby="closing-title"><div className="ka-wrap"><LogoIcon className="keepall-logo-link size-28 md:size-40" /><h2 id="closing-title">Keep a little space<br />for your next good find.</h2><Link href="/" className="ka-button">Start your library <ArrowRightIcon /></Link></div></section><div className="ka-wrap ka-footer-top"><Link href="/about" className="ka-brand keepall-logo-link"><LogoIcon className="size-8" />keepall</Link><MarketingFooterLinks /></div></FooterWordmark></footer>

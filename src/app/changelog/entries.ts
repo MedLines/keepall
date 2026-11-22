@@ -26,7 +26,7 @@ export const changelogEntries: ChangelogEntry[] = [
       ] },
     ],
     guides: [
-      { label: "Connect an agent", href: "/settings#agents" },
+      { label: "Connect an agent", href: "/settings#agents-connect-heading" },
       { label: "What agents and the relay receive", href: "/privacy#agents" },
     ],
   },
