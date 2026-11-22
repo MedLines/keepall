@@ -5,6 +5,7 @@ import { ArrowLeftIcon, LogoIcon } from "../shell-icons";
 import { LogoContextMenu } from "../logo-context-menu";
 import { GeneralSettings, InstallationSettings, StorageSettings } from "./settings-sections";
 import { SettingsTabs } from "./settings-tabs";
+import { AgentsSettings } from "./agents-settings";
 import { SettingsLink } from "./settings-link";
 import { buttonClassName } from "@/components/ui/button";
 
@@ -42,7 +43,7 @@ export default function SettingsPage() {
               Settings
             </h1>
             <p className="mt-1 text-sm text-text-secondary">
-              Appearance, storage, and installation.
+              Appearance, storage, installation, and agents.
             </p>
           </div>
 
@@ -50,6 +51,7 @@ export default function SettingsPage() {
             general={<GeneralSettings />}
             storage={<StorageSettings />}
             installation={<InstallationSettings />}
+            agents={<AgentsSettings />}
           />
           <nav aria-label="Support and information" className="mt-8 flex flex-wrap gap-2 border-t border-border-control pt-5">
             <SettingsLink href="/contact">Contact</SettingsLink>

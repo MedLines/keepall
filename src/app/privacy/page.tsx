@@ -29,7 +29,7 @@ export default function PrivacyPage() {
       eyebrow="Your data"
       description="Your library lives in your browser. Here is what stays on this device, what uses the internet, and how to keep a recovery copy."
     >
-      <time className="kw-date" dateTime="2026-10-07">Last updated October 7, 2026</time>
+      <time className="kw-date" dateTime="2026-11-21">Last updated November 21, 2026</time>
 
       <section id="local-library" aria-labelledby="local-library-title">
         <h2 id="local-library-title">Where your library lives</h2>
@@ -50,6 +50,13 @@ export default function PrivacyPage() {
         <p>When a link has no locally saved preview image, Keepall may load its website icon from Google&apos;s favicon service. That request includes the saved link&apos;s hostname. If the icon cannot load, Keepall may request the website&apos;s own favicon. Those hosts receive normal browser requests.</p>
         <p>Opening a source link visits the original website under that website&apos;s privacy practices. Saving a web image with Keepall Capture requests the image&apos;s bytes from its host. Imported files, locally saved media, and saved article images open from browser storage. Markdown images pointing to remote websites do not load inside notes or imported documents.</p>
         <p>The Chrome extension has its own permissions and temporary capture storage. Read the <Link href="/extension-privacy">Keepall Capture privacy details</Link> for those actions.</p>
+      </section>
+
+      <section id="agents" aria-labelledby="agents-title">
+        <h2 id="agents-title">AI agents you connect</h2>
+        <p>Agent access is off until you connect an agent in <Link href="/settings#agents">Settings</Link>. A connected agent, such as Claude Code, Codex, or OpenCode, reaches your library through Keepall&apos;s relay, a small service on Cloudflare. While Keepall or its extension is open, your browser keeps a connection to the relay and answers the agent from your local library.</p>
+        <p>Requests and answers are end-to-end encrypted between your browser and the agent&apos;s computer, using a key made when you connect it. The relay forwards encrypted messages and cannot read them. It sees a random channel identifier, message sizes and timing, and the network addresses of both sides, and it keeps no messages. Cloudflare may log requests under its own policies.</p>
+        <p>What an agent reads leaves your browser. The agent program decrypts it on its computer and usually sends it to its AI provider, such as Anthropic or OpenAI, under that provider&apos;s privacy practices. Choose what each agent can do: read only, suggest changes for you to review, or make small changes directly. Keepall records every agent change with a copy of what it replaced so you can undo it. With a backup folder set, approving suggestions saves a backup first. Disconnect an agent in Settings to revoke its key.</p>
       </section>
 
       <section id="hosting" aria-labelledby="hosting-title">

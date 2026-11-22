@@ -2,7 +2,7 @@
 
 Let coding agents such as Claude Code, Codex, and OpenCode search, read, save to, and organize a Keepall library. The library stays in the browser's IndexedDB. Keepall's servers can't read it, can't read the agent's requests, and can't send commands to it.
 
-Status: proposal, November 15, 2026. Nothing is implemented. A spike decides whether to continue (see [Spike](#spike)).
+Status: spike built locally on November 15, 2026 (see [Spike results](#spike-results)). Launch prepared November 21, 2026 (see [Launch](#launch)); nothing is deployed or published yet.
 
 ## Constraints
 
@@ -64,17 +64,96 @@ Settings lists paired agents with their permission level and last use. Revoking 
 
 ## Tools
 
+Read tools, built in the spike:
+
 | Tool | Behavior |
 | --- | --- |
-| `search_items` | Query, type, collection, tag, limit. Returns IDs, titles, types, and excerpts using the library's existing search rules. |
-| `get_item` | One item as Markdown with its note, tags, collection, and source URL. Article and document text on request. Images only on request, in chunks. |
-| `list_collections`, `list_tags` | Names, IDs, and item counts. |
-| `save_link`, `save_note` | Create or reuse items. New items land in Unsorted and record which agent created them. |
-| `organize` | Move items to a collection, add or remove tags. Returns a proposal first unless the agent has permission to apply changes directly. |
-| `trash_item` | Moves to Trash. The tools never delete permanently or empty Trash. |
-| `export_context_pack` | Returns a collection, tag, or search as the existing context pack format (`src/domain/context-pack.ts`). |
+| `search_items` | Query plus optional type, collection name, tag name, and `has_images`. Uses the library's own search rules, including text found inside images. Each result has its ID, title, excerpt, tags, collection, picture count, and a link to open it in Keepall. |
+| `get_item` | One item in full: note, caption, saved article or document text, text found in its images, palette, tags, and collection. Long text is cut at 30,000 characters and marked as cut. Shows up to 8 pictures per call, with `image_offset` to page through a gallery. |
+| `view_images` | The main picture of up to 12 items at once, for comparing references like a moodboard. Reports IDs that are missing or have no picture. |
+| `list_collections`, `list_tags` | Names and item counts. |
 
-Permission levels are read, read and add, and read, add, and organize. Each write can also require approval in the browser, where the extension's existing toast shows Approve and Deny while the agent waits.
+Pictures are every image in a gallery, a link's cover, page preview, and screenshots, a video's poster frame, and a PDF's first page. The browser decodes each one and re-encodes it as WebP: up to 1,568 px on the long side for `get_item` and 1,092 px for `view_images`, and smaller again if it would exceed about 600 KB. Originals never leave the library. The MCP server returns each picture as image content with a caption naming its item, so the model sees it the way it sees a pasted screenshot. Answers larger than one relay frame travel as ordered chunks of 512 KiB and are reassembled by `@keepall/mcp`.
+
+Write tools, built:
+
+| Tool | Behavior |
+| --- | --- |
+| `move_to_collection` | Puts items into a collection by name, creating it if needed. "Unsorted" takes them out. |
+| `tag_items` | Adds and removes tags by name, creating new ones. Names ignore case. |
+| `add_note` | Adds text below an item's note (a note's text, an image's caption), or replaces it. |
+| `rename_collection` | Renames a collection unless the new name is taken. |
+| `save_link`, `save_note` | Save new items with an optional note, collection, and tags. A link that's already saved gets organized instead of duplicated. |
+| `move_to_trash` | Moves items to Trash. Nothing is ever deleted permanently, and Trash is never emptied. |
+| `check_changes` | The agent's access level, what waits for review, what the user applied or declined, and recent change IDs. |
+| `undo_change` | Reverses one of the agent's own changes. |
+
+Still planned: `export_context_pack`, which would return a collection, tag, or search in the existing context pack format (`src/domain/context-pack.ts`).
+
+### Connecting from Keepall
+
+Settings → Agents → **Connect an agent** sets up Claude Code, Codex, OpenCode, Claude Desktop, or any stdio MCP agent in one step:
+
+1. **Choose** the agent and what it can do, then **Create setup**.
+2. **Keepall makes a setup code** holding the relay, the app, a fresh channel, and a 256-bit secret. It saves the pairing straight away, deriving the pair key from the secret with HKDF and binding it to the channel. The bridge or an open tab starts listening on the new channel.
+3. **The page shows the exact thing to paste,** with the code in it. For example: `claude mcp add -s user keepall -- npx -y @keepall/mcp@1 --code keepall_…`, `codex mcp add keepall -- …`, an `opencode.json` entry, or a `claude_desktop_config.json` entry.
+4. **The agent connects** the first time it starts. There's no link to open and no approval round trip, since creating the setup was the approval. `@keepall/mcp` reads the code from `--code` or `KEEPALL_CODE` and needs no pairing file.
+
+The code never passes through a server, but it works like an API key, and the page says so. Disconnect revokes it. The connected agent's card reads "waiting for its first request" until the agent makes one.
+
+The relay address comes from `NEXT_PUBLIC_KEEPALL_RELAY_URL` at build time; on localhost it defaults to the dev relay on 8787. `NEXT_PUBLIC_KEEPALL_MCP_COMMAND` points development builds at a local checkout instead of the npm package.
+
+The agent-initiated link flow (`/connect`) stays for agents started before a setup exists.
+
+### Noticing suggestions
+
+While an agent's suggestions wait, the extension shows the number of items on its toolbar icon in every tab, with a tooltip naming the agent. The icon's right-click menu gains **Review agent changes (N)**, which opens or focuses `/review`. Save confirmations still show on the icon briefly, then clear back to the count. The bridge reports the count whenever suggestions change, and the extension only accepts it from the configured library address. The sidebar's **Agent review** entry and the library's Review button lead to `/review` too.
+
+### Access, review, and undo
+
+The user picks an access level when pairing and can change it in **Settings → Agents**:
+
+- **Read only.** Every write tool returns an error that says how to allow changes. Pairings made before writes existed are read only.
+- **Suggest changes**, the default. Every write joins that agent's one open proposal, so twenty small tool calls become one review at `/review`.
+- **Make changes.** A call that touches 10 items or fewer applies at once. Larger calls still wait for review.
+
+Reviewing follows Unsorted review and uses the library's own parts:
+
+- **The review page, `/review`.** The agent's link and Settings → Agents both lead here. Changes are grouped by what they do, however many tool calls suggested them, and each item appears as a library card: the same shell, squircle media, and corner selection control. The control includes or leaves the item out of **Apply all**, and each group has **Include all** or **Leave out all**. Notes show your existing text next to the added text. Trash and replaced notes show in the danger color. A sticky bar shows how many changes are included.
+- **Review one at a time, in place.** Clicking a card, pressing Space on a focused card, or choosing **Review one at a time** opens Unsorted review's dialog right on the review page, starting at that item:
+  - **The item, large,** with a card listing what the agent suggested and why.
+  - **The same Collection and Tags cards** as Unsorted review, pre-filled with the suggestion and editable.
+  - **Note and Trash suggestions,** each in its own card with **Leave out** or **Keep item**.
+  - **The same footer:** Back, Next (leaves the item as it is), **Apply changes**, and **Undo**.
+  - **At the end,** **Apply the rest as suggested** or **Decline the rest**.
+  
+  Each item you apply is its own change with a before-copy.
+- **From the library.** While suggestions wait, the library also offers **Review Claude Code's changes** where **Review Unsorted** sits, and it opens the same dialog over the library. `/?agent-review=1` opens it directly.
+
+Settings → Agents summarizes waiting proposals with **Review changes**. Its **Recent changes** list groups the journal the way changes happened: everything applied from one review is one card, and each call that applied directly is its own card. Each card shows:
+
+- **A plain summary** built from the before-copies, not the agent's request text, such as "Moved 3 items to “Design Inspiration”" or "Tagged 9 items: “dark ui”, “cards”, “fintech”".
+- **A strip of the items' thumbnails** in the library's list-thumbnail style.
+- **Undo** or **Undo all**.
+- **Show all items,** listing each item with what happened to it, and Undo for items applied on their own.
+
+Undone cards are dimmed and show when they were undone. Agents can pass an optional `reason` with each write, which appears beside the change.
+
+Suggestions remember a fingerprint of what they saw: each target item's collection, tags, note text and Trash state. Your later edits to those fields skip the suggestion with a reason. Background updates, such as a fetched link preview, don't.
+
+Every applied change is stored in a journal with a before-copy of every row it touches, written in the same IndexedDB transaction as the change itself, so no change can land without its copy. When a backup folder is connected, applying a reviewed proposal also writes a full folder backup first. If that backup fails, the change still applies, and the result says the folder backup failed.
+
+Undo restores only the fields agents can change: collection, tags, note text, and Trash state. It leaves anything the user edited since and lists it. Unrelated later updates, like a fetched link preview, survive. Items the agent created go to Trash. Collections and tags the agent created are removed only when nothing uses them.
+
+Proposals record each target item's version when suggested. If the user edits an item before applying, that part is skipped and the reason is shown. Agents send a fresh request ID with every call, and the library remembers them, so a call re-sent after a reconnect never applies twice.
+
+### Designed for simple agents
+
+- **Forgiving input.** Write tools accept one ID or a list, tags as a list or a comma-separated string, and names regardless of case.
+- **A next step in every result.** Each write result ends with `what_to_do_next`, a plain instruction. For example: "Tell the user exactly this: I've suggested 7 changes to your Keepall library. Review them here: <link>. After they say they've reviewed them, call check_changes."
+- **Errors say how to fix the call.** For example, "No collection is named X. Use list_collections to see the names."
+- **A CLI for agents without MCP.** `keepall-mcp tools` lists the same tools, and `keepall-mcp call <tool> '<json>'` runs one.
+- **An eval.** `scripts/agent-eval.mjs` seeds a messy library (design and cooking links, notes, two images, two junk entries), pairs it, gives an agent one vague request ("tidy up my library…"), applies what it suggested, and scores the result. On November 21, 2026, Claude Haiku passed all 7 checks through the CLI in 7 tool calls and 37 seconds. It grouped design and cooking separately, tagged both images, summarized both notes, and trashed only the junk. It also handed the user the review link from `what_to_do_next`. Running the eval with `--agent claude` drives Claude Code over MCP, but that needs a signed-in `claude` CLI.
 
 Saved pages are untrusted text. Results mark library content as data, and context packs keep their existing filter that drops agent instruction files such as `CLAUDE.md`.
 
@@ -137,6 +216,66 @@ These claims are unverified. The spike answers them before any slice ships.
 | Do Claude Code, Codex, and OpenCode start `npx -y @keepall/mcp@1` from their MCP config? | Each one lists the tools and completes `search_items`. |
 
 Spike scope: a Worker and Durable Object that forward opaque frames, a minimal `@keepall/mcp` with pairing, and the extension answering `search_items` through `/extension-bridge`.
+
+## Spike results
+
+Built on `spike/agent-relay`. Everything runs locally: the relay under `wrangler dev`, the app under `next dev`, and the unpacked extension.
+
+| Piece | Where |
+| --- | --- |
+| Shared protocol: pairing link, X25519 + HKDF pair key, per-connection AES-GCM sessions, library endpoint | `src/domain/agent-protocol.ts` |
+| Read tools and picture resizing | `src/domain/agent-tools.ts`, `src/persistence/agent-tools.ts`, `src/persistence/agent-images.ts`, `packages/mcp/src/tools.ts` |
+| Pairings, stored only on this device and never in backups | `src/persistence/agent-pairings.ts` (database version 13) |
+| Library host, elected through a Web Lock, in the hidden bridge or an open tab | `src/app/extension-bridge/agent-host.ts`, `src/app/agent-host-runner.tsx` |
+| Approval page | `src/app/connect/` |
+| Relay Worker and Durable Object | `packages/relay/` |
+| Stdio MCP server and `pair`, `unpair`, `search` commands | `packages/mcp/` |
+| Extension: start the bridge on Chrome startup and after pairing | `extension/worker.js`, `extension/offscreen.js`, `externally_connectable` in the manifest |
+
+Tests: protocol and tool unit tests in Vitest, five relay tests against `wrangler dev`, two MCP tests that drive the stdio server through a real relay, and `e2e/agent-access.spec.ts`, which pairs through `/connect` in Chromium with the extension loaded, closes the tab, and gets search results from the extension's hidden bridge.
+
+What the spike showed:
+
+- **Push may not be needed while Chrome runs.** The extension's offscreen document already outlives its background worker, so the bridge inside it can hold the relay connection with no pings and no push. The idle connection sends nothing, so the Durable Object hibernates. Still unverified: whether that connection survives hours idle, sleep and resume, and network changes, and whether Cloudflare closes long-idle hibernated sockets. Measure this with a deployed relay before building push.
+- **The agent has to speak first.** The relay only routes library frames to an agent connection it has seen, so the agent announces itself when the library appears, during pairing and after.
+- **WebCrypto X25519 works** in Node 24 and in the Chromium build Playwright ships. The minimum Chrome version for X25519 is still unchecked against the extension's `minimum_chrome_version` of 116.
+- **No new extension permissions.** The change adds `externally_connectable`, `runtime.onStartup`, and `runtime.onMessageExternal`. Confirm in the Chrome Web Store dashboard that it doesn't trigger a warning.
+- **The pairing link reaches browser history.** The page drops the fragment from the address bar after reading it, but the history entry is already written and may sync. The secret only matters until pairing completes. A short code shown by both the agent and the page would close that window.
+- **The extension isn't always there.** In the first hands-on test, pairing worked but the extension in Chrome wasn't loading the bridge, so searches never reached the library. Two changes came out of it. First, an open Keepall tab now answers agents too: the bridge and every tab ask for the same Web Lock, so one context per browser profile holds the relay connections, and the next one takes over when it closes. Second, `/connect` says when Keepall Capture didn't respond, and the agent's errors name the missing piece (relay, no connected browser, handshake, or slow answer) and the library address to check.
+- **Parallel calls before pairing now share one link**, and a retry on a connection that already knows the library is gone fails in about 3 seconds instead of waiting out the 30-second timeout.
+- **Retried requests could run twice.** When the library reconnects mid-request, the agent re-sends under the new session. Write tools now carry request IDs the library remembers, so a re-sent write applies once.
+
+Not done in the spike: deploying the relay (needs a Cloudflare login), measuring real usage, publishing `@keepall/mcp` (it imports `src/domain` directly, so publishing needs a bundling step, and running from source prints a Node module-type warning), checking Codex and OpenCode, revoking pairings in Settings, and push.
+
+### Try it locally
+
+```bash
+pnpm --filter @keepall/relay dev
+```
+
+```bash
+pnpm dev
+```
+
+Load `extension/` unpacked and set its library address to `http://localhost:3000`. Then add the server to Claude Code:
+
+```bash
+claude mcp add keepall -- node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /absolute/path/to/keepall/packages/mcp/src/cli.ts
+```
+
+Ask Claude Code to search Keepall. The first call returns a pairing link. Open it in the same Chrome profile, choose what it can do, then **Connect**, and ask again.
+
+## Launch
+
+Prepared, waiting on steps only the owner can take:
+
+- **Relay.** `pnpm --filter @keepall/relay run deploy` deploys `keepall-relay` to workers.dev with `ALLOWED_ORIGINS=https://www.keepall.app`. Browser upgrades from other origins get 403 before any Durable Object runs, so other sites can't spend the daily quota. Agents send no Origin and are unaffected. Local `wrangler dev` allows every origin.
+- **App.** Vercel Production needs `NEXT_PUBLIC_KEEPALL_RELAY_URL` set to the relay before the build. Without it, Settings shows that agent access isn't available. Preview deployments can't use the production relay.
+- **`@keepall/mcp`.** `packages/mcp/build.mjs` bundles the CLI with esbuild into one file, baking in the relay from `KEEPALL_PUBLIC_RELAY_URL` and the package version. The first 1.0.0 publish runs locally (npm needs the package to exist before trusted publishing can be set up). Later releases: bump the version and push a `mcp-v<version>` tag; `.github/workflows/publish-mcp.yml` tests and publishes with provenance through npm trusted publishing. It reads the repository variable `KEEPALL_PUBLIC_RELAY_URL`.
+- **Extension 0.6.0.** Adds `externally_connectable` and the review badge, no new permissions. Store copy and privacy answers are in `docs/chrome-web-store.md`.
+- **Privacy.** `/privacy#agents` says what the relay sees, that what an agent reads goes to its AI provider, and how to revoke. `/extension-privacy` covers the bridge staying loaded and the review count.
+
+The launch wizard (`.qa/launch-agent-access.sh`, not committed) walks through Cloudflare, the GitHub variable, Vercel, merging, npm, trusted publishing, an end-to-end check, and the Store upload. Add the changelog entry once this is on main.
 
 ## Slices after the spike
 

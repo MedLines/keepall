@@ -5,9 +5,9 @@ import { ThemeControl } from "../theme-control";
 import { SettingsLink } from "./settings-link";
 import { StorageHealth } from "./storage-health";
 
-const sectionClass = "library-panel border border-border-control bg-bg-surface p-5 sm:p-6";
-const headingClass = "text-lg font-semibold text-text-primary";
-const paragraphClass = "mt-1 text-sm leading-6 text-text-secondary";
+export const sectionClass = "library-panel border border-border-control bg-bg-surface p-5 sm:p-6";
+export const headingClass = "text-lg font-semibold text-text-primary";
+export const paragraphClass = "mt-1 text-sm leading-6 text-text-secondary";
 const iconClass = "mt-0.5 size-5 text-text-secondary";
 
 export function GeneralSettings() {

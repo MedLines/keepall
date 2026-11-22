@@ -18,7 +18,7 @@ function worker() {
       get: vi.fn(async () => ({})), set: vi.fn(async () => {}),
     }, onChanged: { addListener: vi.fn() } },
     alarms: { create: vi.fn(), onAlarm: { addListener: vi.fn() } },
-    runtime: { onInstalled: { addListener: vi.fn() }, onMessage: { addListener: vi.fn() }, getURL: (path: string) => `chrome-extension://test/${path}` },
+    runtime: { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() }, onMessageExternal: { addListener: vi.fn() }, onMessage: { addListener: vi.fn() }, getURL: (path: string) => `chrome-extension://test/${path}` },
     contextMenus: { onClicked: { addListener: vi.fn() } },
     tabs: { sendMessage: vi.fn(async () => {}), onUpdated: { addListener: vi.fn() }, onRemoved: { addListener: vi.fn() } },
     scripting: { executeScript: vi.fn(async () => {}) },
@@ -35,8 +35,9 @@ function worker() {
   return { chrome, api: context as unknown as WorkerApi, context };
 }
 
+// A tab's save badge clears to null, which falls back to the global badge (agent changes waiting, if any).
 const clears = (chrome: ReturnType<typeof worker>["chrome"]) =>
-  chrome.action.setBadgeText.mock.calls.filter(([arg]) => arg.text === "");
+  chrome.action.setBadgeText.mock.calls.filter(([arg]) => arg.text === null);
 
 test("a newer save keeps its badge for a full 5 seconds", async () => {
   const { api, chrome } = worker();

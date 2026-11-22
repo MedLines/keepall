@@ -4,7 +4,7 @@ import { Tabs } from "@base-ui/react/tabs";
 import { useLayoutEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
-import { ArrowRightIcon, BackupIcon, GridIcon, HelpIcon, SettingsIcon } from "../shell-icons";
+import { AgentIcon, ArrowRightIcon, BackupIcon, GridIcon, HelpIcon, SettingsIcon } from "../shell-icons";
 import { useShellMobile } from "../use-shell-mobile";
 import { buttonClassName } from "@/components/ui/button";
 
@@ -12,6 +12,7 @@ const sections = [
   { value: "general", label: "General", icon: SettingsIcon },
   { value: "storage", label: "Storage & backups", icon: BackupIcon },
   { value: "installation", label: "Installation", icon: GridIcon },
+  { value: "agents", label: "Agents", icon: AgentIcon },
 ] as const;
 type Section = typeof sections[number]["value"];
 
@@ -19,6 +20,7 @@ const hashSections: Record<string, Section> = {
   general: "general", "appearance-heading": "general", "network-heading": "general", "keyboard-shortcuts-heading": "general",
   storage: "storage", "storage-heading": "storage", "backup-heading": "storage", "import-heading": "storage",
   installation: "installation", "installation-heading": "installation",
+  agents: "agents", "agents-review-heading": "agents", "agents-connect-heading": "agents", "agents-changes-heading": "agents", "agents-connected-heading": "agents",
 };
 
 function subscribeToSection(onChange: () => void) {

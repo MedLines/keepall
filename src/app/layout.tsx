@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { oklchToHex } from "@/color-format.mjs";
 import { Analytics } from "@vercel/analytics/next";
 import { AutomaticBackupRunner } from "./automatic-backup-runner";
+import { AgentHostRunner } from "./agent-host-runner";
 import { CaptureHost } from "./capture-host";
 import { DevToolsEntry } from "./dev-tools-entry";
 import { PwaProvider } from "./pwa-provider";
@@ -62,6 +63,7 @@ export default function RootLayout({ children, viewer }: LayoutProps<"/">) {
             {viewer}
             <CaptureHost />
             <AutomaticBackupRunner />
+            <AgentHostRunner />
           </PwaProvider>
           {process.env.NODE_ENV === "development" ? <DevToolsEntry /> : null}
           <Toaster />

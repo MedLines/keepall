@@ -206,6 +206,21 @@ the capture drawer, and its notifications, including already-open extension UI.
 System follows the device's appearance; explicit Light/Dark overrides it. The
 choice is stored in the extension and does not change the Keepall app's theme.
 
+## Agent access
+
+When the user connects an AI agent in Keepall (Settings, Agents), the app sends the
+extension an `agent-host` message through `externally_connectable` and the worker stores
+`agentHost: true`. From then on the worker loads the offscreen bridge at browser startup,
+so agents reach the library while Chrome runs, with no Keepall tab open. The bridge page
+(capability `agent-host-v1`) holds the encrypted relay connection and answers from
+IndexedDB; the extension never sees requests or answers. Without the extension, any open
+Keepall tab hosts agents instead.
+
+The bridge reports how many items wait for review. The worker shows that count on the
+toolbar icon, names the agent in the icon's title, and shows **Review agent changes**
+in the icon menu, which opens `/review`. Save confirmations take the badge briefly, then
+clear back to the count. No permissions were added for this.
+
 ## Selected text
 
 Highlight text on an HTTP(S) page and choose **Save to Keepall**. Keepall stores

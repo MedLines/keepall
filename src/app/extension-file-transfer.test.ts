@@ -14,7 +14,7 @@ function worker() {
       set: vi.fn(async (values: object) => Object.assign(session, values)), remove: vi.fn(async () => {}),
     }, onChanged: { addListener: vi.fn() } },
     alarms: { create: vi.fn(), onAlarm: { addListener: vi.fn() } },
-    runtime: { onInstalled: { addListener: vi.fn() }, onMessage: { addListener: (fn: typeof listener) => { listener = fn; } }, getURL: (path: string) => `chrome-extension://test/${path}`,
+    runtime: { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() }, onMessageExternal: { addListener: vi.fn() }, onMessage: { addListener: (fn: typeof listener) => { listener = fn; } }, getURL: (path: string) => `chrome-extension://test/${path}`,
       getContexts: vi.fn(async () => [{}]), sendMessage: vi.fn(async () => ({ success: true, stage: "receiving" })) },
     contextMenus: { onClicked: { addListener: vi.fn() } }, permissions: { contains: vi.fn(async () => true) },
     tabs: { onUpdated: { addListener: vi.fn() }, onRemoved: { addListener: vi.fn() }, query: vi.fn(async () => [] as object[]), create: vi.fn(async () => {}), update: vi.fn(async () => {}), sendMessage: vi.fn(async () => {}) },

@@ -74,3 +74,7 @@ src/app/prototypes/
 
 # Storybook build output
 storybook-static/
+
+# Cloudflare Wrangler local state
+.wrangler/
+packages/*/node_modules/

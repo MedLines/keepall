@@ -45,6 +45,10 @@ window.addEventListener("message", (event) => {
     resolveReady = undefined;
     return;
   }
+  if (event.data.type === "agent-review" && Number.isInteger(event.data.items)) {
+    void chrome.runtime.sendMessage({ target: "worker", type: "agent-review", origin: frameOrigin, items: event.data.items, agentName: typeof event.data.agentName === "string" ? event.data.agentName : null }).catch(() => {});
+    return;
+  }
   if (event.data.type === "file-result" && typeof event.data.requestId === "string") fileWaiting.get(event.data.requestId)?.(event.data);
   if (event.data.type === "result" && typeof event.data.captureId === "string") {
     waiting.get(event.data.captureId)?.resolve(event.data);
@@ -154,6 +158,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "file-action") {
     if (_sender.tab || _sender.id !== chrome.runtime.id) { sendResponse({ success: false, error: "Untrusted file action sender." }); return; }
     void fileAction(message).then(sendResponse).catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+  if (message.type === "agent-host") {
+    void ensureFrame(message.origin).then(() => sendResponse({ ok: true }), (error) => sendResponse({ ok: false, error: error.message }));
     return true;
   }
   const operation = ["capture", "capture-selection", "undo-capture", "capture-collections", "move-capture", "tag-capture"].includes(message.type)
