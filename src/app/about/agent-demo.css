@@ -1,0 +1,53 @@
+.ka-agent-demo {
+  color-scheme: dark;
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ka-agent-demo-log { display: grid; gap: 8px; }
+.ka-agent-demo-log > li { min-width: 0; padding: 10px 12px; border: 1px solid var(--color-border-control); border-radius: 12px; }
+.ka-agent-demo-you { justify-self: end; max-width: 88%; background: var(--color-bg-selected); border-color: var(--color-border-selected); }
+.ka-agent-demo-tool { display: flex; align-items: center; gap: 8px; background: var(--color-bg-control); color: var(--color-text-secondary); font-size: 12px; }
+.ka-agent-demo-tool > svg { flex: none; width: 14px; height: 14px; }
+.ka-agent-demo-tool code { margin-inline-end: 6px; color: var(--color-text-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ka-agent-demo-meta { margin-inline-start: auto; white-space: nowrap; }
+.ka-agent-demo-agent { max-width: 92%; background: var(--color-bg-card); }
+.ka-agent-demo-agent strong { font-weight: 600; }
+
+.ka-agent-demo-review { padding: 16px; border: 1px solid var(--color-border-control); border-radius: 20px; background: var(--color-bg-canvas); box-shadow: var(--shadow-panel); }
+.ka-agent-demo-review-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.ka-agent-demo-review-top > :last-child { color: var(--color-text-secondary); }
+.ka-agent-demo-items { display: grid; gap: 6px; }
+.ka-agent-demo-items > li { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 6px 6px 6px; border: 1px solid var(--color-border-control); border-radius: 14px; background: var(--color-bg-card); transition: opacity 150ms ease; }
+.ka-agent-demo-items > li[data-skipped] { opacity: .6; }
+.ka-agent-demo-thumb { flex: none; width: 40px; height: 40px; border-radius: 9px; object-fit: cover; background: var(--color-bg-raised); }
+.ka-agent-demo-copy { display: grid; flex: 1; min-width: 0; }
+.ka-agent-demo-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; }
+.ka-agent-demo-change { color: var(--color-text-secondary); font-size: 12px; }
+.ka-agent-demo-toggle { flex: none; min-width: 64px; min-height: 36px; padding: 6px 12px; border: 1px solid var(--color-border-control); border-radius: 999px; background: var(--color-bg-control); font-size: 12px; }
+.ka-agent-demo-action { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 16px; border: 1px solid var(--color-border-control); border-radius: 999px; background: var(--color-bg-control); font-size: 13px; font-weight: 550; }
+.ka-agent-demo-apply { width: 100%; margin-top: 12px; border-color: transparent; background: var(--color-action-primary); color: var(--color-text-on-action); }
+.ka-agent-demo-apply:disabled { opacity: var(--opacity-disabled); }
+.ka-agent-demo-done { display: grid; align-content: center; justify-items: start; gap: 16px; min-height: 236px; }
+.ka-agent-demo-collection { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px; border: 1px solid var(--color-border-selected); border-radius: 14px; background: var(--color-bg-selected); }
+.ka-agent-demo-stack { display: flex; flex: none; }
+.ka-agent-demo-stack > .ka-agent-demo-thumb { border: 2px solid var(--color-bg-selected); }
+.ka-agent-demo-stack > .ka-agent-demo-thumb + .ka-agent-demo-thumb { margin-inline-start: -14px; }
+.ka-agent-demo-done p { display: flex; align-items: flex-start; gap: 8px; color: var(--color-text-secondary); }
+.ka-agent-demo-done svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+
+.ka-agent-demo :is(button):focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) {
+  .ka-agent-demo-toggle:hover, .ka-agent-demo-action:not(.ka-agent-demo-apply):hover { background: var(--color-bg-raised); }
+  .ka-agent-demo-apply:not(:disabled):hover { background: var(--color-action-primary-hover); }
+}
+@media (prefers-reduced-motion: reduce) { .ka-agent-demo-items > li { transition: none; } }
+@media (max-width: 450px) {
+  .ka-agent-demo-review { padding: 12px; }
+  .ka-agent-demo-you, .ka-agent-demo-agent { max-width: 100%; }
+}

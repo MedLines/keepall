@@ -15,10 +15,11 @@ import previewScreenshot from "../../../public/marketing/app-preview-document.we
 import noteScreenshot from "../../../public/help/note-editor.webp";
 import searchScreenshot from "../../../public/marketing/app-search-files.webp";
 import imageToolsScreenshot from "../../../public/marketing/app-image-tools.webp";
+import agentsScreenshot from "../../../public/help/agents-settings.webp";
 
 export const metadata: Metadata = {
   title: "Help · Keepall",
-  description: "Guides to saving, reading documents and articles, writing notes, searching, and backing up your Keepall library.",
+  description: "Guides to saving, reading documents and articles, writing notes, searching, backing up, and using your Keepall library with AI agents.",
 };
 
 const thumbnails: Record<string, StaticImageData> = {
@@ -34,6 +35,7 @@ const thumbnails: Record<string, StaticImageData> = {
   documents: pdfScreenshot,
   preview: previewScreenshot,
   notes: noteScreenshot,
+  "ai-agents": agentsScreenshot,
 };
 
 export default function HelpPage() {
