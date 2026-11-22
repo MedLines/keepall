@@ -2,7 +2,7 @@
 
 Let coding agents such as Claude Code, Codex, and OpenCode search, read, save to, and organize a Keepall library. The library stays in the browser's IndexedDB. Keepall's servers can't read it, can't read the agent's requests, and can't send commands to it.
 
-Status: spike built locally on November 15, 2026 (see [Spike results](#spike-results)). Launch prepared November 21, 2026 (see [Launch](#launch)); nothing is deployed or published yet.
+Status: launched November 22, 2026 (see [Launch](#launch)). The relay, the app, and `@keepall/mcp` 1.0.0 are live; Keepall Capture 0.6.0 is in Chrome Web Store review.
 
 ## Constraints
 
@@ -267,15 +267,14 @@ Ask Claude Code to search Keepall. The first call returns a pairing link. Open i
 
 ## Launch
 
-Prepared, waiting on steps only the owner can take:
+Launched November 22, 2026:
 
-- **Relay.** `pnpm --filter @keepall/relay run deploy` deploys `keepall-relay` to workers.dev with `ALLOWED_ORIGINS=https://www.keepall.app`. Browser upgrades from other origins get 403 before any Durable Object runs, so other sites can't spend the daily quota. Agents send no Origin and are unaffected. Local `wrangler dev` allows every origin.
-- **App.** Vercel Production needs `NEXT_PUBLIC_KEEPALL_RELAY_URL` set to the relay before the build. Without it, Settings shows that agent access isn't available. Preview deployments can't use the production relay.
-- **`@keepall/mcp`.** `packages/mcp/build.mjs` bundles the CLI with esbuild into one file, baking in the relay from `KEEPALL_PUBLIC_RELAY_URL` and the package version. The first 1.0.0 publish runs locally (npm needs the package to exist before trusted publishing can be set up). Later releases: bump the version and push a `mcp-v<version>` tag; `.github/workflows/publish-mcp.yml` tests and publishes with provenance through npm trusted publishing. It reads the repository variable `KEEPALL_PUBLIC_RELAY_URL`.
-- **Extension 0.6.0.** Adds `externally_connectable` and the review badge, no new permissions. Store copy and privacy answers are in `docs/chrome-web-store.md`.
+- **Relay.** `keepall-relay` runs at `https://keepall-relay.keepall.workers.dev` with `ALLOWED_ORIGINS=https://www.keepall.app` (set by `pnpm --filter @keepall/relay run deploy`). Browser upgrades from other origins get 403 before any Durable Object runs, so other sites can't spend the daily quota. Agents send no Origin and are unaffected. Local `wrangler dev` allows every origin.
+- **App.** Vercel Production has `NEXT_PUBLIC_KEEPALL_RELAY_URL`, read at build time. Without it, Settings says agent access isn't available. Preview deployments can't use the production relay.
+- **`@keepall/mcp` 1.0.0** is on npm. `packages/mcp/build.mjs` bundles the CLI into one file with the relay from `KEEPALL_PUBLIC_RELAY_URL` and the package version. 1.0.0 was published by hand, because npm needs a package to exist before trusted publishing can be set up. Later releases: bump the version and push a `mcp-v<version>` tag; `.github/workflows/publish-mcp.yml` tests and publishes with provenance through npm trusted publishing, reading the repository variable `KEEPALL_PUBLIC_RELAY_URL`.
+- **Checked end to end** on launch day: the published package searched the production library through the relay.
+- **Extension 0.6.0** was submitted for review on November 22. It adds `externally_connectable` and the review badge, with no new permissions. Until it is approved, agents reach the library only while a keepall.app tab is open. Store copy and privacy answers are in `docs/chrome-web-store.md`.
 - **Privacy.** `/privacy#agents` says what the relay sees, that what an agent reads goes to its AI provider, and how to revoke. `/extension-privacy` covers the bridge staying loaded and the review count.
-
-The launch wizard (`.qa/launch-agent-access.sh`, not committed) walks through Cloudflare, the GitHub variable, Vercel, merging, npm, trusted publishing, an end-to-end check, and the Store upload. Add the changelog entry once this is on main.
 
 ## Slices after the spike
 
