@@ -31,6 +31,11 @@ export const ClaudeCodeCommand: Story = {
   args: { created: { agentName: "Claude Code", instructions: setupInstructions("claude-code", DEFAULT_MCP_COMMAND, code) } },
   play: async ({ canvas, args }) => {
     await expect(canvas.getByText(/claude mcp add -s user keepall/)).toBeVisible();
+    // The choices stay in place, locked, so the setup appears below them instead of moving the page.
+    await expect(canvas.getByRole("radio", { name: "Claude Code" })).toBeChecked();
+    await expect(canvas.getByRole("radio", { name: "Codex" })).toBeDisabled();
+    await expect(canvas.queryByRole("button", { name: "Create setup" })).toBeNull();
+    await expect(canvas.getByRole("button", { name: "Copy" })).toHaveFocus();
     await canvas.getByRole("button", { name: "Set up another agent" }).click();
     await expect(args.onReset).toHaveBeenCalled();
   },
