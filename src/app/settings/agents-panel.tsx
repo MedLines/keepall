@@ -210,7 +210,7 @@ export function AgentsPanel(props: AgentsPanelProps) {
         <p className={paragraphClass}>
           {pairings.length
             ? "Agents reach this library through Keepall's relay, end-to-end encrypted. They answer while Chrome is open with Keepall Capture or a Keepall tab."
-            : "No agents are connected. Add the Keepall MCP server to Claude Code, Codex, or OpenCode, then ask it to search Keepall. It gives you a link to connect."}
+            : "No agents are connected yet. Use Connect an agent above to set one up."}
         </p>
         {pairings.map((pairing) => <Pairing key={pairing.id} pairing={pairing} {...props} />)}
       </section>
