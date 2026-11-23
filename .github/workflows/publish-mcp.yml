@@ -1,6 +1,6 @@
-# Publishes @keepall/mcp to npm with provenance when a tag like mcp-v1.0.1 is pushed.
-# Uses npm trusted publishing (OIDC), so no npm token is stored here. Set it up once on npmjs.com:
-# @keepall/mcp → Settings → Trusted publishing → GitHub Actions, workflow "publish-mcp.yml".
+# Stages @keepall/mcp on npm with provenance when a tag like mcp-v1.0.1 is pushed. The maintainer then approves
+# the staged version with 2FA (npmjs.com, or `npm stage approve <id>`), so nothing publishes without them.
+# Uses npm trusted publishing (OIDC) with the "npm stage publish" permission, so no npm token is stored here.
 # The repository variable KEEPALL_PUBLIC_RELAY_URL is baked into the package as its default relay.
 name: Publish @keepall/mcp
 
@@ -33,7 +33,7 @@ jobs:
       - run: pnpm --filter @keepall/relay test
       - run: pnpm --filter @keepall/mcp typecheck
       - run: pnpm --filter @keepall/mcp test
-      # Trusted publishing needs npm 11.5.1 or later.
-      - run: npm install -g npm@11
+      # Staged publishing needs npm 12.
+      - run: npm install -g npm@12
       - working-directory: packages/mcp
-        run: npm publish
+        run: npm stage publish
