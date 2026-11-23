@@ -53,9 +53,15 @@ export function extractPixelPalette(pixels: Uint8ClampedArray): string[] {
     channels.forEach((value, index) => { bucket.sums[index] += value; });
     buckets.set(key, bucket);
   }
-  const selected: number[][] = [];
-  for (const bucket of [...buckets.values()].sort((a, b) => b.count - a.count)) {
+  // Rank by area, boosted by saturation, so a small vivid accent is not crowded out by shades of a pale background.
+  const ranked = [...buckets.values()].map(bucket => {
     const color = bucket.sums.map(value => Math.round(value / bucket.count));
+    const max = Math.max(...color), min = Math.min(...color);
+    const saturation = max ? (max - min) / max : 0;
+    return { color, score: bucket.count * (1 + 4 * saturation * saturation) };
+  });
+  const selected: number[][] = [];
+  for (const { color } of ranked.sort((a, b) => b.score - a.score)) {
     if (selected.every(existing => distance(existing, color) > 60)) selected.push(color);
     if (selected.length === 6) break;
   }
