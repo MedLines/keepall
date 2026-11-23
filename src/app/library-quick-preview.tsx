@@ -34,7 +34,11 @@ type Props = {
   returnFocus: () => HTMLElement | null;
   sharedOpening?: boolean;
   /** `label` and `description` name the review (Unsorted review by default). */
-  review?: { footer: ReactNode; organization: ReactNode; emptyState: ReactNode; progress: ReactNode; busy: boolean; label?: string; description?: string };
+  review?: {
+    footer: ReactNode; organization: ReactNode; emptyState: ReactNode; progress: ReactNode; busy: boolean; label?: string; description?: string;
+    /** Shown instead of the item's saved content, for an item that isn't in the library yet. */
+    content?: ReactNode;
+  };
 };
 
 export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpenItem, returnFocus, sharedOpening = false, review }: Props) {
@@ -100,7 +104,7 @@ export function LibraryQuickPreview({ item, index, count, onMove, onClose, onOpe
               <Dialog.Close disabled={review?.busy} aria-label="Close preview" className={iconButtonClassName({ size: "lg" })}><CloseIcon /></Dialog.Close>
             </div>
             <div key={item.id} className={`${review ? "min-h-[min(6rem,15dvh)]" : "min-h-0"} flex-1 overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus`} tabIndex={0} role="region" aria-label="Preview content">
-              <PreviewContent item={item} reviewing={reviewing} onGalleryStep={() => popupRef.current?.focus({ preventScroll: true })} />
+              {review?.content ?? <PreviewContent item={item} reviewing={reviewing} onGalleryStep={() => popupRef.current?.focus({ preventScroll: true })} />}
             </div>
             {/* In its own row, not over the content, so long text never runs under the counter. */}
             <div className="flex shrink-0 justify-center px-4 pb-4">{progress}</div>

@@ -2,6 +2,11 @@ import { channelSocketUrl, createLibraryEndpoint } from "@/domain/agent-protocol
 import { AgentToolError } from "@/domain/agent-tools";
 import { AGENT_PAIRINGS_CHANNEL, listAgentPairings, touchAgentPairing, type AgentPairing } from "@/persistence/agent-pairings";
 import { runAgentTool } from "@/persistence/agent-tools";
+import { registerVideoPosterMaker } from "@/persistence/agent-files";
+import { prepareLocalVideo } from "../prepare-local-video";
+
+// Videos agents send get a poster frame, as Add files gives them.
+registerVideoPosterMaker(prepareLocalVideo);
 
 const RETRY_MIN_MS = 5_000;
 const RETRY_MAX_MS = 5 * 60_000;

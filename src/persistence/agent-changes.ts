@@ -1,9 +1,10 @@
 import {
-  DIRECT_CHANGE_LIMIT, itemFingerprint, parseChangeRequest, planChanges, planUndo, type AgentWriteTool, type ChangeRequest, type LibraryState,
+  createdItemId, createdItemIds, DIRECT_CHANGE_LIMIT, effectKeys, itemFingerprint, parseChangeRequest, planChanges, planUndo, withCreatedItemId, type AgentWriteTool, type ChangeRequest, type LibraryState,
   type PlannedStep, type RecordChange, type SeenItems,
 } from "@/domain/agent-changes";
 import type { Item } from "@/domain/item";
 import { decisionRequests, type ItemDecision } from "@/domain/agent-review";
+import type { ChangePlan } from "@/domain/agent-changes";
 import { nameIndex } from "@/domain/agent-tools";
 import { AgentToolError } from "@/domain/agent-tools";
 import { normalizeCollection } from "@/domain/collection";
@@ -11,13 +12,14 @@ import { normalizeItem } from "@/domain/item";
 import { pairingAccess, type AgentPairing } from "./agent-pairings";
 import { getBackupFolderSettings, saveFolderBackup, backupFailureMessage } from "./backup-settings";
 import { getDb } from "./db";
+import { deletePendingFiles, parseFileArgs, pendingBytes, requestFileIds, saveFileItems, storePendingFiles } from "./agent-files";
 
 /** Same-origin contexts announce agent changes here: settings refreshes, and open libraries reload. */
 export const AGENT_CHANGES_CHANNEL = "keepall-agent-changes";
 const JOURNAL_LIMIT = 200;
 
 export type AgentProposalRequest = {
-  id: string; tool: AgentWriteTool; request: ChangeRequest; text: string; seen: SeenItems; addedAt: number;
+  id: string; tool: AgentWriteTool | "save_file"; request: ChangeRequest; text: string; seen: SeenItems; addedAt: number;
   /** The agent's one-line reason, shown to the reviewer. */
   reason?: string;
 };
@@ -53,8 +55,8 @@ export type AgentChangeEntry = {
 export type BackupOutcome = { status: "saved" | "off" } | { status: "failed"; message: string };
 
 export type SubmitResult =
-  | { status: "applied"; changeId: string; steps: string[]; notes: string[] }
-  | { status: "waiting_for_review"; proposalId: string; step: string; notes: string[]; pending: number }
+  | { status: "applied"; changeId: string; steps: string[]; notes: string[]; itemId?: string; itemIds?: string[] }
+  | { status: "waiting_for_review"; proposalId: string; step: string; notes: string[]; pending: number; itemId?: string; itemIds?: string[] }
   | { status: "nothing_to_do"; step: string; notes: string[] };
 
 function announce(detail: Record<string, unknown>) {
@@ -66,7 +68,31 @@ function announce(detail: Record<string, unknown>) {
 
 function agentTables() {
   const db = getDb();
-  return [db.items, db.collections, db.tags, db.agentChanges, db.agentProposals];
+  return [db.items, db.collections, db.tags, db.agentChanges, db.agentProposals, db.agentFiles];
+}
+
+/** A proposal's waiting files, deleted once the proposal is closed: applied, declined, or decided item by item. */
+function proposalFileIds(proposal: AgentProposal) {
+  return proposal.requests.flatMap((entry) => requestFileIds(entry.request));
+}
+
+/**
+ * Saves planned file items after their plan's records are written, and adds what they created to the change.
+ * Runs outside a transaction: saving a file hashes it and makes thumbnails, as Add files does.
+ */
+async function saveFilesInto(changeId: string | undefined, files: ChangePlan["files"], base: Omit<AgentChangeEntry, "id" | "records" | "steps">, steps: string[], bytesFor: (fileId: string) => Promise<Uint8Array | undefined>) {
+  if (!files.length) return { changeId, failed: [] as Array<{ name: string; reason: string }> };
+  const saved = await saveFileItems(files, bytesFor);
+  if (!saved.records.length) return { changeId, failed: saved.failed };
+  const db = getDb();
+  const id = changeId ?? crypto.randomUUID();
+  await db.transaction("rw", db.agentChanges, async () => {
+    const existing = await db.agentChanges.get(id);
+    if (existing) await db.agentChanges.put({ ...existing, records: [...existing.records, ...saved.records] });
+    else await db.agentChanges.add({ ...base, id, steps, records: saved.records });
+  });
+  await pruneJournal();
+  return { changeId: id, failed: saved.failed };
 }
 
 async function readState(): Promise<LibraryState> {
@@ -114,7 +140,7 @@ export async function submitAgentChange(pairing: AgentPairing, requestId: string
   if (access === "read") {
     throw new AgentToolError("This agent has read-only access to Keepall. Ask the user to allow changes in Keepall: Settings, Agents, then try again.");
   }
-  const request = parseChangeRequest(tool, args);
+  const request = withCreatedItemId(parseChangeRequest(tool, args), () => crypto.randomUUID());
   const db = getDb();
   const result = await db.transaction("rw", agentTables(), async (): Promise<SubmitResult> => {
     const previous = await db.agentChanges.where("requestId").equals(requestId).first();
@@ -128,13 +154,16 @@ export async function submitAgentChange(pairing: AgentPairing, requestId: string
     const plan = planChanges(state, [{ id: requestId, request }], { now, newId: () => crypto.randomUUID() });
     const [step] = plan.steps;
     if (step.status !== "planned") return { status: "nothing_to_do", step: step.text, notes: step.notes };
+    // A save that found the link already saved organizes that one instead; report the item it touches.
+    const itemId = createdItemId(request) && plan.created.items.length ? createdItemId(request) : step.itemIds[0];
+    const created = createdItemId(request) ? { itemId } : {};
 
     if (access === "change" && !open && plan.itemsAffected <= DIRECT_CHANGE_LIMIT) {
       await writeRecords(plan.records);
       const changeId = crypto.randomUUID();
       await db.agentChanges.add({ id: changeId, pairingId: pairing.id, agentName: pairing.agentName, requestId, createdAt: now, steps: [step.text], records: plan.records });
       await pruneJournal();
-      return { status: "applied", changeId, steps: [step.text], notes: step.notes };
+      return { status: "applied", changeId, steps: [step.text], notes: step.notes, ...created };
     }
 
     const items = new Map(state.items.map((item) => [item.id, item]));
@@ -144,7 +173,7 @@ export async function submitAgentChange(pairing: AgentPairing, requestId: string
       ? { ...open, requests: [...open.requests, entry], updatedAt: now }
       : { id: crypto.randomUUID(), pairingId: pairing.id, agentName: pairing.agentName, status: "open", requests: [entry], createdAt: now, updatedAt: now };
     await db.agentProposals.put(proposal);
-    return { status: "waiting_for_review", proposalId: proposal.id, step: step.text, notes: step.notes, pending: proposal.requests.length };
+    return { status: "waiting_for_review", proposalId: proposal.id, step: step.text, notes: step.notes, pending: proposal.requests.length, ...created };
   });
   announce({ type: result.status === "applied" ? "applied" : "proposal", pairingId: pairing.id });
   return result;
@@ -178,7 +207,66 @@ export type ProposalPreview = {
   steps: Array<PlannedStep & { reason?: string }>;
   /** Every item the proposal touches as it is now, plus items it would create, keyed by ID. */
   items: Record<string, Item>;
+  /** Collection and tag names by ID, including ones the proposal would create, so new items show their organization. */
+  names: { collections: Record<string, string>; tags: Record<string, string> };
 };
+
+/**
+ * Takes files from an agent. Like submitAgentChange: a small batch from a "change" agent saves now, anything else
+ * waits for review with its bytes kept in this browser. Retries with the same request ID are safe.
+ */
+export async function submitAgentFiles(pairing: AgentPairing, requestId: string, args: Record<string, unknown>, reason?: string): Promise<SubmitResult> {
+  const access = pairingAccess(pairing);
+  if (access === "read") {
+    throw new AgentToolError("This agent has read-only access to Keepall. Ask the user to allow changes in Keepall: Settings, Agents, then try again.");
+  }
+  const { request, payloads } = parseFileArgs(args, () => crypto.randomUUID());
+  const db = getDb();
+  const now = Date.now();
+  type Outcome = { result: SubmitResult } | { plan: ChangePlan; step: ChangePlan["steps"][number] };
+  const outcome = await db.transaction("rw", agentTables(), async (): Promise<Outcome> => {
+    const previous = await db.agentChanges.where("requestId").equals(requestId).first();
+    if (previous) return { result: { status: "applied", changeId: previous.id, steps: previous.steps, notes: [] } as SubmitResult };
+    const open = await db.agentProposals.where("pairingId").equals(pairing.id).filter((proposal) => proposal.status === "open").first();
+    const queued = open?.requests.find((entry) => entry.id === requestId);
+    if (open && queued) return { result: { status: "waiting_for_review", proposalId: open.id, step: queued.text, notes: [], pending: open.requests.length } as SubmitResult };
+    const plan = planChanges(await readState(), [{ id: requestId, request }], { now, newId: () => crypto.randomUUID() });
+    const [step] = plan.steps;
+    if (access === "change" && !open && plan.itemsAffected <= DIRECT_CHANGE_LIMIT) {
+      // New collections and tags first, so the files save into them.
+      await writeRecords(plan.records);
+      return { plan, step };
+    }
+    await storePendingFiles(requestId, request, payloads);
+    const entry: AgentProposalRequest = { id: requestId, tool: "save_file", request, text: step.text, seen: {}, addedAt: now, ...(reason ? { reason } : {}) };
+    const proposal: AgentProposal = open
+      ? { ...open, requests: [...open.requests, entry], updatedAt: now }
+      : { id: crypto.randomUUID(), pairingId: pairing.id, agentName: pairing.agentName, status: "open", requests: [entry], createdAt: now, updatedAt: now };
+    await db.agentProposals.put(proposal);
+    return { result: { status: "waiting_for_review", proposalId: proposal.id, step: step.text, notes: step.notes, pending: proposal.requests.length, itemIds: request.itemIds } as SubmitResult };
+  });
+  if ("result" in outcome) {
+    announce({ type: outcome.result.status === "applied" ? "applied" : "proposal", pairingId: pairing.id });
+    return outcome.result;
+  }
+  const bytes = new Map(payloads.map((payload) => [payload.fileId, payload.bytes]));
+  const base = { pairingId: pairing.id, agentName: pairing.agentName, requestId, createdAt: now };
+  // The plan's new collections and tags were written already; record them with the files so Undo removes them too.
+  const collectionsAndTags = outcome.plan.records.length ? await (async () => {
+    const id = crypto.randomUUID();
+    await db.agentChanges.add({ ...base, id, steps: [outcome.step.text], records: outcome.plan.records });
+    return id;
+  })() : undefined;
+  const saved = await saveFilesInto(collectionsAndTags, outcome.plan.files, base, [outcome.step.text], async (fileId) => bytes.get(fileId));
+  announce({ type: "applied", pairingId: pairing.id });
+  if (!saved.changeId || (saved.failed.length === outcome.plan.files.length)) {
+    throw new AgentToolError(`Couldn't save ${saved.failed.map((entry) => `${entry.name} (${entry.reason})`).join("; ")}.`);
+  }
+  return {
+    status: "applied", changeId: saved.changeId, steps: [outcome.step.text], itemIds: request.itemIds,
+    notes: saved.failed.map((entry) => `Couldn't save ${entry.name}: ${entry.reason}`),
+  };
+}
 
 /** Plans a proposal against the library as it is now, without writing, so the reviewer sees exactly what applies. */
 export async function previewAgentProposal(proposalId: string): Promise<ProposalPreview | null> {
@@ -198,8 +286,16 @@ export async function previewAgentProposal(proposalId: string): Promise<Proposal
         if (item) items[effect.itemId] = item as Item;
       }
     }
+    for (const file of plan.files) items[file.item.id] = file.item;
     const reasons = new Map(proposal.requests.map((entry) => [entry.id, entry.reason]));
-    return { proposal, steps: plan.steps.map((step) => ({ ...step, reason: reasons.get(step.id) })), items };
+    const names = {
+      collections: Object.fromEntries(state.collections.map((row) => [row.id, row.name])),
+      tags: Object.fromEntries(state.tags.map((row) => [row.id, row.name])),
+    };
+    for (const record of plan.records) {
+      if (record.table !== "items" && record.after) names[record.table][record.id] = record.after.name;
+    }
+    return { proposal, steps: plan.steps.map((step) => ({ ...step, reason: reasons.get(step.id) })), items, names };
   });
 }
 
@@ -226,10 +322,19 @@ export async function applyAgentProposal(proposalId: string, excludedKeys: reado
     }
     const outcome: AgentProposalResult = { applied, skipped, changeId, backup, effects: plan.steps.reduce((total, step) => total + step.effects.length, 0) };
     await db.agentProposals.put({ ...proposal, status: "applied", decidedAt: now, updatedAt: now, result: outcome });
-    return outcome;
+    return { outcome, plan, proposal, now };
   });
+  // Files save after the rest is written, through Add files' functions, then join the same change.
+  const { plan, proposal, now } = result;
+  let outcome = result.outcome;
+  if (plan.files.length) {
+    const saved = await saveFilesInto(outcome.changeId, plan.files, { pairingId: proposal.pairingId, agentName: proposal.agentName, proposalId, createdAt: now }, outcome.applied, pendingBytes);
+    outcome = { ...outcome, changeId: saved.changeId, skipped: [...outcome.skipped, ...saved.failed.map((entry) => ({ text: `Save ${entry.name}`, reason: entry.reason }))] };
+    await db.agentProposals.update(proposalId, { result: outcome });
+  }
+  await deletePendingFiles(proposalFileIds(proposal));
   announce({ type: "applied", proposalId });
-  return result;
+  return outcome;
 }
 
 /**
@@ -243,10 +348,16 @@ export async function applyAgentItemDecision(proposalId: string, itemId: string,
     if (!proposal || proposal.status !== "open") throw new Error("These suggestions were already reviewed.");
     const state = await readState();
     const item = state.items.find((entry) => entry.id === itemId && entry.deletedAt === undefined);
-    if (!item) throw new Error("This item is no longer in your library.");
+    const creating = item ? undefined : proposal.requests.find((entry) => createdItemIds(entry.request).includes(itemId));
+    if (!item && !creating) throw new Error("This item is no longer in your library.");
     const now = Date.now();
-    const requests = decisionRequests(item, decision, nameIndex(state.tags, state.collections).tags);
-    const plan = planChanges(state, requests.map((request, index) => ({ id: `${itemId}:${index}`, request })), { now, newId: () => crypto.randomUUID() });
+    // A new item is saved with the reviewer's collection and tags; "Move to Trash" on it means don't save it.
+    const requests = item ? decisionRequests(item, decision, nameIndex(state.tags, state.collections).tags)
+      : decision.trash ? [] : [savingRequest(creating!.request, decision)];
+    // A file request can make several items; this decision saves only this one.
+    const others = creating?.request.kind === "save_file" ? creating.request.itemIds.filter((id) => id !== itemId) : [];
+    const excluded = new Set(others.map((id) => effectKeys.create(`${itemId}:0`, id)));
+    const plan = planChanges(state, requests.map((request, index) => ({ id: `${itemId}:${index}`, request })), { now, newId: () => crypto.randomUUID(), excluded });
     let changeId: string | undefined;
     if (plan.records.length) {
       changeId = crypto.randomUUID();
@@ -259,10 +370,26 @@ export async function applyAgentItemDecision(proposalId: string, itemId: string,
     await db.agentProposals.put(remaining ? decided : {
       ...decided, status: "applied", decidedAt: now, result: { applied: [], skipped: [], backup: { status: "off" }, effects: 0 },
     });
-    return { changeId, remaining };
+    return { changeId, remaining, plan, proposal, now, steps: summarize(plan.steps).applied };
   });
+  let { changeId } = result;
+  if (result.plan.files.length) {
+    const saved = await saveFilesInto(changeId, result.plan.files, { pairingId: result.proposal.pairingId, agentName: result.proposal.agentName, proposalId, createdAt: result.now }, result.steps, pendingBytes);
+    if (saved.failed.length) throw new Error(`Couldn't save ${saved.failed.map((entry) => `${entry.name}: ${entry.reason}`).join("; ")}`);
+    changeId = saved.changeId;
+  }
+  // Keep waiting files while the review is open, so Undo and saving again still work; forget them once it closes.
+  if (!result.remaining) await deletePendingFiles(proposalFileIds(result.proposal));
   announce({ type: "applied", proposalId });
-  return result;
+  return { changeId, remaining: result.remaining };
+}
+
+/** A saving request with the reviewer's organization in place of the agent's. */
+function savingRequest(request: ChangeRequest, decision: ItemDecision): ChangeRequest {
+  const organization = { collection: decision.collection ?? undefined, tags: decision.tags };
+  if (request.kind === "save_note") return { ...request, ...organization, ...(decision.note !== null ? { text: decision.note } : {}) };
+  if (request.kind === "save_link" || request.kind === "save_file") return { ...request, ...organization, ...(decision.note !== null ? { note: decision.note } : {}) };
+  return request;
 }
 
 /** Undoes one item's decision and puts the item back up for review. */
@@ -284,10 +411,11 @@ export async function reopenAgentItem(proposalId: string, itemId: string, change
 
 export async function rejectAgentProposal(proposalId: string): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", db.agentProposals, async () => {
+  await db.transaction("rw", db.agentProposals, db.agentFiles, async () => {
     const proposal = await db.agentProposals.get(proposalId);
     if (!proposal || proposal.status !== "open") return;
     const now = Date.now();
+    await db.agentFiles.bulkDelete(proposalFileIds(proposal));
     await db.agentProposals.put({ ...proposal, status: "rejected", decidedAt: now, updatedAt: now, result: { applied: [], skipped: proposal.requests.map((entry) => ({ text: entry.text, reason: "Declined" })), backup: { status: "off" } } });
   });
   announce({ type: "rejected", proposalId });

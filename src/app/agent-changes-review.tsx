@@ -17,9 +17,15 @@ import { CaptureOrgPanel } from "./capture-org-panel";
 import { captureStyles } from "./capture-styles";
 import { OrganizationMenu } from "./item-context-menu";
 import { ITEMS_CHANGED_EVENT } from "./items-events";
+import { PendingFileContent, pendingFileIds } from "./pending-file-preview";
+import { registerVideoPosterMaker } from "@/persistence/agent-files";
+import { prepareLocalVideo } from "./prepare-local-video";
 import { LibraryQuickPreview } from "./library-quick-preview";
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, UndoIcon } from "./shell-icons";
 
+
+// Videos saved from a review get a poster frame, as Add files gives them.
+registerVideoPosterMaker(prepareLocalVideo);
 type Props = {
   collections: Collection[];
   tags: Tag[];
@@ -37,7 +43,11 @@ type Loaded = {
   items: Record<string, Item>;
   effects: Map<string, StepEffect[]>;
   reasons: Map<string, string[]>;
-  /** Suggestions that aren't about one item, like renaming a collection or saving a new link. */
+  /** Collection and tag names by ID, including ones the suggestions would create. */
+  names: { collections: Map<string, string>; tags: Map<string, string> };
+  /** Items the suggestions would save. They aren't in the library until applied. */
+  created: ReadonlySet<string>;
+  /** Suggestions that aren't about one item, like renaming a collection. */
   other: string[];
 };
 
@@ -57,7 +67,8 @@ async function load(): Promise<Loaded | null> {
       if ("itemId" in effect) reasons.set(effect.itemId, [...new Set([...(reasons.get(effect.itemId) ?? []), step.reason])]);
     }
   }
-  const queue = [...effects.keys()].filter((itemId) => !effects.get(itemId)!.some((effect) => effect.kind === "create"));
+  const queue = [...effects.keys()];
+  const created = new Set(queue.filter((itemId) => effects.get(itemId)!.some((effect) => effect.kind === "create")));
   return {
     proposalId: proposal.id,
     agentName: agentDisplayName(proposal.agentName),
@@ -65,7 +76,9 @@ async function load(): Promise<Loaded | null> {
     items: preview.items,
     effects,
     reasons,
-    other: groups.filter((group) => group.kind === "rename" || group.kind === "create").map((group) => group.kind === "create" ? `${group.title}: ${group.itemIds.length}` : group.title),
+    names: { collections: new Map(Object.entries(preview.names.collections)), tags: new Map(Object.entries(preview.names.tags)) },
+    created,
+    other: groups.filter((group) => group.kind === "rename").map((group) => group.title),
   };
 }
 
@@ -102,6 +115,18 @@ export function TrashSuggestion({ agentName, decision, busy, update }: Pick<Card
       <div className="flex items-center justify-between gap-3">
         <p className={`text-sm ${decision.trash ? "text-text-danger" : "text-text-secondary"}`}>{decision.trash ? `${agentName} suggests moving this to Trash.` : "Keeping this item."}</p>
         <Button variant={decision.trash ? "secondary" : "danger-ghost"} disabled={busy} onClick={() => update({ trash: !decision.trash })}>{decision.trash ? "Keep item" : "Move to Trash"}</Button>
+      </div>
+    </section>
+  );
+}
+
+/** A new item the agent wants to save. It isn't in the library yet; "Don't save" leaves it out. */
+export function NewItemSuggestion({ agentName, decision, busy, update }: Pick<CardsProps, "agentName" | "decision" | "busy" | "update">) {
+  return (
+    <section className={captureStyles["org-section"]} aria-label="New item">
+      <div className="flex items-center justify-between gap-3">
+        <p className={`text-sm ${decision.trash ? "text-text-secondary line-through" : "text-text-primary"}`}>{decision.trash ? "This won't be saved." : `New from ${agentName}. It isn't in your library until you save it.`}</p>
+        <Button variant={decision.trash ? "secondary" : "danger-ghost"} disabled={busy} onClick={() => update({ trash: !decision.trash })}>{decision.trash ? "Save it" : "Don't save"}</Button>
       </div>
     </section>
   );
@@ -200,7 +225,8 @@ export function AgentChangesReview({ collections, tags, onClose, onOpenItem, ret
   const itemId = queue[index];
   const item = loaded && itemId && !decided.has(itemId) ? loaded.items[itemId] ?? null : null;
   const done = !!loaded && index >= queue.length;
-  const names = nameIndex(tags, collections);
+  const names = loaded?.names ?? nameIndex(tags, collections);
+  const isNew = !!item && !!loaded?.created.has(item.id);
   const decision = item ? decisions[item.id] ?? suggestedDecision(item, loaded!.effects.get(item.id) ?? [], names) : null;
   const remaining = queue.filter((id) => !decided.has(id)).length;
   const notify = () => window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
@@ -238,7 +264,7 @@ export function AgentChangesReview({ collections, tags, onClose, onOpenItem, ret
     const result = await applyAgentItemDecision(loaded.proposalId, item.id, decision);
     setHistory((entries) => [...entries, { index, itemId: item.id, changeId: result.changeId }]);
     setDecided((current) => new Set([...current, item.id]));
-    setNotice(decision.trash ? "Moved to Trash." : "Changes applied.");
+    setNotice(isNew ? (decision.trash ? "Not saved." : "Saved to your library.") : decision.trash ? "Moved to Trash." : "Changes applied.");
     setIndex(neighbor(1) ?? queue.length); setCollectionInput(""); setTagInput("");
   });
   const undo = () => void run(async () => {
@@ -275,6 +301,7 @@ export function AgentChangesReview({ collections, tags, onClose, onOpenItem, ret
     <ScrollPanel className="library-review-organizer flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1 overscroll-contain" viewportProps={{ "data-preview-scroll": "" }} aria-label="Review this item's changes" role="group" aria-busy={busy}>
       <div className="grid gap-3">
         <SuggestionSummary agentName={loaded!.agentName} effects={effects} reasons={loaded!.reasons.get(item.id) ?? []} />
+        {isNew ? <NewItemSuggestion agentName={loaded!.agentName} decision={decision} busy={busy} update={update} /> : null}
         <CaptureOrgPanel key={item.id} variant="review" disabled={busy || decision.trash}
           collectionName={decision.collection} collectionInput={collectionInput} collectionSuggestions={collections}
           tagNames={decision.tags} tagInput={tagInput} tagSuggestions={tags}
@@ -296,7 +323,7 @@ export function AgentChangesReview({ collections, tags, onClose, onOpenItem, ret
   ) : null;
 
   let primary: { label: string; icon: "check" | "back"; onClick(): void } | null = null;
-  if (item) primary = { label: decision?.trash ? "Move to Trash" : "Apply changes", icon: "check", onClick: applyItem };
+  if (item) primary = { label: decision?.trash ? (isNew ? "Don't save" : "Move to Trash") : isNew ? "Save to library" : "Apply changes", icon: "check", onClick: applyItem };
   else if (done) primary = { label: "Back to library", icon: "back", onClick: onClose };
   const footer = (
     <ReviewFooter busy={busy} canBack={neighbor(-1) !== null} canNext={neighbor(1) !== null} onBack={() => move(-1)} onNext={() => move(1)}
@@ -308,10 +335,12 @@ export function AgentChangesReview({ collections, tags, onClose, onOpenItem, ret
   return (
     <LibraryQuickPreview item={item} index={index} count={queue.length} onMove={move}
       onClose={() => { if (!inFlight.current) onClose(); }}
-      onOpenItem={(entry, animate) => { if (!inFlight.current) { onClose(); onOpenItem(entry, animate); } }}
+      // A new item has no page until it's saved.
+      onOpenItem={(entry, animate) => { if (!inFlight.current && !loaded?.created.has(entry.id)) { onClose(); onOpenItem(entry, animate); } }}
       returnFocus={returnFocus}
       review={{
         footer, organization, busy, emptyState, label,
+        content: item && isNew && pendingFileIds(item) ? <PendingFileContent item={item} /> : undefined,
         description: "Review an agent's changes. Left and right arrows browse items. Adjust the collection and tags, then Apply changes. Next leaves the item as it is. Escape closes review.",
         progress: <p role="status" aria-live="polite" className="rounded-full border border-border-edge bg-transparent px-2.5 py-1 text-center text-xs tabular-nums text-text-secondary">{done ? <>{queue.length - remaining} of {queue.length}<span className="sr-only"> reviewed</span></> : <><span className="sr-only">Item </span>{index + 1} of {queue.length}</>}</p>,
       }}

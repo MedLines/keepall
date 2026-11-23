@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { itemFingerprint, parseChangeRequest, planChanges, planUndo, type ChangeRequest, type LibraryState, type RecordChange } from "./agent-changes";
+import { itemFingerprint, looksLikeMarkdown, parseChangeRequest, planChanges, planUndo, type ChangeRequest, type LibraryState, type RecordChange } from "./agent-changes";
 import type { Item } from "./item";
 
 const base = { tagIds: [] as string[], collectionIds: [] as string[], createdAt: 1, updatedAt: 1 };
@@ -159,5 +159,44 @@ describe("itemFingerprint", () => {
     expect(itemFingerprint({ ...original, noteContent: "mine" } as Item)).not.toBe(fingerprint);
     const result = planChanges(library(), [{ id: "r", request: { kind: "trash", itemIds: ["b"] }, seen: { b: fingerprint } }], options());
     expect(result.steps[0].status).toBe("planned");
+  });
+});
+
+describe("note formats", () => {
+  it("detects Markdown in agent notes, and keeps plain prose plain", () => {
+    expect(looksLikeMarkdown("# Job search\n\n- Send the form")).toBe(true);
+    expect(looksLikeMarkdown("Read **this** first")).toBe(true);
+    expect(looksLikeMarkdown("Ask about ==the deadline==")).toBe(true);
+    expect(looksLikeMarkdown("A quiet note. Nothing special, just two sentences.")).toBe(false);
+    expect(looksLikeMarkdown("Price: 5 * 3 = 15")).toBe(false);
+  });
+
+  it("saves Markdown notes as Markdown, and honors an explicit format", () => {
+    const detected = plan([{ kind: "save_note", text: "# To do\n\n- Tests", tags: [] }]);
+    expect(detected.records.find((record) => record.table === "items")?.after).toMatchObject({ format: "markdown", content: "# To do\n\n- Tests" });
+    const plain = plan([{ kind: "save_note", text: "# not a heading", format: "plain", tags: [] }]);
+    expect((plain.records.find((record) => record.table === "items")?.after as Record<string, unknown>).format).toBeUndefined();
+    expect(parseChangeRequest("save_note", { text: "x", format: "md" })).toMatchObject({ format: "markdown" });
+    expect(() => parseChangeRequest("save_note", { text: "x", format: "html" })).toThrow("format must be");
+  });
+
+  it("gives a link's new note its format, and keeps an existing plain note plain when Markdown is appended", () => {
+    const fresh = plan([{ kind: "note", itemId: "b", text: "- one\n- two", replace: false }]);
+    expect(after(fresh.records, "b")).toMatchObject({ noteContent: "- one\n- two", noteFormat: "markdown" });
+    const base = library();
+    const start = { ...base, items: base.items.map((item) => (item.id === "b" ? { ...item, noteContent: "Plain words" } as Item : item)) };
+    const appended = plan([{ kind: "note", itemId: "b", text: "- one", replace: false }], start);
+    expect(after(appended.records, "b")?.noteFormat).toBeUndefined();
+  });
+
+  it("uses the ID fixed when the agent asked, and undo restores the note format", () => {
+    const saved = plan([{ kind: "save_note", text: "Hello", tags: [], itemId: "fixed-id" }]);
+    expect(saved.created.items).toEqual(["fixed-id"]);
+    const start = library();
+    const change = plan([{ kind: "note", itemId: "n", text: "# Heading", replace: true }], start);
+    const changed = apply(start, change.records);
+    expect(changed.items.find((item) => item.id === "n")).toMatchObject({ format: "markdown" });
+    const restored = apply(changed, planUndo(change.records, changed, 300).records);
+    expect((restored.items.find((item) => item.id === "n") as Record<string, unknown>).format).toBeUndefined();
   });
 });

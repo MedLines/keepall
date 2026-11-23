@@ -2,6 +2,7 @@
 
 import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { remarkHighlight } from "./remark-highlight";
 import { parseNoteImageLine } from "@/domain/note";
 import { LocalAssetImage as LocalNoteImage } from "./local-asset-image";
 
@@ -52,7 +53,7 @@ export function NoteContent({ content, format, className = "", headingStart = 3,
     <div className={`note-markdown min-w-0 break-words ${className}`}>
       <Markdown
         skipHtml={!allowLocalImages}
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkHighlight]}
         urlTransform={(url, key, node) => key === "src" && node.tagName === "img" && /^keepall-image:[A-Za-z0-9_-]+$/.test(url)
           ? url : defaultUrlTransform(url)}
         components={{

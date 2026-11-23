@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline";
 import { appOrigin, loadPairing, relayUrl, savePairing, type Pairing } from "./config.ts";
 import { LibraryClient } from "./library-client.ts";
+import { prepareToolArgs } from "./files.ts";
 import { startPairing, type PairingAttempt } from "./pair.ts";
 import { INSTRUCTIONS, toolContent, TOOLS } from "./tools.ts";
 
@@ -50,7 +51,8 @@ export function runServer() {
     }
     client ??= new LibraryClient(pairing);
     try {
-      return { content: toolContent(await client.call(name, args)) };
+      // save_file reads its files here, then sends their bytes.
+      return { content: toolContent(await client.call(name, await prepareToolArgs(name, args))) };
     } catch (error) {
       return text(error instanceof Error ? error.message : String(error), true);
     }

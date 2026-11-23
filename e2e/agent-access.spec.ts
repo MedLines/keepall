@@ -2,7 +2,7 @@
 // the /connect page, and the extension bridge answering from IndexedDB.
 import { test, expect, chromium, type Page } from "@playwright/test";
 import { spawn, type ChildProcess, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -351,6 +351,74 @@ test("an agent suggests changes, the user applies some in Settings, and undo put
     // Switching to "Make changes" lets small changes apply at once.
     await page.getByRole("article", { name: "Codex" }).getByRole("radio", { name: /Make changes/ }).check();
     await expect.poll(async () => json(await mcp!.call("save_note", { text: "Agent summary of the moodboard", collection: "Moodboard" })).status).toBe("done");
+  } finally {
+    mcp?.child.stdin.end();
+    await context.close();
+    if (relay?.child.pid) process.kill(-relay.child.pid, "SIGTERM");
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test("an agent saves a Markdown note and files, and the user sees each one before saving it", async ({ browser }) => {
+  test.setTimeout(150_000);
+  const temp = await mkdtemp(path.join(tmpdir(), "keepall-agent-files-"));
+  let relay: { url: string; child: ChildProcess } | undefined;
+  let mcp: ReturnType<typeof startMcp> | undefined;
+  const context = await browser.newContext({ serviceWorkers: "block" });
+  try {
+    relay = await startRelay(path.join(temp, "relay"));
+    const page = await context.newPage();
+    await page.context().setDefaultNavigationTimeout(60_000);
+    await seed(page);
+    mcp = startMcp(relay.url, path.join(temp, "agent.json"));
+    await mcp.request("initialize", { protocolVersion: "2025-06-18", clientInfo: { name: "Claude Code" }, capabilities: {} });
+    const link = new RegExp(`${origin}/connect#\\S+`).exec((await mcp.search("x")).result.content[0].text)![0];
+    await page.goto(link);
+    await page.getByRole("button", { name: "Connect", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Claude Code is connected" })).toBeVisible();
+    await expect.poll(async () => (await mcp!.search("masonry")).result.content[0].text, { timeout: 30_000 }).toContain("Masonry");
+
+    // A Markdown note without a format, and two files from this computer: one larger than a single relay frame.
+    const note = json(await mcp.call("save_note", { title: "Job search to-do", text: "# This week\n\n- ==Send== the form\n- Record the video" }));
+    expect(note).toMatchObject({ status: "waiting_for_review" });
+    expect(typeof note.item_id_after_approval).toBe("string");
+    await writeFile(path.join(temp, "plan.md"), `# Interview plan\n\n${"- Practice the answers\n".repeat(40_000)}`);
+    await writeFile(path.join(temp, "pixel.png"), Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64"));
+    const files = json(await mcp.call("save_file", { path: [path.join(temp, "plan.md"), path.join(temp, "pixel.png")], collection: "Job search", reason: "Your interview prep" }));
+    expect(files).toMatchObject({ status: "waiting_for_review", suggestions_waiting: 2 });
+    expect(files.item_ids_after_approval).toHaveLength(2);
+    expect((await mcp.call("save_file", { path: path.join(temp, "missing.png") })).result).toMatchObject({ isError: true });
+
+    // The review shows every new item as a card that opens, with its content, before anything is saved.
+    await page.goto(`${origin}/review`);
+    await expect(page.locator("mark.note-highlight", { hasText: "Send" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Review “pixel”" }).locator("img")).toBeVisible();
+    await page.getByRole("button", { name: "Review “Job search to-do”" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: "This week" })).toBeVisible();
+    await expect(dialog.getByText("It isn't in your library until you save it.")).toBeVisible();
+    await dialog.getByRole("button", { name: "Save to library" }).click();
+    await expect(dialog.getByRole("heading", { name: "Interview plan" })).toBeVisible();
+    await dialog.getByRole("button", { name: "Save to library" }).click();
+    await expect(dialog.locator("img[src^='blob:']")).toBeVisible();
+    await dialog.getByRole("button", { name: "Save to library" }).click();
+    // Saving an image hashes it and makes its thumbnail, as Add files does.
+    await expect(dialog.getByRole("heading", { name: "Review complete" })).toBeVisible({ timeout: 20_000 });
+    await expect(dialog.getByRole("alert")).toHaveCount(0);
+
+    const items = await page.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open("keepall"); request.onsuccess = () => resolve(request.result); });
+      const rows = await new Promise<Array<Record<string, unknown>>>((resolve) => { const request = db.transaction("items").objectStore("items").getAll(); request.onsuccess = () => resolve(request.result); });
+      const waiting = await new Promise<number>((resolve) => { const request = db.transaction("agentFiles").objectStore("agentFiles").count(); request.onsuccess = () => resolve(request.result); });
+      db.close();
+      return { rows: rows.map(({ id, type, format, title, sourceFileName }) => ({ id, type, format, title, sourceFileName })), waiting };
+    });
+    expect(items.rows).toEqual(expect.arrayContaining([
+      { id: note.item_id_after_approval, type: "note", format: "markdown", title: "Job search to-do", sourceFileName: undefined },
+      { id: files.item_ids_after_approval[0], type: "document", format: "markdown", title: "plan", sourceFileName: "plan.md" },
+      expect.objectContaining({ id: files.item_ids_after_approval[1], type: "image", sourceFileName: "pixel.png" }),
+    ]));
+    expect(items.waiting).toBe(0);
   } finally {
     mcp?.child.stdin.end();
     await context.close();

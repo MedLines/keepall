@@ -81,9 +81,10 @@ Write tools, built:
 | --- | --- |
 | `move_to_collection` | Puts items into a collection by name, creating it if needed. "Unsorted" takes them out. |
 | `tag_items` | Adds and removes tags by name, creating new ones. Names ignore case. |
-| `add_note` | Adds text below an item's note (a note's text, an image's caption), or replaces it. |
+| `add_note` | Adds text below an item's note (a note's text, an image's caption), or replaces it. `format` sets Markdown or plain; left out, Keepall detects Markdown. A note that's already plain stays plain when text is added, unless the agent says Markdown. |
 | `rename_collection` | Renames a collection unless the new name is taken. |
-| `save_link`, `save_note` | Save new items with an optional note, collection, and tags. A link that's already saved gets organized instead of duplicated. |
+| `save_link`, `save_note` | Save new items with an optional note, collection, and tags. A link that's already saved gets organized instead of duplicated. Notes are Markdown when the text is (or `format` says so). The new item's ID is fixed when the agent asks and returned as `item_id` (or `item_id_after_approval`). |
+| `save_file` | Saves images (one item each, or one gallery), MP4 and WebM videos, PDFs, and `.md` and `.txt` files, with the limits of Add files. `@keepall/mcp` reads `path` (on the agent's computer) or downloads `url`, checks type and size, and sends the bytes; requests over one relay frame go in ordered 512 KiB pieces (`requestMessages`). The browser checks the bytes again. Under "suggest", they wait in the `agentFiles` table until the user decides and the review shows them from there; applying saves them through `createImage`, `createDocument`, and `createVideo` with the IDs the agent was told, then records them in the change for Undo. Declining, or closing the review, deletes the waiting bytes. |
 | `move_to_trash` | Moves items to Trash. Nothing is ever deleted permanently, and Trash is never emptied. |
 | `check_changes` | The agent's access level, what waits for review, what the user applied or declined, and recent change IDs. |
 | `undo_change` | Reverses one of the agent's own changes. |

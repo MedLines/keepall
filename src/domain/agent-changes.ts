@@ -1,6 +1,7 @@
 // Rules for changes agents make to a library: forgiving input parsing, planning against the current library,
 // and undo. Pure: persistence applies the planned records in one transaction with their before-copies.
 import { AgentToolError } from "./agent-tools";
+import { fileGroups, PENDING_ASSET_PREFIX, type AgentFile } from "./agent-files";
 import { buildCollection, normalizeCollectionName, type Collection } from "./collection";
 import { itemListTitle, type Item } from "./item";
 import { buildLink, normalizeLinkUrl } from "./link";
@@ -24,11 +25,40 @@ const UNSORTED_NAMES = new Set(["", "unsorted", "none", "no collection"]);
 export type ChangeRequest =
   | { kind: "move"; itemIds: string[]; collection: string | null }
   | { kind: "tag"; itemIds: string[]; add: string[]; remove: string[] }
-  | { kind: "note"; itemId: string; text: string; replace: boolean }
+  | { kind: "note"; itemId: string; text: string; replace: boolean; format?: NoteFormat }
   | { kind: "rename_collection"; from: string; to: string }
-  | { kind: "save_link"; url: string; title?: string; note?: string; collection?: string; tags: string[] }
-  | { kind: "save_note"; text: string; title?: string; collection?: string; tags: string[] }
+  | { kind: "save_link"; url: string; title?: string; note?: string; format?: NoteFormat; collection?: string; tags: string[]; itemId?: string }
+  | { kind: "save_note"; text: string; title?: string; format?: NoteFormat; collection?: string; tags: string[]; itemId?: string }
+  /** Files the agent sent. `itemIds` holds one ID per item they become (see fileGroups), fixed when the agent asked. */
+  | { kind: "save_file"; files: AgentFile[]; gallery: boolean; itemIds: string[]; title?: string; note?: string; format?: NoteFormat; collection?: string; tags: string[] }
   | { kind: "trash"; itemIds: string[] };
+
+type NoteFormat = "plain" | "markdown";
+
+/** `format` as agents send it: markdown, md, plain, text, or nothing (Keepall decides from the text). */
+function noteFormat(value: unknown): NoteFormat | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const format = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (["markdown", "md"].includes(format)) return "markdown";
+  if (["plain", "text", "txt", "plain text"].includes(format)) return "plain";
+  throw new AgentToolError('format must be "markdown" or "plain". Leave it out and Keepall decides from the text.');
+}
+
+/**
+ * Whether text is written in Markdown: headings, lists, checklists, quotes, code fences, tables, links, emphasis,
+ * or highlights. One line of ordinary prose isn't.
+ */
+export function looksLikeMarkdown(text: string): boolean {
+  return [
+    /^#{1,6}\s+\S/m, /^\s*(?:[-*+]|\d+[.)])\s+\S/m, /^\s*>\s?\S/m, /^\s*(?:```|~~~)/m, /^\s*\|.*\|\s*$/m,
+    /\[[^\]\n]+\]\([^)\s]+\)/, /(?:\*\*|__)\S[^\n]*?\S?(?:\*\*|__)/, /==[^=\s][^=\n]*==/, /`[^`\n]+`/,
+  ].some((pattern) => pattern.test(text));
+}
+
+/** The format a note should get: what the agent said, or what the text looks like. */
+function resolvedFormat(format: NoteFormat | undefined, text: string): NoteFormat {
+  return format ?? (looksLikeMarkdown(text) ? "markdown" : "plain");
+}
 
 export type LibraryState = { items: readonly Item[]; collections: readonly Collection[]; tags: readonly Tag[] };
 
@@ -53,7 +83,15 @@ export type StepEffect =
 export type PlannedStep = {
   id: string; text: string; status: "planned" | "unchanged" | "skipped" | "excluded"; notes: string[]; itemIds: string[]; effects: StepEffect[];
 };
-export type ChangePlan = { records: RecordChange[]; steps: PlannedStep[]; itemsAffected: number; created: { items: string[]; collections: string[]; tags: string[] } };
+/**
+ * An item to save from files. It isn't in `records`: files are saved the way Add files saves them, with their
+ * thumbnails and text, once the change applies. `item` shows how it will look, with `pending:` asset IDs.
+ */
+export type PlannedFileItem = { stepId: string; item: Item; files: AgentFile[]; collection?: string; tags: string[]; note?: string; format?: NoteFormat; title?: string };
+export type ChangePlan = {
+  records: RecordChange[]; steps: PlannedStep[]; itemsAffected: number; created: { items: string[]; collections: string[]; tags: string[] };
+  files: PlannedFileItem[];
+};
 /**
  * What a suggestion saw of each item it targets. A fingerprint of the fields agents can change, so background
  * updates such as a fetched link preview don't invalidate it. Older proposals stored the item's version number.
@@ -67,7 +105,7 @@ export const effectKeys = {
   note: (itemId: string, stepId: string) => `${itemId}#note:${stepId}`,
   trash: (itemId: string) => `${itemId}#trash`,
   rename: (from: string) => `rename:${normalizeCollectionName(from).toLowerCase()}`,
-  create: (stepId: string) => `create:${stepId}`,
+  create: (stepId: string, itemId?: string) => (itemId ? `create:${stepId}:${itemId}` : `create:${stepId}`),
 };
 
 // Parsing. Agents vary: accept one ID or many, a tag or a list of tags, and "Unsorted" for no collection.
@@ -134,20 +172,20 @@ const PARSERS: Record<AgentWriteTool, (args: Record<string, unknown>) => ChangeR
   add_note(args) {
     const [itemId, ...rest] = itemIds(args);
     if (rest.length) throw new AgentToolError("add_note takes one item_id. Call it once per item.");
-    return { kind: "note", itemId, text: text(args.text ?? args.note, "text", MAX_NOTE, true), replace: args.replace === true };
+    return { kind: "note", itemId, text: text(args.text ?? args.note, "text", MAX_NOTE, true), replace: args.replace === true, format: noteFormat(args.format) };
   },
   rename_collection(args) {
     return { kind: "rename_collection", from: text(args.collection ?? args.from, "collection", MAX_NAME, true), to: text(args.new_name ?? args.to, "new_name", MAX_NAME, true) };
   },
   save_link(args) {
     return {
-      kind: "save_link", url: text(args.url, "url", MAX_URL, true), title: text(args.title, "title", 500), note: text(args.note, "note", MAX_NOTE),
+      kind: "save_link", url: text(args.url, "url", MAX_URL, true), title: text(args.title, "title", 500), note: text(args.note, "note", MAX_NOTE), format: noteFormat(args.format),
       collection: collectionName(args.collection ?? "") ?? undefined, tags: names(args.tags, "tags"),
     };
   },
   save_note(args) {
     return {
-      kind: "save_note", text: text(args.text ?? args.note, "text", MAX_NOTE, true), title: text(args.title, "title", 500),
+      kind: "save_note", text: text(args.text ?? args.note, "text", MAX_NOTE, true), title: text(args.title, "title", 500), format: noteFormat(args.format),
       collection: collectionName(args.collection ?? "") ?? undefined, tags: names(args.tags, "tags"),
     };
   },
@@ -155,6 +193,26 @@ const PARSERS: Record<AgentWriteTool, (args: Record<string, unknown>) => ChangeR
     return { kind: "trash", itemIds: itemIds(args) };
   },
 };
+
+/**
+ * Gives a request that saves something new the ID its item will have, fixed when the agent asks. The review can
+ * then open, decide, and apply that item one at a time, and the agent is told the ID it ends up with.
+ */
+export function withCreatedItemId(request: ChangeRequest, newId: () => string): ChangeRequest {
+  return (request.kind === "save_link" || request.kind === "save_note") && !request.itemId ? { ...request, itemId: newId() } : request;
+}
+
+/** The item a saving request creates, when it has one. */
+export function createdItemId(request: ChangeRequest): string | undefined {
+  return request.kind === "save_link" || request.kind === "save_note" ? request.itemId : undefined;
+}
+
+/** Every item a saving request creates. */
+export function createdItemIds(request: ChangeRequest): string[] {
+  if (request.kind === "save_file") return request.itemIds;
+  const id = createdItemId(request);
+  return id ? [id] : [];
+}
 
 export function parseChangeRequest(tool: AgentWriteTool, args: Record<string, unknown>): ChangeRequest {
   return PARSERS[tool](args);
@@ -179,6 +237,16 @@ function same(left: string, right: string) {
 
 const NOTE_FIELD = { note: "content", image: "caption", link: "noteContent", video: "noteContent", document: "noteContent" } as const;
 
+/** Sets the format of an item's note: `format` on notes, `captionFormat` on images, `noteFormat` on the rest. */
+function withNoteFormat(item: Item, format: NoteFormat | undefined): Item {
+  if (!format) return item;
+  const field = item.type === "note" ? "format" : item.type === "image" ? "captionFormat" : "noteFormat";
+  const next = { ...item } as Record<string, unknown>;
+  if (format === "markdown") next[field] = "markdown";
+  else delete next[field];
+  return next as Item;
+}
+
 export function itemNote(item: Item): string {
   return String((item as Record<string, unknown>)[NOTE_FIELD[item.type]] ?? "");
 }
@@ -195,6 +263,7 @@ class ChangePlanner {
   private readonly records = new Map<string, RecordChange>();
   private skippedByReviewer = 0;
   readonly created = { items: [] as string[], collections: [] as string[], tags: [] as string[] };
+  private readonly files: PlannedFileItem[] = [];
 
   constructor(state: LibraryState, private readonly now: number, private readonly newId: () => string, private readonly excluded: ReadonlySet<string>) {
     this.originalItems = new Map(state.items.map((item) => [item.id, item]));
@@ -213,7 +282,7 @@ class ChangePlanner {
       return step;
     });
     const records = [...this.records.values()];
-    return { records, steps, itemsAffected: records.filter((change) => change.table === "items").length, created: this.created };
+    return { records, steps, itemsAffected: records.filter((change) => change.table === "items").length + this.files.length, created: this.created, files: this.files };
   }
 
   /** Whether the reviewer unticked this effect. Counts it, so an all-unticked step reads as excluded, not skipped. */
@@ -231,6 +300,7 @@ class ChangePlanner {
       case "rename_collection": return this.rename(step, request);
       case "save_link": return this.saveLink(step, request);
       case "save_note": return this.saveNote(step, request);
+      case "save_file": return this.saveFile(step, request);
       case "trash": return this.trash(step, request, seen);
     }
   }
@@ -397,7 +467,10 @@ class ChangePlanner {
     step.text = `${request.replace && current ? "Replace the note on" : "Add a note to"} ${quote(itemListTitle(item) || "Untitled")}: ${quote(request.text)}`;
     const changed = next !== before && !this.unticked(effectKeys.note(item.id, step.id));
     if (changed) {
-      this.putItem(this.bump({ ...item, [NOTE_FIELD[item.type]]: next } as Item));
+      // A new or replaced note takes the format of its text. Added text keeps the note's format, unless the agent
+      // said it's Markdown, since plain text reads the same as Markdown but not the other way round.
+      const format = request.replace || !current ? resolvedFormat(request.format, request.text) : request.format === "markdown" ? "markdown" : undefined;
+      this.putItem(this.bump(withNoteFormat({ ...item, [NOTE_FIELD[item.type]]: next } as Item, format)));
       step.effects.push({ kind: "note", key: effectKeys.note(item.id, step.id), itemId: item.id, before, after: next });
     }
     this.settle(step, changed ? [item] : [], { found: [item], notes: [] });
@@ -444,7 +517,7 @@ class ChangePlanner {
       step.status = "excluded";
       return;
     }
-    const link = buildLink({ url, title: request.title, noteContent: request.note }, { id: this.newId(), now: this.now });
+    const link = buildLink({ url, title: request.title, noteContent: request.note, ...(request.note ? { noteFormat: resolvedFormat(request.format, request.note) } : {}) }, { id: request.itemId ?? this.newId(), now: this.now });
     const organized = this.organize(step, link, request.collection, request.tags, false);
     this.putItem(organized.item);
     this.created.items.push(link.id);
@@ -459,7 +532,8 @@ class ChangePlanner {
     const current = before.trim();
     let withNote = existing;
     if (request.note && !this.unticked(effectKeys.note(existing.id, step.id))) {
-      withNote = { ...existing, noteContent: current ? `${current}\n\n${request.note}` : request.note } as Item;
+      withNote = withNoteFormat({ ...existing, noteContent: current ? `${current}\n\n${request.note}` : request.note } as Item,
+        current ? (request.format === "markdown" ? "markdown" : undefined) : resolvedFormat(request.format, request.note));
       step.effects.push({ kind: "note", key: effectKeys.note(existing.id, step.id), itemId: existing.id, before, after: itemNote(withNote) });
     }
     const organized = this.organize(step, withNote, request.collection, request.tags, true);
@@ -471,7 +545,7 @@ class ChangePlanner {
   }
 
   private saveNote(step: PlannedStep, request: Extract<ChangeRequest, { kind: "save_note" }>) {
-    const note = buildNote({ content: request.text, title: request.title }, { id: this.newId(), now: this.now });
+    const note = buildNote({ content: request.text, title: request.title, format: resolvedFormat(request.format, request.text) }, { id: request.itemId ?? this.newId(), now: this.now });
     step.text = `Save note ${quote(itemListTitle(note) || "Untitled")}`;
     if (this.unticked(effectKeys.create(step.id))) {
       step.status = "excluded";
@@ -483,6 +557,42 @@ class ChangePlanner {
     step.itemIds = [note.id];
     step.effects.push({ kind: "create", key: effectKeys.create(step.id), itemId: note.id });
     if (organized.parts.length) step.text += ` ${organized.parts.join(", ")}`;
+  }
+
+  private saveFile(step: PlannedStep, request: Extract<ChangeRequest, { kind: "save_file" }>) {
+    const groups = fileGroups(request.files, request.gallery);
+    const label = groups.length === 1 ? quote(request.title || groups[0][0].name) : `${groups.length} files`;
+    step.text = `Save ${label}`;
+    for (const [index, files] of groups.entries()) {
+      const id = request.itemIds[index] ?? this.newId();
+      if (this.unticked(effectKeys.create(step.id, id))) continue;
+      const organized = this.organize(step, this.fileItem(id, files, request), request.collection, request.tags, false);
+      this.files.push({ stepId: step.id, item: organized.item, files, collection: request.collection, tags: request.tags, note: request.note, format: request.format, title: request.title });
+      this.created.items.push(id);
+      step.itemIds.push(id);
+      step.effects.push({ kind: "create", key: effectKeys.create(step.id, id), itemId: id });
+      if (index === 0 && organized.parts.length) step.text += ` ${organized.parts.join(", ")}`;
+    }
+    if (!step.effects.length) step.status = "excluded";
+  }
+
+  /** How files will look as an item, before they're saved. Saving builds the real item the way Add files does. */
+  private fileItem(id: string, files: readonly AgentFile[], request: Extract<ChangeRequest, { kind: "save_file" }>): Item {
+    const [file] = files;
+    const base = { id, tagIds: [], collectionIds: [], createdAt: this.now, updatedAt: this.now };
+    const note = request.note?.trim() ?? "";
+    const format = note ? resolvedFormat(request.format, note) : undefined;
+    const title = request.title?.trim() ?? "";
+    if (file.kind === "image") {
+      return withNoteFormat({ ...base, type: "image", title, sourceFileName: file.name, assetIds: files.map((entry) => PENDING_ASSET_PREFIX + entry.fileId), sourceUrl: "", caption: note } as Item, format);
+    }
+    if (file.kind === "video") {
+      return withNoteFormat({ ...base, type: "video", title: title || file.name.replace(/\.[^.]+$/, ""), noteContent: note, sourceFileName: file.name, assetId: PENDING_ASSET_PREFIX + file.fileId } as Item, format);
+    }
+    return withNoteFormat({
+      ...base, type: "document", format: file.format ?? "text", title: title || file.name.replace(/\.(txt|md|pdf)$/i, ""), sourceFileName: file.name,
+      assetId: PENDING_ASSET_PREFIX + file.fileId, noteContent: note,
+    } as Item, format);
   }
 
   private trash(step: PlannedStep, request: Extract<ChangeRequest, { kind: "trash" }>, seen: SeenItems | undefined) {
@@ -505,8 +615,9 @@ export function planChanges(state: LibraryState, inputs: readonly PlanInput[], o
 // Undo.
 
 /** Fields agents can change. Undo restores only these, so unrelated later updates (like a fetched preview) survive. */
-const AGENT_ITEM_FIELDS = ["collectionIds", "collectionAddedAt", "tagIds", "content", "caption", "noteContent", "deletedAt"] as const;
-const COMPARED_ITEM_FIELDS = AGENT_ITEM_FIELDS.filter((field) => field !== "collectionAddedAt");
+const AGENT_ITEM_FIELDS = ["collectionIds", "collectionAddedAt", "tagIds", "content", "caption", "noteContent", "deletedAt", "format", "noteFormat"] as const;
+// A format only changes with its note, so comparing the note is enough, and older suggestions' fingerprints still match.
+const COMPARED_ITEM_FIELDS = AGENT_ITEM_FIELDS.filter((field) => !["collectionAddedAt", "format", "noteFormat"].includes(field));
 
 /** The state of everything an agent can change on an item, for telling whether the user changed it since. */
 export function itemFingerprint(item: Item): string {

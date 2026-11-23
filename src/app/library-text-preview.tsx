@@ -1,5 +1,6 @@
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { remarkHighlight } from "./remark-highlight";
 import { findQueryTextMatches } from "@/domain/search";
 import { SearchHighlight } from "./search-highlight";
 
@@ -35,7 +36,7 @@ export function LibraryTextPreview({ text, markdown = false, query = "" }: { tex
   const frontmatter = markdown ? sample.match(/^---\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)(?:\r?\n|$)/) : null;
   return <div className="library-text-preview" aria-hidden="true">
     {frontmatter ? <p className="library-preview-frontmatter"><SearchHighlight text={frontmatter[1]} query={query} /></p> : null}
-    {markdown ? <Markdown skipHtml remarkPlugins={[remarkGfm]} rehypePlugins={query.trim() ? [[highlightPreview, { query }]] : []} urlTransform={() => ""}
+    {markdown ? <Markdown skipHtml remarkPlugins={[remarkGfm, remarkHighlight]} rehypePlugins={query.trim() ? [[highlightPreview, { query }]] : []} urlTransform={() => ""}
       components={{
         a: ({ children }) => <span>{children}</span>,
         img: () => null,

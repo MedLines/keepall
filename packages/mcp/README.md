@@ -23,7 +23,7 @@ The setup code works like an API key. Don't share it. **Disconnect** in Settings
 ## What agents can do
 
 - Search, read, and look at saved items, including images.
-- With your permission: move items between collections, tag them, add notes, save links and notes, and move items to Trash.
+- With your permission: move items between collections, tag them, add notes, save links, Markdown notes, and files (images, videos, PDFs, `.md` and `.txt`, from a path or a URL), and move items to Trash.
 
 By default, changes wait for your review in Keepall. Every applied change keeps a copy of what it touched, so it can be undone.
 

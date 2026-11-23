@@ -3,7 +3,7 @@ import {
   channelSocketUrl, concatBytes, createLibraryEndpoint, createPairingLink, createResponseAssembler, formatSetupCode, newSetupCode, parseSetupCode,
   responseMessages, setupCodePairKey, createSession, derivePairKey, generateAgentKeyPair, helloFrame, newChannelId,
   newPairingSecret, newSessionNonce, pairAcceptFrame, pairConfirmFrame, parsePairingFragment, readHello, readPairAccept,
-  verifyPairAccept, verifyPairConfirm,
+  verifyPairAccept, verifyPairConfirm, createRequestAssembler, requestMessages,
 } from "./agent-protocol";
 
 async function pair() {
@@ -190,5 +190,28 @@ describe("setup codes", () => {
     expect(parseSetupCode("sk-something")).toBeNull();
     const bad = newSetupCode("http://evil.example", "https://www.keepall.app");
     expect(parseSetupCode(formatSetupCode(bad))).toBeNull();
+  });
+});
+
+describe("request chunking", () => {
+  it("splits a large request and rebuilds it in order", () => {
+    const request = { id: "big", tool: "save_file", args: { files: [{ name: "a.png", data: "x".repeat(2_500) }] } };
+    const messages = requestMessages(request, 1_000);
+    expect(messages.length).toBe(3);
+    const assembler = createRequestAssembler();
+    expect(messages.slice(0, -1).map((message) => assembler.accept(message))).toEqual([null, null]);
+    expect(assembler.accept(messages.at(-1))).toEqual(request);
+  });
+
+  it("passes small requests through, restarts on a missing piece, and refuses requests over the limit", () => {
+    const small = { id: "s", tool: "get_item", args: { id: "1" } };
+    expect(requestMessages(small)).toEqual([small]);
+    expect(createRequestAssembler().accept(small)).toEqual(small);
+    const pieces = requestMessages({ id: "gap", tool: "save_file", args: { data: "y".repeat(3_000) } }, 1_000);
+    const assembler = createRequestAssembler();
+    assembler.accept(pieces[0]);
+    expect(assembler.accept(pieces[2])).toBeNull();
+    expect(assembler.accept(pieces.at(-1))).toBeNull();
+    expect(() => requestMessages({ id: "huge", tool: "save_file", args: { data: "z".repeat(400 * 10) } }, 10)).toThrow("too large");
   });
 });

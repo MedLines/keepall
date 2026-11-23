@@ -10,7 +10,8 @@ export const agentsGuide: Guide = {
       id: "connect",
       title: "Connect an agent",
       paragraphs: [
-        "A connected agent can search your library, read items in full, and look at saved images. Depending on what you allow, it can also tag, add notes, move items between collections, rename collections, move items to Trash, and save new links and notes.",
+        "A connected agent can search your library, read items in full, and look at saved images. Depending on what you allow, it can also tag, add notes, move items between collections, rename collections, move items to Trash, and save new links, notes, and files.",
+        "Agents save what you can: links, plain or Markdown notes, images and galleries, MP4 and WebM videos, PDFs, and Markdown or text files, with the same size limits as Add files. Files can come from the agent's computer or a web address.",
         "Keepall makes one setup step for each agent. The agent runs Keepall's connector with npx, so you need Node.js 22 or later on that computer. You don't install anything else.",
       ],
       steps: [
@@ -39,7 +40,7 @@ export const agentsGuide: Guide = {
       title: "Review suggestions",
       paragraphs: [
         "When an agent suggests changes, Agent review in the sidebar shows a count. With Keepall Capture, the toolbar icon shows it too.",
-        "Agent review shows each suggested item as a library card. Open one to see the item and the agent's reason. Accept the suggestion, change the collection or tags first, or skip it.",
+        "Agent review shows each suggested item as a library card, including new notes and files that aren't saved yet. Open one to see the item and the agent's reason. Accept the suggestion, change the collection or tags first, or skip it. For a new item, Save to library saves it, and Don't save leaves it out.",
       ],
       steps: [
         "Select Agent review in the sidebar.",

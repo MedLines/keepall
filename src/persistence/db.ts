@@ -9,6 +9,7 @@ import { trackBackupRevision, type BackupRevision } from "./backup-revision";
 import type { BackupFolderSettings } from "./backup-settings";
 import type { AgentPairing } from "./agent-pairings";
 import type { AgentChangeEntry, AgentProposal } from "./agent-changes";
+import type { AgentFileRow } from "./agent-files";
 
 export const KEEPALL_DB_NAME = "keepall";
 
@@ -31,6 +32,7 @@ export type KeepallDB = Dexie & {
   agentPairings: EntityTable<AgentPairing, "id">;
   agentProposals: EntityTable<AgentProposal, "id">;
   agentChanges: EntityTable<AgentChangeEntry, "id">;
+  agentFiles: EntityTable<AgentFileRow, "id">;
 };
 
 function createKeepallDb(): KeepallDB {
@@ -102,6 +104,8 @@ function createKeepallDb(): KeepallDB {
   // Agent suggestions and the journal of applied agent changes, with a before-copy of every touched row.
   // Device-local like pairings, and outside backups.
   db.version(14).stores({ agentProposals: "id, pairingId, status", agentChanges: "id, pairingId, createdAt, requestId" });
+  // Files an agent saved that wait for the user's review. Device-local, outside backups, deleted once decided.
+  db.version(15).stores({ agentFiles: "id, requestId" });
   trackBackupRevision(db);
 
   return db;
