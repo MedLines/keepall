@@ -2,7 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { remarkHighlight } from "@/app/remark-highlight";
+import { remarkHighlight } from "../app/remark-highlight";
 
 const h = React.createElement;
 const components = {

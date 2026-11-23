@@ -419,6 +419,32 @@ test("an agent saves a Markdown note and files, and the user sees each one befor
       expect.objectContaining({ id: files.item_ids_after_approval[1], type: "image", sourceFileName: "pixel.png" }),
     ]));
     expect(items.waiting).toBe(0);
+
+    // A PDF, a video in many relay pieces, and a two-image gallery, applied all at once from the overview.
+    const media = json(await mcp.call("save_file", { path: [path.resolve("public/marketing/demos/field-notes.pdf"), path.resolve("public/marketing/demos/abstract-silk.mp4")], tags: ["media"] }));
+    expect(media.item_ids_after_approval).toHaveLength(2);
+    await writeFile(path.join(temp, "second.png"), Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64"));
+    const gallery = json(await mcp.call("save_file", { path: [path.join(temp, "pixel.png"), path.join(temp, "second.png")], gallery: true, note: "Two ==swatches==" }));
+    expect(gallery.item_ids_after_approval).toHaveLength(1);
+    await page.goto(`${origin}/review`);
+    await expect(page.getByRole("button", { name: "Review “field-notes”" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Review “abstract-silk”" }).locator("video")).toBeAttached();
+    await page.getByRole("button", { name: "Apply 3 changes" }).click();
+    await expect(page.getByText(/Applied|Saved|changes applied/i).first()).toBeVisible({ timeout: 30_000 });
+    const saved = await page.evaluate(async (ids) => {
+      const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open("keepall"); request.onsuccess = () => resolve(request.result); });
+      const get = (store: string, key: string) => new Promise<Record<string, any> | undefined>((resolve) => { const request = db.transaction(store).objectStore(store).get(key); request.onsuccess = () => resolve(request.result); });
+      const rows = await Promise.all(ids.map((id) => get("items", id)));
+      const poster = rows[1] ? await get("thumbnails", rows[1].assetId) : undefined;
+      db.close();
+      return { rows: rows.map((row) => row && { type: row.type, format: row.format, file: row.sourceFileName, assets: row.assetIds?.length, caption: row.caption, captionFormat: row.captionFormat }), poster: !!poster };
+    }, [...media.item_ids_after_approval, gallery.item_ids_after_approval[0]]);
+    expect(saved.rows).toEqual([
+      { type: "document", format: "pdf", file: "field-notes.pdf", assets: undefined, caption: undefined, captionFormat: undefined },
+      { type: "video", format: undefined, file: "abstract-silk.mp4", assets: undefined, caption: undefined, captionFormat: undefined },
+      { type: "image", format: undefined, file: "pixel.png", assets: 2, caption: "Two ==swatches==", captionFormat: "markdown" },
+    ]);
+    expect(saved.poster).toBe(true);
   } finally {
     mcp?.child.stdin.end();
     await context.close();
