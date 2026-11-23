@@ -103,7 +103,7 @@ export function effectLabel(effect: StepEffect): string {
     case "note": return "Note";
     case "trash": return "Trash";
     case "rename": return `${effect.from} → ${effect.to}`;
-    case "create": return "New";
+    case "create": return "Save as a new item";
   }
 }
 

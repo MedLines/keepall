@@ -57,6 +57,10 @@ export function AgentReview() {
   // The one-at-a-time review, opened here on top of the overview rather than in the library.
   const [reviewing, setReviewing] = useState<{ itemId: string | null; from: HTMLElement | null } | null>(null);
   const finished = useRef(false);
+  // While the one-at-a-time review is open it keeps itself current; the overview reloads when it closes, so the
+  // last item's save can't swap the open review for "Nothing to review".
+  const reviewingOpen = useRef(false);
+  useEffect(() => { reviewingOpen.current = reviewing !== null; }, [reviewing]);
 
   const show = useCallback((next: Loaded) => {
     setLoaded(next);
@@ -68,7 +72,7 @@ export function AgentReview() {
     // The agent may keep suggesting while the review is open; show new suggestions as they arrive.
     const channel = new BroadcastChannel(AGENT_CHANGES_CHANNEL);
     channel.onmessage = () => {
-      if (!finished.current) load().then(show, () => {});
+      if (!finished.current && !reviewingOpen.current) load().then(show, () => {});
     };
     return () => channel.close();
   }, [show]);

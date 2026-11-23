@@ -36,10 +36,14 @@ export type AgentRequest = { id: string; tool: string; args: Record<string, unkn
 export type AgentResponse = { id: string; ok: true; result: unknown } | { id: string; ok: false; error: string };
 /** One piece of a response too large for a single relay frame. Pieces arrive in order on one session. */
 export type AgentResponseChunk = { id: string; chunk: number; chunks: number; data: string };
+/** One piece of a request too large for a single relay frame, such as a file the agent saves. Same shape. */
+export type AgentRequestChunk = AgentResponseChunk;
 
 /** Keeps each sealed frame well under the relay's 1 MiB limit. */
 export const RESPONSE_CHUNK_CHARACTERS = 512 * 1024;
 const MAX_RESPONSE_CHUNKS = 64;
+/** A request can carry a 100 MiB video as base64 (about 134 MiB of text) plus its arguments. */
+export const MAX_REQUEST_CHUNKS = 320;
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -319,7 +323,7 @@ export type LibraryEndpoint = {
  * relay's connection prefix. `send` gets complete frames, prefix included.
  */
 export function createLibraryEndpoint(pairKey: Bytes, handle: ToolHandler, send: (frame: Bytes) => void): LibraryEndpoint {
-  type Connection = { session: AgentSession; outbound: Promise<void> };
+  type Connection = { session: AgentSession; outbound: Promise<void>; requests: ReturnType<typeof createRequestAssembler> };
   const connections = new Map<string, Connection>();
 
   function reply(prefix: Bytes, connection: Connection, response: AgentResponse) {
@@ -345,21 +349,23 @@ export function createLibraryEndpoint(pairKey: Bytes, handle: ToolHandler, send:
       const agentNonce = readHello(frame);
       if (agentNonce) {
         const libraryNonce = newSessionNonce();
-        connections.set(key, { session: await createSession(pairKey, "library", agentNonce, libraryNonce), outbound: Promise.resolve() });
+        connections.set(key, { session: await createSession(pairKey, "library", agentNonce, libraryNonce), outbound: Promise.resolve(), requests: createRequestAssembler() });
         send(concatBytes(prefix, helloFrame(libraryNonce)));
         return;
       }
       const connection = connections.get(key);
       if (!connection) return;
-      let request: unknown;
+      let message: unknown;
       try {
-        request = await connection.session.open(frame);
+        message = await connection.session.open(frame);
       } catch {
         // A forged or out-of-order frame ends this connection's session. The agent re-handshakes on its next connection.
         connections.delete(key);
         return;
       }
-      if (!isAgentRequest(request)) return;
+      // Large requests, like saved files, arrive in pieces; handle them once complete.
+      const request = connection.requests.accept(message);
+      if (!request) return;
       void handle(request.tool, request.args, request.id).then(
         (result) => reply(prefix, connection, { id: request.id, ok: true, result }),
         (error: unknown) => reply(prefix, connection, { id: request.id, ok: false, error: error instanceof Error ? error.message : "Keepall could not complete this request." }),
@@ -385,22 +391,30 @@ export function responseMessages(response: AgentResponse, chunkCharacters = RESP
   return Array.from({ length: chunks }, (_, chunk) => ({ id: response.id, chunk, chunks, data: body.slice(chunk * chunkCharacters, (chunk + 1) * chunkCharacters) }));
 }
 
-function isResponseChunk(value: unknown): value is AgentResponseChunk {
+function isChunk(value: unknown, maxChunks: number): value is AgentResponseChunk {
   if (!value || typeof value !== "object") return false;
   const chunk = value as Record<string, unknown>;
-  return typeof chunk.id === "string" && Number.isInteger(chunk.chunk) && Number.isInteger(chunk.chunks) && typeof chunk.data === "string" &&
-    (chunk.chunks as number) > 1 && (chunk.chunks as number) <= MAX_RESPONSE_CHUNKS && (chunk.chunk as number) >= 0 && (chunk.chunk as number) < (chunk.chunks as number);
+  return typeof chunk.id === "string" && chunk.id.length <= 100 && Number.isInteger(chunk.chunk) && Number.isInteger(chunk.chunks) && typeof chunk.data === "string" &&
+    (chunk.chunks as number) > 1 && (chunk.chunks as number) <= maxChunks && (chunk.chunk as number) >= 0 && (chunk.chunk as number) < (chunk.chunks as number);
 }
 
-/** Rebuilds chunked responses. `accept` returns a complete response, or null while one is still arriving. */
-export function createResponseAssembler() {
+/** The messages that carry one request: itself when small, otherwise ordered chunks of its JSON. */
+export function requestMessages(request: AgentRequest, chunkCharacters = RESPONSE_CHUNK_CHARACTERS): Array<AgentRequest | AgentRequestChunk> {
+  const body = JSON.stringify(request);
+  if (body.length <= chunkCharacters) return [request];
+  const chunks = Math.ceil(body.length / chunkCharacters);
+  if (chunks > MAX_REQUEST_CHUNKS) throw new Error("This request is too large to send. Keepall takes files up to 100 MB.");
+  return Array.from({ length: chunks }, (_, chunk) => ({ id: request.id, chunk, chunks, data: body.slice(chunk * chunkCharacters, (chunk + 1) * chunkCharacters) }));
+}
+
+/** Rebuilds chunked messages that arrive in order on one session; anything out of order starts that message over. */
+function createAssembler<T>(maxChunks: number, whole: (value: unknown) => value is T, idOf: (value: T) => string) {
   const partial = new Map<string, string[]>();
   return {
-    accept(message: unknown): AgentResponse | null {
-      if (isAgentResponse(message)) return message;
-      if (!isResponseChunk(message)) return null;
+    accept(message: unknown): T | null {
+      if (whole(message)) return message;
+      if (!isChunk(message, maxChunks)) return null;
       const parts = partial.get(message.id) ?? [];
-      // Chunks of one response arrive in order on one session; anything else starts over.
       if (message.chunk !== parts.length) {
         partial.delete(message.id);
         return null;
@@ -411,13 +425,28 @@ export function createResponseAssembler() {
         return null;
       }
       partial.delete(message.id);
-      const response: unknown = JSON.parse(parts.join(""));
-      return isAgentResponse(response) && response.id === message.id ? response : null;
+      let value: unknown;
+      try {
+        value = JSON.parse(parts.join(""));
+      } catch {
+        return null;
+      }
+      return whole(value) && idOf(value) === message.id ? value : null;
     },
     forget(id: string) {
       partial.delete(id);
     },
   };
+}
+
+/** Rebuilds chunked requests on the library side. */
+export function createRequestAssembler() {
+  return createAssembler(MAX_REQUEST_CHUNKS, isAgentRequest, (request) => request.id);
+}
+
+/** Rebuilds chunked responses. `accept` returns a complete response, or null while one is still arriving. */
+export function createResponseAssembler() {
+  return createAssembler(MAX_RESPONSE_CHUNKS, isAgentResponse, (response) => response.id);
 }
 
 export function parseRelayControl(text: string): RelayControl | null {

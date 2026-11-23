@@ -1,5 +1,5 @@
 import {
-  channelSocketUrl, createResponseAssembler, createSession, helloFrame, newSessionNonce, parseRelayControl, readHello,
+  channelSocketUrl, createResponseAssembler, createSession, helloFrame, newSessionNonce, parseRelayControl, readHello, requestMessages,
   type AgentSession, type Bytes,
 } from "../../../src/domain/agent-protocol.ts";
 import type { Pairing } from "./config.ts";
@@ -47,8 +47,10 @@ export class LibraryClient {
     await this.connect();
     // Unique across processes and reconnects, so the library can recognize a re-sent change and apply it once.
     const id = crypto.randomUUID();
+    // Files take longer to send and save: a second more for every 256 KiB of request.
+    const allowance = this.timeoutMs + Math.floor(JSON.stringify(args).length / (256 * 1024)) * 1000;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => this.settle(id, new Error(this.session ? ANSWER_TIMEOUT : this.libraryPresent ? HANDSHAKE_TIMEOUT : offlineMessage(this.pairing.appOrigin))), this.timeoutMs);
+      const timer = setTimeout(() => this.settle(id, new Error(this.session ? ANSWER_TIMEOUT : this.libraryPresent ? HANDSHAKE_TIMEOUT : offlineMessage(this.pairing.appOrigin))), allowance);
       this.pending.set(id, { tool, args, resolve, reject, timer, sent: false });
       // A reused connection may already know the library is gone. Fail as fast as a fresh one would.
       if (this.libraryPresent === false) this.armOffline();
@@ -133,8 +135,19 @@ export class LibraryClient {
     for (const [id, request] of this.pending) {
       if (request.sent) continue;
       request.sent = true;
+      let messages: ReturnType<typeof requestMessages>;
+      try {
+        messages = requestMessages({ id, tool: request.tool, args: request.args });
+      } catch (error) {
+        this.settle(id, error instanceof Error ? error : new Error("This request is too large to send."));
+        continue;
+      }
+      // A large request goes in ordered pieces on this session; the library reassembles it.
       this.outbound = this.outbound.then(async () => {
-        if (this.session === session) socket.send(await session.seal({ id, tool: request.tool, args: request.args }));
+        for (const message of messages) {
+          if (this.session !== session) return;
+          socket.send(await session.seal(message));
+        }
       });
     }
   }

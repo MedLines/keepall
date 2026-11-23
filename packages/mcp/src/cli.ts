@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { appOrigin, commandArgs, configPath, deletePairing, loadPairing, relayUrl, savePairing } from "./config.ts";
 import { LibraryClient } from "./library-client.ts";
+import { prepareToolArgs } from "./files.ts";
 import { startPairing } from "./pair.ts";
 import { runServer } from "./server.ts";
 import { INSTRUCTIONS, toolContent, TOOLS } from "./tools.ts";
@@ -44,7 +45,7 @@ async function main() {
     if (!pairing) throw new Error("Not paired. Run `keepall-mcp pair` first.");
     const client = new LibraryClient(pairing);
     try {
-      const content = toolContent(await client.call(tool, args));
+      const content = toolContent(await client.call(tool, await prepareToolArgs(tool, args)));
       // Images can't print to a terminal; name them so the agent knows they exist.
       console.log(content.map((block) => (block.type === "text" ? block.text : `[image: ${block.mimeType}, ${Math.round(block.data.length * 0.75 / 1024)} KB]`)).join("\n"));
     } finally {

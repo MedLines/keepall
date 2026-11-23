@@ -7,6 +7,14 @@
     background: var(--color-bg-search-match);
     color: var(--color-text-search-match);
   }
+  /* Markdown ==highlight==: the note's own accent, distinct from search matches. */
+  .note-highlight {
+    border-radius: 3px;
+    padding-inline: 0.15em;
+    background: var(--color-bg-note-highlight);
+    color: var(--color-text-note-highlight);
+    box-decoration-break: clone;
+  }
 
   .ui-control, .ui-field {
     border: 1px solid var(--color-border-control);

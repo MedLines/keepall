@@ -113,6 +113,9 @@
   --theme-border-warning: light-dark(oklch(0.924276834 0.115126806 95.745862969), oklch(0.526468942 0.07671406 74.512358797));
   --theme-bg-search-match: light-dark(oklch(0.945107388 0.086846189 94.873876244), oklch(0.455050432 0.08252792 77.418640118));
   --theme-text-search-match: light-dark(oklch(0.265771697 0.042163708 80.495289208), oklch(0.965108469 0.056770316 95.33699577));
+  /* ==Highlighted== Markdown text: Keepall's rose, as a soft mark that reads in both themes. */
+  --theme-bg-note-highlight: light-dark(oklch(0.93 0.055 12), oklch(0.40 0.11 12));
+  --theme-text-note-highlight: light-dark(oklch(0.38 0.13 12), oklch(0.95 0.035 12));
   /* Overlay tints: black in light, white in dark. Scrollbar thumbs and the sidebar resize rule. */
   --theme-bg-scrollbar-thumb: light-dark(oklch(0 0 0 / 0.08), oklch(1 0 0 / 0.08));
   --theme-bg-scrollbar-thumb-hover: light-dark(oklch(0 0 0 / 0.12), oklch(1 0 0 / 0.12));
@@ -208,6 +211,8 @@
   --color-border-warning: var(--theme-border-warning);
   --color-bg-search-match: var(--theme-bg-search-match);
   --color-text-search-match: var(--theme-text-search-match);
+  --color-bg-note-highlight: var(--theme-bg-note-highlight);
+  --color-text-note-highlight: var(--theme-text-note-highlight);
   --color-collection-marker: oklch(var(--collection-marker-lightness, 0.68) 0.15 var(--collection-marker-hue, 0));
   --color-bg-scrollbar-thumb: var(--theme-bg-scrollbar-thumb);
   --color-bg-scrollbar-thumb-hover: var(--theme-bg-scrollbar-thumb-hover);

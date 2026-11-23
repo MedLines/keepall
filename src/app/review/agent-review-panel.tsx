@@ -8,7 +8,10 @@ import type { StepEffect } from "@/domain/agent-changes";
 import { reviewSummary, type ReviewGroup } from "@/domain/agent-review";
 import { itemListTitle, type Item } from "@/domain/item";
 import { cn } from "@/lib/utils";
+import { ItemTypeBadge } from "../item-type-icon";
 import { LibraryItemMedia } from "../library-item-media";
+import { LibraryTextPreview } from "../library-text-preview";
+import { PendingFileThumbnail, pendingFileIds } from "../pending-file-preview";
 import { LibrarySelectionControl } from "../library-selection-control";
 import { ArrowLeftIcon, EyeIcon, NoteIcon } from "../shell-icons";
 
@@ -49,25 +52,32 @@ function count(value: number, word: string) {
   return `${value} ${word}${value === 1 ? "" : "s"}`;
 }
 
-/** Images saved from the web are titled by their site, which says nothing in a grid of them; use the caption. */
+/** Images saved from the web are titled by their site, which says nothing in a grid of them; use the caption or file name. */
 function title(item: Item | undefined) {
   if (!item) return "Untitled";
-  if (item.type === "image") return item.caption.trim() || "Image";
+  if (item.type === "image") return item.caption.trim() || item.sourceFileName?.replace(/\.[^.]+$/, "") || "Image";
   return itemListTitle(item) || "Untitled";
 }
 
 type Target = (itemId: string, from: HTMLElement) => void;
 
-/** The item's own picture, or for a note its first lines. */
-function Thumbnail({ item }: { item: Item }) {
+/**
+ * The item's own picture, or for a note its text the way library cards show it. On a tile the selection control
+ * sits in the top corner, so the text starts below it.
+ */
+function Thumbnail({ item, compact = false }: { item: Item; compact?: boolean }) {
   if (item.type === "note") {
+    if (compact) return <span className="flex size-full items-center justify-center"><NoteIcon className="size-5 text-text-secondary" /></span>;
     return (
-      <span className="flex size-full flex-col justify-between p-3 text-left">
-        <span className="line-clamp-5 text-xs leading-5 text-text-primary">{item.title || item.content}</span>
-        <NoteIcon className="size-4 text-text-secondary" />
+      <span className="library-reading-inset media-squircle-inset flex size-full flex-col text-left">
+        <span aria-hidden="true" className="block h-8 shrink-0" />
+        <LibraryTextPreview text={item.content} markdown={item.format === "markdown"} />
+        <ItemTypeBadge item={item} />
       </span>
     );
   }
+  // Files the agent sent aren't saved yet; show them from where they wait.
+  if (pendingFileIds(item)) return compact ? <span className="flex size-full items-center justify-center"><NoteIcon className="size-5 text-text-secondary" /></span> : <PendingFileThumbnail item={item} />;
   return <LibraryItemMedia item={item} variant="card" sharedTransition={false} />;
 }
 
@@ -107,7 +117,7 @@ function NoteRow({ effect, item, excluded, onToggle }: { effect: Extract<StepEff
   return (
     <li className={cn("flex items-start gap-3 border-t border-border-control pt-4 first:border-t-0 first:pt-0", !included && "opacity-(--opacity-disabled)")}>
       <LibrarySelectionControl label={`Include the note on “${title(item)}”`} className={ROW_CONTROL} visible selected={included} disabled={false} onToggle={() => onToggle([effect.key], !included)} />
-      <div className="size-16 shrink-0 overflow-hidden rounded-control-md border border-border-control bg-bg-raised">{item ? <Thumbnail item={item} /> : null}</div>
+      <div className="size-16 shrink-0 overflow-hidden rounded-control-md border border-border-control bg-bg-raised">{item ? <Thumbnail item={item} compact /> : null}</div>
       <div className="min-w-0 flex-1 text-sm leading-6">
         <p className="font-medium text-text-primary">{title(item)}</p>
         {before ? <p className={cn("mt-1 line-clamp-2", appended ? "text-text-secondary" : "text-text-danger line-through")}>{before}</p> : null}
@@ -142,7 +152,7 @@ function Group({ group, items, excluded, onToggle, review, focus }: { group: Rev
       ) : group.itemIds.length ? (
         <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
           {group.itemIds.map((itemId) => (
-            <Tile key={itemId} itemId={itemId} item={items[itemId]} keys={keysFor(itemId)} excluded={excluded} onToggle={onToggle} saved={group.kind !== "create"} review={review} focus={focus} />
+            <Tile key={itemId} itemId={itemId} item={items[itemId]} keys={keysFor(itemId)} excluded={excluded} onToggle={onToggle} saved review={review} focus={focus} />
           ))}
         </ul>
       ) : null}

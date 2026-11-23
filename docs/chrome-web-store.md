@@ -1,8 +1,8 @@
 # Keepall Capture — Chrome Web Store 0.6.0 draft
 
 - Item ID: `ehloefgfecmfjbncknaoleakbnjhkpea`
-- Published version: **0.5.0** (the dashboard showed it published on November 22, 2026)
-- Draft: **0.6.0**, uploaded November 22, 2026 with the same permissions as 0.5.0. Description, privacy justifications, and test instructions saved and checked against this file.
+- Published version: **0.6.0** (the dashboard showed it published on November 23, 2026)
+- Update: **0.6.1**, the packaged note preview renders ==highlights==. Same permissions, listing, and privacy answers as 0.6.0, so only the package changes.
 - Dashboard: `https://chrome.google.com/u/2/webstore/devconsole/a26d9a34-d805-4344-ac85-6e738455529d` (publisher account `/u/2/`).
 
 Upload to the **existing item**. 0.6.0 adds agent access: once the user connects an AI agent in Keepall Settings, the

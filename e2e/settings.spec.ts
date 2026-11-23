@@ -249,7 +249,7 @@ test("settings labels and keyboard navigation work on narrow screens in both the
       await page.mouse.move(0, 0);
       await page.screenshot({ path: testInfo.outputPath(`settings-${width}-${theme}.png`) });
       await page.keyboard.press("End");
-      await expect(page.getByRole("tabpanel", { name: "Installation", exact: true })).toBeVisible();
+      await expect(page.getByRole("tabpanel", { name: "Agents", exact: true })).toBeVisible();
       await page.keyboard.press("Home");
       await expect(page.getByRole("tabpanel", { name: "General", exact: true })).toBeVisible();
     }

@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { remarkHighlight } from "../app/remark-highlight";
 
 const h = React.createElement;
 const components = {
@@ -22,7 +23,7 @@ const components = {
 
 export function NotePreview({ content, format }) {
   return format === "markdown"
-    ? h("div", { className: "note-markdown min-w-0 break-words" }, h(Markdown, { remarkPlugins: [remarkGfm], urlTransform: defaultUrlTransform, components }, content))
+    ? h("div", { className: "note-markdown min-w-0 break-words" }, h(Markdown, { remarkPlugins: [remarkGfm, remarkHighlight], urlTransform: defaultUrlTransform, components }, content))
     : h("p", { className: "note-plain whitespace-pre-wrap break-words text-base leading-relaxed" }, content);
 }
 

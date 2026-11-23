@@ -1,6 +1,6 @@
 import { isAgentWriteTool, type AgentAccess } from "@/domain/agent-changes";
 import { AgentToolError } from "@/domain/agent-tools";
-import { agentChangeStatus, submitAgentChange, undoAgentChange, type SubmitResult } from "./agent-changes";
+import { agentChangeStatus, submitAgentChange, submitAgentFiles, undoAgentChange, type SubmitResult } from "./agent-changes";
 import { getAgentPairing, pairingAccess } from "./agent-pairings";
 import { getDb } from "./db";
 
@@ -28,13 +28,15 @@ function describe(result: SubmitResult, appOrigin: string) {
   switch (result.status) {
     case "applied":
       return {
-        status: "done", change_id: result.changeId, changed: result.steps, ...notes,
+        status: "done", change_id: result.changeId, changed: result.steps, ...(result.itemId ? { item_id: result.itemId } : {}), ...(result.itemIds ? { item_ids: result.itemIds } : {}), ...notes,
         what_to_do_next: `Done. Tell the user what you changed. If it was a mistake, call undo_change with change_id "${result.changeId}". The user can also undo it in Keepall under Settings, Agents.`,
       };
     case "waiting_for_review": {
       const url = reviewUrl(appOrigin);
       return {
-        status: "waiting_for_review", suggested: result.step, suggestions_waiting: result.pending, review_url: url, ...notes,
+        status: "waiting_for_review", suggested: result.step, suggestions_waiting: result.pending, review_url: url,
+        // A new item keeps this ID once the user approves it.
+        ...(result.itemId ? { item_id_after_approval: result.itemId } : {}), ...(result.itemIds ? { item_ids_after_approval: result.itemIds } : {}), ...notes,
         what_to_do_next: `Nothing has changed yet. If you have more changes, keep calling the tools; they all join the same review. When you're finished, tell the user exactly this: "I've suggested ${result.pending === 1 ? "a change" : `${result.pending} changes`} to your Keepall library. Review them here: ${url}". After they say they've reviewed them, call check_changes.`,
       };
     }
@@ -92,6 +94,10 @@ async function undoChange(args: Record<string, unknown>, context: AgentCallConte
 export async function runAgentWriteTool(tool: string, args: Record<string, unknown>, context: AgentCallContext): Promise<unknown | undefined> {
   if (tool === "check_changes") return checkChanges(context);
   if (tool === "undo_change") return undoChange(args, context);
+  if (tool === "save_file") {
+    const pairing = await requirePairing(context.pairingId);
+    return describe(await submitAgentFiles(pairing, context.requestId, args, reason(args)), context.appOrigin);
+  }
   if (!isAgentWriteTool(tool)) return undefined;
   const pairing = await requirePairing(context.pairingId);
   return describe(await submitAgentChange(pairing, context.requestId, tool, args, reason(args)), context.appOrigin);

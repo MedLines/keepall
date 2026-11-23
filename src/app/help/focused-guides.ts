@@ -247,7 +247,7 @@ export const focusedGuides: Guide[] = [
         id: "format",
         title: "Format a note with Markdown",
         paragraphs: [
-          "Markdown supports headings, lists, bold text, emphasis, inline code, fenced code blocks, and tables.",
+          "Markdown supports headings, lists, bold text, emphasis, highlights, inline code, fenced code blocks, and tables.",
           "Rendered checklists are read-only. Changes to the Markdown in Edit update the checkboxes.",
         ],
         steps: [
@@ -256,6 +256,7 @@ export const focusedGuides: Guide[] = [
           "For an ordered list, start the line with a number followed by a period and a space.",
           "For bold text, use **text**.",
           "For emphasis, use *text*.",
+          "To highlight text in Keepall's accent color, use ==text==.",
           "For inline code, put backticks around the text.",
           "Select Preview to check the formatting.",
           "Save the changes.",
