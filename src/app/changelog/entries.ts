@@ -9,6 +9,30 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    id: "2026-11-23-agents-save-files-and-markdown",
+    date: "2026-11-23",
+    title: "Agents save files, and you see everything first",
+    summary: "A connected agent can save images, videos, PDFs, and Markdown or text files, and every new item shows in your review before it's saved. Markdown notes can highlight text in Keepall's accent color.",
+    sections: [
+      { label: "New", notes: [
+        "Agents can save what you can save yourself: images or a gallery of them, MP4 and WebM videos, PDFs, and Markdown or text files, from their computer or a web address. Files save the same way as Add files, with the same size limits.",
+        "In a Markdown note, ==text== highlights the words in Keepall's rose accent color, in the library, previews, and Keepall Capture.",
+      ] },
+      { label: "Improved", notes: [
+        "New notes, links, and files from an agent open in Agent review with their full content before they're saved. Save each to your library, change its collection or tags first, or choose Don't save.",
+        "Notes an agent writes in Markdown are saved as Markdown, so headings, checklists, and tables show as they should.",
+      ] },
+      { label: "Fixed", notes: [
+        "Finishing the last item in Review one at a time shows Review complete instead of closing the review.",
+        "A new note's card in Agent review shows its text instead of only its title under the selection control.",
+      ] },
+    ],
+    guides: [
+      { label: "Use Keepall with AI agents", href: "/help/ai-agents" },
+      { label: "Format a note with Markdown", href: "/help/notes#format" },
+    ],
+  },
+  {
     id: "2026-11-22-connect-ai-agents",
     date: "2026-11-22",
     title: "Connect an AI agent to your library",
