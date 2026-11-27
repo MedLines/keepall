@@ -186,10 +186,10 @@ Rules that keep it there:
 - The Durable Object never awaits the other side. It forwards each frame when it arrives and returns, so it can hibernate between frames. `@keepall/mcp` owns request timeouts.
 - No timers or alarms, except a cleanup alarm while the sealed queue is non-empty.
 - The Worker rejects connections without a valid token before they reach a Durable Object.
-- Per-library rate limits and a frame size cap. Durable Objects accept received messages up to 32 MiB. Larger results go in chunks.
+- Per-address rate limits and a frame size cap. The Worker refuses a 61st new connection from one IP address within a minute (429) before any Durable Object runs. Each channel checks its sockets' IP against a shared budget of 600 frames a minute, once per 20 frames so forwarding never waits, and closes a socket over budget (1008). Frames are capped at 1 MiB; Durable Objects accept up to 32 MiB. Larger results go in chunks.
 - The relay uses the free `workers.dev` subdomain, so `keepall.app` DNS stays where it is.
 
-The main risk is abuse that exhausts the daily quota. Agent access would stop for everyone until midnight UTC. Libraries are unaffected.
+The main risk is abuse that exhausts the daily quota. Agent access would stop for everyone until midnight UTC. Libraries are unaffected. The rate limits stop one address from flooding frames or opening channels in bulk. They don't stop many addresses, or a slow trickle that keeps Durable Objects awake: the free plan's 13,000 GB-s a day is about 29 hours of one object awake. Workers Paid turns that from an outage into a bill.
 
 ## Trust
 
