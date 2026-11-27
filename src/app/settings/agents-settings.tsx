@@ -17,6 +17,7 @@ import { ConnectAgentPanel, type ConnectAgentPanelProps } from "./connect-agent-
 import { SETUP_AGENT_NAMES, setupInstructions, type SetupAgent } from "@/domain/agent-setup";
 import { createSetupPairing } from "@/persistence/agent-pairings";
 import { wakeExtensionBridge } from "../extension-wake";
+import { useTranslations } from "@/i18n/use-translations";
 
 type Data = Pick<AgentsPanelProps, "proposals" | "activities" | "pairings">;
 const EMPTY: Data = { proposals: [], activities: [], pairings: [] };
@@ -79,6 +80,7 @@ export function AgentsSettings() {
   const [setupError, setSetupError] = useState<string | null>(null);
   const [created, setCreated] = useState<ConnectAgentPanelProps["created"]>(null);
   const [relayUrl, setRelayUrl] = useState<string | null>(null);
+  const t = useTranslations("AgentsSettings");
 
   const show = useCallback((next: Data | null) => {
     if (next) setData(next);
@@ -105,7 +107,7 @@ export function AgentsSettings() {
     try {
       setStatus(await action());
     } catch (error) {
-      setStatus({ text: error instanceof Error ? error.message : "That didn't work. Try again." });
+      setStatus({ text: error instanceof Error ? error.message : t("actionFailed") });
     } finally {
       setBusy(null);
       await refresh();
@@ -123,7 +125,7 @@ export function AgentsSettings() {
       void wakeExtensionBridge();
       setCreated({ agentName, instructions: setupInstructions(setupAgent, mcpCommand(), pairing.setupCode!) });
     } catch {
-      setSetupError("Couldn't create the setup. Try again.");
+      setSetupError(t("setupError"));
     } finally {
       setSetupBusy(false);
       await refresh();
@@ -144,7 +146,7 @@ export function AgentsSettings() {
         const kept: string[] = [];
         // Newest first, so each undo restores the state the next older change left.
         for (const changeId of changeIds) kept.push(...(await undoAgentChange(changeId)).kept);
-        return { text: kept.length ? "Undone, except where you'd made changes since." : "Undone.", details: kept };
+        return { text: kept.length ? t("undoneExceptEdits") : t("undone"), details: kept };
       })}
       onAccess={(pairingId, access: AgentAccess) => {
         // Show the choice at once; the refresh after saving confirms it.
@@ -155,13 +157,13 @@ export function AgentsSettings() {
         });
       }}
       onDisconnect={(pairingId) => void run(pairingId, async () => {
-        const name = data.pairings.find((pairing) => pairing.id === pairingId)?.agentName ?? "The agent";
+        const name = data.pairings.find((pairing) => pairing.id === pairingId)?.agentName ?? t("theAgent");
         await deleteAgentPairing(pairingId);
         for (const proposal of await listOpenProposals()) {
           if (proposal.pairingId === pairingId) await rejectAgentProposal(proposal.id);
         }
         announcePairings();
-        return { text: `Disconnected ${agentDisplayName(name)}. It can't reach this library any more. Its past changes stay listed with Undo.` };
+        return { text: t("disconnected", { agent: agentDisplayName(name) }) };
       })}
     />
   );

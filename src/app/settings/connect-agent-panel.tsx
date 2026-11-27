@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { RadioCard } from "@/components/ui/radio-card";
 import type { AgentAccess } from "@/domain/agent-changes";
 import { SETUP_AGENT_NAMES, SETUP_AGENTS, type SetupAgent, type SetupInstructions } from "@/domain/agent-setup";
-import { ACCESS_CHOICES } from "./agents-panel";
+import { useAccessChoices } from "./agents-panel";
 import { headingClass, paragraphClass, sectionClass } from "./settings-sections";
+import { useTranslations } from "@/i18n/use-translations";
 
 export type ConnectAgentPanelProps = {
   /** Agent access needs a relay for this Keepall address; without one, the section explains instead. */
@@ -25,13 +26,14 @@ export type ConnectAgentPanelProps = {
 
 function CopyButton({ text, ref }: { text: string; ref?: Ref<HTMLButtonElement> }) {
   const [copied, setCopied] = useState(false);
+  const t = useTranslations("ConnectAgentPanel");
   return (
     <Button ref={ref} variant="primary" onClick={() => {
       void navigator.clipboard.writeText(text).then(() => {
         setCopied(true);
         window.setTimeout(() => setCopied(false), 2000);
       }, () => {});
-    }}>{copied ? "Copied" : "Copy"}</Button>
+    }}>{copied ? t("copied") : t("copy")}</Button>
   );
 }
 
@@ -39,6 +41,7 @@ function CopyButton({ text, ref }: { text: string; ref?: Ref<HTMLButtonElement> 
 function CreatedSetup({ created, onReset }: { created: NonNullable<ConnectAgentPanelProps["created"]>; onReset(): void }) {
   const result = useRef<HTMLDivElement>(null);
   const copy = useRef<HTMLButtonElement>(null);
+  const t = useTranslations("ConnectAgentPanel");
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const node = result.current;
@@ -52,11 +55,11 @@ function CreatedSetup({ created, onReset }: { created: NonNullable<ConnectAgentP
       <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all rounded-input border border-border-control bg-bg-raised p-3 font-mono text-xs leading-5 text-text-primary">{created.instructions.text}</pre>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <CopyButton ref={copy} text={created.instructions.text} />
-        <Button onClick={onReset}>Set up another agent</Button>
+        <Button onClick={onReset}>{t("setUpAnother")}</Button>
       </div>
       <p className="mt-3 text-sm leading-6 text-text-secondary">{created.instructions.then}</p>
       <p className="mt-2 text-xs leading-5 text-text-secondary">
-        This contains a key to your library. Don&apos;t share it. {created.agentName} appears under Connected agents, where Disconnect revokes it.
+        {t("keyWarning", { agent: created.agentName })}
       </p>
     </div>
   );
@@ -68,27 +71,29 @@ function CreatedSetup({ created, onReset }: { created: NonNullable<ConnectAgentP
  */
 export function ConnectAgentPanel({ available, agent, access, busy, created, error, onAgent, onAccess, onCreate, onReset }: ConnectAgentPanelProps) {
   const locked = busy || !!created;
+  const t = useTranslations("ConnectAgentPanel");
+  const accessChoices = useAccessChoices();
   return (
     <section className={sectionClass} aria-labelledby="agents-connect-heading">
-      <h2 id="agents-connect-heading" className={headingClass}>Connect an agent</h2>
+      <h2 id="agents-connect-heading" className={headingClass}>{t("heading")}</h2>
       <p className={paragraphClass}>
-        Let Claude Code, Codex, OpenCode, or another agent search and organize this library. Keepall makes one setup step for it; you don&apos;t install anything else.
+        {t("intro")}
       </p>
       {!available ? (
-        <p className="mt-4 text-sm leading-6 text-text-secondary">Agent access isn&apos;t available at this address yet.</p>
+        <p className="mt-4 text-sm leading-6 text-text-secondary">{t("unavailable")}</p>
       ) : (
         <>
           <fieldset className="mt-5 grid gap-2 sm:grid-cols-2" disabled={locked}>
-            <legend className="mb-2 text-sm font-medium text-text-primary">Agent</legend>
+            <legend className="mb-2 text-sm font-medium text-text-primary">{t("agentLegend")}</legend>
             {SETUP_AGENTS.map((value) => (
               <RadioCard key={value} name="setup-agent" value={value} checked={agent === value} onChange={() => onAgent(value)}>
-                <span className="font-medium text-text-primary">{SETUP_AGENT_NAMES[value]}</span>
+                <span className="font-medium text-text-primary">{value === "other" ? t("otherAgent") : SETUP_AGENT_NAMES[value]}</span>
               </RadioCard>
             ))}
           </fieldset>
           <fieldset className="mt-5 grid gap-2" disabled={locked}>
-            <legend className="mb-2 text-sm font-medium text-text-primary">What it can do</legend>
-            {ACCESS_CHOICES.map((choice) => (
+            <legend className="mb-2 text-sm font-medium text-text-primary">{t("accessLegend")}</legend>
+            {accessChoices.map((choice) => (
               <RadioCard key={choice.value} name="setup-access" value={choice.value} checked={access === choice.value} onChange={() => onAccess(choice.value)}>
                 <span><span className="block font-medium text-text-primary">{choice.label}</span><span className="mt-0.5 block text-text-secondary">{choice.description}</span></span>
               </RadioCard>
@@ -97,7 +102,7 @@ export function ConnectAgentPanel({ available, agent, access, busy, created, err
           {created ? <CreatedSetup created={created} onReset={onReset} /> : (
             <>
               {error ? <p role="alert" className="mt-4 text-sm text-text-danger">{error}</p> : null}
-              <Button variant="primary" className="mt-5" disabled={busy} onClick={onCreate}>{busy ? "Creating…" : "Create setup"}</Button>
+              <Button variant="primary" className="mt-5" disabled={busy} onClick={onCreate}>{busy ? t("creating") : t("create")}</Button>
             </>
           )}
         </>
