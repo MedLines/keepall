@@ -8,6 +8,7 @@ import { SearchIcon, DeleteIcon } from "./shell-icons";
 import "./library-empty-state.css";
 import { buttonClassName } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
+import { useTranslations } from "@/i18n/use-translations";
 
 export type LibraryEmptyStateKind = "library" | "collection" | "unsorted" | "trash" | "filtered" | "first-save";
 
@@ -34,15 +35,11 @@ type Props = {
 };
 
 export function LibraryEmptyState({ kind, message, query, scope, onClearFilters, onSearchEntireLibrary }: Props) {
+  const t = useTranslations("LibraryEmptyState");
   const firstSave = kind === "first-save";
   const canSave = firstSave || kind === "library" || kind === "collection" || kind === "unsorted";
-  const description = firstSave ? "Save links, notes, images, videos, and documents in one place."
-    : kind === "collection" ? "Save an item here, or move an existing item into this collection."
-    : kind === "unsorted" ? "Items without a collection appear here. New saves stay here until you organize them."
-    : kind === "trash" ? "Deleted items appear here until you restore them or empty the trash."
-    : kind === "filtered" ? "Try another search or clear the active filters."
-    : "Save an item to add it to your library.";
-  const title = firstSave ? "Start your library" : query?.trim() ? `No results for “${query.trim()}”` : message;
+  const description = t(firstSave ? "firstSave" : kind);
+  const title = firstSave ? t("firstSaveTitle") : query?.trim() ? t("noResults", { query: query.trim() }) : message;
   return (
     <section className="library-empty-state">
       {canSave ? (
@@ -55,19 +52,19 @@ export function LibraryEmptyState({ kind, message, query, scope, onClearFilters,
         </div>
       )}
       <h2 className="library-empty-title text-text-primary">{title}</h2>
-      {query?.trim() && scope ? <p className="library-empty-scope text-text-secondary">Searching {scope}</p> : null}
+      {query?.trim() && scope ? <p className="library-empty-scope text-text-secondary">{t("searching", { scope })}</p> : null}
       <p className="library-empty-description text-text-secondary">{description}</p>
       <div className="library-empty-actions">
-        {canSave ? <button type="button" className={buttonClassName({ variant: "primary", size: "none", className: "inline-block library-empty-action" })} onClick={openCaptureDialog}>{firstSave ? "Save first item" : "Save an item"}</button> : null}
-        {firstSave ? <Tooltip content="Import bookmarks or files"><button type="button" className={buttonClassName({ size: "none", className: "inline-block library-empty-action" })} onClick={openBulkImportDialog}>Import items</button></Tooltip> : null}
+        {canSave ? <button type="button" className={buttonClassName({ variant: "primary", size: "none", className: "inline-block library-empty-action" })} onClick={openCaptureDialog}>{firstSave ? t("saveFirstItem") : t("saveItem")}</button> : null}
+        {firstSave ? <Tooltip content={t("importTooltip")}><button type="button" className={buttonClassName({ size: "none", className: "inline-block library-empty-action" })} onClick={openBulkImportDialog}>{t("importItems")}</button></Tooltip> : null}
         {kind === "filtered" ? <>
-          {onSearchEntireLibrary ? <button type="button" className={buttonClassName({ variant: "primary", size: "none", className: "inline-block library-empty-action" })} onClick={onSearchEntireLibrary}>Search entire library</button> : null}
-          <button type="button" className={buttonClassName({ size: "none", className: "inline-block library-empty-action" })} onClick={onClearFilters}>Clear filters</button>
+          {onSearchEntireLibrary ? <button type="button" className={buttonClassName({ variant: "primary", size: "none", className: "inline-block library-empty-action" })} onClick={onSearchEntireLibrary}>{t("searchEverywhere")}</button> : null}
+          <button type="button" className={buttonClassName({ size: "none", className: "inline-block library-empty-action" })} onClick={onClearFilters}>{t("clearFilters")}</button>
         </> : null}
       </div>
       {firstSave ? <div className="mt-3 flex max-w-full flex-wrap items-center justify-center gap-x-4 text-xs text-text-secondary">
-        <Link className="inline-flex min-h-10 items-center underline underline-offset-4" href="/settings#backup-heading">Import backup</Link>
-        <Link className="inline-flex min-h-10 items-center underline underline-offset-4" href="/help/getting-started">Getting started</Link>
+        <Link className="inline-flex min-h-10 items-center underline underline-offset-4" href="/settings#backup-heading">{t("importBackup")}</Link>
+        <Link className="inline-flex min-h-10 items-center underline underline-offset-4" href="/help/getting-started">{t("gettingStarted")}</Link>
       </div> : null}
     </section>
   );

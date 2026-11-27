@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import {
-  persistentStorageMessage,
   requestPersistentStorage,
   type PersistentStorageStatus,
 } from "@/pwa/persistent-storage";
 import { CloseIcon } from "./shell-icons";
+import { useTranslations } from "@/i18n/use-translations";
 
 const STORAGE_STATUS_DISMISSED_KEY = "keepall.storage-status-dismissed";
 
@@ -20,6 +20,7 @@ export function PersistentStorageStatusLine({
   const [storageStatus, setStorageStatus] =
     useState<PersistentStorageStatus | null>(null);
   const [dismissed, setDismissed] = useState<boolean | null>(null);
+  const t = useTranslations("ShellBanners");
 
   useEffect(() => {
     if (!shouldRequest) {
@@ -57,13 +58,13 @@ export function PersistentStorageStatusLine({
       className="relative flex min-h-10 items-center justify-center border-b border-border-edge bg-bg-raised px-12 py-1.5 text-center text-xs text-text-secondary"
       data-testid="persistent-storage-status"
     >
-      <p>{persistentStorageMessage(storageStatus)}</p>
+      <p>{t(`storage.${storageStatus}`)}</p>
       <button
         type="button"
         aria-label={
           storageStatus === "granted"
-            ? "Dismiss storage message"
-            : "Dismiss storage warning"
+            ? t("dismissStorageMessage")
+            : t("dismissStorageWarning")
         }
         className="absolute end-0 top-0 flex size-10 items-center justify-center text-text-secondary transition-[color,scale] duration-(--motion-quick) ease-out hover:text-text-primary active:scale-96 focus-visible:outline-1 focus-visible:-outline-offset-3 focus-visible:outline-border-focus motion-reduce:transition-colors motion-reduce:active:scale-100"
         onClick={() => {

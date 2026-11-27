@@ -6,7 +6,7 @@ import { Tooltip } from "@base-ui/react/tooltip";
 import { TooltipContent } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MenuHoverList } from "@/components/ui/menu-hover-list";
-import { libraryTypeSelectionLabel, parseLibraryType, selectedLibraryTypes, type LibraryTypeFilter, type LibraryTypeSelection } from "@/domain/library-view";
+import { parseLibraryType, selectedLibraryTypes, type LibraryTypeFilter, type LibraryTypeSelection } from "@/domain/library-view";
 import type { LibrarySidebarCounts } from "./library-sidebar-counts";
 import {
   ImageIcon,
@@ -19,6 +19,8 @@ import {
 } from "./shell-icons";
 import { buttonClassName } from "@/components/ui/button";
 import { menuItemClassName } from "@/components/ui/menu-item";
+import { useTranslations } from "@/i18n/use-translations";
+import { useLibraryTypeLabel } from "./use-library-type-label";
 
 type MenuValue = LibraryTypeFilter | "all";
 
@@ -37,7 +39,11 @@ export function LibraryTypeFilterMenu({
 }: Props) {
   const tooltipId = useId();
   const selected = selectedLibraryTypes(value);
-  const label = `Filter by type: ${libraryTypeSelectionLabel(value) ?? "All types"}`;
+  const t = useTranslations("LibraryTypes");
+  const common = useTranslations("Common");
+  const typeLabel = useLibraryTypeLabel();
+  const valueLabel = typeLabel(value) ?? t("all");
+  const label = common("labelValue", { label: t("filter"), value: valueLabel });
   const count = (value: number) => (loading ? undefined : value);
   const options: {
     value: MenuValue;
@@ -47,35 +53,35 @@ export function LibraryTypeFilterMenu({
   }[] = [
     {
       value: "all",
-      label: "All types",
+      label: t("all"),
       icon: <FilterIcon />,
       count: count(counts.all),
     },
     {
       value: "image",
-      label: "Images",
+      label: t("image"),
       icon: <ImageIcon />,
       count: count(counts.byType.image),
     },
     {
       value: "video",
-      label: "Videos",
+      label: t("video"),
       icon: <VideoIcon />,
       count: count(counts.byType.video),
     },
     {
       value: "link",
-      label: "Links",
+      label: t("link"),
       icon: <LinkIcon />,
       count: count(counts.byType.link),
     },
     {
       value: "note",
-      label: "Notes",
+      label: t("note"),
       icon: <NoteIcon />,
       count: count(counts.byType.note + counts.byType.document - counts.pdfDocuments),
     },
-    { value: "document", label: "Documents", icon: <PdfIcon />, count: count(counts.byType.document) },
+    { value: "document", label: t("document"), icon: <PdfIcon />, count: count(counts.byType.document) },
   ];
 
   return (
@@ -94,13 +100,13 @@ export function LibraryTypeFilterMenu({
           <span aria-hidden="true" className="inline-flex items-center gap-2">
             {selected.length ? options.filter(option => option.value !== "all" && selected.includes(option.value)).map(option => <span key={option.value} className="inline-flex shrink-0">{option.icon}</span>) : <FilterIcon />}
           </span>
-          <span className="sr-only">{libraryTypeSelectionLabel(value) ?? "All types"}</span>
+          <span className="sr-only">{valueLabel}</span>
         </Select.Trigger>
         <Select.Portal>
           <Select.Positioner align="end" alignItemWithTrigger={false} sideOffset={8} collisionPadding={8} positionMethod="fixed" className="z-[90] data-[anchor-hidden]:invisible">
             <Select.Popup className="shell-select-popup ui-menu-popup ui-popover flex max-h-[min(24rem,var(--available-height))] min-w-[max(12rem,var(--anchor-width))] max-w-[calc(100vw-1rem)] flex-col overflow-hidden outline-none">
               <ScrollArea className="flex min-h-0 flex-col" viewportClassName="min-h-0 flex-1">
-                <Select.List aria-label="Filter by type">
+                <Select.List aria-label={t("filter")}>
                   <MenuHoverList>
                     {options.map(option => <Select.Item key={option.value} value={option.value} label={option.label} className={menuItemClassName({ className: "shell-select-option" })}>
                       {option.icon}

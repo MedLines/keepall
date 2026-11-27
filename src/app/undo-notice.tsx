@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CloseIcon } from "./shell-icons";
+import { useTranslations } from "@/i18n/use-translations";
 
 /** How long an undo offer stays on screen before it withdraws on its own. */
 export const UNDO_NOTICE_TIMEOUT_MS = 6000;
@@ -32,6 +33,7 @@ type Props = {
  * @import import { UndoNotice } from "@/app/undo-notice";
  */
 export function UndoNotice({ message, undoLabel, busy, paused = false, onUndo, onDismiss }: Props) {
+  const t = useTranslations("ShellBanners");
   const [remaining, setRemaining] = useState(UNDO_NOTICE_TIMEOUT_MS);
   const [held, setHeld] = useState(false);
   const [pageHidden, setPageHidden] = useState(false);
@@ -79,13 +81,13 @@ export function UndoNotice({ message, undoLabel, busy, paused = false, onUndo, o
         disabled={busy}
         onClick={onUndo}
       >
-        Undo
+        {t("undo")}
       </button>
       <button
         type="button"
         className="inline-flex size-8 shrink-0 items-center justify-center text-text-secondary hover:bg-bg-raised hover:text-text-primary"
-        aria-label="Dismiss Trash notice"
-        title="Dismiss"
+        aria-label={t("dismissTrashNotice")}
+        title={t("dismiss")}
         onClick={onDismiss}
       >
         <CloseIcon className="size-4" />

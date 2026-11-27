@@ -14,6 +14,7 @@ import {
 } from "./shell-styles";
 import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 import { menuItemClassName } from "@/components/ui/menu-item";
+import { useTranslations } from "@/i18n/use-translations";
 
 type Option<T extends string> = {
   value: T;
@@ -67,6 +68,7 @@ export function ShellTopMenu<T extends string>({
   variant = "toolbar",
 }: Props<T>) {
   const tooltipId = useId();
+  const common = useTranslations("Common");
   const field = variant === "field";
   const triggerClassName = variant === "control"
     ? buttonClassName({ size: "toolbar", className: `button-px-2 ${className}` })
@@ -92,7 +94,7 @@ export function ShellTopMenu<T extends string>({
             ? `flex w-full min-w-0 items-center justify-between gap-2 text-left ${className}`
             : triggerClassName
         }
-        aria-label={field ? undefined : `${ariaLabel}: ${activeOption?.label ?? ""}`}
+        aria-label={field ? undefined : common("labelValue", { label: ariaLabel, value: activeOption?.label ?? "" })}
       >
         {triggerIcon ?? activeOption?.icon}
         {iconOnly ? (
@@ -148,7 +150,7 @@ export function ShellTopMenu<T extends string>({
   return (
     <Tooltip.Root>
       {menu}
-      <TooltipContent id={tooltipId} container={portalContainer} collisionPadding={8}>{ariaLabel}: {activeOption?.label}</TooltipContent>
+      <TooltipContent id={tooltipId} container={portalContainer} collisionPadding={8}>{common("labelValue", { label: ariaLabel, value: activeOption?.label ?? "" })}</TooltipContent>
     </Tooltip.Root>
   );
 }

@@ -1,12 +1,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "@/i18n/use-translations";
 
 type PwaUpdateBannerProps = {
   onReload: () => void;
 };
 
 export function PwaUpdateBanner({ onReload }: PwaUpdateBannerProps) {
+  const t = useTranslations("ShellBanners");
   return (
     <div
       className="relative z-20 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-border-subtle bg-bg-surface px-4 py-2 text-center text-sm text-text-primary"
@@ -14,8 +16,7 @@ export function PwaUpdateBanner({ onReload }: PwaUpdateBannerProps) {
       data-testid="pwa-update-banner"
     >
       <p>
-        Update available. Reload when you are ready. Your library data stays on
-        this device.
+        {t("updateAvailable")}
       </p>
       <Button
         variant="primary"
@@ -25,7 +26,7 @@ export function PwaUpdateBanner({ onReload }: PwaUpdateBannerProps) {
           onReload();
         }}
       >
-        Reload
+        {t("reload")}
       </Button>
     </div>
   );

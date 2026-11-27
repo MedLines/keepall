@@ -38,6 +38,7 @@ import { ShellTopMenu } from "./shell-top-menu";
 import { ThemeControl } from "./theme-control";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
+import { useTranslations } from "@/i18n/use-translations";
 
 type Props = {
   headingRef: Ref<HTMLHeadingElement>;
@@ -95,6 +96,9 @@ export function LibraryTopBar({
   searchPlaceholder, typeFilterName, onClearSearchFilter, onClearTypeFilter,
   onClearTagFilter, onClearFilters, bulk, selection, notice, collectionsView = false, tagsView = false, libraryLoading = false, trash = false, trashEmptyDisabled, onEmptyTrash,
 }: Props) {
+  const t = useTranslations("LibraryTopBar");
+  const common = useTranslations("Common");
+  const withShortcut = (label: string, shortcut: string) => common("withShortcut", { label, shortcut: shortcutLabel(shortcut) });
   const shortcuts = useAppShortcuts({
     search: () => document.getElementById("library-search")?.focus(),
     toggleLayout: () => onLayoutChange(layout === "grid" ? "list" : "grid"),
@@ -112,11 +116,11 @@ export function LibraryTopBar({
     <header className="library-top-bar @container/toolbar relative z-40 flex shrink-0 flex-col gap-3 px-3 pb-6 pt-4 sm:px-6 sm:pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3 @min-[44rem]/toolbar:flex-nowrap">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 @min-[44rem]/toolbar:flex-nowrap @min-[44rem]/toolbar:gap-3">
-          <Tooltip content={panelOpen ? "Collapse sidebar" : "Expand sidebar"}>
+          <Tooltip content={panelOpen ? t("collapseSidebar") : t("expandSidebar")}>
             <button
               type="button"
               className={iconButtonClassName({ className: "text-text-primary" })}
-              aria-label={panelOpen ? "Collapse" : "Expand"}
+              aria-label={panelOpen ? t("collapse") : t("expand")}
               aria-expanded={panelOpen}
               aria-controls="library-sidebar"
               onClick={() => onPanelOpenChange(!panelOpen)}
@@ -125,24 +129,24 @@ export function LibraryTopBar({
             </button>
           </Tooltip>
           <div className="relative min-w-35 flex-1 sm:max-w-62.5">
-            <label className="sr-only" htmlFor="library-search">Search</label>
+            <label className="sr-only" htmlFor="library-search">{t("search")}</label>
             <span role="status" className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-secondary">
               <SearchIcon className={`size-4 transition-[visibility] duration-0 ${searchPending ? "invisible delay-200" : "visible"}`} />
               <span aria-hidden="true" className={`absolute inset-0 size-4 rounded-full border-2 border-current border-t-transparent transition-[visibility] duration-0 ${searchPending ? "visible delay-200 animate-spin motion-reduce:animate-none" : "invisible"}`} />
-              <span className="sr-only">{searchPending ? "Searching file contents…" : ""}</span>
+              <span className="sr-only">{searchPending ? t("searching") : ""}</span>
             </span>
             <input
               className="ui-field h-10 w-full pl-10 pr-11 text-sm"
               aria-keyshortcuts={shortcuts.search.replace(/Key|Digit/g, "").replace("Slash", "/")}
               id="library-search"
               type="search"
-              aria-description={collectionsView || tagsView ? undefined : 'Search words in any order. Use "quotes" for an exact phrase.'}
-              placeholder={collectionsView ? "Search collections…" : tagsView ? "Search tags…" : searchPlaceholder ?? (trash ? "Search Trash…" : "Search your library…")}
+              aria-description={collectionsView || tagsView ? undefined : t("searchHint")}
+              placeholder={collectionsView ? t("searchCollections") : tagsView ? t("searchTags") : searchPlaceholder ?? (trash ? t("searchTrash") : t("searchLibrary"))}
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
             />
             {!searchQuery ? <kbd aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 max-w-[40%] -translate-y-1/2 truncate text-2xs text-text-secondary">{shortcutLabel(shortcuts.search)}</kbd> : null}
-            {searchQuery ? <button type="button" aria-label="Clear search"
+            {searchQuery ? <button type="button" aria-label={t("clearSearch")}
               className="control-shape-none group absolute right-0 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-none text-text-secondary focus-visible:outline-1 focus-visible:-outline-offset-4 focus-visible:outline-border-focus"
               onClick={() => clearWithSearchFocus(() => onSearchChange(""))}>
               <span className="flex size-7 items-center justify-center rounded-full group-hover:bg-bg-raised group-hover:text-text-primary"><CloseIcon className="size-4" /></span>
@@ -156,19 +160,19 @@ export function LibraryTopBar({
               onChange={onTypeFilterChange}
             /> : null}
             <ShellTopMenu<LibrarySort>
-              ariaLabel="Sort library"
+              ariaLabel={t("sort")}
               iconOnly
               value={!canSortByRelevance && sort === "relevance" ? "newest" : sort}
               options={[
-                { value: "newest", label: "Newest first", icon: <SortDescIcon /> },
-                ...(canSortByRelevance ? [{ value: "relevance" as const, label: "Best match", icon: <RelevanceIcon /> }] : []),
-                { value: "oldest", label: "Oldest first", icon: <SortAscIcon /> },
+                { value: "newest", label: t("newest"), icon: <SortDescIcon /> },
+                ...(canSortByRelevance ? [{ value: "relevance" as const, label: t("relevance"), icon: <RelevanceIcon /> }] : []),
+                { value: "oldest", label: t("oldest"), icon: <SortAscIcon /> },
               ]}
               onChange={onSortChange}
             />
             <SegmentedControl
               variant="icon"
-              label="Library layout"
+              label={t("layout")}
               className="library-layout-switch"
               thumbClassName="library-layout-thumb"
               data-layout={layout}
@@ -176,42 +180,42 @@ export function LibraryTopBar({
               value={layout}
               onChange={onLayoutChange}
               choices={[
-                { value: "grid", ariaLabel: "Grid view", icon: <GridIcon />, tooltip: `Grid view · ${shortcutLabel(shortcuts.toggleLayout)}` },
-                { value: "list", ariaLabel: "List view", icon: <ListIcon />, tooltip: `List view · ${shortcutLabel(shortcuts.toggleLayout)}` },
+                { value: "grid", ariaLabel: t("gridView"), icon: <GridIcon />, tooltip: withShortcut(t("gridView"), shortcuts.toggleLayout) },
+                { value: "list", ariaLabel: t("listView"), icon: <ListIcon />, tooltip: withShortcut(t("listView"), shortcuts.toggleLayout) },
               ]}
             />
             {layout === "list" && !collectionsView && !tagsView && onListColumnsChange ? <ShellTopMenu<LibraryListColumns>
-              ariaLabel="List columns"
+              ariaLabel={t("columns")}
               iconOnly
               triggerIcon={<ColumnsIcon />}
               value={listColumns}
               options={[
-                { value: "auto", label: "Auto" },
-                { value: "1", label: "1 column" },
-                { value: "2", label: "2 columns" },
-                { value: "3", label: "3 columns" },
+                { value: "auto", label: t("columnsAuto") },
+                { value: "1", label: t("columnCount", { count: 1 }) },
+                { value: "2", label: t("columnCount", { count: 2 }) },
+                { value: "3", label: t("columnCount", { count: 3 }) },
               ]}
               onChange={onListColumnsChange}
             /> : null}
-            {!trash && !collectionsView && !tagsView && onPreview ? <Tooltip content={`Preview current results · ${shortcutLabel(shortcuts.preview)}`}>
-              <button type="button" aria-keyshortcuts={shortcuts.preview.replace(/Key|Digit/g, "").replace("Slash", "/")} aria-label="Preview" aria-haspopup="dialog"
+            {!trash && !collectionsView && !tagsView && onPreview ? <Tooltip content={withShortcut(t("previewTooltip"), shortcuts.preview)}>
+              <button type="button" aria-keyshortcuts={shortcuts.preview.replace(/Key|Digit/g, "").replace("Slash", "/")} aria-label={t("preview")} aria-haspopup="dialog"
                 className={buttonClassName({ size: "toolbar", className: "button-px-3" })}
                 disabled={previewDisabled} onClick={onPreview}>
-                <EyeIcon className="size-4" /><span className="hidden @min-[54rem]/toolbar:inline">Preview</span>
+                <EyeIcon className="size-4" /><span className="hidden @min-[54rem]/toolbar:inline">{t("preview")}</span>
               </button>
             </Tooltip> : null}
-            {!trash && !collectionsView && !tagsView && onExport ? <Tooltip content="Export these results for an AI agent">
-              <button type="button" aria-label="Export" aria-haspopup="dialog"
+            {!trash && !collectionsView && !tagsView && onExport ? <Tooltip content={t("exportTooltip")}>
+              <button type="button" aria-label={t("export")} aria-haspopup="dialog"
                 className={buttonClassName({ size: "toolbar", className: "button-px-3" })}
                 disabled={previewDisabled} onClick={onExport}>
-                <DownloadIcon className="size-4" /><span className="hidden @min-[54rem]/toolbar:inline">Export</span>
+                <DownloadIcon className="size-4" /><span className="hidden @min-[54rem]/toolbar:inline">{t("export")}</span>
               </button>
             </Tooltip> : null}
           </div>
         </div>
         <div className="flex w-full shrink-0 items-center justify-end gap-3 @min-[44rem]/toolbar:w-auto">
           <ThemeControl compact />
-          {trash ? <button type="button" disabled={trashEmptyDisabled} onClick={onEmptyTrash} className={buttonClassName({ variant: "danger-ghost", size: "toolbar" })}><DeleteIcon className="size-4" /><span className="leading-none">Empty Trash</span></button> : <Tooltip content={`Save item · ${shortcutLabel(shortcuts.capture)}`} describe={false}>
+          {trash ? <button type="button" disabled={trashEmptyDisabled} onClick={onEmptyTrash} className={buttonClassName({ variant: "danger-ghost", size: "toolbar" })}><DeleteIcon className="size-4" /><span className="leading-none">{t("emptyTrash")}</span></button> : <Tooltip content={withShortcut(t("saveItem"), shortcuts.capture)} describe={false}>
             <button
               type="button"
               aria-keyshortcuts={shortcuts.capture.replace(/Key|Digit/g, "").replace("Slash", "/")}
@@ -219,7 +223,7 @@ export function LibraryTopBar({
               onClick={() => openCaptureDialog()}
             >
               <PlusIcon />
-              <span>Save item</span>
+              <span>{t("saveItem")}</span>
             </button>
           </Tooltip>}
         </div>
@@ -231,30 +235,30 @@ export function LibraryTopBar({
           <h1 ref={headingRef} id="library-heading" tabIndex={-1} className="min-w-0 truncate text-2xl font-semibold leading-8.5 text-text-primary sm:text-display">
             {title}
           </h1>
-          <span className="flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? "Loading items" : `${itemCount} ${collectionsView ? "collections" : tagsView ? "tags" : "items"}`}>
+          <span className="flex h-6 min-w-9 shrink-0 items-center justify-center rounded-control-sm bg-bg-raised px-2 text-xs tabular-nums text-text-secondary" aria-label={libraryLoading ? t("loadingItems") : t(collectionsView ? "collectionCount" : tagsView ? "tagCount" : "itemCount", { count: itemCount })}>
             {libraryLoading ? "…" : itemCount}
           </span>
           </div>
 
           {hasFilters ? (
-            <div className="flex min-w-0 flex-wrap items-center gap-2" role="group" aria-label="Active filters">
-          <span className="shrink-0 text-xs text-text-secondary">Filtered by</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-2" role="group" aria-label={t("activeFilters")}>
+          <span className="shrink-0 text-xs text-text-secondary">{t("filteredBy")}</span>
           {hasSearchFilter ? (
-            <button type="button" className={buttonClassName({ size: "none", className: "h-8 min-w-0 max-w-full gap-1.5 px-2.5 text-xs text-text-secondary sm:max-w-[320px] justify-start" })} aria-label={`Remove search filter: ${searchQuery}`} onClick={() => clearWithSearchFocus(onClearSearchFilter)}>
-              <span className="shrink-0">Search</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{searchQuery}</span><CloseIcon className="size-4 shrink-0" />
+            <button type="button" className={buttonClassName({ size: "none", className: "h-8 min-w-0 max-w-full gap-1.5 px-2.5 text-xs text-text-secondary sm:max-w-[320px] justify-start" })} aria-label={t("removeSearch", { value: searchQuery })} onClick={() => clearWithSearchFocus(onClearSearchFilter)}>
+              <span className="shrink-0">{t("searchChip")}</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{searchQuery}</span><CloseIcon className="size-4 shrink-0" />
             </button>
           ) : null}
           {typeFilterName ? (
-            <button type="button" className={buttonClassName({ size: "none", className: "h-8 min-w-0 max-w-full gap-1.5 px-2.5 text-xs text-text-secondary sm:max-w-[320px] justify-start" })} aria-label={`Remove type filter: ${typeFilterName}`} onClick={() => clearWithSearchFocus(onClearTypeFilter)}>
-              <span className="shrink-0">Type</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{typeFilterName}</span><CloseIcon className="size-4 shrink-0" />
+            <button type="button" className={buttonClassName({ size: "none", className: "h-8 min-w-0 max-w-full gap-1.5 px-2.5 text-xs text-text-secondary sm:max-w-[320px] justify-start" })} aria-label={t("removeType", { value: typeFilterName })} onClick={() => clearWithSearchFocus(onClearTypeFilter)}>
+              <span className="shrink-0">{t("typeChip")}</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{typeFilterName}</span><CloseIcon className="size-4 shrink-0" />
             </button>
           ) : null}
           {tagFilterName ? (
-            <button type="button" className={buttonClassName({ size: "none", className: "h-8 min-w-0 max-w-full gap-1.5 px-2.5 text-xs text-text-secondary sm:max-w-[320px] justify-start" })} aria-label={`Remove tag filter: ${tagFilterName}`} onClick={() => clearWithSearchFocus(onClearTagFilter)}>
-              <span className="shrink-0">Tag</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{tagFilterName}</span><CloseIcon className="size-4 shrink-0" />
+            <button type="button" className={buttonClassName({ size: "none", className: "h-8 min-w-0 max-w-full gap-1.5 px-2.5 text-xs text-text-secondary sm:max-w-[320px] justify-start" })} aria-label={t("removeTag", { value: tagFilterName })} onClick={() => clearWithSearchFocus(onClearTagFilter)}>
+              <span className="shrink-0">{t("tagChip")}</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{tagFilterName}</span><CloseIcon className="size-4 shrink-0" />
             </button>
           ) : null}
-          <button type="button" className="px-2.5 py-1.5 text-xs font-medium text-text-primary underline-offset-4 hover:underline" onClick={() => clearWithSearchFocus(onClearFilters)}>Clear filters</button>
+          <button type="button" className="px-2.5 py-1.5 text-xs font-medium text-text-primary underline-offset-4 hover:underline" onClick={() => clearWithSearchFocus(onClearFilters)}>{t("clearFilters")}</button>
             </div>
           ) : null}
         </div>
@@ -265,7 +269,7 @@ export function LibraryTopBar({
       </div>
 
       <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {(selection ?? bulk)?.count ? `${(selection ?? bulk)?.count} selected, ${(selection ?? bulk)?.hiddenCount ?? 0} hidden by search or filters` : "No items selected"}
+        {(selection ?? bulk)?.count ? t("selected", { count: (selection ?? bulk)?.count ?? 0, hidden: (selection ?? bulk)?.hiddenCount ?? 0 }) : t("noneSelected")}
       </span>
 
       {!selection && bulk && (bulk.panel !== null || bulk.error) ? <LibraryBulkPanels {...bulk} count={bulk.panelCount ?? bulk.count} hiddenCount={bulk.panelHiddenCount ?? bulk.hiddenCount} /> : null}

@@ -58,6 +58,7 @@ import { collectionMarkerStyle } from "./collection-marker";
 import { LogoContextMenu } from "./logo-context-menu";
 import { SidebarResizeHandle } from "./sidebar-resize-handle";
 import { menuItemClassName } from "@/components/ui/menu-item";
+import { useTranslations } from "@/i18n/use-translations";
 import { Tooltip } from "@/components/ui/tooltip";
 
 const COLLECTION_REORDER_MIME = "application/x-keepall-pinned-collection";
@@ -143,6 +144,7 @@ export function LibraryShell({
   onDeleteCollection,
   onDeleteTag,
 }: Props) {
+  const t = useTranslations("LibraryShell");
   const [collectionFilter, setCollectionFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [collectionsOpen, setCollectionsOpen] = useState(true);
@@ -209,16 +211,17 @@ export function LibraryShell({
 
   const collectionsCollapsedLabel =
     collections.find((collection) => collection.id === browseCollectionId)
-      ?.name ?? "Collections";
+      ?.name ?? t("collections");
   const tagsCollapsedLabel =
-    tags.find((tag) => tag.id === browseTagId)?.name ?? "Tags";
+    tags.find((tag) => tag.id === browseTagId)?.name ?? t("tags");
 
   const renderPrimaryNav = (contentExpanded: boolean) => (
     <>
       <ShellNavItem
         expanded={contentExpanded}
         active={allItemsActive}
-        label="All items"
+        label={t("allItems")}
+        anchor="all-items"
         count={libraryLoading ? undefined : counts.all}
         icon={<LibraryIcon className="size-4.5 shrink-0 text-text-secondary" />}
         onClick={() => {
@@ -229,7 +232,7 @@ export function LibraryShell({
       <ShellNavItem
         expanded={contentExpanded}
         active={unsortedActive}
-        label="Unsorted"
+        label={t("unsorted")}
         count={libraryLoading ? undefined : counts.unsorted}
         icon={<InboxIcon className="size-4.5 shrink-0 text-text-secondary" />}
         onClick={() => {
@@ -239,7 +242,7 @@ export function LibraryShell({
       />
       {/* Only while an agent's suggestions wait, so people who don't use agents never see it. */}
       {agentReview ? (
-        <ShellNavLink expanded={contentExpanded} label="Agent review" href="/review" count={agentReview.items}
+        <ShellNavLink expanded={contentExpanded} label={t("agentReview")} href="/review" count={agentReview.items}
           icon={<AgentIcon className="size-4.5 shrink-0 text-text-secondary" />} />
       ) : null}
     </>
@@ -258,7 +261,7 @@ export function LibraryShell({
       />
       <nav
           data-sidebar-nav
-          aria-label="Sidebar navigation"
+          aria-label={t("sidebarNavigation")}
           className={`library-sidebar-navigation grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-5 overflow-hidden pb-4.5 ${contentExpanded ? SHELL_NAV_GUTTER : "px-2"}`}
         >
           <div className={`flex min-h-0 flex-col gap-1 ${contentExpanded ? "overflow-hidden" : "scroll-fade overflow-y-auto overscroll-contain"}`}>
@@ -367,31 +370,31 @@ export function LibraryShell({
           </div>
 
           <div className={`flex flex-col gap-1 ${contentExpanded ? "library-sidebar-footer-nav overflow-hidden" : ""}`}>
-            <SidebarRowMenu label="Trash" mutationBusy={mutationBusy || libraryLoading} deleteLabel="Empty Trash" deleteDisabled={trashCount === 0} onDelete={() => onEmptyTrash?.()}>
+            <SidebarRowMenu label={t("trash")} mutationBusy={mutationBusy || libraryLoading} deleteLabel={t("emptyTrash")} deleteDisabled={trashCount === 0} onDelete={() => onEmptyTrash?.()}>
               {(trigger) => contentExpanded ? (
                 <div className={cn(`group ${SHELL_NAV_SURFACE} min-h-10 w-full text-sm ${browseTrash ? SHELL_NAV_ITEM_ACTIVE : `${SHELL_NAV_ITEM_IDLE} focus-within:bg-bg-raised`}`)}>
-                  <button type="button" aria-label="Trash" aria-current={browseTrash ? "page" : undefined} data-sidebar-anchor="Trash"
+                  <button type="button" aria-label={t("trash")} aria-current={browseTrash ? "page" : undefined} data-sidebar-anchor="Trash"
                     className="flex min-h-10 min-w-0 flex-1 self-stretch items-center gap-2.5 px-3 py-2 text-left transition-transform active:scale-98 motion-reduce:transition-none motion-reduce:active:scale-100"
                     onClick={() => { onGoTrash?.(); closeOnMobile(); }}>
                     <span data-sidebar-icon className="flex size-4.5 shrink-0 items-center justify-center"><DeleteIcon className="size-4.5" /></span>
-                    <span className="min-w-0 flex-1 truncate">Trash</span>
+                    <span className="min-w-0 flex-1 truncate">{t("trash")}</span>
                     {!libraryLoading ? <NavCount value={trashCount} /> : null}
                   </button>
                   {trigger}
                 </div>
               ) : (
-                <ShellNavItem expanded={false} active={browseTrash} label="Trash" icon={<DeleteIcon className="size-4.5 shrink-0" />} onClick={() => { onGoTrash?.(); closeOnMobile(); }} />
+                <ShellNavItem expanded={false} active={browseTrash} label={t("trash")} icon={<DeleteIcon className="size-4.5 shrink-0" />} onClick={() => { onGoTrash?.(); closeOnMobile(); }} />
               )}
             </SidebarRowMenu>
             <ShellNavLink
               expanded={contentExpanded}
-              label="Help"
+              label={t("help")}
               href="/help"
               icon={<HelpIcon className="size-4.5 shrink-0 text-text-secondary" />}
             />
             <ShellNavLink
               expanded={contentExpanded}
-              label="Settings"
+              label={t("settings")}
               href="/settings"
               icon={
                 <SettingsIcon className="size-4.5 shrink-0 text-text-secondary" />
@@ -409,7 +412,7 @@ export function LibraryShell({
           {mobileSidebarOpen ? <div className="w-14 shrink-0" aria-hidden="true" /> : (
             <aside
               id="library-sidebar"
-              aria-label="Sidebar"
+              aria-label={t("sidebar")}
               className={`${SHELL_ASIDE} ${SHELL_SIDEBAR_COLLAPSED} relative z-30`}
               onClickCapture={(event) => {
                 const opener = (event.target as HTMLElement).closest<HTMLElement>("button[data-sidebar-anchor]");
@@ -428,7 +431,7 @@ export function LibraryShell({
               <Dialog.Viewport className="fixed inset-0 z-50 flex overflow-hidden">
                 <Dialog.Popup
                   className={`${SHELL_ASIDE} ${SHELL_SIDEBAR_EXPANDED} border-r border-border-control shadow-menu outline-none transition-transform duration-300 ease-standard data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full motion-reduce:transition-none`}
-                  initialFocus={() => document.querySelector<HTMLElement>('#library-sidebar [data-sidebar-anchor="All items"]')}
+                  initialFocus={() => document.querySelector<HTMLElement>('#library-sidebar [data-sidebar-anchor="all-items"]')}
                   finalFocus={() => {
                     if (mobileOpener.current?.isConnected) return mobileOpener.current;
                     const anchor = mobileOpenerAnchor.current;
@@ -439,8 +442,8 @@ export function LibraryShell({
                     return document.querySelector<HTMLElement>('button[aria-controls="library-sidebar"]');
                   }}
                 >
-                  <Dialog.Title className="sr-only">Sidebar navigation</Dialog.Title>
-                  <aside id={mobileSidebarOpen ? "library-sidebar" : undefined} aria-label="Sidebar" className="flex min-h-0 flex-1 flex-col">
+                  <Dialog.Title className="sr-only">{t("sidebarNavigation")}</Dialog.Title>
+                  <aside id={mobileSidebarOpen ? "library-sidebar" : undefined} aria-label={t("sidebar")} className="flex min-h-0 flex-1 flex-col">
                     {sidebarBody(true, true)}
                   </aside>
                 </Dialog.Popup>
@@ -451,7 +454,7 @@ export function LibraryShell({
       ) : (
         <aside
           id="library-sidebar"
-          aria-label="Sidebar"
+          aria-label={t("sidebar")}
           data-state={expanded ? "open" : "closed"}
           data-ready={panelReady}
           className="library-sidebar-desktop relative z-50 h-full max-h-full min-h-0 shrink-0 overflow-visible"
@@ -478,6 +481,7 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onClose, onGoHome }: {
   onClose: () => void;
   onGoHome: () => void;
 }) {
+  const t = useTranslations("LibraryShell");
   return (
     <div data-sidebar-brand className={`mb-5 mt-4.5 flex h-10 shrink-0 items-center ${expanded ? "mx-4" : "mx-2"}`}>
       <LogoContextMenu>
@@ -487,16 +491,18 @@ function SidebarBrand({ expanded, mobileSidebarOpen, onClose, onGoHome }: {
             event.preventDefault();
             onGoHome();
           }}
-          aria-label="Keepall home"
+          aria-label={t("home")}
           data-sidebar-anchor="logo"
           className={`keepall-logo-link flex h-10 min-w-0 items-center gap-0 text-text-primary ${expanded ? "w-fit px-3" : "w-10 justify-center"}`}
         >
           <span data-sidebar-icon className="flex shrink-0 items-center justify-center"><LogoIcon className="size-9" /></span>
+          {/* The wordmark is the product name, the same in every language. */}
+          {/* eslint-disable-next-line react/jsx-no-literals */}
           {expanded ? <span data-sidebar-copy className="shrink-0 text-xl font-medium leading-7">keepall</span> : null}
         </Link>
       </LogoContextMenu>
       {mobileSidebarOpen ? (
-        <Tooltip content="Close sidebar" describe={false}><button type="button" aria-label="Close navigation" className="ml-auto flex size-8 shrink-0 items-center justify-center hover:bg-bg-raised" onClick={onClose}>
+        <Tooltip content={t("closeSidebar")} describe={false}><button type="button" aria-label={t("closeNavigation")} className="ml-auto flex size-8 shrink-0 items-center justify-center hover:bg-bg-raised" onClick={onClose}>
           <ShellPanelIcon open />
         </button></Tooltip>
       ) : null}
@@ -584,6 +590,7 @@ function CollectionsSection({
   onMovePinnedCollection: (sourceId: string, targetId: string) => void;
   onDeleteCollection: (id: string) => void;
 }) {
+  const t = useTranslations("LibraryShell");
   const [renamingCollectionId, setRenamingCollectionId] = useState<
     string | null
   >(null);
@@ -599,14 +606,16 @@ function CollectionsSection({
       rail={rail}
       onSeeAll={onSeeAll}
       overviewActive={overviewActive}
-      overviewLabel="All collections"
-      title="Collections"
+      overviewLabel={t("allCollections")}
+      overviewIcon={<CollectionIcon className="size-3.5" />}
+      title={t("collections")}
       icon={<CollectionIcon />}
       open={collectionsOpen}
       onOpenChange={onCollectionsOpenChange}
     >
       <SidebarSearch
-        label="Search collections"
+        label={t("searchCollections")}
+        placeholder={t("searchFolders")}
         value={collectionFilter}
         onChange={onCollectionFilterChange}
       />
@@ -616,10 +625,10 @@ function CollectionsSection({
           {filteredCollections.length === 0 ? (
             <p className="pb-2 pl-12 text-pretty text-xs text-text-secondary">
               {libraryLoading
-                ? "Loading…"
+                ? t("loading")
                 : collections.length === 0
-                  ? "No collections yet."
-                  : "No matches."}
+                  ? t("noCollections")
+                  : t("noMatches")}
             </p>
           ) : (
             filteredCollections.map((collection) => {
@@ -771,25 +780,27 @@ function TagsSection({
   mutationBusy: boolean;
   onDeleteTag: (id: string) => void;
 }) {
+  const t = useTranslations("LibraryShell");
   return (
     <CollapsibleSection
       rail={rail}
       onSeeAll={onSeeAll}
       overviewActive={overviewActive}
-      overviewLabel="All tags"
+      overviewLabel={t("allTags")}
+      overviewIcon={<HashIcon className="size-3.5" />}
       icon={<HashIcon />}
       title={
         libraryLoading
-          ? "Tags"
+          ? t("tags")
           : tags.length > 0
-            ? `Tags (${tags.length})`
-            : "Tags"
+            ? t("tagsWithCount", { count: tags.length })
+            : t("tags")
       }
       open={tagsOpen}
       onOpenChange={onTagsOpenChange}
     >
       <SidebarSearch
-        label="Search tags"
+        label={t("searchTags")}
         value={tagFilter}
         onChange={onTagFilterChange}
       />
@@ -799,10 +810,10 @@ function TagsSection({
           {filteredTags.length === 0 ? (
             <p className="pb-2 pl-12 text-pretty text-xs text-text-secondary">
               {libraryLoading
-                ? "Loading…"
+                ? t("loading")
                 : tags.length === 0
-                  ? "No tags yet."
-                  : "No matches."}
+                  ? t("noTags")
+                  : t("noMatches")}
             </p>
           ) : (
             filteredTags.map((tag) => (
@@ -882,6 +893,7 @@ function TagNavRow({
   onNavigate: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("LibraryShell");
   return (
     <SidebarRowMenu
       label={tag.name}
@@ -893,7 +905,7 @@ function TagNavRow({
           <button
             type="button"
             className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 py-2 pl-12 text-left transition-transform active:scale-96 motion-reduce:transition-none motion-reduce:active:scale-100"
-            aria-label={`Tag ${tag.name}`}
+            aria-label={t("tag", { name: tag.name })}
             aria-current={active ? "page" : undefined}
             onClick={onNavigate}
           >
@@ -958,6 +970,7 @@ function CollectionNavRow({
   onMoveDown?: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("LibraryShell");
   if (renaming) {
     return (
       <form
@@ -972,7 +985,7 @@ function CollectionNavRow({
           autoFocus
           value={renameDraft}
           disabled={mutationBusy}
-          aria-label="Rename collection"
+          aria-label={t("renameCollection")}
           onChange={(event) => onRenameDraftChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
@@ -1037,7 +1050,7 @@ function CollectionNavRow({
               className="flex h-4.5 w-10 shrink-0 translate-x-4.5 items-center justify-center text-collection-marker"
               // eslint-disable-next-line shadcn/no-inline-styles -- Per-collection marker hue and lightness custom properties.
               style={collectionMarkerStyle(collection.id)}
-              title={pinned ? "Pinned collection" : undefined}
+              title={pinned ? t("pinnedCollection") : undefined}
             >
               {pinned ? <PinIcon className="size-3" fill="currentColor" /> : <span className="size-2 rounded-full bg-collection-marker" />}
             </span>
@@ -1061,7 +1074,7 @@ function SidebarRowMenu({
   onMoveDown,
   onRename,
   onDelete,
-  deleteLabel = "Delete", deleteDisabled = false,
+  deleteLabel, deleteDisabled = false,
 }: {
   children: (trigger: ReactNode) => ReactElement;
   label: string;
@@ -1075,13 +1088,14 @@ function SidebarRowMenu({
   deleteLabel?: string;
   deleteDisabled?: boolean;
 }) {
+  const t = useTranslations("LibraryShell");
   const triggerRef = useRef<HTMLButtonElement>(null);
   const openingDialog = useRef(false);
   function openDialog(action: () => void) {
     openingDialog.current = true;
     action();
   }
-  const actionsLabel = `${label} actions`;
+  const actionsLabel = t("rowActions", { label });
 
   const trigger = (
     <button
@@ -1102,26 +1116,26 @@ function SidebarRowMenu({
         <>
           {onTogglePin ? (
             <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={onTogglePin}>
-              {pinned ? "Unpin" : "Pin to top"}
+              {pinned ? t("unpin") : t("pinToTop")}
             </Menu.Item>
           ) : null}
           {pinned && onMoveUp ? (
             <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={onMoveUp}>
-              Move up
+              {t("moveUp")}
             </Menu.Item>
           ) : null}
           {pinned && onMoveDown ? (
             <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={onMoveDown}>
-              Move down
+              {t("moveDown")}
             </Menu.Item>
           ) : null}
           {onRename ? (
             <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={() => openDialog(onRename)}>
-              Rename
+              {t("rename")}
             </Menu.Item>
           ) : null}
           <Menu.Item disabled={deleteDisabled} className={menuItemClassName({ tone: "danger", layout: "none", className: "items-center gap-2 text-left hover:bg-bg-danger data-[disabled]:opacity-50" })} onClick={() => openDialog(onDelete)}>
-            <DeleteIcon className="size-4" /><span className="leading-none">{deleteLabel}</span>
+            <DeleteIcon className="size-4" /><span className="leading-none">{deleteLabel ?? t("delete")}</span>
           </Menu.Item>
         </>
       }
@@ -1135,6 +1149,7 @@ function ShellNavItem({
   expanded,
   active = false,
   label,
+  anchor,
   ariaLabel,
   icon,
   count,
@@ -1147,6 +1162,8 @@ function ShellNavItem({
   expanded: boolean;
   active?: boolean;
   label: string;
+  /** A stable data-sidebar-anchor key when code looks the row up; defaults to the label. */
+  anchor?: string;
   ariaLabel?: string;
   icon?: ReactNode;
   count?: number;
@@ -1168,7 +1185,7 @@ function ShellNavItem({
         dropHighlight ? "ring-2 ring-border-focus" : ""
       }`)}
       aria-label={ariaLabel ?? label}
-      data-sidebar-anchor={icon ? label : undefined}
+      data-sidebar-anchor={icon ? anchor ?? label : undefined}
       aria-current={active ? "page" : undefined}
       onClick={onClick}
       onDragOver={onDragOver}
@@ -1199,7 +1216,7 @@ function NavCount({ value }: { value: number }) {
 
 function CollapsibleSection({
   rail,
-  onSeeAll, overviewActive = false, overviewLabel,
+  onSeeAll, overviewActive = false, overviewLabel, overviewIcon,
   title,
   icon,
   open,
@@ -1209,6 +1226,7 @@ function CollapsibleSection({
   rail?: SidebarRailAction;
   onSeeAll?: () => void;
   overviewLabel?: string;
+  overviewIcon?: ReactNode;
   overviewActive?: boolean;
   title: string;
   icon: ReactNode;
@@ -1257,7 +1275,7 @@ function CollapsibleSection({
           {children}
           {onSeeAll ? <div className="shrink-0 px-3 pt-1">
             <button type="button" aria-current={overviewActive ? "page" : undefined} onClick={onSeeAll} className={`flex min-h-8 w-full items-center gap-2 px-3 text-xs font-medium outline-none hover:bg-bg-active focus-visible:outline-1 focus-visible:outline-border-focus ${overviewActive ? "bg-bg-selected text-text-primary" : "bg-bg-raised text-text-secondary"}`}>
-              {overviewLabel === "All collections" ? <CollectionIcon className="size-3.5" /> : <HashIcon className="size-3.5" />}<span className="min-w-0 truncate">{overviewLabel}</span>
+              {overviewIcon}<span className="min-w-0 truncate">{overviewLabel}</span>
               <ArrowRightIcon className="ml-auto size-3.5" />
             </button>
           </div> : null}
@@ -1269,10 +1287,12 @@ function CollapsibleSection({
 
 function SidebarSearch({
   label,
+  placeholder = label,
   value,
   onChange,
 }: {
   label: string;
+  placeholder?: string;
   value: string;
   onChange: (value: string) => void;
 }) {
@@ -1283,7 +1303,7 @@ function SidebarSearch({
         <SearchIcon className="pointer-events-none absolute left-4.75 top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
         <input
           className="h-7 w-full border border-transparent bg-transparent pl-9 pr-2 text-xs"
-          placeholder={label === "Search collections" ? "Search folders" : label}
+          placeholder={placeholder}
           aria-label={label}
           value={value}
           onChange={(event) => onChange(event.target.value)}

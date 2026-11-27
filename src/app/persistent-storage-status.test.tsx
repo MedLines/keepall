@@ -8,8 +8,6 @@ const { requestPersistentStorage } = vi.hoisted(() => ({
 
 vi.mock("@/pwa/persistent-storage", () => ({
   requestPersistentStorage,
-  persistentStorageMessage: () =>
-    "Storage may be cleared under browser pressure.",
 }));
 
 describe("PersistentStorageStatusLine", () => {

@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import {
-  persistentStorageMessage,
-  requestPersistentStorage,
-} from "./persistent-storage";
+import { requestPersistentStorage } from "./persistent-storage";
 
 describe("requestPersistentStorage", () => {
   afterEach(() => {
@@ -35,13 +32,5 @@ describe("requestPersistentStorage", () => {
       },
     });
     expect(await requestPersistentStorage()).toBe("unavailable");
-  });
-});
-
-describe("persistentStorageMessage", () => {
-  test("describes each status", () => {
-    expect(persistentStorageMessage("granted")).toMatch(/persistent/i);
-    expect(persistentStorageMessage("denied")).toMatch(/cleared/i);
-    expect(persistentStorageMessage("unavailable")).toMatch(/not available/i);
   });
 });
