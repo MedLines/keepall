@@ -14,59 +14,54 @@ import { countCurrentLibrary } from "@/persistence/backup";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
 import { abortable } from "@/lib/abortable";
 import { formatFileSize } from "@/lib/format-file-size";
-import { useFormatLocale } from "@/i18n/use-translations";
+import { useFormatLocale, useTranslations, type Translations } from "@/i18n/use-translations";
 import { BackupIcon, ChevronDownIcon, CloseIcon, CollectionIcon, DownloadIcon, HashIcon, ImageIcon, ImagesIcon, LinkIcon, NoteIcon, UploadIcon, VideoIcon } from "./shell-icons";
 import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 
 type ImportMode = "merge" | "replace";
 type Operation = "export" | "read-backup" | "restore";
-const operationLabels: Record<Operation, string> = {
-  export: "Preparing backup…", "read-backup": "Reading backup…", restore: "Restoring library…",
-};
-function countText(counts: BackupCounts) {
-  return `${counts.total} items (${counts.active} active, ${counts.trash} in Trash)`;
+type T = Translations<"BackupPanel">;
+/** The backup file extension, kept out of the translated text. */
+const BACKUP_FILE = ".keepall.zip";
+function countText(t: T, counts: BackupCounts) {
+  return t("counts", { total: counts.total, active: counts.active, trash: counts.trash });
 }
 
 function ImportProgress({ progress, cancelling }: { progress: BackupImportProgress | null; cancelling: boolean }) {
+  const t = useTranslations("BackupPanel");
   const phase = progress?.phase ?? "preparing-media";
-  const label = {
-    "preparing-media": "Preparing media…",
-    "merging-items": "Merging items…",
-    "restoring-items": "Restoring items…",
-    "saving-library": "Saving library…",
-  }[phase];
+  const label = t(`progress.${phase}`);
   const total = progress?.total ?? 0;
   const completed = progress?.completed ?? 0;
-  const unit = phase === "preparing-media" ? "media files" : "items";
   return <div className="space-y-3">
     <div role="status" aria-live="polite" aria-atomic="true" className="text-sm font-medium text-text-primary">
       <p className="flex items-center gap-2">
         <span aria-hidden="true" className="size-4 shrink-0 rounded-full border-2 border-border-control border-t-text-primary motion-safe:animate-spin" />
-        {cancelling ? "Canceling import…" : label}
+        {cancelling ? t("cancellingImport") : label}
       </p>
-      {total > 0 ? <p className="mt-1 tabular-nums text-text-secondary">{completed} of {total} {unit} processed</p> : null}
+      {total > 0 ? <p className="mt-1 tabular-nums text-text-secondary">{t(phase === "preparing-media" ? "mediaProcessed" : "itemsProcessed", { completed, total })}</p> : null}
     </div>
     <progress aria-label={label} value={total > 0 ? completed : undefined} max={total > 0 ? total : undefined}
       className="h-2 w-full accent-action-primary" />
-    <p className="text-sm leading-6 text-text-secondary">Keep this tab open until the import finishes. Large backups can take a while.</p>
-    <p className="text-sm leading-6 text-text-secondary">{cancelling ? "Rolling back this import. Your current library will be kept." : "Canceling rolls back this import and keeps your current library."}</p>
+    <p className="text-sm leading-6 text-text-secondary">{t("keepTabOpen")}</p>
+    <p className="text-sm leading-6 text-text-secondary">{cancelling ? t("rollingBack") : t("cancelRollsBack")}</p>
   </div>;
 }
 
 const itemRows = [
-  { label: "Links", key: "links", Icon: LinkIcon },
-  { label: "Notes", key: "notes", Icon: NoteIcon },
-  { label: "Images", key: "images", Icon: ImageIcon },
-  { label: "Videos", key: "videos", Icon: VideoIcon },
-  { label: "Documents", key: "documents", Icon: NoteIcon },
+  { key: "links", Icon: LinkIcon },
+  { key: "notes", Icon: NoteIcon },
+  { key: "images", Icon: ImageIcon },
+  { key: "videos", Icon: VideoIcon },
+  { key: "documents", Icon: NoteIcon },
 ] as const;
 
 const detailRows = [
-  { label: "Tags", key: "tags", Icon: HashIcon },
-  { label: "Collections", key: "collections", Icon: CollectionIcon },
-  { label: "Image files", key: "imageAssets", Icon: ImagesIcon },
-  { label: "Video files", key: "videoAssets", Icon: VideoIcon },
-  { label: "Document files", key: "documentAssets", Icon: NoteIcon },
+  { key: "tags", Icon: HashIcon },
+  { key: "collections", Icon: CollectionIcon },
+  { key: "imageAssets", Icon: ImagesIcon },
+  { key: "videoAssets", Icon: VideoIcon },
+  { key: "documentAssets", Icon: NoteIcon },
 ] as const;
 
 type Props = {
@@ -77,6 +72,7 @@ type Props = {
 export function BackupPanel({ variant = "page", onClose }: Props) {
   const router = useRouter();
   const locale = useFormatLocale();
+  const t = useTranslations("BackupPanel");
   function openImportedFolder(href: string) {
     onClose?.();
     router.push(href);
@@ -135,9 +131,9 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       anchor.download = `keepall-backup-${Date.now()}.keepall.zip`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setStatus("Backup downloaded.");
+      setStatus(t("downloaded"));
     } catch {
-      setError("Couldn't export backup.");
+      setError(t("exportError"));
     } finally {
       finish();
     }
@@ -164,10 +160,10 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       if (mounted.current && version === readVersion.current) setPrepared({ backup, current });
     } catch (caught) {
       if (mounted.current && version === readVersion.current) {
-        if (controller.signal.aborted) setStatus("Backup reading canceled. Your library wasn't changed.");
+        if (controller.signal.aborted) setStatus(t("readCancelled"));
         else setError(caught instanceof BackupValidationError
-          ? `${caught.message}. Choose another Keepall backup.`
-          : "Couldn't read backup file. Try again or choose another file.");
+          ? t("invalidBackup", { reason: caught.message })
+          : t("readError"));
       }
     } finally {
       finish();
@@ -182,7 +178,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
     readVersion.current += 1;
     setPrepared(null);
     setConfirmReplace(false);
-    setStatus("Import canceled.");
+    setStatus(t("importChoiceCancelled"));
   }
 
   async function reviewReplacement() {
@@ -194,7 +190,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         setConfirmReplace(true);
       }
     } catch {
-      if (mounted.current) setError("Couldn't count the current library. Try Replace library again.");
+      if (mounted.current) setError(t("countError"));
     } finally {
       finish();
     }
@@ -215,19 +211,19 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         if (!mounted.current) return;
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
         dispatchPreviewWelcome(summary.addedLinkIds);
-        setStatus(`Merged: ${summary.added} added, ${summary.updated} updated, ${summary.unchanged} unchanged.`);
+        setStatus(t("merged", { added: summary.added, updated: summary.updated, unchanged: summary.unchanged }));
       } else {
         const linkIds = await selected.replace(reportImportProgress, controller.signal);
         if (!mounted.current) return;
         window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
         dispatchPreviewWelcome(linkIds);
-        setStatus("Library replaced from backup.");
+        setStatus(t("replaced"));
       }
     } catch (caught) {
       if (mounted.current) {
-        if (controller.signal.aborted) setStatus("Backup import canceled. Your library wasn't changed.");
+        if (controller.signal.aborted) setStatus(t("importCancelled"));
         else setError(caught instanceof BackupValidationError ? caught.message :
-          mode === "merge" ? "Couldn't merge backup. Your library wasn't changed. Try again." : "Couldn't replace library. Your library wasn't changed. Try again.");
+          mode === "merge" ? t("mergeError") : t("replaceError"));
       }
     } finally {
       if (mounted.current) { setPrepared(null); setConfirmReplace(false); setImportProgress(null); }
@@ -250,21 +246,22 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const dialogButtonClass =
     buttonClassName();
   const restoring = operation === "restore";
-  const operationLabel = cancelling ? "Canceling import…" : restoring && importMode === "merge" ? "Merging backup…" : operation ? operationLabels[operation] : null;
+  const operationLabel = cancelling ? t("cancellingImport") : restoring && importMode === "merge" ? t("mergingBackup") : operation ? t(`operations.${operation}`) : null;
+  const backupName = prepared?.backup.name ?? t("backupFallbackName");
 
   const choiceDialog = (
     <>
       <ModalDialog
-        open={prepared !== null && !confirmReplace} busy={busy} title={restoring ? "Merging backup" : "Import backup"}
-        description={restoring ? `Merging ${prepared?.backup.counts.total ?? 0} items from ${prepared?.backup.name ?? "backup"}.` : "Compare this backup with your library."}
+        open={prepared !== null && !confirmReplace} busy={busy} title={restoring ? t("mergingTitle") : t("importTitle")}
+        description={restoring ? t("mergingDescription", { count: prepared?.backup.counts.total ?? 0, name: backupName }) : t("compareDescription")}
         onOpenChange={(open) => { if (!open) cancelImportChoice(); }}
         footer={<>
           <button className={dialogButtonClass} type="button" disabled={restoring ? cancelling : busy}
-            onClick={restoring ? cancelRunningImport : cancelImportChoice}>{restoring ? cancelling ? "Canceling…" : "Cancel import" : "Cancel"}</button>
+            onClick={restoring ? cancelRunningImport : cancelImportChoice}>{restoring ? cancelling ? t("cancelling") : t("cancelImport") : t("cancel")}</button>
           <button className={`${dialogButtonClass} border-border-danger bg-bg-danger text-text-danger`}
-            type="button" disabled={busy} onClick={() => void reviewReplacement()}>Replace library</button>
+            type="button" disabled={busy} onClick={() => void reviewReplacement()}>{t("replaceLibrary")}</button>
           <button className={`${dialogButtonClass} ui-primary`} type="button" disabled={busy}
-            onClick={() => void runImport("merge")}>{restoring ? "Merging backup…" : "Merge"}</button>
+            onClick={() => void runImport("merge")}>{restoring ? t("mergingBackup") : t("merge")}</button>
         </>}
       >
         {restoring ? <ImportProgress progress={importProgress} cancelling={cancelling} /> : prepared ? <div className="space-y-4 text-sm text-text-primary" aria-busy={busy}>
@@ -272,70 +269,70 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             <BackupIcon className="mt-0.5 text-text-secondary" />
             <div className="min-w-0 flex-1">
               <p className="wrap-anywhere text-base font-semibold"><bdi>{prepared.backup.name}</bdi></p>
-              <p className="mt-1 text-compact leading-5 text-text-secondary">{formatFileSize(prepared.backup.size, locale)} · Exported {new Date(prepared.backup.exportedAt).toLocaleString(locale)}</p>
+              <p className="mt-1 text-compact leading-5 text-text-secondary">{t("fileDetails", { size: formatFileSize(prepared.backup.size, locale), date: new Date(prepared.backup.exportedAt).toLocaleString(locale) })}</p>
             </div>
           </div>
           <div>
-            <table className="w-full table-fixed tabular-nums" aria-label="Backup contents comparison">
+            <table className="w-full table-fixed tabular-nums" aria-label={t("comparisonLabel")}>
               <colgroup><col className="w-[48%]" /><col className="w-[26%]" /><col className="w-[26%]" /></colgroup>
               <thead><tr className="text-compact text-text-secondary">
-                <th scope="col" className="pb-2 text-start font-medium">Contents</th>
-                <th scope="col" className="pb-2 text-end font-medium">Current</th>
-                <th scope="col" className="pb-2 text-end font-medium">Backup</th>
+                <th scope="col" className="pb-2 text-start font-medium">{t("contents")}</th>
+                <th scope="col" className="pb-2 text-end font-medium">{t("current")}</th>
+                <th scope="col" className="pb-2 text-end font-medium">{t("backup")}</th>
               </tr></thead>
               <tbody>
                 <tr className="border-t border-border-control align-top">
-                  <th scope="row" className="py-2 text-start text-sm font-medium">All items</th>
+                  <th scope="row" className="py-2 text-start text-sm font-medium">{t("allItems")}</th>
                   {[prepared.current, prepared.backup.counts].map((counts, index) => (
                     <td key={index} className="py-2 text-end">
                       <span className="block text-display font-semibold leading-none">{counts.total}</span>
-                      <span className="mt-1 block text-compact text-text-secondary">{counts.active} active</span>
+                      <span className="mt-1 block text-compact text-text-secondary">{t("activeCount", { count: counts.active })}</span>
                     </td>
                   ))}
                 </tr>
                 <tr className="border-b border-border-control">
-                  <th scope="row" className="pb-2 text-start text-sm font-normal">In Trash</th>
+                  <th scope="row" className="pb-2 text-start text-sm font-normal">{t("inTrash")}</th>
                   <td className="pb-2 text-end text-sm">{prepared.current.trash}</td>
                   <td className="pb-2 text-end text-sm font-medium">{prepared.backup.counts.trash}</td>
                 </tr>
-                {itemRows.filter(({ key }) => prepared.current[key] > 0 || prepared.backup.counts[key] > 0).map(({ label, key, Icon }) => (
+                {itemRows.filter(({ key }) => prepared.current[key] > 0 || prepared.backup.counts[key] > 0).map(({ key, Icon }) => (
                   <tr key={key}>
-                    <th scope="row" className="py-1.5 text-start text-sm font-normal"><span className="flex items-center gap-2"><Icon className="size-4 text-text-secondary" />{label}</span></th>
+                    <th scope="row" className="py-1.5 text-start text-sm font-normal"><span className="flex items-center gap-2"><Icon className="size-4 text-text-secondary" />{t(`rows.${key}`)}</span></th>
                     <td className="py-1.5 text-end text-sm">{prepared.current[key]}</td>
                     <td className="py-1.5 text-end text-sm font-medium">{prepared.backup.counts[key]}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-compact leading-5 text-text-secondary">Item counts include Trash.</p>
-            {prepared.backup.counts.total === 0 ? <p className="mt-2 text-sm leading-5">This backup has no items. Replacing will remove your current library.</p> : null}
+            <p className="mt-2 text-compact leading-5 text-text-secondary">{t("countsIncludeTrash")}</p>
+            {prepared.backup.counts.total === 0 ? <p className="mt-2 text-sm leading-5">{t("emptyBackup")}</p> : null}
           </div>
           <details className="group">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-2 text-sm font-medium focus-visible:outline-1 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
-              Organization and media details <ChevronDownIcon className="group-open:rotate-180" />
+              {t("detailsSummary")} <ChevronDownIcon className="group-open:rotate-180" />
             </summary>
             <div className="grid grid-cols-[48%_26%_26%] text-compact font-medium text-text-secondary" aria-hidden="true">
-              <span>Details</span><span className="text-end">Current</span><span className="text-end">Backup</span>
+              <span>{t("details")}</span><span className="text-end">{t("current")}</span><span className="text-end">{t("backup")}</span>
             </div>
             <dl className="space-y-1 pb-1 text-sm tabular-nums">
-              {detailRows.map(({ label, key, Icon }) => (
+              {detailRows.map(({ key, Icon }) => (
                 <div key={key} className="grid grid-cols-[48%_26%_26%] items-center py-1">
-                  <dt className="flex min-w-0 items-center gap-2"><Icon className="size-4 text-text-secondary" />{label}</dt>
-                  <dd className="text-end" aria-label={`Current ${label}: ${prepared.current[key]}`}>{prepared.current[key]}</dd>
-                  <dd className="text-end font-medium" aria-label={`Backup ${label}: ${prepared.backup.counts[key]}`}>{prepared.backup.counts[key]}</dd>
+                  <dt className="flex min-w-0 items-center gap-2"><Icon className="size-4 text-text-secondary" />{t(`rows.${key}`)}</dt>
+                  <dd className="text-end" aria-label={t("currentValue", { label: t(`rows.${key}`), count: prepared.current[key] })}>{prepared.current[key]}</dd>
+                  <dd className="text-end font-medium" aria-label={t("backupValue", { label: t(`rows.${key}`), count: prepared.backup.counts[key] })}>{prepared.backup.counts[key]}</dd>
                 </div>
               ))}
             </dl>
           </details>
-          <p className="text-sm leading-6 text-text-secondary"><strong className="font-medium text-text-primary">Merge:</strong> Adds missing items. Matching items may use newer details. Tags combine; the newer item&apos;s collection wins.</p>
+          <p className="text-sm leading-6 text-text-secondary">{t.rich("mergeHelp", { strong: (chunks) => <strong className="font-medium text-text-primary">{chunks}</strong> })}</p>
           {error ? <p role="alert" className="text-text-danger">{error}</p> : null}
         </div> : null}
       </ModalDialog>
       <ConfirmDialog
-        open={prepared !== null && confirmReplace} title={restoring ? "Restoring library" : "Replace library?"}
-        description={restoring ? `Restoring ${prepared?.backup.counts.total ?? 0} items from ${prepared?.backup.name ?? "backup"}.` : prepared ? `Replace the current ${countText(prepared.current)} with ${countText(prepared.backup.counts)} from ${prepared.backup.name}? This removes the current library and cannot be undone.` : ""}
-        confirmLabel="Confirm replacement" pendingLabel="Restoring library…" busy={busy}
-        cancelLabel={restoring ? "Cancel import" : "Cancel"} onCancelWhileBusy={cancelRunningImport} cancelPending={cancelling}
+        open={prepared !== null && confirmReplace} title={restoring ? t("restoringTitle") : t("replaceTitle")}
+        description={restoring ? t("restoringDescription", { count: prepared?.backup.counts.total ?? 0, name: backupName }) : prepared ? t("replaceDescription", { current: countText(t, prepared.current), backup: countText(t, prepared.backup.counts), name: prepared.backup.name }) : ""}
+        confirmLabel={t("confirmReplacement")} pendingLabel={t("operations.restore")} busy={busy}
+        cancelLabel={restoring ? t("cancelImport") : t("cancel")} onCancelWhileBusy={cancelRunningImport} cancelPending={cancelling}
         onConfirm={() => void runImport("replace")}
         onOpenChange={(open) => { if (!open && !operationRef.current) setConfirmReplace(false); }}
       >
@@ -356,14 +353,14 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
           }
           id="backup-heading"
         >
-          Backup
+          {t("heading")}
         </h2>
       </div>
       {onClose ? (
         <button
           type="button"
           className={iconButtonClassName({ size: "md", className: "size-9 shrink" })}
-          aria-label="Close backup"
+          aria-label={t("closeLabel")}
           disabled={busy}
           onClick={onClose}
         >
@@ -390,7 +387,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         disabled={busy}
         onClick={() => void onExport()}
       >
-        Export
+        {t("export")}
       </button>
       <button
         className={buttonClass}
@@ -398,7 +395,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
         disabled={busy}
         onClick={onPickImport}
       >
-        Import
+        {t("import")}
       </button>
       <BookmarksImport buttonClassName={buttonClass} disabled={busy} onBusyChange={setBookmarksImportBusy} />
       <ImageFolderImport buttonClassName={buttonClass} disabled={busy} onBusyChange={setImageImportBusy} onOpenFolder={openImportedFolder} />
@@ -411,7 +408,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       {(operation || status) ? <p className="mt-2 text-sm text-text-primary">{operationLabel ?? status}</p> : null}
       {operation ? <progress aria-label={operationLabel ?? undefined} className="mt-2 h-2 w-full accent-action-primary" /> : null}
       {operation === "read-backup" && prepared === null ? <button className={`mt-2 ${dialogButtonClass}`} type="button" disabled={cancelling}
-        onClick={cancelRunningImport}>{cancelling ? "Canceling…" : "Cancel reading"}</button> : null}
+        onClick={cancelRunningImport}>{cancelling ? t("cancelling") : t("cancelReading")}</button> : null}
       {error ? (
         <p
           className={
@@ -434,18 +431,19 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
   const description =
     variant === "sidebar" ? (
       <p className="mt-2 text-xs leading-relaxed text-text-secondary">
-        <strong className="font-medium">Keepall</strong> backup: export or import
-        a <code className="text-meta">.keepall.zip</code> file.{" "}
-        <strong className="font-medium">Browser</strong>: HTML bookmarks.{" "}
-        <strong className="font-medium">Images</strong>: a folder of files (20 MiB
-        each max).
+        {t.rich("sidebarDescription", {
+          file: BACKUP_FILE,
+          strong: (chunks) => <strong className="font-medium">{chunks}</strong>,
+          code: (chunks) => <code className="text-meta">{chunks}</code>,
+        })}
       </p>
     ) : (
       <p className="mt-2 text-sm text-text-secondary">
-        <strong className="font-medium">Keepall</strong> backup: export or import
-        a <code>.keepall.zip</code> file. <strong className="font-medium">Browser</strong>
-        : HTML bookmarks. <strong className="font-medium">Images</strong>: pick a
-        folder (20 MiB per file max).
+        {t.rich("pageDescription", {
+          file: BACKUP_FILE,
+          strong: (chunks) => <strong className="font-medium">{chunks}</strong>,
+          code: (chunks) => <code>{chunks}</code>,
+        })}
       </p>
     );
 
@@ -472,7 +470,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
       >
         {heading}
         <p className="mt-1 text-sm leading-6 text-text-secondary">
-          A <code>.keepall.zip</code> copy of your library, media, and Trash.
+          {t.rich("intro", { file: BACKUP_FILE, code: (chunks) => <code>{chunks}</code> })}
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <button
@@ -481,7 +479,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             disabled={busy}
             onClick={() => void onExport()}
           >
-            <DownloadIcon className="size-4" /> Export backup
+            <DownloadIcon className="size-4" /> {t("exportBackup")}
           </button>
           <button
             className={buttonClass}
@@ -489,12 +487,12 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             disabled={busy}
             onClick={onPickImport}
           >
-            <UploadIcon className="size-4" /> Import backup
+            <UploadIcon className="size-4" /> {t("importBackup")}
           </button>
           {fileInput}
         </div>
-        <p className="mt-3 text-xs leading-5 text-text-secondary">Keep exported files outside the browser. Use Import backup to recover or move your library.</p>
-        <div className="mt-3"><SettingsLink href="/help/storage-and-backups#restore">Recovery guide</SettingsLink></div>
+        <p className="mt-3 text-xs leading-5 text-text-secondary">{t("keepOutside")}</p>
+        <div className="mt-3"><SettingsLink href="/help/storage-and-backups#restore">{t("recoveryGuide")}</SettingsLink></div>
         {feedback}
         <BackupFolderControls disabled={operation !== null || imageImportBusy || bookmarksImportBusy} onBusyChange={setFolderBackupBusy} />
       </section>

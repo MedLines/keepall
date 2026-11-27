@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormatLocale } from "@/i18n/use-translations";
+import { useFormatLocale, useTranslations } from "@/i18n/use-translations";
 import { useEffect, useState } from "react";
 import { RefreshIcon } from "../shell-icons";
 import { buttonClassName } from "@/components/ui/button";
@@ -60,7 +60,8 @@ export function StorageHealth() {
   const [snapshot, setSnapshot] = useState<StorageHealthSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const locale = useFormatLocale();
-  const placeholder = loading && !snapshot ? "Checking…" : "Unavailable";
+  const t = useTranslations("StorageHealth");
+  const placeholder = loading && !snapshot ? t("checking") : t("unavailable");
   const usage =
     snapshot?.usage == null ? placeholder : formatBytes(snapshot.usage, locale);
   const quota =
@@ -69,8 +70,8 @@ export function StorageHealth() {
     snapshot?.persisted == null
       ? placeholder
       : snapshot.persisted
-        ? "Granted"
-        : "Not granted";
+        ? t("granted")
+        : t("notGranted");
   const usedPercent = snapshot?.usage != null && snapshot.quota != null
     ? Math.min(100, snapshot.usage / snapshot.quota * 100)
     : null;
@@ -98,7 +99,7 @@ export function StorageHealth() {
     <div className="mt-5 border-t border-border-control pt-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-medium text-text-primary">
-          Browser storage health
+          {t("heading")}
         </p>
         <button
           className={buttonClassName({ size: "none", className: "min-h-11 gap-2 px-3 text-sm font-medium justify-start" })}
@@ -107,20 +108,20 @@ export function StorageHealth() {
           onClick={() => void refresh()}
         >
           <RefreshIcon className="size-4" />
-          {loading && snapshot ? "Refreshing…" : "Refresh storage status"}
+          {loading && snapshot ? t("refreshing") : t("refresh")}
         </button>
       </div>
       <dl className="mt-4 grid gap-4 sm:grid-cols-3" aria-live="polite" aria-busy={loading}>
         <div>
-          <dt className="text-xs text-text-secondary">Site storage used</dt>
+          <dt className="text-xs text-text-secondary">{t("used")}</dt>
           <dd className="mt-1 min-h-5 text-sm font-medium text-text-primary"><StorageHealthValue value={usage} checking={loading && !snapshot} /></dd>
         </div>
         <div>
-          <dt className="text-xs text-text-secondary">Estimated allowance</dt>
+          <dt className="text-xs text-text-secondary">{t("allowance")}</dt>
           <dd className="mt-1 min-h-5 text-sm font-medium text-text-primary"><StorageHealthValue value={quota} checking={loading && !snapshot} /></dd>
         </div>
         <div>
-          <dt className="text-xs text-text-secondary">Persistent storage</dt>
+          <dt className="text-xs text-text-secondary">{t("persistent")}</dt>
           <dd className="mt-1 min-h-5 text-sm font-medium text-text-primary">
             <StorageHealthValue value={persistence} checking={loading && !snapshot} />
           </dd>
@@ -129,23 +130,23 @@ export function StorageHealth() {
       <div className="mt-4 h-1.5">
       {usedPercent !== null ? <div
         role="meter"
-        aria-label="Estimated storage usage"
+        aria-label={t("meterLabel")}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={usedPercent}
-        aria-valuetext={`${usage} used out of ${quota}`}
+        aria-valuetext={t("meterValue", { usage, quota })}
         className="h-full overflow-hidden rounded-full bg-bg-raised"
       ><div className="storage-health-meter h-full rounded-full bg-text-primary" style={{ transform: `scaleX(${usedPercent / 100})` }} /></div> : null}
       </div>
       <p className="mt-4 text-xs leading-5 text-text-secondary">
-        Usage and allowance are estimates, including offline files. Persistent
-        storage reduces automatic clearing; it is not a backup.
+        {t("note")}
       </p>
     </div>
   );
 }
 
 function StorageHealthValue({ value, checking }: { value: string; checking: boolean }) {
-  return checking ? <><span aria-hidden="true" className="storage-health-placeholder" /><span className="sr-only">Checking…</span></>
+  const t = useTranslations("StorageHealth");
+  return checking ? <><span aria-hidden="true" className="storage-health-placeholder" /><span className="sr-only">{t("checking")}</span></>
     : <span>{value}</span>;
 }
