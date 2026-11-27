@@ -64,7 +64,10 @@ const BUTTON_PADDING_SYNTAX = [
 const TRANSLATED_FILES = [
   "src/app/backup-panel.tsx",
   "src/app/language-setting.tsx",
+  "src/app/settings/agents-panel.tsx",
+  "src/app/settings/agents-settings.tsx",
   "src/app/settings/backup-folder-controls.tsx",
+  "src/app/settings/connect-agent-panel.tsx",
   "src/app/settings/keyboard-shortcuts-settings.tsx",
   "src/app/settings/settings-page-content.tsx",
   "src/app/settings/settings-sections.tsx",

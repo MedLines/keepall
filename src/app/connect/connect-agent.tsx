@@ -12,7 +12,7 @@ import {
 import { AGENT_PAIRINGS_CHANNEL, saveAgentPairing } from "@/persistence/agent-pairings";
 import { LogoIcon } from "../shell-icons";
 import { wakeExtensionBridge } from "../extension-wake";
-import { ACCESS_CHOICES } from "../settings/agents-panel";
+import { useAccessChoices } from "../settings/agents-panel";
 
 const CONFIRM_TIMEOUT_MS = 20_000;
 
@@ -58,6 +58,7 @@ function pair(link: PairingLink): Promise<Bytes> {
 export function ConnectAgent() {
   const [state, setState] = useState<State>({ step: "loading" });
   const [access, setAccess] = useState<AgentAccess>("suggest");
+  const accessChoices = useAccessChoices();
   const started = useRef(false);
   const parsed = useRef<PairingLink | null>(undefined);
 
@@ -117,7 +118,7 @@ export function ConnectAgent() {
             </p>
             <fieldset className="mt-5 grid gap-2" disabled={state.step === "connecting"}>
               <legend className="mb-2 text-sm font-medium text-text-primary">What {state.link.agentName} can do</legend>
-              {ACCESS_CHOICES.map((choice) => (
+              {accessChoices.map((choice) => (
                 <RadioCard key={choice.value} name="access" value={choice.value} checked={access === choice.value} onChange={() => setAccess(choice.value)}>
                   <span><span className="block font-medium text-text-primary">{choice.label}</span><span className="mt-0.5 block text-text-secondary">{choice.description}</span></span>
                 </RadioCard>
