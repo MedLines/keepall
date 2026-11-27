@@ -77,6 +77,8 @@ Notes, MD, and TXT share `LibraryReadingCard`. Place the title and file metadata
 
 Markdown frontmatter is quiet, bounded plain metadata in the preview. The original document stays intact. Preview links, images, HTML, and inputs cannot become active content. Search highlighting still applies to body and metadata. TXT identifies imported `.txt` files; plain written notes use Note and Markdown notes use MD.
 
+Markdown checklist boxes are clickable only on a note's own page, where a click saves the note with that one `[ ]` or `[x]` flipped. Everywhere else (cards, quick previews, the inspector, documents, captions, link notes, agent review, capture previews) they stay disabled. Each box is named by its item's text, and a task's text starts on the list indent on every line, so wrapped lines line up with the first.
+
 ## Library startup
 
 Cold startup shows placeholders only after 150ms. Item grids use CSS masonry with varied media proportions, while list placeholders follow the selected column count. All collections reuse the existing folder artwork; All tags use preview collages. Organization placeholders follow their own grid and list breakpoints rather than item-list column preferences. Keep placeholders noninteractive and bound them to twelve entries.

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { remarkHighlight } from "../app/remark-highlight";
+import { rehypeTaskList } from "../app/rehype-task-list";
 
 const h = React.createElement;
 const components = {
@@ -12,9 +13,8 @@ const components = {
       : h("span", null, children);
   },
   img({ alt }) { return h("span", { className: "text-text-secondary" }, `Image: ${alt || "no description"}`); },
-  input({ checked }) {
-    return h("input", { type: "checkbox", checked, disabled: true, readOnly: true,
-      "aria-label": checked ? "Completed checklist item" : "Incomplete checklist item" });
+  input({ checked, "aria-label": label }) {
+    return h("input", { type: "checkbox", checked, disabled: true, readOnly: true, "aria-label": label || "Checklist item" });
   },
   ...Object.fromEntries([1, 2, 3, 4, 5, 6].map(level => [
     `h${level}`, ({ children }) => h(`h${Math.min(6, level + 2)}`, null, children),
@@ -23,7 +23,7 @@ const components = {
 
 export function NotePreview({ content, format }) {
   return format === "markdown"
-    ? h("div", { className: "note-markdown min-w-0 break-words" }, h(Markdown, { remarkPlugins: [remarkGfm, remarkHighlight], urlTransform: defaultUrlTransform, components }, content))
+    ? h("div", { className: "note-markdown min-w-0 break-words" }, h(Markdown, { remarkPlugins: [remarkGfm, remarkHighlight], rehypePlugins: [rehypeTaskList], urlTransform: defaultUrlTransform, components }, content))
     : h("p", { className: "note-plain whitespace-pre-wrap break-words text-base leading-relaxed" }, content);
 }
 

@@ -12,7 +12,8 @@
 .note-markdown ol { list-style: decimal; }
 .note-markdown li + li { margin-block-start: 0.25rem; }
 .note-markdown .task-list-item { list-style: none; }
-.note-markdown .task-list-item input { margin-inline: -1.5rem 0.5rem; accent-color: var(--color-text-primary); }
+/* The box (13px, the browser default, pinned so the sum is exact) and its gap fill the list indent, so every line of a task's text starts on the indent edge. */
+.note-markdown .task-list-item input { inline-size: 0.8125rem; block-size: 0.8125rem; margin-inline: -1.5rem 0.6875rem; accent-color: var(--color-text-primary); }
 .note-markdown blockquote { border-inline-start: 2px solid var(--color-border-subtle); padding-inline-start: 1rem; color: var(--color-text-secondary); }
 .note-markdown :not(pre) > code { border-radius: 0.3rem; background: var(--color-bg-raised); padding: 0.1rem 0.3rem; font-size: 0.9em; }
 .note-markdown pre { max-width: 100%; overflow-x: auto; border: 1px solid var(--color-border-control); border-radius: var(--radius-control-xs); background: var(--color-bg-control); padding: 1rem; font-size: 0.875rem; line-height: 1.5; }

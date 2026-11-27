@@ -27,7 +27,7 @@ test("edits title and personal notes while preserving the exact original downloa
   const item = await createDocument({ fileName: "source.md", bytes });
   render(<DocumentItemPage itemId={item.id} returnHref="/?type=document" />);
   expect(await screen.findByRole("heading", { name: "Original heading" })).toBeVisible();
-  expect(screen.getByRole("checkbox", { name: "Completed checklist item" })).toBeDisabled();
+  expect(screen.getByRole("checkbox", { name: "Unicode café مرحبا" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Edit document" }));
   await screen.findByLabelText("Markdown content");
   const editor = screen.getByRole("dialog", { name: "Edit document" });
