@@ -47,7 +47,7 @@ svg.i.xs { width: 12px; height: 12px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
 .page-head h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
 .page-head p { margin: 0; color: var(--text-2); font-size: 14px; max-width: 70ch; text-wrap: pretty; }
-.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
 .tab { text-align: left; padding: 12px 14px; border-radius: var(--r-lg); background: var(--shell); border: 1px solid var(--control); transition: background .15s, border-color .15s; }
 .tab:hover { background: oklch(0.23 0 0); }
 .tab[aria-selected="true"] { border-color: var(--edge); background: var(--raised); }
@@ -164,6 +164,10 @@ svg.i.xs { width: 12px; height: 12px; }
 .b-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 6px; }
 .b-panel .scroll { flex: 1; padding: 4px 12px 8px; }
 
+/* Prototype E: pinned on top + switcher */
+.e-pinned { max-height: 192px; flex: none; }
+.e-rule { height: 1px; margin: 10px 22px 12px; background: var(--control); flex: none; }
+
 /* Prototype C: drill-in pages */
 .c-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .c-page { position: absolute; inset: 0; display: flex; flex-direction: column; }
@@ -253,7 +257,7 @@ svg.i.xs { width: 12px; height: 12px; }
   <header class="page-head">
     <div>
       <h1>Sidebar prototypes</h1>
-      <p>Four ways to stop Collections and Tags from pushing each other around. Every prototype keeps today's features: counts, search, pin and reorder, rename, delete, drag items onto a collection, the overview pages and the icon rail. The data is invented and the page is clickable.</p>
+      <p>Five ways to stop Collections and Tags from pushing each other around. Every prototype keeps today's features: counts, search, pin and reorder, rename, delete, drag items onto a collection, the overview pages and the icon rail. The data is invented and the page is clickable.</p>
     </div>
   </header>
 
@@ -328,6 +332,23 @@ const PROTOS = {
       try: "Open Tags ›, switch sort to Most used, press Escape. Drag a card and hold it over Collections ›.",
     },
   },
+  E: {
+    name: "Switcher + pinned",
+    tag: "Pinned collections on top, switcher below",
+    notes: {
+      what: [
+        "<strong>Pinned collections sit on top</strong>, right under the library views, always visible whichever list is open below.",
+        "Below them, the <strong>Collections / Tags switcher</strong> from B fills the rest of the height in a panel that never changes size.",
+        "Pinned rows are your <strong>drop targets</strong>: drag an item straight onto one without opening anything. The Collections list below skips them so nothing shows twice.",
+        "Search, overview and row actions work like B. Drag a pinned row to reorder it.",
+      ],
+      trade: [
+        "Every pinned collection takes height from the list below. Past five it scrolls in its own box.",
+        "Tags can't be pinned today, so the top block is collections only.",
+      ],
+      try: "Switch to Tags: the pinned block stays put. Pin another collection from its ⋮ menu. Drag a card onto a pinned row.",
+    },
+  },
   D: {
     name: "Flyout",
     tag: "Sidebar stays still; lists open beside it",
@@ -348,15 +369,15 @@ const PROTOS = {
 };
 
 const COVERAGE = [
-  ["Library views and counts", "Unchanged", "Unchanged", "Unchanged", "Unchanged"],
-  ["Search collections / tags", "One filter for both", "One box, scoped to the tab", "Search on each page", "Search in each flyout"],
-  ["All collections / All tags", "Icon on each header, plus “All 188 tags” row", "Grid button beside search", "Grid button in page header", "Open overview in flyout footer"],
-  ["Pin, reorder, rename, delete", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows"],
-  ["Drag items onto a collection", "Any visible collection", "Panel switches to Collections", "Pinned on main page; hover › to open", "Pinned in sidebar; hover to open flyout"],
-  ["Delete tag", "Row ⋮ menu", "Row ⋮ menu", "Row ⋮ menu", "Right-click or ⋮ in flyout"],
-  ["Empty Trash", "Trash ⋮ menu", "Trash ⋮ menu", "Trash ⋮ menu", "Trash ⋮ menu"],
-  ["Icon rail", "Opens sidebar at the section", "Opens sidebar on that tab", "Opens sidebar on that page", "Opens the flyout directly"],
-  ["Remembered state", "Which sections are open", "Last tab, per-tab query", "Last page and sort", "Tag sort"],
+  ["Library views and counts", "Unchanged", "Unchanged", "Unchanged", "Unchanged", "Unchanged"],
+  ["Search collections / tags", "One filter for both", "One box, scoped to the tab", "Search on each page", "Search in each flyout", "One box, scoped to the tab"],
+  ["All collections / All tags", "Icon on each header, plus “All 188 tags” row", "Grid button beside search", "Grid button in page header", "Open overview in flyout footer", "Grid button beside search"],
+  ["Pin, reorder, rename, delete", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows"],
+  ["Drag items onto a collection", "Any visible collection", "Panel switches to Collections", "Pinned on main page; hover › to open", "Pinned in sidebar; hover to open flyout", "Pinned always on top; panel switches to Collections"],
+  ["Delete tag", "Row ⋮ menu", "Row ⋮ menu", "Row ⋮ menu", "Right-click or ⋮ in flyout", "Row ⋮ menu"],
+  ["Empty Trash", "Trash ⋮ menu", "Trash ⋮ menu", "Trash ⋮ menu", "Trash ⋮ menu", "Trash ⋮ menu"],
+  ["Icon rail", "Opens sidebar at the section", "Opens sidebar on that tab", "Opens sidebar on that page", "Opens the flyout directly", "Opens sidebar on that tab"],
+  ["Remembered state", "Which sections are open", "Last tab, per-tab query", "Last page and sort", "Tag sort", "Last tab, per-tab query"],
 ];
 
 // ---------- Invented data ----------
@@ -534,6 +555,34 @@ function protoB() {
     ${footer()}`;
 }
 
+// ---------- Prototype E ----------
+function protoE() {
+  const tab = S.b.tab;
+  const q = S.b.q[tab];
+  const { p, rest } = byPinned();
+  let list;
+  if (tab === "collections") {
+    const cs = q.trim() ? collections.filter(c => match(c.name, q)) : rest;
+    list = cs.length ? cs.map(c => colRow(c, q)).join("") : `<p class="empty">No collections match “${esc(q)}”.</p>`;
+  } else {
+    const ts = tags.filter(t => match(t.name, q));
+    list = ts.length ? ts.map(t => tagRow(t, q)).join("") : `<p class="empty">No tags match “${esc(q)}”.</p>`;
+  }
+  const overview = tab === "collections" ? "collections" : "tags";
+  return `${brand()}${primaryNav()}
+    <div class="sec-label" style="margin:14px 12px 0">Pinned<span class="grow"></span></div>
+    <div class="nav e-pinned scroll">${p.length ? p.map(c => colRow(c)).join("") : `<p class="empty" style="padding-left:12px">Pin a collection from its ⋮ menu to keep it here.</p>`}</div>
+    <div class="e-rule"></div>
+    <div class="seg" role="tablist" data-tab="${tab}"><span class="thumb"></span>
+      <button role="tab" aria-selected="${tab === "collections"}" data-btab="collections" data-spring="collections">Collections <span>${collections.length}</span></button>
+      <button role="tab" aria-selected="${tab === "tags"}" data-btab="tags">Tags <span>${tags.length}</span></button>
+    </div>
+    <div class="b-tools">${search("b", tab === "collections" ? "Search collections" : "Search tags", q)}
+      <button class="icon-btn" style="width:32px;height:32px" data-go="${overview}"${cur(isActive(overview))} aria-label="${tab === "collections" ? "All collections" : "All tags"}" aria-pressed="${isActive(overview)}">${icon("grid", "sm")}</button></div>
+    <div class="b-panel" role="tabpanel"><div class="scroll fade" data-scroll="e-${tab}">${list}</div></div>
+    ${footer()}`;
+}
+
 // ---------- Prototype C ----------
 function protoC() {
   const { p } = byPinned();
@@ -689,7 +738,7 @@ function render() {
   sidebarEl.className = "sidebar" + (S.rail ? " rail" : "");
   let html;
   if (S.rail) html = `${brand()}${primaryNav()}${railMiddle()}${footer()}`;
-  else html = { A: protoA, B: protoB, C: protoC, D: protoD }[S.proto]();
+  else html = { A: protoA, B: protoB, C: protoC, D: protoD, E: protoE }[S.proto]();
   sidebarEl.innerHTML = html;
   contentEl.innerHTML = content();
   frameEl.querySelectorAll(".flyout, .menu").forEach(el => el.remove());
@@ -704,14 +753,14 @@ function render() {
 }
 
 function renderChrome() {
-  document.getElementById("tabs").innerHTML = Object.entries(PROTOS).map(([k, p]) =>
+  document.getElementById("tabs").innerHTML = Object.entries(PROTOS).sort().map(([k, p]) =>
     `<button class="tab" role="tab" aria-selected="${S.proto === k}" data-proto="${k}"><b><span>${k}</span>${p.name}</b><small>${p.tag}</small></button>`).join("");
   const n = PROTOS[S.proto].notes;
   document.getElementById("notes").innerHTML = `<h2>${S.proto}. ${PROTOS[S.proto].name}</h2>
     <h3>What changes</h3><ul>${n.what.map(x => `<li>${x}</li>`).join("")}</ul>
     <h3>Trade-offs</h3><ul>${n.trade.map(x => `<li>${x}</li>`).join("")}</ul>
     <div class="try"><b>Try</b>${n.try}</div>`;
-  document.getElementById("coverage").innerHTML = `<tr><th>Feature</th>${Object.entries(PROTOS).map(([k, p]) => `<th>${k}. ${p.name}</th>`).join("")}</tr>` +
+  document.getElementById("coverage").innerHTML = `<tr><th>Feature</th>${Object.entries(PROTOS).sort().map(([k, p]) => `<th>${k}. ${p.name}</th>`).join("")}</tr>` +
     COVERAGE.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("");
 }
 
@@ -740,7 +789,7 @@ function railOpen(which) {
   if (S.proto === "D") return openFly(S.d.fly === which ? null : which);
   S.rail = false;
   if (S.proto === "A") { if (which === "collections") S.a.colOpen = true; else S.a.tagOpen = true; }
-  if (S.proto === "B") S.b.tab = which;
+  if (S.proto === "B" || S.proto === "E") S.b.tab = which;
   if (S.proto === "C") { S.c.page = which; S.c.dir = "fwd"; }
   render();
 }
@@ -862,7 +911,7 @@ function spring(key) {
   clearTimeout(springTimer); springKey = key;
   if (!key) return;
   springTimer = setTimeout(() => {
-    if (S.proto === "B") S.b.tab = "collections";
+    if (S.proto === "B" || S.proto === "E") S.b.tab = "collections";
     if (S.proto === "C") { S.c.page = "collections"; S.c.dir = "fwd"; }
     if (S.proto === "D") { S.d.fly = "collections"; S.d.q = ""; }
     if (S.rail && S.proto !== "D") S.rail = false;
@@ -877,7 +926,7 @@ frameEl.addEventListener("dragstart", e => {
     dragCard = card; card.classList.add("dragging");
     e.dataTransfer.setData("text/x-card", card.dataset.card); e.dataTransfer.effectAllowed = "move";
     S.dragging = true;
-    if (S.proto === "B" && S.b.tab !== "collections") { S.b.tab = "collections"; setTimeout(render, 0); }
+    if ((S.proto === "B" || S.proto === "E") && S.b.tab !== "collections") { S.b.tab = "collections"; setTimeout(render, 0); }
   } else if (reorder) {
     e.dataTransfer.setData("text/x-reorder", reorder.dataset.reorder); e.dataTransfer.effectAllowed = "move";
   }
