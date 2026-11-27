@@ -4,6 +4,7 @@ import { Menu } from "@base-ui/react/menu";
 import { ChevronDownIcon, LinkIcon, NoteIcon, SelectionCheckedIcon } from "./shell-icons";
 import { iconButtonClassName } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
+import { useTranslations } from "@/i18n/use-translations";
 
 type Props = {
   value: "link" | "note";
@@ -12,14 +13,15 @@ type Props = {
 };
 
 export function CaptureTypeMenu({ value, disabled, onChange }: Props) {
+  const t = useTranslations("Capture");
   return (
     <Menu.Root modal={false} disabled={disabled}>
-      <Tooltip content="Change type" describe={false}><Menu.Trigger className={iconButtonClassName({ size: "sm" })} aria-label="Change type">
+      <Tooltip content={t("changeType")} describe={false}><Menu.Trigger className={iconButtonClassName({ size: "sm" })} aria-label={t("changeType")}>
         <ChevronDownIcon className="size-4" />
       </Menu.Trigger></Tooltip>
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[80] data-[anchor-hidden]:invisible">
-          <Menu.Popup aria-label="Save as" className="ui-menu-popup ui-popover w-44 max-w-[calc(100vw-1rem)] outline-none">
+          <Menu.Popup aria-label={t("saveAs")} className="ui-menu-popup ui-popover w-44 max-w-[calc(100vw-1rem)] outline-none">
             <Menu.RadioGroup value={value} onValueChange={(next) => {
               if (next === "link" || next === "note") onChange(next);
             }}>
@@ -27,7 +29,7 @@ export function CaptureTypeMenu({ value, disabled, onChange }: Props) {
                 <Menu.RadioItem key={type} value={type} closeOnClick
                   className="ui-menu-item flex items-center gap-2 text-sm outline-none data-[highlighted]:bg-bg-active data-[disabled]:opacity-50">
                   {type === "link" ? <LinkIcon className="size-4" /> : <NoteIcon className="size-4" />}
-                  <span>Save as {type}</span>
+                  <span>{t(`saveAsType.${type}`)}</span>
                   <Menu.RadioItemIndicator className="ml-auto"><SelectionCheckedIcon className="size-4" /></Menu.RadioItemIndicator>
                 </Menu.RadioItem>
               ))}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "@/i18n/use-translations";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScrollTextarea } from "@/components/ui/scroll-textarea";
 
@@ -17,8 +18,8 @@ import { buttonClassName } from "@/components/ui/button";
 const TIMING = { swap: 150 }; // interruptible interaction, no delayed stages
 const PANEL = { offsetY: 4, easing: "cubic-bezier(0.2, 0, 0, 1)" };
 const OPTIONS = [
-  ["gallery", "One image item", "Keep these images together in a gallery."],
-  ["separate", "Separate image items", "Save each image as its own library item."],
+  ["gallery", "galleryTitle", "galleryDescription"],
+  ["separate", "separateTitle", "separateDescription"],
 ] as const;
 
 type Props = {
@@ -37,6 +38,7 @@ type Props = {
 
 export function CaptureImageLayout({ mode, disabled, value, format, preview, label, inputRef, onModeChange, onChange, onFormatChange, onPreviewChange }: Props) {
   const stage = mode === "gallery" ? 1 : 0;
+  const t = useTranslations("Capture");
   const choiceRef = useRef<HTMLInputElement>(null);
   const focusFrame = useRef<number | null>(null);
   useEffect(() => () => { if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current); }, []);
@@ -61,25 +63,25 @@ export function CaptureImageLayout({ mode, disabled, value, format, preview, lab
     <fieldset className={`absolute inset-0 flex flex-col gap-2 ${stage === 1 ? "pointer-events-none" : ""}`} disabled={disabled}
       // eslint-disable-next-line shadcn/no-inline-styles -- Crossfade layer state is computed per stage.
       aria-hidden={stage === 1} inert={stage === 1} style={layer(stage === 0)}>
-      <legend className="mb-2 text-sm font-medium">Save images as</legend>
+      <legend className="mb-2 text-sm font-medium">{t("saveImagesAs")}</legend>
       {OPTIONS.map(([option, title, description]) => <label key={option} className={`ui-field flex min-h-16 cursor-pointer items-start gap-3 p-3 ${mode === option ? "border-action-primary" : ""}`}>
         <input ref={option === "gallery" ? choiceRef : undefined} type="radio" name="capture-image-layout" checked={mode === option}
           onChange={() => changeMode(option)} className="mt-1 size-4 shrink-0 accent-action-primary" />
         {option === "gallery" ? <ImagesIcon className="mt-0.5 shrink-0 text-text-secondary" /> : <GridIcon className="mt-0.5 shrink-0 text-text-secondary" />}
-        <span><span className="block text-sm font-medium">{title}</span><span className="mt-1 block text-xs text-text-secondary">{description}</span></span>
+        <span><span className="block text-sm font-medium">{t(title)}</span><span className="mt-1 block text-xs text-text-secondary">{t(description)}</span></span>
       </label>)}
     </fieldset>
     <div className={`absolute inset-0 flex min-h-0 flex-col gap-2 ${stage === 0 ? "pointer-events-none" : ""}`}
       // eslint-disable-next-line shadcn/no-inline-styles -- Crossfade layer state is computed per stage.
       aria-hidden={stage === 0} inert={stage === 0} style={layer(stage === 1)}>
       <div className="flex min-h-8 items-center justify-between gap-2">
-        <label htmlFor="capture-image-caption" className="text-sm font-medium">Caption (optional)</label>
-        <button type="button" className={buttonClassName({ size: "none", className: "inline-block min-h-8 shrink-0 px-2 text-xs" })} disabled={disabled} onClick={() => changeMode(null)}>Change image layout</button>
+        <label htmlFor="capture-image-caption" className="text-sm font-medium">{t("captionOptional")}</label>
+        <button type="button" className={buttonClassName({ size: "none", className: "inline-block min-h-8 shrink-0 px-2 text-xs" })} disabled={disabled} onClick={() => changeMode(null)}>{t("changeLayout")}</button>
       </div>
       <NoteEditorControls format={format} preview={preview} disabled={disabled} onFormatChange={onFormatChange} onPreviewChange={onPreviewChange} />
-      {preview ? <ScrollArea role="region" aria-label="Image note preview" className="ui-field min-h-0 flex-1 rounded-input" viewportClassName="scroll-fade"><div className="p-3"><NoteContent content={value} format={format} /></div></ScrollArea>
+      {preview ? <ScrollArea role="region" aria-label={t("imageNotePreview")} className="ui-field min-h-0 flex-1 rounded-input" viewportClassName="scroll-fade"><div className="p-3"><NoteContent content={value} format={format} /></div></ScrollArea>
         : <ScrollTextarea ref={inputRef} id="capture-image-caption" aria-label={label} className="ui-field min-h-0 flex-1 resize-none rounded-input px-4 py-3 text-sm disabled:opacity-60"
-          placeholder="Optional source URL or caption" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />}
+          placeholder={t("sourceOrCaption")} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />}
     </div>
   </div>;
 }

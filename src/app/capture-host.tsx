@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations, type Translations } from "@/i18n/use-translations";
 import { captureStyles } from "./capture-styles";
 
 import { DEFAULT_SHORTCUTS, shortcutMatches } from "@/domain/keyboard-shortcuts";
@@ -108,16 +109,13 @@ function revokeImageDraftPreviews(drafts: ImageDraft[]): void {
   }
 }
 
-function imageSelectionError(error: unknown, file: File | null): string {
+function imageSelectionError(t: Translations<"Capture">, error: unknown, file: File | null): string {
   if (file && !isAllowedLocalImageMime(file.type)) {
-    const formats = "Choose PNG, JPEG, GIF, WebP, or AVIF images.";
-    return file.type.startsWith("video/")
-      ? `Videos can't be added here. ${formats}`
-      : `This file type can't be added here. ${formats}`;
+    return file.type.startsWith("video/") ? t("videoNotAllowed") : t("typeNotAllowed");
   }
   return error instanceof ImageValidationError
     ? error.message
-    : "Couldn't read the selected image. Try again.";
+    : t("imageReadFailed");
 }
 
 async function applyCaptureOrg(
@@ -157,6 +155,8 @@ async function applyCaptureOrg(
 }
 
 export function CaptureHost() {
+  const t = useTranslations("Capture");
+  const common = useTranslations("Common");
   const [state, dispatch] = useReducer(captureReducer, initialCaptureState);
   const [imageDrafts, setImageDrafts] = useState<ImageDraft[]>([]);
   const [videoDraft, setVideoDraft] = useState<{ file: File; poster: Blob | null } | null>(null);
@@ -531,7 +531,7 @@ export function CaptureHost() {
       return true;
     } catch (caught) {
       if (generation !== imageReadGenerationRef.current) return;
-      const message = imageSelectionError(caught, currentFile);
+      const message = imageSelectionError(t, caught, currentFile);
       imageUploadErrorRef.current = message;
       setImageUploadError(message);
       if (status === "reading") {
@@ -629,7 +629,7 @@ export function CaptureHost() {
       dispatch({ type: "input", text: combined });
     } catch (error) {
       if (generation === documentReadGenerationRef.current) {
-        dispatch({ type: "failed", message: error instanceof DocumentValidationError ? error.message : "Couldn't read this file. Try again." });
+        dispatch({ type: "failed", message: error instanceof DocumentValidationError ? error.message : t("fileReadFailed") });
       }
     } finally {
       if (generation === documentReadGenerationRef.current) {
@@ -651,7 +651,7 @@ export function CaptureHost() {
       dispatch({ type: "input", text: "" });
     } catch (error) {
       if (generation !== videoPreparationGenerationRef.current) return;
-      dispatch({ type: "failed", message: error instanceof VideoValidationError ? error.message : "Couldn't add video." });
+      dispatch({ type: "failed", message: error instanceof VideoValidationError ? error.message : t("videoAddFailed") });
     } finally {
       if (generation === videoPreparationGenerationRef.current) {
         setVideoPreparing(false);
@@ -719,9 +719,9 @@ export function CaptureHost() {
       const failed = results.filter((result) => result.status === "failed").length;
       if (saved) window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
       if (summary.cancelled) {
-        setImportNotice(`Import canceled. ${saved} saved, ${failed} failed, ${results.filter(result => result.status === "cancelled").length} not imported. Continue imports only the remaining files.`);
+        setImportNotice(t("importCancelledSummary", { saved, failed, remaining: results.filter(result => result.status === "cancelled").length }));
         dispatch({ type: "batchSaved" });
-      } else if (failed) dispatch({ type: "failed", message: `${saved} saved, ${failed} failed. Retry saves only the failed files.` });
+      } else if (failed) dispatch({ type: "failed", message: t("savedFailedSummary", { saved, failed }) });
       else {
         const keepDraft = Boolean(imageDrafts.length && hasFileBatch || videoDraft || documentDraft || state.input.trim() && !clipboardTextUntouchedRef.current);
         setFileDrafts(null);
@@ -733,8 +733,8 @@ export function CaptureHost() {
       }
     } catch {
       if (completed.some((result) => result?.status === "saved")) window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
-      setFileResults(files.map((file, index) => completed[index] ?? { fileName: file.name, status: "failed", error: "Import stopped. Retry this file." }));
-      dispatch({ type: "failed", message: "Import stopped. Retry saves only the failed files." });
+      setFileResults(files.map((file, index) => completed[index] ?? { fileName: file.name, status: "failed", error: t("importStoppedFile") }));
+      dispatch({ type: "failed", message: t("importStopped") });
     } finally { saveInFlightRef.current = false; importAbortRef.current = null; setImportCancelling(false); setFileProgress(null); }
   }
 
@@ -744,7 +744,7 @@ export function CaptureHost() {
       imageUploadInFlightRef.current = false;
       setImageUpload(null);
       setBulkImagesPreparing(false);
-      setImportNotice("Image selection canceled. No images from this selection were added.");
+      setImportNotice(t("imageSelectionCancelled"));
       return;
     }
     if (!importAbortRef.current || importAbortRef.current.signal.aborted) return;
@@ -855,7 +855,7 @@ export function CaptureHost() {
           );
           if (existing) {
             if (linkNoteDraft.trim() && existing.noteContent?.trim() && existing.noteContent.trim() !== linkNoteDraft.trim()) {
-              dispatch({ type: "failed", message: "This link already has a personal note. Edit that note from the library." });
+              dispatch({ type: "failed", message: t("linkHasNote") });
               return;
             }
             const ok = await resolveExistingOrgConflict(existing);
@@ -870,7 +870,7 @@ export function CaptureHost() {
         type: "failed",
         message: caught instanceof ImageValidationError
           ? caught.message
-          : "Couldn't check for an existing item. Try again.",
+          : t("checkExistingFailed"),
       });
       return;
     }
@@ -958,14 +958,14 @@ export function CaptureHost() {
       dispatch({ type: "saved" });
     } catch (caught) {
       if (galleryController?.signal.aborted && !savedItemIdRef.current) {
-        setImportNotice("Gallery import canceled. No items were saved.");
+        setImportNotice(t("galleryCancelled"));
         dispatch({ type: "batchSaved" });
         return;
       }
       if (savedItemIdRef.current) {
         dispatch({
           type: "failed",
-          message: "Saved, but couldn't add tags or collection. Try again.",
+          message: t("savedOrgFailed"),
         });
         return;
       }
@@ -978,7 +978,7 @@ export function CaptureHost() {
       ) {
         dispatch({ type: "failed", message: caught.message });
       } else {
-        dispatch({ type: "failed", message: "Couldn't save. Try again." });
+        dispatch({ type: "failed", message: t("saveFailed") });
       }
     } finally {
       saveInFlightRef.current = false;
@@ -1011,8 +1011,8 @@ export function CaptureHost() {
       open={isActive}
       side={captureSide}
       initialFocus={() => inputRef.current?.disabled ? inputRef.current.closest<HTMLElement>('[role="dialog"]') : inputRef.current}
-      title="Save to Keepall"
-      description="Paste a link, write a note, or add files."
+      title={t("title")}
+      description={t("description")}
       widthClassName="w-[min(30rem,100vw)]"
       closeDisabled={dismissLocked}
       onOpenChange={(open, eventDetails) => {
@@ -1045,23 +1045,23 @@ export function CaptureHost() {
           data-testid="capture-scroll-region"
         >
         <div className={captureStyles["body"]}>
-        {documentReading ? <p role="status" className="text-sm text-text-secondary">Reading text file…</p> : null}
-        {importSavedCount > 0 ? <p role="status" className="text-sm text-text-secondary">{importSavedCount} files saved. Your draft is still here.</p> : null}
+        {documentReading ? <p role="status" className="text-sm text-text-secondary">{t("readingText")}</p> : null}
+        {importSavedCount > 0 ? <p role="status" className="text-sm text-text-secondary">{t("filesSavedDraftKept", { count: importSavedCount })}</p> : null}
         {documentDraft ? <div className="flex items-start gap-3 rounded-input border border-border-control bg-bg-raised p-3">
           <NoteIcon className="mt-0.5 shrink-0 text-text-secondary" />
           <div className="min-w-0 text-sm">
             <p className="break-all font-medium">{documentDraft.fileName.replace(/\.(txt|md)$/i, noteFormat === "markdown" ? ".md" : ".txt")}</p>
-            <p className="mt-1 text-xs text-text-secondary">{savingImage ? "Images and text save as one item." : videoDraft ? "Video and text save as one item." : "Edit the text below, then Save."}</p>
+            <p className="mt-1 text-xs text-text-secondary">{savingImage ? t("imagesAndTextOneItem") : videoDraft ? t("videoAndTextOneItem") : t("editThenSave")}</p>
           </div>
         </div> : null}
         {videoDraft ? (
-          <p className="rounded-input border border-border-control bg-bg-raised px-3 py-2 text-sm text-text-primary">Video: {videoDraft.file.name}</p>
+          <p className="rounded-input border border-border-control bg-bg-raised px-3 py-2 text-sm text-text-primary">{t("videoFile", { name: videoDraft.file.name })}</p>
         ) : null}
         {imageDrafts.length > 0 && !fileProgress ? (
           <div className="flex flex-col items-start gap-2">
             <ul
               className="flex w-full flex-wrap gap-2"
-              aria-label={`${imageDrafts.length} image${imageDrafts.length === 1 ? "" : "s"} attached`}
+              aria-label={t("imagesAttached", { count: imageDrafts.length })}
             >
               {imageDrafts.map((draft, index) => (
                 <li
@@ -1079,7 +1079,7 @@ export function CaptureHost() {
                     />
                     <button
                       type="button"
-                      aria-label={`Remove image ${index + 1}`}
+                      aria-label={t("removeImage", { number: index + 1 })}
                       className={iconButtonClassName({ size: "md", className: "absolute right-0.5 top-0.5 size-6 rounded-full shadow-sm shrink" })}
                       disabled={composeLocked}
                       onClick={() => removeImageDraft(draft)}
@@ -1096,7 +1096,7 @@ export function CaptureHost() {
               disabled={composeLocked}
               onClick={() => { clearImageDrafts(); setPreviewKind(null); }}
             >
-              Remove all images
+              {t("removeAllImages")}
             </button>
           </div>
         ) : null}
@@ -1104,7 +1104,7 @@ export function CaptureHost() {
           <div className="flex items-start justify-between gap-3 rounded-input border border-border-control bg-bg-raised px-3 py-2" role="alert">
             <div>
               <p className="text-sm font-medium text-text-danger">{imageUploadError}</p>
-              <p className="mt-1 text-xs text-text-secondary">No images from this selection were added.</p>
+              <p className="mt-1 text-xs text-text-secondary">{t("noImagesAdded")}</p>
             </div>
             <button
               className={buttonClassName({ size: "none", className: "inline-block shrink-0 px-2 py-1 text-xs" })}
@@ -1114,7 +1114,7 @@ export function CaptureHost() {
                 setImageUploadError(null);
               }}
             >
-              Dismiss
+              {t("dismiss")}
             </button>
           </div>
         ) : null}
@@ -1128,18 +1128,18 @@ export function CaptureHost() {
               className="size-3 animate-spin rounded-full border-2 border-border-control border-t-action-primary"
               aria-hidden="true"
             />
-            Adding images… {imageUpload.completed} of {imageUpload.total}
+            {t("addingImages", { completed: imageUpload.completed, total: imageUpload.total })}
           </p>
         ) : null}
         {hasFileBatch && !fileProgress ? <CaptureFileList files={fileDrafts!} results={fileResults} disabled={composeLocked}
           onRemove={(index) => { setFileDrafts((files) => files && files.length > 1 ? files.filter((_, position) => position !== index) : null); }} /> : null}
-        {!hasFileBatch && fileResults.some((result) => result.status !== "saved") ? <ul aria-label="Files not imported" className="space-y-2 text-xs text-text-secondary">
-          {fileResults.map((result, index) => result.status !== "saved" ? <li key={index}>{result.fileName}: {result.status === "failed" ? result.error : "Not imported"}</li> : null)}
+        {!hasFileBatch && fileResults.some((result) => result.status !== "saved") ? <ul aria-label={t("filesNotImported")} className="space-y-2 text-xs text-text-secondary">
+          {fileResults.map((result, index) => result.status !== "saved" ? <li key={index}>{common("labelValue", { label: result.fileName, value: result.status === "failed" ? result.error : t("notImported") })}</li> : null)}
         </ul> : null}
         {fileQuotaWarning ? <p role="status" className="text-sm text-text-warning">{fileQuotaWarning}</p> : null}
         {savingImage && imageLayoutRequired && !hasFileBatch ? <CaptureImageLayout mode={imageLayout} disabled={composeLocked}
           value={state.input} format={noteFormat} preview={previewKind === "image"} inputRef={inputRef}
-          label={documentDraft ? "Text beneath images" : "Optional source URL or caption"}
+          label={documentDraft ? t("textBeneathImages") : t("sourceOrCaption")}
           onModeChange={(mode) => { setImageLayout(mode); setPreviewKind(null); }}
           onChange={(text) => { clipboardTextUntouchedRef.current = false; dispatch({ type: "input", text }); }}
           onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "image" : null)} /> : null}
@@ -1151,12 +1151,12 @@ export function CaptureHost() {
         ) : null}
         {previewKind !== "note" && previewKind !== "image" && !hasFileBatch && !(savingImage && imageLayoutRequired) ? (
           <div className="flex flex-col gap-2">
-            {documentDraft ? <span className={captureStyles["field-label"]}>{videoDraft ? "Video title" : savingImage ? "Text beneath images" : noteFormat === "markdown" ? "Markdown content" : "Text content"}</span> : null}
-            {kind === "link" && !savingImage && !videoDraft ? <span className="text-sm font-medium text-text-secondary">Link URL</span> : null}
+            {documentDraft ? <span className={captureStyles["field-label"]}>{videoDraft ? t("videoTitle") : savingImage ? t("textBeneathImages") : noteFormat === "markdown" ? t("markdownContent") : t("textContent")}</span> : null}
+            {kind === "link" && !savingImage && !videoDraft ? <span className="text-sm font-medium text-text-secondary">{t("linkUrl")}</span> : null}
             <label className="sr-only" htmlFor="capture-input">
-              {videoDraft ? "Video title" : savingImage
-                ? documentDraft ? "Text beneath images" : "Optional source URL or caption"
-                : documentDraft ? noteFormat === "markdown" ? "Markdown content" : "Text content" : "Link, note, or image"}
+              {videoDraft ? t("videoTitle") : savingImage
+                ? documentDraft ? t("textBeneathImages") : t("sourceOrCaption")
+                : documentDraft ? noteFormat === "markdown" ? t("markdownContent") : t("textContent") : t("linkNoteOrImage")}
             </label>
             <ScrollTextarea
               ref={inputRef}
@@ -1165,9 +1165,9 @@ export function CaptureHost() {
               }`}
               id="capture-input"
               placeholder={
-                videoDraft ? "Optional video title" : savingImage
-                  ? "Optional source URL or caption"
-                  : kind === "link" ? "https://example.com/page" : "Paste a link, note, or image"
+                videoDraft ? t("optionalVideoTitle") : savingImage
+                  ? t("sourceOrCaption")
+                  : kind === "link" ? "https://example.com/page" : t("pasteAnything")
               }
               value={state.input}
               onChange={(event) => {
@@ -1179,39 +1179,39 @@ export function CaptureHost() {
           </div>
         ) : null}
         {kind === "note" && !savingImage && !videoDraft && !hasFileBatch && previewKind === "note" ? (
-          <ScrollArea role="region" aria-label="Note preview" className={documentDraft ? FILE_PREVIEW_CLASS : CAPTURE_PREVIEW_CLASS} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4">
+          <ScrollArea role="region" aria-label={t("notePreview")} className={documentDraft ? FILE_PREVIEW_CLASS : CAPTURE_PREVIEW_CLASS} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4">
             {documentDraft ? <DocumentText text={state.input} format={noteFormat === "markdown" ? "markdown" : "text"} /> : <NoteContent content={state.input} format={noteFormat} />}
           </ScrollArea>
         ) : null}
         {savingImage && !imageLayoutRequired && !hasFileBatch && previewKind === "image" ? (
-          <ScrollArea role="region" aria-label="Image note preview" className={documentDraft ? FILE_PREVIEW_CLASS : CAPTURE_PREVIEW_CLASS} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4">
+          <ScrollArea role="region" aria-label={t("imageNotePreview")} className={documentDraft ? FILE_PREVIEW_CLASS : CAPTURE_PREVIEW_CLASS} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4">
             {documentDraft ? <DocumentText text={state.input} format={noteFormat === "markdown" ? "markdown" : "text"} /> : <NoteContent content={state.input} format={noteFormat} />}
           </ScrollArea>
         ) : null}
         {videoDraft && !hasFileBatch ? (
           <div className={captureStyles["note-editor"]}>
-            {previewKind === "video" ? <span className={captureStyles["field-label"]}>Notes (optional)</span> : <label className={captureStyles["field-label"]} htmlFor="capture-video-note">Notes (optional)</label>}
+            {previewKind === "video" ? <span className={captureStyles["field-label"]}>{t("notesOptional")}</span> : <label className={captureStyles["field-label"]} htmlFor="capture-video-note">{t("notesOptional")}</label>}
             <NoteEditorControls format={noteFormat} preview={previewKind === "video"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "video" : null)} />
-            {previewKind !== "video" ? <ScrollTextarea id="capture-video-note" className={captureStyles["note-input"]} placeholder="Add a note about this video" value={videoNoteDraft} disabled={composeLocked} onChange={(event) => setVideoNoteDraft(event.target.value)} /> : null}
-            {previewKind === "video" ? <ScrollArea role="region" aria-label="Video note preview" className={CAPTURE_PREVIEW_CLASS} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4"><NoteContent content={videoNoteDraft} format={noteFormat} /></ScrollArea> : null}
+            {previewKind !== "video" ? <ScrollTextarea id="capture-video-note" className={captureStyles["note-input"]} placeholder={t("videoNotePlaceholder")} value={videoNoteDraft} disabled={composeLocked} onChange={(event) => setVideoNoteDraft(event.target.value)} /> : null}
+            {previewKind === "video" ? <ScrollArea role="region" aria-label={t("videoNotePreview")} className={CAPTURE_PREVIEW_CLASS} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4"><NoteContent content={videoNoteDraft} format={noteFormat} /></ScrollArea> : null}
           </div>
         ) : null}
         {kind === "link" && !savingImage && !videoDraft && !hasFileBatch ? (
           <div className={captureStyles["note-editor"]}>
             <div className={captureStyles["note-head"]}>
               {previewKind === "link" ? (
-                <span className={captureStyles["field-label"]}>Your note (optional)</span>
+                <span className={captureStyles["field-label"]}>{t("yourNoteOptional")}</span>
               ) : (
-                <label className={captureStyles["field-label"]} htmlFor="capture-link-note">Your note (optional)</label>
+                <label className={captureStyles["field-label"]} htmlFor="capture-link-note">{t("yourNoteOptional")}</label>
               )}
               <NoteEditorControls format={noteFormat} preview={previewKind === "link"} disabled={composeLocked} onFormatChange={setNoteFormat} onPreviewChange={(preview) => setPreviewKind(preview ? "link" : null)} />
             </div>
             {previewKind === "link" ? (
-              <ScrollArea role="region" aria-label="Personal note preview" className={`${CAPTURE_PREVIEW_CLASS} h-28`} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4">
+              <ScrollArea role="region" aria-label={t("personalNotePreview")} className={`${CAPTURE_PREVIEW_CLASS} h-28`} viewportClassName="scroll-fade min-h-0 flex-1 overscroll-contain p-4">
                 <NoteContent content={linkNoteDraft} format={noteFormat} />
               </ScrollArea>
             ) : (
-              <ScrollTextarea id="capture-link-note" className={captureStyles["note-input"]} placeholder="Why are you saving this link?" value={linkNoteDraft} disabled={composeLocked} onChange={(event) => {
+              <ScrollTextarea id="capture-link-note" className={captureStyles["note-input"]} placeholder={t("linkNotePlaceholder")} value={linkNoteDraft} disabled={composeLocked} onChange={(event) => {
                 setLinkNoteDraft(event.target.value);
                 if (!event.target.value.trim()) setPreviewKind(null);
               }} />
@@ -1222,7 +1222,7 @@ export function CaptureHost() {
           <input
             ref={fileInputRef}
             accept={CAPTURE_FILE_ACCEPT}
-            aria-label="Choose files"
+            aria-label={t("chooseFiles")}
             data-capture-files
             className="sr-only"
             type="file"
@@ -1239,22 +1239,22 @@ export function CaptureHost() {
             disabled={composeLocked}
             onClick={() => fileInputRef.current?.click()}
           >
-            <UploadIcon className="size-4" />Add files
+            <UploadIcon className="size-4" />{t("addFiles")}
           </button>
           {videoDraft ? (
-            <button className={IMAGE_ACTION_BTN} type="button" disabled={composeLocked} onClick={() => { setVideoDraft(null); if (documentDraft) { dispatch({ type: "input", text: videoNoteDraft }); setVideoNoteDraft(""); } }}>Remove video</button>
+            <button className={IMAGE_ACTION_BTN} type="button" disabled={composeLocked} onClick={() => { setVideoDraft(null); if (documentDraft) { dispatch({ type: "input", text: videoNoteDraft }); setVideoNoteDraft(""); } }}>{t("removeVideo")}</button>
           ) : null}
           {!savingImage && !videoDraft && !documentDraft && !hasFileBatch ? (
             state.input.trim() ? <div className="ml-auto flex items-center gap-2">
-              <p className="text-xs text-text-secondary">Saving as {kind}</p>
+              <p className="text-xs text-text-secondary">{t(`savingAs.${kind}`)}</p>
               {classified === "link" ? <CaptureTypeMenu value={kind} disabled={composeLocked}
                 onChange={(next) => dispatch({ type: "override", kind: next === "link" ? null : "note" })} /> : null}
             </div> : null
           ) : (
             <p className="ml-auto text-xs text-text-secondary">
-              {hasFileBatch ? "Each file saves separately" : imageLayoutRequired && imageLayout !== "gallery" ? imageLayout === "separate" ? "Separate image items" : "Choose an image layout" : videoDraft ? "Saving as video" : documentDraft && !savingImage ? "Saving as note" : imageDrafts.length > 1
-                ? "One item, several photos"
-                : "Saving as image"}
+              {hasFileBatch ? t("eachFileSeparately") : imageLayoutRequired && imageLayout !== "gallery" ? imageLayout === "separate" ? t("separateImageItems") : t("chooseImageLayout") : videoDraft ? t("savingAsVideo") : documentDraft && !savingImage ? t("savingAs.note") : imageDrafts.length > 1
+                ? t("oneItemSeveralPhotos")
+                : t("savingAsImage")}
             </p>
           )}
         </div>
@@ -1306,7 +1306,7 @@ export function CaptureHost() {
                 disabled={bulkImportLocked}
                 onClick={openBulkImport}
               >
-                Bulk import
+                {t("bulkImport")}
               </button>
               <button
                 className={captureStyles["secondary"]}
@@ -1317,7 +1317,7 @@ export function CaptureHost() {
                   dispatch({ type: "dismiss" });
                 }}
               >
-                {fileResults.some((result) => result.status === "saved") ? "Done" : "Cancel"}
+                {fileResults.some((result) => result.status === "saved") ? t("done") : t("cancel")}
               </button>
               <button
                 className={captureStyles["primary"]}
@@ -1334,9 +1334,9 @@ export function CaptureHost() {
                   imageUploadError !== null
                 }
               >
-                {state.status === "saving" ? "Saving…" : fileResults.some((result) => result.status === "cancelled") ? "Continue import" : fileResults.some((result) => result.status === "failed") ? "Retry failed files" : "Save"}
+                {state.status === "saving" ? t("saving") : fileResults.some((result) => result.status === "cancelled") ? t("continueImport") : fileResults.some((result) => result.status === "failed") ? t("retryFailed") : t("save")}
               </button>
-              <p className={captureStyles["footer-hint"]}>Ctrl/⌘ Enter to save</p>
+              <p className={captureStyles["footer-hint"]}>{t("saveHint")}</p>
             </div>
             <div
               data-testid="capture-saved"
@@ -1346,7 +1346,7 @@ export function CaptureHost() {
               <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-action-primary text-text-on-action">
                 <CheckIcon className="size-4.5" strokeWidth={2} />
               </span>
-              {saved ? <p role="status" className="text-sm font-medium text-text-primary">Saved to your library.</p> : null}
+              {saved ? <p role="status" className="text-sm font-medium text-text-primary">{t("saved")}</p> : null}
             </div>
           </div>
         </div>
@@ -1359,8 +1359,8 @@ export function CaptureHost() {
         <ModalDialog
           open={bulkImportOpen}
           onOpenChange={setBulkImportOpen}
-          title="Bulk import"
-          description="Add files, import a folder, or bring in browser bookmarks."
+          title={t("bulkImport")}
+          description={t("bulkImportDescription")}
           busy={folderImportBusy || bookmarksImportBusy}
           footer={(
             <button
@@ -1369,7 +1369,7 @@ export function CaptureHost() {
               disabled={folderImportBusy || bookmarksImportBusy}
               onClick={() => setBulkImportOpen(false)}
             >
-              Done
+              {t("done")}
             </button>
           )}
         >
@@ -1389,8 +1389,8 @@ export function CaptureHost() {
             />
             <BookmarksImport
               buttonClassName={buttonClassName({ size: "lg", className: "inline-block w-full text-left" })}
-              label="Import browser bookmarks"
-              description="Choose the bookmarks HTML file exported from your browser."
+              label={t("importBookmarks")}
+              description={t("importBookmarksDescription")}
               disabled={composeLocked}
               onBusyChange={setBookmarksImportBusy}
             />

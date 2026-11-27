@@ -1,9 +1,11 @@
 "use client";
 
 import { type FocusEvent, useRef, useState } from "react";
+import { useTranslations } from "@/i18n/use-translations";
 
 export function useDirtyDismissal(dirty: boolean, dismiss: () => void) {
   const [confirming, setConfirming] = useState(false);
+  const t = useTranslations("DirtyDismissal");
   const cancelRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement>(null);
 
@@ -25,10 +27,10 @@ export function useDirtyDismissal(dirty: boolean, dismiss: () => void) {
     rememberFocus,
     confirmationProps: {
       open: confirming,
-      title: "Discard unsaved changes?",
-      description: "Your changes will be lost if you discard them.",
-      confirmLabel: "Discard changes",
-      cancelLabel: "Keep editing",
+      title: t("title"),
+      description: t("description"),
+      confirmLabel: t("confirm"),
+      cancelLabel: t("cancel"),
       cancelRef,
       returnFocusRef,
       onOpenChange: setConfirming,

@@ -1,5 +1,6 @@
 import { MarkdownIcon, PlainTextIcon } from "./shell-icons";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { useTranslations } from "@/i18n/use-translations";
 
 type Props = {
   format: "plain" | "markdown";
@@ -8,9 +9,10 @@ type Props = {
 };
 
 export function NoteFormatControl({ format, disabled = false, onChange }: Props) {
-  return <SegmentedControl label="Note format" value={format} disabled={disabled} onChange={onChange} className="w-60"
+  const t = useTranslations("NoteEditor");
+  return <SegmentedControl label={t("format")} value={format} disabled={disabled} onChange={onChange} className="w-60"
     choices={[
-      { value: "plain", label: "Plain text", icon: <PlainTextIcon /> },
-      { value: "markdown", label: "Markdown", icon: <MarkdownIcon /> },
+      { value: "plain", label: t("plain"), icon: <PlainTextIcon /> },
+      { value: "markdown", label: t("markdown"), icon: <MarkdownIcon /> },
     ]} />;
 }
