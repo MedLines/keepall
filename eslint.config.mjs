@@ -63,6 +63,7 @@ const BUTTON_PADDING_SYNTAX = [
 // from then on, text written straight into its JSX is an error. See docs/interface-conventions.md.
 const TRANSLATED_FILES = [
   "src/app/backup-panel.tsx",
+  "src/app/jump-palette.tsx",
   "src/app/language-setting.tsx",
   "src/app/library-bulk-bar.tsx",
   "src/app/library-empty-state.tsx",

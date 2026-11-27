@@ -113,6 +113,9 @@
   }
   .ui-backdrop:is([data-starting-style], [data-ending-style]) { opacity: 0; }
   .ui-backdrop[data-ending-style] { transition-duration: var(--motion-moderate-exit); }
+  /* Scrim without blur, for dialogs people type in continuously (the jump palette): a full-screen
+     blur repaints behind every keystroke and highlight change. */
+  .ui-backdrop.ui-backdrop-plain { -webkit-backdrop-filter: none; backdrop-filter: none; }
   .focused-image-backdrop {
     background: var(--color-bg-image-backdrop);
     -webkit-backdrop-filter: blur(36px) saturate(0.35);

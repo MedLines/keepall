@@ -627,6 +627,13 @@ export function Library() {
     [browseItems],
   );
   const sidebarCounts = useMemo(() => countSidebarItems(items), [items]);
+  const recentItems = useCallback((kind: "collection" | "tag", id: string) => {
+    const addedAt = (item: Item) => (kind === "collection" ? item.collectionAddedAt ?? item.createdAt : item.createdAt);
+    return items
+      .filter(item => (kind === "collection" ? item.collectionIds : item.tagIds).includes(id))
+      .sort((left, right) => addedAt(right) - addedAt(left))
+      .slice(0, 4);
+  }, [items]);
   const typeFilterCounts = useMemo(
     () => countSidebarItems(filterAndSortLibraryItems(
       browseItems,
@@ -2021,6 +2028,7 @@ export function Library() {
             setTagManageError(null);
             setPendingTagDeleteId(id);
           }}
+          recentItems={recentItems}
         />
 
         <div data-library-panel className="library-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-bg-canvas shadow-panel">

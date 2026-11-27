@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { jumpTo } from "./jump-palette";
 
 test.use({ serviceWorkers: "block" });
 
@@ -60,7 +61,7 @@ test("imported file contents produce highlighted results through filters, editin
   await expect(page.locator(".search-excerpt")).toContainText("File contents:");
   await expect(page.locator(".search-excerpt mark")).toHaveText("Unicorn");
   const id = await page.locator("[data-item-id]").getAttribute("data-item-id");
-  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Reading", exact: true }).click();
+  await jumpTo(page, "Reading");
   await search.fill('reference "animation examples" research');
   await expect(page.locator("[data-item-id]")).toHaveCount(1);
   await expect(page.getByText("Searching file contents…", { exact: true })).toBeHidden();

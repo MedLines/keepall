@@ -23,35 +23,6 @@ export function writeShellPanelOpen(open: boolean): void {
   window.localStorage.setItem(SHELL_PANEL_KEY, open ? "open" : "closed");
 }
 
-const SHELL_COLLECTIONS_OPEN_KEY = "keepall-shell-collections-open";
-const SHELL_TAGS_OPEN_KEY = "keepall-shell-tags-open";
-
-function readSectionOpen(key: string): boolean {
-  if (typeof window === "undefined") {
-    return true;
-  }
-  return window.localStorage.getItem(key) !== "closed";
-}
-
-export function readShellCollectionsOpen(): boolean {
-  return readSectionOpen(SHELL_COLLECTIONS_OPEN_KEY);
-}
-
-export function writeShellCollectionsOpen(open: boolean): void {
-  window.localStorage.setItem(
-    SHELL_COLLECTIONS_OPEN_KEY,
-    open ? "open" : "closed",
-  );
-}
-
-export function readShellTagsOpen(): boolean {
-  return readSectionOpen(SHELL_TAGS_OPEN_KEY);
-}
-
-export function writeShellTagsOpen(open: boolean): void {
-  window.localStorage.setItem(SHELL_TAGS_OPEN_KEY, open ? "open" : "closed");
-}
-
 /** Expanded navigation width; the content panel begins at this edge. */
 export const SHELL_SIDEBAR_EXPANDED = "w-64";
 

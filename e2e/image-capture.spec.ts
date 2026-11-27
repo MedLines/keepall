@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
+import { jumpTo } from "./jump-palette";
 
 // Folder import has nothing to do with the service worker. When it is installing, a later
 // page.goto("/") can get ChunkLoadError from SW-served chunks and stay on "Loading…".
@@ -279,9 +280,12 @@ for (const width of [320, 1024]) {
     await page.goto("/");
     if (width < 768) {
       await page.locator('button[aria-controls="library-sidebar"]').click();
-      await expect(page.getByRole("dialog", { name: "Sidebar navigation", exact: true })).toBeVisible();
+      const navigation = page.getByRole("dialog", { name: "Sidebar navigation", exact: true });
+      await expect(navigation).toBeVisible();
+      await jumpTo(page, "Imported photos", "Collections", navigation);
+    } else {
+      await jumpTo(page, "Imported photos");
     }
-    await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Imported photos", exact: true }).click();
     await expect(page).toHaveURL(/collection=/);
     await expect(page.getByRole("main", { name: "Imported photos" }).getByRole("link", { name: "Open Image", exact: true })).toHaveCount(2);
     await page.reload();
@@ -351,7 +355,7 @@ test("Open folder from an empty drawer closes the import dialogs and shows its i
   await (await chooser).setFiles(folder);
   await page.getByRole("dialog", { name: "Save to Keepall" }).getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Save to Keepall" })).toBeHidden();
-  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "New photos", exact: true }).click();
+  await jumpTo(page, "New photos");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/collection=/);
   await expect(page.getByRole("main", { name: "New photos" }).getByRole("link", { name: "Open Image", exact: true })).toHaveCount(1);
@@ -410,7 +414,7 @@ test("read-only folder import scans nested files without triggering the upload c
   expect(await page.evaluate(() => (window as unknown as { keepallPickerOptions: unknown }).keepallPickerOptions)).toEqual({ mode: "read", id: "keepall-import-folder" });
   await review.getByRole("button", { name: "Save", exact: true }).click();
   await expect(review).toBeHidden();
-  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Read-only photos", exact: true }).click();
+  await jumpTo(page, "Read-only photos");
   await expect(page).toHaveURL(/collection=/);
   await expect(page.getByRole("main", { name: "Read-only photos" }).getByRole("link", { name: "Open Image", exact: true })).toHaveCount(2);
   await expect(page.locator("[data-item-id]")).toHaveCount(3);

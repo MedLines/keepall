@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { jumpPalette, openOverview } from "./jump-palette";
 
 test.use({ serviceWorkers: "block" });
 
@@ -31,14 +32,33 @@ for (const width of [320, 767]) {
     await expect(expand).toBeFocused();
     await expect(search).toBeVisible();
 
-    const collections = page.getByRole("button", { name: "Collections", exact: true });
+    // The rail's Collections icon opens the jump palette, not the navigation dialog.
+    const collections = page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Collections", exact: true });
+    const palette = jumpPalette(page);
+    const paletteSearch = palette.getByRole("combobox", { name: "Search collections and tags" });
     await collections.focus();
     await collections.press("Enter");
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole("button", { name: "Close navigation" }).click();
-    expect(await page.locator("#library-sidebar").count()).toBe(1);
+    await expect(paletteSearch).toBeFocused();
+    await expect(palette.getByRole("button", { name: /^Collections/ })).toHaveAttribute("aria-pressed", "true");
     await expect(dialog).toHaveCount(0);
-    await expect(collections).toBeFocused();
+    await palette.getByRole("button", { name: "Close", exact: true }).click();
+    expect(await page.locator("#library-sidebar").count()).toBe(1);
+    await expect(palette).toHaveCount(0);
+    // Closing the palette returns focus to its opener; soft so the rest of the flow still runs.
+    await expect.soft(collections).toBeFocused();
+
+    // Opened from inside the navigation dialog, the palette returns focus there and leaves the dialog open.
+    await expand.press("Enter");
+    await expect(dialog).toBeVisible();
+    const dialogTags = dialog.getByRole("button", { name: "Tags", exact: true });
+    await dialogTags.focus();
+    await dialogTags.press("Enter");
+    await expect(paletteSearch).toBeFocused();
+    await expect(palette.getByRole("button", { name: /^Tags/ })).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("Escape");
+    await expect(palette).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expect.soft(dialogTags).toBeFocused();
   });
 }
 
@@ -70,8 +90,10 @@ test("Escape dismisses the top sidebar overlay while preserving the underlying s
     });
     try {
       await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction("collections", "readwrite");
+        const tx = db.transaction(["collections", "preferences"], "readwrite");
         tx.objectStore("collections").put({ id: "design", name: "Design", createdAt: 1, pinnedItemIds: [] });
+        // Only pinned collections have sidebar rows, and this test opens the row's menu.
+        tx.objectStore("preferences").put({ id: "library", pinnedCollectionIds: ["design"] });
         tx.oncomplete = () => resolve();
         tx.onabort = () => reject(tx.error);
         tx.onerror = () => reject(tx.error);
@@ -85,9 +107,11 @@ test("Escape dismisses the top sidebar overlay while preserving the underlying s
   const expand = page.getByRole("button", { name: "Expand", exact: true });
   await expand.click();
   let sidebar = page.getByRole("dialog", { name: "Sidebar navigation" });
-  await sidebar.getByRole("button", { name: "All collections", exact: true }).click();
+  await openOverview(page, "All collections", sidebar);
   await expect(sidebar).toHaveCount(0);
   const selected = page.getByRole("checkbox", { name: "Select Design" });
+  // The select control shows on hover; the palette footer leaves the pointer away from the card.
+  await page.locator(".organization-card").filter({ has: selected }).hover();
   await selected.locator("..").click();
   await expect(selected).toBeChecked();
 

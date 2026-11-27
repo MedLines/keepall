@@ -12,7 +12,9 @@ test.beforeEach(async ({ page }) => {
     });
     try {
       await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction(["collections", "items"], "readwrite");
+        const tx = db.transaction(["collections", "items", "preferences"], "readwrite");
+        // Only pinned collections have sidebar rows; these tests exercise the rows themselves.
+        tx.objectStore("preferences").put({ id: "library", pinnedCollectionIds: ["design", "reading"] });
         for (const [id, name] of [["design", "Design Inspiration"], ["reading", "Reading"]]) {
           tx.objectStore("collections").put({ id, name, createdAt: 1, pinnedItemIds: [] });
           tx.objectStore("items").put({
@@ -146,8 +148,6 @@ test("compound filters stay visible, clear with keyboard focus, and return with 
 });
 
 test("rapid row-edge switches leave the last collection selected", async ({ page }) => {
-  // At the default 720px height the Collections section (which shares the column with Tags and
-  // the "All collections" footer) clips the second row, so its bottom edge sits under the footer.
   await page.setViewportSize({ width: 1280, height: 900 });
   for (let i = 0; i < 12; i++) {
     const name = i % 2 === 0 ? "Design Inspiration" : "Reading";

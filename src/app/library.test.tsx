@@ -139,6 +139,20 @@ async function clickItemAction(name: string, item?: HTMLElement) {
   fireEvent.click(await screen.findByRole("menuitem", { name }));
 }
 
+function sidebar() {
+  return screen.getByRole("complementary", { name: "Sidebar" });
+}
+
+async function openJumpPalette(row: "Collections" | "Tags") {
+  fireEvent.click(await within(sidebar()).findByRole("button", { name: row }));
+  return screen.findByRole("dialog", { name: "Jump to a collection or tag" });
+}
+
+async function jumpTo(row: "Collections" | "Tags", name: string) {
+  const palette = await openJumpPalette(row);
+  fireEvent.click(await within(palette).findByRole("option", { name: new RegExp(`^${name}`) }));
+}
+
 describe("Library", () => {
   beforeEach(() => {
     vi.mocked(listItems).mockReset();
@@ -200,7 +214,7 @@ describe("Library", () => {
     expect(mockNavigation.searchParams.has("collection")).toBe(false);
   });
 
-  test("pins a collection from its sidebar menu", async () => {
+  test("pins a collection from the jump palette", async () => {
     const collection = {
       id: "c1",
       name: "Reading",
@@ -216,8 +230,9 @@ describe("Library", () => {
 
     render(<Library />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Reading actions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Pin to top" }));
+    const palette = await openJumpPalette("Collections");
+    expect(await within(palette).findByRole("option", { name: /^Reading/ })).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(within(palette).getByRole("button", { name: "Pin" }));
 
     await waitFor(() => {
       expect(pinCollection).toHaveBeenCalledWith(collection.id);
@@ -286,7 +301,7 @@ describe("Library", () => {
     }
   });
 
-  test("renders persisted pinned collections before unpinned collections", async () => {
+  test("shows only pinned collections in the sidebar and lists them first in the jump palette", async () => {
     vi.mocked(listItems).mockResolvedValue([]);
     vi.mocked(listCollections).mockResolvedValue([
       { id: "alpha", name: "Alpha", createdAt: 1, pinnedItemIds: [] },
@@ -299,17 +314,11 @@ describe("Library", () => {
 
     render(<Library />);
 
-    await screen.findByRole("button", { name: "Beta" });
-    const collectionButtons = [
-      screen.getByRole("button", { name: "Beta" }),
-      screen.getByRole("button", { name: "Alpha" }),
-    ];
-    expect(
-      collectionButtons.map((button) => button.compareDocumentPosition(collectionButtons[1])),
-    ).toEqual([
-      Node.DOCUMENT_POSITION_FOLLOWING,
-      0,
-    ]);
+    expect(await within(sidebar()).findByRole("button", { name: "Beta" })).toBeInTheDocument();
+    expect(within(sidebar()).queryByRole("button", { name: "Alpha" })).not.toBeInTheDocument();
+
+    const palette = await openJumpPalette("Collections");
+    expect(within(palette).getAllByRole("option").map(option => option.textContent?.replace(/\d+$/, ""))).toEqual(["Beta", "Alpha"]);
   });
 
   test("does not show the empty copy when loading fails", async () => {
@@ -1161,7 +1170,8 @@ describe("Library tags", () => {
         within(screen.getByRole("main")).queryByRole("button", { name: "1 tag" }),
       ).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: "Tag inspiration" })).toBeInTheDocument();
+    const palette = await openJumpPalette("Tags");
+    expect(within(palette).getByRole("option", { name: /^inspiration/ })).toBeInTheDocument();
     expect(listTags).toHaveBeenCalled();
   });
 });
@@ -1250,10 +1260,12 @@ describe("Library collections", () => {
     vi.mocked(listCollections).mockResolvedValue([]);
     render(<Library />);
 
-    expect(await screen.findByText("No collections yet.")).toBeInTheDocument();
+    expect(await within(sidebar()).findByText("Pin a collection to keep it here.")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "New collection" }),
     ).not.toBeInTheDocument();
+    const palette = await openJumpPalette("Collections");
+    expect(within(palette).getByText("No collections yet.")).toBeInTheDocument();
   });
 
   test("assigns a collection and browses to only that collection", async () => {
@@ -1288,15 +1300,7 @@ describe("Library collections", () => {
       expect(assignCollectionToItem).toHaveBeenCalledWith("n1", "c1");
     });
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
-    expect(
-      await within(screen.getByRole("complementary", { name: "Sidebar" }))
-        .findByRole("button", { name: "Reading" }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(
-      within(screen.getByRole("complementary", { name: "Sidebar" }))
-        .getByRole("button", { name: "Reading" }),
-    );
+    await jumpTo("Collections", "Reading");
 
     expect(screen.getByRole("listitem", { name: "A persisted note" })).toBeInTheDocument();
     expect(screen.queryByRole("listitem", { name: "other note" })).not.toBeInTheDocument();
@@ -1329,29 +1333,21 @@ describe("Library collections", () => {
     vi.mocked(deleteCollection).mockResolvedValue(undefined);
     render(<Library />);
 
-    fireEvent.click(
-      await within(screen.getByRole("complementary", { name: "Sidebar" }))
-        .findByRole("button", { name: "Reading" }),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Reading actions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
-    fireEvent.change(screen.getByLabelText("Rename collection"), {
+    await jumpTo("Collections", "Reading");
+    const palette = await openJumpPalette("Collections");
+    fireEvent.click(within(palette).getByRole("button", { name: "Rename" }));
+    fireEvent.change(within(palette).getByLabelText("Collection name"), {
       target: { value: "Later" },
     });
-    fireEvent.submit(
-      screen.getByLabelText("Rename collection").closest("form")!,
-    );
+    fireEvent.submit(within(palette).getByLabelText("Collection name").closest("form")!);
 
     await waitFor(() => {
       expect(renameCollection).toHaveBeenCalledWith("c1", "Later");
     });
+    expect(renameCollection).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(
-      await within(screen.getByRole("complementary", { name: "Sidebar" }))
-        .findByRole("button", { name: "Later" }),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Later actions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    await within(palette).findByRole("heading", { name: "Later" });
+    fireEvent.click(within(palette).getByRole("button", { name: "Delete" }));
     expect(screen.getByRole("dialog", { name: "Delete collection?" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Delete collection" }));
 
@@ -1369,10 +1365,9 @@ describe("Library collections", () => {
     vi.mocked(deleteTag).mockResolvedValue(undefined);
     render(<Library />);
 
-    const sidebar = screen.getByRole("complementary", { name: "Sidebar" });
-    fireEvent.click(await within(sidebar).findByRole("button", { name: "Tag inspiration" }));
-    fireEvent.click(within(sidebar).getByRole("button", { name: "inspiration actions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    await jumpTo("Tags", "inspiration");
+    const palette = await openJumpPalette("Tags");
+    fireEvent.click(within(palette).getByRole("button", { name: "Delete" }));
 
     expect(screen.getByRole("dialog", { name: "Delete tag?" })).toHaveTextContent(
       "It will be removed from every item",
@@ -1851,6 +1846,7 @@ describe("Library view state", () => {
     };
     vi.mocked(listItems).mockResolvedValue([movable]);
     vi.mocked(listCollections).mockResolvedValue([collection]);
+    vi.mocked(getLibraryPreferences).mockResolvedValue({ id: "library", pinnedCollectionIds: ["c1"] });
     vi.mocked(assignCollectionToItem).mockResolvedValue({
       ...movable,
       collectionIds: ["c1"],
@@ -1875,7 +1871,7 @@ describe("Library view state", () => {
     };
 
     fireEvent.dragStart(screen.getByRole("listitem"), { dataTransfer });
-    const target = screen.getByRole("button", { name: "Reading" });
+    const target = await within(sidebar()).findByRole("button", { name: "Reading" });
     fireEvent.dragOver(target, { dataTransfer });
     fireEvent.drop(target, { dataTransfer });
 
@@ -1895,6 +1891,7 @@ describe("Library view state", () => {
     };
     vi.mocked(listItems).mockResolvedValue([first, second]);
     vi.mocked(listCollections).mockResolvedValue([collection]);
+    vi.mocked(getLibraryPreferences).mockResolvedValue({ id: "library", pinnedCollectionIds: ["c1"] });
     vi.mocked(assignCollectionToItem).mockImplementation(async (id) => {
       const item = id === "n1" ? first : second;
       return { ...item, collectionIds: ["c1"], updatedAt: 3 };
@@ -1916,7 +1913,7 @@ describe("Library view state", () => {
       setData() {},
     };
 
-    const target = screen.getByRole("button", { name: "Reading" });
+    const target = await within(sidebar()).findByRole("button", { name: "Reading" });
     fireEvent.drop(target, { dataTransfer });
 
     await waitFor(() => {
@@ -2027,7 +2024,7 @@ describe("Library inspect", () => {
     render(<Library />);
     await screen.findByRole("heading", { name: "Start your library" });
     expect(screen.getByRole("button", { name: "Preview" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "All collections" }));
+    fireEvent.click(within(await openJumpPalette("Collections")).getByRole("button", { name: "All collections" }));
     await waitFor(() => expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Trash" }));
     await screen.findByText("Trash is empty.");

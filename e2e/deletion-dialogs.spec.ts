@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { jumpPalette, openJumpPalette } from "./jump-palette";
 
 test.use({ serviceWorkers: "block" });
 
@@ -12,7 +13,7 @@ test.beforeEach(async ({ page }) => {
       request.onerror = () => reject(request.error);
     });
     await new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction(["items", "tags", "collections"], "readwrite");
+      const transaction = db.transaction(["items", "tags", "collections", "preferences"], "readwrite");
       const base = { tagIds: [], collectionIds: [], createdAt: 1, updatedAt: 1 };
       transaction.objectStore("items").put({ ...base, id: "note", type: "note", title: "Note", content: "Note body" });
       transaction.objectStore("items").put({ ...base, id: "link", type: "link", title: "Link", url: "https://example.com", noteContent: "", previewTitle: "", previewDescription: "", previewStatus: "ready", previewRetry: "none", previewAttemptedAt: 1, previewImageUrl: "", previewAssetId: null });
@@ -20,6 +21,8 @@ test.beforeEach(async ({ page }) => {
       transaction.objectStore("items").put({ ...base, id: "video", type: "video", title: "Video", assetId: "missing", sourceFileName: "clip.mp4", noteContent: "" });
       transaction.objectStore("items").put({ ...base, id: "trashed", type: "note", title: "Trashed note", content: "Keep in Trash", deletedAt: 2 });
       transaction.objectStore("collections").put({ id: "folder", name: "Folder", createdAt: 1, pinnedItemIds: [] });
+      // Pinned, so the folder has a sidebar row with its actions menu.
+      transaction.objectStore("preferences").put({ id: "library", pinnedCollectionIds: ["folder"] });
       transaction.objectStore("tags").put({ id: "tag", name: "Research", createdAt: 1 });
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
@@ -90,14 +93,21 @@ test("cards, bulk actions, folders, tags, and Trash share the same confirmation 
     await expect(bulk).toContainText("1 selected");
     await bulkAction(page, "Deselect all");
   }
-  for (const [name, action] of [["Folder", "Delete collection"], ["Research", "Delete tag"]]) {
-    // A click while the previous menu is still fading out only dismisses that menu.
-    await expect(page.getByRole("menu")).toHaveCount(0);
-    await page.getByRole("button", { name: `${name} actions`, exact: true }).click();
-    await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
-    await verifyAndCancel(page, action);
-    await expect(page.getByRole("button", { name: `${name} actions`, exact: true })).toBeAttached();
-  }
+  // A click while the previous menu is still fading out only dismisses that menu.
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await page.getByRole("button", { name: "Folder actions", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  await verifyAndCancel(page, "Delete collection");
+  await expect(page.getByRole("button", { name: "Folder actions", exact: true })).toBeAttached();
+  // Tags have no sidebar rows; the jump palette's preview pane deletes them.
+  const palette = await openJumpPalette(page, "Tags");
+  await expect(palette.getByRole("heading", { name: "#Research", exact: true })).toBeVisible();
+  await palette.getByRole("button", { name: "Delete", exact: true }).click();
+  await verifyAndCancel(page, "Delete tag");
+  await openJumpPalette(page, "Tags");
+  await expect(jumpPalette(page).getByRole("option", { name: /^Research/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(jumpPalette(page)).toHaveCount(0);
   await page.getByRole("button", { name: "Trash", exact: true }).click();
   const trashed = page.locator('[data-item-id="trashed"]');
   await trashed.getByRole("button", { name: "Delete permanently", exact: true }).click();

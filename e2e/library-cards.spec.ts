@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import sharp from "sharp";
+import { jumpPalette, jumpTo, openJumpPalette, seedPinnedCollections } from "./jump-palette";
 
 async function expectCardsNotToOverlap(page: Page) {
   await expect(async () => {
@@ -962,7 +963,7 @@ test("card actions, tag disclosure, selection and collection context work", asyn
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
   await expect(note.getByRole("checkbox")).toBeChecked();
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
-  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "UI inspiration", exact: true }).click();
+  await jumpTo(page, "UI inspiration");
   await expect(note.getByRole("list", { name: "Collections" })).toHaveCount(0);
   await note.hover();
   await note.locator("button.library-card-actions").click();
@@ -1194,10 +1195,7 @@ test("list rows use open surfaces with thumbnails, excerpts and collection conte
   await expect(link).not.toContainText("A spacious footer for a portfolio.");
   await expect(note.getByLabel("Collections", { exact: true })).toContainText("UI inspiration");
   await expect(note.getByRole("button", { name: "1 tag", exact: true })).toBeVisible();
-  await page
-    .getByRole("complementary", { name: "Sidebar" })
-    .getByRole("button", { name: "UI inspiration", exact: true })
-    .click();
+  await jumpTo(page, "UI inspiration");
   await expect(note.getByLabel("Collections", { exact: true })).toHaveCount(0);
 });
 
@@ -1225,10 +1223,7 @@ test("list menus support editing, cancel-delete, selection and collection pinnin
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
   await expect(note.getByRole("checkbox")).toBeChecked();
   await note.locator("label").filter({ has: page.getByRole("checkbox") }).click();
-  await page
-    .getByRole("complementary", { name: "Sidebar" })
-    .getByRole("button", { name: "UI inspiration", exact: true })
-    .click();
+  await jumpTo(page, "UI inspiration");
   await note.hover();
   await note.locator("button.library-card-actions").click();
   await page.getByRole("menuitem", { name: "Pin", exact: true }).click();
@@ -1675,10 +1670,7 @@ test("a large library keeps measured card virtualization and reaches the last ca
   expect(await page.locator(".library-card").count()).toBeLessThan(124);
   expect(await main.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await expectCardsNotToOverlap(page);
-  await page
-    .getByRole("complementary", { name: "Sidebar" })
-    .getByRole("button", { name: "UI inspiration", exact: true })
-    .click();
+  await jumpTo(page, "UI inspiration");
   await expect(page.locator(".library-card")).toHaveCount(4);
   await expect.poll(() => main.evaluate(el => el.scrollTop)).toBe(0);
   await expectCardsNotToOverlap(page);
@@ -1931,7 +1923,10 @@ for (const layout of ["Grid", "List"]) {
   });
 }
 
-test("sidebar right click shares collection and tag actions with their buttons", async ({ page }) => {
+test("sidebar right click shares collection actions with their button; tags offer only Delete", async ({ page }) => {
+  // Only pinned collections have sidebar rows; this test exercises the row's menus.
+  await seedPinnedCollections(page, ["c"]);
+  await page.reload();
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
   const collection = sidebar.getByRole("button", { name: "UI inspiration", exact: true });
   await collection.hover();
@@ -1946,13 +1941,16 @@ test("sidebar right click shares collection and tag actions with their buttons",
   const rename = page.getByRole("textbox", { name: "Rename collection", exact: true });
   await expect(rename).toBeFocused();
   await rename.press("Escape");
-  await sidebar.getByRole("button", { name: "Tag minimal", exact: true }).click({ button: "right" });
-  const tagMenu = page.getByRole("menu", { name: "minimal actions", exact: true });
-  await expect(tagMenu.getByRole("menuitem")).toHaveText(["Delete"]);
-  await tagMenu.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  // Tags have no sidebar rows; their actions live in the jump palette's preview pane.
+  const tagPreview = (await openJumpPalette(page, "Tags")).getByRole("complementary", { name: "Selected" });
+  await expect(tagPreview.getByRole("heading", { name: "#minimal", exact: true })).toBeVisible();
+  await expect(tagPreview.getByRole("button")).toHaveText(["Open", "Delete"]);
+  await tagPreview.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Delete tag?", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(sidebar.getByRole("button", { name: "Tag minimal", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Delete tag?", exact: true })).toHaveCount(0);
+  await openJumpPalette(page, "Tags");
+  await expect(jumpPalette(page).getByRole("option", { name: /minimal/ })).toBeVisible();
 });
 
 for (const layout of ["Grid", "List"]) {
