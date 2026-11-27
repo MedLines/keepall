@@ -24,6 +24,7 @@ export function LanguageSetting({ languages = AVAILABLE_LANGUAGES }: { languages
       </div>
       <ShellTopMenu<Language>
         ariaLabel={t("label")}
+        variant="control"
         value={language}
         options={languages.map((value) => ({ value, label: languageName(value) }))}
         onChange={setLanguagePreference}
