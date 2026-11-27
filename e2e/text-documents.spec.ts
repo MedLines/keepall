@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
+import { jumpTo } from "./jump-palette";
 
 test.use({ serviceWorkers: "block" });
 
@@ -221,7 +222,7 @@ test("multi-file import reports invalid UTF-8 and supports empty files, preview,
   await expect(complete).toContainText("UTF-8");
   await complete.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Save to Keepall", exact: true })).toBeHidden();
-  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Reading", exact: true }).click();
+  await jumpTo(page, "Reading");
   await expect(page).toHaveURL(/collection=/);
   const collectionUrl = page.url();
   await expect(page.getByRole("main", { name: "Reading", exact: true })).toBeVisible();
@@ -268,7 +269,7 @@ test("bulk files keep images, TXT, and Markdown separate in one collection after
   await review.getByRole("button", { name: "Save", exact: true }).click();
   await expect(capture).toBeHidden();
   await page.screenshot({ path: testInfo.outputPath("mixed-bulk-complete.png") });
-  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Mixed bulk library", exact: true }).click();
+  await jumpTo(page, "Mixed bulk library");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/collection=/);
   await expect(page.getByRole("main", { name: "Mixed bulk library", exact: true })).toBeVisible();

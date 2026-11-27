@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { jumpTo, seedPinnedCollections } from "./jump-palette";
 
 type SidebarMotionMeasurements = {
   sidebarWidths: number[];
@@ -226,10 +227,13 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
     await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
     const sidebar = page.getByRole("complementary", { name: "Sidebar" });
 
-    // Exercise every section-open combination without changing flags mid-toggle.
-    for (const sectionToToggle of [null, "Collections", "Tags", "Collections"]) {
-      if (sectionToToggle) {
-        await sidebar.getByRole("button", { name: sectionToToggle, exact: true }).click();
+    // Collapse and expand with an empty pinned list, then with pinned rows that the rail hides.
+    for (const pinned of [false, true]) {
+      if (pinned) {
+        await seedMeasuredLibrary(page);
+        await seedPinnedCollections(page, ["short", "mixed"]);
+        await page.reload();
+        await expect(sidebar.getByRole("button", { name: "Mixed cards", exact: true })).toBeVisible();
       }
       for (const action of ["Collapse", "Expand"]) {
         const samples = sidebar.evaluate(async (element) => {
@@ -263,7 +267,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
         });
         await page.getByRole("button", { name: action, exact: true }).click();
         const result = await samples;
-        expect(result.count).toBe(8);
+        // Logo, Jump to, All items, Unsorted, Collections, Tags, Trash, Help, Settings.
+        expect(result.count).toBe(9);
         expect(result.retained).toBe(true);
         expect(result.visible).toBe(true);
         expect(result.maxShift).toBeLessThanOrEqual(1);
@@ -272,23 +277,22 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
       }
     }
 
-    await sidebar.getByRole("textbox", { name: "Search collections" }).fill("retained filter");
-    // Closing without moving focus first must not strand it in inert details.
+    await sidebar.getByRole("button", { name: "Mixed cards", exact: true }).focus();
+    // Closing without moving focus first must not strand it in the pinned list the rail hides.
     await page.getByRole("button", { name: "Collapse", exact: true }).evaluate((button) => {
       if (!(button instanceof HTMLButtonElement)) {
         throw new Error("Collapse control must be a button.");
       }
       button.click();
     });
-    await expect(page.getByRole("button", { name: "Expand", exact: true })).toBeFocused();
-    await expect(sidebar.getByRole("textbox")).toHaveCount(0);
-    expect(await sidebar.locator("[data-sidebar-details]").evaluateAll((elements) =>
-      elements.every((element) => element.hasAttribute("inert")),
-    )).toBe(true);
+    // Soft, so the rest of the collapse checks still run if focus is lost.
+    await expect.soft(page.getByRole("button", { name: "Expand", exact: true })).toBeFocused();
+    await expect(sidebar.getByRole("heading", { name: "Pinned", exact: true })).toHaveCount(0);
+    await expect(sidebar.getByRole("button", { name: "Mixed cards", exact: true })).toHaveCount(0);
     await page.getByRole("searchbox", { name: "Search", exact: true }).click();
     await expect(page.getByRole("searchbox", { name: "Search", exact: true })).toBeFocused();
     await page.getByRole("button", { name: "Expand", exact: true }).click();
-    await expect(sidebar.getByRole("textbox", { name: "Search collections" })).toHaveValue("retained filter");
+    await expect(sidebar.getByRole("button", { name: "Mixed cards", exact: true })).toBeVisible();
   });
 }
 
@@ -298,10 +302,9 @@ test("collection switches keep one stable card for every rendered item", async (
   await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await seedMeasuredLibrary(page);
 
-  const sidebar = page.getByRole("complementary", { name: "Sidebar" });
-  await sidebar.getByRole("button", { name: "Short cards", exact: true }).click();
+  await jumpTo(page, "Short cards");
   await expect(page.getByRole("heading", { name: "Short cards 0" })).toBeVisible();
-  await sidebar.getByRole("button", { name: "Mixed cards", exact: true }).click();
+  await jumpTo(page, "Mixed cards");
   await expect(page.getByRole("heading", { name: "Mixed cards", exact: true })).toBeVisible();
   await expect(page.locator(".library-item-root").first()).toBeVisible();
 
@@ -352,8 +355,7 @@ test("virtualized cards share one object URL for the same local asset", async ({
   await expect(page.getByRole("heading", { name: "Start your library", exact: true })).toBeVisible();
   await seedMeasuredLibrary(page, { imageOnly: true });
 
-  const sidebar = page.getByRole("complementary", { name: "Sidebar" });
-  await sidebar.getByRole("button", { name: "Mixed cards", exact: true }).click();
+  await jumpTo(page, "Mixed cards");
   await expect(page.locator(".library-card img").first()).toBeVisible();
   const main = page.getByRole("main").locator('[data-slot="scroll-area-viewport"]').first();
   await main.evaluate((node) => node.scrollTo(0, node.scrollHeight));

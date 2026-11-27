@@ -19,12 +19,13 @@ import {
 } from "react";
 import type { Collection } from "@/domain/collection";
 import type { LibraryTypeSelection } from "@/domain/library-view";
+import type { Item } from "@/domain/item";
 import type { Tag } from "@/domain/tag";
+import { useTranslations } from "@/i18n/use-translations";
+import { JumpPalette, type JumpFilter } from "./jump-palette";
 import type { LibrarySidebarCounts } from "./library-sidebar-counts";
 import {
   AgentIcon,
-  ArrowRightIcon,
-  ChevronDownIcon,
   DeleteIcon,
   CollectionIcon,
   HashIcon,
@@ -39,8 +40,6 @@ import {
 } from "./shell-icons";
 import { useAgentReviewOffer } from "./use-agent-review-offer";
 import {
-  readShellCollectionsOpen,
-  readShellTagsOpen,
   SHELL_ASIDE,
   SHELL_NAV_GUTTER,
   SHELL_NAV_ITEM,
@@ -49,8 +48,6 @@ import {
   SHELL_NAV_SURFACE,
   SHELL_SIDEBAR_COLLAPSED,
   SHELL_SIDEBAR_EXPANDED,
-  writeShellCollectionsOpen,
-  writeShellTagsOpen,
 } from "./shell-styles";
 import { useShellMobile } from "./use-shell-mobile";
 import { ShellPanelIcon } from "./shell-panel-icon";
@@ -58,16 +55,9 @@ import { collectionMarkerStyle } from "./collection-marker";
 import { LogoContextMenu } from "./logo-context-menu";
 import { SidebarResizeHandle } from "./sidebar-resize-handle";
 import { menuItemClassName } from "@/components/ui/menu-item";
-import { useTranslations } from "@/i18n/use-translations";
 import { Tooltip } from "@/components/ui/tooltip";
 
 const COLLECTION_REORDER_MIME = "application/x-keepall-pinned-collection";
-
-type SidebarRailAction = {
-  label: string;
-  active: boolean;
-  onExpand: () => void;
-};
 
 type Props = {
   panelOpen: boolean;
@@ -108,6 +98,8 @@ type Props = {
   onMovePinnedCollection: (sourceId: string, targetId: string) => void;
   onDeleteCollection: (id: string) => void;
   onDeleteTag: (id: string) => void;
+  /** Newest items in a collection or tag, shown in the jump palette's preview. */
+  recentItems?: (kind: "collection" | "tag", id: string) => Item[];
 };
 
 export function LibraryShell({
@@ -143,12 +135,11 @@ export function LibraryShell({
   onMovePinnedCollection,
   onDeleteCollection,
   onDeleteTag,
+  recentItems,
 }: Props) {
   const t = useTranslations("LibraryShell");
-  const [collectionFilter, setCollectionFilter] = useState("");
-  const [tagFilter, setTagFilter] = useState("");
-  const [collectionsOpen, setCollectionsOpen] = useState(true);
-  const [tagsOpen, setTagsOpen] = useState(true);
+  const [jumpOpen, setJumpOpen] = useState(false);
+  const [jumpFilter, setJumpFilter] = useState<JumpFilter>("all");
   const isMobile = useShellMobile();
   const mobileSidebarOpen = isMobile && expanded && !previewOpen;
   useEffect(() => {
@@ -168,31 +159,28 @@ export function LibraryShell({
     }
   }, [mobileSidebarOpen]);
 
-  useLayoutEffect(() => {
-    // Match the server during hydration, then restore browser-only preferences
-    // before paint.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCollectionsOpen(readShellCollectionsOpen());
-    setTagsOpen(readShellTagsOpen());
+  const jumpOpener = useRef<HTMLElement | null>(null);
+  const openJump = useCallback((filter: JumpFilter) => {
+    jumpOpener.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
+    setJumpFilter(filter);
+    setJumpOpen(true);
   }, []);
 
-  const collectionQuery = collectionFilter.trim().toLowerCase();
-  const filteredCollections = useMemo(() => {
-    if (!collectionQuery) {
-      return collections;
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.code !== "KeyK" || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.repeat || event.isComposing) return;
+      if (!jumpOpen && document.querySelector('[role="dialog"]:not([data-ending-style]), [role="alertdialog"]:not([data-ending-style])')) return;
+      event.preventDefault();
+      if (jumpOpen) setJumpOpen(false); else openJump("all");
     }
-    return collections.filter((collection) =>
-      collection.name.toLowerCase().includes(collectionQuery),
-    );
-  }, [collections, collectionQuery]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [jumpOpen, openJump]);
 
-  const tagQuery = tagFilter.trim().toLowerCase();
-  const filteredTags = useMemo(() => {
-    if (!tagQuery) {
-      return tags;
-    }
-    return tags.filter((tag) => tag.name.toLowerCase().includes(tagQuery));
-  }, [tags, tagQuery]);
+  const pinnedCollections = useMemo(() => {
+    const byId = new Map(collections.map(collection => [collection.id, collection]));
+    return pinnedCollectionIds.flatMap(id => byId.get(id) ?? []);
+  }, [collections, pinnedCollectionIds]);
 
   const { offer: agentReview } = useAgentReviewOffer();
   const closeOnMobile = useCallback(() => {
@@ -209,19 +197,24 @@ export function LibraryShell({
 
   const unsortedActive = browseUnsorted;
 
-  const collectionsCollapsedLabel =
-    collections.find((collection) => collection.id === browseCollectionId)
-      ?.name ?? t("collections");
-  const tagsCollapsedLabel =
-    tags.find((tag) => tag.id === browseTagId)?.name ?? t("tags");
+  const collectionsActive = browseCollectionId !== null || collectionsView;
+  const tagsActive = browseTagId !== null || tagsView;
 
   const renderPrimaryNav = (contentExpanded: boolean) => (
     <>
       <ShellNavItem
         expanded={contentExpanded}
+        label={t("jumpTo")}
+        ariaLabel={t("jumpToLabel")}
+        hasPopup
+        shortcut={t("jumpShortcut")}
+        icon={<SearchIcon className="size-4.5 shrink-0 text-text-secondary" />}
+        onClick={() => openJump("all")}
+      />
+      <ShellNavItem
+        expanded={contentExpanded}
         active={allItemsActive}
         label={t("allItems")}
-        anchor="all-items"
         count={libraryLoading ? undefined : counts.all}
         icon={<LibraryIcon className="size-4.5 shrink-0 text-text-secondary" />}
         onClick={() => {
@@ -269,104 +262,52 @@ export function LibraryShell({
               {renderPrimaryNav(contentExpanded)}
             </div>
 
-            {contentExpanded ? (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <CollectionsSection
-                  onSeeAll={onGoCollections ? () => { onGoCollections(); closeOnMobile(); } : undefined}
-                  overviewActive={collectionsView}
-                  rail={!isMobile && !expanded ? {
-                    label: collectionsCollapsedLabel,
-                    active: browseCollectionId !== null || collectionsView,
-                    onExpand: () => onPanelOpenChange(true),
-                  } : undefined}
-                  collectionsOpen={collectionsOpen}
-                  onCollectionsOpenChange={(open) => {
-                    setCollectionsOpen(open);
-                    writeShellCollectionsOpen(open);
-                  }}
-                  collectionFilter={collectionFilter}
-                  onCollectionFilterChange={setCollectionFilter}
-                  filteredCollections={filteredCollections}
-                  collections={collections}
-                  pinnedCollectionIds={pinnedCollectionIds}
-                  browseCollectionId={browseCollectionId}
-                  counts={counts.byCollectionId}
-                  dropTargetCollectionId={dropTargetCollectionId}
-                  collectionManageError={collectionManageError}
-                  dragError={dragError}
-                  mutationBusy={mutationBusy}
-                  libraryLoading={libraryLoading}
-                  onGoCollection={(id) => {
-                    onGoCollection(id);
-                    closeOnMobile();
-                  }}
-                  onCollectionDragOver={onCollectionDragOver}
-                  onCollectionDragLeave={onCollectionDragLeave}
-                  onCollectionDrop={onCollectionDrop}
-                  onRenameCollection={onRenameCollection}
-                  onTogglePinnedCollection={onTogglePinnedCollection}
-                  onMovePinnedCollection={onMovePinnedCollection}
-                  onDeleteCollection={onDeleteCollection}
-                />
+            <div className="flex shrink-0 flex-col gap-1 pt-4">
+              <ShellNavItem
+                expanded={contentExpanded}
+                active={collectionsActive}
+                label={t("collections")}
+                hasPopup
+                count={libraryLoading ? undefined : collections.length}
+                icon={<CollectionIcon className="size-4.5 shrink-0 text-text-secondary" />}
+                onClick={() => openJump("collections")}
+              />
+              <ShellNavItem
+                expanded={contentExpanded}
+                active={tagsActive}
+                label={t("tags")}
+                hasPopup
+                count={libraryLoading ? undefined : tags.length}
+                icon={<HashIcon className="size-4.5 shrink-0 text-text-secondary" />}
+                onClick={() => openJump("tags")}
+              />
+            </div>
 
-                <TagsSection
-                  onSeeAll={onGoTags ? () => { onGoTags(); closeOnMobile(); } : undefined}
-                  overviewActive={tagsView}
-                  rail={!isMobile && !expanded ? {
-                    label: tagsCollapsedLabel,
-                    active: browseTagId !== null || tagsView,
-                    onExpand: () => onPanelOpenChange(true),
-                  } : undefined}
-                  tagsOpen={tagsOpen}
-                  onTagsOpenChange={(open) => {
-                    setTagsOpen(open);
-                    writeShellTagsOpen(open);
-                  }}
-                  tagFilter={tagFilter}
-                  onTagFilterChange={setTagFilter}
-                  filteredTags={filteredTags}
-                  tags={tags}
-                  browseTagId={browseTagId}
-                  counts={counts.byTagId}
-                  libraryLoading={libraryLoading}
-                  onGoTag={(id) => {
-                    onGoTag(id);
-                    closeOnMobile();
-                  }}
-                  mutationBusy={mutationBusy}
-                  onDeleteTag={onDeleteTag}
-                />
-              </div>
-            ) : (
-              <div className="flex shrink-0 flex-col gap-1">
-                <ShellNavItem
-                  expanded={false}
-                  active={browseCollectionId !== null}
-                  label={collectionsCollapsedLabel}
-                  icon={
-                    <CollectionIcon className="size-4 shrink-0 text-text-secondary" />
-                  }
-                  onClick={() => {
-                    onPanelOpenChange(true);
-                    setCollectionsOpen(true);
-                    writeShellCollectionsOpen(true);
-                  }}
-                />
-                <ShellNavItem
-                  expanded={false}
-                  active={browseTagId !== null}
-                  label={tagsCollapsedLabel}
-                  icon={
-                    <HashIcon className="size-4 shrink-0 text-text-secondary" />
-                  }
-                  onClick={() => {
-                    onPanelOpenChange(true);
-                    setTagsOpen(true);
-                    writeShellTagsOpen(true);
-                  }}
-                />
-              </div>
-            )}
+            {contentExpanded && (isMobile || expanded) ? (
+              <PinnedCollectionsSection
+                rescueFocusOnHide={!isMobile}
+                pinnedCollections={pinnedCollections}
+                pinnedCollectionIds={pinnedCollectionIds}
+                browseCollectionId={browseCollectionId}
+                counts={counts.byCollectionId}
+                dropTargetCollectionId={dropTargetCollectionId}
+                collectionManageError={collectionManageError}
+                dragError={dragError}
+                mutationBusy={mutationBusy}
+                libraryLoading={libraryLoading}
+                onGoCollection={(id) => {
+                  onGoCollection(id);
+                  closeOnMobile();
+                }}
+                onCollectionDragOver={onCollectionDragOver}
+                onCollectionDragLeave={onCollectionDragLeave}
+                onCollectionDrop={onCollectionDrop}
+                onRenameCollection={onRenameCollection}
+                onTogglePinnedCollection={onTogglePinnedCollection}
+                onMovePinnedCollection={onMovePinnedCollection}
+                onDeleteCollection={onDeleteCollection}
+              />
+            ) : null}
           </div>
 
           <div className={`flex flex-col gap-1 ${contentExpanded ? "library-sidebar-footer-nav overflow-hidden" : ""}`}>
@@ -431,7 +372,7 @@ export function LibraryShell({
               <Dialog.Viewport className="fixed inset-0 z-50 flex overflow-hidden">
                 <Dialog.Popup
                   className={`${SHELL_ASIDE} ${SHELL_SIDEBAR_EXPANDED} border-r border-border-control shadow-menu outline-none transition-transform duration-300 ease-standard data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full motion-reduce:transition-none`}
-                  initialFocus={() => document.querySelector<HTMLElement>('#library-sidebar [data-sidebar-anchor="all-items"]')}
+                  initialFocus={() => document.querySelector<HTMLElement>('#library-sidebar [data-sidebar-anchor="All items"]')}
                   finalFocus={() => {
                     if (mobileOpener.current?.isConnected) return mobileOpener.current;
                     const anchor = mobileOpenerAnchor.current;
@@ -471,6 +412,28 @@ export function LibraryShell({
           <SidebarResizeHandle expanded={expanded} onExpandedChange={onPanelOpenChange} />
         </aside>
       )}
+      <JumpPalette
+        open={jumpOpen}
+        onOpenChange={setJumpOpen}
+        filter={jumpFilter}
+        onFilterChange={setJumpFilter}
+        collections={collections}
+        tags={tags}
+        pinnedCollectionIds={pinnedCollectionIds}
+        collectionCounts={counts.byCollectionId}
+        tagCounts={counts.byTagId}
+        mutationBusy={mutationBusy}
+        recentItems={recentItems}
+        onGoCollection={(id) => { onGoCollection(id); closeOnMobile(); }}
+        onGoTag={(id) => { onGoTag(id); closeOnMobile(); }}
+        onGoCollections={() => { onGoCollections?.(); closeOnMobile(); }}
+        onGoTags={() => { onGoTags?.(); closeOnMobile(); }}
+        onTogglePinnedCollection={onTogglePinnedCollection}
+        onRenameCollection={onRenameCollection}
+        onDeleteCollection={onDeleteCollection}
+        onDeleteTag={onDeleteTag}
+        returnFocus={() => (jumpOpener.current?.isConnected ? jumpOpener.current : null)}
+      />
     </>
   );
 }
@@ -538,15 +501,9 @@ function ShellNavLink({ expanded, label, href, icon, count }: {
   );
 }
 
-function CollectionsSection({
-  rail,
-  onSeeAll, overviewActive = false,
-  collectionsOpen,
-  onCollectionsOpenChange,
-  collectionFilter,
-  onCollectionFilterChange,
-  filteredCollections,
-  collections,
+function PinnedCollectionsSection({
+  rescueFocusOnHide,
+  pinnedCollections,
   pinnedCollectionIds,
   browseCollectionId,
   counts,
@@ -564,15 +521,9 @@ function CollectionsSection({
   onMovePinnedCollection,
   onDeleteCollection,
 }: {
-  rail?: SidebarRailAction;
-  onSeeAll?: () => void;
-  overviewActive?: boolean;
-  collectionsOpen: boolean;
-  onCollectionsOpenChange: (open: boolean) => void;
-  collectionFilter: string;
-  onCollectionFilterChange: (value: string) => void;
-  filteredCollections: Collection[];
-  collections: Collection[];
+  /** Desktop only: collapsing the sidebar removes this section, so focus inside it moves to the Expand button. */
+  rescueFocusOnHide: boolean;
+  pinnedCollections: Collection[];
   pinnedCollectionIds: string[];
   browseCollectionId: string | null;
   counts: Record<string, number>;
@@ -591,6 +542,15 @@ function CollectionsSection({
   onDeleteCollection: (id: string) => void;
 }) {
   const t = useTranslations("LibraryShell");
+  const sectionRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const section = sectionRef.current;
+    return () => {
+      if (rescueFocusOnHide && section?.contains(document.activeElement)) {
+        document.querySelector<HTMLButtonElement>('button[aria-controls="library-sidebar"]')?.focus();
+      }
+    };
+  }, [rescueFocusOnHide]);
   const [renamingCollectionId, setRenamingCollectionId] = useState<
     string | null
   >(null);
@@ -602,36 +562,16 @@ function CollectionsSection({
   );
 
   return (
-    <CollapsibleSection
-      rail={rail}
-      onSeeAll={onSeeAll}
-      overviewActive={overviewActive}
-      overviewLabel={t("allCollections")}
-      overviewIcon={<CollectionIcon className="size-3.5" />}
-      title={t("collections")}
-      icon={<CollectionIcon />}
-      open={collectionsOpen}
-      onOpenChange={onCollectionsOpenChange}
-    >
-      <SidebarSearch
-        label={t("searchCollections")}
-        placeholder={t("searchFolders")}
-        value={collectionFilter}
-        onChange={onCollectionFilterChange}
-      />
-
-      <SidebarSectionScroll activeId={browseCollectionId} filter={collectionFilter} itemCount={filteredCollections.length}>
+    <section ref={sectionRef} aria-labelledby="sidebar-pinned-heading" className="library-sidebar-section flex min-h-0 flex-1 flex-col pt-4">
+      <h2 id="sidebar-pinned-heading" className="shrink-0 px-3 pb-1 text-2xs font-semibold tracking-wide text-text-secondary uppercase">{t("pinned")}</h2>
+      <SidebarSectionScroll activeId={browseCollectionId} filter="" itemCount={pinnedCollections.length}>
         <div className="flex flex-col gap-1">
-          {filteredCollections.length === 0 ? (
-            <p className="pb-2 pl-12 text-pretty text-xs text-text-secondary">
-              {libraryLoading
-                ? t("loading")
-                : collections.length === 0
-                  ? t("noCollections")
-                  : t("noMatches")}
+          {pinnedCollections.length === 0 ? (
+            <p className="px-3 pb-2 text-pretty text-xs text-text-secondary">
+              {libraryLoading ? t("loading") : t("pinnedEmpty")}
             </p>
           ) : (
-            filteredCollections.map((collection) => {
+            pinnedCollections.map((collection) => {
               const pinnedIndex = pinnedPositions.get(collection.id) ?? -1;
               const pinned = pinnedIndex >= 0;
               const previousPinnedId =
@@ -732,105 +672,19 @@ function CollectionsSection({
           )}
 
           {dragError ? (
-            <p className="mt-2 pl-12 text-pretty text-xs text-text-danger" role="alert">
+            <p className="mt-2 px-3 text-pretty text-xs text-text-danger" role="alert">
               {dragError}
             </p>
           ) : null}
 
           {collectionManageError ? (
-            <p className="mt-2 pl-12 text-pretty text-xs text-text-danger" role="alert">
+            <p className="mt-2 px-3 text-pretty text-xs text-text-danger" role="alert">
               {collectionManageError}
             </p>
           ) : null}
         </div>
       </SidebarSectionScroll>
-    </CollapsibleSection>
-  );
-}
-
-function TagsSection({
-  rail,
-  onSeeAll, overviewActive = false,
-  tagsOpen,
-  onTagsOpenChange,
-  tagFilter,
-  onTagFilterChange,
-  filteredTags,
-  tags,
-  browseTagId,
-  counts,
-  libraryLoading = false,
-  onGoTag,
-  mutationBusy,
-  onDeleteTag,
-}: {
-  rail?: SidebarRailAction;
-  onSeeAll?: () => void;
-  overviewActive?: boolean;
-  tagsOpen: boolean;
-  onTagsOpenChange: (open: boolean) => void;
-  tagFilter: string;
-  onTagFilterChange: (value: string) => void;
-  filteredTags: Tag[];
-  tags: Tag[];
-  browseTagId: string | null;
-  counts: Record<string, number>;
-  libraryLoading?: boolean;
-  onGoTag: (id: string) => void;
-  mutationBusy: boolean;
-  onDeleteTag: (id: string) => void;
-}) {
-  const t = useTranslations("LibraryShell");
-  return (
-    <CollapsibleSection
-      rail={rail}
-      onSeeAll={onSeeAll}
-      overviewActive={overviewActive}
-      overviewLabel={t("allTags")}
-      overviewIcon={<HashIcon className="size-3.5" />}
-      icon={<HashIcon />}
-      title={
-        libraryLoading
-          ? t("tags")
-          : tags.length > 0
-            ? t("tagsWithCount", { count: tags.length })
-            : t("tags")
-      }
-      open={tagsOpen}
-      onOpenChange={onTagsOpenChange}
-    >
-      <SidebarSearch
-        label={t("searchTags")}
-        value={tagFilter}
-        onChange={onTagFilterChange}
-      />
-
-      <SidebarSectionScroll activeId={browseTagId} filter={tagFilter} itemCount={filteredTags.length}>
-        <div className="flex flex-col gap-1">
-          {filteredTags.length === 0 ? (
-            <p className="pb-2 pl-12 text-pretty text-xs text-text-secondary">
-              {libraryLoading
-                ? t("loading")
-                : tags.length === 0
-                  ? t("noTags")
-                  : t("noMatches")}
-            </p>
-          ) : (
-            filteredTags.map((tag) => (
-              <TagNavRow
-                key={tag.id}
-                tag={tag}
-                active={browseTagId === tag.id}
-                count={libraryLoading ? undefined : (counts[tag.id] ?? 0)}
-                mutationBusy={mutationBusy}
-                onNavigate={() => onGoTag(tag.id)}
-                onDelete={() => onDeleteTag(tag.id)}
-              />
-            ))
-          )}
-        </div>
-      </SidebarSectionScroll>
-    </CollapsibleSection>
+    </section>
   );
 }
 
@@ -875,47 +729,6 @@ function SidebarSectionScroll({ activeId, filter, itemCount, children }: {
     >
       <div className="pr-1">{children}</div>
     </ScrollPanel>
-  );
-}
-
-function TagNavRow({
-  tag,
-  count,
-  active,
-  mutationBusy,
-  onNavigate,
-  onDelete,
-}: {
-  tag: Tag;
-  count?: number;
-  active: boolean;
-  mutationBusy: boolean;
-  onNavigate: () => void;
-  onDelete: () => void;
-}) {
-  const t = useTranslations("LibraryShell");
-  return (
-    <SidebarRowMenu
-      label={tag.name}
-      mutationBusy={mutationBusy}
-      onDelete={onDelete}
-    >
-      {(trigger) => (
-        <div className={cn(`group ${SHELL_NAV_SURFACE} flex min-w-0 w-full items-center pr-2 text-sm ${active ? `${SHELL_NAV_ITEM_ACTIVE} font-medium text-text-primary` : `${SHELL_NAV_ITEM_IDLE} text-text-secondary focus-within:bg-bg-raised`}`)}>
-          <button
-            type="button"
-            className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 py-2 pl-12 text-left transition-transform active:scale-96 motion-reduce:transition-none motion-reduce:active:scale-100"
-            aria-label={t("tag", { name: tag.name })}
-            aria-current={active ? "page" : undefined}
-            onClick={onNavigate}
-          >
-            <span className="min-w-0 flex-1 truncate" title={tag.name}>{tag.name}</span>
-            {count !== undefined ? <NavCount value={count} /> : null}
-          </button>
-          {trigger}
-        </div>
-      )}
-    </SidebarRowMenu>
   );
 }
 
@@ -974,7 +787,7 @@ function CollectionNavRow({
   if (renaming) {
     return (
       <form
-        className={cn(`${SHELL_NAV_SURFACE} ${SHELL_NAV_ITEM_ACTIVE} w-full gap-2 py-1.5 pl-12 pr-2`)}
+        className={cn(`${SHELL_NAV_SURFACE} ${SHELL_NAV_ITEM_ACTIVE} w-full gap-2 py-1.5 ps-10 pe-2`)}
         onSubmit={(event) => {
           event.preventDefault();
           onSubmitRename();
@@ -1040,14 +853,14 @@ function CollectionNavRow({
         >
           <button
             type="button"
-            className="flex min-h-9 min-w-0 flex-1 self-stretch items-center gap-2 py-2 text-left transition-transform active:scale-96 motion-reduce:transition-none motion-reduce:active:scale-100"
+            className="flex min-h-10 min-w-0 flex-1 self-stretch items-center gap-2.5 py-2 ps-3 text-left transition-transform active:scale-96 motion-reduce:transition-none motion-reduce:active:scale-100"
             aria-label={collection.name}
             aria-current={active ? "page" : undefined}
             onClick={onNavigate}
           >
             <span
               aria-hidden="true"
-              className="flex h-4.5 w-10 shrink-0 translate-x-4.5 items-center justify-center text-collection-marker"
+              className="flex size-4.5 shrink-0 items-center justify-center text-collection-marker"
               // eslint-disable-next-line shadcn/no-inline-styles -- Per-collection marker hue and lightness custom properties.
               style={collectionMarkerStyle(collection.id)}
               title={pinned ? t("pinnedCollection") : undefined}
@@ -1149,10 +962,11 @@ function ShellNavItem({
   expanded,
   active = false,
   label,
-  anchor,
   ariaLabel,
   icon,
   count,
+  hasPopup = false,
+  shortcut,
   dropHighlight = false,
   onClick,
   onDragOver,
@@ -1162,11 +976,13 @@ function ShellNavItem({
   expanded: boolean;
   active?: boolean;
   label: string;
-  /** A stable data-sidebar-anchor key when code looks the row up; defaults to the label. */
-  anchor?: string;
   ariaLabel?: string;
   icon?: ReactNode;
   count?: number;
+  /** Opens a dialog rather than navigating. */
+  hasPopup?: boolean;
+  /** Keyboard hint shown in place of a count. */
+  shortcut?: string;
   dropHighlight?: boolean;
   onClick: () => void;
   onDragOver?: (event: DragEvent<HTMLButtonElement>) => void;
@@ -1185,8 +1001,9 @@ function ShellNavItem({
         dropHighlight ? "ring-2 ring-border-focus" : ""
       }`)}
       aria-label={ariaLabel ?? label}
-      data-sidebar-anchor={icon ? anchor ?? label : undefined}
+      data-sidebar-anchor={icon ? label : undefined}
       aria-current={active ? "page" : undefined}
+      aria-haspopup={hasPopup ? "dialog" : undefined}
       onClick={onClick}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -1197,6 +1014,7 @@ function ShellNavItem({
         <>
           <span className="min-w-0 flex-1 truncate">{label}</span>
           {count !== undefined ? <NavCount value={count} /> : null}
+          {shortcut ? <kbd aria-hidden="true" className="ml-auto shrink-0 pl-2 text-2xs text-text-secondary">{shortcut}</kbd> : null}
         </>
       ) : null}
     </button></Tooltip>
@@ -1211,104 +1029,5 @@ function NavCount({ value }: { value: number }) {
     >
       {value}
     </span>
-  );
-}
-
-function CollapsibleSection({
-  rail,
-  onSeeAll, overviewActive = false, overviewLabel, overviewIcon,
-  title,
-  icon,
-  open,
-  onOpenChange,
-  children,
-}: {
-  rail?: SidebarRailAction;
-  onSeeAll?: () => void;
-  overviewLabel?: string;
-  overviewIcon?: ReactNode;
-  overviewActive?: boolean;
-  title: string;
-  icon: ReactNode;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  children: ReactNode;
-}) {
-  const detailsRef = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    if (rail && detailsRef.current?.contains(document.activeElement)) {
-      document.querySelector<HTMLButtonElement>('button[aria-controls="library-sidebar"]')?.focus();
-    }
-  }, [rail]);
-
-  return (
-    <div className={`library-sidebar-section ${open ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} pt-4`}>
-      <div className="mb-1 flex h-10 shrink-0 items-center">
-<Tooltip content={rail?.label} disabled={!rail} side="right" describe={false}>
-        <button
-          type="button"
-          data-sidebar-anchor={title}
-          aria-label={rail?.label ?? title}
-          aria-current={rail?.active ? "page" : undefined}
-          data-sidebar-section-toggle
-          className={`flex h-10 min-w-0 flex-1 items-center gap-2.5 px-3 text-left text-text-primary hover:bg-bg-raised ${rail?.active ? SHELL_NAV_ITEM_ACTIVE : ""}`}
-          aria-expanded={rail ? false : open}
-          onClick={() => rail ? rail.onExpand() : onOpenChange(!open)}
-        >
-          <span data-sidebar-icon className="flex size-4.5 shrink-0 items-center justify-center">{icon}</span>
-          <span className="min-w-0 flex-1 truncate text-md font-medium">{title}</span>
-          <ChevronDownIcon
-            className={`size-3.5 text-text-secondary transition-transform duration-200 ease-standard motion-reduce:transition-none ${
-              open ? "" : "-rotate-90"
-            }`}
-          />
-        </button></Tooltip>
-      </div>
-      {open ? (
-        <div
-          ref={detailsRef}
-          data-sidebar-details
-          inert={Boolean(rail)}
-          aria-hidden={rail ? true : undefined}
-          className={`flex min-h-0 flex-1 flex-col gap-1 overflow-hidden ${rail ? "invisible" : ""}`}
-        >
-          {children}
-          {onSeeAll ? <div className="shrink-0 px-3 pt-1">
-            <button type="button" aria-current={overviewActive ? "page" : undefined} onClick={onSeeAll} className={`flex min-h-8 w-full items-center gap-2 px-3 text-xs font-medium outline-none hover:bg-bg-active focus-visible:outline-1 focus-visible:outline-border-focus ${overviewActive ? "bg-bg-selected text-text-primary" : "bg-bg-raised text-text-secondary"}`}>
-              {overviewIcon}<span className="min-w-0 truncate">{overviewLabel}</span>
-              <ArrowRightIcon className="ml-auto size-3.5" />
-            </button>
-          </div> : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function SidebarSearch({
-  label,
-  placeholder = label,
-  value,
-  onChange,
-}: {
-  label: string;
-  placeholder?: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="shrink-0 px-3">
-      <label className="relative block">
-        <span className="sr-only">{label}</span>
-        <SearchIcon className="pointer-events-none absolute left-4.75 top-1/2 size-3.5 -translate-y-1/2 text-text-secondary" />
-        <input
-          className="h-7 w-full border border-transparent bg-transparent pl-9 pr-2 text-xs"
-          placeholder={placeholder}
-          aria-label={label}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </label>
-    </div>
   );
 }

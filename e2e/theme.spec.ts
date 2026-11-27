@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { jumpPalette, openJumpPalette } from "./jump-palette";
 
 test.use({ serviceWorkers: "block" });
 
@@ -105,9 +106,14 @@ test("shared controls use flat surfaces in both themes", async ({ page }) => {
       await expect(search).toHaveCSS("corner-shape", "superellipse(1.5)");
     }
     expect((await search.boundingBox())!.width).toBe(250);
-    const folderSearch = page.getByRole("textbox", { name: "Search collections" });
-    await expect(folderSearch).toHaveAttribute("placeholder", "Search folders");
+    // Collections are searched in the jump palette, whose field sits flat on the popup surface.
+    const palette = await openJumpPalette(page, "Collections");
+    const folderSearch = palette.getByRole("combobox", { name: "Search collections and tags" });
+    await expect(folderSearch).toHaveAttribute("placeholder", "Jump to a collection or tag…");
     await expect(folderSearch).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(folderSearch).toHaveCSS("box-shadow", "none");
+    await page.keyboard.press("Escape");
+    await expect(palette).toHaveCount(0);
   }
 });
 
@@ -171,12 +177,17 @@ for (const width of [320, 768, 1024, 1440]) {
     await page.getByRole("button", { name: "List view" }).click();
     await expect(page.getByRole("button", { name: "List view" })).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: "Expand", exact: true }).click();
-    await expect(page.getByRole("textbox", { name: "Search collections" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Search tags" })).toBeVisible();
-    await page.getByRole("button", { name: "Collections", exact: true }).click();
-    await expect(page.getByRole("textbox", { name: "Search collections" })).toBeHidden();
-    await expect(page.getByRole("textbox", { name: "Search tags" })).toBeVisible();
-    await page.getByRole("button", { name: "All items", exact: true }).click();
+    const sidebar = width < 768 ? page.getByRole("dialog", { name: "Sidebar navigation" }) : page.getByRole("complementary", { name: "Sidebar" });
+    await expect(sidebar.getByRole("button", { name: "Tags", exact: true })).toBeInViewport();
+    await expect(sidebar.getByText("Pin a collection to keep it here.", { exact: true })).toBeInViewport();
+    // The Collections row opens the jump palette, which must fit the viewport too.
+    const palette = await openJumpPalette(page, "Collections", sidebar);
+    await expect(palette.getByRole("button", { name: "All collections", exact: true })).toBeInViewport();
+    await expect(palette.getByRole("button", { name: "All tags", exact: true })).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    await page.keyboard.press("Escape");
+    await expect(jumpPalette(page)).toHaveCount(0);
+    await sidebar.getByRole("button", { name: "All items", exact: true }).click();
     const overflowing = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
     expect(overflowing).toBe(false);
     await expect(page.getByRole("button", { name: "Save item", exact: true })).toBeInViewport();
