@@ -64,6 +64,14 @@ const BUTTON_PADDING_SYNTAX = [
 const TRANSLATED_FILES = [
   "src/app/backup-panel.tsx",
   "src/app/language-setting.tsx",
+  "src/app/library-empty-state.tsx",
+  "src/app/library-shell.tsx",
+  "src/app/library-top-bar.tsx",
+  "src/app/library-type-filter-menu.tsx",
+  "src/app/logo-context-menu.tsx",
+  "src/app/offline-banner.tsx",
+  "src/app/persistent-storage-status.tsx",
+  "src/app/pwa-update-banner.tsx",
   "src/app/settings/agents-panel.tsx",
   "src/app/settings/agents-settings.tsx",
   "src/app/settings/backup-folder-controls.tsx",
@@ -73,7 +81,10 @@ const TRANSLATED_FILES = [
   "src/app/settings/settings-sections.tsx",
   "src/app/settings/settings-tabs.tsx",
   "src/app/settings/storage-health.tsx",
+  "src/app/shell-top-menu.tsx",
+  "src/app/sidebar-resize-handle.tsx",
   "src/app/theme-control.tsx",
+  "src/app/undo-notice.tsx",
 ];
 const TEXT_ATTRIBUTES = "aria-label|aria-description|alt|placeholder|label|ariaLabel|content|tooltip";
 
@@ -150,7 +161,8 @@ const eslintConfig = defineConfig([
   {
     files: TRANSLATED_FILES,
     rules: {
-      "react/jsx-no-literals": ["error", { noStrings: false }],
+      // Decorative separators carry no words to translate.
+      "react/jsx-no-literals": ["error", { noStrings: false, allowedStrings: ["·", "/", "+"] }],
       "no-restricted-syntax": ["error", ...BUTTON_PADDING_SYNTAX, {
         selector: `JSXAttribute[name.name=/^(${TEXT_ATTRIBUTES})$/] > Literal[value=/[A-Za-z]/]`,
         message: "Interface text goes in src/i18n/messages/en.ts and comes from useTranslations() (src/i18n/use-translations.ts).",

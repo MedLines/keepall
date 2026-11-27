@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { probeNetworkReachable } from "@/pwa/connectivity";
+import { useTranslations } from "@/i18n/use-translations";
 
 const CONNECTIVITY_POLL_MS = 8_000;
 
@@ -9,6 +10,7 @@ export function OfflineBanner() {
   const [mounted, setMounted] = useState(false);
   const [browserOffline, setBrowserOffline] = useState(false);
   const [unreachable, setUnreachable] = useState(false);
+  const t = useTranslations("ShellBanners");
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only mount + connectivity
@@ -86,7 +88,7 @@ export function OfflineBanner() {
       className="border-b border-border-warning bg-bg-warning px-4 py-2 text-center text-sm text-text-warning"
       role="status"
     >
-      You are offline. Your library on this device still works.
+      {t("offline")}
     </div>
   );
 }

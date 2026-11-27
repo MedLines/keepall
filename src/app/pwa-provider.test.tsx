@@ -10,7 +10,6 @@ vi.mock("@/pwa/origin-policy-client", () => ({
 
 vi.mock("@/pwa/persistent-storage", () => ({
   requestPersistentStorage,
-  persistentStorageMessage: (status: string) => status,
 }));
 
 vi.mock("@/pwa/connectivity", () => ({

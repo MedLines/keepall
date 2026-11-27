@@ -34,11 +34,9 @@ import {
 } from "@/domain/item";
 import {
   libraryViewHref,
-  libraryTypeSelectionLabel,
   mergeLibraryViewState,
   parseLibraryViewState,
   sortLibraryItems,
-  type LibraryTypeSelection,
   type LibraryViewState,
 } from "@/domain/library-view";
 import { itemActionLabel } from "@/domain/item-label";
@@ -132,6 +130,8 @@ import Link from "next/link";
 import { UnsortedReview } from "./unsorted-review";
 import { useAgentReviewOffer } from "./use-agent-review-offer";
 import { LibraryEmptyState, getEmptyStateKind, entireLibrarySearch } from "./library-empty-state";
+import { useTranslations, type Translations } from "@/i18n/use-translations";
+import { useLibraryTypeAlternatives, useLibraryTypeLabel } from "./use-library-type-label";
 import { readShellPanelOpen, writeShellPanelOpen } from "./shell-styles";
 import { isShellMobileViewport } from "./use-shell-mobile";
 import type { OrgNameSuggestion } from "./org-name-suggest";
@@ -149,38 +149,40 @@ import type { ImageDetailsDraft, LinkDetailsDraft, NoteDetailsDraft, VideoDetail
 type RestoreFocus = { id: string; action: "edit" | "delete" };
 
 function getEmptyStateMessage(
+  t: Translations<"Library">,
   view: LibraryViewState,
   hasActiveSearch: boolean,
   collectionId: string | null,
 ): string {
-  if (hasActiveSearch) return "No matching items.";
-  if (view.type !== null) return Array.isArray(view.type) ? "No items of these types." : "No items of this type.";
-  if (view.tag !== null) return "No items with this tag.";
-  if (view.unsorted) return "No unsorted items.";
-  if (collectionId !== null) return "No items in this collection.";
-  if (view.trash) return "Trash is empty.";
-  return "No items yet.";
+  if (hasActiveSearch) return t("emptyMatching");
+  if (view.type !== null) return Array.isArray(view.type) ? t("emptyTypes") : t("emptyType");
+  if (view.tag !== null) return t("emptyTag");
+  if (view.unsorted) return t("emptyUnsorted");
+  if (collectionId !== null) return t("emptyCollection");
+  if (view.trash) return t("emptyTrash");
+  return t("emptyLibrary");
 }
 
 /** Resume enrich + flush deferred enrich reloads after folder clicks stop. */
 const BROWSE_IDLE_MS = 2500;
 
 function libraryViewTitle(
+  t: Translations<"Library">,
   browseCollection: Collection | null,
   browseUnsorted: boolean,
-  browseType: LibraryTypeSelection,
+  typeLabel: string | null,
   browseTagName: string | null,
 ): string {
   if (browseCollection) {
     return browseCollection.name;
   }
   if (browseUnsorted) {
-    return "Unsorted";
+    return t("unsorted");
   }
   if (browseTagName) {
     return browseTagName;
   }
-  return libraryTypeSelectionLabel(browseType) ?? "All items";
+  return typeLabel ?? t("allItems");
 }
 
 function subscribePanelPreference(onChange: () => void) {
@@ -191,6 +193,9 @@ function subscribePanelPreference(onChange: () => void) {
 const panelServerSnapshot = () => null;
 
 export function Library() {
+  const t = useTranslations("Library");
+  const typeLabel = useLibraryTypeLabel();
+  const typeAlternatives = useLibraryTypeAlternatives();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -684,8 +689,9 @@ export function Library() {
   const hasActiveSearch = normalizeSearchQuery(searchQuery).length > 0;
   const emptyStateKind = getEmptyStateKind(view, hasActiveSearch, items.length);
   const entireSearch = entireLibrarySearch(view);
-  const emptySearchScope = [view.trash ? "Trash" : browseCollection?.name ?? (browseUnsorted ? "Unsorted" : "the library"), browseTagName ? `tag “${browseTagName}”` : null, browseType ? `${Array.isArray(browseType) ? browseType.join(" or ") : browseType} items` : null].filter(Boolean).join(" · ");
-  const emptyStateMessage = getEmptyStateMessage(view, hasActiveSearch, browseCollectionId);
+  const scopeTypes = typeAlternatives(browseType);
+  const emptySearchScope = [view.trash ? t("trash") : browseCollection?.name ?? (browseUnsorted ? t("unsorted") : t("scopeLibrary")), browseTagName ? t("scopeTag", { name: browseTagName }) : null, scopeTypes ? t("scopeTypes", { types: scopeTypes }) : null].filter(Boolean).join(" · ");
+  const emptyStateMessage = getEmptyStateMessage(t, view, hasActiveSearch, browseCollectionId);
   const allVisibleSelected =
     selectionEntries.length > 0 &&
     selectionEntries.every(entry => selectedIds.has(entry.id));
@@ -1700,10 +1706,11 @@ export function Library() {
     }
   }
 
-  const viewTitle = view.collections ? "Collections" : view.tags ? "Tags" : view.trash ? "Trash" : libraryViewTitle(
+  const viewTitle = view.collections ? t("collections") : view.tags ? t("tags") : view.trash ? t("trash") : libraryViewTitle(
+    t,
     browseCollection,
     browseUnsorted,
-    browseType,
+    typeLabel(browseType),
     browseTagName,
   );
 
@@ -1827,7 +1834,7 @@ export function Library() {
         searchQuery={searchQuery}
         searchPending={documentSearch.pending}
         onSearchChange={(value) => updateView({ q: value })}
-        searchPlaceholder={view.trash ? "Search Trash…" : browseCollection ? `Search in ${browseCollection.name}…` : browseUnsorted ? "Search Unsorted…" : "Search your library…"}
+        searchPlaceholder={view.trash ? t("searchTrash") : browseCollection ? t("searchIn", { name: browseCollection.name }) : browseUnsorted ? t("searchUnsorted") : t("searchLibrary")}
         sort={view.sort}
         onSortChange={(sort) => updateView({ sort }, "push")}
         layout={browseLayout}
@@ -1853,7 +1860,7 @@ export function Library() {
         onEmptyTrash={() => trashActions.requestEmpty(trashedItems)}
         onTypeFilterChange={(type) => updateView({ type }, "push")}
         tagFilterName={browseTagName}
-        typeFilterName={libraryTypeSelectionLabel(browseType)}
+        typeFilterName={typeLabel(browseType)}
         onClearSearchFilter={() => updateView({ q: "" }, "push")}
         onClearTypeFilter={() => updateView({ type: null }, "push")}
         onClearTagFilter={() => updateView({ tag: null }, "push")}
@@ -1863,8 +1870,8 @@ export function Library() {
         libraryLoading={loadState === "loading"}
         notice={trashUndoLatest ? <UndoNotice
           key={`${trashUndoLatest.id}:${trashUndoCount}`}
-          message={trashUndoCount === 1 ? `Moved “${trashUndoLabel}” to Trash.` : `Moved ${trashUndoCount} items to Trash.`}
-          undoLabel={trashUndoCount === 1 ? `Undo moving ${trashUndoLabel} to Trash` : `Undo moving ${trashUndoCount} items to Trash`}
+          message={t("movedToTrash", { count: trashUndoCount, label: trashUndoLabel })}
+          undoLabel={t("undoMoveToTrash", { count: trashUndoCount, label: trashUndoLabel })}
           busy={mutationBusy}
           paused={trashUndoPaused}
           onUndo={() => void undoTrash()}

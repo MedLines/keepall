@@ -16,16 +16,3 @@ export async function requestPersistentStorage(): Promise<PersistentStorageStatu
     return "unavailable";
   }
 }
-
-export function persistentStorageMessage(
-  status: PersistentStorageStatus,
-): string {
-  switch (status) {
-    case "granted":
-      return "Storage on this device is marked persistent.";
-    case "denied":
-      return "Storage may be cleared under browser pressure.";
-    case "unavailable":
-      return "Persistent storage is not available in this browser.";
-  }
-}

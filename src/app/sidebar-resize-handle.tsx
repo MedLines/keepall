@@ -3,6 +3,7 @@
 import { animate, useMotionValue, useReducedMotion } from "motion/react";
 import { uiMotion } from "@/components/ui/motion-tokens";
 import { useLayoutEffect, useRef } from "react";
+import { useTranslations } from "@/i18n/use-translations";
 import {
   SIDEBAR_WIDTH_KEY as WIDTH_KEY,
   SIDEBAR_DEFAULT_WIDTH as DEFAULT_WIDTH,
@@ -27,13 +28,19 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
   const displayedWidth = useMotionValue(DEFAULT_WIDTH);
   const reduceMotion = useReducedMotion();
   const syncWidth = useRef<(() => void) | null>(null);
+  const t = useTranslations("LibraryShell");
+  // The effects below set aria-valuetext imperatively; they read the current language's text through this ref.
+  const widthText = useRef((width: number | null) => width === null ? t("collapsed") : t("width", { count: width }));
+  useLayoutEffect(() => {
+    widthText.current = (width) => width === null ? t("collapsed") : t("width", { count: width });
+  }, [t]);
 
   useLayoutEffect(() => {
     expandedRef.current = expanded;
     syncWidth.current?.();
     const handle = handleRef.current;
     handle?.setAttribute("aria-valuenow", String(expanded ? Math.min(widthRef.current, maximumWidth()) : RAIL_WIDTH));
-    handle?.setAttribute("aria-valuetext", expanded ? `${Math.round(Math.min(widthRef.current, maximumWidth()))} pixels` : "Collapsed");
+    handle?.setAttribute("aria-valuetext", widthText.current(expanded ? Math.round(Math.min(widthRef.current, maximumWidth())) : null));
   }, [expanded]);
 
   useLayoutEffect(() => {
@@ -103,7 +110,7 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
       const width = expandedRef.current ? Math.min(widthRef.current, maximumWidth()) : RAIL_WIDTH;
       handle.setAttribute("aria-valuenow", String(Math.round(width)));
       handle.setAttribute("aria-valuemax", String(Math.floor(maximumWidth())));
-      handle.setAttribute("aria-valuetext", expandedRef.current ? `${Math.round(width)} pixels` : "Collapsed");
+      handle.setAttribute("aria-valuetext", widthText.current(expandedRef.current ? Math.round(width) : null));
     }
 
     function apply(requested: number) {
@@ -248,13 +255,13 @@ export function SidebarResizeHandle({ expanded, onExpandedChange }: {
       ref={handleRef}
       role="separator"
       tabIndex={0}
-      aria-label="Resize sidebar"
+      aria-label={t("resize")}
       aria-controls="library-sidebar"
       aria-orientation="vertical"
       aria-valuemin={RAIL_WIDTH}
       aria-valuemax={MAX_WIDTH}
       aria-valuenow={expanded ? DEFAULT_WIDTH : RAIL_WIDTH}
-      title="Drag to resize. Click or press Enter to collapse or expand. Arrow keys resize."
+      title={t("resizeHint")}
       className="library-sidebar-resize"
     />
   );
