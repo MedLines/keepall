@@ -364,7 +364,9 @@ test("a Markdown note keeps its source and formatting after offline reload", asy
   await page.getByRole("link", { name: /Card idea/ }).click();
   await expect(page).toHaveURL(/\/items\//);
   await expect(page.getByRole("heading", { level: 2, name: "Card idea" })).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Completed checklist item" })).toBeDisabled();
+  // The note's own page can tick its checklist; previews and cards stay read-only.
+  await expect(page.getByRole("checkbox", { name: "Check spacing" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Check spacing" })).toBeEnabled();
   // The library stays mounted beneath the item page, and the card excerpt renders the same code.
   await expect(page.getByTestId("item-page-scroll").getByText("const gap = 8;")).toBeVisible();
 

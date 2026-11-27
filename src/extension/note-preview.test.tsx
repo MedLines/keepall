@@ -6,8 +6,8 @@ test("renders headings, lists, tables and disabled task controls", () => {
   render(<NotePreview format="markdown" content={'# Heading\n\n- One\n- Two\n\n- [x] Done\n- [ ] Pending\n\n| A | B |\n| - | - |\n| 1 | 2 |'} />);
   expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("Heading");
   expect(screen.getByRole("table")).toHaveTextContent("A");
-  expect(screen.getByRole("checkbox", { name: "Completed checklist item" })).toBeChecked();
-  expect(screen.getByRole("checkbox", { name: "Incomplete checklist item" })).toBeDisabled();
+  expect(screen.getByRole("checkbox", { name: "Done" })).toBeChecked();
+  expect(screen.getByRole("checkbox", { name: "Pending" })).toBeDisabled();
 });
 
 test("keeps HTML literal, never mounts images, and only exposes safe absolute links", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildNote, noteListTitle, noteReadingBody, applyNoteEdit, NoteValidationError, noteImageAssetIds, noteImageMarkers, insertNoteImageMarker, removeNoteImageMarkerAt, replaceNoteImageAssetIds } from "./note";
+import { buildNote, noteListTitle, noteReadingBody, applyNoteEdit, NoteValidationError, noteImageAssetIds, noteImageMarkers, insertNoteImageMarker, removeNoteImageMarkerAt, replaceNoteImageAssetIds, toggleNoteTaskAt } from "./note";
 
 describe("buildNote", () => {
   test("creates a note with trimmed content and an empty title", () => {
@@ -147,5 +147,48 @@ describe("inline note images", () => {
     const repeated = "![Image](keepall-image:a1)\n\n![Image](keepall-image:a1)";
     expect(noteImageMarkers(repeated)).toHaveLength(2);
     expect(noteImageMarkers(removeNoteImageMarkerAt(repeated, 1))).toHaveLength(1);
+  });
+});
+
+describe("toggleNoteTaskAt", () => {
+  const at = (content: string, line: string) => content.indexOf(line);
+
+  test("flips only the box on the item at the offset and keeps every other character", () => {
+    const content = "# Plan\r\n\r\n- [ ] Milk  \r\n- [x] Bread [ ] not a box\r\n\ttrailing\r\n";
+    expect(toggleNoteTaskAt(content, at(content, "- [ ] Milk"))).toBe("# Plan\r\n\r\n- [x] Milk  \r\n- [x] Bread [ ] not a box\r\n\ttrailing\r\n");
+    expect(toggleNoteTaskAt(content, at(content, "- [x] Bread"))).toBe("# Plan\r\n\r\n- [ ] Milk  \r\n- [ ] Bread [ ] not a box\r\n\ttrailing\r\n");
+  });
+
+  test("clears done boxes written with x or X", () => {
+    expect(toggleNoteTaskAt("- [x] Done", 0)).toBe("- [ ] Done");
+    expect(toggleNoteTaskAt("- [X] Done", 0)).toBe("- [ ] Done");
+    expect(toggleNoteTaskAt("- [ ] Open", 0)).toBe("- [x] Open");
+  });
+
+  test("handles every list marker, nested items, blockquotes and an offset at the line start", () => {
+    const content = "* [ ] star\n+ [ ] plus\n1. [ ] one\n2) [ ] two\n- [ ] parent\n  - [X] child\n> - [ ] quoted\n-\n  [ ] next line";
+    const flip = (line: string) => toggleNoteTaskAt(content, at(content, line));
+    expect(flip("* [ ] star")).toBe(content.replace("* [ ] star", "* [x] star"));
+    expect(flip("+ [ ] plus")).toBe(content.replace("+ [ ] plus", "+ [x] plus"));
+    expect(flip("1. [ ] one")).toBe(content.replace("1. [ ] one", "1. [x] one"));
+    expect(flip("2) [ ] two")).toBe(content.replace("2) [ ] two", "2) [x] two"));
+    expect(flip("- [X] child")).toBe(content.replace("- [X] child", "- [ ] child"));
+    expect(flip("  - [X] child")).toBe(content.replace("- [X] child", "- [ ] child"));
+    expect(flip("- [ ] quoted")).toBe(content.replace("- [ ] quoted", "- [x] quoted"));
+    expect(flip("> - [ ] quoted")).toBe(content.replace("- [ ] quoted", "- [x] quoted"));
+    expect(flip("-\n  [ ] next line")).toBe(content.replace("[ ] next line", "[x] next line"));
+    // A parent item's offset never reaches into its children.
+    expect(flip("- [ ] parent")).toBe(content.replace("- [ ] parent", "- [x] parent"));
+  });
+
+  test("leaves non-task lines and out-of-range offsets alone", () => {
+    for (const content of ["- plain item", "Text with [ ] inside", "- [ ]", "- [x]done", "- [y] other", "[ ] no marker", "-  \n\n  [ ] after a blank line"]) {
+      expect(toggleNoteTaskAt(content, 0)).toBe(content);
+    }
+    const content = "- [ ] Milk";
+    expect(toggleNoteTaskAt(content, 2)).toBe(content);
+    expect(toggleNoteTaskAt(content, -1)).toBe(content);
+    expect(toggleNoteTaskAt(content, content.length)).toBe(content);
+    expect(toggleNoteTaskAt(content, 0.5)).toBe(content);
   });
 });

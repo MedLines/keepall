@@ -5,7 +5,7 @@ import { ItemPreviewContentTransition } from "./item-view-transition";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { itemActionLabel } from "@/domain/item-label";
 import { ImageValidationError } from "@/domain/image";
 import { CollectionValidationError, type Collection } from "@/domain/collection";
@@ -71,6 +71,8 @@ export function NoteItemPage({
   const organizeBusy = organizeMutation !== null;
   const [tagError, setTagError] = useState<string | null>(null);
   const [collectionError, setCollectionError] = useState<string | null>(null);
+  const [taskError, setTaskError] = useState<string | null>(null);
+  const taskSaves = useRef(Promise.resolve());
 
   useEffect(() => {
     let active = true;
@@ -153,6 +155,24 @@ export function NoteItemPage({
     } finally {
       setSaving(false);
     }
+  }
+
+  // A checklist click shows at once and saves in order behind any earlier click, so quick clicks all land.
+  function toggleTask(content: string) {
+    if (editing || saving || deleting) return;
+    setTaskError(null);
+    setState((current) => current.status === "ready" ? { ...current, note: { ...current.note, content } } : current);
+    taskSaves.current = taskSaves.current.then(async () => {
+      try {
+        const updated = await saveNoteWithImages(itemId, { content }, []);
+        setState((current) => current.status === "ready" && current.note.content === content ? { ...current, note: updated } : current);
+        window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+      } catch {
+        const stored = await getItem(itemId).catch(() => undefined);
+        setState((current) => current.status === "ready" && stored?.type === "note" ? { ...current, note: stored } : current);
+        setTaskError("Couldn't update checklist.");
+      }
+    });
   }
 
   async function addTag(name: string) {
@@ -273,8 +293,9 @@ export function NoteItemPage({
           <div className="row-start-2 min-w-0 lg:col-start-1 lg:row-start-1 lg:mx-auto lg:w-full lg:max-w-4xl lg:pt-6">
             <article className="min-w-0">
               <ItemPreviewContentTransition itemId={itemId}>
-              <NoteContent content={note.content} format={note.format === "markdown" ? "markdown" : "plain"} headingStart={2} />
+              <NoteContent content={note.content} format={note.format === "markdown" ? "markdown" : "plain"} headingStart={2} onTaskToggle={toggleTask} />
               </ItemPreviewContentTransition>
+              {taskError ? <p role="alert" className="mt-4 text-sm text-text-danger">{taskError}</p> : null}
             </article>
           </div>
 

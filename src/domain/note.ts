@@ -36,6 +36,22 @@ export function noteImageAssetIds(content: string): string[] {
   return [...new Set(noteImageMarkers(content).map((marker) => marker.assetId))];
 }
 
+// A GitHub task item read from where its list item starts: optional indent and blockquote marks (so a line
+// start also works), the list marker, then `[ ]`, `[x]` or `[X]` followed by whitespace. The box may sit on
+// the next line when the marker line is otherwise empty.
+const NOTE_TASK_MARKER = /[ \t]*(?:>[ \t]?)*[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]+|[ \t]*\r?\n(?:[ \t]*>)*[ \t]*)\[([ xX])\](?=\s)/y;
+
+/** Flips the task box of the list item that starts at `offset`; any other text comes back unchanged. */
+export function toggleNoteTaskAt(content: string, offset: number): string {
+  if (!Number.isInteger(offset) || offset < 0 || offset >= content.length) return content;
+  const marker = new RegExp(NOTE_TASK_MARKER);
+  marker.lastIndex = offset;
+  const match = marker.exec(content);
+  if (!match) return content;
+  const box = match.index + match[0].length - 2;
+  return `${content.slice(0, box)}${match[1] === " " ? "x" : " "}${content.slice(box + 1)}`;
+}
+
 export function removeNoteImageMarkerAt(content: string, markerIndex: number): string {
   const lines = content.split(/\r?\n/);
   let seen = 0;
