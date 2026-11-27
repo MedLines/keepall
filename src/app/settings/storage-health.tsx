@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormatLocale } from "@/i18n/use-translations";
 import { useEffect, useState } from "react";
 import { RefreshIcon } from "../shell-icons";
 import { buttonClassName } from "@/components/ui/button";
@@ -39,7 +40,7 @@ async function readStorageHealth(): Promise<StorageHealthSnapshot> {
   };
 }
 
-function formatBytes(bytes: number): string {
+function formatBytes(bytes: number, locale: string | undefined): string {
   if (bytes < 1024) return `${Math.round(bytes)} B`;
 
   const units = ["KB", "MB", "GB", "TB"];
@@ -49,7 +50,7 @@ function formatBytes(bytes: number): string {
     value /= 1024;
     unit += 1;
   }
-  const formatted = new Intl.NumberFormat("en-US", {
+  const formatted = new Intl.NumberFormat(locale, {
     maximumFractionDigits: 1,
   }).format(value);
   return `${formatted} ${units[unit]}`;
@@ -58,11 +59,12 @@ function formatBytes(bytes: number): string {
 export function StorageHealth() {
   const [snapshot, setSnapshot] = useState<StorageHealthSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const locale = useFormatLocale();
   const placeholder = loading && !snapshot ? "Checking…" : "Unavailable";
   const usage =
-    snapshot?.usage == null ? placeholder : formatBytes(snapshot.usage);
+    snapshot?.usage == null ? placeholder : formatBytes(snapshot.usage, locale);
   const quota =
-    snapshot?.quota == null ? placeholder : formatBytes(snapshot.quota);
+    snapshot?.quota == null ? placeholder : formatBytes(snapshot.quota, locale);
   const persistence =
     snapshot?.persisted == null
       ? placeholder

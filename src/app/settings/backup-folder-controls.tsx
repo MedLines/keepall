@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormatLocale } from "@/i18n/use-translations";
 import { useEffect, useRef, useState } from "react";
 import { BackupFolderError } from "@/persistence/backup-folder";
 import { BackupIcon, ClockIcon, EditIcon } from "../shell-icons";
@@ -128,11 +129,12 @@ function statusLabel(settings: BackupFolderSettings | undefined, action: Action 
 
 function FolderBackupDetails({ settings, hasPendingChanges }: { settings: BackupFolderSettings; hasPendingChanges?: boolean }) {
   const lastBackup = settings.completed.at(-1);
+  const locale = useFormatLocale();
   return <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2" aria-live="polite">
     <div className="min-w-0"><dt className="text-xs text-text-secondary">Backup folder</dt>
       <dd className="mt-1 wrap-anywhere font-medium"><bdi>{settings.directory.name}</bdi></dd></div>
     <div><dt className="text-xs text-text-secondary">Last verified backup</dt>
-      <dd className="mt-1 font-medium">{lastBackup ? <time dateTime={new Date(lastBackup.completedAt).toISOString()}>{new Date(lastBackup.completedAt).toLocaleString()}</time> : "No completed backup yet"}</dd></div>
+      <dd className="mt-1 font-medium">{lastBackup ? <time dateTime={new Date(lastBackup.completedAt).toISOString()}>{new Date(lastBackup.completedAt).toLocaleString(locale)}</time> : "No completed backup yet"}</dd></div>
     {settings.enabled && lastBackup ? <div className="sm:col-span-2"><dt className="text-xs text-text-secondary">Backup coverage</dt>
       <dd className="mt-1 flex items-center gap-2 font-medium">{hasPendingChanges ? <><EditIcon className="size-4 text-text-secondary" />Changes waiting for backup</> : <><BackupIcon className="size-4 text-text-secondary" />Up to date</>}</dd></div> : null}
   </dl>;

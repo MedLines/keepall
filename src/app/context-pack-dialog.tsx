@@ -8,6 +8,7 @@ import { TextField } from "@/components/ui/text-field";
 import { contextPackSlug, type ContextPack, type ContextPackSource } from "@/domain/context-pack";
 import type { Item } from "@/domain/item";
 import { formatFileSize } from "@/lib/format-file-size";
+import { useFormatLocale } from "@/i18n/use-translations";
 import {
   contextPackFileName,
   contextPackFromSnapshot,
@@ -55,6 +56,7 @@ function progressLabel(progress: ContextPackProgress | null): string {
 
 function PackSummary({ pack, includeFiles }: { pack: ContextPack; includeFiles: boolean }) {
   const items = pack.manifest.items;
+  const locale = useFormatLocale();
   const gaps = items.filter((item) => item.missing.includes("visuals")).length;
   const largest = includeFiles
     ? items.flatMap((item) => item.files.map((file) => ({ title: item.title, bytes: file.bytes })))
@@ -62,9 +64,9 @@ function PackSummary({ pack, includeFiles }: { pack: ContextPack; includeFiles: 
     : [];
   return <>
     <p><span className="font-medium text-text-primary">{items.length === 1 ? "1 item" : `${items.length} items`}</span>{items.length ? `: ${describeCounts(pack)}` : ""}</p>
-    <p>About {pack.manifest.totals.estimatedTokens.toLocaleString()} tokens of text</p>
+    <p>About {pack.manifest.totals.estimatedTokens.toLocaleString(locale)} tokens of text</p>
     {gaps ? <p>{gaps === 1 ? "1 link has" : `${gaps} links have`} no saved text or image. Agents will only see the URL.</p> : null}
-    {largest.length ? <p>Largest: {largest.map((file) => `${file.title} (${formatFileSize(file.bytes)})`).join(", ")}</p> : null}
+    {largest.length ? <p>Largest: {largest.map((file) => `${file.title} (${formatFileSize(file.bytes, locale)})`).join(", ")}</p> : null}
   </>;
 }
 
@@ -84,6 +86,7 @@ function ExportDone({ snippet, copied, onCopy }: { snippet: string; copied: bool
 /** Exports a set of items as an agent-ready Context Pack ZIP. Mount with a `key` per request. */
 export function ContextPackDialog({ request, onClose }: { request: ContextPackRequest; onClose: () => void }) {
   const filesId = useId();
+  const locale = useFormatLocale();
   const [snapshot, setSnapshot] = useState<ContextPackSnapshot | null>(null);
   const [exportedAt] = useState(() => Date.now());
   const [name, setName] = useState(request.defaultName);
@@ -183,7 +186,7 @@ export function ContextPackDialog({ request, onClose }: { request: ContextPackRe
           <span>
             <span className="font-medium">Include files</span>
             <span className="mt-0.5 block text-xs text-text-secondary">
-              Screenshots, images, documents, and videos{sizes ? ` · ${formatFileSize(sizes.withFiles)}` : ""}
+              Screenshots, images, documents, and videos{sizes ? ` · ${formatFileSize(sizes.withFiles, locale)}` : ""}
             </span>
           </span>
         </RadioCard>
@@ -191,7 +194,7 @@ export function ContextPackDialog({ request, onClose }: { request: ContextPackRe
           <span>
             <span className="font-medium">Text only</span>
             <span className="mt-0.5 block text-xs text-text-secondary">
-              Cards, notes, and extracted text{sizes ? ` · ${formatFileSize(sizes.textOnly)}` : ""}
+              Cards, notes, and extracted text{sizes ? ` · ${formatFileSize(sizes.textOnly, locale)}` : ""}
             </span>
           </span>
         </RadioCard>

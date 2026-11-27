@@ -16,7 +16,7 @@ const meta = {
   title: "Shell/ShellTopMenu",
   component: ShellTopMenu,
   args: { ariaLabel: "Sort", value: "newest", options: sortOptions, onChange: fn() },
-  argTypes: { variant: { control: "inline-radio", options: ["toolbar", "field"] } },
+  argTypes: { variant: { control: "inline-radio", options: ["toolbar", "field", "control"] } },
   render: function Render(args) {
     const [value, setValue] = useState(args.value);
     return <ShellTopMenu<Sort> {...args} value={value} onChange={(next) => { setValue(next); args.onChange(next); }} />;
@@ -60,6 +60,9 @@ export const EmphasizedWithCounts: StoryObj<Meta<typeof ShellTopMenu<TypeFilter>
   },
   play: openMenu,
 };
+
+/** Control variant: a settings-row trigger, sized and padded like the Theme control beside it. */
+export const Control: Story = { args: { variant: "control" } };
 
 /** Field variant: a full-width form control paired with a visible label. */
 export const Field: Story = {

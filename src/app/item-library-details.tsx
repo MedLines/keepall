@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { CollectionIcon, HashIcon, ArrowRightIcon, DeleteIcon, EditIcon, LayersIcon } from "./shell-icons";
 import { ITEM_DETAILS_CONTROL } from "./item-page-styles";
+import { useFormatLocale } from "@/i18n/use-translations";
 
 type Props = {
   label: string;
@@ -28,10 +29,11 @@ const ORGANIZATION_LINK = "inline-flex min-h-9 min-w-0 max-w-full items-center g
 
 function DateRow({ label, value }: { label: string; value: number }) {
   const date = new Date(value);
+  const locale = useFormatLocale();
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
       <dt className="text-text-secondary">{label}</dt>
-      <dd><time dateTime={date.toISOString()}>{date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</time></dd>
+      <dd><time dateTime={date.toISOString()}>{date.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" })}</time></dd>
     </div>
   );
 }

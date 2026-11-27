@@ -120,6 +120,14 @@ About and Help retain window scrolling for scroll-driven scenes, sticky navigati
 
 Desktop sidebar rows use 36px height and 12px section spacing; mobile keeps its larger targets. The resize hairline is hidden at rest and stops short of rounded corners, fading at both ends. Click or Enter toggles the existing icon rail. Drag width follows the pointer without a spring; collapse previews use moderate motion and normal toggles use slow motion. Reduced motion applies widths immediately. Freeze only the library viewport during resizing and motion, leaving the top toolbar responsive. Escape and pointer cancellation restore the previous width without saving a drag preview.
 
+# Interface text and languages
+
+The app's interface language is a device preference, like the theme: `keepall-language-v1` in localStorage, defaulting to the browser's languages, applied to `<html lang>` by an init script before the first paint. App routes carry no locale segment, so offline caching, the extension bridge and saved item links keep their URLs. The server renders English; client components switch to the saved language when they hydrate. Server components that render app text need a client child to translate it.
+
+Text lives in `src/i18n/messages/en.ts`, grouped by component, as ICU messages. A key holds a whole sentence with its `{placeholders}` and plurals inside; never build a sentence from fragments or from a word plus an `s`. Components read it with `useTranslations("Component")`, which types keys and arguments against English. Pass `useFormatLocale()` to `toLocaleDateString`, `Intl.NumberFormat` and the like: it keeps the browser's region within the interface language (en-GB dates for an en-GB browser) and is undefined on the server, which is the runtime default. Agent-facing text, such as context packs and MCP output, stays in US English.
+
+The pseudo-locale `en-XA` accents every letter, stretches text by about a third and brackets each message. Outside production it appears in Settings → General → Language and in Storybook's Language toolbar: unbracketed English is text that never reached the catalogue, and a clipped bracket is a layout with no room for translation. The Language row stays hidden while only one language ships.
+
 # Design-system gate
 
 `pnpm lint` runs `@shadcn/lint` through ESLint and Stylelint on `src/app/styles/`. The policy and its reasons:
@@ -128,5 +136,6 @@ Desktop sidebar rows use 36px height and 12px section spacing; mobile keeps its 
 - Arbitrary values are errors except layout geometry (calc/min/viewport sizes, grid tracks, z layers), `rounded-[inherit]` and `transition-[…]` property lists. Prefer the Tailwind scale or a CSS variable shorthand such as `h-(--item-viewer-height)` over an arbitrary `var()` value in square brackets.
 - An inline `style` may carry runtime values: custom properties, transform, width, height, aspect ratio and grid tracks are allowed outright; anything else needs an `eslint-disable-next-line shadcn/no-inline-styles -- <reason>`.
 - Restyling a design-system component is a warning. `Button` and `IconButton` own their size and shape: callers place them with margin; only `Button size="toolbar"` takes `px-*` from the caller. `ScrollArea`, `ScrollPanel` and `ScrollTextarea` accept layout, spacing and shape, plus `ui-field` and `scroll-fade`.
+- Files in `TRANSLATED_FILES` (`eslint.config.mjs`) may not write text straight into JSX or into text attributes such as `aria-label` and `placeholder`. Add a file to the list when its strings move to the catalogue, so it cannot slip back.
 - In `src/app/styles/`, only `tokens.css` may write literal colours; mask properties are exempt because black and transparent there set alpha.
 
