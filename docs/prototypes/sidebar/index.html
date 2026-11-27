@@ -164,9 +164,10 @@ svg.i.xs { width: 12px; height: 12px; }
 .b-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 6px; }
 .b-panel .scroll { flex: 1; padding: 4px 12px 8px; }
 
-/* Prototype E: pinned on top + switcher */
-.e-pinned { max-height: 192px; flex: none; }
-.e-rule { height: 1px; margin: 10px 22px 12px; background: var(--control); flex: none; }
+/* Prototype E: drill-in with a switcher header */
+.e-top { display: flex; align-items: center; gap: 6px; margin: 0 12px 0 8px; }
+.e-top .seg { flex: 1; margin: 0; }
+.e-back { width: 32px; height: 32px; }
 
 /* Prototype C: drill-in pages */
 .c-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
@@ -333,20 +334,20 @@ const PROTOS = {
     },
   },
   E: {
-    name: "Switcher + pinned",
-    tag: "Pinned collections on top, switcher below",
+    name: "Drill-in + switcher",
+    tag: "Pinned on top; lists open with a switcher",
     notes: {
       what: [
-        "<strong>Pinned collections sit on top</strong>, right under the library views, always visible whichever list is open below.",
-        "Below them, the <strong>Collections / Tags switcher</strong> from B fills the rest of the height in a panel that never changes size.",
-        "Pinned rows are your <strong>drop targets</strong>: drag an item straight onto one without opening anything. The Collections list below skips them so nothing shows twice.",
-        "Search, overview and row actions work like B. Drag a pinned row to reorder it.",
+        "The main sidebar is C's: library views, <strong>pinned collections</strong>, then <strong>Collections ›</strong> and <strong>Tags ›</strong>.",
+        "Opening either slides to a full-height page whose header is a <strong>Collections / Tags switcher</strong>, so you hop between the two lists without going back.",
+        "Each list keeps <strong>its own search</strong>, plus the overview button and A–Z or Most used sort. Tags get sticky letters.",
+        "Pinned collections stay on the main page as <strong>drop targets</strong>. Holding a dragged item over Collections › opens the page, and the switcher flips to Collections by itself.",
       ],
       trade: [
-        "Every pinned collection takes height from the list below. Past five it scrolls in its own box.",
-        "Tags can't be pinned today, so the top block is collections only.",
+        "Getting back to pinned collections takes the back button or Escape.",
+        "The switcher and the › rows do the same job, so there are two ways in.",
       ],
-      try: "Switch to Tags: the pinned block stays put. Pin another collection from its ⋮ menu. Drag a card onto a pinned row.",
+      try: "Open Tags ›, search, then switch to Collections in the header: each keeps its own query. Press Escape to go back.",
     },
   },
   D: {
@@ -370,14 +371,14 @@ const PROTOS = {
 
 const COVERAGE = [
   ["Library views and counts", "Unchanged", "Unchanged", "Unchanged", "Unchanged", "Unchanged"],
-  ["Search collections / tags", "One filter for both", "One box, scoped to the tab", "Search on each page", "Search in each flyout", "One box, scoped to the tab"],
+  ["Search collections / tags", "One filter for both", "One box, scoped to the tab", "Search on each page", "Search in each flyout", "Search on each list, kept per tab"],
   ["All collections / All tags", "Icon on each header, plus “All 188 tags” row", "Grid button beside search", "Grid button in page header", "Open overview in flyout footer", "Grid button beside search"],
   ["Pin, reorder, rename, delete", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows", "Row ⋮ menu, drag pinned rows"],
-  ["Drag items onto a collection", "Any visible collection", "Panel switches to Collections", "Pinned on main page; hover › to open", "Pinned in sidebar; hover to open flyout", "Pinned always on top; panel switches to Collections"],
+  ["Drag items onto a collection", "Any visible collection", "Panel switches to Collections", "Pinned on main page; hover › to open", "Pinned in sidebar; hover to open flyout", "Pinned on main page; hover › to open"],
   ["Delete tag", "Row ⋮ menu", "Row ⋮ menu", "Row ⋮ menu", "Right-click or ⋮ in flyout", "Row ⋮ menu"],
   ["Empty Trash", "Trash ⋮ menu", "Trash ⋮ menu", "Trash ⋮ menu", "Trash ⋮ menu", "Trash ⋮ menu"],
-  ["Icon rail", "Opens sidebar at the section", "Opens sidebar on that tab", "Opens sidebar on that page", "Opens the flyout directly", "Opens sidebar on that tab"],
-  ["Remembered state", "Which sections are open", "Last tab, per-tab query", "Last page and sort", "Tag sort", "Last tab, per-tab query"],
+  ["Icon rail", "Opens sidebar at the section", "Opens sidebar on that tab", "Opens sidebar on that page", "Opens the flyout directly", "Opens sidebar on that page"],
+  ["Remembered state", "Which sections are open", "Last tab, per-tab query", "Last page and sort", "Tag sort", "Last page, sort, per-tab query"],
 ];
 
 // ---------- Invented data ----------
@@ -412,6 +413,7 @@ const S = {
   b: { tab: "collections", q: { collections: "", tags: "" } },
   c: { page: "root", dir: null, q: "", sort: "az" },
   d: { fly: null, q: "", sort: "az" },
+  e: { page: "root", dir: null },
 };
 
 // ---------- Helpers ----------
@@ -557,30 +559,55 @@ function protoB() {
 
 // ---------- Prototype E ----------
 function protoE() {
-  const tab = S.b.tab;
-  const q = S.b.q[tab];
   const { p, rest } = byPinned();
-  let list;
-  if (tab === "collections") {
-    const cs = q.trim() ? collections.filter(c => match(c.name, q)) : rest;
-    list = cs.length ? cs.map(c => colRow(c, q)).join("") : `<p class="empty">No collections match “${esc(q)}”.</p>`;
+  const dir = S.e.dir ? (S.e.dir === "fwd" ? "in-right" : "in-left") : "";
+  let page;
+  if (S.e.page === "root") {
+    page = `<div class="c-page ${dir}">
+      <div class="sec-label" style="margin:6px 12px 0">Pinned</div>
+      <div class="nav">${p.length ? p.map(c => colRow(c)).join("") : `<p class="empty" style="padding-left:12px">Pin a collection from its ⋮ menu to keep it here.</p>`}</div>
+      <div class="nav" style="margin-top:12px">
+        <div class="row lg" data-epage="collections" data-spring="collections" role="button" tabindex="0"${cur(isActive("collection") || isActive("collections"))}>${icon("folder")}<span class="label">Collections</span><span class="count">${collections.length}</span>${icon("chevR", "sm chev")}</div>
+        <div class="row lg" data-epage="tags" role="button" tabindex="0"${cur(isActive("tag") || isActive("tags"))}>${icon("tag")}<span class="label">Tags</span><span class="count">${tags.length}</span>${icon("chevR", "sm chev")}</div>
+      </div>
+    </div>`;
   } else {
-    const ts = tags.filter(t => match(t.name, q));
-    list = ts.length ? ts.map(t => tagRow(t, q)).join("") : `<p class="empty">No tags match “${esc(q)}”.</p>`;
+    const tab = S.e.page;
+    const isCol = tab === "collections";
+    const q = S.b.q[tab];
+    let list = "";
+    if (isCol) {
+      if (q.trim()) {
+        const cs = collections.filter(c => match(c.name, q));
+        list = cs.length ? cs.map(c => colRow(c, q)).join("") : `<p class="empty">No collections match “${esc(q)}”.</p>`;
+      } else {
+        const all = S.c.sort === "az" ? rest : [...rest].sort((x, y) => y.count - x.count);
+        list = `<div class="letter">Pinned</div>${p.map(c => colRow(c)).join("")}<div class="letter">All</div>${all.map(c => colRow(c)).join("")}`;
+      }
+    } else {
+      const ts = tags.filter(t => match(t.name, q));
+      if (!ts.length) list = `<p class="empty">No tags match “${esc(q)}”.</p>`;
+      else if (S.c.sort === "count") list = [...ts].sort((x, y) => y.count - x.count).map(t => tagRow(t, q)).join("");
+      else {
+        let last = "";
+        for (const t of ts) { const L = t.name[0].toUpperCase(); if (L !== last) { list += `<div class="letter">${L}</div>`; last = L; } list += tagRow(t, q); }
+      }
+    }
+    page = `<div class="c-page ${dir}">
+      <div class="e-top">
+        <button class="icon-btn e-back" data-epage="root" aria-label="Back">${icon("back", "sm")}</button>
+        <div class="seg" role="tablist" data-tab="${tab}"><span class="thumb"></span>
+          <button role="tab" aria-selected="${isCol}" data-etab="collections" data-spring="collections">Collections <span>${collections.length}</span></button>
+          <button role="tab" aria-selected="${!isCol}" data-etab="tags">Tags <span>${tags.length}</span></button>
+        </div>
+      </div>
+      <div class="b-tools">${search("e", isCol ? "Search collections" : "Search tags", q)}
+        <button class="icon-btn" style="width:32px;height:32px" data-go="${tab}" aria-pressed="${isActive(tab)}" aria-label="${isCol ? "All collections" : "All tags"}">${icon("grid", "sm")}</button></div>
+      <div class="c-sort" role="group" aria-label="Sort"><button data-csort="az" aria-pressed="${S.c.sort === "az"}">A–Z</button><button data-csort="count" aria-pressed="${S.c.sort === "count"}">Most used</button></div>
+      <div class="scroll fade c-list" data-scroll="e-${tab}">${list}</div>
+    </div>`;
   }
-  const overview = tab === "collections" ? "collections" : "tags";
-  return `${brand()}${primaryNav()}
-    <div class="sec-label" style="margin:14px 12px 0">Pinned<span class="grow"></span></div>
-    <div class="nav e-pinned scroll">${p.length ? p.map(c => colRow(c)).join("") : `<p class="empty" style="padding-left:12px">Pin a collection from its ⋮ menu to keep it here.</p>`}</div>
-    <div class="e-rule"></div>
-    <div class="seg" role="tablist" data-tab="${tab}"><span class="thumb"></span>
-      <button role="tab" aria-selected="${tab === "collections"}" data-btab="collections" data-spring="collections">Collections <span>${collections.length}</span></button>
-      <button role="tab" aria-selected="${tab === "tags"}" data-btab="tags">Tags <span>${tags.length}</span></button>
-    </div>
-    <div class="b-tools">${search("b", tab === "collections" ? "Search collections" : "Search tags", q)}
-      <button class="icon-btn" style="width:32px;height:32px" data-go="${overview}"${cur(isActive(overview))} aria-label="${tab === "collections" ? "All collections" : "All tags"}" aria-pressed="${isActive(overview)}">${icon("grid", "sm")}</button></div>
-    <div class="b-panel" role="tabpanel"><div class="scroll fade" data-scroll="e-${tab}">${list}</div></div>
-    ${footer()}`;
+  return `${brand()}${primaryNav()}<div style="height:10px"></div><div class="c-stage">${page}</div>${footer()}`;
 }
 
 // ---------- Prototype C ----------
@@ -749,7 +776,7 @@ function render() {
     const el = frameEl.querySelector(`[data-focus="${focused}"]`);
     if (el) { el.focus(); if (caret != null && el.setSelectionRange) el.setSelectionRange(caret, caret); }
   }
-  S.c.dir = null;
+  S.c.dir = null; S.e.dir = null;
 }
 
 function renderChrome() {
@@ -789,13 +816,14 @@ function railOpen(which) {
   if (S.proto === "D") return openFly(S.d.fly === which ? null : which);
   S.rail = false;
   if (S.proto === "A") { if (which === "collections") S.a.colOpen = true; else S.a.tagOpen = true; }
-  if (S.proto === "B" || S.proto === "E") S.b.tab = which;
+  if (S.proto === "B") S.b.tab = which;
+  if (S.proto === "E") { S.e.page = which; S.e.dir = "fwd"; }
   if (S.proto === "C") { S.c.page = which; S.c.dir = "fwd"; }
   render();
 }
 
 frameEl.addEventListener("click", e => {
-  const t = e.target.closest("[data-menu],[data-mact],[data-act],[data-btab],[data-cpage],[data-csort],[data-dsort],[data-fly],[data-rail],[data-clear],[data-go]");
+  const t = e.target.closest("[data-menu],[data-mact],[data-act],[data-btab],[data-cpage],[data-csort],[data-dsort],[data-epage],[data-etab],[data-fly],[data-rail],[data-clear],[data-go]");
   if (!e.target.closest(".menu") && !e.target.closest("[data-menu]")) S.menu = null;
   if (S.proto === "D" && S.d.fly && !e.target.closest(".flyout") && !e.target.closest("[data-fly],[data-rail],.menu")) S.d.fly = null;
   if (!t) return render();
@@ -818,6 +846,8 @@ frameEl.addEventListener("click", e => {
   if (d.act === "undo") { S.notice?.undo?.(); S.notice = null; return render(); }
   if (d.btab) { S.b.tab = d.btab; return render(); }
   if (d.cpage) { S.c.dir = d.cpage === "root" ? "back" : "fwd"; S.c.page = d.cpage; S.c.q = ""; render(); if (d.cpage !== "root") frameEl.querySelector('[data-focus="c"]')?.focus({ preventScroll: true }); return; }
+  if (d.epage) { S.e.dir = d.epage === "root" ? "back" : "fwd"; S.e.page = d.epage; render(); if (d.epage !== "root") frameEl.querySelector('[data-focus="e"]')?.focus({ preventScroll: true }); return; }
+  if (d.etab) { S.e.page = d.etab; return render(); }
   if (d.csort) { S.c.sort = d.csort; return render(); }
   if (d.dsort) { S.d.sort = d.dsort; return render(); }
   if (d.fly) return openFly(S.d.fly === d.fly ? null : d.fly);
@@ -868,6 +898,7 @@ function setQuery(key, v) {
   if (key === "b") S.b.q[S.b.tab] = v;
   if (key === "c") S.c.q = v;
   if (key === "d") S.d.q = v;
+  if (key === "e") S.b.q[S.e.page] = v;
 }
 
 frameEl.addEventListener("input", e => {
@@ -899,6 +930,7 @@ document.addEventListener("keydown", e => {
     if (S.menu) { S.menu = null; return render(); }
     if (S.proto === "D" && S.d.fly) { S.d.fly = null; return render(); }
     if (S.proto === "C" && S.c.page !== "root" && !(e.target.value)) { S.c.page = "root"; S.c.dir = "back"; return render(); }
+    if (S.proto === "E" && S.e.page !== "root" && !(e.target.value)) { S.e.page = "root"; S.e.dir = "back"; return render(); }
     if (e.target.dataset?.input) { setQuery(e.target.dataset.input, ""); return render(); }
   }
   if (e.key === "/" && !e.target.matches("input") && S.proto === "A" && !S.rail) { e.preventDefault(); frameEl.querySelector('[data-focus="a"]')?.focus(); }
@@ -911,7 +943,8 @@ function spring(key) {
   clearTimeout(springTimer); springKey = key;
   if (!key) return;
   springTimer = setTimeout(() => {
-    if (S.proto === "B" || S.proto === "E") S.b.tab = "collections";
+    if (S.proto === "B") S.b.tab = "collections";
+    if (S.proto === "E") { S.e.dir = S.e.page === "root" ? "fwd" : null; S.e.page = "collections"; }
     if (S.proto === "C") { S.c.page = "collections"; S.c.dir = "fwd"; }
     if (S.proto === "D") { S.d.fly = "collections"; S.d.q = ""; }
     if (S.rail && S.proto !== "D") S.rail = false;
@@ -926,7 +959,8 @@ frameEl.addEventListener("dragstart", e => {
     dragCard = card; card.classList.add("dragging");
     e.dataTransfer.setData("text/x-card", card.dataset.card); e.dataTransfer.effectAllowed = "move";
     S.dragging = true;
-    if ((S.proto === "B" || S.proto === "E") && S.b.tab !== "collections") { S.b.tab = "collections"; setTimeout(render, 0); }
+    if (S.proto === "E" && S.e.page === "tags") { S.e.page = "collections"; setTimeout(render, 0); }
+    if (S.proto === "B" && S.b.tab !== "collections") { S.b.tab = "collections"; setTimeout(render, 0); }
   } else if (reorder) {
     e.dataTransfer.setData("text/x-reorder", reorder.dataset.reorder); e.dataTransfer.effectAllowed = "move";
   }
@@ -967,7 +1001,7 @@ frameEl.addEventListener("drop", e => {
 document.getElementById("tabs").addEventListener("click", e => {
   const t = e.target.closest("[data-proto]"); if (!t) return;
   S.proto = t.dataset.proto; localStorage.setItem("kp-proto", S.proto);
-  S.menu = null; S.d.fly = null; S.renaming = null; S.c.page = "root";
+  S.menu = null; S.d.fly = null; S.renaming = null; S.c.page = "root"; S.e.page = "root";
   renderChrome(); render();
 });
 
