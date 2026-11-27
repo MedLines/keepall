@@ -55,7 +55,8 @@ export function SettingsPageContent() {
             installation={<InstallationSettings />}
             agents={<AgentsSettings />}
           />
-          <nav aria-label={t("supportNav")} className="mt-8 flex flex-wrap gap-2 border-t border-border-control pt-5">
+          {/* md:ml-62 starts the links at the content column (14rem tabs + 1.5rem gap), clear of the fixed Help link. */}
+          <nav aria-label={t("supportNav")} className="mt-8 flex flex-wrap gap-2 border-t border-border-control pt-5 md:ml-62">
             <SettingsLink href="/contact">{t("contact")}</SettingsLink>
             <SettingsLink href="/changelog">{t("changelog")}</SettingsLink>
             <SettingsLink href="/privacy">{t("privacy")}</SettingsLink>
