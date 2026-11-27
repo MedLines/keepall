@@ -14,6 +14,7 @@ import { countCurrentLibrary } from "@/persistence/backup";
 import { dispatchPreviewWelcome, ITEMS_CHANGED_EVENT } from "./items-events";
 import { abortable } from "@/lib/abortable";
 import { formatFileSize } from "@/lib/format-file-size";
+import { useFormatLocale } from "@/i18n/use-translations";
 import { BackupIcon, ChevronDownIcon, CloseIcon, CollectionIcon, DownloadIcon, HashIcon, ImageIcon, ImagesIcon, LinkIcon, NoteIcon, UploadIcon, VideoIcon } from "./shell-icons";
 import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 
@@ -75,6 +76,7 @@ type Props = {
 
 export function BackupPanel({ variant = "page", onClose }: Props) {
   const router = useRouter();
+  const locale = useFormatLocale();
   function openImportedFolder(href: string) {
     onClose?.();
     router.push(href);
@@ -270,7 +272,7 @@ export function BackupPanel({ variant = "page", onClose }: Props) {
             <BackupIcon className="mt-0.5 text-text-secondary" />
             <div className="min-w-0 flex-1">
               <p className="wrap-anywhere text-base font-semibold"><bdi>{prepared.backup.name}</bdi></p>
-              <p className="mt-1 text-compact leading-5 text-text-secondary">{formatFileSize(prepared.backup.size)} · Exported {new Date(prepared.backup.exportedAt).toLocaleString()}</p>
+              <p className="mt-1 text-compact leading-5 text-text-secondary">{formatFileSize(prepared.backup.size, locale)} · Exported {new Date(prepared.backup.exportedAt).toLocaleString(locale)}</p>
             </div>
           </div>
           <div>

@@ -8,6 +8,7 @@ import { DevToolsEntry } from "./dev-tools-entry";
 import { PwaProvider } from "./pwa-provider";
 import { ItemNavigationHistory } from "./item-route-viewer";
 import { THEME_INIT_SCRIPT } from "./theme-preference";
+import { LANGUAGE_INIT_SCRIPT } from "@/i18n/locale-preference";
 import { SHELL_INIT_SCRIPT } from "./shell-styles";
 import { MotionProvider } from "@/components/ui/motion-provider";
 import { motionCssVariables } from "@/components/ui/motion-tokens";
@@ -52,6 +53,7 @@ export default function RootLayout({ children, viewer }: LayoutProps<"/">) {
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: LANGUAGE_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: SHELL_INIT_SCRIPT }} />
       </head>
       {/* eslint-disable-next-line shadcn/no-inline-styles -- uiMotion tiers exposed as --motion-* custom properties. */}

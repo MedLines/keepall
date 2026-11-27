@@ -47,6 +47,26 @@ const BUTTON_TEXT_ELEMENT = {
   },
 };
 
+// Text buttons: the side with an icon gets 3/4 of --button-px (components.css .ui-button).
+const BUTTON_PADDING_SYNTAX = [
+  {
+    selector: "CallExpression[callee.name='buttonClassName']:not(:has(Property[key.name='size'] Literal[value='none'])) Property[key.name='className'] :matches(Literal[value=/(^|\\s)(px|ps|pe)-/], TemplateElement[value.raw=/(^|\\s)(px|ps|pe)-/])",
+    message: "Set a text button's side padding with button-px-* (default 4), not px-/ps-/pe-, so the side with an icon gets its smaller padding. See Button in src/components/ui/button.tsx.",
+  },
+  {
+    selector: "JSXOpeningElement[name.name='Button']:not(:has(JSXAttribute[name.name='size'][value.value='none'])) JSXAttribute[name.name='className'] :matches(Literal[value=/(^|\\s)(px|ps|pe)-/], TemplateElement[value.raw=/(^|\\s)(px|ps|pe)-/])",
+    message: "Set a Button's side padding with button-px-* (default 4), not px-/ps-/pe-, so the side with an icon gets its smaller padding.",
+  },
+];
+
+// Files whose interface text lives in src/i18n/messages. Add a file once its strings move there;
+// from then on, text written straight into its JSX is an error. See docs/interface-conventions.md.
+const TRANSLATED_FILES = [
+  "src/app/language-setting.tsx",
+  "src/app/theme-control.tsx",
+];
+const TEXT_ATTRIBUTES = "aria-label|aria-description|alt|placeholder|label|ariaLabel|content|tooltip";
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -66,16 +86,7 @@ const eslintConfig = defineConfig([
     plugins: { keepall: { rules: { "button-text-element": BUTTON_TEXT_ELEMENT } } },
     rules: {
       "keepall/button-text-element": "error",
-      "no-restricted-syntax": ["error",
-        {
-          selector: "CallExpression[callee.name='buttonClassName']:not(:has(Property[key.name='size'] Literal[value='none'])) Property[key.name='className'] :matches(Literal[value=/(^|\\s)(px|ps|pe)-/], TemplateElement[value.raw=/(^|\\s)(px|ps|pe)-/])",
-          message: "Set a text button's side padding with button-px-* (default 4), not px-/ps-/pe-, so the side with an icon gets its smaller padding. See Button in src/components/ui/button.tsx.",
-        },
-        {
-          selector: "JSXOpeningElement[name.name='Button']:not(:has(JSXAttribute[name.name='size'][value.value='none'])) JSXAttribute[name.name='className'] :matches(Literal[value=/(^|\\s)(px|ps|pe)-/], TemplateElement[value.raw=/(^|\\s)(px|ps|pe)-/])",
-          message: "Set a Button's side padding with button-px-* (default 4), not px-/ps-/pe-, so the side with an icon gets its smaller padding.",
-        },
-      ],
+      "no-restricted-syntax": ["error", ...BUTTON_PADDING_SYNTAX],
     },
   },
   {
@@ -123,6 +134,16 @@ const eslintConfig = defineConfig([
             allow: ["layout", "spacing", "shape", "ui-field", "scroll-fade"],
           },
         ],
+      }],
+    },
+  },
+  {
+    files: TRANSLATED_FILES,
+    rules: {
+      "react/jsx-no-literals": ["error", { noStrings: false }],
+      "no-restricted-syntax": ["error", ...BUTTON_PADDING_SYNTAX, {
+        selector: `JSXAttribute[name.name=/^(${TEXT_ATTRIBUTES})$/] > Literal[value=/[A-Za-z]/]`,
+        message: "Interface text goes in src/i18n/messages/en.ts and comes from useTranslations() (src/i18n/use-translations.ts).",
       }],
     },
   },

@@ -6,6 +6,7 @@ import { ArticleContent } from "./article-content";
 import { useAssetObjectUrl } from "./use-asset-object-url";
 import { useArticleCapture } from "./use-article-capture";
 import { Button } from "@/components/ui/button";
+import { useFormatLocale } from "@/i18n/use-translations";
 
 function LocalArticlePreview({ assetId }: { assetId: string }) {
   const url = useAssetObjectUrl(assetId);
@@ -15,6 +16,7 @@ function LocalArticlePreview({ assetId }: { assetId: string }) {
 }
 
 function SavedArticleHeader({ article, previewAssetId }: { article: SavedArticle; previewAssetId: string | null }) {
+  const locale = useFormatLocale();
   const sourceName = article.siteName || new URL(article.sourceUrl).hostname.replace(/^www\./, "");
   return <header className="mb-8 mt-6 border-b border-border-control pb-7">
     <p className="text-sm font-medium text-text-secondary">{sourceName}</p>
@@ -22,11 +24,11 @@ function SavedArticleHeader({ article, previewAssetId }: { article: SavedArticle
     {article.author || article.publishedAt ? <p className="mt-4 flex flex-wrap gap-x-2 gap-y-1 text-sm leading-relaxed text-text-secondary">
       {article.author ? <span>{article.author}</span> : null}
       {article.author && article.publishedAt ? <span aria-hidden="true">·</span> : null}
-      {article.publishedAt ? <time dateTime={article.publishedAt}>{new Date(article.publishedAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</time> : null}
+      {article.publishedAt ? <time dateTime={article.publishedAt}>{new Date(article.publishedAt).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</time> : null}
     </p> : null}
     <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-text-secondary">
       <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-text-primary">Open original</a>
-      <span>Saved <time dateTime={new Date(article.capturedAt).toISOString()}>{new Date(article.capturedAt).toLocaleDateString()}</time></span>
+      <span>Saved <time dateTime={new Date(article.capturedAt).toISOString()}>{new Date(article.capturedAt).toLocaleDateString(locale)}</time></span>
     </div>
     {previewAssetId ? <LocalArticlePreview assetId={previewAssetId} /> : null}
   </header>;

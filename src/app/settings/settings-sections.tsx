@@ -2,6 +2,7 @@ import { KeyboardShortcutsSettings } from "./keyboard-shortcuts-settings";
 import { BackupPanel } from "../backup-panel";
 import { BackupIcon, DeviceIcon, GridIcon, InternetIcon, NoteIcon, OfflineIcon } from "../shell-icons";
 import { ThemeControl } from "../theme-control";
+import { LanguageSetting } from "../language-setting";
 import { SettingsLink } from "./settings-link";
 import { StorageHealth } from "./storage-health";
 
@@ -21,6 +22,7 @@ export function GeneralSettings() {
         </div>
         <ThemeControl />
       </div>
+      <LanguageSetting />
     </section>
     <KeyboardShortcutsSettings />
     <section className={sectionClass} aria-labelledby="network-heading">
