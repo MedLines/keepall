@@ -11,6 +11,7 @@ import { SHELL_DESTRUCTIVE_BTN, SHELL_TOP_BTN, SHELL_TOP_BTN_IDLE } from "./shel
 import { ArrowRightIcon, ChevronDownIcon, DeleteIcon, DownloadIcon, LayersIcon, SelectionCheckedIcon } from "./shell-icons";
 import { buttonClassName } from "@/components/ui/button";
 import { menuItemClassName } from "@/components/ui/menu-item";
+import { useTranslations, type Translations } from "@/i18n/use-translations";
 
 export type BulkPanel = null | "delete" | "organize";
 
@@ -100,6 +101,7 @@ export function LibraryBulkToolbar({
   const actionsRef = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(true);
   const [preferredWidth, setPreferredWidth] = useState<number>();
+  const t = useTranslations("LibraryBulkBar");
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -121,7 +123,7 @@ export function LibraryBulkToolbar({
   }, [count, hiddenCount, allVisibleSelected, onOpenPanel, onDelete, onDeletePermanently, onRestoreSelected, deleteLabel, onExport]);
 
   const destructiveAction = onDelete ?? onDeletePermanently ?? (() => onOpenPanel?.("delete"));
-  const destructiveLabel = deleteLabel ?? (onDeletePermanently ? "Delete permanently" : "Move to Trash");
+  const destructiveLabel = deleteLabel ?? (onDeletePermanently ? t("deletePermanently") : t("moveToTrash"));
 
   function runWithoutTriggerRestore(action: () => void) {
     restoreTriggerFocus.current = false;
@@ -129,7 +131,7 @@ export function LibraryBulkToolbar({
   }
 
   return (
-    <div ref={containerRef} className={`relative flex h-10 min-w-0 max-w-full items-center justify-end gap-1.5 ${count === 0 ? "invisible" : ""}`} style={{ width: compact ? undefined : preferredWidth }} inert={count === 0} aria-hidden={count === 0} role="region" aria-label="Bulk actions">
+    <div ref={containerRef} className={`relative flex h-10 min-w-0 max-w-full items-center justify-end gap-1.5 ${count === 0 ? "invisible" : ""}`} style={{ width: compact ? undefined : preferredWidth }} inert={count === 0} aria-hidden={count === 0} role="region" aria-label={t("region")}>
       {compact ? <Menu.Root
         modal={false}
         disabled={busy || count === 0}
@@ -146,20 +148,20 @@ export function LibraryBulkToolbar({
           ref={triggerRef}
           type="button"
           className={buttonClassName({ size: "none", className: "h-10 min-w-0 shrink-0 gap-1.5 px-2.5 text-xs font-medium tabular-nums text-text-primary sm:px-3 justify-start" })}
-          aria-label={`Selection actions: ${count} selected`}
+          aria-label={t("selectionActionsCount", { count })}
           disabled={busy || count === 0}
         >
           <span className="inline-flex items-center gap-1 sm:hidden">
             {count}
             <SelectionCheckedIcon className="size-4" />
           </span>
-          <span className="hidden sm:inline">{count} selected</span>
+          <span className="hidden sm:inline">{t("selected", { count })}</span>
           <ChevronDownIcon className="size-4" />
         </Menu.Trigger>
         <Menu.Portal>
           <Menu.Positioner align="start" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
             <Menu.Popup
-              aria-label="Selection actions"
+              aria-label={t("selectionActions")}
               className="ui-menu-popup ui-popover flex flex-col overflow-hidden max-h-[min(24rem,var(--available-height))] min-w-48 max-w-[calc(100vw-1rem)] outline-none"
               finalFocus={() => focusSearchAfterClose.current
                 ? document.getElementById("library-search")
@@ -168,33 +170,33 @@ export function LibraryBulkToolbar({
               <div className="ui-scrollbar flex min-h-0 flex-col overflow-y-auto overscroll-contain">
               {!allVisibleSelected ? (
                 <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={onSelectAllVisible}>
-                  Select all
+                  {t("selectAll")}
                 </Menu.Item>
               ) : null}
               <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={() => runWithoutTriggerRestore(() => {
                 focusSearchAfterClose.current = true;
                 onClearSelection();
               })}>
-                Deselect all
+                {t("deselectAll")}
               </Menu.Item>
               {hiddenCount > 0 ? <Menu.Item className={menuItemClassName({ layout: "none", className: "text-left" })} onClick={() => runWithoutTriggerRestore(() => {
                 focusSearchAfterClose.current = true;
                 onClearHidden?.();
               })}>
-                Clear hidden selection
+                {t("clearHiddenSelection")}
               </Menu.Item> : null}
               {onOpenPanel && !onDeletePermanently && !onDelete ? (
                 <Menu.Item className={menuItemClassName({ layout: "none", className: "items-center gap-2 text-left" })} onClick={() => runWithoutTriggerRestore(() => onOpenPanel("organize"))}>
-                  <LayersIcon className="size-4" />Organize
+                  <LayersIcon className="size-4" />{t("organize")}
                 </Menu.Item>
               ) : null}
               {onExport ? (
                 <Menu.Item className={menuItemClassName({ layout: "none", className: "items-center gap-2 text-left" })} onClick={() => runWithoutTriggerRestore(onExport)}>
-                  <DownloadIcon className="size-4" />Export selected
+                  <DownloadIcon className="size-4" />{t("exportSelected")}
                 </Menu.Item>
               ) : null}
               {onRestoreSelected && count > 0 ? <Menu.Item disabled={busy} className={menuItemClassName({ layout: "none", className: "items-center gap-2 text-left" })} onClick={() => runWithoutTriggerRestore(onRestoreSelected)}>
-                <ArrowRightIcon className="size-4" />Restore selected
+                <ArrowRightIcon className="size-4" />{t("restoreSelected")}
               </Menu.Item> : null}
               <Menu.Item className={menuItemClassName({ tone: "danger", layout: "none", className: "items-center gap-2 text-left" })} onClick={() => runWithoutTriggerRestore(destructiveAction)}>
                 <DeleteIcon className="size-4" />{destructiveLabel}
@@ -204,30 +206,30 @@ export function LibraryBulkToolbar({
           </Menu.Positioner>
         </Menu.Portal>
       </Menu.Root> : null}
-      {compact && hiddenCount > 0 ? <span className="shrink-0 text-xs tabular-nums text-text-secondary">{hiddenCount} hidden</span> : null}
+      {compact && hiddenCount > 0 ? <span className="shrink-0 text-xs tabular-nums text-text-secondary">{t("hidden", { count: hiddenCount })}</span> : null}
       <div ref={actionsRef} inert={compact} aria-hidden={compact} className={`inline-flex w-max items-center gap-1.5 ${compact ? "pointer-events-none invisible absolute right-0 top-0" : ""}`}>
-        <span className="mr-1 shrink-0 text-xs tabular-nums text-text-secondary">{count} selected{hiddenCount > 0 ? ` · ${hiddenCount} hidden` : ""}</span>
+        <span className="mr-1 shrink-0 text-xs tabular-nums text-text-secondary">{hiddenCount > 0 ? t("selectedHidden", { count, hidden: hiddenCount }) : t("selected", { count })}</span>
         {!allVisibleSelected ? (
           <button className={BULK_BTN} disabled={busy} type="button" onClick={onSelectAllVisible}>
-            Select all
+            {t("selectAll")}
           </button>
         ) : null}
         <button className={BULK_BTN} disabled={busy} type="button" onClick={() => { document.getElementById("library-search")?.focus(); onClearSelection(); }}>
-          Deselect all
+          {t("deselectAll")}
         </button>
         {hiddenCount > 0 ? <button className={BULK_BTN} disabled={busy} type="button" onClick={() => { document.getElementById("library-search")?.focus(); onClearHidden?.(); }}>
-          Clear hidden
+          {t("clearHidden")}
         </button> : null}
         {onOpenPanel && !onDeletePermanently && !onDelete ? (
           <button className={BULK_BTN} disabled={busy} type="button" onClick={() => onOpenPanel("organize")}>
-            <LayersIcon className="size-4" />Organize
+            <LayersIcon className="size-4" />{t("organize")}
           </button>
         ) : null}
         {onExport ? <button className={BULK_BTN} disabled={busy} type="button" onClick={onExport}>
-          <DownloadIcon className="size-4" />Export
+          <DownloadIcon className="size-4" />{t("export")}
         </button> : null}
         {onRestoreSelected && count > 0 ? <button className={BULK_BTN} disabled={busy} type="button" onClick={onRestoreSelected}>
-          <ArrowRightIcon className="size-4" />Restore selected
+          <ArrowRightIcon className="size-4" />{t("restoreSelected")}
         </button> : null}
         <button
           className={`${SHELL_TOP_BTN} h-10 shrink-0 px-3 text-xs ${SHELL_DESTRUCTIVE_BTN}`}
@@ -273,15 +275,14 @@ type PanelsProps = Pick<
   | "pendingClearCollection"
 >;
 
-function bulkPanelTitle(panel: BulkPanel, count: number): string {
-  const itemLabel = `${count} selected item${count === 1 ? "" : "s"}`;
+function bulkPanelTitle(t: Translations<"LibraryBulkBar">, panel: BulkPanel, count: number): string {
   switch (panel) {
     case "organize":
-      return `Organize ${itemLabel}`;
+      return t("organizeTitle", { count });
     case "delete":
-      return `Move ${itemLabel} to Trash`;
+      return t("deleteTitle", { count });
     default:
-      return "Bulk action";
+      return t("defaultTitle");
   }
 }
 
@@ -315,13 +316,14 @@ export function LibraryBulkPanels({
   onBulkAddCollection,
   onBulkClearCollection,
 }: PanelsProps) {
+  const t = useTranslations("LibraryBulkBar");
   if (panel === "delete") {
     return <ConfirmDialog
       open
-      title={bulkPanelTitle(panel, count)}
-      description={`Move ${count} item${count === 1 ? "" : "s"} to Trash?${hiddenCount > 0 ? ` ${hiddenCount} selected item${hiddenCount === 1 ? " is" : "s are"} hidden by search or filters.` : ""} You can restore ${count === 1 ? "it" : "them"} later.`}
-      confirmLabel="Move to Trash"
-      pendingLabel={pendingDelete ? "Moving…" : "Working…"}
+      title={bulkPanelTitle(t, panel, count)}
+      description={[t("deleteQuestion", { count }), hiddenCount > 0 ? t("deleteHidden", { count: hiddenCount }) : null, t("deleteRestore", { count })].filter(Boolean).join(" ")}
+      confirmLabel={t("moveToTrash")}
+      pendingLabel={pendingDelete ? t("moving") : t("working")}
       busy={busy}
       error={error}
       onConfirm={onConfirmDelete}
@@ -336,8 +338,8 @@ export function LibraryBulkPanels({
   return (
     <OrganizerDrawer
       open={panel !== null || Boolean(error)}
-      title={bulkPanelTitle(panel, count)}
-      description={`Move the selected items to a collection or add tags. Changes apply immediately${hiddenCount > 0 ? ` to all ${count} selected items, including ${hiddenCount} hidden by search or filters` : ""}.`}
+      title={bulkPanelTitle(t, panel, count)}
+      description={hiddenCount > 0 ? t("organizeDescriptionHidden", { count, hidden: hiddenCount }) : t("organizeDescription")}
       disabled={busy}
       error={error}
       onOpenChange={(open) => { if (!open) onClosePanel(); }}
@@ -345,11 +347,11 @@ export function LibraryBulkPanels({
       <CaptureOrgPanel
         collectionName={collectionName}
         collectionInput={collectionDraft}
-        collectionInputLabel="Move selection to collection"
+        collectionInputLabel={t("collectionInput")}
         collectionSuggestions={collectionSuggestions}
         tagNames={removeTagSuggestions.map(tag => tag.name)}
         tagInput={tagDraft}
-        tagInputLabel="Add tag to selection"
+        tagInputLabel={t("tagInput")}
         tagSuggestions={tagSuggestions}
         selection={{ partialTagNames, collectionMixed, onRemoveAllTags: onBulkRemoveAllTags }}
         disabled={busy || count === 0 || pendingAddTag || pendingRemoveTag || pendingAddCollection || pendingClearCollection}
