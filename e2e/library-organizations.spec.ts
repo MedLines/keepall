@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { jumpTo, openOverview, sidebar as librarySidebar } from "./jump-palette";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -29,7 +30,8 @@ test.beforeEach(async ({ page }) => {
 for (const scope of ["collection", "tag"] as const) {
   test(`sidebar logo returns home from a ${scope}`, async ({ page }) => {
     const sidebar = page.getByRole("complementary", { name: "Sidebar" });
-    await sidebar.getByRole("button", { name: scope === "collection" ? "Design" : "Tag design", exact: true }).click();
+    if (scope === "collection") await jumpTo(page, "Design");
+    else await jumpTo(page, "design", "Tags");
     await expect(page).toHaveURL(new RegExp(`${scope}=`));
     await expect(page.getByRole("main")).toContainText("Saved Design content");
     await expect(page.getByRole("main")).not.toContainText("Saved Reading content");
@@ -52,7 +54,7 @@ for (const scope of ["collection", "tag"] as const) {
 
 test("sidebar logo returns home and closes mobile navigation", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 825 });
-  await page.getByRole("dialog", { name: "Sidebar navigation" }).getByRole("button", { name: "Tag design", exact: true }).click();
+  await jumpTo(page, "design", "Tags", page.getByRole("dialog", { name: "Sidebar navigation" }));
   await expect(page).toHaveURL(/tag=tag-design/);
   await page.getByRole("button", { name: "Expand", exact: true }).click();
   await page.getByRole("dialog", { name: "Sidebar navigation" }).getByRole("link", { name: "Keepall home" }).click();
@@ -97,9 +99,9 @@ test("tags show item previews in cards and open their matching items", async ({ 
     const media = getComputedStyle(element.querySelector('.library-card-media')!);
     return { radius: outer.borderRadius, corner: outer.getPropertyValue('corner-shape'), inset: media.borderTopWidth, mediaRadius: media.borderRadius, mediaCorner: media.getPropertyValue('corner-shape') };
   });
-  await page.getByRole("button", { name: "All tags", exact: true }).click();
+  await openOverview(page, "All tags");
   await expect(page).toHaveURL(/tags=1/);
-  await expect(page.getByRole("button", { name: "All tags", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(librarySidebar(page).getByRole("button", { name: "Tags", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("button", { name: "All items", exact: true })).not.toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("group", { name: "Library layout", exact: true })).toBeVisible();
   const tags = page.getByRole("list", { name: "Library tags", exact: true });
@@ -129,7 +131,7 @@ test("tags show item previews in cards and open their matching items", async ({ 
   await expect(page).toHaveURL(/tag=tag-reading/);
   await expect(page.getByRole("main")).toContainText("Saved Reading content");
   await expect(page.getByRole("main")).not.toContainText("Saved Design content");
-  await page.getByRole("button", { name: "All tags", exact: true }).click();
+  await openOverview(page, "All tags");
   await expect(page).toHaveURL(/tags=1/);
   await page.reload();
   await expect(tags).toBeVisible();
@@ -142,7 +144,7 @@ test("tags show item previews in cards and open their matching items", async ({ 
 
 test("Grid and List remain available and change layout without leaving either overview", async ({ page }) => {
   for (const kind of ["collections", "tags"] as const) {
-    await page.getByRole("button", { name: `All ${kind}`, exact: true }).click();
+    await openOverview(page, kind === "collections" ? "All collections" : "All tags");
     const entries = page.getByRole("list", { name: `Library ${kind}`, exact: true });
     await page.getByRole("button", { name: "List view", exact: true }).click();
     await expect(entries).toHaveClass(/organization-list/);
@@ -159,7 +161,7 @@ test("Grid and List remain available and change layout without leaving either ov
 });
 
 test("folder context menu opens the actual collection in a new tab", async ({ page, context }) => {
-  await page.getByRole("button", { name: "All collections", exact: true }).click();
+  await openOverview(page, "All collections");
   const folders = page.getByRole("list", { name: "Library collections", exact: true });
   const design = folders.getByRole("link", { name: "Open Design, 1 item", exact: true });
   await design.click({ button: "right" });
@@ -174,7 +176,7 @@ test("folder context menu opens the actual collection in a new tab", async ({ pa
 });
 
 test("bulk folder deletion preserves its items and supports cancel", async ({ page }) => {
-  await page.getByRole("button", { name: "All collections", exact: true }).click();
+  await openOverview(page, "All collections");
   const folders = page.getByRole("list", { name: "Library collections", exact: true });
   await folders.locator(".organization-card").filter({ has: page.getByRole("checkbox", { name: "Select Design", exact: true }) }).hover();
   await folders.getByRole("checkbox", { name: "Select Design", exact: true }).locator("..").click();
@@ -197,7 +199,7 @@ test("bulk folder deletion preserves its items and supports cancel", async ({ pa
 });
 
 test("bulk tag deletion keeps the items and their folder memberships", async ({ page }) => {
-  await page.getByRole("button", { name: "All tags", exact: true }).click();
+  await openOverview(page, "All tags");
   const tags = page.getByRole("list", { name: "Library tags", exact: true });
   await tags.locator(".organization-card").filter({ has: page.getByRole("checkbox", { name: "Select design", exact: true }) }).hover();
   await tags.getByRole("checkbox", { name: "Select design", exact: true }).locator("..").click();
@@ -206,7 +208,7 @@ test("bulk tag deletion keeps the items and their folder memberships", async ({ 
   await page.getByRole("button", { name: "Delete tags", exact: true }).click();
   await page.getByRole("dialog", { name: "Delete 2 tags?", exact: true }).getByRole("button", { name: "Delete tags", exact: true }).click();
   await expect(tags.getByRole("link", { name: /^Open / })).toHaveCount(1);
-  await page.getByRole("complementary", { name: "Sidebar" }).getByRole("button", { name: "Design", exact: true }).click();
+  await jumpTo(page, "Design");
   await expect(page.getByRole("main")).toContainText("Saved Design content");
   await expect(page).toHaveURL(/collection=design/);
   await page.reload();
@@ -216,7 +218,7 @@ test("bulk tag deletion keeps the items and their folder memberships", async ({ 
 for (const opener of ["button", "shortcut"] as const) {
   test(`${opener} capture defaults to the current folder and saves there`, async ({ page }) => {
     const sidebar = page.getByRole("complementary", { name: "Sidebar" });
-    await sidebar.getByRole("button", { name: "Design", exact: true }).click();
+    await jumpTo(page, "Design");
     await expect(page.locator("#library-heading")).toHaveText("Design");
     if (opener === "button") await page.getByRole("button", { name: "Save item", exact: true }).click();
     else await page.keyboard.press("Alt+k");
@@ -256,7 +258,7 @@ test("organization selection matches library cards and uses their top-bar action
   await selectionAction('Deselect all');
 
   for (const kind of ['collections', 'tags'] as const) {
-    await page.getByRole('button', { name: `All ${kind}`, exact: true }).click();
+    await openOverview(page, kind === 'collections' ? 'All collections' : 'All tags');
     await expect(toolbar).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Select all', exact: true })).toHaveCount(0);
     const list = page.getByRole('list', { name: `Library ${kind}`, exact: true });
@@ -360,7 +362,7 @@ test("unenriched links show three distinct previews with useful titles and sourc
     } finally { db.close(); }
   });
   await page.reload();
-  await page.getByRole('button', { name: 'All tags', exact: true }).click();
+  await openOverview(page, 'All tags');
   const card = page.getByRole('link', { name: 'Open needs-review, 9 items', exact: true });
   await expect(card.locator('.library-tag-link')).toHaveCount(3);
   await expect(card.locator('.library-tag-link-title')).toHaveText(['Research collection', 'Interface details', 'Reading notes']);

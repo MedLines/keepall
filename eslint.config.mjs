@@ -68,7 +68,11 @@ const TRANSLATED_FILES = [
   "src/app/capture-image-layout.tsx",
   "src/app/capture-import-progress.tsx",
   "src/app/capture-link-conflict-dialog.tsx",
+  "src/app/capture-org-browser.tsx",
+  "src/app/capture-org-panel.tsx",
   "src/app/capture-type-menu.tsx",
+  "src/app/item-organizer-drawer.tsx",
+  "src/app/jump-palette.tsx",
   "src/app/language-setting.tsx",
   "src/app/library-bulk-bar.tsx",
   "src/app/library-empty-state.tsx",
@@ -79,6 +83,8 @@ const TRANSLATED_FILES = [
   "src/app/note-editor-controls.tsx",
   "src/app/note-format-control.tsx",
   "src/app/offline-banner.tsx",
+  "src/app/org-name-suggest.tsx",
+  "src/app/organizer-drawer.tsx",
   "src/app/pending-file-preview.tsx",
   "src/app/persistent-storage-status.tsx",
   "src/app/pwa-update-banner.tsx",
@@ -95,6 +101,9 @@ const TRANSLATED_FILES = [
   "src/app/sidebar-resize-handle.tsx",
   "src/app/theme-control.tsx",
   "src/app/undo-notice.tsx",
+  "src/components/ui/confirm-dialog.tsx",
+  "src/components/ui/modal-dialog.tsx",
+  "src/components/ui/side-drawer.tsx",
 ];
 const TEXT_ATTRIBUTES = "aria-label|aria-description|alt|placeholder|label|ariaLabel|content|tooltip";
 

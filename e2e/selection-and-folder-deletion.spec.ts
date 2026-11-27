@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { seedPinnedCollections } from "./jump-palette";
 
 test.use({ serviceWorkers: "block" });
 
@@ -94,6 +95,8 @@ for (const entry of ["sidebar", "overview", "bulk"]) {
     test(`${entry} folder deletion moves its contents to ${destination}`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width: 320, height: 800 });
       await page.addInitScript(() => localStorage.setItem("keepall-shell-panel-open", "closed"));
+      // Only pinned collections have sidebar rows; the sidebar entry deletes through the row's menu.
+      if (entry === "sidebar") await seedPinnedCollections(page, ["folder"]);
       await page.goto(entry === "sidebar" ? "/" : "/?collections=1");
       if (entry === "sidebar") {
         await page.getByRole("button", { name: "Expand", exact: true }).click();

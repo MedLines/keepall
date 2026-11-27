@@ -109,6 +109,8 @@ Top-bar selects use `MenuHoverList` for one moving highlight that follows Base U
 
 Searchable collection and tag menus use natural content height with a viewport cap; scroll only when their results exceed it. Small text inputs, textareas, and native selects use 16px text on touch devices while retaining desktop sizing.
 
+Dialog backdrops blur what's behind them, except dialogs people type in continuously, such as the jump palette: those add `ui-backdrop-plain`. A full-screen blur repaints behind every keystroke and highlight change, which measured about three times slower per arrow-key frame.
+
 ## Scrolling panels
 
 Use the registry `ScrollArea` for capture and organizer drawer bodies, organization browsing, and shared dialog content. Constrain the outer box, put `scroll-fade` on `viewportClassName`, and put padding on its content. Keep headers and action footers outside the scrolling box. Compose the installed component without editing it.

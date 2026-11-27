@@ -3,6 +3,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ReactNode } from "react";
 import { SideDrawer } from "@/components/ui/side-drawer";
+import { useTranslations } from "@/i18n/use-translations";
 
 export function OrganizerDrawer({
   open, onOpenChange, side, title, description, disabled, error, children,
@@ -16,6 +17,7 @@ export function OrganizerDrawer({
   children: ReactNode;
   error?: string | null;
 }) {
+  const t = useTranslations("Organizer");
   return (
     <SideDrawer
       open={open} side={side} title={title} description={description}
@@ -32,7 +34,7 @@ export function OrganizerDrawer({
         </div>
       </ScrollArea>
       <footer className="shrink-0 border-t border-border-control px-5 py-4">
-        <button type="button" className="ui-primary min-h-10 w-full px-4 text-sm font-medium disabled:opacity-60" disabled={disabled} onClick={() => onOpenChange(false)}>Done</button>
+        <button type="button" className="ui-primary min-h-10 w-full px-4 text-sm font-medium disabled:opacity-60" disabled={disabled} onClick={() => onOpenChange(false)}>{t("done")}</button>
       </footer>
     </SideDrawer>
   );

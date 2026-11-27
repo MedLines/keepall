@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openOverview } from "./jump-palette";
 
 test("collection folders preview recent items, lift on hover, and open their collection", async ({ page }, testInfo) => {
   const errors: string[] = [];
@@ -57,7 +58,7 @@ test("collection folders preview recent items, lift on hover, and open their col
     }
   });
   await page.reload();
-  await page.getByRole("button", { name: "All collections", exact: true }).click();
+  await openOverview(page, "All collections");
   await expect(page).toHaveURL(/collections=1/);
   const folders = page.getByRole("list", { name: "Library collections" });
   const design = folders.getByRole("link", { name: "Open Design Inspiration, 5 items", exact: true });
