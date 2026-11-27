@@ -7,6 +7,8 @@ import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline";
+import type { Item } from "../src/domain/item";
+import type { Thumbnail } from "../src/persistence/db";
 
 const port = process.env.KEEPALL_E2E_PORT ?? "3100";
 const origin = `http://localhost:${port}`;
@@ -433,11 +435,22 @@ test("an agent saves a Markdown note and files, and the user sees each one befor
     await expect(page.getByText(/Applied|Saved|changes applied/i).first()).toBeVisible({ timeout: 30_000 });
     const saved = await page.evaluate(async (ids) => {
       const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open("keepall"); request.onsuccess = () => resolve(request.result); });
-      const get = (store: string, key: string) => new Promise<Record<string, any> | undefined>((resolve) => { const request = db.transaction(store).objectStore(store).get(key); request.onsuccess = () => resolve(request.result); });
-      const rows = await Promise.all(ids.map((id) => get("items", id)));
-      const poster = rows[1] ? await get("thumbnails", rows[1].assetId) : undefined;
+      const get = <T,>(store: string, key: string) => new Promise<T | undefined>((resolve) => { const request = db.transaction(store).objectStore(store).get(key); request.onsuccess = () => resolve(request.result); });
+      const rows = await Promise.all(ids.map((id) => get<Item>("items", id)));
+      const video = rows[1];
+      const poster = video?.type === "video" ? await get<Thumbnail>("thumbnails", video.assetId) : undefined;
       db.close();
-      return { rows: rows.map((row) => row && { type: row.type, format: row.format, file: row.sourceFileName, assets: row.assetIds?.length, caption: row.caption, captionFormat: row.captionFormat }), poster: !!poster };
+      return {
+        rows: rows.map((row) => row && {
+          type: row.type,
+          format: "format" in row ? row.format : undefined,
+          file: "sourceFileName" in row ? row.sourceFileName : undefined,
+          assets: row.type === "image" ? row.assetIds.length : undefined,
+          caption: row.type === "image" ? row.caption : undefined,
+          captionFormat: row.type === "image" ? row.captionFormat : undefined,
+        }),
+        poster: !!poster,
+      };
     }, [...media.item_ids_after_approval, gallery.item_ids_after_approval[0]]);
     expect(saved.rows).toEqual([
       { type: "document", format: "pdf", file: "field-notes.pdf", assets: undefined, caption: undefined, captionFormat: undefined },
