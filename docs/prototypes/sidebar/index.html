@@ -278,6 +278,36 @@ kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; line-height: 1;
 .link-btn { font-size: 12px; color: var(--text-2); padding: 4px 6px; border-radius: 6px; }
 .link-btn:hover { color: var(--text); background: oklch(1 0 0 / .06); }
 
+/* J/K/L/M */
+.pal-row { position: relative; }
+.pal-row .more { position: absolute; right: 4px; top: 50%; translate: 0 -50%; opacity: 0; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: var(--text-2); }
+.pal-row .more:hover { background: oklch(1 0 0 / .08); color: var(--text); }
+.pal-row:hover .more, .pal-row[aria-selected="true"] .more, .pal-row .more[aria-expanded="true"] { opacity: 1; }
+.pal-row:hover .count.hides, .pal-row[aria-selected="true"] .count.hides { opacity: 0; }
+.pal-row.drop { box-shadow: inset 0 0 0 2px var(--focus); }
+.k-drop { position: absolute; z-index: 30; top: 104px; left: 12px; width: 360px; border-radius: 14px; background: var(--surface); border: 1px solid var(--edge); box-shadow: 0 24px 60px -12px oklch(0 0 0 / .65); animation: pop .14s var(--ease-out); transform-origin: top left; overflow: hidden; }
+.l-wide { width: 820px; max-height: 560px; }
+.l-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 300px; }
+.l-body .pal-list { min-height: 0; max-height: 400px; }
+.l-pane { border-left: 1px solid var(--control); padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.l-pane-head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-3); }
+.l-pane h3 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.l-recent { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-2); }
+.l-recent b { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 600; margin-bottom: 2px; }
+.l-actions { margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px; }
+.btn.primary { background: var(--text); color: oklch(0.2 0 0); }
+.btn.primary:hover { background: oklch(0.92 0.004 106); }
+.btn.primary kbd { border-color: oklch(0 0 0 / .2); color: oklch(0.4 0 0); }
+.btn.danger { color: var(--danger); }
+.btn.danger:hover { background: var(--danger-bg); }
+.m-body { flex: 1; min-height: 0; display: flex; }
+.m-list { flex: 1; padding: 8px 4px 8px 10px; position: relative; }
+.m-index { display: flex; flex-direction: column; justify-content: space-between; padding: 8px 6px 10px 2px; }
+.m-index button { width: 18px; height: 18px; font-size: 10px; font-weight: 600; color: var(--text-2); border-radius: 5px; }
+.m-index button:hover { background: oklch(1 0 0 / .1); color: var(--text); }
+.m-index button:disabled { color: var(--text-3); opacity: .4; pointer-events: none; }
+.icon-btn[aria-pressed="true"] svg { color: var(--text); }
+
 /* Shared menu */
 .menu { position: absolute; z-index: 40; min-width: 180px; padding: 4px; border-radius: 12px; background: var(--surface); border: 1px solid var(--edge); box-shadow: 0 16px 40px -8px oklch(0 0 0 / .6); animation: pop .14s var(--ease-out); transform-origin: top left; }
 @keyframes pop { from { opacity: 0; transform: scale(.97); } }
@@ -327,7 +357,7 @@ kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; line-height: 1;
   <header class="page-head">
     <div>
       <h1>Sidebar prototypes</h1>
-      <p>Six takes on the Switcher and Flyout directions, all aimed at stopping Collections and Tags from pushing each other around. Every prototype keeps today's features: counts, search, pin and reorder, rename, delete, drag items onto a collection, the overview pages and the icon rail. The data is invented and the page is clickable.</p>
+      <p>Six takes on the Flyout and Jump palette directions, all aimed at stopping Collections and Tags from pushing each other around. Every prototype keeps today's features: counts, search, pin and reorder, rename, delete, drag items onto a collection, the overview pages and the icon rail. The data is invented and the page is clickable.</p>
     </div>
   </header>
 
@@ -352,22 +382,6 @@ kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; line-height: 1;
 const ICONS={"all":"<path d=\"M3 17.9808V12.7075C3 9.07416 3 7.25748 4.09835 6.12874C5.1967 5 6.96447 5 10.5 5C14.0355 5 15.8033 5 16.9017 6.12874C18 7.25748 18 9.07416 18 12.7075V17.9808C18 20.2867 18 21.4396 17.2755 21.8523C15.8724 22.6514 13.2405 19.9852 11.9906 19.1824C11.2657 18.7168 10.9033 18.484 10.5 18.484C10.0967 18.484 9.73425 18.7168 9.00938 19.1824C7.7595 19.9852 5.12763 22.6514 3.72454 21.8523C3 21.4396 3 20.2867 3 17.9808Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M9 2H11C15.714 2 18.0711 2 19.5355 3.46447C21 4.92893 21 7.28595 21 12V18\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","unsorted":"<path d=\"M2.5 12C2.5 7.52166 2.5 5.28249 3.89124 3.89124C5.28249 2.5 7.52166 2.5 12 2.5C16.4783 2.5 18.7175 2.5 20.1088 3.89124C21.5 5.28249 21.5 7.52166 21.5 12C21.5 16.4783 21.5 18.7175 20.1088 20.1088C18.7175 21.5 16.4783 21.5 12 21.5C7.52166 21.5 5.28249 21.5 3.89124 20.1088C2.5 18.7175 2.5 16.4783 2.5 12Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M21.5 13.5H16.5743C15.7322 13.5 15.0706 14.2036 14.6995 14.9472C14.2963 15.7551 13.4889 16.5 12 16.5C10.5111 16.5 9.70373 15.7551 9.30054 14.9472C8.92942 14.2036 8.26777 13.5 7.42566 13.5H2.5\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","folder":"<path d=\"M8 7H16.75C18.8567 7 19.91 7 20.6667 7.50559C20.9943 7.72447 21.2755 8.00572 21.4944 8.33329C22 9.08996 22 10.1433 22 12.25C22 15.7612 22 17.5167 21.1573 18.7779C20.7926 19.3238 20.3238 19.7926 19.7779 20.1573C18.5167 21 16.7612 21 13.25 21H12C7.28595 21 4.92893 21 3.46447 19.5355C2 18.0711 2 15.714 2 11V7.94427C2 6.1278 2 5.21956 2.38032 4.53806C2.65142 4.05227 3.05227 3.65142 3.53806 3.38032C4.21956 3 5.1278 3 6.94427 3C8.10802 3 8.6899 3 9.19926 3.19101C10.3622 3.62712 10.8418 4.68358 11.3666 5.73313L12 7\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-width=\"1.5\"/>","tag":"<circle cx=\"1.5\" cy=\"1.5\" r=\"1.5\" transform=\"matrix(1 0 0 -1 16 8.00024)\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M2.77423 11.1439C1.77108 12.2643 1.7495 13.9546 2.67016 15.1437C4.49711 17.5033 6.49674 19.5029 8.85633 21.3298C10.0454 22.2505 11.7357 22.2289 12.8561 21.2258C15.8979 18.5022 18.6835 15.6559 21.3719 12.5279C21.6377 12.2187 21.8039 11.8397 21.8412 11.4336C22.0062 9.63798 22.3452 4.46467 20.9403 3.05974C19.5353 1.65481 14.362 1.99377 12.5664 2.15876C12.1603 2.19608 11.7813 2.36233 11.472 2.62811C8.34412 5.31646 5.49781 8.10211 2.77423 11.1439Z\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M7.00002 14.0002L10 17.0002\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","trash":"<path d=\"M19.5 5.5L18.8803 15.5251C18.7219 18.0864 18.6428 19.3671 18.0008 20.2879C17.6833 20.7431 17.2747 21.1273 16.8007 21.416C15.8421 22 14.559 22 11.9927 22C9.42312 22 8.1383 22 7.17905 21.4149C6.7048 21.1257 6.296 20.7408 5.97868 20.2848C5.33688 19.3626 5.25945 18.0801 5.10461 15.5152L4.5 5.5\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-width=\"1.5\"/><path d=\"M3 5.5H21M16.0557 5.5L15.3731 4.09173C14.9196 3.15626 14.6928 2.68852 14.3017 2.39681C14.215 2.3321 14.1231 2.27454 14.027 2.2247C13.5939 2 13.0741 2 12.0345 2C10.9688 2 10.436 2 9.99568 2.23412C9.8981 2.28601 9.80498 2.3459 9.71729 2.41317C9.32164 2.7167 9.10063 3.20155 8.65861 4.17126L8.05292 5.5\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-width=\"1.5\"/><path d=\"M9.5 16.5L9.5 10.5\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-width=\"1.5\"/><path d=\"M14.5 16.5L14.5 10.5\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-width=\"1.5\"/>","help":"<circle cx=\"12\" cy=\"12\" r=\"10\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M9.5 9.5C9.5 8.11929 10.6193 7 12 7C13.3807 7 14.5 8.11929 14.5 9.5C14.5 10.3569 14.0689 11.1131 13.4117 11.5636C12.7283 12.0319 12 12.6716 12 13.5\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M12.125 16.75H12M12.25 16.75C12.25 16.8881 12.1381 17 12 17C11.8619 17 11.75 16.8881 11.75 16.75C11.75 16.6119 11.8619 16.5 12 16.5C12.1381 16.5 12.25 16.6119 12.25 16.75Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","settings":"<path d=\"M15.5 12C15.5 13.933 13.933 15.5 12 15.5C10.067 15.5 8.5 13.933 8.5 12C8.5 10.067 10.067 8.5 12 8.5C13.933 8.5 15.5 10.067 15.5 12Z\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M21.011 14.0965C21.5329 13.9558 21.7939 13.8854 21.8969 13.7508C22 13.6163 22 13.3998 22 12.9669V11.0332C22 10.6003 22 10.3838 21.8969 10.2493C21.7938 10.1147 21.5329 10.0443 21.011 9.90358C19.0606 9.37759 17.8399 7.33851 18.3433 5.40087C18.4817 4.86799 18.5509 4.60156 18.4848 4.44529C18.4187 4.28902 18.2291 4.18134 17.8497 3.96596L16.125 2.98673C15.7528 2.77539 15.5667 2.66972 15.3997 2.69222C15.2326 2.71472 15.0442 2.90273 14.6672 3.27873C13.208 4.73448 10.7936 4.73442 9.33434 3.27864C8.95743 2.90263 8.76898 2.71463 8.60193 2.69212C8.43489 2.66962 8.24877 2.77529 7.87653 2.98663L6.15184 3.96587C5.77253 4.18123 5.58287 4.28891 5.51678 4.44515C5.45068 4.6014 5.51987 4.86787 5.65825 5.4008C6.16137 7.3385 4.93972 9.37763 2.98902 9.9036C2.46712 10.0443 2.20617 10.1147 2.10308 10.2492C2 10.3838 2 10.6003 2 11.0332V12.9669C2 13.3998 2 13.6163 2.10308 13.7508C2.20615 13.8854 2.46711 13.9558 2.98902 14.0965C4.9394 14.6225 6.16008 16.6616 5.65672 18.5992C5.51829 19.1321 5.44907 19.3985 5.51516 19.5548C5.58126 19.7111 5.77092 19.8188 6.15025 20.0341L7.87495 21.0134C8.24721 21.2247 8.43334 21.3304 8.6004 21.3079C8.76746 21.2854 8.95588 21.0973 9.33271 20.7213C10.7927 19.2644 13.2088 19.2643 14.6689 20.7212C15.0457 21.0973 15.2341 21.2853 15.4012 21.3078C15.5682 21.3303 15.7544 21.2246 16.1266 21.0133L17.8513 20.034C18.2307 19.8187 18.4204 19.711 18.4864 19.5547C18.5525 19.3984 18.4833 19.132 18.3448 18.5991C17.8412 16.6616 19.0609 14.6226 21.011 14.0965Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-width=\"1.5\"/>","search":"<path d=\"M17 17L21 21\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19C15.4183 19 19 15.4183 19 11Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","chevR":"<path d=\"M9.00005 6C9.00005 6 15 10.4189 15 12C15 13.5812 9 18 9 18\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","chevD":"<path d=\"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","more":"<path d=\"M11.9967 12.5V12M11.9967 6.5V6M11.9967 18.5V18M12.9967 12.5C12.9967 11.9477 12.549 11.5 11.9967 11.5C11.4444 11.5 10.9967 11.9477 10.9967 12.5C10.9967 13.0523 11.4444 13.5 11.9967 13.5C12.549 13.5 12.9967 13.0523 12.9967 12.5ZM12.9967 6.5C12.9967 5.94772 12.549 5.5 11.9967 5.5C11.4444 5.5 10.9967 5.94772 10.9967 6.5C10.9967 7.05228 11.4444 7.5 11.9967 7.5C12.549 7.5 12.9967 7.05228 12.9967 6.5ZM12.9967 18.5C12.9967 17.9477 12.549 17.5 11.9967 17.5C11.4444 17.5 10.9967 17.9477 10.9967 18.5C10.9967 19.0523 11.4444 19.5 11.9967 19.5C12.549 19.5 12.9967 19.0523 12.9967 18.5Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","pin":"<path d=\"M3 21L8 16\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M13.2585 18.8714C9.51516 18.0215 5.97844 14.4848 5.12853 10.7415C4.99399 10.1489 4.92672 9.85266 5.12161 9.37197C5.3165 8.89129 5.55457 8.74255 6.03071 8.44509C7.10705 7.77265 8.27254 7.55888 9.48209 7.66586C11.1793 7.81598 12.0279 7.89104 12.4512 7.67048C12.8746 7.44991 13.1622 6.93417 13.7376 5.90269L14.4664 4.59604C14.9465 3.73528 15.1866 3.3049 15.7513 3.10202C16.316 2.89913 16.6558 3.02199 17.3355 3.26771C18.9249 3.84236 20.1576 5.07505 20.7323 6.66449C20.978 7.34417 21.1009 7.68401 20.898 8.2487C20.6951 8.8134 20.2647 9.05346 19.4039 9.53358L18.0672 10.2792C17.0376 10.8534 16.5229 11.1406 16.3024 11.568C16.0819 11.9955 16.162 12.8256 16.3221 14.4859C16.4399 15.7068 16.2369 16.88 15.5555 17.9697C15.2577 18.4458 15.1088 18.6839 14.6283 18.8786C14.1477 19.0733 13.8513 19.006 13.2585 18.8714Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","plus":"<path d=\"M12.001 5.00003V19.002\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M19.002 12.002L4.99998 12.002\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","bot":"<path d=\"M13 7H11C8.19108 7 6.78661 7 5.77772 7.67412C5.34096 7.96596 4.96596 8.34096 4.67412 8.77772C4 9.78661 4 11.1911 4 14C4 16.8089 4 18.2134 4.67412 19.2223C4.96596 19.659 5.34096 20.034 5.77772 20.3259C6.78661 21 8.19108 21 11 21H13C15.8089 21 17.2134 21 18.2223 20.3259C18.659 20.034 19.034 19.659 19.3259 19.2223C20 18.2134 20 16.8089 20 14C20 11.1911 20 9.78661 19.3259 8.77772C19.034 8.34096 18.659 7.96596 18.2223 7.67412C17.2134 7 15.8089 7 13 7Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M4 14H2\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M10 17H14\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M22 14H20\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M15 11V13\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M9 11V13\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M12 7C12 5.11438 12 4.17157 11.4142 3.58579C10.8284 3 9.88562 3 8 3\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","sidebar":"<path d=\"M2 12C2 8.25027 2 6.3754 2.95491 5.06107C3.26331 4.6366 3.6366 4.26331 4.06107 3.95491C5.3754 3 7.25027 3 11 3H13C16.7497 3 18.6246 3 19.9389 3.95491C20.3634 4.26331 20.7367 4.6366 21.0451 5.06107C22 6.3754 22 8.25027 22 12C22 15.7497 22 17.6246 21.0451 18.9389C20.7367 19.3634 20.3634 19.7367 19.9389 20.0451C18.6246 21 16.7497 21 13 21H11C7.25027 21 5.3754 21 4.06107 20.0451C3.6366 19.7367 3.26331 19.3634 2.95491 18.9389C2 17.6246 2 15.7497 2 12Z\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M9.5 3.5L9.5 20.5\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M5 7C5 7 5.91421 7 6.5 7\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M5 11H6.5\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M17 10L15.7735 11.0572C15.2578 11.5016 15 11.7239 15 12C15 12.2761 15.2578 12.4984 15.7735 12.9428L17 14\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","hash":"<circle cx=\"1.5\" cy=\"1.5\" r=\"1.5\" transform=\"matrix(1 0 0 -1 16 8.00024)\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M2.77423 11.1439C1.77108 12.2643 1.7495 13.9546 2.67016 15.1437C4.49711 17.5033 6.49674 19.5029 8.85633 21.3298C10.0454 22.2505 11.7357 22.2289 12.8561 21.2258C15.8979 18.5022 18.6835 15.6559 21.3719 12.5279C21.6377 12.2187 21.8039 11.8397 21.8412 11.4336C22.0062 9.63798 22.3452 4.46467 20.9403 3.05974C19.5353 1.65481 14.362 1.99377 12.5664 2.15876C12.1603 2.19608 11.7813 2.36233 11.472 2.62811C8.34412 5.31646 5.49781 8.10211 2.77423 11.1439Z\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M7.00002 14.0002L10 17.0002\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","close":"<path d=\"M18 6L6.00081 17.9992M17.9992 18L6 6.00085\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","arrowR":"<path d=\"M9.00005 6C9.00005 6 15 10.4189 15 12C15 13.5812 9 18 9 18\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","layers":"<path d=\"M8.64298 3.14559L6.93816 3.93362C4.31272 5.14719 3 5.75397 3 6.75C3 7.74603 4.31272 8.35281 6.93817 9.56638L8.64298 10.3544C10.2952 11.1181 11.1214 11.5 12 11.5C12.8786 11.5 13.7048 11.1181 15.357 10.3544L17.0618 9.56638C19.6873 8.35281 21 7.74603 21 6.75C21 5.75397 19.6873 5.14719 17.0618 3.93362L15.357 3.14559C13.7048 2.38186 12.8786 2 12 2C11.1214 2 10.2952 2.38186 8.64298 3.14559Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M20.788 11.0972C20.9293 11.2959 21 11.5031 21 11.7309C21 12.7127 19.6873 13.3109 17.0618 14.5072L15.357 15.284C13.7048 16.0368 12.8786 16.4133 12 16.4133C11.1214 16.4133 10.2952 16.0368 8.64298 15.284L6.93817 14.5072C4.31272 13.3109 3 12.7127 3 11.7309C3 11.5031 3.07067 11.2959 3.212 11.0972\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M20.3767 16.2661C20.7922 16.5971 21 16.927 21 17.3176C21 18.2995 19.6873 18.8976 17.0618 20.0939L15.357 20.8707C13.7048 21.6236 12.8786 22 12 22C11.1214 22 10.2952 21.6236 8.64298 20.8707L6.93817 20.0939C4.31272 18.8976 3 18.2995 3 17.3176C3 16.927 3.20778 16.5971 3.62334 16.2661\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","grid":"<path d=\"M3.88884 9.66294C4.39329 10 5.09552 10 6.49998 10C7.90445 10 8.60668 10 9.11113 9.66294C9.32951 9.51702 9.51701 9.32952 9.66292 9.11114C9.99998 8.60669 9.99998 7.90446 9.99998 6.5C9.99998 5.09554 9.99998 4.39331 9.66292 3.88886C9.51701 3.67048 9.32951 3.48298 9.11113 3.33706C8.60668 3 7.90445 3 6.49998 3C5.09552 3 4.39329 3 3.88884 3.33706C3.67046 3.48298 3.48296 3.67048 3.33705 3.88886C2.99998 4.39331 2.99998 5.09554 2.99998 6.5C2.99998 7.90446 2.99998 8.60669 3.33705 9.11114C3.48296 9.32952 3.67046 9.51702 3.88884 9.66294Z\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M14.8888 9.66294C15.3933 10 16.0955 10 17.5 10C18.9044 10 19.6067 10 20.1111 9.66294C20.3295 9.51702 20.517 9.32952 20.6629 9.11114C21 8.60669 21 7.90446 21 6.5C21 5.09554 21 4.39331 20.6629 3.88886C20.517 3.67048 20.3295 3.48298 20.1111 3.33706C19.6067 3 18.9044 3 17.5 3C16.0955 3 15.3933 3 14.8888 3.33706C14.6705 3.48298 14.483 3.67048 14.337 3.88886C14 4.39331 14 5.09554 14 6.5C14 7.90446 14 8.60669 14.337 9.11114C14.483 9.32952 14.6705 9.51702 14.8888 9.66294Z\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M3.88884 20.6629C4.39329 21 5.09552 21 6.49998 21C7.90445 21 8.60668 21 9.11113 20.6629C9.32951 20.517 9.51701 20.3295 9.66292 20.1111C9.99998 19.6067 9.99998 18.9045 9.99998 17.5C9.99998 16.0955 9.99998 15.3933 9.66292 14.8889C9.51701 14.6705 9.32951 14.483 9.11113 14.3371C8.60668 14 7.90445 14 6.49998 14C5.09552 14 4.39329 14 3.88884 14.3371C3.67046 14.483 3.48296 14.6705 3.33705 14.8889C2.99998 15.3933 2.99998 16.0955 2.99998 17.5C2.99998 18.9045 2.99998 19.6067 3.33705 20.1111C3.48296 20.3295 3.67046 20.517 3.88884 20.6629Z\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M14.8888 20.6629C15.3933 21 16.0955 21 17.5 21C18.9044 21 19.6067 21 20.1111 20.6629C20.3295 20.517 20.517 20.3295 20.6629 20.1111C21 19.6067 21 18.9045 21 17.5C21 16.0955 21 15.3933 20.6629 14.8889C20.517 14.6705 20.3295 14.483 20.1111 14.3371C19.6067 14 18.9044 14 17.5 14C16.0955 14 15.3933 14 14.8888 14.3371C14.6705 14.483 14.483 14.6705 14.337 14.8889C14 15.3933 14 16.0955 14 17.5C14 18.9045 14 19.6067 14.337 20.1111C14.483 20.3295 14.6705 20.517 14.8888 20.6629Z\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","back":"<path d=\"M15 6C15 6 9.00001 10.4189 9 12C8.99999 13.5812 15 18 15 18\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","star":"<path d=\"M13.7276 3.44418L15.4874 6.99288C15.7274 7.48687 16.3673 7.9607 16.9073 8.05143L20.0969 8.58575C22.1367 8.92853 22.6167 10.4206 21.1468 11.8925L18.6671 14.3927C18.2471 14.8161 18.0172 15.6327 18.1471 16.2175L18.8571 19.3125C19.417 21.7623 18.1271 22.71 15.9774 21.4296L12.9877 19.6452C12.4478 19.3226 11.5579 19.3226 11.0079 19.6452L8.01827 21.4296C5.8785 22.71 4.57865 21.7522 5.13859 19.3125L5.84851 16.2175C5.97849 15.6327 5.74852 14.8161 5.32856 14.3927L2.84884 11.8925C1.389 10.4206 1.85895 8.92853 3.89872 8.58575L7.08837 8.05143C7.61831 7.9607 8.25824 7.48687 8.49821 6.99288L10.258 3.44418C11.2179 1.51861 12.7777 1.51861 13.7276 3.44418Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","clock":"<circle cx=\"12\" cy=\"12\" r=\"10\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M12 8V12L14 14\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","check":"<path d=\"M5 14L8.5 17.5L19 6.5\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","edit":"<path d=\"M14.0737 3.88545C14.8189 3.07808 15.1915 2.6744 15.5874 2.43893C16.5427 1.87076 17.7191 1.85309 18.6904 2.39232C19.0929 2.6158 19.4769 3.00812 20.245 3.79276C21.0131 4.5774 21.3972 4.96972 21.6159 5.38093C22.1438 6.37312 22.1265 7.57479 21.5703 8.5507C21.3398 8.95516 20.9446 9.33578 20.1543 10.097L10.7506 19.1543C9.25288 20.5969 8.504 21.3182 7.56806 21.6837C6.63212 22.0493 5.6032 22.0224 3.54536 21.9686L3.26538 21.9613C2.63891 21.9449 2.32567 21.9367 2.14359 21.73C1.9615 21.5234 1.98636 21.2043 2.03608 20.5662L2.06308 20.2197C2.20301 18.4235 2.27297 17.5255 2.62371 16.7182C2.97444 15.9109 3.57944 15.2555 4.78943 13.9445L14.0737 3.88545Z\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M13 4L20 11\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M14 22L22 22\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","filter":"<path d=\"M8.85746 12.5061C6.36901 10.6456 4.59564 8.59915 3.62734 7.44867C3.3276 7.09253 3.22938 6.8319 3.17033 6.3728C2.96811 4.8008 2.86701 4.0148 3.32795 3.5074C3.7889 3 4.60404 3 6.23433 3H17.7657C19.396 3 20.2111 3 20.672 3.5074C21.133 4.0148 21.0319 4.8008 20.8297 6.37281C20.7706 6.83191 20.6724 7.09254 20.3726 7.44867C19.403 8.60062 17.6261 10.6507 15.1326 12.5135C14.907 12.6821 14.7583 12.9567 14.7307 13.2614C14.4837 15.992 14.2559 17.4876 14.1141 18.2442C13.8853 19.4657 12.1532 20.2006 11.226 20.8563C10.6741 21.2466 10.0043 20.782 9.93278 20.1778C9.79643 19.0261 9.53961 16.6864 9.25927 13.2614C9.23409 12.9539 9.08486 12.6761 8.85746 12.5061Z\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>","sort":"<path d=\"M11.0001 8L19.0001 8.00006\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M11.0001 12H16.0001\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M11.0001 16H14.0001\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M11.0001 4H21.0001\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M5.5 21V3M5.5 21C4.79977 21 3.49153 19.0057 3 18.5M5.5 21C6.20023 21 7.50847 19.0057 8 18.5\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>"};
 
 const PROTOS = {
-  B: {
-    name: "Switcher",
-    tag: "Collections and Tags share one fixed panel",
-    notes: {
-      what: [
-        "A <strong>segmented control</strong> switches the panel between Collections and Tags. Only one list shows at a time, in a panel that never changes size.",
-        "<strong>One search box</strong> under the switch, scoped to the list you're looking at. The tab remembers its own query.",
-        "The <strong>overview</strong> becomes a grid button next to the search, so “All tags” stops sitting at the bottom like a stray button.",
-        "Dragging an item <strong>switches to Collections</strong> by itself, so there's always a drop target.",
-      ],
-      trade: [
-        "You can't see a collection and a tag list at once. Tags become one click further away.",
-      ],
-      try: "Switch to Tags and search. Switch back: each tab keeps its own query. Drag a card while Tags is showing.",
-    },
-  },
   D: {
     name: "Flyout",
     tag: "Sidebar stays still; lists open beside it",
@@ -383,57 +397,6 @@ const PROTOS = {
         "Browsing all collections is one more click than a list that's always visible.",
       ],
       try: "Open Tags and type. Collapse the sidebar with the panel button, then open Collections from the rail. Drag a card over Collections.",
-    },
-  },
-  F: {
-    name: "Flyout with tabs",
-    tag: "One flyout, Collections / Tags tabs inside",
-    notes: {
-      what: [
-        "The sidebar is the Flyout's: library views, <strong>Collections</strong> and <strong>Tags</strong> rows, pinned collections. It never changes shape.",
-        "Both rows open <strong>the same flyout</strong>, on the matching tab. <strong>Tabs at the top</strong> switch between collections and tags without closing it.",
-        "Each tab keeps its own search. Collections show as rows with counts and ⋮ actions. Tags show as <strong>chips</strong>, A–Z or Most used.",
-        "Holding a dragged item over Collections opens the flyout on the Collections tab.",
-      ],
-      trade: [
-        "The flyout covers part of the library while it's open.",
-        "Two ways to reach Tags: the sidebar row and the tab.",
-      ],
-      try: "Open Collections, then switch to Tags inside the flyout and search. Switch back: the query is kept.",
-    },
-  },
-  G: {
-    name: "Split browser",
-    tag: "Collections and tags side by side in one wide panel",
-    notes: {
-      what: [
-        "Collections or Tags opens <strong>one wide panel</strong>: collections on the left, tags as chips on the right.",
-        "<strong>One search</strong> at the top filters both columns at once, so typing “design” shows the matching collection and tags together.",
-        "Each column has its own overview button, and the tag column sorts A–Z or by most used.",
-        "The sidebar stays fixed, with pinned collections as drop targets. Collection rows in the panel take drops too.",
-      ],
-      trade: [
-        "It covers more of the library than a single flyout.",
-        "Too wide for small windows; it would fall back to the Flyout there.",
-      ],
-      try: "Open it and type “an”: both columns filter. Drag a card onto a collection in the left column.",
-    },
-  },
-  H: {
-    name: "Icon bar",
-    tag: "Icon strip switches the panel beside it",
-    notes: {
-      what: [
-        "A <strong>narrow icon strip</strong> on the left (Library, Collections, Tags, then Trash, Help, Settings) <strong>switches what the panel next to it shows</strong>. It's the switcher turned on its side.",
-        "Library shows All items, Unsorted and pinned collections. Collections and Tags each get the <strong>full panel height</strong> with search and the overview button.",
-        "Clicking the icon that's already selected <strong>hides the panel</strong>, which is the collapsed sidebar for free.",
-        "Holding a dragged item over the Collections icon switches the panel to Collections.",
-      ],
-      trade: [
-        "While you're in Tags, All items is two clicks away (Library, then All items).",
-        "About 20 px wider than today's sidebar.",
-      ],
-      try: "Click Tags, then Collections, then Collections again to hide the panel. Drag a card onto the Collections icon and hold.",
     },
   },
   I: {
@@ -453,20 +416,88 @@ const PROTOS = {
       try: "Press Ctrl K, type “ty”, use the arrow keys and Enter. Press Tab to cycle the filter.",
     },
   },
+  J: {
+    name: "Browse flyout",
+    tag: "Flyout you search first, driven by the keyboard",
+    notes: {
+      what: [
+        "The Flyout and the Jump palette in one: Collections or Tags opens <strong>one flyout beside the sidebar</strong> with the search box already focused.",
+        "<strong>All / Collections / Tags</strong> filters at the top. Arrow keys move, Tab switches filter, Enter opens, all without a scrim over the library.",
+        "Every result keeps its <strong>⋮ menu</strong>, and collection rows take <strong>dropped items</strong>, so you can manage things here as well as jump.",
+        "Without a search it's a plain list: pinned collections, then the rest, then tags by most used.",
+      ],
+      trade: [
+        "The flyout covers part of the library while it's open.",
+        "Filters plus a list is busier than the plain Flyout.",
+      ],
+      try: "Click Tags, type “re”, press Tab twice, use the arrow keys and Enter. Drag a card over Collections, then onto a row.",
+    },
+  },
+  K: {
+    name: "Sidebar search",
+    tag: "Search box in the sidebar; results drop down",
+    notes: {
+      what: [
+        "A <strong>search box sits in the sidebar</strong>. Typing drops a results list below it, grouped into Collections and Tags. No popup or scrim.",
+        "Arrow keys and Enter work in the results, and Escape clears.",
+        "The <strong>Collections</strong> and <strong>Tags</strong> rows still open the Flyout for browsing the full list.",
+        "Pinned collections stay in the sidebar as drop targets.",
+      ],
+      trade: [
+        "Two ways in (search box and flyout) to explain.",
+        "The results list covers the top of the library while you type.",
+      ],
+      try: "Click the search box and type “de”. Use the arrow keys and Enter. Then open Tags from its row.",
+    },
+  },
+  L: {
+    name: "Palette with preview",
+    tag: "Jump palette with a side pane for actions",
+    notes: {
+      what: [
+        "The Jump palette, wider, with a <strong>preview pane</strong> for the highlighted result: its count, recent items, and buttons.",
+        "Act without opening the item first: <strong>Open, Pin, Rename and Delete</strong> live in the pane, so the palette replaces the sidebar's ⋮ menus for anything you find.",
+        "Filters, arrow keys, Tab and Enter work as in the Jump palette.",
+        "The sidebar keeps library views, pinned collections, and Collections / Tags rows that open the palette already filtered.",
+      ],
+      trade: [
+        "The widest popup of the set.",
+        "Dragging only reaches pinned collections.",
+      ],
+      try: "Press Ctrl K, move down a few rows and watch the pane. Pin a collection, then rename it from the pane.",
+    },
+  },
+  M: {
+    name: "Hover flyout",
+    tag: "Flyout opens on hover, A–Z index for tags",
+    notes: {
+      what: [
+        "Pointing at <strong>Collections</strong> or <strong>Tags</strong> opens its flyout after a short pause, and moving away closes it, like a menu bar. <strong>Clicking</strong> keeps it open, and so does the pin in its header.",
+        "The Tags flyout is a <strong>list with an A–Z index</strong> down its edge: click a letter to jump there.",
+        "The sidebar adds <strong>Recent tags</strong> (the last ones you opened) under the pinned collections, so the usual ones are one click away. <em>New: not in the app today.</em>",
+        "Search, overview, ⋮ actions and drop targets work as in the Flyout.",
+      ],
+      trade: [
+        "Opening on hover can fire by accident when you move the mouse across the sidebar.",
+        "Recent tags is a new feature to build and keep up to date.",
+      ],
+      try: "Rest the pointer on Tags, then move it into the flyout and click a letter. Move away: it closes. Click Tags to keep it open.",
+    },
+  },
 };
-const ORDER = ["B", "D", "F", "G", "H", "I"];
+const ORDER = ["D", "I", "J", "K", "L", "M"];
 const LETTER = id => "ABCDEF"[ORDER.indexOf(id)];
 
 const COVERAGE = [
-  ["Library views and counts", { B: "Unchanged", D: "Unchanged", F: "Unchanged", G: "Unchanged", H: "Library panel", I: "Unchanged" }],
-  ["Search collections / tags", { B: "One box, scoped to the tab", D: "Search in each flyout", F: "Search per tab in the flyout", G: "One search for both columns", H: "Search in each panel", I: "The popup is the search" }],
-  ["All collections / All tags", { B: "Grid button beside search", D: "Open overview in flyout footer", F: "Open overview in flyout footer", G: "Button on each column", H: "Grid button in panel header", I: "Links in popup footer" }],
-  ["Pin, reorder, rename, delete", { B: "Row ⋮ menu, drag pinned rows", D: "Row ⋮ menu, drag pinned rows", F: "Row ⋮ menu, drag pinned rows", G: "Row ⋮ menu, drag pinned rows", H: "Row ⋮ menu, drag pinned rows", I: "Right-click a result; drag pinned rows" }],
-  ["Drag items onto a collection", { B: "Panel switches to Collections", D: "Pinned in sidebar; hover to open flyout", F: "Pinned in sidebar; hover opens Collections tab", G: "Pinned in sidebar, or any row in the panel", H: "Pinned in Library; hover icon to switch", I: "Pinned in sidebar only" }],
-  ["Delete tag", { B: "Row ⋮ menu", D: "Right-click or ⋮ in flyout", F: "Right-click a chip", G: "Right-click a chip", H: "Row ⋮ menu", I: "Right-click a result" }],
-  ["Empty Trash", { B: "Trash ⋮ menu", D: "Trash ⋮ menu", F: "Trash ⋮ menu", G: "Trash ⋮ menu", H: "Trash page", I: "Trash ⋮ menu" }],
-  ["Collapsed sidebar", { B: "Opens sidebar on that tab", D: "Opens the flyout directly", F: "Opens the flyout directly", G: "Opens the panel directly", H: "Click the selected icon", I: "Rail icons open the popup" }],
-  ["Remembered state", { B: "Last tab, per-tab query", D: "Tag sort", F: "Last tab, per-tab query", G: "Tag sort", H: "Last panel, open or hidden", I: "Last filter" }],
+  ["Library views and counts", { D: "Unchanged", I: "Unchanged", J: "Unchanged", K: "Unchanged", L: "Unchanged", M: "Unchanged" }],
+  ["Search collections / tags", { D: "Search in each flyout", I: "The popup is the search", J: "Search-first flyout with filters", K: "Search box in the sidebar", L: "The popup is the search", M: "Search in each flyout" }],
+  ["All collections / All tags", { D: "Open overview in flyout footer", I: "Links in popup footer", J: "Links in flyout footer", K: "Flyout footers", L: "Links in popup footer", M: "Open overview in flyout footer" }],
+  ["Pin, reorder, rename, delete", { D: "Row ⋮ menu, drag pinned rows", I: "Right-click a result; drag pinned rows", J: "⋮ on each result; drag pinned rows", K: "⋮ in the flyout; drag pinned rows", L: "Buttons in the preview pane", M: "Row ⋮ menu, drag pinned rows" }],
+  ["Drag items onto a collection", { D: "Pinned in sidebar; hover to open flyout", I: "Pinned in sidebar only", J: "Pinned in sidebar; hover opens flyout", K: "Pinned in sidebar; hover opens flyout", L: "Pinned in sidebar only", M: "Pinned in sidebar; hover opens flyout" }],
+  ["Delete tag", { D: "Right-click or ⋮ in flyout", I: "Right-click a result", J: "⋮ on the result", K: "Right-click in the flyout", L: "Delete in the preview pane", M: "Row ⋮ menu" }],
+  ["Empty Trash", { D: "Trash ⋮ menu", I: "Trash ⋮ menu", J: "Trash ⋮ menu", K: "Trash ⋮ menu", L: "Trash ⋮ menu", M: "Trash ⋮ menu" }],
+  ["Collapsed sidebar", { D: "Opens the flyout directly", I: "Rail icons open the popup", J: "Rail icons open the flyout", K: "Rail icons open the flyout", L: "Rail icons open the popup", M: "Rail icons open the flyout" }],
+  ["Remembered state", { D: "Tag sort", I: "Last filter", J: "Last filter", K: "Nothing; search clears", L: "Last filter", M: "Recent tags, keep-open pin" }],
 ];
 
 // ---------- Invented data ----------
@@ -487,7 +518,7 @@ const CARD_TITLES = ["Variable fonts in practice", "Sourdough starter log", "Spr
 
 // ---------- State ----------
 const S = {
-  proto: ["B", "D", "F", "G", "H", "I"].includes(localStorage.getItem("kp-proto")) ? localStorage.getItem("kp-proto") : "B",
+  proto: ["D", "I", "J", "K", "L", "M"].includes(localStorage.getItem("kp-proto")) ? localStorage.getItem("kp-proto") : "D",
   view: { kind: "all" },
   rail: false,
   menu: null,
@@ -505,11 +536,14 @@ const S = {
   fq: { collections: "", tags: "" },
   g: { q: "" },
   h: { sec: "library", open: true, q: { collections: "", tags: "" } },
-  pal: { open: false, filter: "all", q: "", idx: 0 },
+  pal: { open: false, filter: "all", q: "", idx: 0, limit: 6 },
+  j: { open: false, filter: "all", q: "", idx: 0, limit: 60 },
+  k: { open: false, filter: "all", q: "", idx: 0, limit: 5 },
+  m: { keep: false, recent: [] },
 };
 
 // ---------- Helpers ----------
-const FLY = () => ["D", "F", "G"].includes(S.proto);
+const FLY = () => ["D", "F", "G", "K", "M"].includes(S.proto);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const icon = (n, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" fill="none" aria-hidden="true">${ICONS[n]}</svg>`;
 const isActive = (kind, id) => S.view.kind === kind && (id === undefined || S.view.id === id);
@@ -742,7 +776,7 @@ function protoD() {
 }
 
 function flyoutD() {
-  if (S.proto !== "D" || !S.d.fly) return "";
+  if (!["D", "K"].includes(S.proto) || !S.d.fly) return "";
   const isCol = S.d.fly === "collections";
   const q = S.d.q;
   let body;
@@ -880,27 +914,33 @@ function protoI() {
     ${footer()}`;
 }
 
-function palResults() {
-  const P = S.pal, q = P.q;
+function palResults(P = S.pal) {
+  const q = P.q;
   const cs = P.filter === "tags" ? [] : collections.filter(c => match(c.name, q)).sort((x, y) => (pinned.includes(y.id) - pinned.includes(x.id)) || x.name.localeCompare(y.name));
   let ts = P.filter === "collections" ? [] : tags.filter(t => match(t.name, q));
   if (!q.trim() && P.filter === "all") ts = [...ts].sort((x, y) => y.count - x.count);
-  const limit = P.filter === "all" ? 6 : 200;
+  const limit = P.filter === "all" ? P.limit : 200;
   return [...cs.slice(0, limit).map(c => ({ kind: "collection", item: c })), ...ts.slice(0, limit).map(t => ({ kind: "tag", item: t }))];
 }
 
-function palette() {
-  if (S.proto !== "I" || !S.pal.open) return "";
-  const P = S.pal, res = palResults();
+function resultRows(P, res, { more = false, enter = true } = {}) {
   P.idx = Math.min(P.idx, Math.max(0, res.length - 1));
   let html = "", lastKind = "";
   res.forEach((r, i) => {
     if (P.filter === "all" && r.kind !== lastKind) { html += `<div class="pal-group">${r.kind === "collection" ? "Collections" : "Tags"}</div>`; lastKind = r.kind; }
     const it = r.item, isPinned = r.kind === "collection" && pinned.includes(it.id);
-    html += `<div class="pal-row" role="option" aria-selected="${i === P.idx}" data-palidx="${i}" data-go="${r.kind}" data-id="${it.id}">
+    html += `<div class="pal-row${S.dropId === it.id ? " drop" : ""}" role="option" aria-selected="${i === P.idx}" data-palidx="${i}" data-go="${r.kind}" data-id="${it.id}" ${r.kind === "collection" ? `data-drop="${it.id}"` : ""}>
       ${r.kind === "collection" ? `<span class="marker" style="--h:${it.hue}">${isPinned ? icon("pin", "xs") : '<span class="dot"></span>'}</span>` : `<span class="hash">#</span>`}
-      <span class="label">${highlight(it.name, P.q)}</span><span class="count">${it.count}</span>${i === P.idx ? `<kbd>↵</kbd>` : ""}</div>`;
+      <span class="label">${highlight(it.name, P.q)}</span><span class="count${more ? " hides" : ""}">${it.count}</span>${enter && i === P.idx && !more ? `<kbd>↵</kbd>` : ""}
+      ${more ? `<button class="more" data-menu="${r.kind}" data-id="${it.id}" aria-label="${esc(it.name)} actions" aria-expanded="${S.menu && S.menu.id === it.id ? "true" : "false"}">${icon("more", "sm")}</button>` : ""}</div>`;
   });
+  return html;
+}
+
+function palette() {
+  if (S.proto !== "I" || !S.pal.open) return "";
+  const P = S.pal, res = palResults();
+  const html = resultRows(P, res);
   const f = (k, l) => `<button data-pfilter="${k}" aria-pressed="${P.filter === k}">${l}</button>`;
   return `<div class="scrim" data-act="pal-close"></div>
   <div class="palette" role="dialog" aria-label="Jump to">
@@ -909,6 +949,140 @@ function palette() {
     <div class="pal-list scroll" data-scroll="pal" role="listbox">${html || `<p class="empty" style="padding:18px 16px">Nothing matches “${esc(P.q)}”.</p>`}</div>
     <div class="pal-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>Tab</kbd> filter</span><span class="grow"></span>
       <button class="link-btn" data-go="collections">All collections</button><button class="link-btn" data-go="tags">All tags</button></div>
+  </div>`;
+}
+
+// ---------- Prototype J: browse flyout ----------
+function flyoutJ() {
+  if (S.proto !== "J" || !S.j.open) return "";
+  const P = S.j, res = palResults(P);
+  const f = (k, l) => `<button data-jfilter="${k}" aria-pressed="${P.filter === k}">${l}</button>`;
+  return `<div class="flyout" role="dialog" aria-label="Browse" style="left:${(S.rail ? 56 : 256) + 4}px;width:340px">
+    <div class="fly-head" style="padding-bottom:8px"><h3>Browse</h3><button class="icon-btn" data-act="j-close" aria-label="Close">${icon("close", "sm")}</button></div>
+    ${search("j", "Search collections and tags", P.q)}
+    <div class="pal-filters" style="padding:10px 12px 2px">${f("all", "All")}${f("collections", `Collections <span>${collections.length}</span>`)}${f("tags", `Tags <span>${tags.length}</span>`)}</div>
+    <div class="scroll fade" style="flex:1;padding:4px 8px 8px" data-scroll="j-${P.filter}" role="listbox">${res.length ? resultRows(P, res, { more: true }) : `<p class="empty">Nothing matches “${esc(P.q)}”.</p>`}</div>
+    <div class="pal-foot" style="white-space:nowrap"><span><kbd>↑</kbd><kbd>↓</kbd> <kbd>Tab</kbd></span><span class="grow"></span>
+      <button class="link-btn" data-go="collections">All collections</button><button class="link-btn" data-go="tags">All tags</button></div>
+  </div>`;
+}
+function protoJ() {
+  const { p } = byPinned();
+  return `${brand()}${primaryNav()}
+    <nav class="nav" style="margin-top:14px">
+      <div class="row lg trigger" data-jopen="collections" data-spring="collections" role="button" tabindex="0" aria-expanded="${S.j.open && S.j.filter === "collections"}"${cur(isActive("collection") || isActive("collections"))}>${icon("folder")}<span class="label">Collections</span><span class="count">${collections.length}</span>${icon("chevR", "sm chev")}</div>
+      <div class="row lg trigger" data-jopen="tags" role="button" tabindex="0" aria-expanded="${S.j.open && S.j.filter === "tags"}"${cur(isActive("tag") || isActive("tags"))}>${icon("tag")}<span class="label">Tags</span><span class="count">${tags.length}</span>${icon("chevR", "sm chev")}</div>
+    </nav>
+    <div class="sec-label" style="margin:14px 12px 0">Pinned</div>
+    <div class="nav">${p.map(c => colRow(c)).join("")}</div>
+    ${footer()}`;
+}
+function openJ(filter) {
+  S.j = { ...S.j, open: true, filter, q: "", idx: 0 }; S.menu = null; render();
+  frameEl.querySelector('[data-focus="j"]')?.focus();
+}
+
+// ---------- Prototype K: sidebar search ----------
+function protoK() {
+  const { p } = byPinned();
+  return `${brand()}
+    <div class="k-search" style="padding:0 12px 10px">${search("k", "Find a collection or tag", S.k.q)}</div>
+    ${primaryNav()}
+    <nav class="nav" style="margin-top:14px">
+      <div class="row lg trigger" data-fly="collections" data-spring="collections" role="button" tabindex="0" aria-expanded="${S.d.fly === "collections"}"${cur(isActive("collection") || isActive("collections"))}>${icon("folder")}<span class="label">Collections</span><span class="count">${collections.length}</span>${icon("chevR", "sm chev")}</div>
+      <div class="row lg trigger" data-fly="tags" role="button" tabindex="0" aria-expanded="${S.d.fly === "tags"}"${cur(isActive("tag") || isActive("tags"))}>${icon("tag")}<span class="label">Tags</span><span class="count">${tags.length}</span>${icon("chevR", "sm chev")}</div>
+    </nav>
+    <div class="sec-label" style="margin:14px 12px 0">Pinned</div>
+    <div class="nav">${p.map(c => colRow(c)).join("")}</div>
+    ${footer()}`;
+}
+function dropdownK() {
+  if (S.proto !== "K" || S.rail || !S.k.open || !S.k.q.trim()) return "";
+  const P = S.k, res = palResults(P);
+  const nc = collections.filter(c => match(c.name, P.q)).length, nt = tags.filter(t => match(t.name, P.q)).length;
+  return `<div class="k-drop" role="listbox" aria-label="Results">
+    <div class="scroll" style="max-height:420px;padding:4px 6px 6px">${res.length ? resultRows(P, res) : `<p class="empty" style="padding:14px">Nothing matches “${esc(P.q)}”.</p>`}</div>
+    ${nc > P.limit || nt > P.limit ? `<div class="pal-foot">${nc > P.limit ? `<button class="link-btn" data-kmore="collections">All ${nc} collections</button>` : ""}${nt > P.limit ? `<button class="link-btn" data-kmore="tags">All ${nt} tags</button>` : ""}</div>` : ""}
+  </div>`;
+}
+
+// ---------- Prototype L: palette with preview ----------
+function protoL() { return protoI(); }
+function paletteL() {
+  if (S.proto !== "L" || !S.pal.open) return "";
+  const P = S.pal, res = palResults(P);
+  const html = resultRows(P, res, { enter: false });
+  const sel = res[P.idx];
+  let pane = `<p class="empty" style="padding:24px">Nothing selected.</p>`;
+  if (sel) {
+    const it = sel.item, isCol = sel.kind === "collection", isPinned = isCol && pinned.includes(it.id);
+    const seed = it.id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    const recent = [0, 1, 2, 3].map(i => CARD_TITLES[(seed + i * 5) % CARD_TITLES.length]);
+    const title = S.renaming === it.id
+      ? `<form class="rename" data-rename="${it.id}" style="margin:0 -6px"><input data-focus="rename" aria-label="Rename collection" value="${esc(S.renameDraft)}"></form>`
+      : `<h3>${isCol ? "" : "#"}${esc(it.name)}</h3>`;
+    pane = `<div class="l-pane-head">${isCol ? `<span class="marker" style="--h:${it.hue}">${isPinned ? icon("pin", "xs") : '<span class="dot"></span>'}</span>` : `<span class="hash">#</span>`}<span>${isCol ? (isPinned ? "Pinned collection" : "Collection") : "Tag"} · ${it.count} items</span></div>
+      ${title}
+      <div class="l-recent"><b>Recently added</b>${recent.map(t => `<span>${esc(t)}</span>`).join("")}</div>
+      <div class="l-actions">
+        <button class="btn primary" data-go="${sel.kind}" data-id="${it.id}">Open<kbd>↵</kbd></button>
+        ${isCol ? `<button class="btn" data-lact="pin" data-id="${it.id}">${icon("pin", "sm")}${isPinned ? "Unpin" : "Pin"}</button><button class="btn" data-lact="rename" data-id="${it.id}">${icon("edit", "sm")}Rename</button>` : ""}
+        <button class="btn danger" data-lact="delete" data-kind="${sel.kind}" data-id="${it.id}">${icon("trash", "sm")}Delete</button>
+      </div>`;
+  }
+  const f = (k, l) => `<button data-pfilter="${k}" aria-pressed="${P.filter === k}">${l}</button>`;
+  return `<div class="scrim" data-act="pal-close"></div>
+  <div class="palette l-wide" role="dialog" aria-label="Jump to">
+    <label class="pal-input">${icon("search")}<input data-input="i" data-focus="l" placeholder="Jump to a collection or tag…" value="${esc(P.q)}" autocomplete="off"></label>
+    <div class="pal-filters">${f("all", "All")}${f("collections", `Collections <span>${collections.length}</span>`)}${f("tags", `Tags <span>${tags.length}</span>`)}</div>
+    <div class="l-body">
+      <div class="pal-list scroll" data-scroll="pal" role="listbox">${html || `<p class="empty" style="padding:18px 16px">Nothing matches “${esc(P.q)}”.</p>`}</div>
+      <aside class="l-pane">${pane}</aside>
+    </div>
+    <div class="pal-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>Tab</kbd> filter</span><span class="grow"></span>
+      <button class="link-btn" data-go="collections">All collections</button><button class="link-btn" data-go="tags">All tags</button></div>
+  </div>`;
+}
+
+// ---------- Prototype M: hover flyout with A–Z index ----------
+function protoM() {
+  const { p } = byPinned();
+  const recent = S.m.recent.map(id => tags.find(t => t.id === id)).filter(Boolean);
+  return `${brand()}${primaryNav()}
+    <nav class="nav" style="margin-top:14px">
+      <div class="row lg trigger" data-fly="collections" data-hfly="collections" data-spring="collections" role="button" tabindex="0" aria-expanded="${S.d.fly === "collections"}"${cur(isActive("collection") || isActive("collections"))}>${icon("folder")}<span class="label">Collections</span><span class="count">${collections.length}</span>${icon("chevR", "sm chev")}</div>
+      <div class="row lg trigger" data-fly="tags" data-hfly="tags" role="button" tabindex="0" aria-expanded="${S.d.fly === "tags"}"${cur(isActive("tag") || isActive("tags"))}>${icon("tag")}<span class="label">Tags</span><span class="count">${tags.length}</span>${icon("chevR", "sm chev")}</div>
+    </nav>
+    <div class="sec-label" style="margin:14px 12px 0">Pinned</div>
+    <div class="nav">${p.map(c => colRow(c)).join("")}</div>
+    ${recent.length ? `<div class="sec-label" style="margin:12px 12px 0">Recent tags</div><div class="nav">${recent.map(t => tagRow(t)).join("")}</div>` : ""}
+    ${footer()}`;
+}
+function flyoutM() {
+  if (S.proto !== "M" || !S.d.fly) return "";
+  const isCol = S.d.fly === "collections", q = S.d.q;
+  let body = "", letters = [];
+  if (isCol) {
+    const { p, rest } = byPinned();
+    if (q.trim()) { const cs = collections.filter(c => match(c.name, q)); body = cs.length ? cs.map(c => colRow(c, q)).join("") : `<p class="empty">No collections match.</p>`; }
+    else body = `<div class="letter" style="background:var(--surface)">Pinned</div>${p.map(c => colRow(c)).join("")}<div class="letter" style="background:var(--surface)">All</div>${rest.map(c => colRow(c)).join("")}`;
+  } else {
+    const ts = tags.filter(t => match(t.name, q));
+    let last = "";
+    for (const t of ts) { const L = t.name[0].toUpperCase(); if (L !== last) { body += `<div class="letter" data-letter="${L}" style="background:var(--surface)">${L}</div>`; letters.push(L); last = L; } body += tagRow(t, q); }
+    if (!ts.length) body = `<p class="empty">No tags match.</p>`;
+  }
+  const all = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  return `<div class="flyout" role="dialog" aria-label="${isCol ? "Collections" : "Tags"}" style="left:${(S.rail ? 56 : 256) + 4}px">
+    <div class="fly-head"><h3>${isCol ? "Collections" : "Tags"}<span>${isCol ? collections.length : tags.length}</span></h3>
+      <button class="icon-btn" data-act="m-keep" aria-pressed="${S.m.keep}" aria-label="Keep open">${icon("pin", "sm")}</button>
+      <button class="icon-btn" data-act="fly-close" aria-label="Close">${icon("close", "sm")}</button></div>
+    ${search("d", isCol ? "Search collections" : "Search tags", q)}
+    <div class="m-body">
+      <div class="scroll fade m-list" data-scroll="m-${S.d.fly}">${body}</div>
+      ${!isCol ? `<div class="m-index" aria-label="Jump to letter">${all.map(L => `<button data-jump="${L}" ${letters.includes(L) ? "" : "disabled"}>${L}</button>`).join("")}</div>` : ""}
+    </div>
+    <div class="fly-foot"><span class="grow">${S.m.keep ? "Kept open." : "Closes when you move away."}</span><button class="btn" data-go="${S.d.fly}">${icon("grid", "sm")}Open overview</button></div>
   </div>`;
 }
 
@@ -980,11 +1154,11 @@ function render() {
   sidebarEl.className = "sidebar" + (S.rail && S.proto !== "H" ? " rail" : "") + (S.proto === "H" ? " h-mode" + (S.h.open ? "" : " h-closed") : "");
   let html;
   if (S.rail && S.proto !== "H") html = `${brand()}${primaryNav()}${railMiddle()}${footer()}`;
-  else html = { B: protoB, D: protoD, F: protoD, G: protoD, H: protoH, I: protoI }[S.proto]();
+  else html = { B: protoB, D: protoD, F: protoD, G: protoD, H: protoH, I: protoI, J: protoJ, K: protoK, L: protoL, M: protoM }[S.proto]();
   sidebarEl.innerHTML = html;
   contentEl.innerHTML = content();
-  frameEl.querySelectorAll(".flyout, .menu, .palette, .scrim").forEach(el => el.remove());
-  frameEl.insertAdjacentHTML("beforeend", flyoutD() + flyoutF() + flyoutG() + palette() + menu());
+  frameEl.querySelectorAll(".flyout, .menu, .palette, .scrim, .k-drop").forEach(el => el.remove());
+  frameEl.insertAdjacentHTML("beforeend", flyoutD() + flyoutF() + flyoutG() + flyoutJ() + flyoutM() + dropdownK() + palette() + paletteL() + menu());
 
   frameEl.querySelectorAll("[data-scroll]").forEach(el => { if (scrolls[el.dataset.scroll] != null) el.scrollTop = scrolls[el.dataset.scroll]; });
   if (focused) {
@@ -1011,7 +1185,8 @@ function go(kind, id) {
   S.view = { kind, id };
   S.menu = null;
   if (FLY()) S.d.fly = null;
-  S.pal.open = false;
+  S.pal.open = false; S.j.open = false; S.k.open = false; S.k.q = ""; S.m.keep = false;
+  if (kind === "tag") S.m.recent = [id, ...S.m.recent.filter(x => x !== id)].slice(0, 4);
   render();
 }
 
@@ -1028,12 +1203,13 @@ function openFly(which) {
 }
 function openPal(filter) {
   S.pal = { open: true, filter, q: "", idx: 0 }; S.menu = null; render();
-  frameEl.querySelector('[data-focus="i"]')?.focus();
+  frameEl.querySelector('[data-focus="i"],[data-focus="l"]')?.focus();
 }
 
 function railOpen(which) {
   if (FLY()) return openFly(S.d.fly === which ? null : which);
-  if (S.proto === "I") return openPal(which);
+  if (S.proto === "I" || S.proto === "L") return openPal(which);
+  if (S.proto === "J") return openJ(which);
   S.rail = false;
   if (S.proto === "A") { if (which === "collections") S.a.colOpen = true; else S.a.tagOpen = true; }
   if (S.proto === "B") S.b.tab = which;
@@ -1043,9 +1219,11 @@ function railOpen(which) {
 }
 
 frameEl.addEventListener("click", e => {
-  const t = e.target.closest("[data-menu],[data-mact],[data-act],[data-btab],[data-cpage],[data-csort],[data-dsort],[data-epage],[data-etab],[data-ftab],[data-hsec],[data-pal],[data-pfilter],[data-fly],[data-rail],[data-clear],[data-go]");
+  const t = e.target.closest("[data-menu],[data-mact],[data-act],[data-btab],[data-cpage],[data-csort],[data-dsort],[data-epage],[data-etab],[data-ftab],[data-hsec],[data-pal],[data-pfilter],[data-jopen],[data-jfilter],[data-kmore],[data-lact],[data-jump],[data-fly],[data-rail],[data-clear],[data-go]");
   if (!e.target.closest(".menu") && !e.target.closest("[data-menu]")) S.menu = null;
-  if (FLY() && S.d.fly && !e.target.closest(".flyout") && !e.target.closest("[data-fly],[data-rail],.menu")) S.d.fly = null;
+  if (FLY() && S.d.fly && !e.target.closest(".flyout") && !e.target.closest("[data-fly],[data-rail],.menu")) { S.d.fly = null; S.m.keep = false; }
+  if (S.proto === "J" && S.j.open && !e.target.closest(".flyout") && !e.target.closest("[data-jopen],[data-rail],.menu")) S.j.open = false;
+  if (S.proto === "K" && S.k.open && !e.target.closest(".k-drop,.k-search,.menu")) S.k.open = false;
   if (!t) return render();
   e.preventDefault();
   const d = t.dataset;
@@ -1066,7 +1244,18 @@ frameEl.addEventListener("click", e => {
   if (d.ftab) { S.d.fly = d.ftab; render(); frameEl.querySelector('[data-focus="f"]')?.focus(); return; }
   if (d.hsec) { if (S.h.sec === d.hsec && S.h.open) S.h.open = false; else { S.h.sec = d.hsec; S.h.open = true; } return render(); }
   if (d.pal) return openPal(d.pal);
-  if (d.pfilter) { S.pal.filter = d.pfilter; S.pal.idx = 0; render(); frameEl.querySelector('[data-focus="i"]')?.focus(); return; }
+  if (d.act === "j-close") { S.j.open = false; return render(); }
+  if (d.act === "m-keep") { S.m.keep = !S.m.keep; return render(); }
+  if (d.jopen) { if (S.j.open && S.j.filter === d.jopen) { S.j.open = false; return render(); } return openJ(d.jopen); }
+  if (d.jfilter) { S.j.filter = d.jfilter; S.j.idx = 0; render(); frameEl.querySelector('[data-focus="j"]')?.focus(); return; }
+  if (d.kmore) { S.k.open = false; S.d.fly = d.kmore; S.d.q = S.k.q; S.k.q = ""; return render(); }
+  if (d.jump) { const list = frameEl.querySelector(".m-list"), el = list?.querySelector(`[data-letter="${d.jump}"]`); if (el) list.scrollTop = el.offsetTop - list.offsetTop; return; }
+  if (d.lact) {
+    if (d.lact === "pin") { pinned = pinned.includes(d.id) ? pinned.filter(x => x !== d.id) : [...pinned, d.id]; S.pal.idx = Math.max(0, palResults().findIndex(r => r.item.id === d.id)); render(); frameEl.querySelector('.pal-row[aria-selected="true"]')?.scrollIntoView({ block: "nearest" }); return; }
+    if (d.lact === "rename") { const c = collections.find(c => c.id === d.id); S.renaming = d.id; S.renameDraft = c.name; render(); const el = frameEl.querySelector('[data-focus="rename"]'); el?.focus(); el?.select(); return; }
+    if (d.lact === "delete") { S.menu = { kind: d.kind, id: d.id }; return menuAction("delete"); }
+  }
+  if (d.pfilter) { S.pal.filter = d.pfilter; S.pal.idx = 0; render(); frameEl.querySelector('[data-focus="i"],[data-focus="l"]')?.focus(); return; }
   if (d.act === "dismiss") { S.notice = null; return render(); }
   if (d.act === "undo") { S.notice?.undo?.(); S.notice = null; return render(); }
   if (d.btab) { S.b.tab = d.btab; return render(); }
@@ -1076,6 +1265,7 @@ frameEl.addEventListener("click", e => {
   if (d.csort) { S.c.sort = d.csort; return render(); }
   if (d.dsort) { S.d.sort = d.dsort; return render(); }
   if (d.fly) {
+    if (S.proto === "M") { S.m.keep = true; S.d.fly = d.fly; S.d.q = ""; render(); frameEl.querySelector('[data-focus="d"]')?.focus(); return; }
     if (S.proto === "G" && S.d.fly) { S.d.fly = S.d.fly === d.fly ? null : d.fly; return render(); }
     return openFly(S.d.fly === d.fly ? null : d.fly);
   }
@@ -1131,6 +1321,8 @@ function setQuery(key, v) {
   if (key === "g") S.g.q = v;
   if (key === "h") S.h.q[S.h.sec] = v;
   if (key === "i") { S.pal.q = v; S.pal.idx = 0; }
+  if (key === "j") { S.j.q = v; S.j.idx = 0; }
+  if (key === "k") { S.k.q = v; S.k.idx = 0; S.k.open = true; }
 }
 
 frameEl.addEventListener("input", e => {
@@ -1148,9 +1340,10 @@ function commitRename() {
   if (!S.renaming) return;
   const c = collections.find(c => c.id === S.renaming);
   const name = S.renameDraft.trim();
-  if (c && name && name !== c.name) { c.name = name; notify(`Renamed to “${name}”`, null); }
+  if (c && name && name !== c.name) { c.name = name; notify(`Renamed to “${name}”`, null); if (S.pal.open) S.pal.idx = Math.max(0, palResults().findIndex(r => r.item.id === c.id)); }
   S.renaming = null; render();
 }
+frameEl.addEventListener("focusin", e => { if (e.target.dataset?.focus === "k" && !S.k.open) { S.k.open = true; if (S.k.q) render(); } });
 frameEl.addEventListener("focusout", e => { if (e.target.dataset?.focus === "rename") setTimeout(commitRename, 0); });
 
 frameEl.addEventListener("keydown", e => {
@@ -1161,17 +1354,22 @@ document.addEventListener("keydown", e => {
     if (S.renaming) { S.renaming = null; return render(); }
     if (S.menu) { S.menu = null; return render(); }
     if (FLY() && S.d.fly) { S.d.fly = null; return render(); }
-    if (S.proto === "I" && S.pal.open) { S.pal.open = false; return render(); }
+    if ((S.proto === "I" || S.proto === "L") && S.pal.open) { S.pal.open = false; return render(); }
+    if (S.proto === "J" && S.j.open) { S.j.open = false; return render(); }
+    if (S.proto === "K" && S.k.q) { S.k.q = ""; S.k.open = false; return render(); }
     if (S.proto === "C" && S.c.page !== "root" && !(e.target.value)) { S.c.page = "root"; S.c.dir = "back"; return render(); }
     if (e.target.dataset?.input) { setQuery(e.target.dataset.input, ""); return render(); }
   }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k" && S.proto === "I") { e.preventDefault(); openPal(S.pal.filter || "all"); return; }
-  if (S.proto === "I" && S.pal.open && e.target.dataset?.focus === "i") {
-    const n = palResults().length;
-    if (e.key === "ArrowDown") { e.preventDefault(); S.pal.idx = Math.min(n - 1, S.pal.idx + 1); render(); frameEl.querySelector('.pal-row[aria-selected="true"]')?.scrollIntoView({ block: "nearest" }); }
-    if (e.key === "ArrowUp") { e.preventDefault(); S.pal.idx = Math.max(0, S.pal.idx - 1); render(); frameEl.querySelector('.pal-row[aria-selected="true"]')?.scrollIntoView({ block: "nearest" }); }
-    if (e.key === "Tab") { e.preventDefault(); const f = ["all", "collections", "tags"]; S.pal.filter = f[(f.indexOf(S.pal.filter) + (e.shiftKey ? 2 : 1)) % 3]; S.pal.idx = 0; render(); }
-    if (e.key === "Enter") { const r = palResults()[S.pal.idx]; if (r) { e.preventDefault(); go(r.kind, r.item.id); } }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k" && (S.proto === "I" || S.proto === "L")) { e.preventDefault(); openPal(S.pal.filter || "all"); return; }
+  const f = e.target.dataset?.focus;
+  const P = f === "i" || f === "l" ? S.pal : f === "j" ? S.j : f === "k" ? S.k : null;
+  if (P) {
+    const n = palResults(P).length;
+    const move = d => { e.preventDefault(); P.idx = Math.max(0, Math.min(n - 1, P.idx + d)); render(); frameEl.querySelector('.pal-row[aria-selected="true"]')?.scrollIntoView({ block: "nearest" }); };
+    if (e.key === "ArrowDown") move(1);
+    if (e.key === "ArrowUp") move(-1);
+    if (e.key === "Tab" && P !== S.k) { e.preventDefault(); const fs = ["all", "collections", "tags"]; P.filter = fs[(fs.indexOf(P.filter) + (e.shiftKey ? 2 : 1)) % 3]; P.idx = 0; render(); }
+    if (e.key === "Enter") { const r = palResults(P)[P.idx]; if (r) { e.preventDefault(); go(r.kind, r.item.id); } }
   }
 });
 
@@ -1187,6 +1385,7 @@ function spring(key) {
     if (S.proto === "C") { S.c.page = "collections"; S.c.dir = "fwd"; }
     if (FLY()) { S.d.fly = "collections"; S.d.q = ""; }
     if (S.proto === "H") { S.h.sec = "collections"; S.h.open = true; }
+    if (S.proto === "J") { S.j = { ...S.j, open: true, filter: "collections", q: "", idx: 0 }; }
     if (S.rail && !FLY()) S.rail = false;
     render();
   }, 550);
@@ -1241,9 +1440,26 @@ frameEl.addEventListener("drop", e => {
 document.getElementById("tabs").addEventListener("click", e => {
   const t = e.target.closest("[data-proto]"); if (!t) return;
   S.proto = t.dataset.proto; localStorage.setItem("kp-proto", S.proto);
-  S.menu = null; S.d.fly = null; S.renaming = null; S.c.page = "root"; S.pal.open = false; S.rail = false;
+  S.menu = null; S.d.fly = null; S.renaming = null; S.c.page = "root"; S.pal.open = false; S.rail = false; S.j.open = false; S.k.open = false; S.k.q = ""; S.m.keep = false;
   renderChrome(); render();
 });
+
+// ---------- Hover intent (M) ----------
+let hoverOpen = null, hoverClose = null;
+frameEl.addEventListener("mouseover", e => {
+  if (S.proto !== "M") return;
+  const trg = e.target.closest("[data-hfly]");
+  if (trg) {
+    clearTimeout(hoverClose);
+    if (S.d.fly !== trg.dataset.hfly) { clearTimeout(hoverOpen); hoverOpen = setTimeout(() => { S.d.fly = trg.dataset.hfly; S.d.q = ""; S.m.keep = false; render(); }, 160); }
+    return;
+  }
+  clearTimeout(hoverOpen);
+  const busy = S.m.keep || S.menu || S.renaming || (document.activeElement?.matches("input") && frameEl.querySelector(".flyout")?.contains(document.activeElement));
+  if (e.target.closest(".flyout,.menu") || busy) { clearTimeout(hoverClose); return; }
+  if (S.d.fly) { clearTimeout(hoverClose); hoverClose = setTimeout(() => { if (!S.m.keep && !S.menu) { S.d.fly = null; render(); } }, 320); }
+});
+S.m.recent = ["typography", "css", "animation"].map(n => tags.find(t => t.name === n)?.id).filter(Boolean);
 
 renderChrome(); render();
 </script>
