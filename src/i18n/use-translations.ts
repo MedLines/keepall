@@ -5,7 +5,10 @@ import { getLanguageSnapshot, getServerLanguageSnapshot, readBrowserLanguages, s
 import { en } from "./messages/en";
 import { pseudoCatalogue } from "./pseudo";
 
-type Namespace = NamespaceKeys<typeof en, NestedKeyOf<typeof en>>;
+export type Namespace = NamespaceKeys<typeof en, NestedKeyOf<typeof en>>;
+
+/** The `t` that useTranslations(namespace) returns, for helpers that format text outside a component. */
+export type Translations<N extends Namespace> = ReturnType<typeof useTranslations<N>>;
 
 let pseudo: typeof en | undefined;
 function catalogue(language: Language): typeof en {

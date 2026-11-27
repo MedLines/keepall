@@ -7,12 +7,13 @@ import Link from "next/link";
 import { AgentIcon, ArrowRightIcon, BackupIcon, GridIcon, HelpIcon, SettingsIcon } from "../shell-icons";
 import { useShellMobile } from "../use-shell-mobile";
 import { buttonClassName } from "@/components/ui/button";
+import { useTranslations } from "@/i18n/use-translations";
 
 const sections = [
-  { value: "general", label: "General", icon: SettingsIcon },
-  { value: "storage", label: "Storage & backups", icon: BackupIcon },
-  { value: "installation", label: "Installation", icon: GridIcon },
-  { value: "agents", label: "Agents", icon: AgentIcon },
+  { value: "general", icon: SettingsIcon },
+  { value: "storage", icon: BackupIcon },
+  { value: "installation", icon: GridIcon },
+  { value: "agents", icon: AgentIcon },
 ] as const;
 type Section = typeof sections[number]["value"];
 
@@ -40,6 +41,7 @@ export function SettingsTabs(content: Record<Section, ReactNode>) {
   const hash = useSyncExternalStore(subscribeToSection, currentHash, () => "");
   const section = Object.hasOwn(hashSections, hash) ? hashSections[hash] : "general";
   const mobile = useShellMobile();
+  const t = useTranslations("SettingsPage");
   const contentRef = useRef<HTMLDivElement>(null);
   const tabListRef = useRef<HTMLDivElement>(null);
   const transitionRef = useRef<ViewTransition | null>(null);
@@ -100,8 +102,8 @@ export function SettingsTabs(content: Record<Section, ReactNode>) {
     className="grid items-start gap-3 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-6"
   >
     <div className="sticky top-0 z-10 border-b border-border-control bg-bg-canvas py-3 md:top-6 md:border-b-0 md:border-r md:py-0 md:pr-4">
-      <Tabs.List ref={tabListRef} aria-label="Settings" activateOnFocus className="settings-tab-list relative isolate grid grid-cols-3 gap-1 md:flex md:flex-col">
-        {sections.map(({ value, label, icon: Icon }) => <Tabs.Tab
+      <Tabs.List ref={tabListRef} aria-label={t("tabsLabel")} activateOnFocus className="settings-tab-list relative isolate grid grid-cols-3 gap-1 md:flex md:flex-col">
+        {sections.map(({ value, icon: Icon }) => <Tabs.Tab
           key={value}
           value={value}
           onPointerDownCapture={() => {
@@ -112,7 +114,7 @@ export function SettingsTabs(content: Record<Section, ReactNode>) {
           className="settings-tab relative z-10 flex min-h-11 items-center justify-center gap-2 border border-transparent px-2 py-2 text-center text-xs font-medium text-text-secondary hover:text-text-primary data-[active]:text-text-primary sm:text-sm md:justify-start md:px-3 md:text-left"
         >
           <Icon className="hidden size-4 shrink-0 md:block" />
-          <span className="md:whitespace-nowrap">{label}</span>
+          <span className="md:whitespace-nowrap">{t(`tabs.${value}`)}</span>
         </Tabs.Tab>)}
         <Tabs.Indicator renderBeforeHydration className="settings-tab-indicator" />
       </Tabs.List>
@@ -128,9 +130,10 @@ export function SettingsTabs(content: Record<Section, ReactNode>) {
 }
 
 function HelpLink() {
+  const t = useTranslations("SettingsPage");
   return <Link href="/help" className={buttonClassName({ size: "none", className: "flex min-h-11 w-full items-center gap-2 px-3 py-2 text-sm font-medium justify-start" })}>
     <HelpIcon className="size-4" />
-    <span>Help & guides</span>
+    <span>{t("helpAndGuides")}</span>
     <ArrowRightIcon className="ml-auto size-4" />
   </Link>;
 }

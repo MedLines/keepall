@@ -62,7 +62,14 @@ const BUTTON_PADDING_SYNTAX = [
 // Files whose interface text lives in src/i18n/messages. Add a file once its strings move there;
 // from then on, text written straight into its JSX is an error. See docs/interface-conventions.md.
 const TRANSLATED_FILES = [
+  "src/app/backup-panel.tsx",
   "src/app/language-setting.tsx",
+  "src/app/settings/backup-folder-controls.tsx",
+  "src/app/settings/keyboard-shortcuts-settings.tsx",
+  "src/app/settings/settings-page-content.tsx",
+  "src/app/settings/settings-sections.tsx",
+  "src/app/settings/settings-tabs.tsx",
+  "src/app/settings/storage-health.tsx",
   "src/app/theme-control.tsx",
 ];
 const TEXT_ATTRIBUTES = "aria-label|aria-description|alt|placeholder|label|ariaLabel|content|tooltip";

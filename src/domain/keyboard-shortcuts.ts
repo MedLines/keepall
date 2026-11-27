@@ -28,8 +28,11 @@ export function shortcutLabel(shortcut: string): string {
   return shortcut.split("+").map(part => keyLabels[part] ?? part.replace(/^Key([A-Z])$/, "$1").replace(/^Digit(\d)$/, "$1").replace(/^Numpad(\d)$/, "Numpad $1")).join("+");
 }
 
+export type ShortcutValidationCode = "invalid-key" | "invalid-shortcuts" | "already-assigned";
+
+/** `code` picks the interface message; `shortcut` names the clashing shortcut for "already-assigned". */
 export class ShortcutValidationError extends Error {
-  constructor(message: string) {
+  constructor(readonly code: ShortcutValidationCode, message: string, readonly shortcut?: string) {
     super(message);
     this.name = "ShortcutValidationError";
   }
@@ -38,19 +41,19 @@ export class ShortcutValidationError extends Error {
 function assertShortcut(shortcut: unknown): asserts shortcut is string {
   const pattern = /^(Ctrl\+)?(Meta\+)?(Alt\+)?(Shift\+)?(Key[A-Z]|Digit[0-9]|F([1-9]|1[0-9]|2[0-4])|Numpad([0-9]|Add|Subtract|Multiply|Decimal|Enter|Equal)|Arrow(Up|Down|Left|Right)|Backquote|Minus|Equal|BracketLeft|BracketRight|Backslash|IntlBackslash|IntlRo|IntlYen|Semicolon|Quote|Comma|Period|Slash|Space|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Enter)$/;
   if (typeof shortcut !== "string" || !pattern.test(shortcut) || shortcut === "Enter") {
-    throw new ShortcutValidationError("Press a key, with or without Ctrl, Shift, Alt or Cmd. Escape cancels, Tab moves focus, and Enter confirms.");
+    throw new ShortcutValidationError("invalid-key", "Press a key, with or without Ctrl, Shift, Alt or Cmd. Escape cancels, Tab moves focus, and Enter confirms.");
   }
 }
 
 export function validateShortcuts(raw: unknown): KeyboardShortcuts {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new ShortcutValidationError("Invalid app shortcuts");
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new ShortcutValidationError("invalid-shortcuts", "Invalid app shortcuts");
   const candidate = raw as Record<string, unknown>;
   const result = { ...DEFAULT_SHORTCUTS };
   const assigned = new Set<string>();
   for (const action of SHORTCUT_ACTIONS) {
     const shortcut = candidate[action];
     assertShortcut(shortcut);
-    if (assigned.has(shortcut)) throw new ShortcutValidationError(`${shortcutLabel(shortcut)} is already assigned to another action.`);
+    if (assigned.has(shortcut)) throw new ShortcutValidationError("already-assigned", `${shortcutLabel(shortcut)} is already assigned to another action.`, shortcut);
     assigned.add(shortcut);
     result[action] = shortcut;
   }
