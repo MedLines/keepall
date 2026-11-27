@@ -66,6 +66,7 @@ const TRANSLATED_FILES = [
   "src/app/capture-org-browser.tsx",
   "src/app/capture-org-panel.tsx",
   "src/app/item-organizer-drawer.tsx",
+  "src/app/jump-palette.tsx",
   "src/app/language-setting.tsx",
   "src/app/library-bulk-bar.tsx",
   "src/app/library-empty-state.tsx",

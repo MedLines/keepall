@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { jumpTo } from "./jump-palette";
 
 test.use({ serviceWorkers: "block" });
 
@@ -37,7 +38,7 @@ test("enriches old links automatically after opening their folder without a relo
   await page.goto("/?collection=empty");
   await expect(page.getByRole("heading", { name: "Empty folder", exact: true })).toBeVisible();
   expect(previewRequests).toBe(0);
-  await page.getByRole("button", { name: "Old folder", exact: true }).click();
+  await jumpTo(page, "Old folder");
   const card = page.locator('[data-item-id="old-link"]');
   await expect(card).toBeVisible();
   expect(previewRequests).toBe(0);
