@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { OrganizerDrawer } from "./organizer-drawer";
 import { CaptureOrgPanel } from "./capture-org-panel";
+import { useTranslations } from "@/i18n/use-translations";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 
 type NamedEntry = { id: string; name: string };
@@ -48,21 +49,22 @@ export function ItemOrganizerDrawer({
 }: ItemOrganizerDrawerProps) {
   const [tagDraft, setTagDraft] = useState("");
   const [collectionDraft, setCollectionDraft] = useState("");
+  const t = useTranslations("Organizer");
 
   return (
     <OrganizerDrawer
       open={open} onOpenChange={onOpenChange} side={side}
-      title={`Organize ${itemTitle}`}
-      description="Move this item to a collection or add tags. Changes apply immediately."
+      title={t("organizeItem", { title: itemTitle })}
+      description={t("organizeItemDescription")}
       disabled={disabled}
     >
       <CaptureOrgPanel
         tagNames={tags.map((tag) => tag.name)}
         tagInput={tagDraft}
-        tagInputLabel="Add tag"
+        tagInputLabel={t("addTag")}
         collectionName={collections[0]?.name ?? null}
         collectionInput={collectionDraft}
-        collectionInputLabel="Move to collection"
+        collectionInputLabel={t("moveToCollection")}
         tagSuggestions={tagSuggestions}
         collectionSuggestions={collectionSuggestions}
         disabled={disabled || pendingTag || pendingCollection}

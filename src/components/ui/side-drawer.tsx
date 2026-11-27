@@ -7,6 +7,7 @@ import {
   type DrawerRootChangeEventDetails,
 } from "@base-ui/react/drawer";
 import { CloseIcon } from "@/app/shell-icons";
+import { useTranslations } from "@/i18n/use-translations";
 
 type SideDrawerProps = {
   open: boolean;
@@ -39,6 +40,7 @@ export function SideDrawer({
   initialFocus,
   children,
 }: SideDrawerProps) {
+  const t = useTranslations("Dialogs");
   const fromRight = side === "right";
 
   return (
@@ -76,7 +78,7 @@ export function SideDrawer({
                   ) : null}
                 </div>
                 <Drawer.Close
-                  aria-label="Close drawer"
+                  aria-label={t("closeDrawer")}
                   disabled={closeDisabled}
                   className={captureStyles["close"]}
                 >

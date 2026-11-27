@@ -1,6 +1,7 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
+import { useTranslations } from "@/i18n/use-translations";
 import type { ReactNode, RefObject } from "react";
 import { CloseIcon } from "@/app/shell-icons";
 import { Button, buttonClassName, iconButtonClassName } from "./button";
@@ -35,10 +36,10 @@ export function ConfirmDialog({
   description,
   children,
   confirmLabel,
-  cancelLabel = "Cancel",
+  cancelLabel: cancelLabelProp,
   cancelRef,
   returnFocusRef,
-  pendingLabel = "Working…",
+  pendingLabel: pendingLabelProp,
   busy = false,
   onCancelWhileBusy,
   cancelPending = false,
@@ -47,6 +48,9 @@ export function ConfirmDialog({
   onConfirm,
   onOpenChange,
 }: ConfirmDialogProps) {
+  const t = useTranslations("Dialogs");
+  const cancelLabel = cancelLabelProp ?? t("cancel");
+  const pendingLabel = pendingLabelProp ?? t("working");
   return (
     <Dialog.Root
       open={open}
@@ -78,7 +82,7 @@ export function ConfirmDialog({
               </div>
               <Dialog.Close
                 className={iconButtonClassName()}
-                aria-label="Close"
+                aria-label={t("close")}
                 disabled={busy}
               >
                 <CloseIcon />
@@ -89,7 +93,7 @@ export function ConfirmDialog({
               {error ? <p className="text-sm text-text-danger" role="alert">{error}</p> : null}
               <div className="flex flex-wrap justify-end gap-2">
                 {busy && onCancelWhileBusy ? <Button onClick={onCancelWhileBusy} disabled={cancelPending}>
-                  {cancelPending ? "Canceling…" : cancelLabel}
+                  {cancelPending ? t("cancelling") : cancelLabel}
                 </Button> : <Dialog.Close ref={cancelRef} className={buttonClassName()} disabled={busy}>
                   {cancelLabel}
                 </Dialog.Close>}

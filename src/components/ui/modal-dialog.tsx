@@ -1,6 +1,7 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
+import { useTranslations } from "@/i18n/use-translations";
 import type { FocusEventHandler, KeyboardEventHandler, ReactNode, RefObject } from "react";
 import { ScrollArea } from "./scroll-area";
 import { CloseIcon } from "@/app/shell-icons";
@@ -12,7 +13,7 @@ import { iconButtonClassName } from "./button";
  * @import import { ModalDialog } from "@/components/ui/modal-dialog";
  */
 export function ModalDialog({
-  open, onOpenChange, title, description, busy = false, closeLabel = "Close",
+  open, onOpenChange, title, description, busy = false, closeLabel,
   size = "compact", children, footer, onSubmit, onDismiss, onFocusCapture, initialFocus, onKeyDown, onKeyUp,
 }: {
   open: boolean;
@@ -31,6 +32,7 @@ export function ModalDialog({
   onKeyDown?: KeyboardEventHandler<HTMLElement>;
   onKeyUp?: KeyboardEventHandler<HTMLElement>;
 }) {
+  const t = useTranslations("Dialogs");
   const content = <>
     {children ? (
       <ScrollArea className="flex min-h-0 flex-1 flex-col" viewportClassName="scroll-fade min-h-0 flex-1">
@@ -57,7 +59,7 @@ export function ModalDialog({
                 <Dialog.Title className="wrap-anywhere text-xl font-semibold text-text-primary">{title}</Dialog.Title>
                 <Dialog.Description className="mt-1 wrap-anywhere text-sm leading-relaxed text-text-secondary">{description}</Dialog.Description>
               </div>
-              <Dialog.Close aria-label={closeLabel} disabled={busy} className={iconButtonClassName()}><CloseIcon /></Dialog.Close>
+              <Dialog.Close aria-label={closeLabel ?? t("close")} disabled={busy} className={iconButtonClassName()}><CloseIcon /></Dialog.Close>
             </div>
             {onSubmit ? (
               <form className="flex min-h-0 flex-1 flex-col"

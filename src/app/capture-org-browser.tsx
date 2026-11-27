@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog } from "@base-ui/react/dialog";
 import { useMemo, useState } from "react";
 import { CloseIcon, SearchIcon } from "./shell-icons";
+import { useTranslations } from "@/i18n/use-translations";
 import type { OrgNameSuggestion } from "./org-name-suggest";
 
 type Props = {
@@ -46,13 +47,14 @@ export function CaptureOrgBrowser({
   returnFocus,
 }: Props) {
   const [query, setQuery] = useState("");
+  const t = useTranslations("Organizer");
   const filtered = useMemo(
     () => filterSuggestions(suggestions, query),
     [query, suggestions],
   );
   const isCollection = kind === "collection";
-  const title = isCollection ? "Choose a collection" : "Choose a tag";
-  const searchLabel = isCollection ? "Search collections" : "Search tags";
+  const title = isCollection ? t("chooseCollection") : t("chooseTag");
+  const searchLabel = isCollection ? t("searchCollections") : t("searchTags");
 
   return (
     <Dialog.Root
@@ -78,12 +80,12 @@ export function CaptureOrgBrowser({
                   {title}
                 </Dialog.Title>
                 <Dialog.Description className={captureStyles["browse-description"]}>
-                  Search the complete list.
+                  {t("browseDescription")}
                 </Dialog.Description>
               </div>
               <Dialog.Close
                 className={captureStyles["browse-close"]}
-                aria-label="Close"
+                aria-label={t("close")}
                 disabled={disabled}
               >
                 <CloseIcon />
@@ -125,7 +127,7 @@ export function CaptureOrgBrowser({
                         >
                           <span className="min-w-0 truncate">{entry.name}</span>
                           {selected ? (
-                            <span className={captureStyles["browse-selected"]}>Selected</span>
+                            <span className={captureStyles["browse-selected"]}>{t("selected")}</span>
                           ) : null}
                         </button>
                       </li>
@@ -134,7 +136,7 @@ export function CaptureOrgBrowser({
                 </ul>
               ) : (
                 <p className={captureStyles["browse-empty"]}>
-                  No matches.
+                  {t("noMatches")}
                 </p>
               )}
             </div>
