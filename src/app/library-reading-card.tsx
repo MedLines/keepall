@@ -8,6 +8,7 @@ import { CardNote, CardPin } from "./library-card-details";
 import { SearchHighlight } from "./search-highlight";
 import { ItemViewTransition } from "./item-view-transition";
 import { TextDocumentLoading } from "./document-loading-content";
+import { useFormatLocale } from "@/i18n/use-translations";
 
 function previewStatus(text: string | null, type: "note" | "document") {
   if (text === null) return "Preview unavailable";
@@ -18,6 +19,7 @@ export function LibraryReadingCard({ item, text, query, pinned, openHref, onOpen
   item: NoteItem | DocumentItem; text: string | null | undefined; query: string; pinned: boolean; openHref?: string; onOpen: () => void;
 }) {
   const title = itemListTitle(item);
+  const locale = useFormatLocale();
   // An untitled note reads as its content; a title derived from the first line would repeat it.
   const showTitle = item.type === "document" || Boolean(item.title.trim());
   const preview = <div className="library-reading-inset media-squircle-inset" data-document-preview={item.type === "document" ? text ?? undefined : undefined}>
@@ -42,7 +44,7 @@ export function LibraryReadingCard({ item, text, query, pinned, openHref, onOpen
     <p className={`library-card-file${showTitle ? "" : " library-reading-file"}`} title={item.type === "document" ? item.sourceFileName : undefined}>
       {item.type === "document" ? <SearchHighlight text={item.sourceFileName} query={query} /> : <>
         {pinned && !showTitle ? <CardPin className="me-1 inline-flex size-4 align-text-bottom" /> : null}
-        {item.deletedAt !== undefined ? "Moved to Trash" : "Edited"} <time dateTime={new Date(item.updatedAt).toISOString()}>{new Date(item.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</time></>}
+        {item.deletedAt !== undefined ? "Moved to Trash" : "Edited"} <time dateTime={new Date(item.updatedAt).toISOString()}>{new Date(item.updatedAt).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" })}</time></>}
     </p>
     {item.type === "document" && item.noteContent.trim() ? <div className="mt-2"><CardNote content={item.noteContent} format={item.noteFormat} title={title} query={query} openHref={openHref} onOpen={onOpen} readOnly={item.deletedAt !== undefined} /></div> : null}
   </div>;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormatLocale, useTranslations, type Translations } from "@/i18n/use-translations";
 import { useEffect, useRef, useState } from "react";
 import { BackupFolderError } from "@/persistence/backup-folder";
 import { BackupIcon, ClockIcon, EditIcon } from "../shell-icons";
@@ -12,10 +13,11 @@ import { buttonClassName } from "@/components/ui/button";
 
 type View = { supported: boolean; settings?: BackupFolderSettings; permission: PermissionState; hasPendingChanges?: boolean };
 type Action = "choose" | "save" | "reconnect";
+type T = Translations<"BackupFolder">;
 
-function useBackupFolderView() {
+function useBackupFolderView(t: T) {
   const [view, setView] = useState<View | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<"read" | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -34,7 +36,7 @@ function useBackupFolderView() {
     const stop = observeBackupFolderStatus((next) => { settings = next.settings; hasPendingChanges = next.hasPendingChanges; void refresh(); }, () => {
       if (mounted) {
         setView({ supported: supportsFolderBackups(), permission: "prompt" });
-        setError("Couldn't read the backup folder settings. Reload this page to try again.");
+        setError("read");
       }
     });
     const resume = () => { if (document.visibilityState === "visible") void refresh(); };
@@ -47,10 +49,10 @@ function useBackupFolderView() {
       document.removeEventListener("visibilitychange", resume);
     };
   }, []);
-  return { view, error };
+  return { view, error: error === "read" ? t("readError") : null };
 }
 
-function useBackupFolderActions(disabled: boolean, onBusyChange?: (busy: boolean) => void) {
+function useBackupFolderActions(t: T, disabled: boolean, onBusyChange?: (busy: boolean) => void) {
   const [action, setAction] = useState<Action | null>(null);
   const [turningOff, setTurningOff] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +97,7 @@ function useBackupFolderActions(disabled: boolean, onBusyChange?: (busy: boolean
     void run("reconnect", async (signal) => {
       // Request access only here, while handling the user's reconnect/enable click.
       if (await directory.requestPermission({ mode: "readwrite" }) !== "granted") {
-        throw new BackupFolderError("permission-required", "Folder access wasn't granted. Reconnect again or export a backup.");
+        throw new BackupFolderError("permission-required", t("permissionNotGranted"));
       }
       signal.throwIfAborted();
       setAction("save");
@@ -109,32 +111,34 @@ function useBackupFolderActions(disabled: boolean, onBusyChange?: (busy: boolean
     setTurningOff(true);
     setError(null);
     try { await disableBackupFolder(); }
-    catch { setError("Couldn't turn off folder backups. Try again."); }
+    catch { setError(t("turnOffError")); }
     finally { setTurningOff(false); }
   }
 
   return { action, turningOff, error, choose, reconnect, turnOff, save: () => void run("save", saveFolderBackup) };
 }
 
-function statusLabel(settings: BackupFolderSettings | undefined, action: Action | null, permission: PermissionState, failed: boolean) {
-  if (settings && !settings.enabled) return "Off";
-  if (action === "choose") return "Choosing folder…";
-  if (action === "reconnect") return "Reconnecting…";
-  if (action === "save") return "Saving…";
-  if (!settings?.enabled) return "Off";
-  if (permission !== "granted") return "Reconnect needed";
-  return failed ? "Backup failed" : "Connected";
+function statusLabel(t: T, settings: BackupFolderSettings | undefined, action: Action | null, permission: PermissionState, failed: boolean) {
+  if (settings && !settings.enabled) return t("status.off");
+  if (action === "choose") return t("status.choosing");
+  if (action === "reconnect") return t("status.reconnecting");
+  if (action === "save") return t("status.saving");
+  if (!settings?.enabled) return t("status.off");
+  if (permission !== "granted") return t("status.reconnectNeeded");
+  return failed ? t("status.failed") : t("status.connected");
 }
 
 function FolderBackupDetails({ settings, hasPendingChanges }: { settings: BackupFolderSettings; hasPendingChanges?: boolean }) {
   const lastBackup = settings.completed.at(-1);
+  const locale = useFormatLocale();
+  const t = useTranslations("BackupFolder");
   return <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2" aria-live="polite">
-    <div className="min-w-0"><dt className="text-xs text-text-secondary">Backup folder</dt>
+    <div className="min-w-0"><dt className="text-xs text-text-secondary">{t("folder")}</dt>
       <dd className="mt-1 wrap-anywhere font-medium"><bdi>{settings.directory.name}</bdi></dd></div>
-    <div><dt className="text-xs text-text-secondary">Last verified backup</dt>
-      <dd className="mt-1 font-medium">{lastBackup ? <time dateTime={new Date(lastBackup.completedAt).toISOString()}>{new Date(lastBackup.completedAt).toLocaleString()}</time> : "No completed backup yet"}</dd></div>
-    {settings.enabled && lastBackup ? <div className="sm:col-span-2"><dt className="text-xs text-text-secondary">Backup coverage</dt>
-      <dd className="mt-1 flex items-center gap-2 font-medium">{hasPendingChanges ? <><EditIcon className="size-4 text-text-secondary" />Changes waiting for backup</> : <><BackupIcon className="size-4 text-text-secondary" />Up to date</>}</dd></div> : null}
+    <div><dt className="text-xs text-text-secondary">{t("lastVerified")}</dt>
+      <dd className="mt-1 font-medium">{lastBackup ? <time dateTime={new Date(lastBackup.completedAt).toISOString()}>{new Date(lastBackup.completedAt).toLocaleString(locale)}</time> : t("noBackupYet")}</dd></div>
+    {settings.enabled && lastBackup ? <div className="sm:col-span-2"><dt className="text-xs text-text-secondary">{t("coverage")}</dt>
+      <dd className="mt-1 flex items-center gap-2 font-medium">{hasPendingChanges ? <><EditIcon className="size-4 text-text-secondary" />{t("pendingChanges")}</> : <><BackupIcon className="size-4 text-text-secondary" />{t("upToDate")}</>}</dd></div> : null}
   </dl>;
 }
 
@@ -147,14 +151,15 @@ function FolderBackupButtons({ settings, needsAccess, disabled, actions }: {
   actions: ReturnType<typeof useBackupFolderActions>;
 }) {
   const busy = actions.action !== null || actions.turningOff;
+  const t = useTranslations("BackupFolder");
   if (!settings) return <div className="mt-4">
-    <button type="button" className={`${buttonClass} ui-primary`} disabled={disabled || busy} onClick={actions.choose}>Choose backup folder</button>
+    <button type="button" className={`${buttonClass} ui-primary`} disabled={disabled || busy} onClick={actions.choose}>{t("choose")}</button>
   </div>;
   return <div className="mt-4 flex flex-wrap gap-2">
-    {settings.enabled && !needsAccess ? <button type="button" className={buttonClass} disabled={disabled || busy} onClick={actions.save}>Back up now</button> :
-      <button type="button" className={buttonClass} disabled={disabled || busy} onClick={() => actions.reconnect(settings.directory)}>{settings.enabled ? "Reconnect folder" : "Enable folder backups"}</button>}
-    <button type="button" className={buttonClass} disabled={disabled || busy} onClick={actions.choose}>Change folder</button>
-    {settings.enabled ? <button type="button" className={buttonClass} disabled={disabled || actions.turningOff} onClick={() => void actions.turnOff()}>Turn off folder backups</button> : null}
+    {settings.enabled && !needsAccess ? <button type="button" className={buttonClass} disabled={disabled || busy} onClick={actions.save}>{t("backUpNow")}</button> :
+      <button type="button" className={buttonClass} disabled={disabled || busy} onClick={() => actions.reconnect(settings.directory)}>{settings.enabled ? t("reconnect") : t("enable")}</button>}
+    <button type="button" className={buttonClass} disabled={disabled || busy} onClick={actions.choose}>{t("changeFolder")}</button>
+    {settings.enabled ? <button type="button" className={buttonClass} disabled={disabled || actions.turningOff} onClick={() => void actions.turnOff()}>{t("turnOff")}</button> : null}
   </div>;
 }
 
@@ -167,21 +172,21 @@ function FolderBackupContent({ view, disabled, actions, status }: {
   const settings = view.settings;
   const enabled = settings?.enabled ?? false;
   const needsAccess = enabled && view.permission !== "granted";
+  const t = useTranslations("BackupFolder");
   return <>
     <p className="mt-3 text-xs leading-5 text-text-secondary">
-      Use a dedicated, empty <span className="font-medium">Keepall Backups</span> folder.
-      Keepall gets read and write access to everything inside it. Your browser may remember access for future visits and app updates.
+      {t.rich("intro", { name: (chunks) => <span className="font-medium">{chunks}</span> })}
     </p>
     {settings ? <FolderBackupDetails settings={settings} hasPendingChanges={view.hasPendingChanges} /> : null}
     <FolderBackupButtons settings={settings} needsAccess={needsAccess} disabled={disabled} actions={actions} />
-    {actions.action ? <progress className="mt-3 h-2 w-full accent-action-primary" aria-label={actions.action === "save" ? "Saving folder backup" : status} /> : null}
-    <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-text-primary" aria-label="Folder backup schedule">
-      <li className="flex items-center gap-2"><ClockIcon className="size-4" />Every 30 minutes</li>
-      <li className="flex items-center gap-2"><EditIcon className="size-4" />Changes only</li>
-      <li className="flex items-center gap-2"><BackupIcon className="size-4" />Latest 3 copies</li>
+    {actions.action ? <progress className="mt-3 h-2 w-full accent-action-primary" aria-label={actions.action === "save" ? t("savingProgress") : status} /> : null}
+    <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-text-primary" aria-label={t("schedule")}>
+      <li className="flex items-center gap-2"><ClockIcon className="size-4" />{t("every30Minutes")}</li>
+      <li className="flex items-center gap-2"><EditIcon className="size-4" />{t("changesOnly")}</li>
+      <li className="flex items-center gap-2"><BackupIcon className="size-4" />{t("latestCopies")}</li>
     </ul>
-    <p className="mt-3 text-xs leading-5 text-text-secondary">Runs while Keepall is open. Sleeping or inactive tabs may delay it. Background checks never ask for permission.</p>
-    {settings && !enabled ? <p className="mt-2 text-xs leading-5 text-text-secondary">Folder backups are off. Saved files stay in your folder.</p> : null}
+    <p className="mt-3 text-xs leading-5 text-text-secondary">{t("runsWhileOpen")}</p>
+    {settings && !enabled ? <p className="mt-2 text-xs leading-5 text-text-secondary">{t("offNote")}</p> : null}
     {settings?.cleanupWarning && enabled ? <p className="mt-2 text-sm text-text-secondary">{settings.cleanupWarning}</p> : null}
   </>;
 }
@@ -190,22 +195,23 @@ export function BackupFolderControls({ disabled = false, onBusyChange }: {
   disabled?: boolean;
   onBusyChange?: (busy: boolean) => void;
 }) {
-  const { view, error } = useBackupFolderView();
-  const actions = useBackupFolderActions(disabled, onBusyChange);
+  const t = useTranslations("BackupFolder");
+  const { view, error } = useBackupFolderView(t);
+  const actions = useBackupFolderActions(t, disabled, onBusyChange);
   const settings = view?.settings;
   const enabled = settings?.enabled ?? false;
   const failure = actions.error ?? error ?? (enabled ? settings?.lastError : null);
-  const status = statusLabel(settings, actions.action, view?.permission ?? "prompt", !!failure);
+  const status = statusLabel(t, settings, actions.action, view?.permission ?? "prompt", !!failure);
 
   return (
     <div className="mt-6 border-t border-border-control pt-5" aria-labelledby="folder-backups-heading">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id="folder-backups-heading" className="text-sm font-semibold text-text-primary">Folder backups</h3>
+        <h3 id="folder-backups-heading" className="text-sm font-semibold text-text-primary">{t("heading")}</h3>
         {view?.supported ? <span className="text-xs text-text-secondary" aria-live="polite">{status}</span> : null}
       </div>
-      <p className="mt-1 text-sm leading-6 text-text-secondary">Automatically save recovery copies to a folder on this device.</p>
-      {!view ? <p className="mt-3 text-sm text-text-secondary">Checking folder backups…</p> : !view.supported ? (
-        <p className="mt-3 text-sm leading-6 text-text-secondary">Folder backups are not supported in this browser. Use Export backup above to download a recovery copy.</p>
+      <p className="mt-1 text-sm leading-6 text-text-secondary">{t("description")}</p>
+      {!view ? <p className="mt-3 text-sm text-text-secondary">{t("checking")}</p> : !view.supported ? (
+        <p className="mt-3 text-sm leading-6 text-text-secondary">{t("unsupported")}</p>
       ) : <FolderBackupContent view={view} disabled={disabled} actions={actions} status={status} />}
       {failure ? <p className="mt-3 text-sm text-text-danger" role="alert">{failure}</p> : null}
     </div>

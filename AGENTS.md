@@ -41,6 +41,7 @@ Storybook is the closed list of UI parts. Run `pnpm storybook`; the `keepall-sto
 - **Before writing UI**, call `docs-list` once, then `docs-show` only for the components you will use. Use only the props and values it documents.
 - **Build from what exists**: components from the MCP list, colours from the semantic roles in `src/app/styles/tokens.css` (`bg-*`, `text-*`, `border-*`), sizes, spacing, radius and shadows from its tokens or Tailwind's scale. Style through `className`; an inline `style` carries only runtime values (measured geometry, motion values) behind an `eslint-disable` comment that says why.
 - **When a part is missing**, compose it from existing parts, list it as _invented_ in your report, and ask before adding a component to `src/components/ui`.
+- **Interface text** you write goes in `src/i18n/messages/en.ts` as whole ICU sentences, read through `useTranslations()`; dates and numbers take `useFormatLocale()`. Rules: "Interface text and languages" in `docs/interface-conventions.md`.
 - **Icons** come from `@/app/shell-icons` (Hugeicons; see Storybook's Foundations/Icons) and `DocumentIcon` for file types.
 - **Imports**:
 

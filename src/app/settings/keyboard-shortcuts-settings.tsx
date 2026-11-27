@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
-import { ShortcutValidationError, DEFAULT_SHORTCUTS, SHORTCUT_ACTIONS, SHORTCUT_LABELS, assignShortcut, shortcutFromEvent, shortcutLabel, type KeyboardShortcuts, type ShortcutAction } from "@/domain/keyboard-shortcuts";
+import { ShortcutValidationError, DEFAULT_SHORTCUTS, SHORTCUT_ACTIONS, assignShortcut, shortcutFromEvent, shortcutLabel, type KeyboardShortcuts, type ShortcutAction } from "@/domain/keyboard-shortcuts";
 import { getLibraryPreferences, putKeyboardShortcut, putKeyboardShortcuts } from "@/persistence/library-preferences";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { ITEMS_CHANGED_EVENT } from "../items-events";
 import { SHORTCUTS_CHANGED_EVENT } from "../use-app-shortcuts";
 import { buttonClassName } from "@/components/ui/button";
+import { useTranslations, type Translations } from "@/i18n/use-translations";
 
 const CONTROL = buttonClassName({ size: "none", className: "min-h-11 gap-2 px-3 text-sm font-medium disabled:opacity-50" });
 const MODIFIER_KEYS = ["Alt", "Control", "Meta", "Shift"];
@@ -18,6 +19,15 @@ function hasModifiers(event: KeyboardEvent<HTMLElement>) {
 
 function modifierLabel(event: KeyboardEvent<HTMLElement>) {
   return shortcutLabel([event.ctrlKey && "Ctrl", event.metaKey && "Meta", event.altKey && "Alt", event.shiftKey && "Shift"].filter(Boolean).join("+"));
+}
+
+type T = Translations<"KeyboardShortcuts">;
+
+function validationMessage(t: T, caught: unknown, fallback: "saveError" | "recordError") {
+  if (!(caught instanceof ShortcutValidationError)) return t(fallback);
+  return caught.code === "already-assigned"
+    ? t("errors.already-assigned", { shortcut: shortcutLabel(caught.shortcut ?? "") })
+    : t(`errors.${caught.code}`);
 }
 
 function isButtonActivation(event: KeyboardEvent<HTMLElement>) {
@@ -33,6 +43,7 @@ export function KeyboardShortcutsSettings() {
   const [notice, setNotice] = useState("");
   const changeButtons = useRef<Partial<Record<ShortcutAction, HTMLButtonElement>>>({});
   const returnFocus = useRef<ShortcutAction | null>(null);
+  const t = useTranslations("KeyboardShortcuts");
 
   useEffect(() => {
     let disposed = false;
@@ -41,7 +52,7 @@ export function KeyboardShortcutsSettings() {
       const request = ++generation;
       void getLibraryPreferences().then(preferences => {
         if (!disposed && request === generation) { setShortcuts(preferences.keyboardShortcuts ?? DEFAULT_SHORTCUTS); setReady(true); setError(null); }
-      }).catch(() => { if (!disposed && request === generation) setError("Couldn't load shortcut settings. Reload to retry."); });
+      }).catch(() => { if (!disposed && request === generation) setError(t("loadError")); });
     };
     reload();
     window.addEventListener(ITEMS_CHANGED_EVENT, reload);
@@ -53,7 +64,8 @@ export function KeyboardShortcutsSettings() {
       window.removeEventListener(SHORTCUTS_CHANGED_EVENT, reload);
       window.removeEventListener("focus", reload);
     };
-  }, []);
+  // t only changes with the language; reloading preferences then is harmless.
+  }, [t]);
 
   useEffect(() => {
     if (!editing && returnFocus.current) {
@@ -71,7 +83,7 @@ export function KeyboardShortcutsSettings() {
       setNotice(savedNotice);
       return true;
     } catch (caught) {
-      setError(caught instanceof ShortcutValidationError ? caught.message : "Couldn't save shortcuts. Try again.");
+      setError(validationMessage(t, caught, "saveError"));
       return false;
     } finally { setBusy(false); }
   }
@@ -82,33 +94,33 @@ export function KeyboardShortcutsSettings() {
   }
 
   async function saveShortcut(action: ShortcutAction, candidate: string) {
-    const saved = await save(() => putKeyboardShortcut(action, candidate), `${SHORTCUT_LABELS[action]} shortcut saved.`);
+    const saved = await save(() => putKeyboardShortcut(action, candidate), t("saved", { action: t(`actions.${action}`) }));
     if (saved) finishEditing(action);
   }
 
   return <section className="library-panel border border-border-control bg-bg-surface p-5 sm:p-6" aria-labelledby="keyboard-shortcuts-heading">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h2 id="keyboard-shortcuts-heading" className="text-lg font-semibold text-text-primary">App shortcuts</h2>
-      <button type="button" disabled={!ready || busy || editing !== null} className={CONTROL} onClick={() => void save(async () => { await putKeyboardShortcuts(DEFAULT_SHORTCUTS); return { ...DEFAULT_SHORTCUTS }; }, "Shortcuts reset to defaults.")}>Reset to defaults</button>
+      <h2 id="keyboard-shortcuts-heading" className="text-lg font-semibold text-text-primary">{t("heading")}</h2>
+      <button type="button" disabled={!ready || busy || editing !== null} className={CONTROL} onClick={() => void save(async () => { await putKeyboardShortcuts(DEFAULT_SHORTCUTS); return { ...DEFAULT_SHORTCUTS }; }, t("resetDone"))}>{t("reset")}</button>
     </div>
-    <p className="mt-2 text-sm leading-6 text-text-secondary">Choose Change, press the keys together, then confirm. Shortcuts pause while typing or using a dialog.</p>
+    <p className="mt-2 text-sm leading-6 text-text-secondary">{t("intro")}</p>
     <div className="mt-4 divide-y divide-border-control">
       {SHORTCUT_ACTIONS.map(action => (
-        <div key={action} role="group" aria-label={`Shortcut for ${SHORTCUT_LABELS[action]}`} className="py-3 first:pt-0 last:pb-0">
+        <div key={action} role="group" aria-label={t("group", { action: t(`actions.${action}`) })} className="py-3 first:pt-0 last:pb-0">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-text-primary">{SHORTCUT_LABELS[action]}</p>
+            <p className="text-sm text-text-primary">{t(`actions.${action}`)}</p>
             <div className="flex flex-wrap items-center gap-2">
               <kbd className="min-w-28 text-center text-sm font-normal text-text-secondary">{shortcutLabel(shortcuts[action])}</kbd>
-              <button ref={node => { if (node) changeButtons.current[action] = node; }} type="button" className={CONTROL} aria-label={`Change ${SHORTCUT_LABELS[action]} shortcut`} disabled={!ready || busy || editing !== null} onClick={() => { setEditing(action); setError(null); setNotice(""); }}>Change</button>
+              <button ref={node => { if (node) changeButtons.current[action] = node; }} type="button" className={CONTROL} aria-label={t("changeShortcut", { action: t(`actions.${action}`) })} disabled={!ready || busy || editing !== null} onClick={() => { setEditing(action); setError(null); setNotice(""); }}>{t("change")}</button>
             </div>
           </div>
         </div>
       ))}
     </div>
-    {editing ? <ShortcutRecorder action={editing} shortcuts={shortcuts} busy={busy} saveError={error} onSave={candidate => void saveShortcut(editing, candidate)} onCancel={() => { setError(null); setNotice("Change cancelled."); finishEditing(editing); }} /> : null}
+    {editing ? <ShortcutRecorder action={editing} shortcuts={shortcuts} busy={busy} saveError={error} onSave={candidate => void saveShortcut(editing, candidate)} onCancel={() => { setError(null); setNotice(t("cancelled")); finishEditing(editing); }} /> : null}
     {error && !editing ? <p role="alert" className="mt-3 text-sm text-text-danger">{error}</p> : null}
     {notice ? <p role="status" className="mt-3 text-sm text-text-secondary">{notice}</p> : null}
-    <p className="mt-4 text-xs leading-5 text-text-secondary">These shortcuts work inside Keepall and are included in library backups. The Chrome capture extension has its own shortcut. <Link href="/help/chrome-capture" className="underline underline-offset-4">Change the Chrome extension shortcut</Link>.</p>
+    <p className="mt-4 text-xs leading-5 text-text-secondary">{t.rich("footer", { link: (chunks) => <Link href="/help/chrome-capture" className="underline underline-offset-4">{chunks}</Link> })}</p>
   </section>;
 }
 
@@ -130,6 +142,8 @@ function ShortcutRecorder({ action, shortcuts, busy, saveError, onSave, onCancel
   const errorId = useId();
   const error = validationError ?? saveError;
   const canConfirm = candidate !== null && liveModifiers === null && !busy;
+  const t = useTranslations("KeyboardShortcuts");
+  const actionLabel = t(`actions.${action}`);
 
   function chooseShortcut(next: string) {
     setAttempted(shortcutLabel(next)); setLiveModifiers(null);
@@ -138,7 +152,7 @@ function ShortcutRecorder({ action, shortcuts, busy, saveError, onSave, onCancel
       setCandidate(next); setValidationError(null);
     } catch (caught) {
       setCandidate(null);
-      setValidationError(caught instanceof ShortcutValidationError ? caught.message : "Couldn't record this shortcut. Try again.");
+      setValidationError(validationMessage(t, caught, "recordError"));
     }
   }
 
@@ -155,30 +169,30 @@ function ShortcutRecorder({ action, shortcuts, busy, saveError, onSave, onCancel
   }
 
   return <ModalDialog open busy={busy} initialFocus={input}
-    title={`Change ${SHORTCUT_LABELS[action]} shortcut`}
-    description="Press the keys together. Review the new shortcut, then confirm."
-    closeLabel="Cancel shortcut change"
+    title={t("changeShortcut", { action: actionLabel })}
+    description={t("dialogDescription")}
+    closeLabel={t("closeLabel")}
     onOpenChange={open => { if (!open) onCancel(); }}
     onKeyDown={record}
     onKeyUp={event => { if (liveModifiers !== null) setLiveModifiers(modifierLabel(event) || null); }}
     footer={<>
-      <button type="button" className={CONTROL} disabled={busy} onClick={onCancel}>Cancel</button>
-      <button type="button" className={`${CONTROL} bg-bg-active text-text-primary`} disabled={!canConfirm} onClick={() => { if (canConfirm && candidate) onSave(candidate); }}>{busy ? "Saving…" : "Confirm shortcut"}</button>
+      <button type="button" className={CONTROL} disabled={busy} onClick={onCancel}>{t("cancel")}</button>
+      <button type="button" className={`${CONTROL} bg-bg-active text-text-primary`} disabled={!canConfirm} onClick={() => { if (canConfirm && candidate) onSave(candidate); }}>{busy ? t("saving") : t("confirm")}</button>
     </>}
   >
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="space-y-2">
-        <p className="text-sm font-medium text-text-primary">Current shortcut</p>
+        <p className="text-sm font-medium text-text-primary">{t("current")}</p>
         <kbd className="block text-sm font-normal text-text-secondary">{shortcutLabel(shortcuts[action])}</kbd>
       </div>
-      <button type="button" className={CONTROL} disabled={busy} onClick={() => { chooseShortcut(DEFAULT_SHORTCUTS[action]); input.current?.focus(); }}>Use default ({shortcutLabel(DEFAULT_SHORTCUTS[action])})</button>
+      <button type="button" className={CONTROL} disabled={busy} onClick={() => { chooseShortcut(DEFAULT_SHORTCUTS[action]); input.current?.focus(); }}>{t("useDefault", { shortcut: shortcutLabel(DEFAULT_SHORTCUTS[action]) })}</button>
     </div>
     <div className="space-y-2" data-shortcut-recording="">
-      <label htmlFor={inputId} className="block text-sm font-medium text-text-primary">New shortcut</label>
-      <input id={inputId} ref={input} className="ui-field min-h-12 w-full px-3 text-base" aria-label={`New shortcut for ${SHORTCUT_LABELS[action]}`} aria-describedby={`${instructionsId}${error ? ` ${errorId}` : ""}`} aria-invalid={error ? true : undefined} placeholder="Press a shortcut" readOnly disabled={busy} value={liveModifiers ?? attempted} />
-      <p id={instructionsId} className="text-xs leading-5 text-text-secondary">Use a single key or a combination with Ctrl, Shift, Alt or Cmd / Windows. Function keys work too. Both / keys work. Use default selects the original shortcut.</p>
+      <label htmlFor={inputId} className="block text-sm font-medium text-text-primary">{t("newShortcut")}</label>
+      <input id={inputId} ref={input} className="ui-field min-h-12 w-full px-3 text-base" aria-label={t("newShortcutFor", { action: actionLabel })} aria-describedby={`${instructionsId}${error ? ` ${errorId}` : ""}`} aria-invalid={error ? true : undefined} placeholder={t("placeholder")} readOnly disabled={busy} value={liveModifiers ?? attempted} />
+      <p id={instructionsId} className="text-xs leading-5 text-text-secondary">{t("instructions")}</p>
       {error ? <p id={errorId} role="alert" className="text-sm leading-5 text-text-danger">{error}</p> : null}
-      <p className="text-xs text-text-secondary">{canConfirm ? "Enter to confirm · Esc to cancel" : "Esc to cancel"}</p>
+      <p className="text-xs text-text-secondary">{canConfirm ? t("hintConfirm") : t("hintCancel")}</p>
     </div>
   </ModalDialog>;
 }

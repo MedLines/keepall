@@ -12,7 +12,7 @@ import {
   SHELL_TOP_BTN_ACTIVE,
   SHELL_TOP_BTN_IDLE,
 } from "./shell-styles";
-import { iconButtonClassName } from "@/components/ui/button";
+import { buttonClassName, iconButtonClassName } from "@/components/ui/button";
 import { menuItemClassName } from "@/components/ui/menu-item";
 
 type Option<T extends string> = {
@@ -38,7 +38,12 @@ type Props<T extends string> = {
   portalContainer?: HTMLElement | null;
   /** Associate a visible <label htmlFor> with a full-width form field. */
   id?: string;
-  variant?: "toolbar" | "field";
+  /**
+   * - toolbar: 40px top-bar trigger.
+   * - field: full-width form control paired with a visible label.
+   * - control: 44px settings-row trigger, the same button as the Theme control beside it.
+   */
+  variant?: "toolbar" | "field" | "control";
 };
 
 /**
@@ -63,6 +68,9 @@ export function ShellTopMenu<T extends string>({
 }: Props<T>) {
   const tooltipId = useId();
   const field = variant === "field";
+  const triggerClassName = variant === "control"
+    ? buttonClassName({ size: "toolbar", className: `button-px-2 ${className}` })
+    : `${iconOnly ? iconButtonClassName({ size: "lg", className: emphasized ? "ui-selected" : "" }) : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`} ${className}`;
   const activeOption =
     options.find((option) => option.value === value) ?? options[0];
 
@@ -82,7 +90,7 @@ export function ShellTopMenu<T extends string>({
         className={
           field
             ? `flex w-full min-w-0 items-center justify-between gap-2 text-left ${className}`
-            : `${iconOnly ? iconButtonClassName({ size: "lg", className: emphasized ? "ui-selected" : "" }) : `${SHELL_TOP_BTN} ${emphasized ? SHELL_TOP_BTN_ACTIVE : SHELL_TOP_BTN_IDLE}`} ${className}`
+            : triggerClassName
         }
         aria-label={field ? undefined : `${ariaLabel}: ${activeOption?.label ?? ""}`}
       >
