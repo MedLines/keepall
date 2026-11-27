@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "@/i18n/use-translations";
 import { useEffect, useState } from "react";
 import { pendingFileId } from "@/domain/agent-files";
 import { decodeTextDocument } from "@/domain/document";
@@ -51,7 +52,8 @@ function usePendingFile(fileId: string, wantText: boolean): Loaded | null {
 }
 
 function Missing() {
-  return <p className="flex size-full items-center justify-center p-3 text-center text-xs text-text-secondary">This file is no longer waiting in this browser.</p>;
+  const t = useTranslations("Capture");
+  return <p className="flex size-full items-center justify-center p-3 text-center text-xs text-text-secondary">{t("fileMissing")}</p>;
 }
 
 /** A library-card thumbnail for an item that isn't saved yet, drawn from its waiting file. */
@@ -107,6 +109,7 @@ function PendingImage({ fileId }: { fileId: string }) {
 function PendingSingle({ item, fileId }: { item: Item; fileId: string }) {
   const isText = item.type === "document" && item.format !== "pdf";
   const file = usePendingFile(fileId, isText);
+  const t = useTranslations("Capture");
   if (file === "missing") return <Missing />;
   if (!file) return <span className="block size-full" />;
   if (item.type === "video") return <div className="flex h-full items-center justify-center p-4"><VideoPlayer src={file.url} title={item.title} onError={() => {}} /></div>;
@@ -119,7 +122,7 @@ function PendingSingle({ item, fileId }: { item: Item; fileId: string }) {
   return (
     <div className="h-full overflow-y-auto px-5 py-4">
       <NoteContent content={shown} format={item.type === "document" && item.format === "markdown" ? "markdown" : "plain"} allowLocalImages={false} />
-      {shown.length < text.length ? <p className="mt-4 text-xs text-text-secondary">Showing the start of this file. Saving keeps all of it.</p> : null}
+      {shown.length < text.length ? <p className="mt-4 text-xs text-text-secondary">{t("previewTruncated")}</p> : null}
     </div>
   );
 }

@@ -63,6 +63,12 @@ const BUTTON_PADDING_SYNTAX = [
 // from then on, text written straight into its JSX is an error. See docs/interface-conventions.md.
 const TRANSLATED_FILES = [
   "src/app/backup-panel.tsx",
+  "src/app/capture-file-list.tsx",
+  "src/app/capture-host.tsx",
+  "src/app/capture-image-layout.tsx",
+  "src/app/capture-import-progress.tsx",
+  "src/app/capture-link-conflict-dialog.tsx",
+  "src/app/capture-type-menu.tsx",
   "src/app/language-setting.tsx",
   "src/app/library-bulk-bar.tsx",
   "src/app/library-empty-state.tsx",
@@ -70,7 +76,10 @@ const TRANSLATED_FILES = [
   "src/app/library-top-bar.tsx",
   "src/app/library-type-filter-menu.tsx",
   "src/app/logo-context-menu.tsx",
+  "src/app/note-editor-controls.tsx",
+  "src/app/note-format-control.tsx",
   "src/app/offline-banner.tsx",
+  "src/app/pending-file-preview.tsx",
   "src/app/persistent-storage-status.tsx",
   "src/app/pwa-update-banner.tsx",
   "src/app/settings/agents-panel.tsx",

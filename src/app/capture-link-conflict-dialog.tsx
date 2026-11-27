@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "@/i18n/use-translations";
 import { useState } from "react";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { SHELL_TOP_BTN, SHELL_TOP_BTN_ACTIVE, SHELL_TOP_BTN_IDLE } from "./shell-styles";
@@ -46,38 +47,38 @@ function LinkConflictChoices({
   const [tagChoice, setTagChoice] = useState<"keep" | "replace" | "merge">(
     "merge",
   );
+  const t = useTranslations("Capture");
 
   return (
     <ModalDialog
-      open busy={busy} title="Already saved"
-      description="This item is already in your library. Choose how to update tags and collection."
+      open busy={busy} title={t("alreadySaved")}
+      description={t("conflictDescription")}
       onOpenChange={(open) => { if (!open) onCancel(); }}
       footer={<>
-        <button className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-4 disabled:opacity-60`} type="button" disabled={busy} onClick={onCancel}>Cancel</button>
+        <button className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_IDLE} px-4 disabled:opacity-60`} type="button" disabled={busy} onClick={onCancel}>{t("cancel")}</button>
         <button className={`${SHELL_TOP_BTN} ${SHELL_TOP_BTN_ACTIVE} px-4 disabled:opacity-60`} type="button" disabled={busy}
           onClick={() => onConfirm({
             collectionChoice: conflict.askCollection ? collectionChoice : "keep",
             tagChoice: conflict.askTags ? tagChoice : "merge",
           })}
-        >{busy ? "Saving…" : "Confirm"}</button>
+        >{busy ? t("saving") : t("confirm")}</button>
       </>}
     >
           {conflict.askCollection ? (
             <fieldset className="flex flex-col gap-2">
               <legend className="text-xs font-medium text-text-primary">
-                Collection
+                {t("collection")}
               </legend>
               <RadioCard className="text-text-primary" name="capture-conflict-collection" checked={collectionChoice === "keep"} disabled={busy} onChange={() => setCollectionChoice("keep")}>
                 <span>
-                  Keep in “{conflict.existingCollectionName}”
+                  {t("keepIn", { name: conflict.existingCollectionName ?? "" })}
                 </span>
               </RadioCard>
               <RadioCard className="text-text-primary" name="capture-conflict-collection" checked={collectionChoice === "move"} disabled={busy} onChange={() => setCollectionChoice("move")}>
                 <span>
-                  Move to{" "}
                   {conflict.nextCollectionName
-                    ? `“${conflict.nextCollectionName}”`
-                    : "Unsorted"}
+                    ? t("moveToNamed", { name: conflict.nextCollectionName })
+                    : t("moveToUnsorted")}
                 </span>
               </RadioCard>
             </fieldset>
@@ -86,20 +87,20 @@ function LinkConflictChoices({
           {conflict.askTags ? (
             <fieldset className="flex flex-col gap-2">
               <legend className="text-xs font-medium text-text-primary">
-                Tags
+                {t("tags")}
               </legend>
               <RadioCard className="text-text-primary" name="capture-conflict-tags" checked={tagChoice === "keep"} disabled={busy} onChange={() => setTagChoice("keep")}>
                 <span>
-                  Keep existing ({formatList(conflict.existingTagNames)})
+                  {t("keepExisting", { tags: formatList(conflict.existingTagNames) })}
                 </span>
               </RadioCard>
               <RadioCard className="text-text-primary" name="capture-conflict-tags" checked={tagChoice === "replace"} disabled={busy} onChange={() => setTagChoice("replace")}>
                 <span>
-                  Use new only ({formatList(conflict.nextTagNames)})
+                  {t("useNewOnly", { tags: formatList(conflict.nextTagNames) })}
                 </span>
               </RadioCard>
               <RadioCard className="text-text-primary" name="capture-conflict-tags" checked={tagChoice === "merge"} disabled={busy} onChange={() => setTagChoice("merge")}>
-                <span>Merge both</span>
+                <span>{t("mergeBoth")}</span>
               </RadioCard>
             </fieldset>
           ) : null}

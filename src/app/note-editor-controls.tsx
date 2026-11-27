@@ -1,6 +1,7 @@
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { NoteFormatControl } from "./note-format-control";
 import { EditIcon, EyeIcon } from "./shell-icons";
+import { useTranslations } from "@/i18n/use-translations";
 
 type Props = {
   format: "plain" | "markdown";
@@ -13,12 +14,13 @@ type Props = {
 };
 
 export function NoteEditorControls({ format, preview, disabled = false, formatDisabled = disabled, portalContainer, onFormatChange, onPreviewChange }: Props) {
+  const t = useTranslations("NoteEditor");
   return (
     <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
       <NoteFormatControl format={format} disabled={disabled || formatDisabled} onChange={onFormatChange} />
       <SegmentedControl
         variant="icon"
-        label="Note editor view"
+        label={t("view")}
         className="ms-auto"
         value={preview ? "preview" : "edit"}
         disabled={disabled}
@@ -26,8 +28,8 @@ export function NoteEditorControls({ format, preview, disabled = false, formatDi
         tooltipContainer={portalContainer}
         onChange={value => onPreviewChange(value === "preview")}
         choices={[
-          { value: "edit", ariaLabel: "Edit", icon: <EditIcon />, tooltip: "Edit notes" },
-          { value: "preview", ariaLabel: "Preview", icon: <EyeIcon />, tooltip: "Preview notes" },
+          { value: "edit", ariaLabel: t("edit"), icon: <EditIcon />, tooltip: t("editTooltip") },
+          { value: "preview", ariaLabel: t("preview"), icon: <EyeIcon />, tooltip: t("previewTooltip") },
         ]}
       />
     </div>
