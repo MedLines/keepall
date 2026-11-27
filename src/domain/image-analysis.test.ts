@@ -7,6 +7,15 @@ describe("image analysis", () => {
   it("ignores transparent pixels and returns dominant separated colors", () => {
     expect(extractPixelPalette(new Uint8ClampedArray([255,0,0,255, 255,0,0,255, 0,0,255,255, 0,255,0,0]))).toEqual(["#FF0000", "#0000FF"]);
   });
+  it("keeps a small vivid accent ahead of extra shades of a pale background", () => {
+    const pixel = (r: number, g: number, b: number, n: number) => Array.from({ length: n }, () => [r, g, b, 255]).flat();
+    // Glossy jelly shapes on lavender: six distinct colours each cover more area than the green ball.
+    const pixels = new Uint8ClampedArray([
+      ...pixel(221, 209, 249, 100), ...pixel(182, 122, 243, 30), ...pixel(4, 103, 245, 15),
+      ...pixel(247, 41, 137, 15), ...pixel(253, 136, 6, 15), ...pixel(56, 135, 252, 13), ...pixel(137, 201, 4, 10),
+    ]);
+    expect(extractPixelPalette(pixels)).toContain("#89C904");
+  });
   it("matches nearby hex and named families, rejecting unknown filters", () => {
     expect(matchesPaletteColor(["#FE0101"], "#ff0000")).toBe(true);
     expect(matchesPaletteColor(["#FE0101"], "red")).toBe(true);
