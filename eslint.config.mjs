@@ -64,6 +64,7 @@ const BUTTON_PADDING_SYNTAX = [
 const TRANSLATED_FILES = [
   "src/app/backup-panel.tsx",
   "src/app/language-setting.tsx",
+  "src/app/library-bulk-bar.tsx",
   "src/app/library-empty-state.tsx",
   "src/app/library-shell.tsx",
   "src/app/library-top-bar.tsx",
