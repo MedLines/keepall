@@ -1,6 +1,7 @@
 "use client";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useTranslations } from "@/i18n/use-translations";
 
 import {
   type CSSProperties,
@@ -52,7 +53,7 @@ export function OrgNameSuggest({
   suggestions,
   disabled = false,
   pending = false,
-  submitLabel = "Add",
+  submitLabel,
   error = null,
   onSubmit,
   onCancel,
@@ -61,6 +62,7 @@ export function OrgNameSuggest({
   suggestWhenEmpty = true,
 }: Props) {
   const listboxId = useId();
+  const t = useTranslations("Organizer");
   const [listOpen, setListOpen] = useState(false);
   const [suggestionPosition, setSuggestionPosition] = useState<SuggestionPosition | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -237,7 +239,7 @@ export function OrgNameSuggest({
               : undefined
           }
         >
-          {pending ? "…" : submitLabel}
+          {pending ? "…" : submitLabel ?? t("add")}
         </button>
       </div>
       {error ? (

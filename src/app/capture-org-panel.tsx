@@ -1,6 +1,7 @@
 "use client";
 
 import { captureStyles } from "./capture-styles";
+import { useTranslations } from "@/i18n/use-translations";
 
 import { type ReactNode, type KeyboardEvent, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -227,20 +228,22 @@ function CreateButton({
   onCreate: () => void;
   inline?: boolean;
 }) {
+  const t = useTranslations("Organizer");
   if (!query || matchesExisting) {
     return null;
   }
+  const named = t(kind === "collection" ? "createNamedCollection" : "createNamedTag", { name: query });
   return (
     <button
       type="button"
       className={inline ? buttonClassName({ size: "none", className: "h-7 max-w-full gap-1.5 ps-1.5 pe-2 text-xs font-medium justify-start" }) : captureStyles["org-create"]}
-      aria-label={inline ? `Create ${kind} “${query}”` : undefined}
-      title={inline ? `Create ${kind} “${query}”` : undefined}
+      aria-label={inline ? named : undefined}
+      title={inline ? named : undefined}
       disabled={disabled}
       onClick={onCreate}
     >
       <PlusIcon className={`${inline ? "size-3.5" : "size-4"} shrink-0`} />
-      <span className="break-words">{inline ? `Create ${kind}` : `Create ${kind} “${query}”`}</span>
+      <span className="break-words">{inline ? t(kind === "collection" ? "createCollection" : "createTag") : named}</span>
     </button>
   );
 }
@@ -274,6 +277,7 @@ function CollectionSection({
   variant,
   browseControl,
 }: CollectionSectionProps) {
+  const t = useTranslations("Organizer");
   const inputId = useId();
   const query = collectionInput.trim();
   const visible = compactChoices(
@@ -312,7 +316,7 @@ function CollectionSection({
   }
 
   const choices = (
-      <ul ref={suggestionsRef} className={`flex gap-1.5 ${variant === "review" ? "w-max flex-nowrap" : "max-h-[3.875rem] flex-wrap overflow-hidden"}`} aria-label="Collections">
+      <ul ref={suggestionsRef} className={`flex gap-1.5 ${variant === "review" ? "w-max flex-nowrap" : "max-h-[3.875rem] flex-wrap overflow-hidden"}`} aria-label={t("collections")}>
         {variant === "review" && canCreate ? <li><CreateButton inline query={query} matchesExisting={false} kind="collection" disabled={disabled} onCreate={createCollection} /></li> : <>
         {selectedCollection ? (
           <li>
@@ -323,7 +327,7 @@ function CollectionSection({
           </li>
         ) : null}
         {variant !== "review" || !query ? <li>
-          <button className={`${PICK_CHIP} ${collectionName === null && !selection?.collectionMixed ? PICK_CHIP_SELECTED : PICK_CHIP_OUTLINE}`} type="button" disabled={disabled} aria-pressed={collectionName === null && !selection?.collectionMixed} onClick={onClearCollection}>Unsorted</button>
+          <button className={`${PICK_CHIP} ${collectionName === null && !selection?.collectionMixed ? PICK_CHIP_SELECTED : PICK_CHIP_OUTLINE}`} type="button" disabled={disabled} aria-pressed={collectionName === null && !selection?.collectionMixed} onClick={onClearCollection}>{t("unsorted")}</button>
         </li> : null}
         {otherCollections.slice(0, Math.max(0, visibleCount - prefixCount)).map(entry => (
           <li key={entry.id}>
@@ -339,7 +343,7 @@ function CollectionSection({
   return (
     <section className={captureStyles["org-section"]}>
       {variant !== "review" ? <SectionHeader
-        inputId={inputId} label="Collection" kind="collection" browseLabel="Browse all collections"
+        inputId={inputId} label={t("collection")} kind="collection" browseLabel={t("browseCollections")}
         showBrowse={collectionSuggestions.length > 0} disabled={disabled} onBrowse={onBrowse} browseControl={browseControl}
       /> : null}
       <div className={captureStyles["org-search-wrap"]}>
@@ -347,19 +351,19 @@ function CollectionSection({
         <input autoComplete="off"
           className={captureStyles["org-search"]}
           disabled={disabled} id={inputId} aria-label={collectionInputLabel}
-          placeholder={variant === "review" ? "Find a collection…" : collectionSuggestions.length > 0 ? "Find or create a collection…" : "Collection name"}
+          placeholder={variant === "review" ? t("findCollection") : collectionSuggestions.length > 0 ? t("findOrCreateCollection") : t("collectionName")}
           value={collectionInput} onChange={event => onCollectionInputChange(event.target.value)} onKeyDown={onKeyDown}
         />
         {variant === "review" ? browseControl : null}
       </div>
       {variant === "review" ? <ScrollArea orientation="horizontal" className="h-8" viewportClassName="overscroll-contain">{choices}</ScrollArea> : choices}
-      {selection?.collectionMixed ? <p className="text-xs text-text-secondary">Selected items are in different collections.</p> : null}
+      {selection?.collectionMixed ? <p className="text-xs text-text-secondary">{t("mixedCollections")}</p> : null}
       {variant !== "review" ? <NoMatches
         query={query}
         totalCount={collectionSuggestions.length}
         visibleCount={visible.length}
       >
-        No matching collections.
+        {t("noMatchingCollections")}
       </NoMatches> : null}
       {collectionError ? <p role="alert" className="text-sm text-text-danger">{collectionError}</p> : null}
       {variant !== "review" ? <CreateButton query={query} matchesExisting={matchesExisting} kind="collection" disabled={disabled} onCreate={createCollection} /> : null}
@@ -375,14 +379,15 @@ function SelectedTag({ name, disabled, selection, onAdd, onRemove }: {
   onRemove: () => void;
 }) {
   const partial = selection?.partialTagNames.includes(name) ?? false;
+  const t = useTranslations("Organizer");
   return (
     <li className={`${PICK_CHIP} ${PICK_CHIP_SELECTED} pr-0.5`}>
       {partial ? (
         <button type="button" className="inline-flex min-h-6 min-w-0 items-center gap-1 text-start disabled:opacity-60"
-          aria-label={`Apply tag ${name} to all selected items`} aria-pressed="mixed" disabled={disabled} onClick={onAdd}>
+          aria-label={t("applyTagToAll", { name })} aria-pressed="mixed" disabled={disabled} onClick={onAdd}>
           <PlusIcon className="size-3.5 shrink-0" />
           <span className="max-w-40 truncate">{name}</span>
-          <span className="text-text-secondary">· Some items</span>
+          <span className="text-text-secondary">{t("someItems")}</span>
         </button>
       ) : (
         <>
@@ -391,7 +396,7 @@ function SelectedTag({ name, disabled, selection, onAdd, onRemove }: {
         </>
       )}
       <button className={captureStyles["remove-tag"]}
-        type="button" disabled={disabled} aria-label={`Remove tag ${name}${selection ? " from selection" : ""}`} onClick={onRemove}>
+        type="button" disabled={disabled} aria-label={t(selection ? "removeTagFromSelection" : "removeTag", { name })} onClick={onRemove}>
         <CloseIcon className="size-4" />
       </button>
     </li>
@@ -434,6 +439,7 @@ function TagSection({
   browseControl,
 }: TagSectionProps) {
   const inputId = useId();
+  const t = useTranslations("Organizer");
   const query = tagInput.trim();
   const selectedNames = variant === "review" && query ? tagNames.filter(name => name.toLowerCase().includes(query.toLowerCase())) : tagNames;
   const visible = compactChoices(unusedTags, tagInput, null, variant === "review" ? 24 : COMPACT_CHOICE_LIMIT);
@@ -466,9 +472,9 @@ function TagSection({
     <section className={captureStyles["org-section"]}>
       {variant !== "review" ? <SectionHeader
         inputId={inputId}
-        label="Tags"
+        label={t("tags")}
         kind="tag"
-        browseLabel="Browse all tags"
+        browseLabel={t("browseTags")}
         showBrowse={tagSuggestions.length > 0}
         disabled={disabled}
         onBrowse={onBrowse}
@@ -482,7 +488,7 @@ function TagSection({
           disabled={disabled}
           id={inputId}
           aria-label={tagInputLabel}
-          placeholder={variant === "review" ? "Find a tag…" : tagSuggestions.length > 0 ? "Find or create a tag…" : "Tag name"}
+          placeholder={variant === "review" ? t("findTag") : tagSuggestions.length > 0 ? t("findOrCreateTag") : t("tagName")}
           value={tagInput}
           onChange={(event) => onTagInputChange(event.target.value)}
           onKeyDown={onKeyDown}
@@ -490,7 +496,7 @@ function TagSection({
         {variant === "review" ? browseControl : null}
       </div>
       {variant !== "review" && tagNames.length > 0 ? (
-        <ul className="flex flex-wrap gap-1.5" aria-label="Selected tags">
+        <ul className="flex flex-wrap gap-1.5" aria-label={t("selectedTags")}>
           {tagNames.map((name) => (
             <SelectedTag key={name} name={name} disabled={disabled} selection={selection}
               onAdd={() => onAddTag(name)} onRemove={() => onRemoveTag(name)} />
@@ -499,10 +505,10 @@ function TagSection({
       ) : null}
       {selection && tagNames.length > 0 ? (
         <button type="button" className="min-h-7 self-start text-xs font-medium text-text-danger hover:underline disabled:opacity-60"
-          disabled={disabled} onClick={selection.onRemoveAllTags}>Remove all tags</button>
+          disabled={disabled} onClick={selection.onRemoveAllTags}>{t("removeAllTags")}</button>
       ) : null}
       {variant === "review" || visible.length > 0 ? (
-        <ul ref={suggestionsRef} className={`flex flex-wrap gap-1.5 overflow-hidden ${variant === "review" ? "h-[4.125rem] content-start items-start" : "max-h-[3.875rem]"}`} aria-label={variant === "review" ? "Tags" : "Existing tags"}>
+        <ul ref={suggestionsRef} className={`flex flex-wrap gap-1.5 overflow-hidden ${variant === "review" ? "h-[4.125rem] content-start items-start" : "max-h-[3.875rem]"}`} aria-label={variant === "review" ? t("tags") : t("existingTags")}>
           {variant === "review" && canCreate ? <li><CreateButton inline query={query} matchesExisting={false} kind="tag" disabled={disabled} onCreate={createTag} /></li> : <>
           {variant === "review" ? selectedNames.slice(0, visibleCount).map(name => <SelectedTag key={name} name={name} disabled={disabled} selection={selection} onAdd={() => onAddTag(name)} onRemove={() => onRemoveTag(name)} />) : null}
           {visible.slice(0, Math.max(0, visibleCount - (variant === "review" ? selectedNames.length : 0))).map((entry) => (
@@ -525,7 +531,7 @@ function TagSection({
         totalCount={tagSuggestions.length}
         visibleCount={visible.length + tagNames.filter(name => name.toLowerCase().includes(query.toLowerCase())).length}
       >
-        No matching tags.
+        {t("noMatchingTags")}
       </NoMatches> : null}
       {tagError ? <p role="alert" className="text-sm text-text-danger">{tagError}</p> : null}
       {variant !== "review" ? <CreateButton query={query} matchesExisting={matchesExisting || tagNames.some((name) => name.toLowerCase() === query.toLowerCase())} kind="tag" disabled={disabled} onCreate={createTag} /> : null}

@@ -63,6 +63,9 @@ const BUTTON_PADDING_SYNTAX = [
 // from then on, text written straight into its JSX is an error. See docs/interface-conventions.md.
 const TRANSLATED_FILES = [
   "src/app/backup-panel.tsx",
+  "src/app/capture-org-browser.tsx",
+  "src/app/capture-org-panel.tsx",
+  "src/app/item-organizer-drawer.tsx",
   "src/app/jump-palette.tsx",
   "src/app/language-setting.tsx",
   "src/app/library-bulk-bar.tsx",
@@ -72,6 +75,8 @@ const TRANSLATED_FILES = [
   "src/app/library-type-filter-menu.tsx",
   "src/app/logo-context-menu.tsx",
   "src/app/offline-banner.tsx",
+  "src/app/org-name-suggest.tsx",
+  "src/app/organizer-drawer.tsx",
   "src/app/persistent-storage-status.tsx",
   "src/app/pwa-update-banner.tsx",
   "src/app/settings/agents-panel.tsx",
@@ -87,6 +92,9 @@ const TRANSLATED_FILES = [
   "src/app/sidebar-resize-handle.tsx",
   "src/app/theme-control.tsx",
   "src/app/undo-notice.tsx",
+  "src/components/ui/confirm-dialog.tsx",
+  "src/components/ui/modal-dialog.tsx",
+  "src/components/ui/side-drawer.tsx",
 ];
 const TEXT_ATTRIBUTES = "aria-label|aria-description|alt|placeholder|label|ariaLabel|content|tooltip";
 
