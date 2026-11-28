@@ -1,6 +1,7 @@
 "use client";
 
 
+import { focusIsUnclaimed } from "./focus-handoff";
 import { Menu } from "@base-ui/react/menu";
 import { useLayoutEffect, useRef, useState } from "react";
 import { OrganizerDrawer } from "./organizer-drawer";
@@ -95,6 +96,7 @@ export function LibraryBulkToolbar({
   onExport,
 }: LibraryBulkToolbarProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuPopupRef = useRef<HTMLDivElement>(null);
   const restoreTriggerFocus = useRef(true);
   const focusSearchAfterClose = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -161,10 +163,11 @@ export function LibraryBulkToolbar({
         <Menu.Portal>
           <Menu.Positioner align="start" sideOffset={4} collisionPadding={8} positionMethod="fixed" className="z-[60] data-[anchor-hidden]:invisible">
             <Menu.Popup
+              ref={menuPopupRef}
               aria-label={t("selectionActions")}
               className="ui-menu-popup ui-popover flex flex-col overflow-hidden max-h-[min(24rem,var(--available-height))] min-w-48 max-w-[calc(100vw-1rem)] outline-none"
-              finalFocus={() => focusSearchAfterClose.current
-                ? document.getElementById("library-search")
+              finalFocus={() => !focusIsUnclaimed(menuPopupRef.current) ? false
+                : focusSearchAfterClose.current ? document.getElementById("library-search")
                 : restoreTriggerFocus.current ? triggerRef.current : false}
             >
               <div className="ui-scrollbar flex min-h-0 flex-col overflow-y-auto overscroll-contain">
