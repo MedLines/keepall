@@ -63,6 +63,8 @@ const BUTTON_PADDING_SYNTAX = [
 // from then on, text written straight into its JSX is an error. See docs/interface-conventions.md.
 const TRANSLATED_FILES = [
   "src/app/backup-panel.tsx",
+  "src/app/bookmarks-import.tsx",
+  "src/app/bulk-file-import.tsx",
   "src/app/capture-file-list.tsx",
   "src/app/capture-host.tsx",
   "src/app/capture-image-layout.tsx",
@@ -71,6 +73,7 @@ const TRANSLATED_FILES = [
   "src/app/capture-org-browser.tsx",
   "src/app/capture-org-panel.tsx",
   "src/app/capture-type-menu.tsx",
+  "src/app/image-folder-import.tsx",
   "src/app/item-organizer-drawer.tsx",
   "src/app/jump-palette.tsx",
   "src/app/language-setting.tsx",
@@ -104,6 +107,7 @@ const TRANSLATED_FILES = [
   "src/components/ui/confirm-dialog.tsx",
   "src/components/ui/modal-dialog.tsx",
   "src/components/ui/side-drawer.tsx",
+  "src/components/ui/toaster.tsx",
 ];
 const TEXT_ATTRIBUTES = "aria-label|aria-description|alt|placeholder|label|ariaLabel|content|tooltip";
 

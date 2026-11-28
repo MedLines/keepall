@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "@/i18n/use-translations";
 import { useEffect, useId, useRef, useState } from "react";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import type { BookmarksHtmlCollectionPolicy } from "@/domain/bookmarks-html";
@@ -28,7 +29,8 @@ type Props = {
   onBusyChange: (busy: boolean) => void;
 };
 
-export function BookmarksImport({ buttonClassName, label = "Import bookmarks", description, disabled = false, onBusyChange }: Props) {
+export function BookmarksImport({ buttonClassName, label, description, disabled = false, onBusyChange }: Props) {
+  const t = useTranslations("BookmarksImport");
   const descriptionId = useId();
   const bookmarksFileInputRef = useRef<HTMLInputElement>(null);
   const operationRef = useRef<Operation | null>(null);
@@ -84,8 +86,8 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
       setPendingBookmarksHtml(await abortable(file.text(), signal));
       setCollectionPolicy("unsorted-only");
     } catch {
-      if (signal.aborted) setStatus("Bookmarks reading canceled.");
-      else setError("Couldn't read bookmarks file.");
+      if (signal.aborted) setStatus(t("readCancelled"));
+      else setError(t("readError"));
     } finally {
       finish();
       if (bookmarksFileInputRef.current) {
@@ -99,7 +101,7 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
       return;
     }
     setPendingBookmarksHtml(null);
-    setStatus("Bookmarks import canceled.");
+    setStatus(t("choiceCancelled"));
   }
 
   async function runBookmarksImport() {
@@ -118,15 +120,13 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
       window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
       dispatchPreviewWelcome(summary.addedLinkIds);
       setLastBookmarksSummary(summary);
-      setStatus(
-        `${summary.cancelled ? "Bookmark import canceled. Completed bookmarks are kept." : "Bookmarks:"} ${summary.added} added, ${summary.merged} merged, ${summary.skipped} skipped.`,
-      );
+      setStatus(t(summary.cancelled ? "summaryCancelled" : "summary", { added: summary.added, merged: summary.merged, skipped: summary.skipped }));
       setPendingBookmarksHtml(null);
     } catch (caught) {
       if (caught instanceof BookmarksHtmlParseError) {
         setError(caught.message);
       } else {
-        setError("Couldn't import bookmarks.");
+        setError(t("importError"));
       }
       setPendingBookmarksHtml(null);
     } finally {
@@ -160,8 +160,8 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
 
   const bookmarksDialog = (
     <ModalDialog
-      open={pendingBookmarksHtml !== null} busy={busy} title="Import browser bookmarks"
-      description="Choose how browser folders update collections when links already exist."
+      open={pendingBookmarksHtml !== null} busy={busy} title={t("dialogTitle")}
+      description={t("dialogDescription")}
       onOpenChange={(open) => { if (!open) cancelBookmarksImport(); }}
       footer={<>
         <button
@@ -170,7 +170,7 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
           disabled={cancelling}
           onClick={busy ? cancelRunningImport : cancelBookmarksImport}
         >
-          {busy ? cancelling ? "Canceling…" : "Cancel import" : "Cancel"}
+          {busy ? cancelling ? t("cancelling") : t("cancelImport") : t("cancel")}
         </button>
         <button
           className={`${dialogButtonClass} ui-primary`}
@@ -178,49 +178,47 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
           disabled={busy}
           onClick={() => void runBookmarksImport()}
         >
-          {operation === "import-bookmarks" ? "Importing bookmarks…" : "Import bookmarks"}
+          {operation === "import-bookmarks" ? t("importing") : t("importBookmarks")}
         </button>
       </>}
     >
 
     {operation === "import-bookmarks" ? <div className="space-y-2">
-      <p role="status" aria-live="polite">{cancelling ? "Canceling import… Finishing the current bookmark." : "Importing bookmarks…"}{progress ? ` ${progress.done} of ${progress.total} bookmarks processed.` : ""}</p>
-      <progress aria-label="Bookmark import progress" value={progress?.done} max={progress?.total || undefined} className="h-2 w-full accent-action-primary" />
-      <p className="text-xs leading-relaxed text-text-secondary">Cancel stops before the next bookmark. Completed bookmarks stay in your library.</p>
+      <p role="status" aria-live="polite">{progress
+        ? t(cancelling ? "cancellingImportProgress" : "importingProgress", { done: progress.done, total: progress.total })
+        : t(cancelling ? "cancellingImport" : "importing")}</p>
+      <progress aria-label={t("progressLabel")} value={progress?.done} max={progress?.total || undefined} className="h-2 w-full accent-action-primary" />
+      <p className="text-xs leading-relaxed text-text-secondary">{t("cancelNote")}</p>
     </div> : null}
 
     <fieldset className="flex flex-col gap-2 border-0 p-0">
       <legend className="text-sm font-medium text-text-primary">
-        When a link already exists, which collection wins?
+        {t("policyLegend")}
       </legend>
       <p className="text-xs leading-relaxed text-text-secondary">
-        Browser tags are always added. This choice only controls browser
-        folders and Keepall collections.
+        {t("policyNote")}
       </p>
       <RadioCard className="bookmark-import-option" inputClassName="mt-0.5" name="collection-policy" disabled={busy} checked={collectionPolicy === "unsorted-only"} onChange={() => setCollectionPolicy("unsorted-only")}>
         <span>
-          <span className="font-medium">Browser folder → Unsorted only</span>
+          <span className="font-medium">{t("unsortedOnlyTitle")}</span>
           <span className="mt-0.5 block text-xs text-text-secondary">
-            Already in a Keepall collection → leave it. In Keepall Unsorted
-            → file using the browser folder name.
+            {t("unsortedOnlyDescription")}
           </span>
         </span>
       </RadioCard>
       <RadioCard className="bookmark-import-option" inputClassName="mt-0.5" name="collection-policy" disabled={busy} checked={collectionPolicy === "keep"} onChange={() => setCollectionPolicy("keep")}>
         <span>
-          <span className="font-medium">Keep Keepall collections</span>
+          <span className="font-medium">{t("keepTitle")}</span>
           <span className="mt-0.5 block text-xs text-text-secondary">
-            Browser folders apply only to links not in Keepall yet. Existing
-            Keepall links keep their collection.
+            {t("keepDescription")}
           </span>
         </span>
       </RadioCard>
       <RadioCard className="bookmark-import-option" inputClassName="mt-0.5" name="collection-policy" disabled={busy} checked={collectionPolicy === "apply"} onChange={() => setCollectionPolicy("apply")}>
         <span>
-          <span className="font-medium">Browser folders win</span>
+          <span className="font-medium">{t("applyTitle")}</span>
           <span className="mt-0.5 block text-xs text-text-secondary">
-            If the browser file has a folder, move the Keepall link into
-            that collection — even when already filed.
+            {t("applyDescription")}
           </span>
         </span>
       </RadioCard>
@@ -231,22 +229,22 @@ export function BookmarksImport({ buttonClassName, label = "Import bookmarks", d
   return (
     <div className="min-w-0">
       <button className={buttonClassName} type="button" aria-describedby={description ? descriptionId : undefined} disabled={disabled || busy} onClick={() => bookmarksFileInputRef.current?.click()}>
-        {label}
+        {label ?? t("importBookmarks")}
       </button>
       {description ? <p id={descriptionId} className="mt-2 text-xs leading-relaxed text-text-secondary">{description}</p> : null}
       {bookmarksFileInput}
       {bookmarksDialog}
       {operation || status ? (
         <p className="mt-2 text-sm text-text-primary" role="status" aria-live="polite">
-          {operation === "read-bookmarks" ? "Reading bookmarks…" : operation ? "Importing bookmarks…" : status}
+          {operation === "read-bookmarks" ? t("reading") : operation ? t("importing") : status}
         </p>
       ) : null}
-      {operation ? <progress aria-label="Bookmark import progress" className="mt-2 h-2 w-full accent-action-primary" /> : null}
+      {operation ? <progress aria-label={t("progressLabel")} className="mt-2 h-2 w-full accent-action-primary" /> : null}
       {operation === "read-bookmarks" ? <button className={`${dialogButtonClass} mt-2`} type="button" disabled={cancelling}
-        onClick={cancelRunningImport}>{cancelling ? "Canceling…" : "Cancel reading"}</button> : null}
+        onClick={cancelRunningImport}>{cancelling ? t("cancelling") : t("cancelReading")}</button> : null}
       {lastBookmarksSummary && lastBookmarksSummary.skippedRows.length > 0 ? (
         <button className="mt-2 text-left text-sm font-medium text-text-primary underline" type="button" onClick={onDownloadSkippedLog}>
-          Download skipped links (.txt)
+          {t("downloadSkipped")}
         </button>
       ) : null}
       {error ? <p className="mt-2 text-sm text-text-danger" role="alert">{error}</p> : null}

@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { Toaster as Sonner, toast } from "sonner";
+import { useTranslations } from "@/i18n/use-translations";
 
 export { toast };
 
@@ -15,6 +16,7 @@ const subscribeToNothing = () => () => {};
 export function Toaster() {
   // False on the server and during hydration, true after; keeps Sonner out of SSR markup.
   const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false);
+  const t = useTranslations("Toaster");
   if (!mounted) return null;
   return (
     <Sonner
@@ -22,6 +24,7 @@ export function Toaster() {
       position="bottom-right"
       offset={24}
       className="kc-toaster"
+      containerAriaLabel={t("notifications")}
       toastOptions={{
         className: "kc-toast",
       }}
