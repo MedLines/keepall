@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormatLocale, useTranslations } from "@/i18n/use-translations";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -26,8 +27,10 @@ type Props = {
   onOpenFolder?: (href: string) => void;
 };
 
-export function ImageFolderImport({ buttonClassName, label = "Import images", disabled = false, defaultCollectionName, onBusyChange, onOpenFolder }: Props) {
+export function ImageFolderImport({ buttonClassName, label, disabled = false, defaultCollectionName, onBusyChange, onOpenFolder }: Props) {
   const router = useRouter();
+  const t = useTranslations("ImageFolderImport");
+  const locale = useFormatLocale();
   const reducedMotion = useReducedMotion();
   const imageFolderInputRef = useRef<HTMLInputElement>(null);
   const operationRef = useRef<Operation | null>(null);
@@ -59,7 +62,7 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
 
   async function prepareImageFolder(files: File[], folderName?: string) {
     if (files.length === 0) {
-      setStatus("This folder is empty. Choose a folder containing images.");
+      setStatus(t("emptyFolder"));
       return;
     }
     setPendingImageFiles(files);
@@ -86,7 +89,7 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
       await prepareImageFolder(files, directory.name);
     } catch (caught) {
       if (!(caught instanceof DOMException && caught.name === "AbortError")) {
-        setError("Couldn't read the folder. Allow folder access, then select it again.");
+        setError(t("accessError"));
       }
       setPendingImageFiles(null);
     } finally {
@@ -104,7 +107,7 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
     try {
       await prepareImageFolder(Array.from(fileList));
     } catch {
-      setError("Couldn't read the folder. Select it again to retry.");
+      setError(t("readError"));
       setPendingImageFiles(null);
     } finally {
       finish();
@@ -114,7 +117,7 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
 
   function closeDialog() {
     if (operationRef.current) return;
-    if (!completion) setStatus("Image import canceled.");
+    if (!completion) setStatus(t("cancelled"));
     setPendingImageFiles(null);
     setCompletion(null);
     setImageCollectionDraft("");
@@ -145,7 +148,7 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
       setStatus(skippedDetail ? `${message} (${skippedDetail})` : message);
       setPendingImageFiles(null);
     } catch {
-      setError("Import stopped. Try again. Images already saved won't be duplicated.");
+      setError(t("importStopped"));
     } finally {
       setImageImportProgress(null);
       finish();
@@ -167,7 +170,7 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
       if (onOpenFolder) onOpenFolder(href);
       else router.push(href);
     } catch {
-      setError("Couldn't open the folder. Try again, or open it from the sidebar.");
+      setError(t("openError"));
     } finally {
       finish();
     }
@@ -180,7 +183,7 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
   return (
     <div className="min-w-0">
       <button className={buttonClassName} type="button" disabled={disabled || busy} onClick={() => void chooseImageFolder()}>
-        {label}
+        {label ?? t("importImages")}
       </button>
       <input
         ref={imageFolderInputRef}
@@ -191,20 +194,20 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
       <ModalDialog
         open={dialogOpen}
         busy={busy}
-        title={completed ? "Import complete" : importing ? "Importing images" : readingFolder ? "Reading image folder" : error ? "Import stopped" : "Import image folder"}
+        title={completed ? t("titleComplete") : importing ? t("titleImporting") : readingFolder ? t("titleReading") : error ? t("titleStopped") : t("title")}
         description={completed
           ? completion.savedCount > 0
-            ? `Images are saved in ${completion.collectionName ?? "Unsorted"}.`
-            : "No images were added. Review the skipped files below."
+            ? t("savedIn", { name: completion.collectionName ?? t("unsorted") })
+            : t("noneAdded")
           : readingFolder
-            ? `Finding files in ${readingFolder.name}.`
+            ? t("finding", { name: readingFolder.name })
           : importing
-            ? `Adding images to ${imageCollectionDraft.trim() || "Unsorted"}. Keep this window open until the import finishes.`
-            : `${pendingImageFiles?.length ?? 0} file${pendingImageFiles?.length === 1 ? "" : "s"} selected. Images under 20 MiB become separate library items.`}
+            ? t("adding", { name: imageCollectionDraft.trim() || t("unsorted") })
+            : t("selected", { count: pendingImageFiles?.length ?? 0 })}
         onOpenChange={(open) => { if (!open) closeDialog(); }}
-        footer={importing || readingFolder ? <span className="text-xs text-text-secondary">{readingFolder ? "Checking the selected folder…" : "Saving to your library…"}</span> : <>
+        footer={importing || readingFolder ? <span className="text-xs text-text-secondary">{readingFolder ? t("checkingFolder") : t("savingToLibrary")}</span> : <>
           <button className={dialogButtonClass} type="button" disabled={busy} onClick={closeDialog}>
-            {completed ? "Done" : "Cancel"}
+            {completed ? t("done") : t("cancel")}
           </button>
           <button
             className={`${dialogButtonClass} ui-primary inline-flex items-center justify-center gap-2`}
@@ -212,7 +215,7 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
             onClick={() => void (completed ? openImportedFolder() : runImageFolderImport())}
           >
             {completed ? <CollectionIcon /> : null}
-            {completed ? operation === "open-folder" ? "Opening folder…" : completion.collectionName ? "Open folder" : "Open Unsorted" : error ? "Retry import" : "Import images"}
+            {completed ? operation === "open-folder" ? t("openingFolder") : completion.collectionName ? t("openFolder") : t("openUnsorted") : error ? t("retry") : t("importImages")}
           </button>
         </>}
       >
@@ -233,20 +236,20 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
             </div>
             {readingFolder ? (
               <div className="w-full space-y-3">
-                <p className="text-sm text-text-primary" role="status">{readingFolder.count} file{readingFolder.count === 1 ? "" : "s"} found</p>
-                <div role="progressbar" aria-label="Reading image folder progress" className="h-2 overflow-hidden rounded-full bg-bg-active">
+                <p className="text-sm text-text-primary" role="status">{t("filesFound", { count: readingFolder.count })}</p>
+                <div role="progressbar" aria-label={t("readingProgressLabel")} className="h-2 overflow-hidden rounded-full bg-bg-active">
                   <div className="h-full w-1/3 bg-action-primary motion-safe:animate-pulse" />
                 </div>
-                <p className="min-h-5 truncate text-xs text-text-secondary">{readingFolder.currentName || "Checking the selected folder…"}</p>
+                <p className="min-h-5 truncate text-xs text-text-secondary">{readingFolder.currentName || t("checkingFolder")}</p>
               </div>
             ) : imageImportProgress ? (
               <div className="w-full space-y-3">
                 <div className="flex items-baseline justify-between gap-3 text-sm text-text-primary" role="status" aria-live="polite">
-                  <span>Importing images… {imageImportProgress.done} of {imageImportProgress.total}</span>
-                  <span className="tabular-nums">{Math.round(imageImportProgress.done / imageImportProgress.total * 100)}%</span>
+                  <span>{t("importingProgress", { done: imageImportProgress.done, total: imageImportProgress.total })}</span>
+                  <span className="tabular-nums">{new Intl.NumberFormat(locale, { style: "percent" }).format(Math.round(imageImportProgress.done / imageImportProgress.total * 100) / 100)}</span>
                 </div>
                 <div
-                  role="progressbar" aria-label="Image folder import progress"
+                  role="progressbar" aria-label={t("importProgressLabel")}
                   aria-valuemin={0} aria-valuemax={imageImportProgress.total} aria-valuenow={imageImportProgress.done}
                   className="h-2 overflow-hidden rounded-full bg-bg-active"
                 >
@@ -255,32 +258,32 @@ export function ImageFolderImport({ buttonClassName, label = "Import images", di
                     style={{ transform: `scaleX(${imageImportProgress.done / imageImportProgress.total})` }}
                   />
                 </div>
-                <p className="min-h-5 truncate text-xs text-text-secondary">{imageImportProgress.currentName || "Preparing images…"}</p>
-                <p className="text-xs text-text-secondary">{imageImportProgress.added} added · {imageImportProgress.reused} already in library</p>
+                <p className="min-h-5 truncate text-xs text-text-secondary">{imageImportProgress.currentName || t("preparing")}</p>
+                <p className="text-xs text-text-secondary">{t("addedReused", { added: imageImportProgress.added, reused: imageImportProgress.reused })}</p>
               </div>
             ) : completion ? (
               <div className="space-y-2 text-center" role="status" aria-live="polite">
                 <p className="text-base font-medium text-text-primary">{completion.message}</p>
-                {completion.skippedDetail ? <p className="text-sm text-text-secondary">Skipped: {completion.skippedDetail}.</p> : null}
+                {completion.skippedDetail ? <p className="text-sm text-text-secondary">{t("skipped", { detail: completion.skippedDetail })}</p> : null}
               </div>
             ) : null}
           </div>
         ) : (
           <>
             <label className="flex flex-col gap-2 text-sm">
-              <span className="font-medium text-text-primary">Collection (optional)</span>
+              <span className="font-medium text-text-primary">{t("collectionOptional")}</span>
               <input
-                aria-label="Collection (optional)"
+                aria-label={t("collectionOptional")}
                 className="ui-field min-h-11 px-3 py-2 disabled:opacity-60"
-                type="text" value={imageCollectionDraft} placeholder="e.g. Vacation 2024" disabled={busy}
+                type="text" value={imageCollectionDraft} placeholder={t("collectionPlaceholder")} disabled={busy}
                 onChange={(event) => setImageCollectionDraft(event.target.value)}
               />
               <span className="text-xs leading-relaxed text-text-secondary">
-                Leave blank to keep the images unsorted. Unsupported or larger files are skipped. Subfolders are not converted into collections.
+                {t("collectionHelp")}
               </span>
             </label>
             {imageQuotaWarning ? <p className="text-sm text-text-warning" role="status">{imageQuotaWarning}</p> : null}
-            {operation === "read-images" ? <p className="text-sm text-text-secondary" role="status">Reading image folder…</p> : null}
+            {operation === "read-images" ? <p className="text-sm text-text-secondary" role="status">{t("readingFolder")}</p> : null}
           </>
         )}
         {error ? <p className="text-sm text-text-danger" role="alert">{error}</p> : null}

@@ -6,6 +6,7 @@ import { readImageDirectory as readDirectory, type ImageDirectoryPicker } from "
 import { storageQuotaWarningForImport } from "./storage-quota-warning";
 import { abortable } from "@/lib/abortable";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "@/i18n/use-translations";
 
 type Props = {
   buttonClassName: string;
@@ -20,6 +21,7 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
   const readingRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const t = useTranslations("FileImport");
   const [reading, setReading] = useState<{ name: string; count: number; currentName: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
   async function prepare(files: File[], folderName: string | undefined, signal: AbortSignal) {
     signal.throwIfAborted();
     if (!files.length) {
-      setStatus("This folder is empty. Choose a folder containing files.");
+      setStatus(t("emptyFolder"));
       return;
     }
     const total = files.reduce((sum, file) => classifyCaptureFile(file).kind === "unsupported" ? sum : sum + file.size, 0);
@@ -63,9 +65,9 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
       const files = await abortable(readDirectory(directory, (count, currentName) => setReading({ name: directory.name, count, currentName }), controller.signal), controller.signal);
       await prepare(files, directory.name, controller.signal);
     } catch (caught) {
-      if (controller.signal.aborted) setStatus("Folder reading canceled. No files were added.");
+      if (controller.signal.aborted) setStatus(t("folderCancelled"));
       else if (!(caught instanceof DOMException && caught.name === "AbortError")) {
-        setError("Couldn't read the folder. Select it again to retry.");
+        setError(t("folderError"));
       }
     } finally {
       readingRef.current = false;
@@ -83,14 +85,14 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
     setCancelling(false);
     setError(null);
     setStatus(null);
-    setReading({ name: folder ? "the selected folder" : "the selected files", count: files.length, currentName: "" });
+    setReading({ name: folder ? t("selectedFolder") : t("selectedFiles"), count: files.length, currentName: "" });
     try {
       const selected = Array.from(files);
-      const folderName = folder ? selected[0].webkitRelativePath?.split("/")[0] || "Imported files" : undefined;
+      const folderName = folder ? selected[0].webkitRelativePath?.split("/")[0] || t("importedFiles") : undefined;
       await prepare(selected, folderName, controller.signal);
     } catch {
-      if (controller.signal.aborted) setStatus("File selection canceled. No files were added.");
-      else setError("Couldn't read the selected files. Select them again to retry.");
+      if (controller.signal.aborted) setStatus(t("selectionCancelled"));
+      else setError(t("filesError"));
     } finally {
       readingRef.current = false;
       abortRef.current = null;
@@ -101,8 +103,8 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
 
   return (
     <div className="grid gap-3">
-      <button type="button" className={buttonClassName} disabled={disabled || locked} onClick={() => filesInput.current?.click()}>Import files</button>
-      <button type="button" className={buttonClassName} disabled={disabled || locked} onClick={() => void chooseFolder()}>Import folder</button>
+      <button type="button" className={buttonClassName} disabled={disabled || locked} onClick={() => filesInput.current?.click()}>{t("importFiles")}</button>
+      <button type="button" className={buttonClassName} disabled={disabled || locked} onClick={() => void chooseFolder()}>{t("importFolder")}</button>
       <input
         ref={filesInput} hidden aria-hidden="true" tabIndex={-1} type="file" multiple accept={CAPTURE_FILE_ACCEPT} data-bulk-files
         onChange={(event) => { void onFiles(event.target.files, false); event.target.value = ""; }}
@@ -113,12 +115,12 @@ export function BulkFileImport({ buttonClassName, disabled = false, defaultColle
         onChange={(event) => { void onFiles(event.target.files, true); event.target.value = ""; }}
       />
       {reading ? <div className="rounded-input border border-border-control p-3">
-        <progress aria-label="Folder reading progress" className="h-2 w-full accent-action-primary" />
+        <progress aria-label={t("progressLabel")} className="h-2 w-full accent-action-primary" />
         <p role="status" className="mt-2 text-sm text-text-secondary">
-          Reading {reading.name}… {reading.count} {reading.count === 1 ? "file" : "files"} found{reading.currentName ? ` · ${reading.currentName}` : ""}
+          {reading.currentName ? t("readingFile", { name: reading.name, count: reading.count, file: reading.currentName }) : t("reading", { name: reading.name, count: reading.count })}
         </p>
         <Button className="mt-2" disabled={cancelling}
-          onClick={() => { setCancelling(true); abortRef.current?.abort(); }}>{cancelling ? "Canceling…" : "Cancel reading"}</Button>
+          onClick={() => { setCancelling(true); abortRef.current?.abort(); }}>{cancelling ? t("cancelling") : t("cancelReading")}</Button>
       </div> : null}
       {error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : null}
       {!locked && status ? <p role="status" className="text-sm text-text-secondary">{status}</p> : null}
