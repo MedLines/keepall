@@ -12,7 +12,8 @@ import { itemPageHref } from "../item-page-navigation";
 import { LibraryItemMedia } from "../library-item-media";
 import { NoteIcon } from "../shell-icons";
 import { headingClass, paragraphClass, sectionClass } from "./settings-sections";
-import { useFormatLocale, useTranslations, type Translations } from "@/i18n/use-translations";
+import { useTranslations, type Translations } from "@/i18n/use-translations";
+import { useAgo } from "../use-ago";
 
 export type ProposalView = { id: string; agentName: string; createdAt: number; requests: Array<{ id: string; text: string }> };
 /** One item in an activity: what happened to it, and the change that did it. */
@@ -49,19 +50,6 @@ const ACCESS_LEVELS: readonly AgentAccess[] = ["read", "suggest", "change"];
 export function useAccessChoices(): Array<{ value: AgentAccess; label: string; description: string }> {
   const t = useTranslations("AgentAccess");
   return ACCESS_LEVELS.map((value) => ({ value, label: t(`${value}.label`), description: t(`${value}.description`) }));
-}
-
-/** "5 minutes ago", "yesterday": relative time in the interface locale. */
-function useAgo() {
-  const locale = useFormatLocale();
-  const relative = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-  return (time: number, now: number) => {
-    const minutes = Math.round((time - now) / 60_000);
-    if (Math.abs(minutes) < 60) return relative.format(minutes, "minute");
-    const hours = Math.round(minutes / 60);
-    if (Math.abs(hours) < 24) return relative.format(hours, "hour");
-    return relative.format(Math.round(hours / 24), "day");
-  };
 }
 
 /** A summary that leads to the full review, where every change shows the items it touches. */

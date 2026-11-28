@@ -14,6 +14,8 @@ import { LibraryTextPreview } from "../library-text-preview";
 import { PendingFileThumbnail, pendingFileIds } from "../pending-file-preview";
 import { LibrarySelectionControl } from "../library-selection-control";
 import { ArrowLeftIcon, EyeIcon, NoteIcon } from "../shell-icons";
+import { useFormatLocale, useTranslations, type Translations } from "@/i18n/use-translations";
+import { useAgo } from "../use-ago";
 
 export type AgentReviewPanelProps = {
   agentName: string;
@@ -39,24 +41,13 @@ const TILE_CONTROL = "library-card-media-chrome library-card-corner-control libr
 // Positioned, so the control's enlarged hit area stays around it instead of covering the page.
 const ROW_CONTROL = "library-card-media-chrome library-card-corner-control relative flex shrink-0 items-center justify-center";
 
-const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-
-export function ago(time: number, now: number) {
-  const minutes = Math.round((time - now) / 60_000);
-  if (Math.abs(minutes) < 60) return relative.format(minutes, "minute");
-  const hours = Math.round(minutes / 60);
-  return Math.abs(hours) < 24 ? relative.format(hours, "hour") : relative.format(Math.round(hours / 24), "day");
-}
-
-function count(value: number, word: string) {
-  return `${value} ${word}${value === 1 ? "" : "s"}`;
-}
+type T = Translations<"AgentReview">;
 
 /** Images saved from the web are titled by their site, which says nothing in a grid of them; use the caption or file name. */
-function title(item: Item | undefined) {
-  if (!item) return "Untitled";
-  if (item.type === "image") return item.caption.trim() || item.sourceFileName?.replace(/\.[^.]+$/, "") || "Image";
-  return itemListTitle(item) || "Untitled";
+function title(t: T, item: Item | undefined) {
+  if (!item) return t("untitled");
+  if (item.type === "image") return item.caption.trim() || item.sourceFileName?.replace(/\.[^.]+$/, "") || t("image");
+  return itemListTitle(item) || t("untitled");
 }
 
 type Target = (itemId: string, from: HTMLElement) => void;
@@ -90,7 +81,8 @@ function Tile({ item, itemId, keys, excluded, onToggle, saved, review, focus }: 
   review: Target; focus: Target;
 }) {
   const included = keys.some((key) => !excluded.has(key));
-  const name = title(item);
+  const t = useTranslations("AgentReview");
+  const name = title(t, item);
   const media = (
     <div className="library-card-media relative">
       <div className="aspect-4/5 w-full">{item ? <Thumbnail item={item} /> : null}</div>
@@ -99,9 +91,9 @@ function Tile({ item, itemId, keys, excluded, onToggle, saved, review, focus }: 
   return (
     <li className="min-w-0">
       <div className={cn("library-card group relative flex flex-col rounded-card p-2", !included && "opacity-(--opacity-disabled)")}>
-        <LibrarySelectionControl label={`Include “${name}”`} className={TILE_CONTROL} visible selected={included} disabled={false} onToggle={() => onToggle(keys, !included)} />
+        <LibrarySelectionControl label={t("include", { name })} className={TILE_CONTROL} visible selected={included} disabled={false} onToggle={() => onToggle(keys, !included)} />
         {saved ? (
-          <button type="button" className="library-card-open control-shape-none block text-left" aria-label={`Review “${name}”`} aria-keyshortcuts="Space"
+          <button type="button" className="library-card-open control-shape-none block text-left" aria-label={t("review", { name })} aria-keyshortcuts="Space"
             onClick={(event) => review(itemId, event.currentTarget)} onFocus={(event) => focus(itemId, event.currentTarget)}>{media}</button>
         ) : media}
         <p className="mt-2 truncate px-2 text-xs text-text-card-meta">{name}</p>
@@ -114,12 +106,13 @@ function NoteRow({ effect, item, excluded, onToggle }: { effect: Extract<StepEff
   const before = effect.before.trim();
   const appended = !before || effect.after.startsWith(before);
   const included = !excluded.has(effect.key);
+  const t = useTranslations("AgentReview");
   return (
     <li className={cn("flex items-start gap-3 border-t border-border-control pt-4 first:border-t-0 first:pt-0", !included && "opacity-(--opacity-disabled)")}>
-      <LibrarySelectionControl label={`Include the note on “${title(item)}”`} className={ROW_CONTROL} visible selected={included} disabled={false} onToggle={() => onToggle([effect.key], !included)} />
+      <LibrarySelectionControl label={t("includeNote", { title: title(t, item) })} className={ROW_CONTROL} visible selected={included} disabled={false} onToggle={() => onToggle([effect.key], !included)} />
       <div className="size-16 shrink-0 overflow-hidden rounded-control-md border border-border-control bg-bg-raised">{item ? <Thumbnail item={item} compact /> : null}</div>
       <div className="min-w-0 flex-1 text-sm leading-6">
-        <p className="font-medium text-text-primary">{title(item)}</p>
+        <p className="font-medium text-text-primary">{title(t, item)}</p>
         {before ? <p className={cn("mt-1 line-clamp-2", appended ? "text-text-secondary" : "text-text-danger line-through")}>{before}</p> : null}
         <p className="mt-1 whitespace-pre-wrap rounded-control-xs bg-bg-selected px-2 py-1 text-text-primary">{appended ? effect.after.slice(before.length).trim() : effect.after}</p>
       </div>
@@ -131,6 +124,8 @@ function Group({ group, items, excluded, onToggle, review, focus }: { group: Rev
   const headingId = `group-${group.id}`;
   const keys = group.effects.map((effect) => effect.key);
   const chosen = keys.filter((key) => !excluded.has(key)).length;
+  const t = useTranslations("AgentReview");
+  const reviewText = useTranslations("Review");
   const keysFor = (itemId: string) => group.effects.filter((effect) => "itemId" in effect && effect.itemId === itemId).map((effect) => effect.key);
   return (
     <section aria-labelledby={headingId} className="library-panel border border-border-control bg-bg-surface p-4 sm:p-5">
@@ -138,12 +133,14 @@ function Group({ group, items, excluded, onToggle, review, focus }: { group: Rev
         <div className="min-w-0 flex-1">
           <h2 id={headingId} className={cn("text-base font-semibold", group.caution ? "text-text-danger" : "text-text-primary")}>{group.title}</h2>
           <p className="mt-0.5 text-xs text-text-secondary">
-            {group.itemIds.length ? count(group.itemIds.length, "item") : count(group.effects.length, "change")}
-            {chosen < keys.length ? ` · ${chosen} included` : ""}
+            {(() => {
+              const summary = group.itemIds.length ? t("items", { count: group.itemIds.length }) : t("changes", { count: group.effects.length });
+              return chosen < keys.length ? t("withIncluded", { summary, count: chosen }) : summary;
+            })()}
           </p>
-          {group.reasons.map((reason) => <p key={reason} className="mt-2 text-sm leading-6 text-text-secondary">“{reason}”</p>)}
+          {group.reasons.map((reason) => <p key={reason} className="mt-2 text-sm leading-6 text-text-secondary">{reviewText("quoted", { text: reason })}</p>)}
         </div>
-        <Button onClick={() => onToggle(keys, chosen < keys.length)}>{chosen < keys.length ? "Include all" : "Leave out all"}</Button>
+        <Button onClick={() => onToggle(keys, chosen < keys.length)}>{chosen < keys.length ? t("includeAll") : t("leaveOutAll")}</Button>
       </div>
       {group.kind === "note" ? (
         <ul className="mt-4 space-y-4">
@@ -161,32 +158,37 @@ function Group({ group, items, excluded, onToggle, review, focus }: { group: Rev
 }
 
 export function ReviewHeader({ children }: { children: ReactNode }) {
+  const t = useTranslations("AgentReview");
   return (
     <header>
       <Link href="/settings#agents-connect-heading" className={buttonClassName({ size: "none", className: "min-h-10 gap-2 px-3 text-sm font-medium justify-start" })}>
         <ArrowLeftIcon className="size-4" />
-        <span>Agents</span>
+        <span>{t("agents")}</span>
       </Link>
       {children}
     </header>
   );
 }
 
-function summaryLine(groups: readonly ReviewGroup[]) {
+function summaryLine(t: T, locale: string | undefined, groups: readonly ReviewGroup[]) {
   const summary = reviewSummary(groups);
   const parts = [
-    summary.collections ? count(summary.collections, "collection") : "",
-    summary.tags ? count(summary.tags, "tag") : "",
-    summary.notes ? count(summary.notes, "note") : "",
-    summary.trash ? `${summary.trash} to Trash` : "",
+    summary.collections ? t("collections", { count: summary.collections }) : "",
+    summary.tags ? t("tags", { count: summary.tags }) : "",
+    summary.notes ? t("notes", { count: summary.notes }) : "",
+    summary.trash ? t("toTrash", { count: summary.trash }) : "",
   ].filter(Boolean);
-  return `${count(summary.items, "item")}${parts.length ? `: ${parts.join(", ")}` : ""}`;
+  const items = t("items", { count: summary.items });
+  return parts.length ? t("summaryWithParts", { items, parts: new Intl.ListFormat(locale, { type: "unit", style: "short" }).format(parts) }) : items;
 }
 
 /** All of an agent's suggestions at once, as pictures of the items they change, grouped by what they do. */
 export function AgentReviewPanel(props: AgentReviewPanelProps) {
   const { agentName, createdAt, now, groups, conflicts, excluded, backupFolder, busy, onReview, onApply, onDecline } = props;
   const focused = useRef<{ itemId: string; from: HTMLElement } | null>(null);
+  const t = useTranslations("AgentReview");
+  const locale = useFormatLocale();
+  const ago = useAgo();
   const focus: Target = (itemId, from) => {
     focused.current = { itemId, from };
   };
@@ -197,34 +199,34 @@ export function AgentReviewPanel(props: AgentReviewPanelProps) {
   return (
     <div className="space-y-4">
       <ReviewHeader>
-        <h1 className="mt-5 text-2xl font-semibold tracking-heading text-text-primary sm:text-3xl">All of {agentName}&apos;s changes</h1>
+        <h1 className="mt-5 text-2xl font-semibold tracking-heading text-text-primary sm:text-3xl">{t("title", { agent: agentName })}</h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Suggested {ago(createdAt, now)} for {summaryLine(groups)}. Click any item to review it like Unsorted, or leave out what you don&apos;t want and apply the rest at once.
+          {t("intro", { when: ago(createdAt, now), summary: summaryLine(t, locale, groups) })}
         </p>
         <p className="mt-1 text-xs text-text-secondary">
-          Keepall keeps a copy of everything this changes, so you can undo it.{backupFolder ? " It also saves a full backup to your backup folder first." : ""}
+          {backupFolder ? t("copyNoteBackup") : t("copyNote")}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Tooltip content="Review the focused item, or start from the first (Space)" describe={false}>
+          <Tooltip content={t("reviewTooltip")} describe={false}>
             <button type="button" aria-keyshortcuts="Space" aria-haspopup="dialog" className={buttonClassName({ size: "none", className: "min-h-10 gap-2 ps-3 pe-4 text-sm font-medium" })}
               onClick={(event) => onReview(focused.current?.itemId ?? null, event.currentTarget)}>
-              <EyeIcon className="size-4" /><span>Review one at a time</span>
+              <EyeIcon className="size-4" /><span>{t("reviewOneAtATime")}</span>
             </button>
           </Tooltip>
         </div>
       </ReviewHeader>
       {conflicts.length ? (
         <div role="note" className="library-panel border border-border-control bg-bg-surface p-4 text-sm leading-6">
-          <p className="font-medium text-text-warning">Some suggestions won&apos;t apply as they stand</p>
+          <p className="font-medium text-text-warning">{t("conflictsTitle")}</p>
           <ul className="mt-1 text-text-secondary">{conflicts.map((conflict) => <li key={conflict}>{conflict}</li>)}</ul>
         </div>
       ) : null}
       {groups.map((group) => <Group key={group.id} group={group} {...props} review={review} focus={focus} />)}
       <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 library-panel border border-border-control bg-bg-surface p-3 sm:p-4">
-        <p className="text-sm text-text-secondary">{chosen === total ? `All ${count(total, "change")} included` : `${chosen} of ${count(total, "change")} included`}</p>
+        <p className="text-sm text-text-secondary">{chosen === total ? t("allIncluded", { count: total }) : t("someIncluded", { chosen, count: total })}</p>
         <div className="flex flex-wrap gap-2">
-          <Button disabled={busy} onClick={onDecline}>Decline all</Button>
-          <Button variant="primary" disabled={busy || !chosen} onClick={onApply}>{busy ? "Applying…" : `Apply ${count(chosen, "change")}`}</Button>
+          <Button disabled={busy} onClick={onDecline}>{t("declineAll")}</Button>
+          <Button variant="primary" disabled={busy || !chosen} onClick={onApply}>{busy ? t("applying") : t("apply", { count: chosen })}</Button>
         </div>
       </div>
     </div>
@@ -240,41 +242,43 @@ export type ReviewOutcome = {
   declined: boolean;
 };
 
-function outcomeHeading(outcome: ReviewOutcome) {
-  if (outcome.declined) return "Declined. Nothing changed.";
-  if (outcome.undone) return "Undone. Your library is back as it was.";
-  return `Applied ${count(outcome.applied, "change")}`;
+function outcomeHeading(t: T, outcome: ReviewOutcome) {
+  if (outcome.declined) return t("declined");
+  if (outcome.undone) return t("undone");
+  return t("applied", { count: outcome.applied });
 }
 
-function backupLine(backup: ReviewOutcome["backup"]) {
-  if (backup.status === "saved") return "Saved a backup to your folder first. ";
-  if (backup.status === "failed") return `The folder backup failed (${backup.message}), but Keepall kept a copy of everything it changed. `;
-  return "";
+function appliedLine(t: T, backup: ReviewOutcome["backup"]) {
+  if (backup.status === "saved") return t("backupSaved");
+  if (backup.status === "failed") return t("backupFailed", { message: backup.message });
+  return t("undoLater");
 }
 
 /** What happened, with Undo right where the change was made. */
 export function AgentReviewResult({ outcome, busy, onUndo, next }: { outcome: ReviewOutcome; busy: boolean; onUndo?: () => void; next?: { id: string; agentName: string } }) {
   const skipped = outcome.skipped.filter((entry) => entry.reason !== "Not chosen");
   const applied = !outcome.declined && !outcome.undone;
+  const t = useTranslations("AgentReview");
+  const common = useTranslations("Common");
   return (
     <div className="space-y-4">
       <ReviewHeader>
-        <div role="status"><h1 className="mt-5 text-2xl font-semibold tracking-heading text-text-primary sm:text-3xl">{outcomeHeading(outcome)}</h1></div>
-        {applied ? <p className="mt-1 text-sm text-text-secondary">{backupLine(outcome.backup)}You can undo this here or later in Settings, Agents.</p> : null}
+        <div role="status"><h1 className="mt-5 text-2xl font-semibold tracking-heading text-text-primary sm:text-3xl">{outcomeHeading(t, outcome)}</h1></div>
+        {applied ? <p className="mt-1 text-sm text-text-secondary">{appliedLine(t, outcome.backup)}</p> : null}
       </ReviewHeader>
       {outcome.undone?.kept.length ? (
         <ul className="library-panel border border-border-control bg-bg-surface p-4 text-sm leading-6 text-text-warning">{outcome.undone.kept.map((note) => <li key={note}>{note}</li>)}</ul>
       ) : null}
       {skipped.length && !outcome.undone ? (
         <div className="library-panel border border-border-control bg-bg-surface p-4 text-sm leading-6">
-          <p className="font-medium text-text-primary">Skipped</p>
-          <ul className="mt-1 text-text-secondary">{skipped.map((entry) => <li key={entry.text}>{entry.text}: {entry.reason}</li>)}</ul>
+          <p className="font-medium text-text-primary">{t("skipped")}</p>
+          <ul className="mt-1 text-text-secondary">{skipped.map((entry) => <li key={entry.text}>{common("labelValue", { label: entry.text, value: entry.reason })}</li>)}</ul>
         </div>
       ) : null}
       <div className="flex flex-wrap gap-2">
-        <Link href="/" className={buttonClassName({ variant: "primary" })}>Open library</Link>
-        {onUndo && applied && outcome.applied ? <Button disabled={busy} onClick={onUndo}>{busy ? "Undoing…" : "Undo"}</Button> : null}
-        {next ? <Link href={`/review?proposal=${encodeURIComponent(next.id)}`} className={buttonClassName()}>Review {next.agentName}&apos;s changes</Link> : null}
+        <Link href="/" className={buttonClassName({ variant: "primary" })}>{t("openLibrary")}</Link>
+        {onUndo && applied && outcome.applied ? <Button disabled={busy} onClick={onUndo}>{busy ? t("undoing") : t("undo")}</Button> : null}
+        {next ? <Link href={`/review?proposal=${encodeURIComponent(next.id)}`} className={buttonClassName()}>{t("reviewNext", { agent: next.agentName })}</Link> : null}
       </div>
     </div>
   );
