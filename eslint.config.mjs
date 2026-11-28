@@ -62,6 +62,7 @@ const BUTTON_PADDING_SYNTAX = [
 // Files whose interface text lives in src/i18n/messages. Add a file once its strings move there;
 // from then on, text written straight into its JSX is an error. See docs/interface-conventions.md.
 const TRANSLATED_FILES = [
+  "src/app/agent-changes-review.tsx",
   "src/app/backup-panel.tsx",
   "src/app/bookmarks-import.tsx",
   "src/app/bulk-file-import.tsx",
@@ -91,6 +92,8 @@ const TRANSLATED_FILES = [
   "src/app/pending-file-preview.tsx",
   "src/app/persistent-storage-status.tsx",
   "src/app/pwa-update-banner.tsx",
+  "src/app/review/agent-review-panel.tsx",
+  "src/app/review/agent-review.tsx",
   "src/app/settings/agents-panel.tsx",
   "src/app/settings/agents-settings.tsx",
   "src/app/settings/backup-folder-controls.tsx",
@@ -104,6 +107,7 @@ const TRANSLATED_FILES = [
   "src/app/sidebar-resize-handle.tsx",
   "src/app/theme-control.tsx",
   "src/app/undo-notice.tsx",
+  "src/app/unsorted-review.tsx",
   "src/components/ui/confirm-dialog.tsx",
   "src/components/ui/modal-dialog.tsx",
   "src/components/ui/side-drawer.tsx",

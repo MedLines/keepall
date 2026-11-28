@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "@/i18n/use-translations";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buttonClassName } from "@/components/ui/button";
@@ -48,6 +49,7 @@ async function load(): Promise<Loaded> {
 }
 
 export function AgentReview() {
+  const t = useTranslations("AgentReview");
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
   const [excluded, setExcluded] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -97,13 +99,13 @@ export function AgentReview() {
     );
   }
 
-  if (loaded.status === "loading") return <p className="py-10 text-sm text-text-secondary">Loading suggestions…</p>;
+  if (loaded.status === "loading") return <p className="py-10 text-sm text-text-secondary">{t("loading")}</p>;
   if (loaded.status === "empty") {
     return (
       <ReviewHeader>
-        <h1 className="mt-5 text-2xl font-semibold tracking-heading text-text-primary sm:text-3xl">Nothing to review</h1>
-        <p className="mt-1 text-sm text-text-secondary">When an agent suggests changes to your library, they appear here. Past changes and Undo are in Settings, Agents.</p>
-        <Link href="/" className={buttonClassName({ variant: "primary", className: "mt-5" })}>Open library</Link>
+        <h1 className="mt-5 text-2xl font-semibold tracking-heading text-text-primary sm:text-3xl">{t("nothing")}</h1>
+        <p className="mt-1 text-sm text-text-secondary">{t("nothingDescription")}</p>
+        <Link href="/" className={buttonClassName({ variant: "primary", className: "mt-5" })}>{t("openLibrary")}</Link>
       </ReviewHeader>
     );
   }
@@ -118,7 +120,7 @@ export function AgentReview() {
       setLoaded(await load());
     } catch (error) {
       finished.current = false;
-      setError(error instanceof Error ? error.message : "That didn't work. Try again.");
+      setError(error instanceof Error ? error.message : t("actionFailed"));
     } finally {
       setBusy(false);
     }
